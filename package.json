@@ -17,16 +17,23 @@
 		"autohotkey2",
 		"AutoHotkey2"
 	],
-	"repository": "",
+	"repository": "https://gitee.com/orz707/vscode-autohotkey2-lsp/tree/master",
 	"icon": "icon.png",
 	"engines": {
 		"vscode": "^1.43.0"
 	},
 	"activationEvents": [
-		"onLanguage:ahk2"
+		"onLanguage:ahk2",
+		"onCommand:run.ahk2",
+		"onDebug"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
+		"breakpoints": [
+			{
+				"language": "ahk2"
+			}
+		],
 		"languages": [
 			{
 				"id": "ahk2",
@@ -57,16 +64,16 @@
 			}
 		],
 		"configuration": {
-			"type": "object",
-			"title": "AutoHotKey2",
+			"id": "AutoHotkey2",
+			"title": "AutoHotkey2",
 			"properties": {
-				"Autohotkey2LanguageServer.ahkpath": {
+				"AutoHotkey2.Path": {
 					"scope": "window",
 					"type": "string",
 					"default": "C:\\Program Files\\Autohotkey\\AutoHotkey.exe",
-					"description": "Absolute path to a AutoHotkey.exe file."
+					"description": "AutoHotkey.exe可执行文件的路径。"
 				},
-				"Autohotkey2LanguageServer.trace.server": {
+				"AutoHotkey2.Trace": {
 					"scope": "window",
 					"type": "string",
 					"enum": [
@@ -75,7 +82,19 @@
 						"verbose"
 					],
 					"default": "off",
-					"description": "Traces the communication between VS Code and the language server."
+					"description": "跟踪VS Code和AutoHotKey2语言服务器之间的通信。"
+				}
+			}
+		},
+		"configurationDefaults": {
+			"[ahk2]": {
+				"editor.detectIndentation": true,
+				"editor.autoIndent": "brackets",
+				"editor.insertSpaces": false,
+				"editor.quickSuggestions": {
+					"other": true,
+					"comments": false,
+					"strings": true
 				}
 			}
 		}
