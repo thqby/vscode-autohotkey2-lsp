@@ -1,0 +1,13 @@
+{
+	"name": "vscode-autohotkey2-server",
+	"description": "Autohotkey2 Language Server using vscode-lsp.",
+	"license": "LGPLv3.0",
+	"engines": {
+		"node": "*"
+	},
+	"dependencies": {
+		"vscode-languageserver": "^6.1.1",
+		"vscode-languageserver-textdocument": "^1.0.1"
+	},
+	"scripts": {}
+}

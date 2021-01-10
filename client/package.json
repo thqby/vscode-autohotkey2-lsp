@@ -1,0 +1,16 @@
+{
+	"name": "vscode-autohotkey2-client",
+	"description": "VSCode part of a language server",
+	"license": "MIT",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.43.0"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^6.1.3"
+	},
+	"devDependencies": {
+		"@types/vscode": "1.43.0",
+		"vscode-test": "^1.3.0"
+	}
+}
