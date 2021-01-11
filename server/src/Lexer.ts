@@ -610,7 +610,7 @@ export class Lexer {
                 let cache = [], rg, vr, byref = false;
                 if (paramsdef)
                     while (nexttoken()) {
-                        if (tk.content === ')') { if ((--pairnum) < 0) break; } else if (tk.content === '(') pairnum++;
+                        if (tk.content === ')') { if ((--pairnum) < 0) break; } //else if (tk.content === '(') pairnum++;
                         else if (tk.type.indexOf('COMMENT') > -1) continue;
                         else if (tk.type === 'TK_WORD') {
                             addtext(tk);
@@ -632,6 +632,8 @@ export class Lexer {
                                         (<Variable>tn).defaultVal = tk.content, cache.push(tn), lk = tk, tk = get_token_ingore_comment(comment = '');
                                         if (tk.type === 'TK_COMMA') continue; else if (tk.content === ')' && ((--pairnum) < 0)) break; else { paramsdef = false, next = false; break; }
                                     } else { paramsdef = false, next = false; break; }
+                                } else if (tk.content === '*') {
+                                    continue;
                                 } else if (tk.content === '(') {
                                     next = false, paramsdef = false, parser_pos = lk.offset + lk.length, tk = lk; break;
                                 } else { paramsdef = false, next = false; addvariable(lk, mode); break; }
@@ -643,6 +645,8 @@ export class Lexer {
                             } else {
                                 paramsdef = false, next = false; break;
                             }
+                        // } else if (tk.content === '=>') {
+
                         } else {
                             paramsdef = false, next = false; break;
                         }
