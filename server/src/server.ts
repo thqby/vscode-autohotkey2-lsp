@@ -142,18 +142,14 @@ enum docLangName {
 };
 
 interface AHKLSSettings {
-	ahkpath: string;
-	maxNumberOfProblems: number;
-	documentLanguage: docLangName;			// which language doc to be used
+	path: string;
 }
 
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
 // Please note that this is not the case when using this server with the client provided in this example
 // but could happen with other clients.
 const defaultSettings: AHKLSSettings = {
-	ahkpath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey.exe',
-	maxNumberOfProblems: 1000,
-	documentLanguage: docLangName.NO
+	path: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe'
 };
 export let globalSettings: AHKLSSettings = defaultSettings;
 
@@ -183,7 +179,7 @@ connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] 
 		gv[key.toLowerCase()] = glo[key];
 		if (glo[key].kind === SymbolKind.Variable) gvar.push(glo[key]);
 	}
-	return (treedict[uri].cache = flatTree(tree, gv).concat(gvar)).map(info => {
+	return (treedict[uri].cache = flatTree(tree, gv)).map(info => {
 		return SymbolInformation.create(info.name, info.kind, info.range, uri, info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
 	});
 });
@@ -216,7 +212,7 @@ connection.onHover(async (params: HoverParams, token: CancellationToken): Promis
 			if (value)
 				return { contents: { language: 'ahk2', value: value } };
 		}
-		if (typeof kind === 'object' && (hoverCache[1][word])) return hoverCache[0][word][0];
+		if (typeof kind === 'object') { if (hoverCache[1][word]) return hoverCache[0][word][0]; }
 		else if (kind === SymbolKind.Function) {
 			if (hoverCache[0][word]) return hoverCache[0][word][0];
 		} else if (kind === SymbolKind.Method) {
@@ -534,18 +530,19 @@ export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for every validate run.
 	let result = await getDocumentSettings(textDocument.uri.toLowerCase());
-	globalSettings.ahkpath = pathenv.ahkpath = result.ahkpath;
+	if (result)
+		globalSettings.path = pathenv.ahkpath = result.path;
 }
 
 async function initpathenv(doc: Lexer) {
 	let result = await connection.workspace.getConfiguration('Autohotkey2LanguageServer');
-	globalSettings.ahkpath = result.ahkpath;
+	globalSettings.path = result.path;
 	runscript(`#NoTrayIcon\nfor _,p in [A_AhkPath,A_Desktop,A_Programs,A_ProgramFiles,A_MyDocuments]\nFileAppend(p "\`n", "*")`, (data: string) => {
 		let paths = data.trim().split('\n'), s = ['ahkpath', 'desktop', 'programs', 'programfiles', 'mydocuments'];
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].replace(/\\/g, '/').toLowerCase();
 		doc.parseScript(), parseinclude(doc.includetable);
-		pathenv.ahkpath = result.ahkpath;
+		pathenv.ahkpath = result.path;
 	});
 }
 
@@ -565,13 +562,16 @@ async function parseinclude(include: { [uri: string]: { url: string, path: strin
 		}
 	}
 }
-function flatTree(tree: DocumentSymbol[], vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
-	let result: DocumentSymbol[] = [];
+function flatTree(tree: DocumentSymbol[], superglobal: { [key: string]: DocumentSymbol }, vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
+	const result: DocumentSymbol[] = [], t: DocumentSymbol[] = [];
 	tree.map(info => {
 		if (info.kind === SymbolKind.Variable || info.kind === SymbolKind.Property) {
 			let nm_l = info.name.toLowerCase();
 			if (!vars[nm_l]) { vars[nm_l] = info; if (!global) result.push(info); }
-		} else result.push(info);
+		} else if (info.children) t.push(info); else result.push(info);
+	});
+	t.map(info => {
+		result.push(info);
 		if (info.children) {
 			let inherit: { [key: string]: DocumentSymbol } = {}, gg = false;
 			if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Method) {
@@ -580,13 +580,22 @@ function flatTree(tree: DocumentSymbol[], vars: { [key: string]: DocumentSymbol 
 				for (const k in s.global) inherit[k] = s.global[k];
 				for (const k in s.local) inherit[k] = s.local[k], result.push(inherit[k]);
 				(<FuncNode>info).params?.map(it => inherit[it.name.toLowerCase()] = it);
-				(<FuncNode>info).variables?.map(it => (result.push(it), inherit[it.name.toLowerCase()] = it));
-				if (!(s.assume & FuncScope.LOCAL))
-					for (const k in vars) inherit[k] = vars[k];
-				if (s.assume === FuncScope.GLOBAL) gg = true;
+				if (s && s.assume === FuncScope.GLOBAL) {
+					gg = true;
+					for (const k in superglobal) if (!inherit[k]) inherit[k] = superglobal[k];
+				} else if (s && (s.assume & FuncScope.LOCAL)) {
+					// for (const k in vars) if (!inherit[k]) inherit[k] = vars[k];
+				} else {
+					gg = global;
+					for (const k in superglobal) if (!inherit[k]) inherit[k] = superglobal[k];
+					if (vars['#parent']) for (const k in vars) if (!inherit[k]) inherit[k] = vars[k];
+				}
 				inherit['#parent'] = info;
+			} else if (info.kind === SymbolKind.Class) {
+				inherit['#parent'] = info;
+				inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
 			}
-			result.push(...flatTree(info.children, inherit, gg));
+			result.push(...flatTree(info.children, superglobal, inherit, gg));
 		}
 	});
 	return result;

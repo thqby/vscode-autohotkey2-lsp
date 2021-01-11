@@ -3,7 +3,7 @@ import { globalSettings } from './server';
 import * as fs from 'fs';
 
 export function runscript(script: string, out: Function | undefined = undefined): boolean {
-	let executePath = globalSettings.ahkpath;
+	let executePath = globalSettings.path;
 	if (fs.existsSync(executePath)) {
 		const process = child_process.spawn(`\"${executePath}\" /CP65001 /ErrorStdOut *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true });
 		process.stdin.write(script);
