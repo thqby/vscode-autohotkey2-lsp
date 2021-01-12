@@ -115,5 +115,8 @@
 		"eslint": "^6.4.0",
 		"@typescript-eslint/parser": "^2.3.0",
 		"typescript": "^3.9.4"
+	},
+	"dependencies": {
+		"vsce": "^1.83.0"
 	}
 }

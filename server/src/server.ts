@@ -63,7 +63,7 @@ let hasWorkspaceFolderCapability: boolean = false;
 let hasDiagnosticRelatedInformationCapability: boolean = false;
 // let keyWordCompletions: CompletionItem[] = buildKeyWordCompletions();
 // let builtinVariableCompletions: CompletionItem[] = buildbuiltin_variable();
-let treedict: { [key: string]: Lexer } = {};
+let doctree: { [key: string]: Lexer } = {};
 let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [] };
 let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], funcCache: { [key: string]: { prefix: string, body: string, description?: string } } = {};
 let nodecache: { [key: string]: { uri: string, line: number, character: number, ruri: string, node: DocumentSymbol } } = {};
@@ -142,14 +142,14 @@ enum docLangName {
 };
 
 interface AHKLSSettings {
-	path: string;
+	Path: string;
 }
 
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
 // Please note that this is not the case when using this server with the client provided in this example
 // but could happen with other clients.
 const defaultSettings: AHKLSSettings = {
-	path: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe'
+	Path: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe'
 };
 export let globalSettings: AHKLSSettings = defaultSettings;
 
@@ -171,7 +171,7 @@ connection.onDidChangeConfiguration(async change => {
 });
 
 connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] => {
-	let uri = params.textDocument.uri.toLowerCase(), doc = treedict[uri], glo = doc.root.statement.global;
+	let uri = params.textDocument.uri.toLowerCase(), doc = doctree[uri], glo = doc.root.statement.global;
 	let tree = <DocumentSymbol[]>doc.symboltree, gv: { [key: string]: DocumentSymbol } = {}, gvar = [];
 	for (const key of ['gui', 'menu', 'menubar', 'class', 'array', 'map', 'object', 'guicontrol'])
 		gv[key] = DocumentSymbol.create(key, undefined, SymbolKind.Class, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
@@ -179,7 +179,7 @@ connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] 
 		gv[key.toLowerCase()] = glo[key];
 		if (glo[key].kind === SymbolKind.Variable) gvar.push(glo[key]);
 	}
-	return (treedict[uri].cache = flatTree(tree, gv)).map(info => {
+	return (doctree[uri].cache = flatTree(tree, gv)).map(info => {
 		return SymbolInformation.create(info.name, info.kind, info.range, uri, info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
 	});
 });
@@ -187,7 +187,7 @@ connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] 
 connection.onHover(async (params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> => {
 	if (token.isCancellationRequested)
 		return undefined;
-	let uri = params.textDocument.uri.toLowerCase(), docLexer = treedict[uri], context = docLexer.buildContext(params.position), value = '';
+	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], context = docLexer.buildContext(params.position), value = '';
 	if (context) {
 		let word = context.text.toLowerCase(), kind: SymbolKind | SymbolKind[] = SymbolKind.Variable, node: DocumentSymbol | null, hover: Hover | undefined;
 		if (context.pre === '#') {
@@ -200,8 +200,8 @@ connection.onHover(async (params: HoverParams, token: CancellationToken): Promis
 		node = docLexer.searchNode(word, context.range.end, kind);
 		if (!node) {
 			let pos = Position.create(0, 0);
-			for (let u in treedict)
-				if (u !== uri && (node = treedict[u].searchNode(word, pos, kind))) {
+			for (let u in doctree)
+				if (u !== uri && (node = doctree[u].searchNode(word, pos, kind))) {
 					uri = u;
 					break;
 				}
@@ -224,7 +224,7 @@ connection.onHover(async (params: HoverParams, token: CancellationToken): Promis
 
 connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> => {
 	if (cancellation.isCancellationRequested) return undefined;
-	let docLexer = treedict[params.textDocument.uri.toLowerCase()], offset = docLexer.document.offsetAt(params.position);
+	let docLexer = doctree[params.textDocument.uri.toLowerCase()], offset = docLexer.document.offsetAt(params.position);
 	let func: DocumentSymbol | undefined, same = false, off = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
 	for (const item of docLexer.root.funccall) {
 		const start = docLexer.document.offsetAt(item.range.start), end = docLexer.document.offsetAt(item.range.end);
@@ -252,8 +252,8 @@ connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: Can
 		node = docLexer.searchNode(name, pos, kind);
 		if (!node) {
 			let p = Position.create(0, 0);
-			for (let u in treedict)
-				if (u !== uri && (node = treedict[u].searchNode(name, p, kind))) {
+			for (let u in doctree)
+				if (u !== uri && (node = doctree[u].searchNode(name, p, kind))) {
 					uri = u; break;
 				}
 		}
@@ -295,7 +295,7 @@ connection.onDefinition(async (params: DefinitionParams, token: CancellationToke
 	if (token.isCancellationRequested) {
 		return undefined;
 	}
-	let uri = params.textDocument.uri.toLowerCase(), docLexer = treedict[uri], context = docLexer.buildContext(params.position), m: any;
+	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], context = docLexer.buildContext(params.position), m: any;
 	if (context) {
 		let word = '', kind: SymbolKind | SymbolKind[] = SymbolKind.Variable, node: DocumentSymbol | null, cache = nodecache.hover;
 		if (context.pre.match(/^\s*#/i)) {
@@ -312,8 +312,8 @@ connection.onDefinition(async (params: DefinitionParams, token: CancellationToke
 		node = docLexer.searchNode(word, context.range.end, kind);
 		if (!node) {
 			let pos = Position.create(0, 0);
-			for (let u in treedict)
-				if (u !== uri && (node = treedict[u].searchNode(word, pos, kind))) {
+			for (let u in doctree)
+				if (u !== uri && (node = doctree[u].searchNode(word, pos, kind))) {
 					uri = u;
 					break;
 				}
@@ -325,7 +325,7 @@ connection.onDefinition(async (params: DefinitionParams, token: CancellationToke
 });
 
 connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancellation: CancellationToken): Promise<TextEdit[]> => {
-	let uri = params.textDocument.uri.toLowerCase(), docLexer = treedict[uri];
+	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri];
 	const opts = { "indent_size": "1", "indent_char": "\t", "max_preserve_newlines": "2", "preserve_newlines": true, "keep_array_indentation": true, "break_chained_methods": false, "indent_scripts": "keep", "brace_style": "collapse", "space_before_conditional": true, "wrap_line_length": "0", "space_after_anon_function": true, "jslint_happy": true };
 	if (params.options.insertSpaces) {
 		opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
@@ -336,8 +336,8 @@ connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancell
 });
 
 documents.onDidOpen(async e => {
-	let uri = e.document.uri.toLowerCase(), docLexer = treedict[uri];
-	if (!docLexer) docLexer = new Lexer(e.document), treedict[uri] = docLexer;
+	let uri = e.document.uri.toLowerCase(), docLexer = doctree[uri];
+	if (!docLexer) docLexer = new Lexer(e.document), doctree[uri] = docLexer;
 	else if (docLexer.document.version < 0) docLexer.document = e.document;
 	if (pathenv.ahkpath) docLexer.parseScript(), parseinclude(docLexer.includetable);
 	else initpathenv(docLexer);
@@ -347,21 +347,21 @@ documents.onDidOpen(async e => {
 documents.onDidClose(e => {
 	let uri = e.document.uri.toLowerCase();
 	documentSettings.delete(uri);
-	for (let u in treedict)
+	for (let u in doctree)
 		if (u !== uri) {
-			for (let f in treedict[u].includetable)
+			for (let f in doctree[u].includetable)
 				if (f === uri)
 					return;
 		}
-	delete treedict[uri];
+	delete doctree[uri];
 });
 
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
-	let uri = change.document.uri.toLowerCase(), docLexer = treedict[uri];
+	let uri = change.document.uri.toLowerCase(), docLexer = doctree[uri];
 	if (!docLexer)
-		docLexer = new Lexer(change.document), treedict[uri] = docLexer;
+		docLexer = new Lexer(change.document), doctree[uri] = docLexer;
 	docLexer.parseScript();
 	// parseinclude(docLexer.includetable);
 	validateTextDocument(change.document);
@@ -379,7 +379,7 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 	}
 	const { position, textDocument } = params, items: CompletionItem[] = [], { line, character } = position;
 	// const triggerKind = params.context?.triggerKind, triggerCharacter = params.context?.triggerCharacter;
-	let docLexer = treedict[textDocument.uri.toLowerCase()], content = docLexer.buildContext(position, false);
+	let docLexer = doctree[textDocument.uri.toLowerCase()], content = docLexer.buildContext(position, false);
 	let quote = '', char = '', percent = false, linetext = content.linetext, prechar = linetext.charAt(content.range.start.character - 1);
 	for (let i = 0; i < position.character; i++) {
 		char = linetext.charAt(i);
@@ -516,40 +516,51 @@ export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
 	if (!hasConfigurationCapability) {
 		return Promise.resolve(globalSettings);
 	}
-	let result = documentSettings.get(resource);
+	let result = documentSettings.get(resource.toLowerCase());
 	if (!result) {
 		result = connection.workspace.getConfiguration({
 			scopeUri: resource,
-			section: 'Autohotkey2LanguageServer'
+			section: 'AutoHotkey2'
 		});
-		documentSettings.set(resource, result);
+		documentSettings.set(resource.toLowerCase(), result);
 	}
 	return result;
 }
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for every validate run.
-	let result = await getDocumentSettings(textDocument.uri.toLowerCase());
+	let result = await getDocumentSettings(textDocument.uri);
 	if (result)
-		globalSettings.path = pathenv.ahkpath = result.path;
+		globalSettings.Path = pathenv.ahkpath = result.Path;
 }
 
 async function initpathenv(doc: Lexer) {
-	let result = await connection.workspace.getConfiguration('Autohotkey2LanguageServer');
-	globalSettings.path = result.path;
-	runscript(`#NoTrayIcon\nfor _,p in [A_AhkPath,A_Desktop,A_Programs,A_ProgramFiles,A_MyDocuments]\nFileAppend(p "\`n", "*")`, (data: string) => {
+	let result = await connection.workspace.getConfiguration('AutoHotkey2');
+	if (!result) return;
+	globalSettings.Path = result.Path;
+	let script = `
+	#NoTrayIcon
+	Append := SubStr(A_AhkVersion, 1, 3) = "2.0" ? "FileAppend" : "FileAppend2"
+	for _, p in [A_AhkPath,A_Desktop,A_Programs,A_ProgramFiles,A_MyDocuments] {
+		p .= "\`n", %Append%(p, "*")
+	}
+	FileAppend2(text, file) {
+		FileAppend %text%, %file%
+	}
+	`
+	let ret = runscript(script, (data: string) => {
 		let paths = data.trim().split('\n'), s = ['ahkpath', 'desktop', 'programs', 'programfiles', 'mydocuments'];
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].replace(/\\/g, '/').toLowerCase();
 		doc.parseScript(), parseinclude(doc.includetable);
-		pathenv.ahkpath = result.path;
 	});
+	if (!ret) connection.window.showErrorMessage('AutoHotkey可执行文件的路径不正确, 在"设置-AutoHotkey2.Path"中重新指定');
 }
 
 async function parseinclude(include: { [uri: string]: { url: string, path: string, raw: string } }) {
 	for (let uri in include) {
 		let path = include[uri].path;
-		if (!treedict[uri] && fs.existsSync(path)) {
+		if (!doctree[uri] && fs.existsSync(path)) {
 			let buf: any = fs.readFileSync(path);
 			if (buf[0] === 0xff && buf[1] === 0xfe)
 				buf = buf.toString('utf16le');
@@ -557,7 +568,7 @@ async function parseinclude(include: { [uri: string]: { url: string, path: strin
 				buf = buf.toString('utf8').substring(1);
 			else buf = buf.toString('utf8');
 			let doc = new Lexer(TextDocument.create(uri, 'ahk2', -10, buf));
-			treedict[uri] = doc;
+			doctree[uri] = doc;
 			doc.parseScript();
 		}
 	}

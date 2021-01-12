@@ -313,7 +313,7 @@ export class Lexer {
 						tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2));
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
 						lk = tk, tk = get_token_ingore_comment(comment = ''); if (tk.content === '{') sub = parse(1), tn.children = sub;
-						result.push(tn), next = false, lk = tk; break;
+						result.push(tn), next = false; break;
 					case 'TK_HOTLINE':
 						tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2));
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
@@ -367,14 +367,16 @@ export class Lexer {
 							if (!tn) _this.root.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
 						} else {
 							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) comment = trimcomment(lk.content); else comment = '';
-							let bak = lk;
+							let bak = lk, restore = false;
 							lk = tk, tk = get_next_token(), next = false;
+							if (!lk.topofline && (bak.type === 'TK_HOT' || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i)))) lk.topofline = restore = true;
 							if (!predot && (!lk.topofline || (tk.type === 'TK_OPERATOR' && tk.content.match(/=$|\?/)) || ['TK_EQUALS', 'TK_DOT'].includes(tk.type))) {
 								if (!lk.topofline && bak.type === 'TK_SHARP' && bak.content.match(/^#(MenuMaskKey|SingleInstance|Warn)/i)) break;
 								addvariable(lk, mode);
 							} else if (input.charAt(lk.offset + lk.length).match(/^(\s|)$/)) {
 								if (lk.topofline) {
 									let fc = lk, sub = parseline();
+									if (restore) lk.topofline = false;
 									result.push(...sub), _this.root.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
 									break;
 								} else if (predot && !((tk.type === 'TK_OPERATOR' && tk.content.match(/=$|\?/)) || ['TK_EQUALS', 'TK_DOT'].includes(tk.type))) {
@@ -1255,7 +1257,7 @@ export class Lexer {
 				if (line.indexOf('::') === -1) {
 
 				} else if (m = line.match(/^(:(\s|\*|\?|c[01]?|[pk]\d+|s[ipe]|[brto]0?|x|z)*:[\x09\x20-\x7E]+?::)(.*)$/i)) {
-					if (m[3].trim().match(/^\{\s*(\s;.*)?$/)) {
+					if (m[2].match(/[xX]/) || m[3].trim().match(/^\{\s*(\s;.*)?$/)) {
 						parser_pos += m[1].length - 1;
 						return createToken(m[1], 'TK_HOT', offset, m[1].length, true);
 					} else {

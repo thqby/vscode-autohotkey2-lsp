@@ -8,6 +8,9 @@ contributing.md
 .travis.yml
 src/**
 script/**
+node_modules/**
+testFixture/**
+scripts/**
 client/node_modules/**
 !client/node_modules/vscode-jsonrpc/**
 !client/node_modules/vscode-languageclient/**

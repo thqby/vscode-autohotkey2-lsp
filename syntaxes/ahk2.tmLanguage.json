@@ -662,7 +662,7 @@
     "funccallnotparens": {
       "patterns": [
         {
-          "match": "(?<=^\\s*|::\\s*)([[:alpha:]_][[:alnum:]_]*\\b(?<!^\\s*(?i:class)\\b))(?=$|\\s((?!(\\s*[+\\-*/^&:.|]?=|<<=|>>=|\\?|\\{))|$))",
+          "match": "(?<=^\\s*(?i:(try|else|finally)\\s+)?|::\\s*)([[:alpha:]_][[:alnum:]_]*\\b(?<!^\\s*(?i:class)\\b))(?=$|\\s((?!(\\s*[+\\-*/^&:.|]?=|<<=|>>=|\\?|\\{))|$))",
           "name": "entity.name.function.ahk2",
           "captures": {
             "0": {

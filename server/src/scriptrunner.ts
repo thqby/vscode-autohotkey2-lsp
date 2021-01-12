@@ -2,8 +2,8 @@ import * as child_process from 'child_process';
 import { globalSettings } from './server';
 import * as fs from 'fs';
 
-export function runscript(script: string, out: Function | undefined = undefined): boolean {
-	let executePath = globalSettings.path;
+export function runscript(script: string, out?: Function): boolean {
+	let executePath = globalSettings.Path;
 	if (fs.existsSync(executePath)) {
 		const process = child_process.spawn(`\"${executePath}\" /CP65001 /ErrorStdOut *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true });
 		process.stdin.write(script);
