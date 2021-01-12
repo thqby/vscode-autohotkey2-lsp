@@ -410,13 +410,24 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 					for (const it of constant) if (rg.test(it.label)) items.push(it);
 				}
 			}
-			let scopenode = docLexer.searchScopedNode(position), nodes: DocumentSymbol[] = docLexer.getScopeChildren(scopenode);
+			let scopenode = docLexer.searchScopedNode(position), nodes: DocumentSymbol[] = docLexer.getScopeChildren(scopenode), vars: { [key: string]: any } = {};
 			for (const item of nodes) {
-				if (item.kind === SymbolKind.Variable && item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character) continue;
+				if (item.kind === SymbolKind.Variable) {
+					if (item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character) continue;
+					vars[item.name.toLowerCase()] = true;
+				} else if (item.kind === SymbolKind.Class) vars[item.name.toLowerCase()] = true;
 				items.push(convertNodeCompletion(item));
 			}
 			if (!scopenode) {
-
+				let _low = '';
+				for (let t in docLexer.includetable) {
+					nodes = doctree[t.toLowerCase()].getScopeChildren();
+					for (const item of nodes) {
+						if (item.kind === SymbolKind.Variable || item.kind === SymbolKind.Class)
+							if (vars[_low = item.name.toLowerCase()]) continue; else vars[_low] = true;
+						items.push(convertNodeCompletion(item));
+					}
+				}
 			}
 			return items;
 	}
