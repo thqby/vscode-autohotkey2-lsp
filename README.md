@@ -36,7 +36,7 @@ AutoHotKey V2 语言支持 for VS Code
 
 ### 转到定义
 
-1. 支持跳转到方法和变量的定义位置.  
+1. 支持跳转到函数和变量的定义位置.  
 2. 用法: 按住 ctrl 然后移动鼠标到代码处点击.  
 
 ![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/gotoDefinition.png)
