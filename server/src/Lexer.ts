@@ -25,6 +25,7 @@ export enum FuncScope {
 
 export interface StateMent {
 	assume: FuncScope
+	closure?: boolean
 	global?: { [key: string]: Variable | DocumentSymbol }
 	local?: { [key: string]: Variable }
 	define?: { [key: string]: Variable }
@@ -122,7 +123,8 @@ export class Lexer {
 	public cache: DocumentSymbol[] = [];
 	public scriptpath: string;
 	public texts: { [key: string]: string } = {};
-	public includetable: { [uri: string]: { url: string, path: string, raw: string } } = {};
+	public include: { [uri: string]: { url: string, path: string, raw: string } } = {};
+	public relevance: { [uri: string]: { url: string, path: string, raw: string } } | undefined;
 	private reference: ReferenceInfomation[] = [];
 	document: TextDocument;
 	constructor(document: TextDocument) {
@@ -134,7 +136,7 @@ export class Lexer {
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
 		this.document = document, this.scriptpath = decodeURIComponent(document.uri).substring(8).replace(/\/[^\/]+$/, '').toLowerCase();
-		includetable = this.includetable, scriptpath = this.scriptpath;
+		includetable = this.include, scriptpath = this.scriptpath;
 
 		whitespace = "\n\r\t ".split(''), digits = '0123456789'.split(''), wordchar = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$'.split('');
 		punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >> << >>= <<= && &= | || ! ~ , : ? ^ ^= |= :: =>'.split(' ');
@@ -303,7 +305,7 @@ export class Lexer {
 						if (m = tk.content.match(/^\s*#include(again)?\s+(<.+>|(['"])[^;]+(\.ahk2?|\.ah2)?\3)/i)) {
 							raw = m[2].trim(), m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, scriptpath);
 							if (m === '') includedir = scriptpath; else if (m.match(/(>|\.ahk2?|\.ah2)$/)) includedir = m;
-							else m = pathanalyze(m, includedir + '/'), includetable[m.uri] = { url: m.url, path: m.path, raw };
+							else if (m = pathanalyze(m, includedir + '/')) includetable[m.uri] = { url: m.url, path: m.path, raw };
 						}
 						break;
 					case 'TK_LABEL':
@@ -342,7 +344,7 @@ export class Lexer {
 									let sub = parseline(), pars: { [key: string]: any } = {};
 									mode = storemode;
 									tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par);
-									tn.range.end = document.positionAt(lk.offset + lk.length);
+									tn.range.end = document.positionAt(lk.offset + lk.length), tn.statement.closure = mode === 0;
 									tn.children = []; for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) tn.children.push(sub[i]), sub.splice(i, 1); }
 									if (comm) tn.detail = comm; result.push(tn), result.push(...sub);
@@ -479,7 +481,7 @@ export class Lexer {
 									let sub = parseexp();
 									mode = storemode;
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par);
-									tn.range.end = document.positionAt(lk.offset + lk.length);
+									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).statement.closure = mode === 0;
 									for (const it of sub) result.push(it);
 								} else {
 									_this.root.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
@@ -589,7 +591,7 @@ export class Lexer {
 									let sub = parseexp(true), pars: { [key: string]: boolean } = {}, cds: DocumentSymbol[] = [];
 									for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) cds.push(sub[i]), sub.splice(i, 1); }
-									if (fc) result.push(FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, cds));
+									if (fc) result.push(tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, cds)), (<FuncNode>tn).statement.closure = mode === 0;
 									result.push(...sub);
 									return result;
 								} else {
@@ -725,7 +727,7 @@ export class Lexer {
 								if (nk.content === '=>') {
 									let sub = parseexp(true);
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par, sub);
-									tn.range.end = document.positionAt(lk.offset + lk.length), result.push(tn);
+									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).statement.closure = mode === 0, result.push(tn);
 								} else {
 									_this.root.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
 									next = false, lk = tk, tk = nk;
@@ -2221,15 +2223,15 @@ export class Lexer {
 		return { text: '', range: Range.create(position, position) };
 	}
 
-	public searchNode(name: string, position: Position, kind?: SymbolKind | SymbolKind[], root?: DocumentSymbol[])
+	public searchNode(name: string, position?: Position, kind?: SymbolKind | SymbolKind[], root?: DocumentSymbol[])
 		: DocumentSymbol | null {
-		let node: DocumentSymbol | null = null, temp: any, { line, character } = position, same = false;
+		let node: DocumentSymbol | null = null, temp: any, { line, character } = position || { line: 0, character: 0 }, same = false;
 		if (!root) root = this.symboltree;
 		if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
 
 		} else {
 			for (const item of root) {
-				if (((same = (item.range.start.line === item.range.end.line)) && item.range.start.line === line && character >= item.range.start.character && character <= item.range.end.character)
+				if (position && ((same = (item.range.start.line === item.range.end.line)) && item.range.start.line === line && character >= item.range.start.character && character <= item.range.end.character)
 					|| (!same && line >= item.range.start.line && line <= item.range.end.line)) {
 					if (iskinds(item.kind, kind) && item.name.toLowerCase() === name) {
 						for (const first of root) if (item.kind === first.kind && first.name.toLowerCase() === name) return node = first;
@@ -2297,7 +2299,8 @@ export class Lexer {
 	public getScopeChildren(scopenode?: DocumentSymbol) {
 		let p: DocumentSymbol | undefined, nodes: DocumentSymbol[] = [], it: DocumentSymbol, vars: { [key: string]: any } = {}, _l = '';
 		if (scopenode) {
-			for (it of (<FuncNode>scopenode).params) if (vars[_l = it.name.toLowerCase()]) continue; else vars[_l] = true, nodes.push(it);
+			if ((<FuncNode>scopenode).params)
+				for (it of (<FuncNode>scopenode).params) if (vars[_l = it.name.toLowerCase()]) continue; else vars[_l] = true, nodes.push(it);
 			if (scopenode.children) for (it of scopenode.children) {
 				if (it.kind === SymbolKind.Variable)
 					if (vars[_l = it.name.toLowerCase()]) continue; else vars[_l] = true;
@@ -2305,7 +2308,8 @@ export class Lexer {
 			}
 			p = (<FuncNode>scopenode).parent;
 			while (p && p.children && (p.kind === SymbolKind.Function || p.kind === SymbolKind.Method)) {
-				for (it of (<FuncNode>p).params) if (vars[_l = it.name.toLowerCase()]) continue; else vars[_l] = true, nodes.push(it);
+				if ((<FuncNode>p).params)
+					for (it of (<FuncNode>p).params) if (vars[_l = it.name.toLowerCase()]) continue; else vars[_l] = true, nodes.push(it);
 				for (it of p.children) {
 					if (it.kind === SymbolKind.Event) continue;
 					if (it.kind === SymbolKind.Variable)
@@ -2315,7 +2319,7 @@ export class Lexer {
 				scopenode = p, p = (<FuncNode>p).parent;
 			}
 			nodes.push(scopenode);
-			if (!((<FuncNode>scopenode).statement.assume & FuncScope.LOCAL))
+			if ((<FuncNode>scopenode).statement && !((<FuncNode>scopenode).statement.assume & FuncScope.LOCAL))
 				for (const key in this.root.statement.global)
 					if (vars[_l = (it = this.root.statement.global[key]).name.toLowerCase()]) continue; else vars[_l] = true, nodes.push(it);
 			return nodes;

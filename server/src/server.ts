@@ -53,28 +53,27 @@ export const serverName = 'mock-ahk-vscode';
 export const languageServer = 'ahk2-language-server';
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
-let connection = createConnection(ProposedFeatures.all);
-
-// Create a simple text document manager. 
-let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
-
-let hasConfigurationCapability: boolean = false;
-let hasWorkspaceFolderCapability: boolean = false;
+let connection = createConnection(ProposedFeatures.all), documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false;
 let hasDiagnosticRelatedInformationCapability: boolean = false;
-// let keyWordCompletions: CompletionItem[] = buildKeyWordCompletions();
-// let builtinVariableCompletions: CompletionItem[] = buildbuiltin_variable();
-let doctree: { [key: string]: Lexer } = {};
+let doctree: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
 let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [] };
 let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], funcCache: { [key: string]: { prefix: string, body: string, description?: string } } = {};
 let nodecache: { [key: string]: { uri: string, line: number, character: number, ruri: string, node: DocumentSymbol } } = {};
-let pathenv: { [key: string]: string } = {};
 let logger = connection.console.log;
-
 type Maybe<T> = T | undefined;
+
+interface AHKLSSettings {
+	Path: string;
+}
+
+const defaultSettings: AHKLSSettings = {
+	Path: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe'
+};
+export let globalSettings: AHKLSSettings = defaultSettings, documentSettings: Map<string, Thenable<AHKLSSettings>> = new Map();
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
-
 	// Does the client support the `workspace/configuration` request?
 	// If not, we fall back using global settings.
 	hasConfigurationCapability = !!(
@@ -135,27 +134,6 @@ connection.onInitialized(() => {
 	}
 });
 
-// The AHK Language Server settings
-enum docLangName {
-	CN = 'CN',
-	NO = 'no'		// No Doc
-};
-
-interface AHKLSSettings {
-	Path: string;
-}
-
-// The global settings, used when the `workspace/configuration` request is not supported by the client.
-// Please note that this is not the case when using this server with the client provided in this example
-// but could happen with other clients.
-const defaultSettings: AHKLSSettings = {
-	Path: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe'
-};
-export let globalSettings: AHKLSSettings = defaultSettings;
-
-// Cache the settings of all open documents
-let documentSettings: Map<string, Thenable<AHKLSSettings>> = new Map();
-
 connection.onDidChangeConfiguration(async change => {
 	if (hasConfigurationCapability) {
 		// Reset all cached document settings
@@ -165,9 +143,51 @@ connection.onDidChangeConfiguration(async change => {
 			(change.settings.languageServerExample || defaultSettings)
 		);
 	}
-
-	// Revalidate all open text documents
 	documents.all().forEach(validateTextDocument);
+});
+
+
+documents.onDidOpen(async e => {
+	let uri = e.document.uri.toLowerCase(), docLexer = doctree[uri];
+	if (!docLexer) docLexer = new Lexer(e.document), doctree[uri] = docLexer;
+	else docLexer.document = e.document;
+	if (pathenv.ahkpath) {
+		docLexer.parseScript(), parseinclude(docLexer.include);
+		if (!docLexer.relevance) docLexer.relevance = getincludetable(uri);
+	} else initpathenv(docLexer);
+});
+
+// Only keep settings for open documents
+documents.onDidClose(e => {
+	let uri = e.document.uri.toLowerCase();
+	documentSettings.delete(uri);
+	for (let u in doctree)
+		if (u !== uri)
+			for (let f in doctree[u].include) if (f === uri) return;
+	delete doctree[uri];
+});
+
+documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
+	let uri = change.document.uri.toLowerCase(), docLexer = doctree[uri];
+	if (!docLexer) docLexer = new Lexer(change.document), doctree[uri] = docLexer;
+	let initial = docLexer.include;
+	docLexer.parseScript(); // parseinclude(docLexer.includetable);
+	if (Object.keys(initial) !== Object.keys(docLexer.include)) docLexer.relevance = getincludetable(uri);
+	else for (const t in docLexer.include) if (!initial[t]) { docLexer.relevance = getincludetable(uri); break; };
+	validateTextDocument(change.document);
+});
+
+connection.onDidChangeWatchedFiles(_change => {
+	// Monitored files have change in VSCode
+	connection.console.log('We received an file change event');
+});
+
+connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancellation: CancellationToken): Promise<TextEdit[]> => {
+	let docLexer = doctree[params.textDocument.uri.toLowerCase()];
+	const opts = { "indent_size": "1", "indent_char": "\t", "max_preserve_newlines": "2", "preserve_newlines": true, "keep_array_indentation": true, "break_chained_methods": false, "indent_scripts": "keep", "brace_style": "collapse", "space_before_conditional": true, "wrap_line_length": "0", "space_after_anon_function": true, "jslint_happy": true };
+	if (params.options.insertSpaces) opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
+	let newText = docLexer.beautify(opts), range = Range.create(0, 0, docLexer.document.lineCount, 0);
+	return [{ range, newText }];
 });
 
 connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] => {
@@ -184,47 +204,78 @@ connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] 
 	});
 });
 
+function flatTree(tree: DocumentSymbol[], superglobal: { [key: string]: DocumentSymbol }, vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
+	const result: DocumentSymbol[] = [], t: DocumentSymbol[] = [];
+	tree.map(info => {
+		if (info.kind === SymbolKind.Variable || info.kind === SymbolKind.Property) {
+			let nm_l = info.name.toLowerCase();
+			if (!vars[nm_l]) { vars[nm_l] = info; if (!global) result.push(info); }
+		} else if (info.children) t.push(info); else result.push(info);
+	});
+	t.map(info => {
+		result.push(info);
+		if (info.children) {
+			let inherit: { [key: string]: DocumentSymbol } = {}, gg = false;
+			if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Method) {
+				let s = (<FuncNode>info).statement;
+				if (vars['#parent']) (<FuncNode>info).parent = vars['#parent'];
+				for (const k in s.global) inherit[k] = s.global[k];
+				for (const k in s.local) inherit[k] = s.local[k], result.push(inherit[k]);
+				(<FuncNode>info).params?.map(it => inherit[it.name.toLowerCase()] = it);
+				if (s && s.assume === FuncScope.GLOBAL) {
+					gg = true;
+					for (const k in superglobal) if (!inherit[k]) inherit[k] = superglobal[k];
+				} else if (s && (s.assume & FuncScope.LOCAL)) {
+					// for (const k in vars) if (!inherit[k]) inherit[k] = vars[k];
+				} else {
+					gg = global;
+					for (const k in superglobal) if (!inherit[k]) inherit[k] = superglobal[k];
+					if (vars['#parent']) for (const k in vars) if (!inherit[k]) inherit[k] = vars[k];
+				}
+				inherit['#parent'] = info;
+			} else if (info.kind === SymbolKind.Class) {
+				inherit['#parent'] = info;
+				inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
+			}
+			result.push(...flatTree(info.children, superglobal, inherit, gg));
+		}
+	});
+	return result;
+}
+
 connection.onHover(async (params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> => {
-	if (token.isCancellationRequested)
-		return undefined;
-	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], context = docLexer.buildContext(params.position), value = '';
+	if (token.isCancellationRequested) return undefined;
+	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], context = docLexer.buildContext(params.position), value = '', t: any;
 	if (context) {
-		let word = context.text.toLowerCase(), kind: SymbolKind | SymbolKind[] = SymbolKind.Variable, node: DocumentSymbol | null, hover: Hover | undefined;
+		let word = context.text.toLowerCase(), kind: SymbolKind | SymbolKind[] = SymbolKind.Variable, node: DocumentSymbol | null;
 		if (context.pre === '#') {
-			if (hoverCache[1][word = '#' + word]) return hoverCache[1][word][0];
-			return undefined;
+			if ((t = hoverCache[1]) && (t = t[word = '#' + word])) return t[0]; else return undefined;
 		} else if (context.pre.match(/\b(goto|break|continue)(\(\s*['"]|\s*)$/i)) {
 			kind = SymbolKind.Field, word = word + ':';
 		} else kind = context.kind;
 		if (kind === SymbolKind.Variable) kind = [SymbolKind.Variable, SymbolKind.Class];
-		node = docLexer.searchNode(word, context.range.end, kind);
-		if (!node) {
-			let pos = Position.create(0, 0);
-			for (let u in doctree)
-				if (u !== uri && (node = doctree[u].searchNode(word, pos, kind))) {
-					uri = u;
-					break;
-				}
+		if (!(node = docLexer.searchNode(word, context.range.end, kind))) {
+			let res = searchIncludeNode(uri, word, kind);
+			if (res) node = res.node, uri = res.uri;
 		}
 		if (node) {
 			value = ((node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) ? (<FuncNode>node).full + '\n' : '') + (node.detail ? node.detail : '');
 			nodecache.hover = { uri, line: params.position.line, character: context.range.end.character, ruri: uri, node };
-			if (value)
-				return { contents: { language: 'ahk2', value: value } };
+			if (value) return { contents: { language: 'ahk2', value: value } };
 		}
-		if (typeof kind === 'object') { if (hoverCache[1][word]) return hoverCache[0][word][0]; }
+		if (typeof kind === 'object') { if ((t = hoverCache[1]) && t[word]) return t[word][0]; }
 		else if (kind === SymbolKind.Function) {
-			if (hoverCache[0][word]) return hoverCache[0][word][0];
+			if ((t = hoverCache[0]) && t[word]) return t[word][0];
 		} else if (kind === SymbolKind.Method) {
 
 		}
 	}
 	return undefined;
-})
+});
 
 connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> => {
 	if (cancellation.isCancellationRequested) return undefined;
-	let docLexer = doctree[params.textDocument.uri.toLowerCase()], offset = docLexer.document.offsetAt(params.position);
+	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], offset = docLexer.document.offsetAt(params.position);
 	let func: DocumentSymbol | undefined, same = false, off = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
 	for (const item of docLexer.root.funccall) {
 		const start = docLexer.document.offsetAt(item.range.start), end = docLexer.document.offsetAt(item.range.end);
@@ -238,24 +289,16 @@ connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: Can
 		}
 	}
 	if (!func) return undefined;
-	offset = offset - off.start;
 	let text = docLexer.document.getText(func.range), tt: any, kind: SymbolKind = SymbolKind.Function;
-	let node: DocumentSymbol | null, uri = '', name = func.name.toLowerCase(), index = -1, signinfo: SignatureHelp;
-	signinfo = { activeSignature: 0, signatures: [], activeParameter: 0 }
-	if (pos.character > 0) {
-		let p = { line: pos.line, character: pos.character - 1 };
-		if (docLexer.document.getText(Range.create(p, pos)) === '.') kind = SymbolKind.Method;
-	}
-	if (kind === SymbolKind.Method) {
-		return undefined;
-	} else {
-		node = docLexer.searchNode(name, pos, kind);
-		if (!node) {
-			let p = Position.create(0, 0);
-			for (let u in doctree)
-				if (u !== uri && (node = doctree[u].searchNode(name, p, kind))) {
-					uri = u; break;
-				}
+	let node: DocumentSymbol | null, name = func.name.toLowerCase(), index = -1, signinfo: SignatureHelp;
+	offset = offset - off.start, signinfo = { activeSignature: 0, signatures: [], activeParameter: 0 }
+	if (pos.character > 0)
+		if (docLexer.document.getText(Range.create({ line: pos.line, character: pos.character - 1 }, pos)) === '.') kind = SymbolKind.Method;
+	if (kind === SymbolKind.Method) return undefined;
+	else {
+		if (!(node = docLexer.searchNode(name, pos, kind))) {
+			let res = searchIncludeNode(uri, name, kind);
+			if (res) node = res.node, uri = res.uri;
 		}
 		if (node) {
 			signinfo.signatures.push({
@@ -285,102 +328,42 @@ connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: Can
 	}
 	if (offset > func.name.length) index += 1;
 	for (let i = func.name.length + 1; i < offset; i++)
-		if (text.charAt(i) === ',') index++;
-		else if (text.charAt(i) === ')' && i >= text.length - 1) { index = maxparam; break; }
+		if (text.charAt(i) === ',') index++; else if (text.charAt(i) === ')' && i >= text.length - 1) { index = maxparam; break; }
 	signinfo.activeParameter = index < 0 ? maxparam : index;
 	return signinfo;
 })
 
 connection.onDefinition(async (params: DefinitionParams, token: CancellationToken): Promise<Definition | LocationLink[] | undefined> => {
-	if (token.isCancellationRequested) {
-		return undefined;
-	}
+	if (token.isCancellationRequested) return undefined;
 	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], context = docLexer.buildContext(params.position), m: any;
 	if (context) {
 		let word = '', kind: SymbolKind | SymbolKind[] = SymbolKind.Variable, node: DocumentSymbol | null, cache = nodecache.hover;
 		if (context.pre.match(/^\s*#/i)) {
 			if (m = context.linetext.match(/^(\s*#include(again)?\s+)(<.+>|(['"]?).+\.(ahk2?|ah2)\4)/i)) {
 				let line = context.range.start.line;
-				for (let t in docLexer.includetable)
-					if (docLexer.includetable[t].raw === m[3])
+				for (let t in docLexer.include)
+					if (docLexer.include[t].raw === m[3])
 						return [LocationLink.create(t, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0), Range.create(line, m[1].length, line, m[0].length))];
 			} return undefined;
 		} else if (context.pre.match(/\b(goto|break|continue)(\(\s*['"]|\s*)$/i) || (context.pre.trim() === '' && context.suf.match(/^:\s*(\s;.*)?$/))) {
 			kind = SymbolKind.Field, word = context.text.toLowerCase() + ':';
 		} else word = context.text.toLowerCase(), kind = context.kind;
 		if (kind === SymbolKind.Variable) kind = [SymbolKind.Variable, SymbolKind.Class];
-		node = docLexer.searchNode(word, context.range.end, kind);
-		if (!node) {
-			let pos = Position.create(0, 0);
-			for (let u in doctree)
-				if (u !== uri && (node = doctree[u].searchNode(word, pos, kind))) {
-					uri = u;
-					break;
-				}
+		if (!(node = docLexer.searchNode(word, context.range.end, kind))) {
+			let res = searchIncludeNode(uri, word, kind);
+			if (res) node = res.node, uri = res.uri;
 		}
-		if (node)
-			return Location.create(uri, node.selectionRange);
+		if (node) return Location.create(uri, node.selectionRange);
 	}
 	return undefined;
 });
 
-connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancellation: CancellationToken): Promise<TextEdit[]> => {
-	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri];
-	const opts = { "indent_size": "1", "indent_char": "\t", "max_preserve_newlines": "2", "preserve_newlines": true, "keep_array_indentation": true, "break_chained_methods": false, "indent_scripts": "keep", "brace_style": "collapse", "space_before_conditional": true, "wrap_line_length": "0", "space_after_anon_function": true, "jslint_happy": true };
-	if (params.options.insertSpaces) {
-		opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
-	}
-	let newText = docLexer.beautify(opts);
-	let range = Range.create(0, 0, docLexer.document.lineCount, 0);
-	return [{ range, newText }];
-});
-
-documents.onDidOpen(async e => {
-	let uri = e.document.uri.toLowerCase(), docLexer = doctree[uri];
-	if (!docLexer) docLexer = new Lexer(e.document), doctree[uri] = docLexer;
-	else if (docLexer.document.version < 0) docLexer.document = e.document;
-	if (pathenv.ahkpath) docLexer.parseScript(), parseinclude(docLexer.includetable);
-	else initpathenv(docLexer);
-});
-
-// Only keep settings for open documents
-documents.onDidClose(e => {
-	let uri = e.document.uri.toLowerCase();
-	documentSettings.delete(uri);
-	for (let u in doctree)
-		if (u !== uri) {
-			for (let f in doctree[u].includetable)
-				if (f === uri)
-					return;
-		}
-	delete doctree[uri];
-});
-
-// The content of a text document has changed. This event is emitted
-// when the text document first opened or when its content has changed.
-documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
-	let uri = change.document.uri.toLowerCase(), docLexer = doctree[uri];
-	if (!docLexer)
-		docLexer = new Lexer(change.document), doctree[uri] = docLexer;
-	docLexer.parseScript();
-	// parseinclude(docLexer.includetable);
-	validateTextDocument(change.document);
-});
-
-connection.onDidChangeWatchedFiles(_change => {
-	// Monitored files have change in VSCode
-	connection.console.log('We received an file change event');
-});
-
-// This handler provides the initial list of the completion items.
 connection.onCompletion(async (params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> => {
-	if (token.isCancellationRequested) {
-		return undefined;
-	}
-	const { position, textDocument } = params, items: CompletionItem[] = [], { line, character } = position;
+	if (token.isCancellationRequested) return undefined;
+	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, { line, character } = position;
 	// const triggerKind = params.context?.triggerKind, triggerCharacter = params.context?.triggerCharacter;
-	let docLexer = doctree[textDocument.uri.toLowerCase()], content = docLexer.buildContext(position, false);
-	let quote = '', char = '', percent = false, linetext = content.linetext, prechar = linetext.charAt(content.range.start.character - 1);
+	let uri = textDocument.uri.toLowerCase(), docLexer = doctree[uri], content = docLexer.buildContext(position, false), nodes: DocumentSymbol[];
+	let quote = '', char = '', _low = '', percent = false, linetext = content.linetext, prechar = linetext.charAt(content.range.start.character - 1);
 	for (let i = 0; i < position.character; i++) {
 		char = linetext.charAt(i);
 		if (quote === char) {
@@ -410,7 +393,8 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 					for (const it of constant) if (rg.test(it.label)) items.push(it);
 				}
 			}
-			let scopenode = docLexer.searchScopedNode(position), nodes: DocumentSymbol[] = docLexer.getScopeChildren(scopenode), vars: { [key: string]: any } = {};
+			let scopenode = docLexer.searchScopedNode(position);
+			nodes = docLexer.getScopeChildren(scopenode);
 			for (const item of nodes) {
 				if (item.kind === SymbolKind.Variable) {
 					if (item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character) continue;
@@ -418,14 +402,45 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 				} else if (item.kind === SymbolKind.Class) vars[item.name.toLowerCase()] = true;
 				items.push(convertNodeCompletion(item));
 			}
-			if (!scopenode) {
-				let _low = '';
-				for (let t in docLexer.includetable) {
-					nodes = doctree[t.toLowerCase()].getScopeChildren();
+			let list = docLexer.relevance, cpitem: CompletionItem, scope: FuncScope = FuncScope.GLOBAL;
+			if (scopenode) {
+				let s = (<FuncNode>scopenode).statement;
+				if (!s) scope = FuncScope.DEFAULT;
+				else if (s.assume & FuncScope.LOCAL) scope = FuncScope.LOCAL;
+				else if (s.assume !== FuncScope.GLOBAL) scope = FuncScope.DEFAULT;
+			}
+			if (scope === FuncScope.GLOBAL) {
+				for (const t in list) {
+					let path = list[t].path;
+					nodes = doctree[t].getScopeChildren();
 					for (const item of nodes) {
 						if (item.kind === SymbolKind.Variable || item.kind === SymbolKind.Class)
 							if (vars[_low = item.name.toLowerCase()]) continue; else vars[_low] = true;
-						items.push(convertNodeCompletion(item));
+						cpitem = convertNodeCompletion(item), cpitem.detail = `从'${path}'自动导入\n` + cpitem.detail;
+						items.push(cpitem);
+					}
+				}
+			} else if (scope === FuncScope.LOCAL) {
+				for (const t in list) {
+					let path = list[t].path;
+					nodes = doctree[t].getScopeChildren();
+					for (const item of nodes) {
+						if (item.kind === SymbolKind.Function)
+							cpitem = convertNodeCompletion(item), cpitem.detail = `从'${path}'自动导入\n` + cpitem.detail, items.push(cpitem);
+					}
+				}
+			} else {
+				for (const t in list) {
+					let glo = doctree[t].root.statement.global, path = list[t].path;
+					nodes = doctree[t].getScopeChildren();
+					for (const item of nodes) {
+						if (item.kind === SymbolKind.Function)
+							cpitem = convertNodeCompletion(item), cpitem.detail = `从'${path}'自动导入\n` + cpitem.detail, items.push(cpitem);
+					}
+					for (const name in glo) {
+						const item = glo[name];
+						if (vars[_low = name.toLowerCase()]) continue; else vars[_low] = true;
+						cpitem = convertNodeCompletion(item), cpitem.detail = `从'${path}'自动导入\n` + cpitem.detail, items.push(cpitem);
 					}
 				}
 			}
@@ -433,18 +448,25 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 	}
 });
 
-// This handler resolves additional information for the item selected in
-// the completion list.
 connection.onCompletionResolve(async (item: CompletionItem): Promise<CompletionItem> => item);
-
-// Make the text document manager listen on the connection
-// for open, change and close text document events
 documents.listen(connection);
-
-// Listen on the connection
 connection.listen();
 connection.console.log('Starting AHK Server');
 initAHKCache();
+
+export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
+	if (!hasConfigurationCapability) return Promise.resolve(globalSettings);
+	let result = documentSettings.get(resource.toLowerCase());
+	if (!result)
+		documentSettings.set(resource.toLowerCase(), result = connection.workspace.getConfiguration({ scopeUri: resource, section: 'AutoHotkey2' }));
+	return result;
+}
+
+async function validateTextDocument(textDocument: TextDocument): Promise<void> {
+	// In this simple example we get the settings for every validate run.
+	let result = await getDocumentSettings(textDocument.uri);
+	if (result) globalSettings.Path = pathenv.ahkpath = result.Path;
+}
 
 async function initAHKCache() {
 	const ahk2 = JSON.parse(fs.readFileSync(resolve(__dirname, '../../syntaxes/ahk2.json'), "UTF8"));
@@ -505,44 +527,21 @@ async function initAHKCache() {
 
 export function pathanalyze(path: string, workdir: string = '') {
 	let m: RegExpMatchArray | null, url = '', uri = '';
-	path = path.replace(/['"]/g, '').replace(/\\+/g, '/').toLowerCase();
+	path = path.replace(/['"]/g, '').toLowerCase();
 
 	if (path[0] === '<') {
-
+		return;
 	} else {
-		if (m = path.match(/%(a_[a-z]+)%/i)) {
+		if (m = path.match(/%(a_\w+)%/i)) {
 			let a_ = m[1].substring(2);
-			if (pathenv[a_])
-				path = path.replace(m[0], pathenv[a_]);
+			if (pathenv[a_]) path = path.replace(m[0], pathenv[a_]); else return;
 		}
 		if (path.indexOf(':') === -1)
-			path = workdir + path;
+			path = resolve(workdir, path).replace(/\\/g, '/');
 		url = 'file:///' + encodeURI(path);
 		uri = url.replace(/\/([a-z]):\//, '/$1%3a/');
 	}
 	return { url, uri, path };
-}
-
-export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
-	if (!hasConfigurationCapability) {
-		return Promise.resolve(globalSettings);
-	}
-	let result = documentSettings.get(resource.toLowerCase());
-	if (!result) {
-		result = connection.workspace.getConfiguration({
-			scopeUri: resource,
-			section: 'AutoHotkey2'
-		});
-		documentSettings.set(resource.toLowerCase(), result);
-	}
-	return result;
-}
-
-async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-	// In this simple example we get the settings for every validate run.
-	let result = await getDocumentSettings(textDocument.uri);
-	if (result)
-		globalSettings.Path = pathenv.ahkpath = result.Path;
 }
 
 async function initpathenv(doc: Lexer) {
@@ -563,15 +562,16 @@ async function initpathenv(doc: Lexer) {
 		let paths = data.trim().split('\n'), s = ['ahkpath', 'desktop', 'programs', 'programfiles', 'mydocuments'];
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].replace(/\\/g, '/').toLowerCase();
-		doc.parseScript(), parseinclude(doc.includetable);
+		doc.parseScript(), parseinclude(doc.include);
+		if (!doc.relevance) doc.relevance = getincludetable(doc.document.uri.toLowerCase());
 	});
 	if (!ret) connection.window.showErrorMessage('AutoHotkey可执行文件的路径不正确, 在"设置-AutoHotkey2.Path"中重新指定');
 }
 
 async function parseinclude(include: { [uri: string]: { url: string, path: string, raw: string } }) {
-	for (let uri in include) {
+	for (const uri in include) {
 		let path = include[uri].path;
-		if (!doctree[uri] && fs.existsSync(path)) {
+		if (!(doctree[uri]) && fs.existsSync(path)) {
 			let buf: any = fs.readFileSync(path);
 			if (buf[0] === 0xff && buf[1] === 0xfe)
 				buf = buf.toString('utf16le');
@@ -579,48 +579,10 @@ async function parseinclude(include: { [uri: string]: { url: string, path: strin
 				buf = buf.toString('utf8').substring(1);
 			else buf = buf.toString('utf8');
 			let doc = new Lexer(TextDocument.create(uri, 'ahk2', -10, buf));
-			doctree[uri] = doc;
-			doc.parseScript();
+			doctree[uri] = doc, doc.parseScript(), parseinclude(doc.include);
+			if (!doc.relevance) doc.relevance = getincludetable(uri);
 		}
 	}
-}
-function flatTree(tree: DocumentSymbol[], superglobal: { [key: string]: DocumentSymbol }, vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
-	const result: DocumentSymbol[] = [], t: DocumentSymbol[] = [];
-	tree.map(info => {
-		if (info.kind === SymbolKind.Variable || info.kind === SymbolKind.Property) {
-			let nm_l = info.name.toLowerCase();
-			if (!vars[nm_l]) { vars[nm_l] = info; if (!global) result.push(info); }
-		} else if (info.children) t.push(info); else result.push(info);
-	});
-	t.map(info => {
-		result.push(info);
-		if (info.children) {
-			let inherit: { [key: string]: DocumentSymbol } = {}, gg = false;
-			if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Method) {
-				let s = (<FuncNode>info).statement;
-				if (vars['#parent']) (<FuncNode>info).parent = vars['#parent'];
-				for (const k in s.global) inherit[k] = s.global[k];
-				for (const k in s.local) inherit[k] = s.local[k], result.push(inherit[k]);
-				(<FuncNode>info).params?.map(it => inherit[it.name.toLowerCase()] = it);
-				if (s && s.assume === FuncScope.GLOBAL) {
-					gg = true;
-					for (const k in superglobal) if (!inherit[k]) inherit[k] = superglobal[k];
-				} else if (s && (s.assume & FuncScope.LOCAL)) {
-					// for (const k in vars) if (!inherit[k]) inherit[k] = vars[k];
-				} else {
-					gg = global;
-					for (const k in superglobal) if (!inherit[k]) inherit[k] = superglobal[k];
-					if (vars['#parent']) for (const k in vars) if (!inherit[k]) inherit[k] = vars[k];
-				}
-				inherit['#parent'] = info;
-			} else if (info.kind === SymbolKind.Class) {
-				inherit['#parent'] = info;
-				inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
-			}
-			result.push(...flatTree(info.children, superglobal, inherit, gg));
-		}
-	});
-	return result;
 }
 
 function convertNodeCompletion(info: any): CompletionItem {
@@ -643,4 +605,24 @@ function convertNodeCompletion(info: any): CompletionItem {
 			ci.kind = CompletionItemKind.Text; break;
 	}
 	return ci;
+}
+
+function searchIncludeNode(fileuri: string, name: string, kind: SymbolKind[] | SymbolKind): { node: DocumentSymbol, uri: string } | undefined {
+	let node: DocumentSymbol | null, list = getincludetable(fileuri);
+	for (const uri in list) if (node = doctree[uri].searchNode(name, undefined, kind)) return { node, uri };
+}
+
+function getincludetable(fileuri: string) {
+	let list: { [uri: string]: any } = {}, count = 0, has = false, doc: Lexer, res: any = { list, count, main: '' };
+	for (const uri in doctree) {
+		list = {}, count = 0, has = (uri === fileuri), traverseinclude(doctree[uri].include);
+		if (has && count > res.count) res = { list, count, main: uri };
+	}
+	if (res.count) { delete res.list[fileuri]; return res.list; }
+	function traverseinclude(include: any) {
+		for (const uri in include) {
+			if (fileuri === uri) has = true;
+			if (doc = doctree[uri]) { if (!list[uri]) list[uri] = include[uri], count++; traverseinclude(doc.include); }
+		}
+	}
 }
