@@ -159,15 +159,14 @@ documents.onDidClose(e => {
 documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
 	let uri = change.document.uri.toLowerCase(), docLexer = doctree[uri];
 	if (!docLexer) docLexer = new Lexer(change.document), doctree[uri] = docLexer;
-	let initial = docLexer.include;
-	docLexer.parseScript(); // parseinclude(docLexer.includetable);
-	if (Object.keys(initial).length !== Object.keys(docLexer.include).length) docLexer.relevance = getincludetable(uri), resetrelevance();
-	else for (const t in docLexer.include) if (!initial[t]) { docLexer.relevance = getincludetable(uri), resetrelevance(); break; };
+	let initial = docLexer.include, cg = false;
+	docLexer.parseScript();
+	if (Object.keys(initial).length !== Object.keys(docLexer.include).length)
+		for (const t in docLexer.include) if (!initial[t]) { cg = true, initial[t] = docLexer.include[t]; }
+	if (!cg) return;
+	parseinclude(docLexer.include), resetrelevance();
 	function resetrelevance() {
-		for (const uri in initial) if (doctree[uri]) doctree[uri].relevance = getincludetable(uri); else {
-			let path = URI.parse(uri).fsPath, t: any = {}, raw = '';
-			t[uri] = { path, raw }, parseinclude(t);
-		}
+		for (const u in initial) if (doctree[u]) doctree[u].relevance = getincludetable(u);
 	}
 });
 
@@ -428,7 +427,7 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 					else if (s.assume !== FuncScope.GLOBAL) scope = FuncScope.DEFAULT;
 				}
 				completionItemCache.other.map(value => { if (value.kind !== CompletionItemKind.Text) items.push(value); });
-			} else items.push(...completionItemCache.other);			
+			} else items.push(...completionItemCache.other);
 			if (scope === FuncScope.GLOBAL) {
 				for (const name in (temp = docLexer.root.statement.global)) vars[name] = true, items.push(convertNodeCompletion(temp[name]));
 				for (const t in list) {

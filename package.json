@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "0.2.3",
+	"version": "0.2.4",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -104,6 +104,7 @@
 		"watch": "tsc -b -w",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
 		"test": "node ./client/out/test/runTest",
+		"patch": "npm version patch",
 		"publish": "vsce publish",
 		"package": "vsce package"
 	},
