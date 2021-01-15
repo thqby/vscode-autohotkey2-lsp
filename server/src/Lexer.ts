@@ -1,4 +1,6 @@
 import * as fs from 'fs';
+import { resolve } from 'path';
+import { argv0 } from 'process';
 import {
 	Position,
 	Range,
@@ -9,8 +11,10 @@ import {
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
+import { SemanticTokensBuilder } from 'vscode-languageserver/lib/sematicTokens.proposed';
+import { URI } from 'vscode-uri';
 import { builtin_variable } from './constants';
-import { pathanalyze } from './server';
+import { pathanalyze, libdirs } from './server';
 
 export interface AhkDoc {
 	statement: StateMent
@@ -25,10 +29,12 @@ export enum FuncScope {
 
 export interface StateMent {
 	assume: FuncScope
+	static?: boolean
 	closure?: boolean
-	global?: { [key: string]: Variable | DocumentSymbol }
+	global?: { [key: string]: Variable | ClassNode }
 	local?: { [key: string]: Variable }
 	define?: { [key: string]: Variable }
+	function?: { [key: string]: FuncNode }
 }
 
 export interface FuncNode extends DocumentSymbol {
@@ -50,6 +56,8 @@ export interface Word {
 
 export interface Variable extends DocumentSymbol {
 	byref?: boolean
+	static?: boolean
+	globalspace?: boolean
 	defaultVal?: string
 }
 
@@ -117,27 +125,30 @@ export namespace acorn {
 export class Lexer {
 	public beautify: Function;
 	public parseScript: Function;
+	public get_tokon: Function;
 	public symboltree: DocumentSymbol[] = [];
 	public blocks: DocumentSymbol[] | undefined;
 	public root: AhkDoc = { statement: { assume: FuncScope.DEFAULT }, include: [], children: [], funccall: [] };
 	public cache: DocumentSymbol[] = [];
 	public scriptpath: string;
+	public uri: string;
 	public texts: { [key: string]: string } = {};
 	public include: { [uri: string]: { url: string, path: string, raw: string } } = {};
 	public relevance: { [uri: string]: { url: string, path: string, raw: string } } | undefined;
+	public semantoken: SemanticTokensBuilder | undefined;
+	public libdirs: string[] = [];
+	public object: { method: { [key: string]: any }, property: { [key: string]: any } } = { method: {}, property: {} };
 	private reference: ReferenceInfomation[] = [];
 	document: TextDocument;
 	constructor(document: TextDocument) {
-		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { url: string, path: string, raw: string } };
+		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this;
 		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, _root_: DocumentSymbol[] = [];
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, tks: Token[] = [];
 		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string;;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
-		this.document = document, this.scriptpath = decodeURIComponent(document.uri).substring(8).replace(/\/[^\/]+$/, '').toLowerCase();
-		includetable = this.include, scriptpath = this.scriptpath;
-
+		this.document = document, this.scriptpath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath.replace(/\\[^\\]+$/, ''), this.initlibdirs();
 		whitespace = "\n\r\t ".split(''), digits = '0123456789'.split(''), wordchar = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$'.split('');
 		punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >> << >>= <<= && &= | || ! ~ , : ? ^ ^= |= :: =>'.split(' ');
 		line_starters = 'class,try,throw,return,global,local,static,if,switch,case,default,for,while,loop,continue,break,goto'.split(',');
@@ -166,6 +177,11 @@ export class Lexer {
 			'TK_HOTLINE': handle_unknown,
 			'TK_UNKNOWN': handle_unknown
 		};
+
+		this.get_tokon = function (offset?: number) {
+			if (offset !== undefined) parser_pos = offset;
+			return get_next_token();
+		}
 
 		this.beautify = function (options: any) {
 			/*jshint onevar:true */
@@ -283,29 +299,34 @@ export class Lexer {
 		};
 
 		this.parseScript = function (): void {
-			input = this.document.getText(), input_length = input.length, includedir = scriptpath, tks.length = 0;
+			input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, tks.length = 0;
 			whitespace_before_token = [], beginpos = 0, last_text = '', last_type = 'TK_BLOCK';
 			following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1, this.blocks = [];
-			this.root = { statement: { assume: FuncScope.DEFAULT, global: {}, define: {} }, include: [], children: [], funccall: [] };
-			for (let t in includetable) delete includetable[t];
+			let gg: any = {}, dd: any = {}, ff: any = {}, _low = '';
+			this.root = { statement: { assume: FuncScope.DEFAULT, global: gg, define: dd, function: ff }, include: [], children: [], funccall: [] };
+			this.object = { method: {}, property: {} };
+			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder;
 			this.symboltree = parse(), this.root.children = this.symboltree, this.symboltree.push(...this.blocks), this.blocks = undefined;
-			for (const it in this.root.statement.define) this.symboltree.push(this.root.statement.define[it]);
+			for (const it of this.symboltree)
+				if (it.kind === SymbolKind.Function) { if (!ff[_low = it.name.toLowerCase()]) ff[_low] = it; }
+				else if (it.kind === SymbolKind.Variable && !gg[_low = it.name.toLowerCase()]) dd[_low] = it;
+			// for (const it in this.root.statement.define) this.symboltree.push(this.root.statement.define[it]);
 		}
 
 		function parse(mode = 0, scopevar = new Map<string, any>()): DocumentSymbol[] {
 			const result: DocumentSymbol[] = [];
 			let tk: Token = { content: '', type: '', offset: 0, length: 0 }, lk: Token = tk, next: boolean = true, LF: number = 0;
-			let blocks = 0, includefiles: { [key: string]: { url: string, uri: string, path: string } }, findvar: 0 | 1 | 2 = 1;
-			let tn: DocumentSymbol | FuncNode | Variable | undefined, comment = '', sub: DocumentSymbol[];
-			if (mode === 0) _root_ = result;
+			let blocks = 0, tn: DocumentSymbol | FuncNode | Variable | undefined, comment = '', sub: DocumentSymbol[];
 			while (nexttoken()) {
 				switch (tk.type) {
 					case 'TK_SHARP':
 						let m: any, raw = '';
-						if (m = tk.content.match(/^\s*#include(again)?\s+(<.+>|(['"])[^;]+(\.ahk2?|\.ah2)?\3)/i)) {
-							raw = m[2].trim(), m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, scriptpath);
-							if (m === '') includedir = scriptpath; else if (m.match(/(>|\.ahk2?|\.ah2)$/)) includedir = m;
-							else if (m = pathanalyze(m, includedir + '/')) includetable[m.uri] = { url: m.url, path: m.path, raw };
+						if (m = tk.content.match(/^\s*#include(again)?\s+(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
+							raw = m[2].trim(), m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.libdirs[0]).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
+							if (m === '') includedir = _this.libdirs[0]; else {
+								m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir);
+								if (fs.statSync(m.path).isDirectory()) includedir = m.path; else includetable[m.uri] = { path: m.path, raw };
+							}
 						}
 						break;
 					case 'TK_LABEL':
@@ -332,7 +353,7 @@ export class Lexer {
 						addtext(tk);
 						let predot = (input.charAt(tk.offset - 1) === '.');
 						if (!predot && input.charAt(parser_pos) === '(') {
-							let comm = '';
+							let comm = '', isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
 							if (input.charAt(tk.offset - 1) === '.') continue;
 							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) comm = trimcomment(lk.content);
 							lk = tk, tk = { content: '(', offset: parser_pos, length: 1, type: 'TK_START_EXPR' }, parser_pos++;
@@ -341,17 +362,20 @@ export class Lexer {
 								if (nk.content === '=>') {
 									let storemode = mode;
 									mode = mode | 1;
-									let sub = parseline(), pars: { [key: string]: any } = {};
+									let sub = parseline(), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
 									mode = storemode;
 									tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par);
 									tn.range.end = document.positionAt(lk.offset + lk.length), tn.statement.closure = mode === 0;
-									tn.children = []; for (const it of par) pars[it.name.toLowerCase()] = true;
+									if (mode === 2) _this.object.method[_low] = _this.object.method[_low] || fc.content;
+									tn.statement.static = isstatic, tn.children = []; for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) tn.children.push(sub[i]), sub.splice(i, 1); }
 									if (comm) tn.detail = comm; result.push(tn), result.push(...sub);
 								} else if (nk.content === '{' && fc.topofline) {
-									let vars = new Map<string, any>();
+									let vars = new Map<string, any>(), _low = fc.content.toLowerCase();
 									sub = parse(mode | 1, vars);
 									tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, sub);
+									tn.statement.static = isstatic;
+									if (mode === 2) _this.object.method[_low] = _this.object.method[_low] || fc.content;
 									if (vars.has('#assume')) tn.statement.assume = vars.get('#assume');
 									for (const tp of ['global', 'local', 'define']) {
 										if (vars.has('#' + tp)) {
@@ -428,8 +452,9 @@ export class Lexer {
 						} else if (tk.type === 'TK_WORD') {
 							if (input.charAt(parser_pos) === '(') tk.topofline = true;
 							else {
+								let sta: any[];
 								next = false;
-								let sta = parsestatement();
+								sta = parsestatement();
 								if (_low === 'global') {
 									if (!scopevar.has('#global')) scopevar.set('#global', sta);
 									else (scopevar.get('#global')).push(...sta);
@@ -442,6 +467,8 @@ export class Lexer {
 									// sta.map(it=>_this.root.statement.global[it.name.toLowerCase()])
 									// sta.map(it => _this.root.statement.global[it.name.toLowerCase()] = _this.root.statement.global[it.name.toLowerCase()] || it)
 								} else {
+									if (mode === 2 && _low === 'static')
+										for (const it of sta) if (it.kind === SymbolKind.Property) it.static = true;
 									if (!scopevar.has('#local')) scopevar.set('#local', sta);
 									else (scopevar.get('#local')).push(...sta);
 								}
@@ -521,7 +548,7 @@ export class Lexer {
 			}
 
 			function parsestatement() {
-				let sta: DocumentSymbol[] = [], trg: Range;
+				let sta: DocumentSymbol[] | Variable[] = [], trg: Range;
 				loop:
 				while (nexttoken()) {
 					if (tk.topofline && !(['and', 'or'].includes(tk.content.toLowerCase()) || ['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type))) { next = false; break; }
@@ -746,9 +773,10 @@ export class Lexer {
 			}
 
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
-				if (token.ignore || builtin_variable.includes(token.content.toLowerCase()) || ((md & 2) && ['this', 'super'].includes(token.content.toLowerCase()))) return false;
+				let _low = token.content.toLowerCase();
+				if (token.ignore || builtin_variable.includes(_low) || ((md & 2) && ['this', 'super'].includes(token.content.toLowerCase()))) return false;
 				let rg = makerange(token.offset, token.length), tn = Variable.create(token.content, md === 2 ? SymbolKind.Property : SymbolKind.Variable, rg, rg);
-				if (comment) tn.detail = comment;
+				if (comment) tn.detail = comment; if (md === 0) tn.globalspace = true; else if (md === 2) _this.object.property[_low] = _this.object.property[_low] || token.content;
 				if (p) p.push(tn); else result.push(tn); return true;
 			}
 
@@ -2332,5 +2360,13 @@ export class Lexer {
 			}
 			return nodes;
 		}
+	}
+
+	public initlibdirs() {
+		const workfolder = resolve().toLowerCase();
+		if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.indexOf(workfolder) !== -1) {
+			this.libdirs = [workfolder.replace(/\\lib$/, '') + '\\lib'];
+		} else this.libdirs = [this.scriptpath.replace(/\\lib$/, '') + '\\lib'];
+		for (const t of libdirs) if (this.libdirs[0] !== t.toLowerCase()) this.libdirs.push(t);
 	}
 }

@@ -6,9 +6,7 @@
 import * as path from 'path';
 import { 
 	workspace, 
-	ExtensionContext,
-	DocumentSelector,
-	languages
+	ExtensionContext
 } from 'vscode';
 
 import {

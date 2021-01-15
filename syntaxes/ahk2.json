@@ -2778,11 +2778,6 @@
 				"prefix": ".New"
 			},
 			{
-				"body": ".New()",
-				"description": "创建一个新的Menu或MenuBar对象.",
-				"prefix": ".New"
-			},
-			{
 				"body": ".Add(${1:[MenuItemName, Callback-or-Submenu, Options]})",
 				"description": "添加或修改菜单项.",
 				"prefix": ".Add"
