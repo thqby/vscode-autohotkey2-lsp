@@ -137,6 +137,7 @@ export class Lexer {
 	public relevance: { [uri: string]: { url: string, path: string, raw: string } } | undefined;
 	public semantoken: SemanticTokensBuilder | undefined;
 	public libdirs: string[] = [];
+	public includedir: Map<number, string> = new Map();
 	public object: { method: { [key: string]: any }, property: { [key: string]: any } } = { method: {}, property: {} };
 	private reference: ReferenceInfomation[] = [];
 	document: TextDocument;
@@ -304,7 +305,7 @@ export class Lexer {
 			following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1, this.blocks = [];
 			let gg: any = {}, dd: any = {}, ff: any = {}, _low = '';
 			this.root = { statement: { assume: FuncScope.DEFAULT, global: gg, define: dd, function: ff }, include: [], children: [], funccall: [] };
-			this.object = { method: {}, property: {} };
+			this.object = { method: {}, property: {} }, this.includedir = new Map();
 			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder;
 			this.symboltree = parse(), this.root.children = this.symboltree, this.symboltree.push(...this.blocks), this.blocks = undefined;
 			for (const it of this.symboltree)
@@ -322,10 +323,11 @@ export class Lexer {
 					case 'TK_SHARP':
 						let m: any, raw = '';
 						if (m = tk.content.match(/^\s*#include(again)?\s+(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
-							raw = m[2].trim(), m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.libdirs[0]).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
+							raw = (m[2] || '').trim(), m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.libdirs[0]).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
+							_this.includedir.set(_this.document.positionAt(tk.offset).line, includedir);
 							if (m === '') includedir = _this.libdirs[0]; else {
 								m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir);
-								if (fs.statSync(m.path).isDirectory()) includedir = m.path; else includetable[m.uri] = { path: m.path, raw };
+								if (fs.existsSync(m.path)) if (fs.statSync(m.path).isDirectory()) includedir = m.path; else includetable[m.uri] = { path: m.path, raw };
 							}
 						}
 						break;

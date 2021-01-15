@@ -43,7 +43,6 @@ import {
 } from 'vscode-languageserver-textdocument';
 import { Lexer, ClassNode, FuncNode, Variable, Word, FuncScope } from './Lexer'
 import { runscript } from './scriptrunner';
-import { type } from 'os';
 
 export const serverName = 'mock-ahk-vscode';
 export const languageServer = 'ahk2-language-server';
@@ -53,7 +52,7 @@ export let libdirs: string[] = [];
 let connection = createConnection(ProposedFeatures.all), documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false;
 let hasDiagnosticRelatedInformationCapability: boolean = false;
-let doctree: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string | string[] } = {};
+let doctree: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
 let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [] };
 let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], funcCache: { [key: string]: { prefix: string, body: string, description?: string } } = {};
 let nodecache: { [key: string]: { uri: string, line: number, character: number, ruri: string, node: DocumentSymbol } } = {};
@@ -128,6 +127,7 @@ connection.onInitialized(() => {
 			connection.console.log('Workspace folder change event received.');
 		});
 	}
+	initpathenv();
 });
 
 connection.onDidChangeConfiguration(async change => {
@@ -142,7 +142,6 @@ documents.onDidOpen(async e => {
 	let uri = e.document.uri.toLowerCase(), docLexer = doctree[uri];
 	if (!docLexer) docLexer = new Lexer(e.document), doctree[uri] = docLexer;
 	else docLexer.document = e.document;
-	if (!pathenv.ahkpath) initpathenv();
 	docLexer.parseScript(), parseinclude(docLexer.include);
 	if (!docLexer.relevance) docLexer.relevance = getincludetable(uri);
 });
@@ -372,7 +371,7 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 			return items;
 		case '.':
 			items.push(...completionItemCache.method);
-			let obj: any, objs = [docLexer.object];
+			let objs = [docLexer.object];
 			for (const uri in list) objs.push(doctree[uri].object);
 			for (const obj of objs) for (const it in obj['property'])
 				if (!vars[it]) vars[it] = true, cpitem = CompletionItem.create(obj['property'][it]), cpitem.kind = CompletionItemKind.Property, items.push(cpitem);
@@ -382,6 +381,29 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 		default:
 			if (percent) {
 				completionItemCache.other.map(value => { if (value.kind !== CompletionItemKind.Text) items.push(value); });
+			} else if (linetext.match(/^\s*#include/i)) {
+				let tt = linetext.replace(/^\s*#include(again)?\s+/i, '').replace(/\s*\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
+				let pre = linetext.substring(linetext.length - tt.length, position.character);
+				if (pre.charAt(0).match(/['"<]/)) {
+					if (pre.substring(1).match(/['">]/)) return;
+					else {
+						if ((lchar = pre.charAt(0)) === '<') inlib = true, paths = docLexer.libdirs; else if (temp = docLexer.includedir.get(position.line)) paths = [temp]; else paths = [docLexer.scriptpath];
+						pre = pre.substring(1), lchar = lchar === '<' ? '>' : lchar;
+						if (linetext.substring(position.character).indexOf(lchar) !== -1) lchar = '';
+					}
+				} else if (pre.match(/\s+;/)) return;
+				pre = pre.replace(/[^\\/]*$/, '');
+				for (let path of paths) {
+					if (!fs.existsSync(path = resolve(path, pre) + '\\')) continue;
+					for (const it of fs.readdirSync(path)) {
+						if (fs.statSync(path + it).isDirectory()) cpitem = CompletionItem.create(it), cpitem.kind = CompletionItemKind.Folder, items.push(cpitem);
+						else {
+							if (inlib) { if (it.match(/\.ahk/i)) cpitem = CompletionItem.create(it.replace(/\.ahk/i, '')), cpitem.kind = CompletionItemKind.File, items.push(cpitem); }
+							else if (it.match(/\.(ahk2?|ah2)$/i)) cpitem = CompletionItem.create(it), cpitem.kind = CompletionItemKind.File, items.push(cpitem);
+						}
+					}
+				}
+				return items;
 			} else if (quote) {
 				completionItemCache.other.map(value => { if (value.kind === CompletionItemKind.Text) items.push(value); });
 				return items;
@@ -553,19 +575,26 @@ async function initpathenv(config?: any) {
 	let script = `
 	#NoTrayIcon
 	Append := SubStr(A_AhkVersion, 1, 3) = "2.0" ? "FileAppend" : "FileAppend2"
-	for _, p in [A_AhkPath,A_Desktop,A_Programs,A_ProgramFiles,A_MyDocuments] {
-		p .= "\`n", %Append%(p, "*")
-	}
+	for _, p in [A_MyDocuments,A_Desktop,A_AhkPath,A_ProgramFiles,A_Programs]
+		p .= "|", %Append%(p, "*")
+	%Append%("\`n", "*")
 	FileAppend2(text, file) {
 		FileAppend %text%, %file%
 	}
 	`
 	let ret = runscript(script, (data: string) => {
-		let paths = data.trim().split('\n'), s = ['ahkpath', 'desktop', 'programs', 'programfiles', 'mydocuments'];
+		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs'], path = '', init = !pathenv.ahkpath;
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].toLowerCase();
-		libdirs = [];
-		for (const k of ['mydocuments', 'ahkpath']) if (fs.existsSync(<string>pathenv[k] + '\\lib')) libdirs.push(<string>pathenv[k] + '\\lib');
+		libdirs.length = 0;
+		if (fs.existsSync(path = pathenv.mydocuments + '\\autohotkey\\lib')) libdirs.push(path);
+		if (fs.existsSync(path = pathenv.ahkpath.replace(/[^\\/]+$/, 'lib'))) libdirs.push(path);
+		if (init) {
+			for (const uri in doctree) {
+				let doc = doctree[uri];
+				doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include), doc.relevance = getincludetable(doc.uri);
+			}
+		}
 	});
 	if (!ret) connection.window.showErrorMessage('AutoHotkey可执行文件的路径不正确, 在"设置-AutoHotkey2.Path"中重新指定');
 	return ret;
