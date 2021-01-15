@@ -374,12 +374,10 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 			items.push(...completionItemCache.method);
 			let obj: any, objs = [docLexer.object];
 			for (const uri in list) objs.push(doctree[uri].object);
-			for (const t of <('method' | 'property')[]>['method', 'property']) {
-				const vars: any = {}, kind = t === 'method' ? CompletionItemKind.Method : CompletionItemKind.Property;
-				for (const obj of objs)
-					for (const it in obj[t])
-						if (!vars[it]) vars[it] = true, cpitem = CompletionItem.create(obj[t][it]), cpitem.kind = kind, items.push(cpitem);
-			}
+			for (const obj of objs) for (const it in obj['property'])
+				if (!vars[it]) vars[it] = true, cpitem = CompletionItem.create(obj['property'][it]), cpitem.kind = CompletionItemKind.Property, items.push(cpitem);
+			for (const obj of objs) for (const it in obj['method'])
+				if (!vars[it]) vars[it] = true, cpitem = CompletionItem.create(obj['method'][it]), cpitem.kind = CompletionItemKind.Method, cpitem.insertText = cpitem.label + '($0)', cpitem.insertTextFormat = InsertTextFormat.Snippet, items.push(cpitem);
 			return items;
 		default:
 			if (percent) {
