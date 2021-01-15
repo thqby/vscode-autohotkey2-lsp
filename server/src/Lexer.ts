@@ -326,7 +326,7 @@ export class Lexer {
 							raw = (m[2] || '').trim(), m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.libdirs[0]).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
 							_this.includedir.set(_this.document.positionAt(tk.offset).line, includedir);
 							if (m === '') includedir = _this.libdirs[0]; else {
-								m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir);
+								if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir))) break;
 								if (fs.existsSync(m.path)) if (fs.statSync(m.path).isDirectory()) includedir = m.path; else includetable[m.uri] = { path: m.path, raw };
 							}
 						}

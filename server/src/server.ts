@@ -161,10 +161,13 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 	if (!docLexer) docLexer = new Lexer(change.document), doctree[uri] = docLexer;
 	let initial = docLexer.include;
 	docLexer.parseScript(); // parseinclude(docLexer.includetable);
-	if (Object.keys(initial) !== Object.keys(docLexer.include)) docLexer.relevance = getincludetable(uri), resetrelevance();
+	if (Object.keys(initial).length !== Object.keys(docLexer.include).length) docLexer.relevance = getincludetable(uri), resetrelevance();
 	else for (const t in docLexer.include) if (!initial[t]) { docLexer.relevance = getincludetable(uri), resetrelevance(); break; };
 	function resetrelevance() {
-		for (const uri in initial) doctree[uri].relevance = getincludetable(uri);
+		for (const uri in initial) if (doctree[uri]) doctree[uri].relevance = getincludetable(uri); else {
+			let path = URI.parse(uri).fsPath, t: any = {}, raw = '';
+			t[uri] = { path, raw }, parseinclude(t);
+		}
 	}
 });
 
@@ -383,7 +386,7 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 				completionItemCache.other.map(value => { if (value.kind !== CompletionItemKind.Text) items.push(value); });
 			} else if (linetext.match(/^\s*#include/i)) {
 				let tt = linetext.replace(/^\s*#include(again)?\s+/i, '').replace(/\s*\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
-				let pre = linetext.substring(linetext.length - tt.length, position.character);
+				let pre = linetext.substring(linetext.length - tt.length, position.character), xg = '\\', m: any, a_ = '';
 				if (pre.charAt(0).match(/['"<]/)) {
 					if (pre.substring(1).match(/['">]/)) return;
 					else {
@@ -393,14 +396,17 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 					}
 				} else if (pre.match(/\s+;/)) return;
 				pre = pre.replace(/[^\\/]*$/, '');
+				while (m = pre.match(/%a_(\w+)%/i))
+					if (pathenv[a_ = m[1].toLowerCase()]) pre = pre.replace(m[0], pathenv[a_]); else return;
+				if (pre.charAt(pre.length - 1) === '/') xg = '/';
 				for (let path of paths) {
 					if (!fs.existsSync(path = resolve(path, pre) + '\\')) continue;
 					for (const it of fs.readdirSync(path)) {
-						if (fs.statSync(path + it).isDirectory()) cpitem = CompletionItem.create(it), cpitem.kind = CompletionItemKind.Folder, items.push(cpitem);
-						else {
-							if (inlib) { if (it.match(/\.ahk/i)) cpitem = CompletionItem.create(it.replace(/\.ahk/i, '')), cpitem.kind = CompletionItemKind.File, items.push(cpitem); }
-							else if (it.match(/\.(ahk2?|ah2)$/i)) cpitem = CompletionItem.create(it), cpitem.kind = CompletionItemKind.File, items.push(cpitem);
-						}
+						try {
+							if (inlib) { if (it.match(/\.ahk$/i)) cpitem = CompletionItem.create(it.replace(/\.ahk/i, '')), cpitem.insertText = cpitem.label + lchar, cpitem.kind = CompletionItemKind.File, items.push(cpitem); }
+							else if (fs.statSync(path + it).isDirectory()) cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + xg, cpitem.command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' }, cpitem.kind = CompletionItemKind.Folder, items.push(cpitem);
+							else if (it.match(/\.(ahk2?|ah2)$/i)) cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + lchar, cpitem.kind = CompletionItemKind.File, items.push(cpitem);
+						} catch (err) { };
 					}
 				}
 				return items;
@@ -408,19 +414,21 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 				completionItemCache.other.map(value => { if (value.kind === CompletionItemKind.Text) items.push(value); });
 				return items;
 			} else {
-				items.push(...completionItemCache.other);
 				if (content.text.length > 2 && content.text.match(/^[a-z]+_/i)) {
 					const rg = new RegExp(content.text.replace(/(.)/g, '$1.*'), 'i'), constant = completionItemCache.constant;
 					for (const it of constant) if (rg.test(it.label)) items.push(it);
 				}
 			}
 			let scopenode = docLexer.searchScopedNode(position);
-			if (scopenode && !linetext.match(/^\s*global\s/i)) {
-				let s = (<FuncNode>scopenode).statement;
-				if (!s) scope = FuncScope.DEFAULT;
-				else if (s.assume & FuncScope.LOCAL) scope = FuncScope.LOCAL;
-				else if (s.assume !== FuncScope.GLOBAL) scope = FuncScope.DEFAULT;
-			}
+			if (scopenode) {
+				if (!linetext.match(/^\s*global\s/i)) {
+					let s = (<FuncNode>scopenode).statement;
+					if (!s) scope = FuncScope.DEFAULT;
+					else if (s.assume & FuncScope.LOCAL) scope = FuncScope.LOCAL;
+					else if (s.assume !== FuncScope.GLOBAL) scope = FuncScope.DEFAULT;
+				}
+				completionItemCache.other.map(value => { if (value.kind !== CompletionItemKind.Text) items.push(value); });
+			} else items.push(...completionItemCache.other);			
 			if (scope === FuncScope.GLOBAL) {
 				for (const name in (temp = docLexer.root.statement.global)) vars[name] = true, items.push(convertNodeCompletion(temp[name]));
 				for (const t in list) {
@@ -547,12 +555,12 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 	let m: RegExpMatchArray | null, uri = '';
 
 	if (path[0] === '<') {
-		path = path.replace('<', '').replace('>', '');
+		if (!(path = path.replace('<', '').replace('>', ''))) return;
 		let search: string[] = [path + '.ahk'];
 		if (m = path.match(/^(\w+)_.*/)) search.push(m[1] + '.ahk');
 		for (const dir of libdirs) {
 			for (const file of search)
-				if (fs.existsSync(path = dir + file)) {
+				if (fs.existsSync(path = dir + '\\' + file)) {
 					uri = URI.file(path).toString().toLowerCase();
 					return { uri, path };
 				}
@@ -666,7 +674,7 @@ function getincludetable(fileuri: string) {
 		list = {}, count = 0, has = (uri === fileuri), traverseinclude(doctree[uri].include);
 		if (has && count > res.count) res = { list, count, main: uri };
 	}
-	if (res.count) { delete res.list[fileuri]; return res.list; }
+	if (res.count) { delete res.list[fileuri]; return res.list; } else return {};
 	function traverseinclude(include: any) {
 		for (const uri in include) {
 			if (fileuri === uri) has = true;
