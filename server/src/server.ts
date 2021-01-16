@@ -393,7 +393,7 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 						pre = pre.substring(1), lchar = lchar === '<' ? '>' : lchar;
 						if (linetext.substring(position.character).indexOf(lchar) !== -1) lchar = '';
 					}
-				} else if (pre.match(/\s+;/)) return;
+				} else if (pre.match(/\s+;/)) return; else if (temp = docLexer.includedir.get(position.line)) paths = [temp]; else paths = [docLexer.scriptpath];
 				pre = pre.replace(/[^\\/]*$/, '');
 				while (m = pre.match(/%a_(\w+)%/i))
 					if (pathenv[a_ = m[1].toLowerCase()]) pre = pre.replace(m[0], pathenv[a_]); else return;
@@ -494,7 +494,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 }
 
 async function initAHKCache() {
-	const ahk2 = JSON.parse(fs.readFileSync(resolve(__dirname, '../../syntaxes/ahk2.json'), "UTF8"));
+	const ahk2 = JSON.parse(fs.readFileSync(resolve(__dirname, '../../syntaxes/ahk2.json'), { encoding: "utf8" }));
 	const cmd: Command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
 	let type: CompletionItemKind, t = '', snip: { prefix: string, body: string, description?: string };
 	for (const it of ['Gui', 'Class', 'Menu', 'MenuBar']) {
