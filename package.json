@@ -101,10 +101,8 @@
 	"scripts": {
 		"vscode:prepublish": "webpack --mode production",
 		"webpack": "webpack --mode development",
-		"webpack-dev": "webpack --mode development --watch",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
-		"installwebpack": "npm i --save-dev webpack webpack-cli ts-loader",
 		"test": "node ./client/out/test/runTest",
 		"patch": "npm version patch",
 		"publish": "vsce publish",

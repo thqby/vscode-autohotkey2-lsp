@@ -5,12 +5,32 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Launch Extension",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}",
+				"--disable-extensions"
+			],
+			"outFiles": [
+				"${workspaceRoot}/client/dist/**/*.js"
+			],
+			"preLaunchTask": {
+				"type": "npm",
+				"script": "webpack"
+			}
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceRoot}",
 				"--disable-extensions"
 			],
+			"env": {
+				"VSCODE_AHK_SERVER_PATH": "out"
+			},
 			"outFiles": [
 				"${workspaceRoot}/client/out/**/*.js"
 			],
@@ -26,22 +46,7 @@
 			"port": 6009,
 			"restart": true,
 			"outFiles": [
-				"${workspaceRoot}/server/dist/**/*.js"
-			]
-		},
-		{
-			"name": "Language Server E2E Test",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--disable-extensions",
-				"--extensionDevelopmentPath=${workspaceRoot}",
-				"--extensionTestsPath=${workspaceRoot}/client/out/test/index",
-				"${workspaceRoot}/client/testFixture"
-			],
-			"outFiles": [
-				"${workspaceRoot}/client/out/test/**/*.js"
+				"${workspaceRoot}/server/out/**/*.js"
 			]
 		}
 	],
