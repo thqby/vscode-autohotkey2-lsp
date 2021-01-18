@@ -273,23 +273,10 @@ connection.onHover(async (params: HoverParams, token: CancellationToken): Promis
 
 connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> => {
 	if (cancellation.isCancellationRequested) return undefined;
-	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], offset = docLexer.document.offsetAt(params.position);
-	let func: DocumentSymbol | undefined, same = false, off = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
-	for (const item of docLexer.root.funccall) {
-		const start = docLexer.document.offsetAt(item.range.start), end = docLexer.document.offsetAt(item.range.end);
-		if (start <= offset) {
-			if (offset > end) {
-				const line = item.range.start.line, character = item.range.start.character + item.name.length;
-				let char = docLexer.document.getText(Range.create(line, character, line, character + 1));
-				if (char === '(' || line !== params.position.line) continue;
-			}
-			if (!func || (off.start <= start && end <= off.end)) func = item, off = { start, end }, pos = item.range.start;
-		}
-	}
-	if (!func) return undefined;
-	let text = docLexer.document.getText(func.range), tt: any, kind: SymbolKind = SymbolKind.Function;
-	let name = func.name.toLowerCase(), index = -1, signinfo: SignatureHelp;
-	offset = offset - off.start, signinfo = { activeSignature: 0, signatures: [], activeParameter: 0 }
+	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], kind: SymbolKind = SymbolKind.Function;
+	let res: any, name: string, pos: Position, index: number, signinfo: SignatureHelp = { activeSignature: 0, signatures: [], activeParameter: 0 }
+	if (!(res = getFuncCallInfo(docLexer, params.position))) return;
+	name = res.name, pos = res.pos, index = res.index;
 	if (pos.character > 0)
 		if (docLexer.document.getText(Range.create({ line: pos.line, character: pos.character - 1 }, pos)) === '.') kind = SymbolKind.Method;
 	if (kind === SymbolKind.Method) return undefined;
@@ -311,22 +298,40 @@ connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: Can
 			});
 		}
 	}
+	signinfo.activeParameter = index < 0 ? (signinfo.signatures[0].parameters?.length || 0) : index;
+	return signinfo;
+});
+
+function getFuncCallInfo(doc: Lexer, position: Position) {
+	let func: DocumentSymbol | undefined, offset = doc.document.offsetAt(position), off = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
+	for (const item of doc.root.funccall) {
+		const start = doc.document.offsetAt(item.range.start), end = doc.document.offsetAt(item.range.end);
+		if (start <= offset) {
+			if (offset > end) {
+				const line = item.range.start.line, character = item.range.start.character + item.name.length;
+				let char = doc.document.getText(Range.create(line, character, line, character + 1));
+				if (char === '(' || line !== position.line) continue;
+			}
+			if (!func || (off.start <= start && end <= off.end)) func = item, off = { start, end }, pos = item.range.start;
+		}
+	}
+	if (!func) return undefined;
+	let text = doc.document.getText(func.range), index = -1, len = 0, name = func.name.toLowerCase(), tt: any;
+	offset = offset - off.start;
 	while (tt = text.match(/('|").*?(?<!`)\1/)) text = text.replace(tt[0], '_'.repeat(tt[0].length));
-	const len = off.end - off.start - func.name.length, maxparam = signinfo.signatures[0].parameters?.length || 0;
+	len = off.end - off.start - func.name.length;
 	for (const pair of [['\\{', '\\}'], ['\\[', '\\]'], ['\\(', '\\)']]) {
 		const rg = new RegExp(pair[0] + '[^' + pair[0] + ']*?' + pair[1]);
 		while (tt = rg.exec(text)) {
-			// if (offset >= tt.index && offset < tt.index + tt[0].length) break;
 			if (tt[0].length >= len) break;
 			text = text.replace(tt[0], '_'.repeat(tt[0].length));
 		}
 	}
 	if (offset > func.name.length) index += 1;
 	for (let i = func.name.length + 1; i < offset; i++)
-		if (text.charAt(i) === ',') index++; else if (text.charAt(i) === ')' && i >= text.length - 1) { index = maxparam; break; }
-	signinfo.activeParameter = index < 0 ? maxparam : index;
-	return signinfo;
-})
+		if (text.charAt(i) === ',') index++; else if (text.charAt(i) === ')' && i >= text.length - 1) { index = -1; break; }
+	return { name, pos, index };
+}
 
 connection.onDefinition(async (params: DefinitionParams, token: CancellationToken): Promise<Definition | LocationLink[] | undefined> => {
 	if (token.isCancellationRequested) return undefined;
@@ -354,7 +359,7 @@ connection.onDefinition(async (params: DefinitionParams, token: CancellationToke
 connection.onCompletion(async (params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> => {
 	if (token.isCancellationRequested) return undefined;
 	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, funcs: { [key: string]: any } = {};
-	const triggerKind = params.context?.triggerKind, triggerCharacter = params.context?.triggerCharacter;
+	let triggerKind = params.context?.triggerKind, triggerCharacter = params.context?.triggerCharacter, scopenode: DocumentSymbol | undefined;
 	let uri = textDocument.uri.toLowerCase(), docLexer = doctree[uri], content = docLexer.buildContext(position, false), nodes: DocumentSymbol[];
 	let quote = '', char = '', _low = '', percent = false, linetext = content.linetext, prechar = linetext.charAt(content.range.start.character - 1);
 	let list = docLexer.relevance, cpitem: CompletionItem, scope: FuncScope = FuncScope.GLOBAL, temp: any, path: string, { line, character } = position;
@@ -378,7 +383,7 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 			for (const obj of objs) for (const it in obj['property'])
 				if (!vars[it]) vars[it] = true, cpitem = CompletionItem.create(obj['property'][it]), cpitem.kind = CompletionItemKind.Property, items.push(cpitem);
 			for (const obj of objs) for (const it in obj['method'])
-				if (!vars[it]) vars[it] = true, cpitem = CompletionItem.create(obj['method'][it]), cpitem.kind = CompletionItemKind.Method, cpitem.insertText = cpitem.label + '($0)', cpitem.insertTextFormat = InsertTextFormat.Snippet, items.push(cpitem);
+				if (!vars[it]) vars[it] = true, cpitem = CompletionItem.create(obj['method'][it][0].name), cpitem.kind = CompletionItemKind.Method, cpitem.insertText = cpitem.label + '($0)', cpitem.insertTextFormat = InsertTextFormat.Snippet, items.push(cpitem);
 			return items;
 		default:
 			if (percent) {
@@ -410,9 +415,47 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 				}
 				return items;
 			} else if (quote) {
+				let res = getFuncCallInfo(docLexer, position);
+				if (res) {
+					switch (res.name) {
+						case 'func':
+							if (res.index !== 0) break;
+							for (const name in funcCache)
+								if (name.charAt(0) !== '.')
+									cpitem = CompletionItem.create(funcCache[name].prefix), cpitem.kind = CompletionItemKind.Function, items.push(cpitem), vars[name] = true;
+							if (scopenode = docLexer.searchScopedNode(position)) {
+								nodes = docLexer.getScopeChildren(scopenode);
+								for (const it of nodes)
+									if (it.kind === SymbolKind.Function && !vars[_low = it.name.toLowerCase()]) {
+										vars[_low] = true, cpitem = CompletionItem.create(it.name), cpitem.kind = CompletionItemKind.Function, items.push(cpitem);
+									}
+							}
+							for (const name in (temp = docLexer.root.statement.function))
+								if (!vars[name]) vars[name] = true, cpitem = CompletionItem.create(temp[name].name), cpitem.kind = CompletionItemKind.Function, items.push(cpitem);
+							for (const t in list)
+								for (const name in (temp = doctree[t].root.statement.function))
+									if (!vars[name]) vars[name] = true, cpitem = CompletionItem.create(temp[name].name), cpitem.kind = CompletionItemKind.Function, items.push(cpitem);
+							return items;
+						case 'dllcall':
+							if (res.index === 0) {
+
+							} else if (res.index > 0 && res.index % 2 === 1) {
+								for (const name of ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'HRESULT', 'cdecl'])
+									cpitem = CompletionItem.create(name), cpitem.kind = CompletionItemKind.TypeParameter, items.push(cpitem);
+							}
+							return items;
+						case 'objbindmethod':
+							if (res.index === 1) {
+								let objs = [docLexer.object];
+								for (const uri in list) objs.push(doctree[uri].object);
+								for (const obj of objs) for (const it in obj['method'])
+									if (!vars[it]) vars[it] = true, cpitem = CompletionItem.create(obj['method'][it]), cpitem.kind = CompletionItemKind.Method, items.push(cpitem);
+							}
+					}
+				}
 				completionItemCache.other.map(value => { if (value.kind === CompletionItemKind.Text) vars[value.label.toLowerCase()] = true, items.push(value); });
-				// for (const t in docLexer.texts) if (!vars[t]) items.push(cpitem = CompletionItem.create(docLexer.texts[t])), cpitem.kind = CompletionItemKind.Text;
-				// for (const u in list) for (const t in (temp = doctree[u].texts)) if (!vars[t]) items.push(cpitem = CompletionItem.create(temp[t])), cpitem.kind = CompletionItemKind.Text;
+				for (const t in docLexer.texts) if (!vars[t]) items.push(cpitem = CompletionItem.create(docLexer.texts[t])), cpitem.kind = CompletionItemKind.Text;
+				for (const u in list) for (const t in (temp = doctree[u].texts)) if (!vars[t]) items.push(cpitem = CompletionItem.create(temp[t])), cpitem.kind = CompletionItemKind.Text;
 				return items;
 			} else {
 				items.push(...completionItemCache.snippet);
@@ -421,7 +464,7 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 					for (const it of constant) if (rg.test(it.label)) items.push(it);
 				}
 			}
-			let scopenode = docLexer.searchScopedNode(position);
+			scopenode = docLexer.searchScopedNode(position);
 			if (scopenode) {
 				if (!linetext.match(/^\s*global\s/i)) {
 					let s = (<FuncNode>scopenode).statement;

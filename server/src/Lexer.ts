@@ -302,7 +302,7 @@ export class Lexer {
 		this.parseScript = function (): void {
 			input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, tks.length = 0;
 			whitespace_before_token = [], beginpos = 0, last_text = '', last_type = 'TK_BLOCK';
-			following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1, this.blocks = [];
+			following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1, this.blocks = [], this.texts = {};
 			let gg: any = {}, dd: any = {}, ff: any = {}, _low = '';
 			this.root = { statement: { assume: FuncScope.DEFAULT, global: gg, define: dd, function: ff }, include: [], children: [], funccall: [] };
 			this.object = { method: {}, property: {} }, this.includedir = new Map();
@@ -352,7 +352,6 @@ export class Lexer {
 						break;
 					default: continue;
 					case 'TK_WORD':
-						addtext(tk);
 						let predot = (input.charAt(tk.offset - 1) === '.');
 						if (!predot && input.charAt(parser_pos) === '(') {
 							let comm = '', isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
@@ -368,7 +367,7 @@ export class Lexer {
 									mode = storemode;
 									tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par);
 									tn.range.end = document.positionAt(lk.offset + lk.length), tn.statement.closure = mode === 0;
-									if (mode === 2) _this.object.method[_low] = _this.object.method[_low] || fc.content;
+									if (mode === 2) { if (!_this.object.method[_low]) _this.object.method[_low] = []; _this.object.method[_low].push(tn) };
 									tn.statement.static = isstatic, tn.children = []; for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) tn.children.push(sub[i]), sub.splice(i, 1); }
 									if (comm) tn.detail = comm; result.push(tn), result.push(...sub);
@@ -377,7 +376,7 @@ export class Lexer {
 									sub = parse(mode | 1, vars);
 									tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, sub);
 									tn.statement.static = isstatic;
-									if (mode === 2) _this.object.method[_low] = _this.object.method[_low] || fc.content;
+									if (mode === 2) { if (!_this.object.method[_low]) _this.object.method[_low] = []; _this.object.method[_low].push(tn) };
 									if (vars.has('#assume')) tn.statement.assume = vars.get('#assume');
 									for (const tp of ['global', 'local', 'define']) {
 										if (vars.has('#' + tp)) {
@@ -499,19 +498,20 @@ export class Lexer {
 					if (tk.topofline && !(['and', 'or'].includes(tk.content.toLowerCase()) || ['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type))) { next = false; break; }
 					switch (tk.type) {
 						case 'TK_WORD':
-							addtext(tk);
 							if (input.charAt(tk.offset - 1) === '.') { lk = tk; continue; }
 							if (input.charAt(parser_pos) === '(') {
 								lk = tk, tk = { content: '(', offset: parser_pos, length: 1, type: 'TK_START_EXPR' }, parser_pos++;
-								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_next_token();
+								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_next_token(), pars: any = {};
 								if (nk.content === '=>') {
 									let storemode = mode;
 									mode = mode | 1;
 									let sub = parseexp();
 									mode = storemode;
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par);
-									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).statement.closure = mode === 0;
-									for (const it of sub) result.push(it);
+									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).statement.closure = mode === 0, tn.children = [];
+									if (par) for (const it of par) pars[it.name.toLowerCase()] = true;
+									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) tn.children.push(sub[i]), sub.splice(i, 1); }
+									result.push(tn), result.push(...sub);
 								} else {
 									_this.root.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
 									if (par) for (const it of par) if (!builtin_variable.includes(it.name.toLowerCase())) result.push(it);
@@ -528,13 +528,15 @@ export class Lexer {
 							break;
 						case 'TK_START_EXPR':
 							if (tk.content === '[') parsepair('[', ']'); else {
-								let ptk = lk, par = parsequt(), quoteend = parser_pos, nk = get_next_token();
+								let ptk = lk, par = parsequt(), quoteend = parser_pos, nk = get_next_token(), pars: any = {};
 								if (nk.content === '=>') {
 									let storemode = mode;
 									mode = mode | 1;
 									let sub = parseexp();
 									mode = storemode;
-									for (const it of sub) result.push(it);
+									if (par) for (const it of par) pars[it.name.toLowerCase()] = true;
+									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) sub.splice(i, 1); }
+									result.push(...sub);
 								} else {
 									if (ptk.type === 'TK_WORD' && input.charAt(ptk.offset + ptk.length) === '(')
 										_this.root.funccall.push(DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, makerange(ptk.offset, quoteend - ptk.offset), makerange(ptk.offset, ptk.length)));
@@ -588,7 +590,10 @@ export class Lexer {
 								lk = tk, tk = { content: '(', offset: parser_pos, length: 1, type: 'TK_START_EXPR' }, parser_pos++;
 								let ptk = lk, par = parsequt(), quoteend = parser_pos, nk = get_next_token();
 								if (nk.content === '=>') {
-									let sub = parseexp();
+									let sub = parseexp(), pars: any = {};
+									if (par) for (const it of par) pars[it.name.toLowerCase()] = true;
+									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) sub.splice(i, 1); }
+									result.push(...sub);
 								} else {
 									_this.root.funccall.push(DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, makerange(ptk.offset, quoteend - ptk.offset), makerange(ptk.offset, ptk.length)));
 									next = false, tk = nk;
@@ -649,7 +654,6 @@ export class Lexer {
 						if (tk.content === ')') { if ((--pairnum) < 0) break; } //else if (tk.content === '(') pairnum++;
 						else if (tk.type.indexOf('COMMENT') > -1) continue;
 						else if (tk.type === 'TK_WORD') {
-							addtext(tk);
 							if (in_array(lk.content, [',', '('])) {
 								if (tk.content.toLowerCase() === 'byref') {
 									nexttoken();
@@ -716,9 +720,10 @@ export class Lexer {
 					while (nexttoken()) {
 						if (tk.content === '}') break;
 						else if (tk.content === '%') parsepair('%', '%');
-						else if (tk.type === 'TK_WORD' || tk.type.indexOf('COMMENT') > -1) continue;
+						else if (tk.type === 'TK_WORD') continue;
 						else if (tk.type === 'TK_OPERATOR' && tk.content === ':') return true;
-						else if (tk.type === 'TK_LABEL' && tk.content.match(/^\w+:$/)) return true;
+						else if (tk.type === 'TK_LABEL' && tk.content.match(/^\w+:$/)) { addtext({ content: tk.content.replace(':', ''), type: '', offset: 0, length: 0 }); return true; }
+						else if (tk.type.indexOf('COMMENT') > -1) continue;
 						else break;
 					}
 					return false;
@@ -746,7 +751,6 @@ export class Lexer {
 							result.push(...sub);
 						}
 					} else if (tk.type === 'TK_WORD') {
-						addtext(tk);
 						if (input.charAt(tk.offset - 1) !== '.') {
 							if (input.charAt(parser_pos) !== '(') {
 								addvariable(tk, mode);
@@ -754,9 +758,12 @@ export class Lexer {
 								lk = tk, tk = { content: '(', offset: parser_pos, length: 1, type: 'TK_START_EXPR' }, parser_pos++;
 								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_token_ingore_comment(comment = '');
 								if (nk.content === '=>') {
-									let sub = parseexp(true);
+									let sub = parseexp(true), pars: any = {};
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par, sub);
 									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).statement.closure = mode === 0, result.push(tn);
+									if (par) for (const it of par) pars[it.name.toLowerCase()] = true;
+									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) sub.splice(i, 1); }
+									result.push(...sub);
 								} else {
 									_this.root.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
 									next = false, lk = tk, tk = nk;
@@ -770,6 +777,7 @@ export class Lexer {
 							_this.root.funccall.push(DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, makerange(ptk.offset, parser_pos - ptk.offset), makerange(ptk.offset, ptk.length)));
 						}
 					} else if (tk.type === 'TK_START_BLOCK') parseobj();
+					else if (tk.type === 'TK_STRING') { if (b === '[' && is_next(']') && !tk.content.match(/\n|`n/)) addtext({ type: '', content: tk.content.substring(1, tk.content.length - 1), offset: 0, length: 0 }); }
 					else if (tk.content === '[') parsepair('[', ']');
 				}
 			}
