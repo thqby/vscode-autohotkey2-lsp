@@ -56,12 +56,6 @@
 				"path": "./syntaxes/ahk2.tmLanguage.json"
 			}
 		],
-		"snippets": [
-			{
-				"language": "ahk2",
-				"path": "./snippets/ahk2.json"
-			}
-		],
 		"configuration": {
 			"id": "AutoHotkey2",
 			"title": "AutoHotkey2",

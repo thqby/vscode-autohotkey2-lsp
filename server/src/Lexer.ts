@@ -397,7 +397,7 @@ export class Lexer {
 							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) comment = trimcomment(lk.content); else comment = '';
 							let bak = lk, restore = false;
 							lk = tk, tk = get_next_token(), next = false;
-							if (!lk.topofline && (bak.type === 'TK_HOT' || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i)))) lk.topofline = restore = true;
+							if (!lk.topofline && (bak.type === 'TK_HOT' || bak.content === '{' || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i)))) lk.topofline = restore = true;
 							if (!predot && (!lk.topofline || (tk.type === 'TK_OPERATOR' && tk.content.match(/=$|\?/)) || ['TK_EQUALS', 'TK_DOT'].includes(tk.type))) {
 								if (!lk.topofline && bak.type === 'TK_SHARP' && bak.content.match(/^#(MenuMaskKey|SingleInstance|Warn)/i)) break;
 								addvariable(lk, mode);
@@ -1296,8 +1296,8 @@ export class Lexer {
 						last_LF = next_LF, parser_pos += m[1].length - 1, begin_line = true;
 						return createToken(m[1], 'TK_HOTLINE', offset, m[1].length, true);
 					}
-				} else if (m = line.match(/^([~*]{0,2}((([<>]?[!+#^]){0,4}(`{|[\x21-\x7A\x7C-\x7E]|[a-z][a-z\d_]+))|(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+)\s+&\s+(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+))(\s+up)?::)(.*)$/i)) {
-					if (m[9].trim().match(/^([<>]?[!+#^]){0,4}(`{|[\x21-\x7A\x7C-\x7E]|[a-z][a-z\d_]+)\s*(\s;.*)?$/i)) {
+				} else if (m = line.match(/^(\$?[~*]{0,2}((([<>]?[!+#^]){0,4}(`{|[\x21-\x7A\x7C-\x7E]|[a-z][a-z\d_]+))|(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+)\s+&\s+(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+))(\s+up)?::)(.*)$/i)) {
+					if (m[9].trim().match(/^(\$?[~*]{0,2}[<>]?[!+#^]){0,4}(`{|[\x21-\x7A\x7C-\x7E]|[a-z][a-z\d_]+)\s*(\s;.*)?$/i)) {
 						last_LF = next_LF, begin_line = true;
 						parser_pos = input.indexOf('::', parser_pos) + m[9].length - m[9].trimLeft().length + 2;
 						return createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, true);

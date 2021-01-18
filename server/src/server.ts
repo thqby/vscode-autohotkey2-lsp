@@ -53,7 +53,7 @@ let connection = createConnection(ProposedFeatures.all), documents: TextDocument
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false;
 let hasDiagnosticRelatedInformationCapability: boolean = false;
 let doctree: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
-let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [] };
+let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
 let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], funcCache: { [key: string]: { prefix: string, body: string, description?: string } } = {};
 let nodecache: { [key: string]: { uri: string, line: number, character: number, ruri: string, node: DocumentSymbol } } = {};
 type Maybe<T> = T | undefined;
@@ -410,9 +410,12 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 				}
 				return items;
 			} else if (quote) {
-				completionItemCache.other.map(value => { if (value.kind === CompletionItemKind.Text) items.push(value); });
+				completionItemCache.other.map(value => { if (value.kind === CompletionItemKind.Text) vars[value.label.toLowerCase()] = true, items.push(value); });
+				// for (const t in docLexer.texts) if (!vars[t]) items.push(cpitem = CompletionItem.create(docLexer.texts[t])), cpitem.kind = CompletionItemKind.Text;
+				// for (const u in list) for (const t in (temp = doctree[u].texts)) if (!vars[t]) items.push(cpitem = CompletionItem.create(temp[t])), cpitem.kind = CompletionItemKind.Text;
 				return items;
 			} else {
+				items.push(...completionItemCache.snippet);
 				if (content.text.length > 2 && content.text.match(/^[a-z]+_/i)) {
 					const rg = new RegExp(content.text.replace(/(.)/g, '$1.*'), 'i'), constant = completionItemCache.constant;
 					for (const it of constant) if (rg.test(it.label)) items.push(it);
@@ -499,8 +502,7 @@ async function initAHKCache() {
 	let type: CompletionItemKind, t = '', snip: { prefix: string, body: string, description?: string };
 	for (const it of ['Gui', 'Class', 'Menu', 'MenuBar']) {
 		const completionItem = CompletionItem.create(it);
-		completionItem.insertText = it, completionItem.kind = CompletionItemKind.Class;
-		completionItemCache.other.push(completionItem);
+		completionItem.insertText = it, completionItem.kind = CompletionItemKind.Class, completionItemCache.other.push(completionItem);
 	}
 	for (const key in ahk2) {
 		if (key === 'methods') {
@@ -509,7 +511,7 @@ async function initAHKCache() {
 				let arr: any[] = ahk2[key][objname];
 				for (snip of arr) {
 					const completionItem = CompletionItem.create(snip.prefix.replace('.', '')), hover: Hover = { contents: [] }, _low = snip.prefix.toLowerCase();
-					completionItem.kind = snip.body.indexOf('(') === -1 ? CompletionItemKind.Property : CompletionItemKind.Method;
+					snip.body = bodytostring(snip.body), completionItem.kind = snip.body.indexOf('(') === -1 ? CompletionItemKind.Property : CompletionItemKind.Method;
 					completionItem.insertText = snip.body.replace(/^\./, ''), completionItem.insertTextFormat = InsertTextFormat.Snippet;
 					completionItem.detail = `(${objname}) ` + snip.description, snip.body = snip.body.replace(/\$\{\d+:([^}]+)\}/g, '$1');
 					completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' }, completionItemCache[t].push(completionItem);
@@ -517,6 +519,13 @@ async function initAHKCache() {
 					if (!hoverCache[0][_low]) hoverCache[0][_low] = [];
 					hoverCache[0][_low].push(hover), funcCache[_low] = snip;
 				}
+			}
+		} else if (key === 'snippet') {
+			for (snip of ahk2['snippet']) {
+				const completionItem = CompletionItem.create(snip.prefix);
+				completionItem.kind = CompletionItemKind.Snippet, completionItem.insertText = bodytostring(snip.body);
+				completionItem.detail = snip.description, completionItem.insertTextFormat = InsertTextFormat.Snippet;
+				completionItemCache.snippet.push(completionItem);
 			}
 		} else {
 			let arr: any[] = ahk2[key];
@@ -533,7 +542,7 @@ async function initAHKCache() {
 	function additem() {
 		const completionItem = CompletionItem.create(snip.prefix.replace('.', '')), hover: Hover = { contents: [] }, _low = snip.prefix.toLowerCase();
 		completionItem.kind = type;
-		if (type === CompletionItemKind.Keyword && snip.prefix.charAt(0) === '#') t = 'sharp', snip.body = snip.body.replace(/^#/, '');
+		if (type === CompletionItemKind.Keyword && snip.prefix.charAt(0) === '#') t = 'sharp', snip.body = bodytostring(snip.body).replace(/^#/, '');
 		else if (type === CompletionItemKind.Constant) t = 'constant'; else t = 'other';
 		if (type === CompletionItemKind.Function && snip.body.indexOf('|}') === -1 && snip.body.indexOf('(${') !== -1)
 			completionItem.insertText = snip.prefix + '($0)', completionItem.command = cmd, completionItem.detail = snip.description;
@@ -548,6 +557,7 @@ async function initAHKCache() {
 		if (!n) funcCache[_low] = snip;
 		hoverCache[n][_low].push(hover);
 	}
+	function bodytostring(body: any) { return (typeof body === 'object' ? body.join('\n') : body) };
 }
 
 export function pathanalyze(path: string, libdirs: string[], workdir: string = '') {
