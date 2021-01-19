@@ -15,7 +15,7 @@
       "include": "#switch_statement"
     },
     {
-      "match": "\\b(?i:break|continue|critical|loop|until|else|for|goto|if|throw|try|catch|finally|return|while)\\b",
+      "match": "(?<!\\.)\\b(?i:break|continue|critical|loop|until|else|for|goto|if|throw|try|catch|finally|return|while)\\b(?!\\s*:)",
       "name": "keyword.control.ahk2"
     },
     {
@@ -576,7 +576,7 @@
     "function-defaultLibrary": {
       "patterns": [
         {
-          "match": "\\b(?i:blockinput|coordmodetooltip|coordmodepixel|coordmodemouse|coordmodecaret|coordmodemenu|detecthiddentext|detecthiddenwindows|fileencoding|goto|hotif|listlines|pause|runas|sendlevel|sendmode|setcapslockstate|setcontroldelay|setdefaultmousespeed|setkeydelay|setmousedelay|setnumlockstate|setregview|setscrolllockstate|setstorecapslockmode|settitlematchmode|setwindelay|setworkingdir|shutdown|suspend|thread)\\b",
+          "match": "\\b(?i:blockinput|coordmodetooltip|coordmodepixel|coordmodemouse|coordmodecaret|coordmodemenu|detecthiddentext|detecthiddenwindows|fileencoding|hotif|listlines|pause|runas|sendlevel|sendmode|setcapslockstate|setcontroldelay|setdefaultmousespeed|setkeydelay|setmousedelay|setnumlockstate|setregview|setscrolllockstate|setstorecapslockmode|settitlematchmode|setwindelay|setworkingdir|shutdown|suspend|thread)\\b",
           "name": "support.function.ahk2"
         },
         {

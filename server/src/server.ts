@@ -184,7 +184,7 @@ connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancell
 });
 
 connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] => {
-	let uri = params.textDocument.uri.toLowerCase(), doc = doctree[uri], glo = doc.root.statement.global || {};
+	let uri = params.textDocument.uri.toLowerCase(), doc = doctree[uri], glo = doc.global || {};
 	let tree = <DocumentSymbol[]>doc.symboltree, superglobal: { [key: string]: DocumentSymbol } = {}, gvar: any = {};
 	for (const key of ['gui', 'menu', 'menubar', 'class', 'array', 'map', 'object', 'guicontrol'])
 		superglobal[key] = DocumentSymbol.create(key, undefined, SymbolKind.Class, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
@@ -194,7 +194,7 @@ connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] 
 	}
 	let list = doc.relevance;
 	for (const uri in list) {
-		const gg = doctree[uri].root.statement.global;
+		const gg = doctree[uri].global;
 		for (let key in gg) {
 			superglobal[key] = superglobal[key] || gg[key];
 			if (gg[key].kind === SymbolKind.Class && !glo[key]) gvar[key] = gg[key];
@@ -251,7 +251,7 @@ connection.onHover(async (params: HoverParams, token: CancellationToken): Promis
 		let word = context.text.toLowerCase(), kind: SymbolKind | SymbolKind[] = SymbolKind.Variable;
 		if (context.pre === '#') {
 			if ((t = hoverCache[1]) && (t = t[word = '#' + word])) return t[0]; else return undefined;
-		} else if (context.pre.match(/\b(goto|break|continue)(\(\s*['"]|\s*)$/i)) {
+		} else if (context.pre.match(/(?<!\.)\b(goto|break|continue)(?!\s*:)(\(\s*['"]|\s*)$/i)) {
 			kind = SymbolKind.Field, word = word + ':';
 		} else kind = context.kind;
 		if (kind === SymbolKind.Variable) kind = [SymbolKind.Variable, SymbolKind.Class];
@@ -304,7 +304,7 @@ connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: Can
 
 function getFuncCallInfo(doc: Lexer, position: Position) {
 	let func: DocumentSymbol | undefined, offset = doc.document.offsetAt(position), off = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
-	for (const item of doc.root.funccall) {
+	for (const item of doc.funccall) {
 		const start = doc.document.offsetAt(item.range.start), end = doc.document.offsetAt(item.range.end);
 		if (start <= offset) {
 			if (offset > end) {
@@ -346,7 +346,7 @@ connection.onDefinition(async (params: DefinitionParams, token: CancellationToke
 						return [LocationLink.create(t, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0), Range.create(line, m[1].length, line, m[1].length + m[3].length))];
 			}
 			return undefined;
-		} else if (context.pre.match(/\b(goto|break|continue)(\(\s*['"]|\s*)$/i) || (context.pre.trim() === '' && context.suf.match(/^:\s*(\s;.*)?$/))) {
+		} else if (context.pre.match(/(?<!\.)\b(goto|break|continue)(?!\s*:)(\(\s*['"]|\s*)$/i) || (context.pre.trim() === '' && context.suf.match(/^:\s*(\s;.*)?$/))) {
 			kind = SymbolKind.Field, word = context.text.toLowerCase() + ':';
 		} else word = context.text.toLowerCase(), kind = context.kind;
 		if (kind === SymbolKind.Variable) kind = [SymbolKind.Variable, SymbolKind.Class];
@@ -414,6 +414,16 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 					}
 				}
 				return items;
+			} else if (temp = linetext.match(/(?<!\.)\b(goto|continue|break)\b(?!\s*:)(\s+|\(\s*('|")?)/i)) {
+				let t = temp[2].trim();
+				if (scopenode = docLexer.searchScopedNode(position))
+					docLexer.getScopeChildren(scopenode).map(it => { if (it.kind === SymbolKind.Field) items.push(convertNodeCompletion(it)); });
+				else {
+					docLexer.label.map(it => { items.push(convertNodeCompletion(it)); });
+					for (const t in list) doctree[t].label.map(it => { items.push(convertNodeCompletion(it)); });
+				}
+				if (t === '' || temp[3]) return items;
+				else for (let it of items) it.insertText = `'${it.insertText}'`;
 			} else if (quote) {
 				let res = getFuncCallInfo(docLexer, position);
 				if (res) {
@@ -430,10 +440,10 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 										vars[_low] = true, cpitem = CompletionItem.create(it.name), cpitem.kind = CompletionItemKind.Function, items.push(cpitem);
 									}
 							}
-							for (const name in (temp = docLexer.root.statement.function))
+							for (const name in (temp = docLexer.function))
 								if (!vars[name]) vars[name] = true, cpitem = CompletionItem.create(temp[name].name), cpitem.kind = CompletionItemKind.Function, items.push(cpitem);
 							for (const t in list)
-								for (const name in (temp = doctree[t].root.statement.function))
+								for (const name in (temp = doctree[t].function))
 									if (!vars[name]) vars[name] = true, cpitem = CompletionItem.create(temp[name].name), cpitem.kind = CompletionItemKind.Function, items.push(cpitem);
 							return items;
 						case 'dllcall':
@@ -475,48 +485,48 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 				completionItemCache.other.map(value => { if (value.kind !== CompletionItemKind.Text) items.push(value); });
 			} else items.push(...completionItemCache.other);
 			if (scope === FuncScope.GLOBAL) {
-				for (const name in (temp = docLexer.root.statement.global)) vars[name] = true, items.push(convertNodeCompletion(temp[name]));
+				addGlobalVar();
+				if (scopenode) addNodesIgnoreCurpos(docLexer.getScopeChildren(scopenode));
+				addFunction();
+				for (const name in (temp = docLexer.define)) {
+					const item = temp[name];
+					if (!vars[name] && !(item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character)) vars[name] = true, items.push(convertNodeCompletion(item));
+				}
 				for (const t in list) {
 					path = list[t].path;
-					for (const name in (temp = doctree[t].root.statement.global)) if (!vars[name]) vars[name] = true, addincludeitem(temp[name]);
-				}
-				if (scopenode) for (const item of (nodes = docLexer.getScopeChildren(scopenode))) {
-					if (item.kind === SymbolKind.Variable) { if (!vars[_low = item.name.toLowerCase()]) vars[_low] = true, items.push(convertNodeCompletion(item)); }
-					else { if (item.kind === SymbolKind.Function) funcs[item.name.toLowerCase()] = true; items.push(convertNodeCompletion(item)); }
-				}
-				for (const name in (temp = docLexer.root.statement.define)) if (!vars[name]) vars[name] = true, cpitem = convertNodeCompletion(temp[name]), items.push(cpitem);
-				for (const name in (temp = docLexer.root.statement.function)) if (!funcs[name]) funcs[name] = true, cpitem = convertNodeCompletion(temp[name]), items.push(cpitem);
-				for (const t in list) {
-					path = list[t].path;
-					for (const name in (temp = doctree[t].root.statement.define)) if (!vars[name]) vars[name] = true, addincludeitem(temp[name]);
-					for (const name in (temp = doctree[t].root.statement.function)) if (!funcs[name]) addincludeitem(temp[name]);
-				}
-			} else if (scope === FuncScope.LOCAL) {
-				for (const name in (temp = docLexer.root.statement.function)) items.push(convertNodeCompletion(temp[name]));
-				for (const t in list) {
-					path = list[t].path;
-					for (const name in (temp = doctree[t].root.statement.function)) addincludeitem(temp[name]);
+					for (const name in (temp = doctree[t].define)) if (!vars[name]) vars[name] = true, addincludeitem(temp[name]);
 				}
 			} else {
-				for (const name in (temp = docLexer.root.statement.global)) vars[name] = true, items.push(convertNodeCompletion(temp[name]));
-				for (const t in list) {
-					path = list[t].path;
-					for (const name in (temp = doctree[t].root.statement.global)) if (!vars[name]) vars[name] = true, addincludeitem(temp[name]);
-				}
-				for (const item of (nodes = docLexer.getScopeChildren(scopenode))) {
-					if (item.kind === SymbolKind.Variable) { if (!vars[_low = item.name.toLowerCase()]) vars[_low] = true, items.push(convertNodeCompletion(item)); }
-					else { if (item.kind === SymbolKind.Function) funcs[item.name.toLowerCase()] = true; items.push(convertNodeCompletion(item)); }
-				}
-				for (const name in (temp = docLexer.root.statement.function)) if (!funcs[name]) funcs[name] = true, cpitem = convertNodeCompletion(temp[name]), items.push(cpitem);
-				for (const t in list) {
-					path = list[t].path;
-					for (const name in (temp = doctree[t].root.statement.function)) if (!funcs[name]) addincludeitem(temp[name]);
-				}
+				if (scope === FuncScope.DEFAULT) addGlobalVar();
+				addNodesIgnoreCurpos(docLexer.getScopeChildren(scopenode)), addFunction();
 			}
 			return items;
 	}
 	function addincludeitem(item: DocumentSymbol) {
 		cpitem = convertNodeCompletion(item), cpitem.detail = `从'${path}'自动导入  ` + (cpitem.detail || ''), items.push(cpitem);
+	}
+	function addNodesIgnoreCurpos(nodes: DocumentSymbol[]) {
+		for (const item of nodes) {
+			if (item.kind === SymbolKind.Variable) { if (!vars[_low = item.name.toLowerCase()] && !(item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character)) vars[_low] = true, items.push(convertNodeCompletion(item)); }
+			else { if (item.kind === SymbolKind.Function) funcs[item.name.toLowerCase()] = true; items.push(convertNodeCompletion(item)); }
+		}
+	}
+	function addGlobalVar() {
+		for (const name in (temp = docLexer.global)) {
+			const item = temp[name];
+			if (!(item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character)) vars[name] = true, items.push(convertNodeCompletion(item));
+		}
+		for (const t in list) {
+			path = list[t].path;
+			for (const name in (temp = doctree[t].global)) if (!vars[name]) vars[name] = true, addincludeitem(temp[name]);
+		}
+	}
+	function addFunction() {
+		for (const name in (temp = docLexer.function)) if (!funcs[name]) funcs[name] = true, items.push(convertNodeCompletion(temp[name]));
+		for (const t in list) {
+			path = list[t].path;
+			for (const name in (temp = doctree[t].function)) if (!funcs[name]) addincludeitem(temp[name]);
+		}
 	}
 });
 
@@ -692,7 +702,7 @@ function convertNodeCompletion(info: any): CompletionItem {
 		case SymbolKind.Event:
 			ci.kind = CompletionItemKind.Event; break;
 		case SymbolKind.Field:
-			ci.kind = CompletionItemKind.Field, ci.insertText = ci.label.replace(/:$/, ''), ci.detail = 'labal'; break;
+			ci.kind = CompletionItemKind.Field, ci.insertText = ci.label.replace(/:$/, ''); break;
 		case SymbolKind.Property:
 			ci.kind = CompletionItemKind.Property; break;
 		default:
@@ -706,15 +716,15 @@ function searchNode(doc: Lexer, name: string, pos: Position, kind: SymbolKind | 
 	if (!(node = doc.searchNode(name, pos, kind))) {
 		return searchIncludeNode(doc.uri, name, kind);
 	} else if (typeof kind === 'object' && (<Variable>node).globalspace) {
-		if ((t = doc.root.statement.global) && t[name]) node = t[name];
-		else for (const u in doc.relevance) if ((t = doctree[u].root.statement.global) && t[name]) { node = t[name], uri = u; break; }
+		if ((t = doc.global) && t[name]) node = t[name];
+		else for (const u in doc.relevance) if ((t = doctree[u].global) && t[name]) { node = t[name], uri = u; break; }
 	}
 	return { node, uri };
 	function searchIncludeNode(fileuri: string, name: string, kind: SymbolKind[] | SymbolKind): { node: DocumentSymbol | null, uri: string } {
 		let node: DocumentSymbol | null, list = doctree[fileuri].relevance, t: any;
 		if (typeof kind === 'object') {
-			for (const uri in list) if ((t = doctree[uri].root.statement.global) && t[name]) return { node: t[name], uri };
-			for (const uri in list) if ((t = doctree[uri].root.statement.define) && t[name]) return { node: t[name], uri };
+			for (const uri in list) if ((t = doctree[uri].global) && t[name]) return { node: t[name], uri };
+			for (const uri in list) if ((t = doctree[uri].define) && t[name]) return { node: t[name], uri };
 		} else for (const uri in list) if (node = doctree[uri].searchNode(name, undefined, kind)) return { node, uri };
 		return { node: null, uri: '' };
 	}
