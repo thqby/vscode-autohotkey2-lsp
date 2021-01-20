@@ -128,7 +128,7 @@ export class Lexer {
 	public get_tokon: Function;
 	public symboltree: DocumentSymbol[] = [];
 	public blocks: DocumentSymbol[] | undefined;
-	public cache: DocumentSymbol[] = [];
+	public flattreecache: DocumentSymbol[] = [];
 	public scriptpath: string;
 	public uri: string;
 	public global: { [key: string]: DocumentSymbol } = {};
@@ -308,7 +308,7 @@ export class Lexer {
 			whitespace_before_token = [], beginpos = 0, last_text = '', last_type = 'TK_BLOCK';
 			following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 			let gg: any = {}, dd: any = {}, ff: any = {}, _low = '';
-			this.global = gg, this.define = dd, this.function = ff, this.label.length = 0, this.funccall.length = 0;
+			this.global = gg, this.define = dd, this.function = ff, this.label.length = 0, this.funccall.length = 0, this.flattreecache.length = 0;
 			this.object = { method: {}, property: {} }, this.includedir = new Map(), this.blocks = [], this.texts = {};
 			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder;
 			this.symboltree = parse(), this.symboltree.push(...this.blocks), this.blocks = undefined;
@@ -2327,7 +2327,7 @@ export class Lexer {
 
 	public searchScopedNode(position: Position, root?: DocumentSymbol[]): DocumentSymbol | undefined {
 		let { line, character } = position, its: DocumentSymbol[] | undefined = undefined, it: DocumentSymbol | undefined;
-		if (!root) root = this.cache;
+		if (!root) root = this.flattreecache;
 		for (const item of root) {
 			if ((item.range.start.line === line && item.range.start.line === item.range.end.line && character >= item.range.start.character && character <= item.range.end.character)
 				|| (item.range.end.line > item.range.start.line && line >= item.range.start.line && line <= item.range.end.line))
