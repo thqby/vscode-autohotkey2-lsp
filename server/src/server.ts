@@ -56,7 +56,7 @@ let doctree: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } =
 let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
 let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], funcCache: { [key: string]: { prefix: string, body: string, description?: string } } = {};
 let nodecache: { [key: string]: { uri: string, line: number, character: number, ruri: string, node: DocumentSymbol } } = {};
-let symbolcache: SymbolInformation[] = [];
+let symbolcache: { uri: string, sym: SymbolInformation[] } = { uri: '', sym: [] };
 let timer: any;
 type Maybe<T> = T | undefined;
 
@@ -191,6 +191,7 @@ connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancell
 
 connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] => {
 	let uri = params.textDocument.uri.toLowerCase(), doc = doctree[uri];
+	if (!doc.reflat && symbolcache.uri === uri) return symbolcache.sym;
 	let tree = <DocumentSymbol[]>doc.symboltree, superglobal: { [key: string]: DocumentSymbol } = {}, gvar: any = {}, glo = doc.global;
 	for (const key of ['gui', 'menu', 'menubar', 'class', 'array', 'map', 'object', 'guicontrol'])
 		superglobal[key] = DocumentSymbol.create(key, undefined, SymbolKind.Class, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
@@ -206,7 +207,8 @@ connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] 
 			if (gg[key].kind === SymbolKind.Class && !glo[key]) gvar[key] = gg[key];
 		}
 	}
-	return symbolcache = (doctree[uri].flattreecache = flatTree(tree, gvar)).map(info => {
+	symbolcache.uri = uri, doc.reflat = false;
+	return symbolcache.sym = (doctree[uri].flattreecache = flatTree(tree, gvar)).map(info => {
 		return SymbolInformation.create(info.name, info.kind, info.range, uri, info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
 	});
 

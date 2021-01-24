@@ -130,6 +130,7 @@ export class Lexer {
 	public symboltree: DocumentSymbol[] = [];
 	public blocks: DocumentSymbol[] | undefined;
 	public flattreecache: DocumentSymbol[] = [];
+	public reflat: boolean = false;
 	public scriptpath: string;
 	public uri: string;
 	public global: { [key: string]: DocumentSymbol } = {};
@@ -311,7 +312,7 @@ export class Lexer {
 			following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 			let gg: any = {}, dd: any = {}, ff: any = {}, _low = '';
 			this.global = gg, this.define = dd, this.function = ff, this.label.length = this.funccall.length = this.diagnostics.length = 0;
-			this.object = { method: {}, property: {} }, this.includedir = new Map(), this.blocks = [], this.texts = {};
+			this.object = { method: {}, property: {} }, this.includedir = new Map(), this.blocks = [], this.texts = {}, this.reflat = true;
 			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder;
 			this.symboltree = parse(), this.symboltree.push(...this.blocks), this.blocks = undefined;
 			for (const it of this.symboltree)
