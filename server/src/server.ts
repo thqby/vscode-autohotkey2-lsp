@@ -191,7 +191,6 @@ connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancell
 
 connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] => {
 	let uri = params.textDocument.uri.toLowerCase(), doc = doctree[uri];
-	if (doc.flattreecache.length) return symbolcache;
 	let tree = <DocumentSymbol[]>doc.symboltree, superglobal: { [key: string]: DocumentSymbol } = {}, gvar: any = {}, glo = doc.global;
 	for (const key of ['gui', 'menu', 'menubar', 'class', 'array', 'map', 'object', 'guicontrol'])
 		superglobal[key] = DocumentSymbol.create(key, undefined, SymbolKind.Class, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));

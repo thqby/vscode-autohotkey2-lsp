@@ -308,7 +308,7 @@ export class Lexer {
 			whitespace_before_token = [], beginpos = 0, last_text = '', last_type = 'TK_BLOCK';
 			following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 			let gg: any = {}, dd: any = {}, ff: any = {}, _low = '';
-			this.global = gg, this.define = dd, this.function = ff, this.label.length = 0, this.funccall.length = 0, this.flattreecache.length = 0;
+			this.global = gg, this.define = dd, this.function = ff, this.label.length = 0, this.funccall.length = 0;
 			this.object = { method: {}, property: {} }, this.includedir = new Map(), this.blocks = [], this.texts = {};
 			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder;
 			this.symboltree = parse(), this.symboltree.push(...this.blocks), this.blocks = undefined;
@@ -341,8 +341,21 @@ export class Lexer {
 					case 'TK_HOT':
 						tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2));
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
-						lk = tk, tk = get_token_ingore_comment(comment = ''); if (tk.content === '{') sub = parse(1), tn.children = sub;
-						result.push(tn), next = false; break;
+						lk = tk, tk = get_token_ingore_comment(comment = '');
+						if (tk.content === '{') {
+							let ht = lk, vars = new Map<string, any>(), sm: StateMent = { assume: FuncScope.DEFAULT };
+							sub = parse(1, vars), tn.children = sub, tn.range = makerange(ht.offset, parser_pos - ht.offset), (<FuncNode>tn).statement = sm;
+							(<FuncNode>tn).params = [Variable.create('ThisHotkey', SymbolKind.Variable, makerange(0, 0), makerange(0, 0))];
+							if (vars.has('#assume')) sm.assume = vars.get('#assume');
+							for (const tp of ['global', 'local', 'define']) {
+								if (vars.has('#' + tp)) {
+									let oo: { [key: string]: Variable } = {}, _name = '';
+									for (const it of vars.get('#' + tp)) if (!oo[_name = it.name.toLowerCase()]) oo[_name] = it;
+									sm[tp === 'global' ? 'global' : tp === 'local' ? 'local' : 'define'] = oo;
+								}
+							}
+						} else next = false;
+						result.push(tn); break;
 					case 'TK_HOTLINE':
 						tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2));
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
@@ -1308,7 +1321,7 @@ export class Lexer {
 						return createToken(m[1], 'TK_HOTLINE', offset, m[1].length, true);
 					}
 				} else if (m = line.match(/^(\$?[~*]{0,2}((([<>]?[!+#^]){0,4}(`{|[\x21-\x7A\x7C-\x7E]|[a-z][a-z\d_]+))|(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+)\s+&\s+(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+))(\s+up)?::)(.*)$/i)) {
-					if (m[9].trim().match(/^(\$?[~*]{0,2}[<>]?[!+#^]){0,4}(`{|[\x21-\x7A\x7C-\x7E]|[a-z][a-z\d_]+)\s*(\s;.*)?$/i)) {
+					if (m[9].trim().match(/^([~*]{0,2}[<>]?[!+#^]){0,4}(`{|[\x21-\x7A\x7C-\x7E]|[a-z][a-z\d_]+)\s*(\s;.*)?$/i)) {
 						last_LF = next_LF, begin_line = true;
 						parser_pos = input.indexOf('::', parser_pos) + m[9].length - m[9].trimLeft().length + 2;
 						return createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, true);
