@@ -196,7 +196,7 @@ connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] 
 		superglobal[key] = DocumentSymbol.create(key, undefined, SymbolKind.Class, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
 	for (const key in glo) {
 		superglobal[key] = glo[key];
-		// if (glo[key].kind === SymbolKind.Variable) gvar.push(glo[key]);
+		if (glo[key].kind === SymbolKind.Class) gvar[key] = glo[key];
 	}
 	let list = doc.relevance;
 	for (const uri in list) {
