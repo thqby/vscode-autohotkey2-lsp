@@ -35,7 +35,8 @@ import {
 	CompletionParams,
 	TextDocumentChangeEvent,
 	Command,
-	MarkupKind
+	MarkupKind,
+	Diagnostic
 } from 'vscode-languageserver';
 
 import {
@@ -144,7 +145,8 @@ documents.onDidOpen(async e => {
 	let uri = e.document.uri.toLowerCase(), docLexer = doctree[uri];
 	if (!docLexer) docLexer = new Lexer(e.document), doctree[uri] = docLexer;
 	else docLexer.document = e.document;
-	docLexer.parseScript(), parseinclude(docLexer.include);
+	docLexer.parseScript(), parseinclude(docLexer.include), sendDiagnostics();
+	if (docLexer.diagnostics.length) connection.sendDiagnostics({ uri: uri, diagnostics: docLexer.diagnostics });
 	if (!docLexer.relevance) docLexer.relevance = getincludetable(uri);
 });
 
@@ -165,7 +167,7 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 		timer = null;
 		if (!docLexer) docLexer = new Lexer(document), doctree[uri] = docLexer;
 		let initial = docLexer.include, cg = false;
-		docLexer.parseScript();
+		docLexer.parseScript(), sendDiagnostics();
 		if (Object.keys(initial).length !== Object.keys(docLexer.include).length)
 			for (const t in docLexer.include) if (!initial[t]) { cg = true, initial[t] = docLexer.include[t]; }
 		if (!cg) return;
@@ -173,7 +175,7 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 		function resetrelevance() {
 			for (const u in initial) if (doctree[u]) doctree[u].relevance = getincludetable(u);
 		}
-	}, 750);
+	}, 500);
 });
 
 connection.onDidChangeWatchedFiles(_change => {
@@ -751,4 +753,9 @@ function getincludetable(fileuri: string) {
 			if (doc = doctree[uri]) { if (!list[uri]) list[uri] = include[uri], count++; traverseinclude(doc.include); }
 		}
 	}
+}
+
+function sendDiagnostics() {
+	for (const uri in doctree) 
+		connection.sendDiagnostics({ uri: uri, diagnostics: doctree[uri].diagnostics });
 }
