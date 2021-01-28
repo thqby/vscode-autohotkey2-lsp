@@ -2,7 +2,7 @@
 
 AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis
 
-![简体中文](https://gitee.com/orz707/vscode-autohotkey2-lsp/blob/master/README.md)
+[简体中文](https://gitee.com/orz707/vscode-autohotkey2-lsp/blob/master/README.md)
 
 - [Language features](#Language features)
   - [Diagnostics](#Diagnostics)

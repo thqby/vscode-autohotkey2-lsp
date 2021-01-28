@@ -2,7 +2,7 @@
 
 AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
-![English](https://gitee.com/orz707/vscode-autohotkey2-lsp/blob/master/README.en.md)
+[English](https://gitee.com/orz707/vscode-autohotkey2-lsp/blob/master/README.en.md)
 
 - [语言特性](#语言特性)
   - [错误诊断](#错误诊断)
