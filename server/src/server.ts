@@ -267,7 +267,7 @@ connection.onHover(async (params: HoverParams, token: CancellationToken): Promis
 	if (token.isCancellationRequested) return undefined;
 	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri];
 	if (!docLexer) return;
-	let context = docLexer.buildContext(params.position), value = '', t: any, hover: any[] = [];
+	let context = docLexer.buildContext(params.position), t: any, hover: any[] = [];
 	if (context) {
 		let word = context.text.toLowerCase(), kind: SymbolKind | SymbolKind[] = SymbolKind.Variable;
 		if (context.pre === '#') {
