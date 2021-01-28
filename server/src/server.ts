@@ -267,7 +267,7 @@ connection.onHover(async (params: HoverParams, token: CancellationToken): Promis
 	if (token.isCancellationRequested) return undefined;
 	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri];
 	if (!docLexer) return;
-	let context = docLexer.buildContext(params.position), value = '', t: any;
+	let context = docLexer.buildContext(params.position), value = '', t: any, hover: any[] = [];
 	if (context) {
 		let word = context.text.toLowerCase(), kind: SymbolKind | SymbolKind[] = SymbolKind.Variable;
 		if (context.pre === '#') {
@@ -278,9 +278,9 @@ connection.onHover(async (params: HoverParams, token: CancellationToken): Promis
 		if (kind === SymbolKind.Variable) kind = [SymbolKind.Variable, SymbolKind.Class];
 		let { node, uri } = searchNode(docLexer, word, context.range.end, kind);
 		if (node) {
-			value = ((node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) ? (<FuncNode>node).full + '\n' : '') + (node.detail ? node.detail : '');
-			nodecache.hover = { uri, line: params.position.line, character: context.range.end.character, ruri: uri, node };
-			if (value) return { contents: { language: 'ahk2', value: value } };
+			if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) hover.push({ language: 'ahk2', value: (<FuncNode>node).full });
+			if (node.detail) hover.push(node.detail.replace(/(\r?\n)+/g, '$1$1'));
+			if (hover.length) return { contents: hover };
 		}
 		if (typeof kind === 'object') { if ((t = hoverCache[1]) && t[word]) return t[word][0]; }
 		else if (kind === SymbolKind.Function) {
@@ -589,7 +589,8 @@ async function initAHKCache() {
 					completionItem.insertText = snip.body.replace(/^\./, ''), completionItem.insertTextFormat = InsertTextFormat.Snippet;
 					completionItem.detail = `(${objname}) ` + snip.description, snip.body = snip.body.replace(/\$\{\d+:([^}]+)\}/g, '$1');
 					completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' }, completionItemCache[t].push(completionItem);
-					hover.contents = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```\n\n' + snip.description };
+					hover.contents = [{ language: 'ahk2', value: snip.body } ];
+					if (snip.description) hover.contents.push(snip.description);
 					if (!hoverCache[0][_low]) hoverCache[0][_low] = [];
 					hoverCache[0][_low].push(hover), funcCache[_low] = snip;
 				}
