@@ -1,36 +1,70 @@
 # vscode-autohotkey2-lsp
 
-#### Description
-Autohotkey2 Language Support using vscode-lsp.
+AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis
 
-#### Software Architecture
-Software architecture description
+![简体中文](https://gitee.com/orz707/vscode-autohotkey2-lsp/blob/master/README.md)
 
-#### Installation
+- [Language features](#Language features)
+  - [Diagnostics](#Diagnostics)
+  - [Snippet](#Snippet)
+  - [Signature](#Signature)
+  - [DocumentSymbol](#DocumentSymbol)
+  - [Blocks](#Blocks)
+  - [Hover](#Hover)
+  - [GotoDefinition](#GotoDefinition)
+  - [CodeFormat](#CodeFormat)
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+## Language features
 
-#### Instructions
+### Diagnostics
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+Simple syntax error diagnosis.
 
-#### Contribution
+![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/diagnostics.png)
 
-1.  Fork the repository
-2.  Create Feat_xxx branch
-3.  Commit your code
-4.  Create Pull Request
+### Snippet
 
+Support for scoped variables, functions, parameters, class names, method names, include files, and function library completion.
 
-#### Gitee Feature
+![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/snippet.png)
 
-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+![snippet2](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/snippet.gif)
+
+### Signature
+
+Support for intelligent prompts for function parameters.
+
+![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/signature.gif)
+
+### DocumentSymbol
+
+1. Displays class, method, function, variable, label, hotkey, hot string, block information in the left outline column.  
+2. press Ctrl + P, Input @symbol_name to retrieve and jump  
+3. You can comment a method with a semicolon or /* */ on the top line of a function, variable.  
+
+### Blocks
+
+usage: Add two semicolons to the comment code block.  
+![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeSymbol.png)
+
+### Hover  
+
+Supports hover prompts and comments for scoped variables, functions, global classes, and labels.  
+usage: Move the mouse over the symbol.  
+![hover](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/hover.png)
+
+### GotoDefinition
+
+1. Support for jumping to the declaration location of scoped variables, functions, global classes, and labels.  
+2. usage: Press ctrl Then move the mouse over to the code and click.  
+
+![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/gotoDefinition.png)
+
+### CodeFormat
+
+usage:  
+
+- Right-click the popup menu and click "Format document".  
+- or Press `Shift+Alt+F`.  
+
+![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeFormat.gif)

@@ -145,7 +145,7 @@ documents.onDidOpen(async e => {
 	let uri = e.document.uri.toLowerCase(), docLexer = doctree[uri];
 	if (!docLexer) docLexer = new Lexer(e.document), doctree[uri] = docLexer;
 	else docLexer.document = e.document;
-	docLexer.parseScript(), parseinclude(docLexer.include), sendDiagnostics();
+	docLexer.actived = true, docLexer.parseScript(), parseinclude(docLexer.include), sendDiagnostics();
 	if (docLexer.diagnostics.length) connection.sendDiagnostics({ uri: uri, diagnostics: docLexer.diagnostics });
 	if (!docLexer.relevance) docLexer.relevance = getincludetable(uri);
 });
@@ -153,11 +153,20 @@ documents.onDidOpen(async e => {
 // Only keep settings for open documents
 documents.onDidClose(e => {
 	let uri = e.document.uri.toLowerCase();
-	documentSettings.delete(uri);
+	documentSettings.delete(uri), doctree[uri].actived = false;
 	for (let u in doctree)
-		if (u !== uri)
+		if (doctree[u].actived)
 			for (let f in doctree[u].include) if (f === uri) return;
 	delete doctree[uri];
+	connection.sendDiagnostics({ uri, diagnostics: [] });
+	let deldocs: string[] = [];
+	for (let u in doctree)
+		if (!doctree[u].actived) {
+			let del = true;
+			for (let f in doctree[u].include) if (doctree[f] && doctree[f].actived) { del = false; break; }
+			if (del) deldocs.push(u);
+		}
+	for (let u of deldocs) { delete doctree[u]; connection.sendDiagnostics({ uri: u, diagnostics: [] }); }
 });
 
 documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
@@ -193,7 +202,7 @@ connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancell
 
 connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] => {
 	let uri = params.textDocument.uri.toLowerCase(), doc = doctree[uri];
-	if (!doc.reflat && symbolcache.uri === uri) return symbolcache.sym;
+	if (!doc || (!doc.reflat && symbolcache.uri === uri)) return symbolcache.sym;
 	let tree = <DocumentSymbol[]>doc.symboltree, superglobal: { [key: string]: DocumentSymbol } = {}, gvar: any = {}, glo = doc.global;
 	for (const key of ['gui', 'menu', 'menubar', 'class', 'array', 'map', 'object', 'guicontrol'])
 		superglobal[key] = DocumentSymbol.create(key, undefined, SymbolKind.Class, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
@@ -256,7 +265,9 @@ connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] 
 
 connection.onHover(async (params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> => {
 	if (token.isCancellationRequested) return undefined;
-	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], context = docLexer.buildContext(params.position), value = '', t: any;
+	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri];
+	if (!docLexer) return;
+	let context = docLexer.buildContext(params.position), value = '', t: any;
 	if (context) {
 		let word = context.text.toLowerCase(), kind: SymbolKind | SymbolKind[] = SymbolKind.Variable;
 		if (context.pre === '#') {
