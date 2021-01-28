@@ -721,7 +721,7 @@ export class Lexer {
 						case 'TK_INLINE_COMMENT':
 							continue;
 						case 'TK_UNKNOWN': _this.addDiagnostic('未知的Token', tk.offset); break;
-						case 'TK_RESERVED': _this.addDiagnostic('保留字不能用作变量名', tk.offset);
+						case 'TK_RESERVED': _this.addDiagnostic('保留字不能用作变量名', tk.offset), next = false, tk.type = 'TK_WORD'; break;
 						default: break loop;
 					}
 				}
