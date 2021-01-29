@@ -8,7 +8,9 @@ import {
 	ExtensionContext,
 	workspace,
 	window,
-	Range
+	Range,
+	ViewColumn,
+	Uri
 } from 'vscode';
 
 import {

@@ -25,7 +25,7 @@
 		"onLanguage:ahk2",
 		"onCommand:run.ahk2"
 	],
-	"main": "./client/dist/extension",
+	"main": "./client/out/extension",
 	"contributes": {
 		"breakpoints": [
 			{

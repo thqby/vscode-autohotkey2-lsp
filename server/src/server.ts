@@ -28,6 +28,7 @@ import {
 	HoverParams,
 	Hover,
 	DocumentFormattingParams,
+	DocumentRangeFormattingParams,
 	Range,
 	DocumentSymbol,
 	LocationLink,
@@ -107,6 +108,7 @@ connection.onInitialize((params: InitializeParams) => {
 			documentSymbolProvider: true,
 			definitionProvider: true,
 			documentFormattingProvider: true,
+			documentRangeFormattingProvider: true,
 			hoverProvider: true
 		}
 	};
@@ -127,7 +129,7 @@ connection.onInitialized(() => {
 	}
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			connection.console.log('Workspace folder change event received.');
+			console.log('Workspace folder change event received.');
 		});
 	}
 	initpathenv();
@@ -177,19 +179,18 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 		if (!docLexer) docLexer = new Lexer(document), doctree[uri] = docLexer;
 		let initial = docLexer.include, cg = false;
 		docLexer.parseScript(), sendDiagnostics();
-		if (Object.keys(initial).length !== Object.keys(docLexer.include).length)
-			for (const t in docLexer.include) if (!initial[t]) { cg = true, initial[t] = docLexer.include[t]; }
-		if (!cg) return;
-		parseinclude(docLexer.include), resetrelevance();
+		for (const t in docLexer.include) if (!initial[t]) initial[t] = docLexer.include[t], cg = true;
+		if (!cg && Object.keys(initial).length === Object.keys(docLexer.include).length) return;
+		docLexer.relevance = getincludetable(uri), parseinclude(docLexer.include), resetrelevance();
 		function resetrelevance() {
 			for (const u in initial) if (doctree[u]) doctree[u].relevance = getincludetable(u);
 		}
-	}, 500);
+	}, 300);
 });
 
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
-	connection.console.log('We received an file change event');
+	console.log('We received an file change event');
 });
 
 connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancellation: CancellationToken): Promise<TextEdit[]> => {
@@ -197,6 +198,17 @@ connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancell
 	const opts = { "indent_size": "1", "indent_char": "\t", "max_preserve_newlines": "2", "preserve_newlines": true, "keep_array_indentation": true, "break_chained_methods": false, "indent_scripts": "keep", "brace_style": "collapse", "space_before_conditional": true, "wrap_line_length": "0", "space_after_anon_function": true, "jslint_happy": true };
 	if (params.options.insertSpaces) opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
 	let newText = docLexer.beautify(opts), range = Range.create(0, 0, docLexer.document.lineCount, 0);
+	return [{ range, newText }];
+});
+
+connection.onDocumentRangeFormatting(async (params: DocumentRangeFormattingParams, cancellation: CancellationToken): Promise<TextEdit[]> => {
+	const opts = { "indent_size": "1", "indent_char": "\t", "max_preserve_newlines": "2", "preserve_newlines": true, "keep_array_indentation": true, "break_chained_methods": false, "indent_scripts": "keep", "brace_style": "collapse", "space_before_conditional": true, "wrap_line_length": "0", "space_after_anon_function": true, "jslint_happy": true };
+	if (params.options.insertSpaces) opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
+	let range = params.range, document = doctree[params.textDocument.uri.toLowerCase()].document, newText = document.getText(range);
+	let t = '';
+	if (range.start.character > 0 && (t = document.getText(Range.create(range.start.line, 0, range.start.line, range.start.character))).trim() === '')
+		newText = t + newText, range.start.character = 0;
+	newText = new Lexer(TextDocument.create('', 'ahk2', -10, newText)).beautify(opts);
 	return [{ range, newText }];
 });
 
@@ -292,6 +304,29 @@ connection.onHover(async (params: HoverParams, token: CancellationToken): Promis
 	return undefined;
 });
 
+connection.onDefinition(async (params: DefinitionParams, token: CancellationToken): Promise<Definition | LocationLink[] | undefined> => {
+	if (token.isCancellationRequested) return undefined;
+	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], context = docLexer.buildContext(params.position), m: any;
+	if (context) {
+		let word = '', kind: SymbolKind | SymbolKind[] = SymbolKind.Variable, t: any, cache = nodecache.hover;
+		if (context.pre.match(/^\s*#/i)) {
+			if ((m = context.linetext.match(/^(\s*#include(again)?\s+)(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)\s*(\s;.*)?$/i)) && m[3]) {
+				let line = context.range.start.line, file = m[3].trim();
+				for (let t in docLexer.include)
+					if (docLexer.include[t].raw === file)
+						return [LocationLink.create(t, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0), Range.create(line, m[1].length, line, m[1].length + m[3].length))];
+			}
+			return undefined;
+		} else if (context.pre.match(/(?<!\.)\b(goto|break|continue)(?!\s*:)(\(\s*['"]|\s*)$/i) || (context.pre.trim() === '' && context.suf.match(/^:\s*(\s;.*)?$/))) {
+			kind = SymbolKind.Field, word = context.text.toLowerCase() + ':';
+		} else word = context.text.toLowerCase(), kind = context.kind;
+		if (kind === SymbolKind.Variable) kind = [SymbolKind.Variable, SymbolKind.Class];
+		let { node, uri } = searchNode(docLexer, word, context.range.end, kind);
+		if (node) return Location.create(uri, node.selectionRange);
+	}
+	return undefined;
+});
+
 connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> => {
 	if (cancellation.isCancellationRequested) return undefined;
 	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], kind: SymbolKind = SymbolKind.Function;
@@ -314,7 +349,7 @@ connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: Can
 			let t = funcCache[name];
 			signinfo.signatures.push({
 				label: t.body,
-				parameters: t.body.replace(/^\w+\(|\)/g, '').split(',').map(param => { return { label: param.trim() } }),
+				parameters: t.body.replace(/^\w+[(\s]|\)/g, '').split(',').map(param => { return { label: param.trim() } }),
 				documentation: t.description
 			});
 		}
@@ -353,29 +388,6 @@ function getFuncCallInfo(doc: Lexer, position: Position) {
 		if (text.charAt(i) === ',') index++; else if (text.charAt(i) === ')' && i >= text.length - 1) { index = -1; break; }
 	return { name, pos, index };
 }
-
-connection.onDefinition(async (params: DefinitionParams, token: CancellationToken): Promise<Definition | LocationLink[] | undefined> => {
-	if (token.isCancellationRequested) return undefined;
-	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], context = docLexer.buildContext(params.position), m: any;
-	if (context) {
-		let word = '', kind: SymbolKind | SymbolKind[] = SymbolKind.Variable, t: any, cache = nodecache.hover;
-		if (context.pre.match(/^\s*#/i)) {
-			if ((m = context.linetext.match(/^(\s*#include(again)?\s+)(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)\s*(\s;.*)?$/i)) && m[3]) {
-				let line = context.range.start.line, file = m[3].trim();
-				for (let t in docLexer.include)
-					if (docLexer.include[t].raw === file)
-						return [LocationLink.create(t, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0), Range.create(line, m[1].length, line, m[1].length + m[3].length))];
-			}
-			return undefined;
-		} else if (context.pre.match(/(?<!\.)\b(goto|break|continue)(?!\s*:)(\(\s*['"]|\s*)$/i) || (context.pre.trim() === '' && context.suf.match(/^:\s*(\s;.*)?$/))) {
-			kind = SymbolKind.Field, word = context.text.toLowerCase() + ':';
-		} else word = context.text.toLowerCase(), kind = context.kind;
-		if (kind === SymbolKind.Variable) kind = [SymbolKind.Variable, SymbolKind.Class];
-		let { node, uri } = searchNode(docLexer, word, context.range.end, kind);
-		if (node) return Location.create(uri, node.selectionRange);
-	}
-	return undefined;
-});
 
 connection.onCompletion(async (params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> => {
 	if (token.isCancellationRequested) return undefined;
@@ -554,7 +566,7 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 connection.onCompletionResolve(async (item: CompletionItem): Promise<CompletionItem> => item);
 documents.listen(connection);
 connection.listen();
-connection.client.connection.console.log('Starting AHK Server');
+console.log('Starting AHK Server');
 initAHKCache();
 
 export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
@@ -587,9 +599,12 @@ async function initAHKCache() {
 					const completionItem = CompletionItem.create(snip.prefix.replace('.', '')), hover: Hover = { contents: [] }, _low = snip.prefix.toLowerCase();
 					snip.body = bodytostring(snip.body), completionItem.kind = snip.body.indexOf('(') === -1 ? CompletionItemKind.Property : CompletionItemKind.Method;
 					completionItem.insertText = snip.body.replace(/^\./, ''), completionItem.insertTextFormat = InsertTextFormat.Snippet;
-					completionItem.detail = `(${objname}) ` + snip.description, snip.body = snip.body.replace(/\$\{\d+:([^}]+)\}/g, '$1');
+					completionItem.detail = `(${objname}) ` + snip.description;
+					snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]+)\2\}/g, (...m) => {
+						return m[2] ? m[3].replace(/,/g, '|') : m[3];
+					});
 					completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' }, completionItemCache[t].push(completionItem);
-					hover.contents = [{ language: 'ahk2', value: snip.body } ];
+					hover.contents = [{ language: 'ahk2', value: snip.body }];
 					if (snip.description) hover.contents.push(snip.description);
 					if (!hoverCache[0][_low]) hoverCache[0][_low] = [];
 					hoverCache[0][_low].push(hover), funcCache[_low] = snip;
@@ -622,8 +637,14 @@ async function initAHKCache() {
 		if (type === CompletionItemKind.Function && snip.body.indexOf('|}') === -1 && snip.body.indexOf('(${') !== -1)
 			completionItem.insertText = snip.prefix + '($0)', completionItem.command = cmd, completionItem.detail = snip.description;
 		else if (type === CompletionItemKind.Constant) completionItem.insertText = '${1:' + snip.prefix + ' := }' + snip.body + '$0', completionItem.detail = snip.body;
-		else completionItem.insertText = snip.body, completionItem.detail = snip.description;
-		completionItem.insertTextFormat = InsertTextFormat.Snippet, snip.body = snip.body.replace(/\$\{\d+:([^}]+)\}/g, '$1');
+		else completionItem.insertText = snip.body.replace(/\$\{\d:\s*\[,[^\]\}]+\]\}/, () => {
+			completionItem.command = cmd;
+			return '';
+		}), completionItem.detail = snip.description;
+		completionItem.insertTextFormat = InsertTextFormat.Snippet;
+		snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]+)\2\}/g, (...m) => {
+			return m[2] ? m[3].replace(/,/g, '|') : m[3];
+		});
 		completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' }, completionItemCache[t].push(completionItem);
 		if (type === CompletionItemKind.Constant || type === CompletionItemKind.Text) return;
 		hover.contents = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```\n\n' + snip.description };
@@ -774,6 +795,6 @@ function getincludetable(fileuri: string) {
 }
 
 function sendDiagnostics() {
-	for (const uri in doctree) 
+	for (const uri in doctree)
 		connection.sendDiagnostics({ uri: uri, diagnostics: doctree[uri].diagnostics });
 }

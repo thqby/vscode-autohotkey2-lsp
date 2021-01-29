@@ -2144,7 +2144,7 @@
 			"prefix": "Suspend"
 		},
 		{
-			"body": "Thread ${1|'NoTimer','Priority','Interrupt'|}, ${2:Value1}, ${3:Value2]}",
+			"body": "Thread ${1|'NoTimer','Priority','Interrupt'|}${2: [, Value1, Value2]}",
 			"description": "设置线程的优先级或是否可以被中断. 它也可以临时禁用所有的计时器.\nThread 'NoTimers' , TrueOrFalse\nThread 'Priority', Level\nThread 'Interrupt' [, Duration, LineCount]",
 			"prefix": "Thread"
 		},

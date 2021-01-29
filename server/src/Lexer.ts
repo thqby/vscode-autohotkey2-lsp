@@ -374,7 +374,11 @@ export class Lexer {
 						LF = input.indexOf('\n', parser_pos), parser_pos = LF > -1 ? LF + 1 : input_length, tn.range.end = document.positionAt(parser_pos - 2), result.push(tn);
 						break;
 					case 'TK_START_BLOCK': blocks++, blockpos.push(parser_pos - 1); break;
-					case 'TK_END_BLOCK': if ((--blocks) < 0) return result; break;
+					case 'TK_END_BLOCK':
+						if (mode === 0) _this.addDiagnostic('丢失对应的"{"', tk.offset);
+						else if ((--blocks) < 0) return result;
+						break;
+					case 'TK_END_EXPR': _this.addDiagnostic('丢失对应的"' + (<any>{ ')': '(', ']': '[' })[tk.content] + '"', tk.offset); break;
 					case 'TK_START_EXPR':
 						if (tk.content === '[') parsepair('[', ']');
 						else parsepair('(', ')');
@@ -688,8 +692,10 @@ export class Lexer {
 								// parsepair('(', ')')
 							} break;
 						case 'TK_START_BLOCK': parseobj(); break;
+						case 'TK_END_BLOCK':
+						case 'TK_END_EXPR': _this.addDiagnostic('丢失对应的"' + (<any>{ ')': '(', ']': '[', '}': '{' })[tk.content] + '"', tk.offset); break;
 						case 'TK_UNKNOWN': _this.addDiagnostic('未知的Token', tk.offset); break;
-						case 'TK_RESERVED': _this.addDiagnostic('保留字不能用作变量名', tk.offset);
+						case 'TK_RESERVED': _this.addDiagnostic('保留字不能用作变量名', tk.offset); break;
 					}
 				}
 				return result.splice(index);
@@ -722,6 +728,8 @@ export class Lexer {
 							continue;
 						case 'TK_UNKNOWN': _this.addDiagnostic('未知的Token', tk.offset); break;
 						case 'TK_RESERVED': _this.addDiagnostic('保留字不能用作变量名', tk.offset), next = false, tk.type = 'TK_WORD'; break;
+						case 'TK_END_BLOCK':
+						case 'TK_END_EXPR': _this.addDiagnostic('丢失对应的"' + (<any>{ ')': '(', ']': '[', '}': '{' })[tk.content] + '"', tk.offset); break;
 						default: break loop;
 					}
 				}
@@ -879,6 +887,7 @@ export class Lexer {
 							case 'TK_LABEL':
 								if (tk.content.match(/^\w+:$/)) { addtext({ content: tk.content.replace(':', ''), type: '', offset: 0, length: 0 }); return true; }
 								return false;
+							case 'TK_COMMA':
 							case 'TK_COMMENT':
 							case 'TK_BLOCK_COMMENT':
 							case 'TK_INLINE_COMMENT':
@@ -948,6 +957,7 @@ export class Lexer {
 					else if (tk.content === '{') parseobj();
 					else if (tk.content.match(/^[%)}]$/)) { _this.addDiagnostic('丢失对应的"' + e + '"', pairpos[pairnum]), next = false; return; }
 					else if (tk.type === 'TK_RESERVED') _this.addDiagnostic('保留字不能用作变量名', tk.offset);
+					else if (tk.type === 'TK_END_BLOCK' || tk.type === 'TK_END_EXPR') _this.addDiagnostic('丢失对应的"' + (<any>{ ')': '(', ']': '[', '}': '{' })[tk.content] + '"', tk.offset);
 				}
 				if (tk.type === 'TK_EOF') _this.addDiagnostic('丢失对应的"' + e + '"', pairpos[pairnum]);
 			}
