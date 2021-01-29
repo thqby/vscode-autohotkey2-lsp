@@ -1,0 +1,80 @@
+{
+  "name": "ahk2-output",
+  "scopeName": "ahk2.output",
+  "patterns": [
+    {
+      "captures": {
+        "1": {
+          "name": "token.info-token"
+        },
+        "2": {
+          "name": "string"
+        }
+      },
+      "match": "^(\\[Running\\])(.*)$",
+      "name": "ahk2.running"
+    },
+    {
+      "captures": {
+        "1": {
+          "name": "token.info-token"
+        },
+        "2": {
+          "name": "string"
+        },
+        "3": {
+          "name": "token.debug-token"
+        },
+        "4": {
+          "name": "token.error-token"
+        },
+        "5": {
+          "name": "string"
+        },
+        "6": {
+          "name": "constant.numeric"
+        },
+        "7": {
+          "name": "string"
+        }
+      },
+      "match": "^(\\[Done\\])(.+)(?:(code=0)|(code=\\d+))([^\\d]+)(\\d+(?:\\.\\d+)?)([^\\d]+)$",
+      "name": "ahk2.done"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#string_escaped_char"
+    }
+  ],
+  "repository": {
+    "numbers": {
+      "match": "((?<!\\w*)[+\\-])?(\\d+(?:\\.\\d+)?|0[xX][\\da-fA-F]+)",
+      "name": "constant.numeric"
+    },
+    "operators": {
+      "patterns": [
+        {
+          "match": "&=|\\^=|<<=|>>=|\\|=|\\.=|\\+=|-=|\\*=|(?<!\\()/=|--|\\+\\+|<<|>>|!=|<=|>=|=?=|<|>|&&|!|\\|\\||&|\\||\\^|~|:=|\\*|/|-|\\+",
+          "name": "keyword.operator"
+        }
+      ]
+    },
+    "string_escaped_char": {
+      "patterns": [
+        {
+          "match": "(?i)`[abefnprtv'\"`]",
+          "name": "constant.character.escape.ahk2"
+        },
+        {
+          "match": "`.",
+          "name": "invalid.illegal.unknown-escape.ahk2"
+        }
+      ]
+    }
+  }
+}

@@ -23,8 +23,7 @@
 	},
 	"activationEvents": [
 		"onLanguage:ahk2",
-		"onCommand:run.ahk2",
-		"onDebug"
+		"onCommand:run.ahk2"
 	],
 	"main": "./client/dist/extension",
 	"contributes": {
@@ -47,6 +46,12 @@
 					".ahk2"
 				],
 				"configuration": "./ahk2.configuration.json"
+			},
+			{
+				"id": "ahk2-output",
+				"mimetypes": [
+					"text/x-code-output"
+				]
 			}
 		],
 		"grammars": [
@@ -54,6 +59,11 @@
 				"language": "ahk2",
 				"scopeName": "source.ahk2",
 				"path": "./syntaxes/ahk2.tmLanguage.json"
+			},
+			{
+				"language": "ahk2-output",
+				"scopeName": "ahk2.output",
+				"path": "./syntaxes/ahk2-output.tmLanguage.json"
 			}
 		],
 		"configuration": {
@@ -90,7 +100,72 @@
 					"strings": true
 				}
 			}
-		}
+		},
+		"commands": [
+			{
+				"command": "ahk2.run",
+				"title": "运行脚本",
+				"category": "ahk2"
+			},
+			{
+				"command": "ahk2.selection.run",
+				"title": "运行选择的脚本",
+				"category": "ahk2"
+			},
+			{
+				"command": "ahk2.stop",
+				"title": "停止运行中的脚本",
+				"category": "ahk2"
+			},
+			{
+				"command": "ahk2.help",
+				"title": "快捷帮助",
+				"category": "ahk2"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"when": "!inOutput && editorHasSelection",
+					"command": "ahk2.selection.run",
+					"group": "navigation"
+				},
+				{
+					"when": "!inOutput && !editorHasSelection",
+					"command": "ahk2.run",
+					"group": "navigation"
+				},
+				{
+					"command": "ahk2.help",
+					"group": "navigation"
+				},
+				{
+					"when": "inOutput",
+					"command": "ahk2.stop",
+					"group": "stop-code-run"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "ahk2.run",
+				"key": "ctrl+f5",
+				"when": "!editorHasSelection"
+			},
+			{
+				"command": "ahk2.selection.run",
+				"key": "ctrl+f5",
+				"when": "editorHasSelection"
+			},
+			{
+				"command": "ahk2.help",
+				"key": "ctrl+f1"
+			},
+			{
+				"command": "ahk2.stop",
+				"key": "ctrl+f6"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "webpack --mode production",

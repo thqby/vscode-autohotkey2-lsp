@@ -554,7 +554,7 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 connection.onCompletionResolve(async (item: CompletionItem): Promise<CompletionItem> => item);
 documents.listen(connection);
 connection.listen();
-connection.console.log('Starting AHK Server');
+connection.client.connection.console.log('Starting AHK Server');
 initAHKCache();
 
 export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
@@ -678,6 +678,12 @@ async function initpathenv(config?: any) {
 		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs'], path = '', init = !pathenv.ahkpath;
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].toLowerCase();
+		if (!pathenv.ahkpath) {
+			setTimeout(() => {
+				initpathenv();
+			}, 1000);
+			return;
+		}
 		libdirs.length = 0;
 		if (fs.existsSync(path = pathenv.mydocuments + '\\autohotkey\\lib')) libdirs.push(path);
 		if (fs.existsSync(path = pathenv.ahkpath.replace(/[^\\/]+$/, 'lib'))) libdirs.push(path);
