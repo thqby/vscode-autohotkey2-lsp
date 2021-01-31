@@ -1,10 +1,8 @@
 # AutoHotkey2语言支持
 
-Turn down the pages of the English version of README
+Turn down the pages of the [English](#Language-support-for-AutoHotkey2-for-Visual-Studio-Code) version of README
 
 AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
-
-[English](https://gitee.com/orz707/vscode-autohotkey2-lsp/blob/master/README.en.md)
 
 - [语言特性](#语言特性)
   - [错误诊断](#错误诊断)
@@ -68,8 +66,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 - 右键弹出菜单然后点击 格式化文档.  
 - 或按 `Shift+Alt+F`.  
-  
-  
+
 ![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeFormat.gif)
 
 # Language support for AutoHotkey2 for Visual Studio Code
