@@ -323,7 +323,7 @@
 			"prefix": "static"
 		},
 		{
-			"body": "switch ${1:SwitchValue}\n{\ncase ${2:}:\n\t${3:}\ndefault:\n\t$0\n}",
+			"body": "switch ${1:SwitchValue} {\n\tcase ${2:}:\n\t\t${3:}\n\tdefault:\n\t\t$0\n}",
 			"prefix": "switch"
 		},
 		{
@@ -343,7 +343,7 @@
 		{
 			"body": "until ($0)",
 			"description": "将条件应用于循环或for循环的继续.",
-			"prefix": "Until"
+			"prefix": "until"
 		},
 		{
 			"body": "while ($0)",
@@ -2019,29 +2019,29 @@
 			"prefix": "ListVars"
 		},
 		{
-			"body": "Loop Files ${1:FilePattern [, Mode]}",
+			"body": "loop files ${1:FilePattern [, Mode]}",
 			"description": "检索指定的文件或文件夹, 每次一个.",
-			"prefix": "Loop Files"
+			"prefix": "loop files"
 		},
 		{
-			"body": "Loop Parse ${1:String [, Delimiters|CSV, OmitChars]}",
+			"body": "loop parse ${1:String [, Delimiters|CSV, OmitChars]}",
 			"description": "从一个字符串中一次检索一个子字符串（字段）.",
-			"prefix": "Loop Parse"
+			"prefix": "loop parse"
 		},
 		{
-			"body": "Loop Read ${1:InputFile [, OutputFile]}",
+			"body": "loop read ${1:InputFile [, OutputFile]}",
 			"description": "检索文本文件中的行, 每次一行.",
-			"prefix": "Loop Read"
+			"prefix": "loop read"
 		},
 		{
-			"body": "Loop Reg ${1:KeyName [, Mode]}",
+			"body": "loop reg ${1:KeyName [, Mode]}",
 			"description": "检索指定注册表子项的内容,一次检索一项.",
-			"prefix": "Loop Reg"
+			"prefix": "loop reg"
 		},
 		{
-			"body": "Loop ${1:[Count]}",
+			"body": "loop ${1:[Count]}",
 			"description": "重复执行一系列函数: 可以指定表示重复次数的数字或直到遇到 break.",
-			"prefix": "Loop"
+			"prefix": "loop"
 		},
 		{
 			"body": "Pause ${1:[NewState]}",

@@ -37,7 +37,9 @@ import {
 	TextDocumentChangeEvent,
 	Command,
 	MarkupKind,
-	Diagnostic
+	FoldingRangeParams,
+	FoldingRange,
+	LanguagesImpl
 } from 'vscode-languageserver';
 
 import {
@@ -45,6 +47,7 @@ import {
 } from 'vscode-languageserver-textdocument';
 import { Lexer, ClassNode, FuncNode, Variable, Word, FuncScope } from './Lexer'
 import { runscript } from './scriptrunner';
+import { ResultProgress } from 'vscode-languageserver/lib/progress';
 
 export const serverName = 'mock-ahk-vscode';
 export const languageServer = 'ahk2-language-server';
@@ -109,7 +112,8 @@ connection.onInitialize((params: InitializeParams) => {
 			definitionProvider: true,
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
-			hoverProvider: true
+			hoverProvider: true,
+			foldingRangeProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -129,7 +133,7 @@ connection.onInitialized(() => {
 	}
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			console.log('Workspace folder change event received.');
+			// console.log('Workspace folder change event received.');
 		});
 	}
 	initpathenv();
@@ -173,36 +177,37 @@ documents.onDidClose(e => {
 
 documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
 	let document = change.document, uri = document.uri.toLowerCase(), docLexer = doctree[uri];
-	if (timer) clearTimeout(timer);
-	timer = setTimeout(() => {
-		timer = null;
-		if (!docLexer) docLexer = new Lexer(document), doctree[uri] = docLexer;
-		let initial = docLexer.include, cg = false;
-		docLexer.parseScript(), sendDiagnostics();
-		for (const t in docLexer.include) if (!initial[t]) initial[t] = docLexer.include[t], cg = true;
-		if (!cg && Object.keys(initial).length === Object.keys(docLexer.include).length) return;
-		docLexer.relevance = getincludetable(uri), parseinclude(docLexer.include), resetrelevance();
-		function resetrelevance() {
-			for (const u in initial) if (doctree[u]) doctree[u].relevance = getincludetable(u);
-		}
-	}, 300);
+	if (!docLexer) docLexer = new Lexer(document), doctree[uri] = docLexer;
+	let initial = docLexer.include, cg = false;
+	docLexer.parseScript(), sendDiagnostics();
+	for (const t in docLexer.include) if (!initial[t]) initial[t] = docLexer.include[t], cg = true;
+	if (!cg && Object.keys(initial).length === Object.keys(docLexer.include).length) return;
+	docLexer.relevance = getincludetable(uri), parseinclude(docLexer.include), resetrelevance();
+	function resetrelevance() {
+		for (const u in initial) if (doctree[u]) doctree[u].relevance = getincludetable(u);
+	}
+	// if (timer) clearTimeout(timer);
+	// timer = setTimeout(() => {
+	// 	timer = null;
+
+	// }, 300);
 });
 
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
-	console.log('We received an file change event');
+	// console.log('We received an file change event');
 });
 
 connection.onDocumentFormatting(async (params: DocumentFormattingParams, cancellation: CancellationToken): Promise<TextEdit[]> => {
 	let docLexer = doctree[params.textDocument.uri.toLowerCase()];
-	const opts = { "indent_size": "1", "indent_char": "\t", "max_preserve_newlines": "2", "preserve_newlines": true, "keep_array_indentation": true, "break_chained_methods": false, "indent_scripts": "keep", "brace_style": "collapse", "space_before_conditional": true, "wrap_line_length": "0", "space_after_anon_function": true, "jslint_happy": true };
+	const opts = { "indent_size": "1", "indent_char": "\t", "max_preserve_newlines": "2", "preserve_newlines": true, "keep_array_indentation": true, "break_chained_methods": false, "indent_scripts": "keep", "brace_style": "collapse", "space_before_conditional": true, "wrap_line_length": "0", "space_after_anon_function": true };
 	if (params.options.insertSpaces) opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
 	let newText = docLexer.beautify(opts), range = Range.create(0, 0, docLexer.document.lineCount, 0);
 	return [{ range, newText }];
 });
 
 connection.onDocumentRangeFormatting(async (params: DocumentRangeFormattingParams, cancellation: CancellationToken): Promise<TextEdit[]> => {
-	const opts = { "indent_size": "1", "indent_char": "\t", "max_preserve_newlines": "2", "preserve_newlines": true, "keep_array_indentation": true, "break_chained_methods": false, "indent_scripts": "keep", "brace_style": "collapse", "space_before_conditional": true, "wrap_line_length": "0", "space_after_anon_function": true, "jslint_happy": true };
+	const opts = { "indent_size": "1", "indent_char": "\t", "max_preserve_newlines": "2", "preserve_newlines": true, "keep_array_indentation": true, "break_chained_methods": false, "indent_scripts": "keep", "brace_style": "collapse", "space_before_conditional": true, "wrap_line_length": "0", "space_after_anon_function": true };
 	if (params.options.insertSpaces) opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
 	let range = params.range, document = doctree[params.textDocument.uri.toLowerCase()].document, newText = document.getText(range);
 	let t = '';
@@ -358,37 +363,6 @@ connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: Can
 	return signinfo;
 });
 
-function getFuncCallInfo(doc: Lexer, position: Position) {
-	let func: DocumentSymbol | undefined, offset = doc.document.offsetAt(position), off = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
-	for (const item of doc.funccall) {
-		const start = doc.document.offsetAt(item.range.start), end = doc.document.offsetAt(item.range.end);
-		if (start <= offset) {
-			if (offset > end) {
-				const line = item.range.start.line, character = item.range.start.character + item.name.length;
-				let char = doc.document.getText(Range.create(line, character, line, character + 1));
-				if (char === '(' || line !== position.line) continue;
-			}
-			if (!func || (off.start <= start && end <= off.end)) func = item, off = { start, end }, pos = item.range.start;
-		}
-	}
-	if (!func) return undefined;
-	let text = doc.document.getText(func.range), index = -1, len = 0, name = func.name.toLowerCase(), tt: any;
-	offset = offset - off.start;
-	while (tt = text.match(/('|").*?(?<!`)\1/)) text = text.replace(tt[0], '_'.repeat(tt[0].length));
-	len = off.end - off.start - func.name.length;
-	for (const pair of [['\\{', '\\}'], ['\\[', '\\]'], ['\\(', '\\)']]) {
-		const rg = new RegExp(pair[0] + '[^' + pair[0] + ']*?' + pair[1]);
-		while (tt = rg.exec(text)) {
-			if (tt[0].length >= len) break;
-			text = text.replace(tt[0], '_'.repeat(tt[0].length));
-		}
-	}
-	if (offset > func.name.length) index += 1;
-	for (let i = func.name.length + 1; i < offset; i++)
-		if (text.charAt(i) === ',') index++; else if (text.charAt(i) === ')' && i >= text.length - 1) { index = -1; break; }
-	return { name, pos, index };
-}
-
 connection.onCompletion(async (params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> => {
 	if (token.isCancellationRequested) return undefined;
 	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, funcs: { [key: string]: any } = {};
@@ -485,15 +459,25 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 							} else if (res.index > 0 && res.index % 2 === 1) {
 								for (const name of ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'HRESULT', 'cdecl'])
 									cpitem = CompletionItem.create(name), cpitem.kind = CompletionItemKind.TypeParameter, items.push(cpitem);
+								return items;
 							}
-							return items;
+							break;
+						case 'comcall':
+							if (res.index > 1 && res.index % 2 === 0) {
+								for (const name of ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'HRESULT', 'cdecl'])
+									cpitem = CompletionItem.create(name), cpitem.kind = CompletionItemKind.TypeParameter, items.push(cpitem);
+								return items;
+							}
+							break;
 						case 'objbindmethod':
 							if (res.index === 1) {
 								let objs = [docLexer.object];
 								for (const uri in list) objs.push(doctree[uri].object);
 								for (const obj of objs) for (const it in obj['method'])
 									if (!vars[it]) vars[it] = true, cpitem = CompletionItem.create(obj['method'][it]), cpitem.kind = CompletionItemKind.Method, items.push(cpitem);
+								return items;
 							}
+							break;
 					}
 				}
 				completionItemCache.other.map(value => { if (value.kind === CompletionItemKind.Text) vars[value.label.toLowerCase()] = true, items.push(value); });
@@ -564,9 +548,13 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 });
 
 connection.onCompletionResolve(async (item: CompletionItem): Promise<CompletionItem> => item);
+
+connection.onFoldingRanges(async (params: FoldingRangeParams): Promise<FoldingRange[]> => {
+	return doctree[params.textDocument.uri.toLowerCase()].foldingranges;
+});
+
 documents.listen(connection);
 connection.listen();
-console.log('Starting AHK Server');
 initAHKCache();
 
 export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
@@ -600,8 +588,8 @@ async function initAHKCache() {
 					snip.body = bodytostring(snip.body), completionItem.kind = snip.body.indexOf('(') === -1 ? CompletionItemKind.Property : CompletionItemKind.Method;
 					completionItem.insertText = snip.body.replace(/^\./, ''), completionItem.insertTextFormat = InsertTextFormat.Snippet;
 					completionItem.detail = `(${objname}) ` + snip.description;
-					snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]+)\2\}/g, (...m) => {
-						return m[2] ? m[3].replace(/,/g, '|') : m[3];
+					snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => {
+						return m[2] ? m[3].replace(/,/g, '|') : m[3] || '';
 					});
 					completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' }, completionItemCache[t].push(completionItem);
 					hover.contents = [{ language: 'ahk2', value: snip.body }];
@@ -642,8 +630,8 @@ async function initAHKCache() {
 			return '';
 		}), completionItem.detail = snip.description;
 		completionItem.insertTextFormat = InsertTextFormat.Snippet;
-		snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]+)\2\}/g, (...m) => {
-			return m[2] ? m[3].replace(/,/g, '|') : m[3];
+		snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => {
+			return m[2] ? m[3].replace(/,/g, '|') : m[3] || '';
 		});
 		completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' }, completionItemCache[t].push(completionItem);
 		if (type === CompletionItemKind.Constant || type === CompletionItemKind.Text) return;
@@ -680,7 +668,7 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 		return { uri, path };
 	}
 }
-
+let initnum = 0;
 async function initpathenv(config?: any) {
 	config = config || await connection.workspace.getConfiguration('AutoHotkey2');
 	if (!config) return false;
@@ -688,7 +676,7 @@ async function initpathenv(config?: any) {
 	let script = `
 	#NoTrayIcon
 	Append := SubStr(A_AhkVersion, 1, 3) = "2.0" ? "FileAppend" : "FileAppend2"
-	for _, p in [A_MyDocuments,A_Desktop,A_AhkPath,A_ProgramFiles,A_Programs]
+	for _, p in [A_MyDocuments,A_Desktop,A_AhkPath,A_ProgramFiles,A_Programs,A_AhkVersion]
 		p .= "|", %Append%(p, "*")
 	%Append%("\`n", "*")
 	FileAppend2(text, file) {
@@ -696,16 +684,17 @@ async function initpathenv(config?: any) {
 	}
 	`
 	let ret = runscript(script, (data: string) => {
-		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs'], path = '', init = !pathenv.ahkpath;
+		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version'], path = '', init = !pathenv.ahkpath;
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].toLowerCase();
 		if (!pathenv.ahkpath) {
-			setTimeout(() => {
-				initpathenv();
+			if (initnum < 3) setTimeout(() => {
+				initnum++, initpathenv();
 			}, 1000);
 			return;
 		}
-		libdirs.length = 0;
+		libdirs.length = 0, initnum = 1;
+		if (pathenv.version && pathenv.version.match(/^1\./)) connection.window.showErrorMessage('当前AutoHotkey.exe不是v2版本，无法获得正确的语法解析、补全等功能');
 		if (fs.existsSync(path = pathenv.mydocuments + '\\autohotkey\\lib')) libdirs.push(path);
 		if (fs.existsSync(path = pathenv.ahkpath.replace(/[^\\/]+$/, 'lib'))) libdirs.push(path);
 		if (init) {
@@ -777,6 +766,37 @@ function searchNode(doc: Lexer, name: string, pos: Position, kind: SymbolKind | 
 		} else for (const uri in list) if (node = doctree[uri].searchNode(name, undefined, kind)) return { node, uri };
 		return { node: null, uri: '' };
 	}
+}
+
+function getFuncCallInfo(doc: Lexer, position: Position) {
+	let func: DocumentSymbol | undefined, offset = doc.document.offsetAt(position), off = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
+	for (const item of doc.funccall) {
+		const start = doc.document.offsetAt(item.range.start), end = doc.document.offsetAt(item.range.end);
+		if (start <= offset) {
+			if (offset > end) {
+				const line = item.range.start.line, character = item.range.start.character + item.name.length;
+				let char = doc.document.getText(Range.create(line, character, line, character + 1));
+				if (char === '(' || line !== position.line) continue;
+			}
+			if (!func || (off.start <= start && end <= off.end)) func = item, off = { start, end }, pos = item.range.start;
+		}
+	}
+	if (!func) return undefined;
+	let text = doc.document.getText(func.range), index = -1, len = 0, name = func.name.toLowerCase(), tt: any;
+	offset = offset - off.start;
+	while (tt = text.match(/('|").*?(?<!`)\1/)) text = text.replace(tt[0], '_'.repeat(tt[0].length));
+	len = off.end - off.start - func.name.length;
+	for (const pair of [['\\{', '\\}'], ['\\[', '\\]'], ['\\(', '\\)']]) {
+		const rg = new RegExp(pair[0] + '[^' + pair[0] + ']*?' + pair[1]);
+		while (tt = rg.exec(text)) {
+			if (tt[0].length >= len) break;
+			text = text.replace(tt[0], '_'.repeat(tt[0].length));
+		}
+	}
+	if (offset > func.name.length) index += 1;
+	for (let i = func.name.length + 1; i < offset; i++)
+		if (text.charAt(i) === ',') index++; else if (text.charAt(i) === ')' && i >= text.length - 1) { index = -1; break; }
+	return { name, pos, index };
 }
 
 function getincludetable(fileuri: string) {

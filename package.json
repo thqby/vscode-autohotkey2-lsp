@@ -1,10 +1,10 @@
 {
 	"name": "vscode-autohotkey2-lsp",
-	"displayName": "AutoHotKey2 Language Server",
+	"displayName": "AutoHotKey2 Language Support",
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "0.2.9",
+	"version": "0.3.0",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -22,16 +22,10 @@
 		"vscode": "^1.43.0"
 	},
 	"activationEvents": [
-		"onLanguage:ahk2",
-		"onCommand:run.ahk2"
+		"onLanguage:ahk2"
 	],
-	"main": "./client/out/extension",
+	"main": "./client/dist/extension",
 	"contributes": {
-		"breakpoints": [
-			{
-				"language": "ahk2"
-			}
-		],
 		"languages": [
 			{
 				"id": "ahk2",
@@ -126,23 +120,24 @@
 		"menus": {
 			"editor/context": [
 				{
-					"when": "!inOutput && editorHasSelection",
+					"when": "editorLangId == ahk2 && !ahk2:isRunning && editorHasSelection",
 					"command": "ahk2.selection.run",
-					"group": "navigation"
+					"group": "navigation@0"
 				},
 				{
-					"when": "!inOutput && !editorHasSelection",
+					"when": "editorLangId == ahk2 && !ahk2:isRunning && !editorHasSelection",
 					"command": "ahk2.run",
-					"group": "navigation"
+					"group": "navigation@0"
 				},
 				{
+					"when": "editorLangId == ahk2",
 					"command": "ahk2.help",
-					"group": "navigation"
+					"group": "navigation@1"
 				},
 				{
-					"when": "inOutput",
+					"when": "editorLangId == ahk2 && ahk2:isRunning",
 					"command": "ahk2.stop",
-					"group": "stop-code-run"
+					"group": "navigation@0"
 				}
 			]
 		},
@@ -150,20 +145,22 @@
 			{
 				"command": "ahk2.run",
 				"key": "ctrl+f5",
-				"when": "!editorHasSelection"
+				"when": "editorLangId == ahk2 && !ahk2:isRunning && !editorHasSelection"
 			},
 			{
 				"command": "ahk2.selection.run",
 				"key": "ctrl+f5",
-				"when": "editorHasSelection"
+				"when": "editorLangId == ahk2 && !ahk2:isRunning && editorHasSelection"
 			},
 			{
 				"command": "ahk2.help",
-				"key": "ctrl+f1"
+				"key": "ctrl+f1",
+				"when": "editorLangId == ahk2"
 			},
 			{
 				"command": "ahk2.stop",
-				"key": "ctrl+f6"
+				"key": "ctrl+f6",
+				"when": "editorLangId == ahk2 && ahk2:isRunning"
 			}
 		]
 	},

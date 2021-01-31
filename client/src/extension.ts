@@ -8,11 +8,8 @@ import {
 	ExtensionContext,
 	workspace,
 	window,
-	Range,
-	ViewColumn,
-	Uri
+	Range
 } from 'vscode';
-
 import {
 	LanguageClient,
 	LanguageClientOptions,
@@ -60,8 +57,8 @@ export function activate(context: ExtensionContext) {
 
 	// Create the language client and start the client.
 	client = new LanguageClient(
-		'Autohotkey2LanguageServer',
-		'Autohotkey2 Language Server',
+		'ahk2',
+		'Autohotkey2 Server',
 		serverOptions,
 		clientOptions
 	);
@@ -74,6 +71,7 @@ export function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.stop', () => stopRunningScript()),
 		commands.registerCommand('ahk2.help', () => quickHelp())
 	);
+	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 }
 
 export function deactivate(): Thenable<void> | undefined {
@@ -101,16 +99,18 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 		ahkprocess = child_process.spawn(command, { cwd: resolve(path, '..'), shell: true });
 	}
 	if (ahkprocess) {
+		commands.executeCommand('setContext', 'ahk2:isRunning', true);
 		ahkprocess.stderr?.on('data', (data) => {
-			console.log(data.toString());
+			channel.append(`[Error] ${data.toString().trim()}`);
 		});
 		ahkprocess.on('error', (error) => {
-			console.log(error.message);
+			console.error(error.message);
 		});
 		ahkprocess.stdout?.on('data', (data) => {
 			channel.append(data.toString());
 		});
 		ahkprocess.on('exit', (code) => {
+			commands.executeCommand('setContext', 'ahk2:isRunning', false);
 			channel.appendLine('');
 			channel.appendLine('[Done] exited with code=' + code + ' in ' + ((new Date()).getTime() - startTime.getTime()) / 1000 + ' seconds');
 		});
@@ -146,4 +146,8 @@ function quickHelp() {
 		ahkpro.stdin?.write(`#NoTrayIcon\nWinActivate("ahk_pid ${ahkhelp.pid}")\nif !WinWaitActive("ahk_pid ${ahkhelp.pid}", , 3)\nExitApp()\nSendInput("!n"), Sleep(50)\nSendInput("^a{Backspace}"), Sleep(100)\nSendInput("{Text}${word}\`n")`);
 		ahkpro.stdin?.end();
 	}
+}
+
+function log(data: string) {
+	client.sendRequest('log', data);
 }

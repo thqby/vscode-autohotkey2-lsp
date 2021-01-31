@@ -42,18 +42,37 @@
       "name": "ahk2.done"
     },
     {
+      "match": "\\d{1,3}(\\.\\d{1,3}){3}(:\\d+)",
+      "name": "constant.numeric"
+    },
+    {
+      "match": "^(?i:(\\[error\\])|(\\[info\\])|(\\[warn\\]))(.*)",
+      "captures": {
+        "1": {
+          "name": "token.error-token"
+        },
+        "2": {
+          "name": "token.info-token"
+        },
+        "3": {
+          "name": "token.warn-token"
+        }
+      },
+      "name": "ahk2.log"
+    },
+    {
       "include": "#numbers"
     },
     {
       "include": "#operators"
     },
     {
-      "include": "#string_escaped_char"
+      "include": "#string"
     }
   ],
   "repository": {
     "numbers": {
-      "match": "((?<!\\w*)[+\\-])?(\\d+(?:\\.\\d+)?|0[xX][\\da-fA-F]+)",
+      "match": "\\b(\\d+(?:\\.\\d+)?|0[xX][\\da-fA-F]+)\\b",
       "name": "constant.numeric"
     },
     "operators": {
@@ -64,15 +83,22 @@
         }
       ]
     },
-    "string_escaped_char": {
+    "string": {
       "patterns": [
         {
-          "match": "(?i)`[abefnprtv'\"`]",
-          "name": "constant.character.escape.ahk2"
-        },
-        {
-          "match": "`.",
-          "name": "invalid.illegal.unknown-escape.ahk2"
+          "begin": "(['\"])(?=.*\\1)",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.begin"
+            }
+          },
+          "end": "(\\1)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.end"
+            }
+          },
+          "name": "string.quoted"
         }
       ]
     }

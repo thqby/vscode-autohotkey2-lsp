@@ -597,7 +597,6 @@
           "include": "#vararg_ellipses"
         },
         {
-          "name": "meta.function.definition.parameters.ahk2",
           "begin": "([_[:alpha:]][[:alnum:]_]*)(\\()",
           "beginCaptures": {
             "1": {
@@ -609,13 +608,13 @@
               ]
             },
             "2": {
-              "name": "punctuation.section.parameters.begin.bracket.round.ahk2"
+              "name": "punctuation.section.parens.begin.bracket.round.ahk2"
             }
           },
           "end": "\\)",
           "endCaptures": {
             "0": {
-              "name": "punctuation.section.parameters.end.bracket.round.ahk2"
+              "name": "punctuation.section.parens.end.bracket.round.ahk2"
             }
           },
           "patterns": [
@@ -1054,8 +1053,8 @@
     "operators": {
       "patterns": [
         {
-          "match": "\\b(?i:in)\\b",
-          "name": "keyword.operator.expression.in.ahk2"
+          "match": "(?<!\\.)\\b(?i:and|or|not|in|is|contains)\\b(?!\\s*:)",
+          "name": "keyword.operator.expression.ahk2"
         },
         {
           "match": "--",
@@ -1263,9 +1262,9 @@
       ]
     },
     "probably_a_parameter": {
-      "match": "(?i:)(?<=(,|\\(|byref\\s)\\s*)([_[:alpha:]]\\w*\\*?)\\s*(?=(,|\\)|:=))",
+      "match": "(?<=(\\(|,|(?i:byref)\\s)\\s*)([_[:alpha:]][_[:alnum:]]*\\*?)\\s*(?=(,|\\)|:=))",
       "captures": {
-        "1": {
+        "2": {
           "name": "variable.parameter.probably.ahk2"
         }
       }
