@@ -300,6 +300,31 @@
 			"prefix": "is"
 		},
 		{
+			"body": "loop files ${1:FilePattern [, Mode]}",
+			"description": "检索指定的文件或文件夹, 每次一个.",
+			"prefix": "loop files"
+		},
+		{
+			"body": "loop parse ${1:String [, Delimiters|CSV, OmitChars]}",
+			"description": "从一个字符串中一次检索一个子字符串（字段）.",
+			"prefix": "loop parse"
+		},
+		{
+			"body": "loop read ${1:InputFile [, OutputFile]}",
+			"description": "检索文本文件中的行, 每次一行.",
+			"prefix": "loop read"
+		},
+		{
+			"body": "loop reg ${1:KeyName [, Mode]}",
+			"description": "检索指定注册表子项的内容,一次检索一项.",
+			"prefix": "loop reg"
+		},
+		{
+			"body": "loop ${1:[Count]}",
+			"description": "重复执行一系列函数: 可以指定表示重复次数的数字或直到遇到 break.",
+			"prefix": "loop"
+		},
+		{
 			"body": "local",
 			"description": "局部变量特定于单个函数,并且仅在该函数内部可见.因此,局部变量可能与全局变量具有相同的名称,并且两者将具有单独的内容.单独的函数也可以安全地使用相同的变量名.",
 			"prefix": "local"
@@ -2017,31 +2042,6 @@
 			"body": "ListVars",
 			"description": "显示脚本的变量: 它们的名称和当前的内容.",
 			"prefix": "ListVars"
-		},
-		{
-			"body": "loop files ${1:FilePattern [, Mode]}",
-			"description": "检索指定的文件或文件夹, 每次一个.",
-			"prefix": "loop files"
-		},
-		{
-			"body": "loop parse ${1:String [, Delimiters|CSV, OmitChars]}",
-			"description": "从一个字符串中一次检索一个子字符串（字段）.",
-			"prefix": "loop parse"
-		},
-		{
-			"body": "loop read ${1:InputFile [, OutputFile]}",
-			"description": "检索文本文件中的行, 每次一行.",
-			"prefix": "loop read"
-		},
-		{
-			"body": "loop reg ${1:KeyName [, Mode]}",
-			"description": "检索指定注册表子项的内容,一次检索一项.",
-			"prefix": "loop reg"
-		},
-		{
-			"body": "loop ${1:[Count]}",
-			"description": "重复执行一系列函数: 可以指定表示重复次数的数字或直到遇到 break.",
-			"prefix": "loop"
 		},
 		{
 			"body": "Pause ${1:[NewState]}",

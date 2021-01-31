@@ -169,7 +169,6 @@
 		"webpack": "webpack --mode development",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
-		"test": "node ./client/out/test/runTest",
 		"patch": "npm version patch",
 		"publish": "vsce publish",
 		"package": "vsce package"

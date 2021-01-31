@@ -808,7 +808,7 @@ function getincludetable(fileuri: string) {
 	if (res.count) { delete res.list[fileuri]; return res.list; } else return {};
 	function traverseinclude(include: any) {
 		for (const uri in include) {
-			if (fileuri === uri) has = true;
+			if (fileuri === uri) { has = true; continue; }
 			if (doc = doctree[uri]) { if (!list[uri]) list[uri] = include[uri], count++; traverseinclude(doc.include); }
 		}
 	}

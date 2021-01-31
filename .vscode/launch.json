@@ -32,7 +32,7 @@
 				"VSCODE_AHK_SERVER_PATH": "out"
 			},
 			"outFiles": [
-				"${workspaceRoot}/client/out/**/*.js"
+				"${workspaceRoot}/client/dist/**/*.js"
 			],
 			"preLaunchTask": {
 				"type": "npm",
