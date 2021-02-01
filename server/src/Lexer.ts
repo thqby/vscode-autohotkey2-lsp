@@ -8,7 +8,8 @@ import {
 	DocumentSymbol,
 	Diagnostic,
 	DiagnosticSeverity,
-	FoldingRange
+	FoldingRange,
+	ColorInformation
 } from 'vscode-languageserver';
 
 import {
@@ -125,6 +126,9 @@ export namespace acorn {
 	}
 }
 
+const colorregexp = new RegExp(/\b(c|background)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
+const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
+
 export class Lexer {
 	public beautify: Function;
 	public parseScript: Function;
@@ -144,6 +148,7 @@ export class Lexer {
 	public include: { [uri: string]: { url: string, path: string, raw: string } } = {};
 	public relevance: { [uri: string]: { url: string, path: string, raw: string } } | undefined;
 	public semantoken: SemanticTokensBuilder | undefined;
+	public colors: ColorInformation[] = [];
 	public diagnostics: Diagnostic[] = [];
 	public foldingranges: FoldingRange[] = [];
 	public libdirs: string[] = [];
@@ -315,7 +320,8 @@ export class Lexer {
 			let gg: any = {}, dd: any = {}, ff: any = {}, _low = '';
 			this.global = gg, this.define = dd, this.function = ff, this.label.length = this.funccall.length = this.diagnostics.length = 0;
 			this.object = { method: {}, property: {} }, this.includedir = new Map(), this.blocks = [], this.texts = {}, this.reflat = true;
-			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder, this.foldingranges.length = 0;
+			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder;
+			this.colors.length = this.foldingranges.length = 0;
 			this.symboltree = parse(), this.symboltree.push(...this.blocks), this.blocks = undefined;
 			for (const it of this.symboltree)
 				if (it.kind === SymbolKind.Function) { if (!ff[_low = it.name.toLowerCase()]) ff[_low] = it; }
@@ -529,7 +535,7 @@ export class Lexer {
 									addvariable(lk, mode);
 									if (mode === 2 && tk.type !== 'TK_EQUALS' && input.charAt(lk.offset + lk.length) !== '.') _this.addDiagnostic('属性声明未初始化', lk.offset);
 								} else if (mode === 2) { if (input.charAt(lk.offset + lk.length) !== '.') _this.addDiagnostic('属性声明未初始化', lk.offset); }
-								else if ((m = input.charAt(lk.offset + lk.length)).match(/^(\s|,|)$/)) {
+								else if ((m = input.charAt(lk.offset + lk.length)).match(/^(\(|\s|,|)$/)) {
 									if (lk.topofline) {
 										if (m === ',') _this.addDiagnostic('函数调用需要一个空格或"("', tk.offset, 1);
 										let fc = lk, sub = parseline();
@@ -541,7 +547,7 @@ export class Lexer {
 										if (prestr.match(/^\s*(\w+\.)+$/)) {
 											if (m === ',') _this.addDiagnostic('函数调用需要一个空格或"("', tk.offset, 1);
 											let fc = lk, sub = parseline();
-											result.push(...sub), _this.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+											result.push(...sub); //, _this.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
 											break;
 										}
 									}
@@ -1058,10 +1064,29 @@ export class Lexer {
 			}
 
 			function nexttoken() {
-				if (next) lk = tk, tk = get_next_token(); else next = true;
-				if (tk.type === 'TK_BLOCK_COMMENT') _this.addFoldingRange(tk.offset, tk.offset + tk.length, 'comment');
+				if (next) lk = tk, tk = get_next_token(); else return next = true;
+				switch (tk.type) {
+					case 'TK_BLOCK_COMMENT':
+						_this.addFoldingRange(tk.offset, tk.offset + tk.length, 'comment');
+						break;
+					case 'TK_STRING':
+						addcolorinformation(tk);
+						break;
+				}
 				return tk.type !== 'TK_EOF';
 			}
+		}
+
+		function addcolorinformation(tk: Token) {
+			if (_this.document.version < 0 || tk.content.indexOf('\n') !== -1) return;
+			let m = colorregexp.exec(tk.content), range: Range, v = '';
+			if (!m || (!m[1] && tk.length !== m[2].length + 2)) return;
+			range = makerange(tk.offset + m.index + (m[1] ? m[1].length : 0), m[2].length);
+			v = m[5] ? colortable[m[5]] : m[3] === undefined ? m[2] : m[2].substring(2);
+			let color: any = { red: 0, green: 0, blue: 0, alpha: 1 }, cls: string[] = ['red', 'green', 'blue'];
+			if (m[4] !== undefined) cls.unshift('alpha');
+			for (const i of cls) color[i] = (parseInt('0x' + v.substr(0, 2)) / 255), v = v.slice(2);
+			_this.colors.push({ range, color });
 		}
 
 		function trimcomment(comment: string): string {

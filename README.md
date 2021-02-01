@@ -10,6 +10,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
   - [智能提示](#智能提示)
   - [大纲](#大纲)
   - [代码标记](#代码标记)
+  - [颜色提示](#颜色提示)
   - [悬停提示](#悬停提示)
   - [转到定义](#转到定义)
   - [代码格式化](#代码格式化)
@@ -47,6 +48,12 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 用法: 在注释代码块中添加两个分号  
 ![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeSymbol.png)
 
+### 颜色提示
+
+计算并解析文档中的颜色，并提供颜色选择器更直观地修改颜色数据。
+
+![documentcolor](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/documentcolor.png)
+
 ### 悬停提示  
 
 支持对作用域范围内变量、函数、全局类、标签的悬停提示并显示相关备注.  
@@ -79,6 +86,7 @@ AutoHotKey V2 Language support for VS Code, Function realization based on v2 syn
   - [Signature](#Signature)
   - [Document Symbol](#Document-Symbol)
   - [Blocks](#Blocks)
+  - [Document Color](#Document-Color)
   - [Hover](#Hover)
   - [Goto Definition](#Goto-Definition)
   - [CodeFormat](#CodeFormat)
@@ -115,6 +123,12 @@ Support for intelligent prompts for function parameters.
 
 usage: Add two semicolons to the comment code block.  
 ![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeSymbol.png)
+
+### Document Color
+
+Compute and resolve colors inside a document to provide color picker in editor.
+
+![documentcolor](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/documentcolor.png)
 
 ### Hover  
 

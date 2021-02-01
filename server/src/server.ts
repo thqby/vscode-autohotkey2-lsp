@@ -3,55 +3,30 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import * as fs from "fs";
-import { URI } from 'vscode-uri';
 import { resolve } from 'path';
 import {
-	createConnection,
-	TextDocuments,
-	ProposedFeatures,
-	InitializeParams,
-	DidChangeConfigurationNotification,
-	CompletionItem,
-	CompletionItemKind,
-	TextDocumentSyncKind,
-	InitializeResult,
-	SymbolInformation,
-	DocumentSymbolParams,
-	SymbolKind,
-	SignatureHelpParams,
-	SignatureHelp,
 	CancellationToken,
-	DefinitionParams,
-	Definition,
-	Location,
-	Position,
-	HoverParams,
-	Hover,
-	DocumentFormattingParams,
-	DocumentRangeFormattingParams,
-	Range,
-	DocumentSymbol,
-	LocationLink,
-	InsertTextFormat,
-	CompletionParams,
-	TextDocumentChangeEvent,
-	Command,
-	MarkupKind,
-	FoldingRangeParams,
-	FoldingRange,
-	LanguagesImpl
+	Color, ColorInformation, ColorPresentation, Command, CompletionItem,
+	CompletionItemKind, CompletionParams, createConnection,
+	Definition, DefinitionParams, DidChangeConfigurationNotification,
+	DocumentFormattingParams, DocumentRangeFormattingParams,
+	DocumentSymbol, DocumentSymbolParams,
+	FoldingRange, FoldingRangeParams, Hover, HoverParams, InitializeParams,
+	InitializeResult, InsertTextFormat, Location, LocationLink,
+	MarkupKind, Position, ProposedFeatures,
+	Range, SignatureHelp, SignatureHelpParams, SymbolInformation, SymbolKind,
+	TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind
 } from 'vscode-languageserver';
-
 import {
 	TextDocument, TextEdit
 } from 'vscode-languageserver-textdocument';
-import { Lexer, ClassNode, FuncNode, Variable, Word, FuncScope } from './Lexer'
+import { URI } from 'vscode-uri';
+import { ClassNode, FuncNode, FuncScope, Lexer, Variable } from './Lexer';
 import { runscript } from './scriptrunner';
-import { ResultProgress } from 'vscode-languageserver/lib/progress';
-
 export const serverName = 'mock-ahk-vscode';
 export const languageServer = 'ahk2-language-server';
 export let libdirs: string[] = [];
+
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 let connection = createConnection(ProposedFeatures.all), documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -113,7 +88,8 @@ connection.onInitialize((params: InitializeParams) => {
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
 			hoverProvider: true,
-			foldingRangeProvider: true
+			foldingRangeProvider: true,
+			colorProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -551,6 +527,22 @@ connection.onCompletionResolve(async (item: CompletionItem): Promise<CompletionI
 
 connection.onFoldingRanges(async (params: FoldingRangeParams): Promise<FoldingRange[]> => {
 	return doctree[params.textDocument.uri.toLowerCase()].foldingranges;
+});
+
+connection.onDocumentColor(async (params): Promise<ColorInformation[]> => {
+	return doctree[params.textDocument.uri.toLowerCase()].colors;
+});
+
+connection.onColorPresentation(async (params): Promise<Maybe<ColorPresentation[]>> => {
+	let label = 'RGB: ', textEdit: TextEdit = { range: params.range, newText: '' }, color = params.color, m: any;
+	let text = doctree[params.textDocument.uri.toLowerCase()].document.getText(params.range), hex = '';
+	for (const i of [color.alpha, color.red, color.green, color.blue])
+		hex += ('00' + Math.round(i * 255).toString(16)).substr(-2);
+	if (m = text.match(/^(0x)?([\da-f]{6}([\da-f]{2})?)/i))
+		textEdit.newText = (m[1] === undefined ? '' : '0x') + hex.slice(-m[2].length);
+	else textEdit.newText = hex.substring(2);
+	label += textEdit.newText
+	return [{ label, textEdit }];
 });
 
 documents.listen(connection);
