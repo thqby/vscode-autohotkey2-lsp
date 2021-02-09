@@ -25,7 +25,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 ### 代码补全
 
-支持对作用域范围内的变量、函数、参数，支持对类名、方法名、include文件和函数库补全.
+支持对作用域范围内的变量、函数、参数、类名、方法名，支持对include文件和函数库补全.
 
 ![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/snippet.png)
 
@@ -33,7 +33,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 ### 智能提示
 
-支持对函数参数的智能提示.
+支持对函数、方法参数的智能提示.
 
 ![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/signature.gif)
 

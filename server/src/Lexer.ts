@@ -63,6 +63,7 @@ export interface Variable extends DocumentSymbol {
 	static?: boolean
 	globalspace?: boolean
 	defaultVal?: string
+	full?: string
 }
 
 export interface ReferenceInfomation {
@@ -153,10 +154,11 @@ export class Lexer {
 	public foldingranges: FoldingRange[] = [];
 	public libdirs: string[] = [];
 	public includedir: Map<number, string> = new Map();
-	public object: { method: { [key: string]: any }, property: { [key: string]: any } } = { method: {}, property: {} };
+	public object: { method: { [key: string]: FuncNode[] }, property: { [key: string]: any } } = { method: {}, property: {} };
 	private reference: ReferenceInfomation[] = [];
 	public document: TextDocument;
 	public actived: boolean = false;
+	public version: number = 0;
 	constructor(document: TextDocument) {
 		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this;
@@ -195,9 +197,12 @@ export class Lexer {
 			'TK_UNKNOWN': handle_unknown
 		};
 
-		this.get_tokon = function (offset?: number) {
-			if (offset !== undefined) parser_pos = offset;
-			return get_next_token();
+		this.get_tokon = function (offset?: number): Token {
+			let p = parser_pos, t: Token;
+			if (offset !== undefined) {
+				parser_pos = offset, t = get_next_token(), parser_pos = p;
+			} else t = get_next_token();
+			return t;
 		}
 
 		this.beautify = function (options: any) {
@@ -320,8 +325,7 @@ export class Lexer {
 			let gg: any = {}, dd: any = {}, ff: any = {}, _low = '';
 			this.global = gg, this.define = dd, this.function = ff, this.label.length = this.funccall.length = this.diagnostics.length = 0;
 			this.object = { method: {}, property: {} }, this.includedir = new Map(), this.blocks = [], this.texts = {}, this.reflat = true;
-			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder;
-			this.colors.length = this.foldingranges.length = 0;
+			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder, this.colors.length = this.foldingranges.length = 0;
 			this.symboltree = parse(), this.symboltree.push(...this.blocks), this.blocks = undefined;
 			for (const it of this.symboltree)
 				if (it.kind === SymbolKind.Function) { if (!ff[_low = it.name.toLowerCase()]) ff[_low] = it; }
@@ -329,7 +333,7 @@ export class Lexer {
 			// for (const it in this.define) this.symboltree.push(this.define[it]);
 		}
 
-		function parse(mode = 0, scopevar = new Map<string, any>()): DocumentSymbol[] {
+		function parse(mode = 0, scopevar = new Map<string, any>(), full: string = ''): DocumentSymbol[] {
 			const result: DocumentSymbol[] = [], cmm: Token = { content: '', offset: 0, type: '', length: 0 };
 			let tk: Token = { content: '', type: '', offset: 0, length: 0 }, lk: Token = tk, next: boolean = true, LF: number = 0, comment = '';
 			let blocks = 0, inswitch = -1, blockpos: number[] = [], tn: DocumentSymbol | FuncNode | Variable | undefined, m: any, sub: DocumentSymbol[];
@@ -338,13 +342,18 @@ export class Lexer {
 				switch (tk.type) {
 					case 'TK_SHARP':
 						let raw = '', o: any = '';
-						if (m = tk.content.match(/^\s*#include((again)?)\s+(<.+>|(['"]?)(\s*\*i\s+)?[^*]+?\4)?\s*(\s;.*)?$/i)) {
+						if (m = tk.content.match(/^\s*#include((again)?)\s+(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
 							raw = (m[3] || '').trim(), o = m[5], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.libdirs[0]).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
 							_this.includedir.set(_this.document.positionAt(tk.offset).line, includedir);
 							if (m === '') includedir = _this.libdirs[0]; else {
-								if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir))) break;
-								if (!fs.existsSync(m.path)) { if (!o) _this.addDiagnostic('文件不存在', tk.offset, tk.length); }
-								else if (fs.statSync(m.path).isDirectory()) includedir = m.path; else includetable[m.uri] = { path: m.path, raw };
+								if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir))) {
+									_this.addDiagnostic('无效的文件路径', tk.offset, tk.length);
+									break;
+								}
+								if (!fs.existsSync(m.path)) { if (!o) _this.addDiagnostic(`'${m.path}' 文件不存在`, tk.offset, tk.length); }
+								else if (fs.statSync(m.path).isDirectory()) includedir = m.path;
+								else if (m.path.match(/\.(ahk2?|ah2|txt|ext)$/i)) includetable[m.uri] = { path: m.path, raw };
+								else _this.addDiagnostic(`'${m.path}' 未知的include文件格式`, tk.offset, tk.length);
 							}
 							if (mode !== 0) _this.addDiagnostic('在函数、类中的#include无法正确地推导作用域和代码补全', tk.offset, tk.length, DiagnosticSeverity.Warning);
 						}
@@ -414,24 +423,28 @@ export class Lexer {
 							if (nk.content === '=>') {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic('无效的参数默认值', fc.offset, tk.offset - fc.offset + 1); }
 								let storemode = mode;
-								mode = mode | 1;
+								mode = mode | 1, tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(_this.document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par);
+								tn.detail = comm || tn.detail, result.push(tn);
 								let sub = parseline(), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
-								mode = storemode;
 								if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(`非法的函数命名, "${fc.content}"`, fc.offset, fc.length);
-								tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par);
 								tn.range.end = document.positionAt(lk.offset + lk.length), tn.statement.closure = mode === 0, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-								if (mode === 2) { if (!_this.object.method[_low]) _this.object.method[_low] = []; _this.object.method[_low].push(tn) };
-								tn.statement.static = isstatic, tn.children = []; for (const it of par) pars[it.name.toLowerCase()] = true;
+								mode = storemode, tn.statement.static = isstatic, tn.children = []; for (const it of par) pars[it.name.toLowerCase()] = true;
 								for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) tn.children.push(sub[i]), sub.splice(i, 1); }
-								if (comm) tn.detail = comm; result.push(tn), result.push(...sub);
+								if (mode === 2) {
+									tn.full = `(${full.slice(0, -1)}) ` + tn.full;
+									if (!isstatic) { if (!_this.object.method[_low]) _this.object.method[_low] = []; _this.object.method[_low].push(tn) }
+								} else result.push(...sub);
 							} else if (nk.content === '{' && fc.topofline) {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic('无效的参数默认值', fc.offset, tk.offset - fc.offset + 1); }
 								let vars = new Map<string, any>(), _low = fc.content.toLowerCase();
-								sub = parse(mode | 1, vars);
+								tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(_this.document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), par);
+								tn.detail = comm || tn.detail, result.push(tn), tn.children = parse(mode | 1, vars);
 								if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(`非法的函数命名, "${fc.content}"`, fc.offset, fc.length);
-								tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, sub);
-								tn.statement.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
-								if (mode === 2) { if (!_this.object.method[_low]) _this.object.method[_low] = []; _this.object.method[_low].push(tn) };
+								tn.range.end = _this.document.positionAt(parser_pos), tn.statement.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
+								if (mode === 2) {
+									tn.full = `(${full.slice(0, -1)}) ` + tn.full;
+									if (!isstatic) { if (!_this.object.method[_low]) _this.object.method[_low] = []; _this.object.method[_low].push(tn) }
+								}
 								if (vars.has('#assume')) tn.statement.assume = vars.get('#assume');
 								for (const tp of ['global', 'local', 'define']) {
 									if (vars.has('#' + tp)) {
@@ -440,7 +453,6 @@ export class Lexer {
 										tn.statement[tp === 'global' ? 'global' : tp === 'local' ? 'local' : 'define'] = oo;
 									}
 								}
-								if (comm) tn.detail = comm; result.push(tn);
 							} else {
 								next = false, lk = tk, tk = nk;
 								if (par) for (const it of par) if (!builtin_variable.includes(it.name.toLowerCase())) result.push(it);
@@ -480,7 +492,7 @@ export class Lexer {
 									}
 								}
 								let prop = DocumentSymbol.create(fc.content, comm, SymbolKind.Property, rg = makerange(fc.offset, fc.length), rg);
-								(<Variable>prop).static = isstatic, result.push(prop), prop.children = [], _this.object.property[fc.content.toLowerCase()] = fc.content;
+								(<Variable>prop).full = `(${full.slice(0, -1)}) ${fc.content}`, (<Variable>prop).static = isstatic, result.push(prop), prop.children = [], _this.object.property[fc.content.toLowerCase()] = fc.content;
 								if (tk.content === '{') {
 									let nk: Token, sk: Token;
 									tk = get_token_ingore_comment(), next = false;
@@ -592,7 +604,8 @@ export class Lexer {
 							if (tk.type !== 'TK_START_BLOCK') { next = false; break; }
 							if (cl.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic('非法的类命名', cl.offset, cl.length);
 							tn = DocumentSymbol.create(cl.content, undefined, SymbolKind.Class, makerange(0, 0), makerange(cl.offset, cl.length));
-							sv.set('#class', tn), tn.children = parse(2, sv), tn.range = makerange(beginpos, parser_pos - beginpos);
+							sv.set('#class', tn), tn.children = parse(2, sv, full + cl.content + '.'), tn.range = makerange(beginpos, parser_pos - beginpos);
+							_this.addFoldingRangePos(tn.selectionRange.start, tn.range.end, 'block');
 							if (comm) tn.detail = comm; if (ex) (<ClassNode>tn).extends = ex;
 							for (const item of tn.children) if (item.children && item.kind != SymbolKind.Property) (<FuncNode>item).parent = tn;
 							if (mode === 0) (<{ [key: string]: Variable }>_this.global)[cl.content.toLowerCase()] = tn;
@@ -1055,7 +1068,10 @@ export class Lexer {
 				if (token.ignore || builtin_variable.includes(_low) || ((md & 2) && ['this', 'super'].includes(token.content.toLowerCase()))) return false;
 				if (token.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic('非法的变量命名', token.offset, token.length);
 				let rg = makerange(token.offset, token.length), tn = Variable.create(token.content, md === 2 ? SymbolKind.Property : SymbolKind.Variable, rg, rg);
-				if (comment) tn.detail = comment; if (md === 0) tn.globalspace = true; else if (md === 2) _this.object.property[_low] = _this.object.property[_low] || token.content;
+				if (comment) tn.detail = comment; if (md === 0) tn.globalspace = true; else if (md === 2) {
+					_this.object.property[_low] = _this.object.property[_low] || token.content;
+					if (full) (<Variable>tn).full = `(${full.slice(0, -1)}) ${tn.name}`;
+				}
 				if (p) p.push(tn); else result.push(tn); return true;
 			}
 
@@ -1093,7 +1109,7 @@ export class Lexer {
 			if (comment.charAt(0) === ';') return comment.replace(/^\s*;\s*/, '');
 			let c = comment.split('\n'), cc = '';
 			c.slice(1, c.length - 1).map(l => {
-				cc += '\n' + l.replace(/^\s*\?*\s*/, '');
+				cc += '\n' + l.replace(/^\s*\*\s*/, '');
 			})
 			return cc.substring(1);
 		}
@@ -1546,7 +1562,7 @@ export class Lexer {
 		}
 
 		function get_next_token(): Token {
-			let resulting_string: string, bg: boolean = false;
+			let resulting_string: string, bg: boolean = parser_pos === 0;
 			n_newlines = 0;
 			if (parser_pos >= input_length) {
 				return createToken('', 'TK_EOF', input_length - 1, 0, true);
@@ -2610,14 +2626,19 @@ export class Lexer {
 						for (const first of root) if (item.kind === first.kind && first.name.toLowerCase() === name) return node = first;
 						return node = item;
 					} else if (item.children) {
+						let local = false;
 						if ((item.kind === SymbolKind.Function || item.kind === SymbolKind.Method) && iskinds(SymbolKind.Variable, kind)) {
-							for (const it of (<FuncNode>item).params) if (it.name.toLowerCase() === name) return node = it;
-							for (const stt of [(<FuncNode>item).statement.global, (<FuncNode>item).statement.define, (<FuncNode>item).statement.local])
-								for (const key in stt) if (key === name) return node = stt[key];
-							if (!((<FuncNode>item).statement.assume & FuncScope.LOCAL) && this.global)
-								for (const key in this.global) if (key.toLowerCase() === name) return node = this.global[key];
+							for (const it of (<FuncNode>item).params) if (it.name.toLowerCase() === name) { (<any>it).userdef = true; return node = it; }
+							for (const stt of [(<FuncNode>item).statement.global, (<FuncNode>item).statement.local, (<FuncNode>item).statement.define])
+								for (const key in stt) if (key === name) {
+									node = stt[key], (<any>node).userdef = true; return node;
+								}
+							if ((<FuncNode>item).statement.assume & FuncScope.LOCAL) local = true;
+							else if (this.global) for (const key in this.global) if (key.toLowerCase() === name) {
+								node = this.global[key], (<any>node).userdef = true; return node;
+							}
 						}
-						if (temp = this.searchNode(name, position, kind, item.children)) return node = temp;
+						if (temp = this.searchNode(name, position, kind, item.children)) { if (local) (<any>temp).userdef = local; return node = temp; }
 					}
 				}
 				if (!node && iskinds(item.kind, kind) && item.name.toLowerCase() === name) node = item;

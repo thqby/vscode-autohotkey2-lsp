@@ -6,8 +6,8 @@
 				" * @file: $TM_FILENAME",
 				" * @description: ${1:}",
 				" * @author ${2:}",
-				" * @date ${3:$CURRENT_MONTH/$CURRENT_DATE/$CURRENT_YEAR}",
-				" * @version ${4:1.0}",
+				" * @date ${3:$CURRENT_YEAR/$CURRENT_MONTH/$CURRENT_DATE}",
+				" * @version ${4:0.0.0}",
 				" ***********************************************************************/",
 				"\n$0"
 			],
@@ -374,9 +374,7 @@
 			"body": "while ($0)",
 			"description": "重复执行一系列功能,直到指定的表达式计算为false.",
 			"prefix": "while"
-		}
-	],
-	"functions": [
+		},
 		{
 			"body": "__Call(${1:Name}, ${2:Params})",
 			"prefix": "__Call"
@@ -404,7 +402,9 @@
 		{
 			"body": "__Set(${1:Key}, ${2:Params}, ${3:Value})",
 			"prefix": "__Set"
-		},
+		}
+	],
+	"functions": [
 		{
 			"body": "Abs(${1:Number})",
 			"description": "返回 Number 的绝对值.",
@@ -2019,9 +2019,24 @@
 			"prefix": "HotIf"
 		},
 		{
-			"body": "HotIfWin${1|Active,Exist,NotActive,NotExist|} ${2:[WinTitle, WinText]}",
+			"body": "HotIfWinActive ${1:[WinTitle, WinText]}",
 			"description": "指定随后创建或修改的热键变体的条件.",
-			"prefix": "HotIfWin"
+			"prefix": "HotIfWinActive"
+		},
+		{
+			"body": "HotIfWinExist ${1:[WinTitle, WinText]}",
+			"description": "指定随后创建或修改的热键变体的条件.",
+			"prefix": "HotIfWinExist"
+		},
+		{
+			"body": "HotIfWinNotActive ${1:[WinTitle, WinText]}",
+			"description": "指定随后创建或修改的热键变体的条件.",
+			"prefix": "HotIfWinNotActive"
+		},
+		{
+			"body": "HotIfWinNotExist ${1:[WinTitle, WinText]}",
+			"description": "指定随后创建或修改的热键变体的条件.",
+			"prefix": "HotIfWinNotExist"
 		},
 		{
 			"body": "KeyHistory",
@@ -2162,966 +2177,1166 @@
 	"methods": {
 		"any": [
 			{
-				"body": ".GetMethod(${1:Name})",
+				"body": "GetMethod(${1:Name})",
 				"description": "检索方法的实现函数.",
-				"prefix": ".GetMethod"
+				"prefix": "GetMethod"
 			},
 			{
-				"body": ".HasBase(${1:BaseObj})",
+				"body": "HasBase(${1:BaseObj})",
 				"description": "如果 BaseObj 在 Value 的基对象链中, 则返回 true, 否则返回 false.",
-				"prefix": ".HasBase"
+				"prefix": "HasBase"
 			},
 			{
-				"body": ".HasMethod(${1:Name})",
+				"body": "HasMethod(${1:Name})",
 				"description": "如果该值具有使用此名称的方法, 则返回 true, 否则返回 false.",
-				"prefix": ".HasMethod"
+				"prefix": "HasMethod"
 			},
 			{
-				"body": ".HasProp(${1:Name})",
+				"body": "HasProp(${1:Name})",
 				"description": "如果值具有使用此名称的属性, 则返回 true, 否则返回 false.",
-				"prefix": ".HasProp"
+				"prefix": "HasProp"
 			},
 			{
-				"body": ".Base",
+				"body": "Base",
 				"description": "检索值的基对象.",
-				"prefix": ".Base"
+				"prefix": "Base"
 			}
 		],
 		"object": [
 			{
-				"body": ".Clone()",
+				"body": "Clone()",
 				"description": "返回对象的一个浅拷贝.",
-				"prefix": ".Clone"
+				"prefix": "Clone"
 			},
 			{
-				"body": ".DefineMethod(${1:Name}, ${2:MethodFunc})",
+				"body": "DefineMethod(${1:Name}, ${2:MethodFunc})",
 				"description": "定义一个新的方法.",
-				"prefix": ".DefineMethod"
+				"prefix": "DefineMethod"
 			},
 			{
-				"body": ".DefineProp(${1:Name}, ${2:Desc})",
+				"body": "DefineProp(${1:Name}, ${2:Desc})",
 				"description": "定义一个新的自有属性.",
-				"prefix": ".DefineProp"
+				"prefix": "DefineProp"
 			},
 			{
-				"body": ".DeleteMethod(${1:Name})",
+				"body": "DeleteMethod(${1:Name})",
 				"description": "删除对象拥有的方法.",
-				"prefix": ".DeleteMethod"
+				"prefix": "DeleteMethod"
 			},
 			{
-				"body": ".DeleteProp(${1:Name})",
+				"body": "DeleteProp(${1:Name})",
 				"description": "删除对象拥有的属性.",
-				"prefix": ".DeleteProp"
+				"prefix": "DeleteProp"
 			},
 			{
-				"body": ".GetOwnPropDesc(${1:Name})",
+				"body": "GetOwnPropDesc(${1:Name})",
 				"description": "返回给定自有属性的描述符, 兼容于 DefineProp.",
-				"prefix": ".GetOwnPropDesc"
+				"prefix": "GetOwnPropDesc"
 			},
 			{
-				"body": ".HasOwnMethod(${1:Name})",
+				"body": "HasOwnMethod(${1:Name})",
 				"description": "如果对象拥有该名称的方法, 则返回 true, 否则返回 false.",
-				"prefix": ".HasOwnMethod"
+				"prefix": "HasOwnMethod"
 			},
 			{
-				"body": ".HasOwnProp(${1:Name})",
+				"body": "HasOwnProp(${1:Name})",
 				"description": "如果对象拥有该名称的属性, 则返回 true, 否则返回 false.",
-				"prefix": ".HasOwnProp"
+				"prefix": "HasOwnProp"
 			},
 			{
-				"body": ".OwnMethods()",
+				"body": "OwnMethods()",
 				"description": "枚举对象拥有的方法.",
-				"prefix": ".OwnMethods"
+				"prefix": "OwnMethods"
 			},
 			{
-				"body": ".OwnProps()",
+				"body": "OwnProps()",
 				"description": "枚举对象自有的属性.",
-				"prefix": ".OwnProps"
+				"prefix": "OwnProps"
 			}
 		],
 		"array": [
 			{
-				"body": ".Clone()",
+				"body": "Clone()",
 				"description": "返回对象的一个浅拷贝.",
-				"prefix": ".Clone"
+				"prefix": "Clone"
 			},
 			{
-				"body": ".Delete(${1:Index})",
+				"body": "Delete(${1:Index})",
 				"description": "删除数组元素的值, 使索引不包含值.",
-				"prefix": ".Delete"
+				"prefix": "Delete"
 			},
 			{
-				"body": ".Has(${1:Index})",
+				"body": "Has(${1:Index})",
 				"description": "如果 Index 有效且在该位置有一个值, 则返回 true, 否则返回 false.",
-				"prefix": ".Has"
+				"prefix": "Has"
 			},
 			{
-				"body": ".InsertAt(${1:Index}, ${2:Values...})",
+				"body": "InsertAt(${1:Index}, ${2:Values...})",
 				"description": "插入一个或多个值到给定位置.",
-				"prefix": ".InsertAt"
+				"prefix": "InsertAt"
 			},
 			{
-				"body": ".Pop()",
+				"body": "Pop()",
 				"description": "删除并返回最后的数组元素.",
-				"prefix": ".Pop"
+				"prefix": "Pop"
 			},
 			{
-				"body": ".Push(${1:Values...})",
+				"body": "Push(${1:Values...})",
 				"description": "追加值到数组的末尾.",
-				"prefix": ".Push"
+				"prefix": "Push"
 			},
 			{
-				"body": ".RemoveAt(${1:Index [, Length]})",
+				"body": "RemoveAt(${1:Index [, Length]})",
 				"description": "追加值到数组的末尾.",
-				"prefix": ".RemoveAt"
+				"prefix": "RemoveAt"
 			},
 			{
-				"body": ".Length",
+				"body": "Length",
 				"description": "检索或设置数组的长度.",
-				"prefix": ".Length"
+				"prefix": "Length"
 			},
 			{
-				"body": ".Capacity",
+				"body": "Capacity",
 				"description": "检索或设置数组的当前容量.",
-				"prefix": ".Capacity"
+				"prefix": "Capacity"
 			}
 		],
 		"map": [
 			{
-				"body": ".Clear()",
+				"body": "Clear()",
 				"description": "从映射中删除所有键-值对.",
-				"prefix": ".Clear"
+				"prefix": "Clear"
 			},
 			{
-				"body": ".Clone()",
+				"body": "Clone()",
 				"description": "返回对象的一个浅拷贝.",
-				"prefix": ".Clone"
+				"prefix": "Clone"
 			},
 			{
-				"body": ".Delete(${1:Key})",
+				"body": "Delete(${1:Key})",
 				"description": "从映射中删除键-值对.",
-				"prefix": ".Delete"
+				"prefix": "Delete"
 			},
 			{
-				"body": ".Has(${1:Key})",
+				"body": "Has(${1:Key})",
 				"description": "如果 Key 在映射中有关联的值, 则返回 true, 否则返回 false.",
-				"prefix": ".Has"
+				"prefix": "Has"
 			},
 			{
-				"body": ".Set(${1:Key1, Value1, Key2, Value2, ...})",
+				"body": "Set(${1:Key1, Value1, Key2, Value2, ...})",
 				"description": "设置零个或多个项目.",
-				"prefix": ".Set"
+				"prefix": "Set"
 			},
 			{
-				"body": ".Count",
+				"body": "Count",
 				"description": "检索映射中存在的键-值对的数量.",
-				"prefix": ".Count"
+				"prefix": "Count"
 			},
 			{
-				"body": ".Capacity",
+				"body": "Capacity",
 				"description": "检索或设置映射的当前容量.",
-				"prefix": ".Capacity"
+				"prefix": "Capacity"
 			},
 			{
-				"body": ".CaseSense",
+				"body": "CaseSense",
 				"description": "检索或设置映射的大小写敏感性设置.",
-				"prefix": ".CaseSense"
+				"prefix": "CaseSense"
 			}
 		],
 		"buffer": [
 			{
-				"body": ".Ptr",
+				"body": "Ptr",
 				"description": "检索缓冲区的当前内存地址.",
-				"prefix": ".Ptr"
+				"prefix": "Ptr"
 			},
 			{
-				"body": ".Size",
+				"body": "Size",
 				"description": "检索或设置缓冲区的大小, 以字节为单位.",
-				"prefix": ".Size"
+				"prefix": "Size"
 			}
 		],
 		"class": [
 			{
-				"body": ".New(${1:})",
+				"body": "New(${1:})",
 				"description": "构造类的新实例.",
-				"prefix": ".New"
+				"prefix": "New"
 			},
 			{
-				"body": ".Prototype",
+				"body": "Prototype",
 				"description": "检索或设置类的所有实例所基于的对象.",
-				"prefix": ".Prototype"
+				"prefix": "Prototype"
 			}
 		],
 		"file": [
 			{
-				"body": ".Pos",
+				"body": "Pos",
 				"description": "检索或设置文件指针的位置.",
-				"prefix": ".Pos"
+				"prefix": "Pos"
 			},
 			{
-				"body": ".Length",
+				"body": "Length",
 				"description": "检索或设置文件的大小.",
-				"prefix": ".Length"
+				"prefix": "Length"
 			},
 			{
-				"body": ".AtEOF",
+				"body": "AtEOF",
 				"description": "检索一个非零值, 如果文件指针已到达文件末尾.",
-				"prefix": ".AtEOF"
+				"prefix": "AtEOF"
 			},
 			{
-				"body": ".Encoding",
+				"body": "Encoding",
 				"description": "检索或设置此文件对象使用的文本编码.",
-				"prefix": ".Encoding"
+				"prefix": "Encoding"
 			},
 			{
-				"body": ".Handle",
+				"body": "Handle",
 				"description": "检索旨在与 DllCall 一起使用的系统文件句柄.",
-				"prefix": ".Handle"
+				"prefix": "Handle"
 			},
 			{
-				"body": ".Read(${1:[Characters]})$0",
+				"body": "Read(${1:[Characters]})$0",
 				"description": "从文件读取字符串并向前移动文件指针.",
-				"prefix": ".Read"
+				"prefix": "Read"
 			},
 			{
-				"body": ".Write(${1:String})",
+				"body": "Write(${1:String})",
 				"description": "写入字符串到文件并向前移动文件指针.",
-				"prefix": ".Write"
+				"prefix": "Write"
 			},
 			{
-				"body": ".RawRead(${1:VarOrAddress}, ${2:Bytes})",
+				"body": "RawRead(${1:VarOrAddress}, ${2:Bytes})",
 				"description": "从文件读取原始的二进制数据到内存并向前移动文件指针.",
-				"prefix": ".RawRead"
+				"prefix": "RawRead"
 			},
 			{
-				"body": ".RawWrite(${1:VarOrAddress}, ${2:Bytes})",
+				"body": "RawWrite(${1:VarOrAddress}, ${2:Bytes})",
 				"description": "写入原始的二进制数据到文件并向前移动文件指针.",
-				"prefix": ".RawWrite"
+				"prefix": "RawWrite"
 			},
 			{
-				"body": ".ReadLine()",
+				"body": "ReadLine()",
 				"description": "从文件中读取一行文本并使文件指针向前移动.",
-				"prefix": ".ReadLine"
+				"prefix": "ReadLine"
 			},
 			{
-				"body": ".WriteLine(${1:[String]})",
+				"body": "WriteLine(${1:[String]})",
 				"description": "根据打开文件时使用的标志, 写入后面跟着 `n 或 `r`n 的字符串. 向前移动文件指针.",
-				"prefix": ".WriteLine"
+				"prefix": "WriteLine"
 			},
 			{
-				"body": ".Read${1|Char,Double,Float,Int,Int64,Short,UChar,UInt,UShort|}()",
+				"body": "ReadChar()",
 				"description": "从文件中读取指定类型的数据并向前移动文件指针.",
-				"prefix": ".ReadType"
+				"prefix": "ReadChar"
 			},
 			{
-				"body": ".Write${1|Char,Double,Float,Int,Int64,Short,UChar,UInt,UShort|}(${2:Num})",
-				"description": "写入指定类型的数据到文件并向前移动文件指针.",
-				"prefix": ".WriteType"
+				"body": "ReadDouble()",
+				"description": "从文件中读取Double类型的数据并向前移动文件指针.",
+				"prefix": "ReadDouble"
 			},
 			{
-				"body": ".Seek(${1:Distance [, Origin := 0]})",
+				"body": "ReadFloat()",
+				"description": "从文件中读取Float类型的数据并向前移动文件指针.",
+				"prefix": "ReadFloat"
+			},
+			{
+				"body": "ReadInt()",
+				"description": "从文件中读取Int类型的数据并向前移动文件指针.",
+				"prefix": "ReadInt"
+			},
+			{
+				"body": "ReadInt64()",
+				"description": "从文件中读取Int64类型的数据并向前移动文件指针.",
+				"prefix": "ReadInt64"
+			},
+			{
+				"body": "ReadShort()",
+				"description": "从文件中读取Short类型的数据并向前移动文件指针.",
+				"prefix": "ReadShort"
+			},
+			{
+				"body": "ReadUChar()",
+				"description": "从文件中读取UChar类型的数据并向前移动文件指针.",
+				"prefix": "ReadUChar"
+			},
+			{
+				"body": "ReadUInt()",
+				"description": "从文件中读取UInt类型的数据并向前移动文件指针.",
+				"prefix": "ReadUInt"
+			},
+			{
+				"body": "ReadUShort()",
+				"description": "从文件中读取UShort类型的数据并向前移动文件指针.",
+				"prefix": "ReadUShort"
+			},
+			{
+				"body": "WriteChar(${2:Num})",
+				"description": "写入Char类型的数据到文件并向前移动文件指针.",
+				"prefix": "WriteChar"
+			},
+			{
+				"body": "WriteDouble(${2:Num})",
+				"description": "写入Double类型的数据到文件并向前移动文件指针.",
+				"prefix": "WriteDouble"
+			},
+			{
+				"body": "WriteFloat(${2:Num})",
+				"description": "写入Float类型的数据到文件并向前移动文件指针.",
+				"prefix": "WriteFloat"
+			},
+			{
+				"body": "WriteInt(${2:Num})",
+				"description": "写入Int类型的数据到文件并向前移动文件指针.",
+				"prefix": "WriteInt"
+			},
+			{
+				"body": "WriteInt64(${2:Num})",
+				"description": "写入Int64类型的数据到文件并向前移动文件指针.",
+				"prefix": "WriteInt64"
+			},
+			{
+				"body": "WriteShort(${2:Num})",
+				"description": "写入Short类型的数据到文件并向前移动文件指针.",
+				"prefix": "WriteShort"
+			},
+			{
+				"body": "WriteUChar(${2:Num})",
+				"description": "写入UChar类型的数据到文件并向前移动文件指针.",
+				"prefix": "WriteUChar"
+			},
+			{
+				"body": "WriteUInt(${2:Num})",
+				"description": "写入UInt类型的数据到文件并向前移动文件指针.",
+				"prefix": "WriteUInt"
+			},
+			{
+				"body": "WriteUShort(${2:Num})",
+				"description": "写入UShort类型的数据到文件并向前移动文件指针.",
+				"prefix": "WriteUShort"
+			},
+			{
+				"body": "Seek(${1:Distance [, Origin := 0]})",
 				"description": "移动文件指针. 如果第二个参数被省略, 等同于 File.Pos := Distance.",
-				"prefix": ".Seek"
+				"prefix": "Seek"
 			},
 			{
-				"body": ".Close()",
+				"body": "Close()",
 				"description": "关闭文件, 将缓存中的所有数据写入磁盘并释放共享锁定.",
-				"prefix": ".Close"
+				"prefix": "Close"
 			}
 		],
 		"func": [
 			{
-				"body": ".Name",
+				"body": "Name",
 				"description": "返回函数的名称.",
-				"prefix": ".Name"
+				"prefix": "Name"
 			},
 			{
-				"body": ".IsBuiltIn",
+				"body": "IsBuiltIn",
 				"description": "内置函数返回 true, 否则返回 false.",
-				"prefix": ".IsBuiltIn"
+				"prefix": "IsBuiltIn"
 			},
 			{
-				"body": ".IsVariadic",
+				"body": "IsVariadic",
 				"description": "当函数为可变参数时返回 true, 否则返回 false.",
-				"prefix": ".IsVariadic"
+				"prefix": "IsVariadic"
 			},
 			{
-				"body": ".MinParams",
+				"body": "MinParams",
 				"description": "返回所需参数的数量.",
-				"prefix": ".MinParams"
+				"prefix": "MinParams"
 			},
 			{
-				"body": ".MaxParams",
+				"body": "MaxParams",
 				"description": "对于用户定义函数返回正式声明的参数数目, 对于内置函数返回最大的参数数目.",
-				"prefix": ".MaxParams"
+				"prefix": "MaxParams"
 			},
 			{
-				"body": ".Call(${1:})",
+				"body": "Call(${1:})",
 				"description": "调用函数.",
-				"prefix": ".Call"
+				"prefix": "Call"
 			},
 			{
-				"body": ".Bind(${1:Param...})",
+				"body": "Bind(${1:Param...})",
 				"description": "绑定参数到函数并返回绑定函数对象.",
-				"prefix": ".Bind"
+				"prefix": "Bind"
 			},
 			{
-				"body": ".IsByRef(${1:})",
+				"body": "IsByRef(${1:})",
 				"description": "确定参数是否为 ByRef 类型(如果省略参数, 表示此函数是否含有 ByRef 参数).",
-				"prefix": ".IsByRef"
+				"prefix": "IsByRef"
 			},
 			{
-				"body": ".IsOptional(${1:})",
+				"body": "IsOptional(${1:})",
 				"description": "确定参数是否是可选的(如果省略参数, 表示此函数是否含有可选参数).",
-				"prefix": ".IsOptional"
+				"prefix": "IsOptional"
 			}
 		],
 		"exception": [
 			{
-				"body": ".Message",
+				"body": "Message",
 				"description": "错误消息.",
-				"prefix": ".Message"
+				"prefix": "Message"
 			},
 			{
-				"body": ".What",
+				"body": "What",
 				"description": "引起异常的原因. 这通常是一个函数的名称, 但对于因表达式错误而引发的异常(例如对非数字值使用数学运算符),则为空白.",
-				"prefix": ".What"
+				"prefix": "What"
 			},
 			{
-				"body": ".Extra",
+				"body": "Extra",
 				"description": "如果找到, 错误的额外信息.",
-				"prefix": ".Extra"
+				"prefix": "Extra"
 			},
 			{
-				"body": ".File",
+				"body": "File",
 				"description": "自动设置为包含发生错误的语句的脚本文件的完整路径.",
-				"prefix": ".File"
+				"prefix": "File"
 			},
 			{
-				"body": ".Line",
+				"body": "Line",
 				"description": "自动设置为发生错误的语句行号.",
-				"prefix": ".Line"
+				"prefix": "Line"
 			}
 		],
 		"regexmatch": [
 			{
-				"body": ".Pos(${1:N})",
+				"body": "Pos(${1:N})",
 				"description": "返回整体匹配或捕获的子模式的位置.",
-				"prefix": ".Pos"
+				"prefix": "Pos"
 			},
 			{
-				"body": ".Len(${1:N})",
+				"body": "Len(${1:N})",
 				"description": "返回整体匹配或捕获的子模式的长度.",
-				"prefix": ".Len"
+				"prefix": "Len"
 			},
 			{
-				"body": ".Value(${1:N})",
+				"body": "Value(${1:N})",
 				"description": "返回整体匹配或捕获的子模式.",
-				"prefix": ".Value"
+				"prefix": "Value"
 			},
 			{
-				"body": ".Name(${1:N})",
+				"body": "Name(${1:N})",
 				"description": "返回给定子模式的名称(如果有的话).",
-				"prefix": ".Name"
+				"prefix": "Name"
 			},
 			{
-				"body": ".Count()",
+				"body": "Count()",
 				"description": "返回子模式的总数.",
-				"prefix": ".Count"
+				"prefix": "Count"
 			},
 			{
-				"body": ".Mark()",
+				"body": "Mark()",
 				"description": "如果适用, 返回最后遇到的名称(*MARK：NAME).",
-				"prefix": ".Mark"
+				"prefix": "Mark"
 			}
 		],
 		"gui": [
 			{
-				"body": ".BackColor",
+				"body": "BackColor",
 				"description": "检索或设置窗口的背景色.",
-				"prefix": ".BackColor"
+				"prefix": "BackColor"
 			},
 			{
-				"body": ".FocusedCtrl",
+				"body": "FocusedCtrl",
 				"description": "检索 GUI 的焦点控件的 GuiControl 对象.",
-				"prefix": ".FocusedCtrl"
+				"prefix": "FocusedCtrl"
 			},
 			{
-				"body": ".Hwnd",
+				"body": "Hwnd",
 				"description": "检索 GUI 窗口的窗口句柄(HWND).",
-				"prefix": ".Hwnd"
+				"prefix": "Hwnd"
 			},
 			{
-				"body": ".MarginX",
+				"body": "MarginX",
 				"description": "检索或设置两侧与随后创建控件之间的水平边距的大小.",
-				"prefix": ".MarginX"
+				"prefix": "MarginX"
 			},
 			{
-				"body": ".MarginY",
+				"body": "MarginY",
 				"description": "检索或设置两侧与随后创建控件之间的垂直边距的大小.",
-				"prefix": ".MarginY"
+				"prefix": "MarginY"
 			},
 			{
-				"body": ".MenuBar",
+				"body": "MenuBar",
 				"description": "检索或设置窗口的菜单栏.",
-				"prefix": ".MenuBar"
+				"prefix": "MenuBar"
 			},
 			{
-				"body": ".Name",
+				"body": "Name",
 				"description": "检索或设置 GUI 窗口的自定义名称.",
-				"prefix": ".Name"
+				"prefix": "Name"
 			},
 			{
-				"body": ".Title",
+				"body": "Title",
 				"description": "检索或设置 GUI 的标题.",
-				"prefix": ".Title"
+				"prefix": "Title"
 			},
 			{
-				"body": ".New(${1:[Options, Title := A_ScriptName, EventObj]})",
+				"body": "New(${1:[Options, Title := A_ScriptName, EventObj]})",
 				"description": "创建一个新的Gui对象.",
-				"prefix": ".New"
+				"prefix": "New"
 			},
 			{
-				"body": ".Add('${1|Text,Edit,UpDown,Picture,Button,Checkbox,Radio,DropDownList,ComboBox,ListBox,ListView,TreeView,Link,Hotkey,DateTime,MonthCal,Slider,Progress,GroupBox,Tab,StatusBar,ActiveX,Custom|}', ${2:[Options, Text]})",
+				"body": "Add(${1|'Text','Edit','UpDown','Picture','Button','Checkbox','Radio','DropDownList','ComboBox','ListBox','ListView','TreeView','Link','Hotkey','DateTime','MonthCal','Slider','Progress','GroupBox','Tab','Tab2','Tab3','StatusBar','ActiveX','Custom'|}, ${2:[Options, Text]})",
 				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
-				"prefix": ".Add"
+				"prefix": "Add"
 			},
 			{
-				"body": ".Add${1|Text,Edit,UpDown,Picture,Button,Checkbox,Radio,DropDownList,ComboBox,ListBox,ListView,TreeView,Link,Hotkey,DateTime,MonthCal,Slider,Progress,GroupBox,Tab,StatusBar,ActiveX,Custom|}(${2:[Options, Text]})",
+				"body": "AddText(${1:[Options, Text]})",
 				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
-				"prefix": ".AddControlType"
+				"prefix": "AddText"
 			},
 			{
-				"body": ".Destroy()",
+				"body": "AddEdit(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddEdit"
+			},
+			{
+				"body": "AddUpDown(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddUpDown"
+			},
+			{
+				"body": "AddPicture(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddPicture"
+			},
+			{
+				"body": "AddButton(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddButton"
+			},
+			{
+				"body": "AddCheckbox(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddCheckbox"
+			},
+			{
+				"body": "AddRadio(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddRadio"
+			},
+			{
+				"body": "AddDropDownList(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddDropDownList"
+			},
+			{
+				"body": "AddComboBox(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddComboBox"
+			},
+			{
+				"body": "AddListBox(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddListBox"
+			},
+			{
+				"body": "AddListView(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddListView"
+			},
+			{
+				"body": "AddTreeView(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddTreeView"
+			},
+			{
+				"body": "AddLink(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddLink"
+			},
+			{
+				"body": "AddHotkey(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddHotkey"
+			},
+			{
+				"body": "AddDateTime(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddDateTime"
+			},
+			{
+				"body": "AddMonthCal(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddMonthCal"
+			},
+			{
+				"body": "AddSlider(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddSlider"
+			},
+			{
+				"body": "AddProgress(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddProgress"
+			},
+			{
+				"body": "AddGroupBox(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddGroupBox"
+			},
+			{
+				"body": "AddTab(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddTab"
+			},
+			{
+				"body": "AddTab2(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddTab2"
+			},
+			{
+				"body": "AddTab3(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddTab3"
+			},
+			{
+				"body": "AddStatusBar(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddStatusBar"
+			},
+			{
+				"body": "AddActiveX(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddActiveX"
+			},
+			{
+				"body": "AddCustom(${1:[Options, Text]})",
+				"description": "创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.",
+				"prefix": "AddCustom"
+			},
+			{
+				"body": "Destroy()",
 				"description": "删除窗口.",
-				"prefix": ".Destroy"
+				"prefix": "Destroy"
 			},
 			{
-				"body": ".Flash(${1:false})",
+				"body": "Flash(${1:false})",
 				"description": "闪烁窗口及其任务栏按钮.",
-				"prefix": ".Flash"
+				"prefix": "Flash"
 			},
 			{
-				"body": ".GetClientPos(${1:[X, Y, Width, Height]})",
+				"body": "GetClientPos(${1:[X, Y, Width, Height]})",
 				"description": "检索窗口工作区的位置和大小.",
-				"prefix": ".GetClientPos"
+				"prefix": "GetClientPos"
 			},
 			{
-				"body": ".GetPos(${1:[X, Y, Width, Height]})",
+				"body": "GetPos(${1:[X, Y, Width, Height]})",
 				"description": "检索窗口的位置和大小.",
-				"prefix": ".GetPos"
+				"prefix": "GetPos"
 			},
 			{
-				"body": ".Hide()",
+				"body": "Hide()",
 				"description": "隐藏窗口.",
-				"prefix": ".Hide"
+				"prefix": "Hide"
 			},
 			{
-				"body": ".Cancel()",
+				"body": "Cancel()",
 				"description": "隐藏窗口.",
-				"prefix": ".Cancel"
+				"prefix": "Cancel"
 			},
 			{
-				"body": ".Maximize()",
+				"body": "Maximize()",
 				"description": "打开并最大化窗口.",
-				"prefix": ".Maximize"
+				"prefix": "Maximize"
 			},
 			{
-				"body": ".Minimize()",
+				"body": "Minimize()",
 				"description": "打开并最小化窗口.",
-				"prefix": ".Minimize"
+				"prefix": "Minimize"
 			},
 			{
-				"body": ".Move(${1:[X, Y, Width, Height]})",
+				"body": "Move(${1:[X, Y, Width, Height]})",
 				"description": "移动/调整GUI窗口的大小.",
-				"prefix": ".Move"
+				"prefix": "Move"
 			},
 			{
-				"body": ".OnEvent(${1:EventName}, ${2:Callback [, AddRemove := 1]})",
+				"body": "OnEvent(${1:EventName}, ${2:Callback [, AddRemove := 1]})",
 				"description": "注册一个函数或方法, 当给定的事件被触发时调用.",
-				"prefix": ".OnEvent"
+				"prefix": "OnEvent"
 			},
 			{
-				"body": ".Opt(${1:Options})",
+				"body": "Opt(${1:Options})",
 				"description": "为窗口的外观和行为设置各种选项和样式.",
-				"prefix": ".Opt"
+				"prefix": "Opt"
 			},
 			{
-				"body": ".Restore()",
+				"body": "Restore()",
 				"description": "如果窗口事先最小化或最大化, 则打开并还原窗口.",
-				"prefix": ".Restore"
+				"prefix": "Restore"
 			},
 			{
-				"body": ".SetFont(${1:[Options, FontName]})",
+				"body": "SetFont(${1:[Options, FontName]})",
 				"description": "设置随后创建的控件的字体, 大小, 样式, 和文本颜色.",
-				"prefix": ".SetFont"
+				"prefix": "SetFont"
 			},
 			{
-				"body": ".Show(${1:})",
+				"body": "Show(${1:[Options]})",
 				"description": "显示窗口. 它还可以最小化, 最大化或移动窗口.",
-				"prefix": ".Show"
+				"prefix": "Show"
 			},
 			{
-				"body": ".Submit(${1:false})",
+				"body": "Submit(${1:false})",
 				"description": "从命名控件中收集值并将其组合到一个对象中, 可选择性地隐藏窗口.",
-				"prefix": ".Submit"
+				"prefix": "Submit"
 			}
 		],
 		"guicontrol": [
 			{
-				"body": ".ClassNN",
+				"body": "ClassNN",
 				"description": "检索控件的 ClassNN.",
-				"prefix": ".ClassNN"
+				"prefix": "ClassNN"
 			},
 			{
-				"body": ".Enabled",
+				"body": "Enabled",
 				"description": "检索控件当前交互状态, 或启用或禁用(灰色)控件.",
-				"prefix": ".Enabled"
+				"prefix": "Enabled"
 			},
 			{
-				"body": ".Focused",
+				"body": "Focused",
 				"description": "检索控件当前焦点状态.",
-				"prefix": ".Focused"
+				"prefix": "Focused"
 			},
 			{
-				"body": ".Gui",
+				"body": "Gui",
 				"description": "检索控件的 Gui 父控件.",
-				"prefix": ".Gui"
+				"prefix": "Gui"
 			},
 			{
-				"body": ".Hwnd",
+				"body": "Hwnd",
 				"description": "检索控件的 HWND.",
-				"prefix": ".Hwnd"
+				"prefix": "Hwnd"
 			},
 			{
-				"body": ".Name",
+				"body": "Name",
 				"description": "检索或设置控件的显式名称.",
-				"prefix": ".Name"
+				"prefix": "Name"
 			},
 			{
-				"body": ".Text",
+				"body": "Text",
 				"description": "检索或设置控件的文本/标题.",
-				"prefix": ".Text"
+				"prefix": "Text"
 			},
 			{
-				"body": ".Type",
+				"body": "Type",
 				"description": "检索控件的类型.",
-				"prefix": ".Type"
+				"prefix": "Type"
 			},
 			{
-				"body": ".Value",
+				"body": "Value",
 				"description": "检索新内容或将其设置为具有价值的控件.",
-				"prefix": ".Value"
+				"prefix": "Value"
 			},
 			{
-				"body": ".Visible",
+				"body": "Visible",
 				"description": "检索控件的当前可见状态, 或显示或隐藏它.",
-				"prefix": ".Visible"
+				"prefix": "Visible"
 			},
 			{
-				"body": ".Add([${1:Items...}])",
+				"body": "Add([${1:Items...}])",
 				"description": "在列表框, 下拉列表, 组合框或选项卡控件的当前列表中追加指定的项.",
-				"prefix": ".Add"
+				"prefix": "Add"
 			},
 			{
-				"body": ".Choose(${1:Index/String})",
+				"body": "Choose(${1:Index/String})",
 				"description": "将ListBox, DropDownList, ComboBox或Tab控件中的选择设置为指定值.",
-				"prefix": ".Choose"
+				"prefix": "Choose"
 			},
 			{
-				"body": ".Delete(${1:[Index]})",
+				"body": "Delete(${1:[Index]})",
 				"description": "删除ListBox, DropDownList, ComboBox或Tab控件的指定条目或所有条目.",
-				"prefix": ".Delete"
+				"prefix": "Delete"
 			},
 			{
-				"body": ".Focus()",
+				"body": "Focus()",
 				"description": "将键盘焦点设置为控件.",
-				"prefix": ".Focus"
+				"prefix": "Focus"
 			},
 			{
-				"body": ".GetPos(${1:[X, Y, Width, Height]})",
+				"body": "GetPos(${1:[X, Y, Width, Height]})",
 				"description": "检索控件的位置和大小.",
-				"prefix": ".GetPos"
+				"prefix": "GetPos"
 			},
 			{
-				"body": ".Move(${1:[X, Y, Width, Height]})",
+				"body": "Move(${1:[X, Y, Width, Height]})",
 				"description": "移动/调整控件大小.",
-				"prefix": ".Move"
+				"prefix": "Move"
 			},
 			{
-				"body": ".OnEvent(${1:EventName}, ${2:Callback [, AddRemove := 1]})",
+				"body": "OnEvent(${1:EventName}, ${2:Callback [, AddRemove := 1]})",
 				"description": "注册引发给定事件时要调用的函数或方法.",
-				"prefix": ".OnEvent"
+				"prefix": "OnEvent"
 			},
 			{
-				"body": ".OnNotify(${1:NotifyCode}, ${2:Callback [, AddRemove := 1]})",
+				"body": "OnNotify(${1:NotifyCode}, ${2:Callback [, AddRemove := 1]})",
 				"description": "注册通过WM_NOTIFY消息接收到控制通知时要调用的函数或方法.",
-				"prefix": ".OnNotify"
+				"prefix": "OnNotify"
 			},
 			{
-				"body": ".Opt(${1:Options})",
+				"body": "Opt(${1:Options})",
 				"description": "为控件的外观和行为设置各种选项和样式.",
-				"prefix": ".Opt"
+				"prefix": "Opt"
 			},
 			{
-				"body": ".Redraw()",
+				"body": "Redraw()",
 				"description": "重绘该控件占用的GUI窗口区域.",
-				"prefix": ".Redraw"
+				"prefix": "Redraw"
 			},
 			{
-				"body": ".SetFont(${1:[Options, FontName]})",
+				"body": "SetFont(${1:[Options, FontName]})",
 				"description": "设置控件的字体字体, 大小, 样式和/或颜色.",
-				"prefix": ".SetFont"
+				"prefix": "SetFont"
 			},
 			{
-				"body": ".SetFormat(${1:[TimeFormat]})",
+				"body": "SetFormat(${1:[TimeFormat]})",
 				"description": "设置 DateTime 控件的显示格式.",
-				"prefix": ".SetFormat"
+				"prefix": "SetFormat"
 			},
 			{
-				"body": ".UseTab(${1:[Index/String, ExactMatch := false]})",
+				"body": "UseTab(${1:[Index/String, ExactMatch := false]})",
 				"description": "导致随后添加的控件属于选项卡控件的指定选项卡.",
-				"prefix": ".UseTab"
+				"prefix": "UseTab"
 			}
 		],
 		"menu": [
 			{
-				"body": ".ClickCount",
+				"body": "ClickCount",
 				"description": "检索或设置激活托盘菜单的默认项所需的单击次数.",
-				"prefix": ".ClickCount"
+				"prefix": "ClickCount"
 			},
 			{
-				"body": ".Default",
+				"body": "Default",
 				"description": "检索或设置默认菜单项.",
-				"prefix": ".Default"
+				"prefix": "Default"
 			},
 			{
-				"body": ".Handle",
+				"body": "Handle",
 				"description": "检索菜单的 Win32 句柄.",
-				"prefix": ".Handle"
+				"prefix": "Handle"
 			},
 			{
-				"body": ".New()",
+				"body": "New()",
 				"description": "创建一个新的Menu或MenuBar对象.",
-				"prefix": ".New"
+				"prefix": "New"
 			},
 			{
-				"body": ".Add(${1:[MenuItemName, Callback-or-Submenu, Options]})",
+				"body": "Add(${1:[MenuItemName, Callback-or-Submenu, Options]})",
 				"description": "添加或修改菜单项.",
-				"prefix": ".Add"
+				"prefix": "Add"
 			},
 			{
-				"body": ".Check(${1:MenuItemName})",
+				"body": "Check(${1:MenuItemName})",
 				"description": "在菜单项旁边添加一个可见的选中标记.",
-				"prefix": ".Check"
+				"prefix": "Check"
 			},
 			{
-				"body": ".Delete(${1:[MenuItemName]})",
+				"body": "Delete(${1:[MenuItemName]})",
 				"description": "删除一个或所有菜单项.",
-				"prefix": ".Delete"
+				"prefix": "Delete"
 			},
 			{
-				"body": ".Disable(${1:MenuItemName})",
+				"body": "Disable(${1:MenuItemName})",
 				"description": "将菜单项更改为灰色, 表示用户无法选择它.",
-				"prefix": ".Disable"
+				"prefix": "Disable"
 			},
 			{
-				"body": ".Enable(${1:MenuItemName})",
+				"body": "Enable(${1:MenuItemName})",
 				"description": "如果先前被禁用(灰色),则允许用户再次选择菜单项.",
-				"prefix": ".Enable"
+				"prefix": "Enable"
 			},
 			{
-				"body": ".Insert(${1:[ItemToInsertBefore, NewItemName, Callback-or-Submenu, Options]})",
+				"body": "Insert(${1:[ItemToInsertBefore, NewItemName, Callback-or-Submenu, Options]})",
 				"description": "在指定的项之前插入一个新项.",
-				"prefix": ".Insert"
+				"prefix": "Insert"
 			},
 			{
-				"body": ".Rename(${1:MenuItemName [, NewName]})",
+				"body": "Rename(${1:MenuItemName [, NewName]})",
 				"description": "重命名菜单项(如果NewName为空或省略，则MenuItemName将转换为分隔线).",
-				"prefix": ".Rename"
+				"prefix": "Rename"
 			},
 			{
-				"body": ".SetColor(${1:[ColorValue, Submenus := true]})",
+				"body": "SetColor(${1:[ColorValue, Submenus := true]})",
 				"description": "更改菜单的背景色.",
-				"prefix": ".SetColor"
+				"prefix": "SetColor"
 			},
 			{
-				"body": ".SetIcon(${1:MenuItemName}, ${2:FileName [, IconNumber, IconWidth]})",
+				"body": "SetIcon(${1:MenuItemName}, ${2:FileName [, IconNumber, IconWidth]})",
 				"description": "设置要在菜单项旁边显示的图标.",
-				"prefix": ".SetIcon"
+				"prefix": "SetIcon"
 			},
 			{
-				"body": ".Show(${1:[X, Y]})",
+				"body": "Show(${1:[X, Y]})",
 				"description": "显示菜单.",
-				"prefix": ".Show"
+				"prefix": "Show"
 			},
 			{
-				"body": ".ToggleCheck(${1:MenuItemName})",
+				"body": "ToggleCheck(${1:MenuItemName})",
 				"description": "切换菜单项旁边的复选标记.",
-				"prefix": ".ToggleCheck"
+				"prefix": "ToggleCheck"
 			},
 			{
-				"body": ".ToggleEnable(${1:MenuItemName})",
+				"body": "ToggleEnable(${1:MenuItemName})",
 				"description": "启用或禁用菜单项.",
-				"prefix": ".ToggleEnable"
+				"prefix": "ToggleEnable"
 			},
 			{
-				"body": ".Uncheck(${1:MenuItemName})",
+				"body": "Uncheck(${1:MenuItemName})",
 				"description": "从菜单项中删除选中标记(如果有).",
-				"prefix": ".Uncheck"
+				"prefix": "Uncheck"
 			},
 			{
-				"body": ".AddStandard()",
+				"body": "AddStandard()",
 				"description": "添加标准托盘菜单项.",
-				"prefix": ".AddStandard"
+				"prefix": "AddStandard"
 			}
 		],
 		"inputhook": [
 			{
-				"body": ".EndKey",
+				"body": "EndKey",
 				"description": "返回终止 Input 而按下的结束建的名称.",
-				"prefix": ".EndKey"
+				"prefix": "EndKey"
 			},
 			{
-				"body": ".EndMods",
+				"body": "EndMods",
 				"description": "返回在 Input 终止时逻辑上是按下的修饰符键的字符串.",
-				"prefix": ".EndMods"
+				"prefix": "EndMods"
 			},
 			{
-				"body": ".EndReason",
+				"body": "EndReason",
 				"description": "返回 EndReason 字符串, 该字符串表明了 Input 是如何终止的.",
-				"prefix": ".EndReason"
+				"prefix": "EndReason"
 			},
 			{
-				"body": ".InProgress",
+				"body": "InProgress",
 				"description": "如果输入正在进行, 则返回 true, 否则返回 false.",
-				"prefix": ".InProgress"
+				"prefix": "InProgress"
 			},
 			{
-				"body": ".Input",
+				"body": "Input",
 				"description": "返回自上次 Input 启动以来收集的任何文本.",
-				"prefix": ".Input"
+				"prefix": "Input"
 			},
 			{
-				"body": ".Match",
+				"body": "Match",
 				"description": "返回导致 Input 终止的 MatchList 项目.",
-				"prefix": ".Match"
+				"prefix": "Match"
 			},
 			{
-				"body": ".OnEnd",
+				"body": "OnEnd",
 				"description": "检索或设置在 Input 终止时调用的函数对象.",
-				"prefix": ".OnEnd"
+				"prefix": "OnEnd"
 			},
 			{
-				"body": ".OnChar",
+				"body": "OnChar",
 				"description": "检索或设置函数对象, 该函数对象将在字符添加到输入缓冲后调用.",
-				"prefix": ".OnChar"
+				"prefix": "OnChar"
 			},
 			{
-				"body": ".OnKeyDown",
+				"body": "OnKeyDown",
 				"description": "检索或设置函数对象, 该函数对象将在按下启用通知的按键时调用.",
-				"prefix": ".OnKeyDown"
+				"prefix": "OnKeyDown"
 			},
 			{
-				"body": ".OnKeyUp",
+				"body": "OnKeyUp",
 				"description": "检索或设置函数对象, 该函数对象将在释放启用通知按键时被调用.",
-				"prefix": ".OnKeyUp"
+				"prefix": "OnKeyUp"
 			},
 			{
-				"body": ".BackspaceIsUndo",
+				"body": "BackspaceIsUndo",
 				"description": "控制 Backspace 是否从输入缓冲的末尾删除最近按下的字符.",
-				"prefix": ".BackspaceIsUndo"
+				"prefix": "BackspaceIsUndo"
 			},
 			{
-				"body": ".CaseSensitive",
+				"body": "CaseSensitive",
 				"description": "控制 MatchList 是否区分大小写.",
-				"prefix": ".CaseSensitive"
+				"prefix": "CaseSensitive"
 			},
 			{
-				"body": ".FindAnywhere",
+				"body": "FindAnywhere",
 				"description": "控制每个匹配项是否可以是输入文本的子字符串.",
-				"prefix": ".FindAnywhere"
+				"prefix": "FindAnywhere"
 			},
 			{
-				"body": ".MinSendLevel",
+				"body": "MinSendLevel",
 				"description": "检索或设置要收集的输入的最小发送级别.",
-				"prefix": ".MinSendLevel"
+				"prefix": "MinSendLevel"
 			},
 			{
-				"body": ".NotifyNonText",
+				"body": "NotifyNonText",
 				"description": "控制当按下非文本键时是否调用 OnKeyDown 和 OnKeyUp 回调.",
-				"prefix": ".NotifyNonText"
+				"prefix": "NotifyNonText"
 			},
 			{
-				"body": ".Timeout",
+				"body": "Timeout",
 				"description": "检索或设置超时值(以秒为单位).",
-				"prefix": ".Timeout"
+				"prefix": "Timeout"
 			},
 			{
-				"body": ".VisibleNonText",
+				"body": "VisibleNonText",
 				"description": "控制不产生文本的键或键组合是否可见(不阻止).",
-				"prefix": ".VisibleNonText"
+				"prefix": "VisibleNonText"
 			},
 			{
-				"body": ".VisibleText",
+				"body": "VisibleText",
 				"description": "控制产生文本的键或键组合是否可见(不阻止).",
-				"prefix": ".VisibleText"
+				"prefix": "VisibleText"
 			},
 			{
-				"body": ".KeyOpt(${1:Keys}, ${2:KeyOptions})",
+				"body": "KeyOpt(${1:Keys}, ${2:KeyOptions})",
 				"description": "设置按键或按键列表的选项.",
-				"prefix": ".KeyOpt"
+				"prefix": "KeyOpt"
 			},
 			{
-				"body": ".Start()",
+				"body": "Start()",
 				"description": "启动收集输入.",
-				"prefix": ".Start"
+				"prefix": "Start"
 			},
 			{
-				"body": ".Stop()",
+				"body": "Stop()",
 				"description": "终止 Input 并将 EndReason 设置为单词 Stopped.",
-				"prefix": ".Stop"
+				"prefix": "Stop"
 			},
 			{
-				"body": ".Wait(${1:[MaxTime]})",
+				"body": "Wait(${1:[MaxTime]})",
 				"description": "等待, 直到 Input 终止(InProgress 为 false).",
-				"prefix": ".Wait"
+				"prefix": "Wait"
 			}
 		],
 		"listview": [
 			{
-				"body": ".Add(${1:[Options, Col1, ...]})",
+				"body": "Add(${1:[Options, Col1, ...]})",
 				"description": "将新行添加到列表的底部, 并返回新行号, 如果ListView具有Sort或SortDesc样式, 则不一定是最后一行.",
-				"prefix": ".Add"
+				"prefix": "Add"
 			},
 			{
-				"body": ".Delete(${1:[RowNumber]})",
+				"body": "Delete(${1:[RowNumber]})",
 				"description": "删除指定的行, 成功则返回1, 失败则返回0.",
-				"prefix": ".Delete"
+				"prefix": "Delete"
 			},
 			{
-				"body": ".DeleteCol(${1:ColumnNumber})",
+				"body": "DeleteCol(${1:ColumnNumber})",
 				"description": "删除指定的列及其下的所有内容, 并在成功时返回1, 在失败时返回0.",
-				"prefix": ".DeleteCol"
+				"prefix": "DeleteCol"
 			},
 			{
-				"body": ".GetCount(${1:[Mode]})",
+				"body": "GetCount(${1:[Mode]})",
 				"description": "返回控件中的行数或列数.",
-				"prefix": ".GetCount"
+				"prefix": "GetCount"
 			},
 			{
-				"body": ".GetNext(${1:[StartingRowNumber, RowType]})",
+				"body": "GetNext(${1:[StartingRowNumber, RowType]})",
 				"description": "返回下一个选定, 选中或关注的行的行号, 否则返回零.",
-				"prefix": ".GetNext"
+				"prefix": "GetNext"
 			},
 			{
-				"body": ".GetText(${1:RowNumber [, ColumnNumber]})",
+				"body": "GetText(${1:RowNumber [, ColumnNumber]})",
 				"description": "检索指定行号和列号的文本.",
-				"prefix": ".GetText"
+				"prefix": "GetText"
 			},
 			{
-				"body": ".Insert(${1:RowNumber [, Options, Col1, ...]})",
+				"body": "Insert(${1:RowNumber [, Options, Col1, ...]})",
 				"description": "在指定的行号处插入新行, 并返回新的行号.",
-				"prefix": ".Insert"
+				"prefix": "Insert"
 			},
 			{
-				"body": ".InsertCol(${1:ColumnNumber [, Options, ColumnTitle]})",
+				"body": "InsertCol(${1:ColumnNumber [, Options, ColumnTitle]})",
 				"description": "在指定的列号处插入新列, 并返回新列的位置号.",
-				"prefix": ".InsertCol"
+				"prefix": "InsertCol"
 			},
 			{
-				"body": ".Modify(${1:RowNumber [, Options, NewCol1, ...]})",
+				"body": "Modify(${1:RowNumber [, Options, NewCol1, ...]})",
 				"description": "修改行的属性/文本, 并在成功时返回1, 在失败时返回0.",
-				"prefix": ".Modify"
+				"prefix": "Modify"
 			},
 			{
-				"body": ".ModifyCol(${1:[ColumnNumber, Options, ColumnTitle]})",
+				"body": "ModifyCol(${1:[ColumnNumber, Options, ColumnTitle]})",
 				"description": "修改指定列及其标题的属性/文本, 并在成功时返回1, 在失败时返回0.",
-				"prefix": ".ModifyCol"
+				"prefix": "ModifyCol"
 			},
 			{
-				"body": ".SetImageList(${1:ImageListID [, IconType]})",
+				"body": "SetImageList(${1:ImageListID [, IconType]})",
 				"description": "设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).",
-				"prefix": ".SetImageList"
+				"prefix": "SetImageList"
 			}
 		],
 		"statusbar": [
 			{
-				"body": ".SetIcon(${1:Filename [, IconNumber := 1, PartNumber := 1]})",
+				"body": "SetIcon(${1:Filename [, IconNumber := 1, PartNumber := 1]})",
 				"description": "在指定部分的文本左侧显示一个小图标, 并返回图标的句柄.",
-				"prefix": ".SetIcon"
+				"prefix": "SetIcon"
 			},
 			{
-				"body": ".SetParts([Width1, ... Width255])",
+				"body": "SetParts([Width1, ... Width255])",
 				"description": "根据指定的宽度(以像素为单位)将条形划分为多个部分, 并返回非零值(状态条的HWND).",
-				"prefix": ".SetParts"
+				"prefix": "SetParts"
 			},
 			{
-				"body": ".SetText(${1:NewText [, PartNumber := 1, Style := 0]})",
+				"body": "SetText(${1:NewText [, PartNumber := 1, Style := 0]})",
 				"description": "在状态栏的指定部分显示NewText, 成功则返回1, 失败则返回0.",
-				"prefix": ".SetText"
+				"prefix": "SetText"
 			}
 		],
 		"treeview": [
 			{
-				"body": ".Add(${1:Name, [ParentItemID, Options]})",
+				"body": "Add(${1:Name, [ParentItemID, Options]})",
 				"description": "将新项目添加到TreeView, 并返回其唯一的项目ID号.",
-				"prefix": ".Add"
+				"prefix": "Add"
 			},
 			{
-				"body": ".Delete(${1:[ItemID]})",
+				"body": "Delete(${1:[ItemID]})",
 				"description": "删除指定的项目, 成功则返回1, 失败则返回0.",
-				"prefix": ".Delete"
+				"prefix": "Delete"
 			},
 			{
-				"body": ".Get(${1:ItemID}, ${2|'Expanded','Checked','Bold'|})",
+				"body": "Get(${1:ItemID}, ${2|'Expanded','Checked','Bold'|})",
 				"description": "如果指定的项目具有指定的属性, 则返回非零值(项目ID).",
-				"prefix": ".Get"
+				"prefix": "Get"
 			},
 			{
-				"body": ".GetChild(${1:ParentItemID})",
+				"body": "GetChild(${1:ParentItemID})",
 				"description": "返回指定项目的第一个/顶部子项的ID号(如果没有, 则返回0).",
-				"prefix": ".GetChild"
+				"prefix": "GetChild"
 			},
 			{
-				"body": ".GetCount()",
+				"body": "GetCount()",
 				"description": "返回控件中的项目总数.",
-				"prefix": ".GetCount"
+				"prefix": "GetCount"
 			},
 			{
-				"body": ".GetNext(${1:[ItemID, ItemType]})",
+				"body": "GetNext(${1:[ItemID, ItemType]})",
 				"description": "返回指定项目下方的下一个项目的ID号(如果没有, 则返回0).",
-				"prefix": ".GetNext"
+				"prefix": "GetNext"
 			},
 			{
-				"body": ".GetParent(${1:ItemID})",
+				"body": "GetParent(${1:ItemID})",
 				"description": "返回指定项目的父项作为项目ID.",
-				"prefix": ".GetParent"
+				"prefix": "GetParent"
 			},
 			{
-				"body": ".GetPrev(${1:ItemID})",
+				"body": "GetPrev(${1:ItemID})",
 				"description": "返回指定项目上方的前一个项目的ID号(如果没有, 则返回0).",
-				"prefix": ".GetPrev"
+				"prefix": "GetPrev"
 			},
 			{
-				"body": ".GetSelection()",
+				"body": "GetSelection()",
 				"description": "返回所选项目的ID号.",
-				"prefix": ".GetSelection"
+				"prefix": "GetSelection"
 			},
 			{
-				"body": ".GetText(${1:ItemID})",
+				"body": "GetText(${1:ItemID})",
 				"description": "检索指定项目的文本/名称.",
-				"prefix": ".GetText"
+				"prefix": "GetText"
 			},
 			{
-				"body": ".Modify(${1:ItemID [, Options, NewName]})",
+				"body": "Modify(${1:ItemID [, Options, NewName]})",
 				"description": "修改项目的属性/名称, 并返回项目自己的ID.",
-				"prefix": ".Modify"
+				"prefix": "Modify"
 			},
 			{
-				"body": ".SetImageList(${1:ImageListID [, IconType]})",
+				"body": "SetImageList(${1:ImageListID [, IconType]})",
 				"description": "设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).",
-				"prefix": ".SetImageList"
+				"prefix": "SetImageList"
 			}
 		]
 	},
@@ -3177,9 +3392,29 @@
 			"prefix": "A_ControlDelay"
 		},
 		{
-			"body": "A_CoordMode${1|Caret,Menu,Mouse,Pixel,ToolTip|}",
+			"body": "A_CoordModeCaret",
 			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
-			"prefix": "A_CoordMode"
+			"prefix": "A_CoordModeCaret"
+		},
+		{
+			"body": "A_CoordModeMenu",
+			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
+			"prefix": "A_CoordModeMenu"
+		},
+		{
+			"body": "A_CoordModeMouse",
+			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
+			"prefix": "A_CoordModeMouse"
+		},
+		{
+			"body": "A_CoordModePixel",
+			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
+			"prefix": "A_CoordModePixel"
+		},
+		{
+			"body": "A_CoordModeToolTip",
+			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
+			"prefix": "A_CoordModeToolTip"
 		},
 		{
 			"body": "A_Cursor",
