@@ -252,12 +252,11 @@ async function initAHKCache() {
 					else
 						completionItem.insertText = snip.body, completionItem.command = cmd;
 					completionItem.insertTextFormat = InsertTextFormat.Snippet;
-					completionItem.detail = `(${objname}) ` + snip.description;
 					snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => {
 						return m[2] ? m[3].replace(/,/g, '|') : m[3] || '';
 					});
 					if (!meds[_low]) {
-						completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' };
+						completionItem.documentation = snip.description;
 						completionItemCache[t].push(meds[_low] = completionItem);
 					} else {
 						meds[_low].documentation = undefined;
@@ -271,7 +270,8 @@ async function initAHKCache() {
 						let it: Variable;
 						ahkclasses[_].push(it = DocumentSymbol.create(snip.prefix, snip.description,
 							SymbolKind.Property, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
-						it.full = `(${_}) ` + it.name;
+						it.full = completionItem.detail = `(${_}) ` + it.name;
+						completionItem.documentation = snip.description;
 					} else {
 						let it = FuncNode.create(_low === 'new' ? '__New' : snip.prefix, SymbolKind.Method, rg, rg,
 							snip.body.replace(/^\w+[(\s]|\)/g, '').split(',').filter(param => param != '').map(param => {
@@ -282,6 +282,7 @@ async function initAHKCache() {
 							return m[1] + '|...';
 						});
 						it.full = `(${_}) ${it.full}`, it.detail = snip.description, ahkclasses[_].push(it);
+						completionItem.detail = completionItem.detail || it.full;
 					}
 				}
 				if (_.indexOf(',') !== -1) {

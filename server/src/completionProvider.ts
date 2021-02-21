@@ -125,7 +125,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			if (!unknown && (triggerKind !== 1 || content.text.match(/\.\w{0,2}$/)))
 				return items;
-			items.push(...completionItemCache.method);
 			let objs = [doc.object];
 			for (const uri in list)
 				objs.push(lexers[uri].object);
@@ -135,10 +134,24 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						items.push(props[it] = convertNodeCompletion({ name: obj['property'][it], kind: SymbolKind.Property }));
 					else props[it].detail = '(...) ' + props[it].label;
 				for (const it in obj['method'])
-					if (!funcs[it])
-						items.push(funcs[it] = convertNodeCompletion(obj['method'][it][0]));
-					else if (typeof funcs[it] === 'object')
-						funcs[it].detail = '(...) ' + funcs[it].label;
+					if (!meds[it])
+						items.push(meds[it] = convertNodeCompletion(obj['method'][it][0]));
+					else if (typeof meds[it] === 'object')
+						meds[it].detail = '(...) ' + meds[it].label + '()';
+			}
+			for (const it of completionItemCache.method) {
+				_low = it.label.toLowerCase();
+				if (it.kind === CompletionItemKind.Property) {
+					if (!props[_low])
+						items.push(it);
+					else if (props[_low].detail !== it.detail)
+						props[_low].detail = '(...) ' + it.label;
+				} else {
+					if (!meds[_low])
+						items.push(it);
+					else if (meds[_low].detail !== it.detail)
+						meds[_low].detail = '(...) ' + it.label + '()';
+				}
 			}
 			return items;
 		default:
