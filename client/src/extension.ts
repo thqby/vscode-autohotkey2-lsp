@@ -40,7 +40,7 @@ export function activate(context: ExtensionContext) {
 		run: { module: serverModule, transport: TransportKind.ipc },
 		debug: {
 			module: serverModule,
-			transport: TransportKind.ipc,
+			transport: { kind: TransportKind.socket, port: 1219 },
 			options: debugOptions
 		}
 	};
@@ -143,7 +143,7 @@ function quickHelp() {
 	}
 	if (word !== '' && executePath !== '' && existsSync(executePath)) {
 		let ahkpro = child_process.exec(`\"${executePath}\" /ErrorStdOut *`, { cwd: `${resolve(editor.document.fileName, '..')}` });
-		ahkpro.stdin?.write(`#NoTrayIcon\nWinActivate("ahk_pid ${ahkhelp.pid}")\nif !WinWaitActive("ahk_pid ${ahkhelp.pid}", , 3)\nExitApp()\nSendInput("!n"), Sleep(50)\nSendInput("^a{Backspace}"), Sleep(100)\nSendInput("{Text}${word}\`n")`);
+		ahkpro.stdin?.write(`#NoTrayIcon\nWinActivate("ahk_pid ${ahkhelp.pid}")\nif !WinWaitActive("ahk_pid ${ahkhelp.pid}", , 3)\nExitApp()\nSendInput("!s"), Sleep(50)\nSendInput("^a{Backspace}"), Sleep(100)\nSendInput("{Text}${word}\`n")`);
 		ahkpro.stdin?.end();
 	}
 }

@@ -5,27 +5,34 @@ Turn down the pages of the [English](#Language-support-for-AutoHotkey2-for-Visua
 AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 - [语言特性](#语言特性)
+  - [重命名符号](#重命名符号)
   - [错误诊断](#错误诊断)
-  - [代码补全](#代码补全)
+  - [智能感知](#智能感知)
   - [智能提示](#智能提示)
   - [大纲](#大纲)
   - [代码标记](#代码标记)
   - [颜色提示](#颜色提示)
   - [悬停提示](#悬停提示)
   - [转到定义](#转到定义)
+  - [查找所有引用](#查找所有引用)
   - [代码格式化](#代码格式化)
 
 ## 语言特性
 
+### 重命名符号
+
+作用域范围内的变量、函数名批量重命名.
+
+![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/rename.gif)
 ### 错误诊断
 
 简单语法错误诊断.
 
 ![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/diagnostics.png)
 
-### 代码补全
+### 智能感知
 
-支持对作用域范围内的变量、函数、参数、类名、方法名，支持对include文件和函数库补全.
+支持对作用域范围内的变量、函数、参数、类名、方法名智能补全(简单的类型推导)，支持对include文件和函数库补全.
 
 ![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/snippet.png)
 
@@ -67,6 +74,10 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 ![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/gotoDefinition.png)
 
+### 查找所有引用
+
+查看正在使用某个变量/函数的所有源代码位置。
+
 ### 代码格式化
 
 用法:  
@@ -81,6 +92,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis
 
 - [Language Features](#Language-Features)
+  - [Rename Symbol](#Rename-Symbol)
   - [Diagnostics](#Diagnostics)
   - [IntelliSense](#IntelliSense)
   - [Signature](#Signature)
@@ -89,9 +101,16 @@ AutoHotKey V2 Language support for VS Code, Function realization based on v2 syn
   - [Document Color](#Document-Color)
   - [Hover](#Hover)
   - [Goto Definition](#Goto-Definition)
+  - [Find All References](#Find-All-References)
   - [CodeFormat](#CodeFormat)
 
 ## Language Features
+
+### Rename Symbol
+
+Rename variables and function names in the scope in batches.
+
+![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/rename.gif)
 
 ### Diagnostics
 
@@ -101,7 +120,7 @@ Simple syntax error diagnosis.
 
 ### IntelliSense
 
-Support for scoped variables, functions, parameters, class names, method names, include files, and function library completion.
+Supports intelligent completion of variables, functions, parameters, class names, and method names within the scope (by simple type deduction), and supports the completion of include files and function libraries.
 
 ![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/snippet.png)
 
@@ -142,6 +161,10 @@ usage: Move the mouse over the symbol.
 2. usage: Press ctrl Then move the mouse over to the code and click.  
 
 ![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/gotoDefinition.png)
+
+### Find All References
+
+See all the source code locations where a certain variable/function is being used.
 
 ### CodeFormat
 

@@ -248,7 +248,7 @@
 			"prefix": "catch"
 		},
 		{
-			"body": "class ${1:classname}\n{$0\n}",
+			"body": "class ${1:classname} {\n\t$0\n}",
 			"prefix": "class"
 		},
 		{
@@ -2934,21 +2934,6 @@
 				"prefix": "Visible"
 			},
 			{
-				"body": "Add([${1:Items...}])",
-				"description": "在列表框, 下拉列表, 组合框或选项卡控件的当前列表中追加指定的项.",
-				"prefix": "Add"
-			},
-			{
-				"body": "Choose(${1:Index/String})",
-				"description": "将ListBox, DropDownList, ComboBox或Tab控件中的选择设置为指定值.",
-				"prefix": "Choose"
-			},
-			{
-				"body": "Delete(${1:[Index]})",
-				"description": "删除ListBox, DropDownList, ComboBox或Tab控件的指定条目或所有条目.",
-				"prefix": "Delete"
-			},
-			{
 				"body": "Focus()",
 				"description": "将键盘焦点设置为控件.",
 				"prefix": "Focus"
@@ -2992,11 +2977,6 @@
 				"body": "SetFormat(${1:[TimeFormat]})",
 				"description": "设置 DateTime 控件的显示格式.",
 				"prefix": "SetFormat"
-			},
-			{
-				"body": "UseTab(${1:[Index/String, ExactMatch := false]})",
-				"description": "导致随后添加的控件属于选项卡控件的指定选项卡.",
-				"prefix": "UseTab"
 			}
 		],
 		"menu": [
@@ -3337,6 +3317,30 @@
 				"body": "SetImageList(${1:ImageListID [, IconType]})",
 				"description": "设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).",
 				"prefix": "SetImageList"
+			}
+		],
+		"listbox,ddl,combobox,tab": [
+			{
+				"body": "Add([${1:Items...}])",
+				"description": "在列表框, 下拉列表, 组合框或选项卡控件的当前列表中追加指定的项.",
+				"prefix": "Add"
+			},
+			{
+				"body": "Choose(${1:Index/String})",
+				"description": "将ListBox, DropDownList, ComboBox或Tab控件中的选择设置为指定值.",
+				"prefix": "Choose"
+			},
+			{
+				"body": "Delete(${1:[Index]})",
+				"description": "删除ListBox, DropDownList, ComboBox或Tab控件的指定条目或所有条目.",
+				"prefix": "Delete"
+			}
+		],
+		"tab": [
+			{
+				"body": "UseTab(${1:[Index/String, ExactMatch := false]})",
+				"description": "导致随后添加的控件属于选项卡控件的指定选项卡.",
+				"prefix": "UseTab"
 			}
 		]
 	},
