@@ -32,8 +32,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			items.push(...completionItemCache.sharp);
 			return items;
 		case '.':
-			if (triggerKind === 1 && content.text === '')
-				triggerKind = undefined;
 			let c = doc.buildContext(position, true);
 			content.pre = c.text.slice(0, content.text === '' && content.pre.match(/\.$/) ? -1 : -content.text.length);
 			content.text = c.text, content.kind = c.kind, content.linetext = c.linetext;;
@@ -125,7 +123,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				p.kind = CompletionItemKind.Method, p.detail = '构造类的新实例.', p.insertText = `New(${hasparams ? '$0' : ''})`;
 				p.insertTextFormat = InsertTextFormat.Snippet;
 			}
-			if (!unknown && triggerKind !== 1)
+			if (!unknown && (triggerKind !== 1 || content.text.match(/\.\w{0,2}$/)))
 				return items;
 			items.push(...completionItemCache.method);
 			let objs = [doc.object];

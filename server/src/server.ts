@@ -18,7 +18,7 @@ import { completionProvider } from './completionProvider';
 import { defintionProvider } from './definitionProvider';
 import { documentFormatting, rangeFormatting } from './formattingProvider';
 import { hoverProvider } from './hoverProvider';
-import { FuncNode, getincludetable, Lexer, parseinclude } from './Lexer';
+import { FuncNode, getincludetable, Lexer, parseinclude, Variable } from './Lexer';
 import { referenceProvider } from './referencesProvider';
 import { prepareRename, renameProvider } from './renameProvider';
 import { runscript } from './scriptrunner';
@@ -267,10 +267,12 @@ async function initAHKCache() {
 						} else
 							meds[_low].detail = '(...) ' + snip.body;
 					}
-					if (completionItem.kind === CompletionItemKind.Property)
-						ahkclasses[_].push(DocumentSymbol.create(snip.prefix, `(${_}) ` + snip.description,
+					if (completionItem.kind === CompletionItemKind.Property) {
+						let it: Variable;
+						ahkclasses[_].push(it = DocumentSymbol.create(snip.prefix, snip.description,
 							SymbolKind.Property, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
-					else {
+						it.full = `(${_}) ` + it.name;
+					} else {
 						let it = FuncNode.create(_low === 'new' ? '__New' : snip.prefix, SymbolKind.Method, rg, rg,
 							snip.body.replace(/^\w+[(\s]|\)/g, '').split(',').filter(param => param != '').map(param => {
 								return DocumentSymbol.create(param.trim(), undefined, SymbolKind.Variable, rg, rg);
