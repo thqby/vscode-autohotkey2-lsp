@@ -24,7 +24,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 	}
 	symbolcache.uri = uri, doc.reflat = false;
 	return symbolcache.sym = (lexers[uri].flattreecache = flatTree(tree, gvar)).map(info => {
-		return SymbolInformation.create(info.name, info.kind, info.range, uri,
+		return SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, uri,
 			info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
 	});
 

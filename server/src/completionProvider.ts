@@ -44,7 +44,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					isstatic = false;
 				return '';
 			});
-			if (!(t = p.match(/^[^\d]\w*(\.\w+)*$/))) {
+			if (p.indexOf('(') !== -1) {
 				if (isstatic) {
 					let ts: any = {};
 					p = content.pre.toLowerCase();
@@ -59,8 +59,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						}
 				}
 			} else {
-				t = t[0].toLowerCase();
-				if (p = searchNode(doc, t, position, [SymbolKind.Class, SymbolKind.Variable])) {
+				if (p = searchNode(doc, p.toLowerCase(), position, [SymbolKind.Class, SymbolKind.Variable])) {
 					let node = p[0].node;
 					if (node.kind === SymbolKind.Property) {
 						if (node.typeexp && node.full?.charAt(0) === '(') {
@@ -117,27 +116,30 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						items.push(convertNodeCompletion(it));
 				});
 			if (isclass && isstatic) {
-				items.push(p = CompletionItem.create('Prototype'));
+				items.push(p = CompletionItem.create('Prototype')), props['prototype'] = p;
 				p.kind = CompletionItemKind.Property, p.detail = '检索或设置类的所有实例所基于的对象.';
-				items.push(p = CompletionItem.create('New'));
+				items.push(p = CompletionItem.create('New')), meds['new'] = p;
 				p.kind = CompletionItemKind.Method, p.detail = '构造类的新实例.', p.insertText = `New(${hasparams ? '$0' : ''})`;
 				p.insertTextFormat = InsertTextFormat.Snippet;
 			}
-			if (!unknown && (triggerKind !== 1 || content.text.match(/\.\w{0,2}$/)))
+			if (!unknown && (triggerKind !== 1 || content.text.match(/\..{0,2}$/)))
 				return items;
 			let objs = [doc.object];
 			for (const uri in list)
 				objs.push(lexers[uri].object);
 			for (const obj of objs) {
-				for (const it in obj['property'])
+				for (const it in obj.property)
 					if (!props[it])
-						items.push(props[it] = convertNodeCompletion({ name: obj['property'][it], kind: SymbolKind.Property }));
-					else props[it].detail = '(...) ' + props[it].label;
-				for (const it in obj['method'])
+						items.push(props[it] = convertNodeCompletion({ name: obj.property[it], kind: SymbolKind.Property }));
+					else props[it].detail = props[it].label;
+				for (const it in obj.method)
 					if (!meds[it])
-						items.push(meds[it] = convertNodeCompletion(obj['method'][it][0]));
+						items.push(meds[it] = convertNodeCompletion(obj.method[it][0]));
 					else if (typeof meds[it] === 'object')
 						meds[it].detail = '(...) ' + meds[it].label + '()';
+				for (const it in obj.userdef)
+					if (!meds[it])
+						items.push(meds[it] = convertNodeCompletion(obj.userdef[it]));
 			}
 			for (const it of completionItemCache.method) {
 				_low = it.label.toLowerCase();
@@ -145,7 +147,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					if (!props[_low])
 						items.push(it);
 					else if (props[_low].detail !== it.detail)
-						props[_low].detail = '(...) ' + it.label;
+						props[_low].detail = it.label;
 				} else {
 					if (!meds[_low])
 						items.push(it);
@@ -155,12 +157,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			return items;
 		default:
-			if (percent) {
-				other = false, completionItemCache.other.map((value: CompletionItem) => {
-					if (value.kind !== CompletionItemKind.Text)
-						items.push(value);
-				});
-			} else if (linetext.match(/^\s*#include/i)) {
+			if (linetext.match(/^\s*#include/i)) {
 				let tt = linetext.replace(/^\s*#include(again)?\s+/i, '').replace(/\s*\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
 				let pre = linetext.substring(linetext.length - tt.length, position.character), xg = '\\', m: any, a_ = '';
 				if (pre.charAt(0).match(/['"<]/)) {
@@ -299,32 +296,17 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						if (!txs[t])
 							txs[t] = true, items.push(cpitem = CompletionItem.create(temp[t])), cpitem.kind = CompletionItemKind.Text;
 				return items;
-			} else {
-				items.push(...completionItemCache.snippet);
-				if (triggerKind === 1 && content.text.length > 2 && content.text.match(/^[a-z]+_/i)) {
-					const rg = new RegExp(content.text.replace(/(.)/g, '$1.*'), 'i'), constants = completionItemCache.constant;
-					for (const it of constants)
-						if (rg.test(it.label))
-							items.push(it);
-				}
-			}
+			} else
+				other = !percent;
 			scopenode = doc.searchScopedNode(position);
-			if (scopenode) {
-				if (!linetext.match(/^\s*global\s/i)) {
-					let s = (<FuncNode>scopenode).statement;
-					if (!s) scope = FuncScope.DEFAULT;
-					else if (s.assume & FuncScope.LOCAL)
-						scope = FuncScope.LOCAL;
-					else if (s.assume !== FuncScope.GLOBAL)
-						scope = FuncScope.DEFAULT;
-				}
-				if (other)
-					completionItemCache.other.map(value => {
-						if (value.kind !== CompletionItemKind.Text)
-							items.push(value);
-					});
-			} else if (other)
-				items.push(...completionItemCache.other);
+			if (scopenode && !linetext.match(/^\s*global\s/i)) {
+				let s = (<FuncNode>scopenode).statement;
+				if (!s) scope = FuncScope.DEFAULT;
+				else if (s.assume & FuncScope.LOCAL)
+					scope = FuncScope.LOCAL;
+				else if (s.assume !== FuncScope.GLOBAL)
+					scope = FuncScope.DEFAULT;
+			}
 			if (scope === FuncScope.GLOBAL) {
 				addGlobalVar();
 				if (scopenode)
@@ -345,6 +327,18 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (scope === FuncScope.DEFAULT) addGlobalVar();
 				addNodesIgnoreCurpos(doc.getScopeChildren(scopenode)), addFunction();
 			}
+			completionItemCache.other.map(it => {
+				if (it.kind === CompletionItemKind.Text) {
+					if (!scopenode && !percent)
+						items.push(it);
+				} else if (it.kind === CompletionItemKind.Function) {
+					if (!funcs[it.label.toLowerCase()])
+						items.push(it);
+				} else
+					items.push(it);
+			});
+			if (other)
+				addOther();
 			return items;
 	}
 	function addincludeitem(item: DocumentSymbol) {
@@ -381,6 +375,15 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			path = list[t].path;
 			for (const name in (temp = lexers[t].function))
 				if (!funcs[name]) funcs[name] = true, addincludeitem(temp[name]);
+		}
+	}
+	function addOther() {
+		items.push(...completionItemCache.snippet);
+		if (triggerKind === 1 && content.text.length > 2 && content.text.match(/^[a-z]+_/i)) {
+			const rg = new RegExp(content.text.replace(/(.)/g, '$1.*'), 'i'), constants = completionItemCache.constant;
+			for (const it of constants)
+				if (rg.test(it.label))
+					items.push(it);
 		}
 	}
 }

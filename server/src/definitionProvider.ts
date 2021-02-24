@@ -29,7 +29,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 		else if (!(nodes = searchNode(doc, word, context.range.end, kind))) {
 			let ts: any = {};
 			nodes = <any>[], detectExpType(doc, word.replace(/\.[^.]+$/, m => {
-				word = m.match(/^\.\w+$/) ? m : '';
+				word = m.match(/^\.[^.]+$/) ? m : '';
 				return '';
 			}), params.position, ts);
 			if (word && !ts['#any'])

@@ -257,7 +257,8 @@ async function initAHKCache() {
 					});
 					if (!meds[_low]) {
 						completionItem.documentation = snip.description;
-						completionItemCache[t].push(meds[_low] = completionItem);
+						if (objname !== 'class')
+							completionItemCache[t].push(meds[_low] = completionItem);
 					} else {
 						meds[_low].documentation = undefined;
 						if (meds[_low].insertText !== completionItem.insertText) {

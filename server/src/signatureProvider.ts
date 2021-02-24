@@ -14,11 +14,11 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 			kind = SymbolKind.Method;
 	if (kind === SymbolKind.Method) {
 		let context = doc.buildContext(pos), t = context.text.toLowerCase();
-		if (t.match(/^((\w+\.)+\w+)$/))
+		if (t.match(/^(((\w|[^\x00-\xff])+\.)+(\w|[^\x00-\xff])+)$/))
 			nodes = searchNode(doc, t, pos, SymbolKind.Method);
 		else {
 			let ts: any = {};
-			t = t.replace(/\.\w+$/, '');
+			t = t.replace(/\.(\w|[^\x00-\xff])+$/, '');
 			nodes = [], detectExpType(doc, t, params.position, ts);
 			if (!ts['#any'])
 				for (const tp in ts)
