@@ -3,6 +3,9 @@
   "scopeName": "ahk2.output",
   "patterns": [
     {
+      "include": "#url"
+    },
+    {
       "captures": {
         "1": {
           "name": "token.info-token"
@@ -71,6 +74,10 @@
     }
   ],
   "repository": {
+    "url": {
+      "match": "\\b((?i:(https?|ws)://\\S+))\\b",
+      "name": "string.url"
+    },
     "numbers": {
       "match": "\\b(\\d+(?:\\.\\d+)?|0[xX][\\da-fA-F]+)\\b",
       "name": "constant.numeric"

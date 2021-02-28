@@ -5,6 +5,8 @@
 
 import {
 	commands,
+	debug,
+	extensions,
 	ExtensionContext,
 	workspace,
 	window,
@@ -18,7 +20,7 @@ import {
 } from 'vscode-languageclient';
 import * as child_process from 'child_process';
 import { resolve } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
 
 let client: LanguageClient;
 let channel = window.createOutputChannel('AutoHotkey2');
@@ -69,8 +71,60 @@ export function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.run', () => runCurrentScriptFile()),
 		commands.registerCommand('ahk2.selection.run', () => runCurrentScriptFile(true)),
 		commands.registerCommand('ahk2.stop', () => stopRunningScript()),
+		commands.registerCommand('ahk2.compile', () => compileScript()),
 		commands.registerCommand('ahk2.help', () => quickHelp())
 	);
+	let extlist: string[] = [], debugexts: { [type: string]: string } = {};
+	for (const ext of extensions.all) {
+		if (ext.id.match(/ahk|autohotkey/i) && ext.packageJSON?.contributes?.debuggers) {
+			for (const debuger of ext.packageJSON.contributes.debuggers)
+				if (debuger.type)
+					debugexts[debuger.type] = ext.id;
+		}
+	}
+	extlist = Object.values(debugexts);
+	context.subscriptions.push(commands.registerCommand('ahk2.debug', async () => {
+		const editor = window.activeTextEditor, executePath = workspace.getConfiguration('AutoHotkey2').get('Path');
+		if (!editor) return;
+		let extname: string | undefined;
+		if (extlist.length === 0) {
+			window.showErrorMessage('未找到debug插件, 请先安装debug插件!');
+			extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'cweijan.vscode-autohotkey-plus']);
+			if (extname)
+				commands.executeCommand('workbench.extensions.installExtension', extname);
+			return;
+		} else if (extlist.length === 1)
+			extname = extlist[0];
+		else
+			extname = await window.showQuickPick(extlist);
+		if (extname) {
+			let config: any = {
+				type: '',
+				request: "launch",
+				name: "AutoHotkey Debug",
+				runtime: executePath,
+				AhkExecutable: executePath,
+				program: editor.document.uri.fsPath
+			};
+			for (const t in debugexts)
+				if (debugexts[t] === extname) {
+					config.type = t;
+					if (extname === 'zero-plusplus.vscode-autohotkey-debug') {
+						let input = await window.showInputBox({ prompt: '输入需要传递的命令行参数' });
+						if (input = input?.trim()) {
+							let args: string[] = [];
+							input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
+								args.push(m[4] || m[2]);
+								return '';
+							});
+							config.args = args;
+						}
+					}
+					break;
+				}
+			debug.startDebugging(workspace.getWorkspaceFolder(editor.document.uri), config);
+		}
+	}));
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 }
 
@@ -86,6 +140,7 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 	if (!editor) return;
 	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut `;
 	let startTime: Date;
+	await stopRunningScript(true);
 	channel.show(true), channel.clear();
 	if (selection || editor.document.isUntitled) selecttext = editor.document.getText(editor.selection);
 	if (selecttext !== '') {
@@ -110,18 +165,66 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 			channel.append(data.toString());
 		});
 		ahkprocess.on('exit', (code) => {
+			ahkprocess = undefined;
 			commands.executeCommand('setContext', 'ahk2:isRunning', false);
 			channel.appendLine('');
 			channel.appendLine('[Done] exited with code=' + code + ' in ' + ((new Date()).getTime() - startTime.getTime()) / 1000 + ' seconds');
 		});
+	} else
+		commands.executeCommand('setContext', 'ahk2:isRunning', false);
+}
+
+async function stopRunningScript(wait = false) {
+	if (ahkprocess) {
+		child_process.execSync('taskkill /pid ' + ahkprocess.pid + ' /T /F');
+		if (wait) {
+			while (ahkprocess)
+				await sleep(200);
+		}
 	}
 }
 
-async function stopRunningScript() {
-	if (ahkprocess) child_process.exec('taskkill /pid ' + ahkprocess.pid + ' /T /F');
+async function compileScript() {
+	const editor = window.activeTextEditor, executePath = workspace.getConfiguration('AutoHotkey2').get('Path');
+	let compilePath = executePath + '';
+	if (!editor) return;
+	compilePath = resolve(compilePath, '..\\Compiler\\Ahk2Exe.exe')
+	if (!existsSync(compilePath)) {
+		window.showErrorMessage(compilePath + '不存在');
+		return;
+	}
+	if (editor.document.isUntitled) {
+		window.showErrorMessage('不支持编译临时脚本');
+		return;
+	}
+	commands.executeCommand('workbench.action.files.save');
+	const currentPath = editor.document.uri.fsPath;
+	const exePath = currentPath.replace(/\.\w+$/, '.exe');
+	unlinkSync(exePath);
+	if (child_process.exec(`"${compilePath}" /in "${currentPath}" /out "${exePath}" /compress 0`, { cwd: resolve(currentPath, '..') })) {
+		let start = new Date().getTime();
+		let timer = setInterval(() => {
+			let end = new Date().getTime();
+			if (!checkcompilesuccess()) {
+				if (end - start > 5000) {
+					clearInterval(timer);
+					window.showErrorMessage('编译失败!');
+				}
+			} else
+				clearInterval(timer);
+			function checkcompilesuccess() {
+				if (existsSync(exePath)) {
+					window.showInformationMessage('编译成功!');
+					return true;
+				}
+				return false;
+			}
+		}, 1000);
+	} else
+		window.showErrorMessage('编译失败!');
 }
 
-function quickHelp() {
+async function quickHelp() {
 	const editor = window.activeTextEditor;
 	if (!editor) return;
 	const document = editor.document, path = document.fileName, position = editor.selection.active;
@@ -143,11 +246,11 @@ function quickHelp() {
 	}
 	if (word !== '' && executePath !== '' && existsSync(executePath)) {
 		let ahkpro = child_process.exec(`\"${executePath}\" /ErrorStdOut *`, { cwd: `${resolve(editor.document.fileName, '..')}` });
-		ahkpro.stdin?.write(`#NoTrayIcon\nWinActivate("ahk_pid ${ahkhelp.pid}")\nif !WinWaitActive("ahk_pid ${ahkhelp.pid}", , 3)\nExitApp()\nSendInput("!s"), Sleep(50)\nSendInput("^a{Backspace}"), Sleep(100)\nSendInput("{Text}${word}\`n")`);
+		ahkpro.stdin?.write(`#NoTrayIcon\ntry if (WinGetMinMax("ahk_pid ${ahkhelp.pid}")=-1)\nWinRestore("ahk_pid ${ahkhelp.pid}"), Sleep(500)\nWinActivate("ahk_pid ${ahkhelp.pid}")\nif !WinWaitActive("ahk_pid ${ahkhelp.pid}", , 5)\nExitApp()\nSendInput("!s"), Sleep(100)\nSendInput("^{Backspace}"), Sleep(200)\nSendInput("{Text}${word}\`n")`);
 		ahkpro.stdin?.end();
 	}
 }
 
-function log(data: string) {
-	client.sendRequest('log', data);
+async function sleep(ms: number) {
+	return new Promise(resolve => setTimeout(resolve, ms));
 }

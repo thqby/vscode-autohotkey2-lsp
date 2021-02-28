@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { resolve } from 'path';
 import {
 	Command, CompletionItem, CompletionItemKind, createConnection,
@@ -12,6 +12,7 @@ import {
 	TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit
 } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { URI } from 'vscode-uri';
 import { codeActionProvider } from './CodeActionProvider';
 import { colorPresentation, colorProvider } from './colorProvider';
 import { completionProvider } from './completionProvider';
@@ -31,15 +32,18 @@ export let globalSettings: AHKLSSettings = {
 }, libdirs: string[] = [], documentSettings: Map<string, Thenable<AHKLSSettings>> = new Map();
 let connection = createConnection(ProposedFeatures.all), documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
+let workspaceFolders: any = null;
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { uri: string, sym: SymbolInformation[] } = { uri: '', sym: [] };
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], ahkclasses: { [key: string]: DocumentSymbol[] } = {}, ahkfunctions: { [key: string]: FuncNode } = {};
+export let libfuncs: { [uri: string]: FuncNode[] } = {};
 export type Maybe<T> = T | undefined;
 interface AHKLSSettings {
 	Path: string;
 }
 
 connection.onInitialize((params: InitializeParams) => {
+	workspaceFolders = params.workspaceFolders;
 	let capabilities = params.capabilities;
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
@@ -119,6 +123,31 @@ connection.onDidChangeConfiguration(async change => {
 documents.onDidOpen(async e => {
 	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
 	lexers[uri] = doc, doc.actived = true;
+	if (uri.match(/\/lib\/(\w|[\x00-\xff])+\.ahk$/i)) {
+		if (!libfuncs[uri])
+			libfuncs[uri] = [];
+	} else {
+		setTimeout(() => {
+			let path = resolve(doc.scriptdir, 'lib');
+			if (existsSync(path) && statSync(path).isDirectory()) {
+				readdirSync(path).map(file => {
+					let url = resolve(path, file), uri = URI.file(url).toString().toLowerCase(), d: Lexer;
+					if (!libfuncs[uri]) {
+						if (!(d = lexers[uri]))
+							d = new Lexer(openFile(url)), d.parseScript();
+						libfuncs[uri] = [];
+						let t = uri.match(/[/\\]((\w|[^\x00-\xff])+?)(_[^/\\]+)?\.ahk$/)
+						if (t) {
+							let re = new RegExp('^' + t[1] + '(_(\w|[^\x00-\xff])+)?$');
+							for (const f in doc.function)
+								if (re.test(f))
+									libfuncs[uri].push(doc.function[f]);
+						}
+					}
+				});
+			}
+		}, 500);
+	}
 });
 
 // Only keep settings for open documents
@@ -152,6 +181,16 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 	let uri = change.document.uri.toLowerCase(), doc = lexers[uri];
 	let initial = doc.include, cg = false;
 	doc.parseScript();
+	if (libfuncs[uri]) {
+		libfuncs[uri].length = 0;
+		let t = uri.match(/[/\\]((\w|[^\x00-\xff])+?)(_[^/\\]+)?\.ahk$/)
+		if (t) {
+			let re = new RegExp('^' + t[1] + '(_(\w|[^\x00-\xff])+)?$');
+			for (const f in doc.function)
+				if (re.test(f))
+					libfuncs[uri].push(doc.function[f]);
+		}
+	}
 	for (const t in doc.include)
 		if (!initial[t])
 			initial[t] = doc.include[t], cg = true;
@@ -398,6 +437,24 @@ async function initpathenv(config?: any) {
 				doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include);
 				doc.relevance = getincludetable(doc.uri);
 			}
+			libdirs.map(dir => {
+				readdirSync(dir).map(file => {
+					let path = resolve(dir, file);
+					if (file.match(/\.ahk/i) && !statSync(path).isDirectory()) {
+						let uri = URI.file(path).toString().toLowerCase(), doc: Lexer, re = new RegExp('^' + file.replace(/(_(.+))?\.ahk$/, '') + '(_.+)?', 'i');
+						if (lexers[uri])
+							doc = lexers[uri];
+						else {
+							doc = new Lexer(openFile(path));
+							doc.parseScript();
+						}
+						libfuncs[uri] = [];
+						for (const name in doc.function)
+							if (re.test(name))
+								libfuncs[uri].push(doc.function[name]);
+					}
+				});
+			});
 		}
 	});
 	if (!ret) connection.window.showErrorMessage('AutoHotkey可执行文件的路径不正确, 在"设置-AutoHotkey2.Path"中重新指定');
@@ -428,4 +485,14 @@ function updateFileInfo(info: string, revised: boolean = true): string {
 		return ver.join('.');
 	});
 	return info;
+}
+
+export function openFile(path: string): TextDocument {
+	let buf: any = readFileSync(path);
+	if (buf[0] === 0xff && buf[1] === 0xfe)
+		buf = buf.toString('utf16le');
+	else if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
+		buf = buf.toString('utf8').substring(1);
+	else buf = buf.toString('utf8');
+	return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, buf);
 }

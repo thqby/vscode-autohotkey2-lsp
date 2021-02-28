@@ -1,5 +1,6 @@
 import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
-import { detectExpType, FuncNode, searchNode } from './Lexer';
+import { searchLibFunction } from './definitionProvider';
+import { ClassNode, detectExpType, FuncNode, searchNode } from './Lexer';
 import { lexers, hoverCache, Maybe } from './server';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
@@ -35,6 +36,18 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			if (!nodes?.length)
 				nodes = undefined;
 		}
+		if (!nodes) {
+			if (typeof kind === 'object') {
+				if ((t = hoverCache[1]) && t[word])
+					return t[word][0];
+			} else if (kind === SymbolKind.Function) {
+				if ((t = hoverCache[0]) && t[word])
+					return t[word][0];
+				else nodes = searchLibFunction(word, doc.libdirs);
+			} else if (kind === SymbolKind.Method) {
+
+			}
+		}
 		if (nodes) {
 			if (nodes.length > 1) {
 				nodes.map(it => {
@@ -47,20 +60,11 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method)
 				hover.push({ language: 'ahk2', value: (<FuncNode>node).full });
 			else if (node.kind === SymbolKind.Class)
-				hover.push({ language: 'ahk2', value: 'class ' + node.name });
+				hover.push({ language: 'ahk2', value: 'class ' + ((<ClassNode>node).full || node.name) });
 			if (node.detail)
 				hover.push(node.detail.replace(/(\r?\n)+/g, '$1$1'));
 			if (hover.length)
 				return { contents: hover };
-		}
-		if (typeof kind === 'object') {
-			if ((t = hoverCache[1]) && t[word])
-				return t[word][0];
-		} else if (kind === SymbolKind.Function) {
-			if ((t = hoverCache[0]) && t[word])
-				return t[word][0];
-		} else if (kind === SymbolKind.Method) {
-
 		}
 	}
 	return undefined;

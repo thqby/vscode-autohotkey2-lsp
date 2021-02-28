@@ -4009,16 +4009,6 @@
 			"body": "false",
 			"description": "布尔值'假', 同数值0.",
 			"prefix": "false"
-		},
-		{
-			"body": "super",
-			"description": "在继承类中, super 可以代替 this 来访问在派生类中被重写的方法或属性的超类版本.",
-			"prefix": "super"
-		},
-		{
-			"body": "this",
-			"description": "在类中, 通过 this 访问该类的其他实例变量和方法.",
-			"prefix": "this"
 		}
 	],
 	"texts": [

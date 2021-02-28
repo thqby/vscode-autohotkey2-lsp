@@ -99,6 +99,7 @@ export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope
 		let global = doc.global[name] ? true : false;
 		for (const t in doc.function)
 			findAllVar(doc.function[t], name, global, ranges);
+		doc.hotkey.map(it => findAllVar(it, name, global, ranges));
 		for (const t in doc.object.method)
 			doc.object.method[t].map(func => findAllVar(func, name, global, ranges));
 	}

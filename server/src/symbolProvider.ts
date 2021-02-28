@@ -46,7 +46,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			result.push(info);
 			if (info.children) {
 				let inherit: { [key: string]: DocumentSymbol } = {}, gg = false;
-				if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Method) {
+				if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Method || info.kind === SymbolKind.Event) {
 					let s = (<FuncNode>info).statement;
 					// if (vars['#parent'])
 					// 	(<FuncNode>info).parent = vars['#parent'];

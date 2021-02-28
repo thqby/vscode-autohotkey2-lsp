@@ -1,8 +1,9 @@
 import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver';
+import { URI } from 'vscode-uri';
 import { detectExp, detectExpType, detectVariableType, FuncNode, FuncScope, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
-import { ahkclasses, ahkfunctions, completionItemCache, lexers, Maybe, pathenv } from './server';
+import { ahkclasses, ahkfunctions, completionItemCache, lexers, libfuncs, Maybe, pathenv } from './server';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested) return undefined;
@@ -78,8 +79,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					} else if (node.kind !== SymbolKind.Class && node.kind !== SymbolKind.Object) {
 						isstatic = false;
 						for (const tp of detectVariableType(lexers[uri], node.name.toLowerCase(), position)) {
-							unknown = false;
-							searchNode(doc, tp.replace(/^@/, ''), position, [SymbolKind.Class, SymbolKind.Variable])?.map(it => { tps.push(it.node) });
+							if (tp.match(/^[#@]/))
+								unknown = false;
+							searchNode(doc, tp.replace(/^@/, ''), position, [SymbolKind.Class, SymbolKind.Variable])?.map(it => { unknown = false, tps.push(it.node) });
 						}
 					} else
 						tps.push(node), unknown = false, isstatic = isstatic && !(p[0].ref);
@@ -160,7 +162,13 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			if (linetext.match(/^\s*#include/i)) {
 				let tt = linetext.replace(/^\s*#include(again)?\s+/i, '').replace(/\s*\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
 				let pre = linetext.substring(linetext.length - tt.length, position.character), xg = '\\', m: any, a_ = '';
-				if (pre.charAt(0).match(/['"<]/)) {
+				if (percent) {
+					completionItemCache.other.map(it => {
+						if (it.kind === CompletionItemKind.Variable)
+							items.push(it);
+					})
+					return items;
+				} else if (pre.charAt(0).match(/['"<]/)) {
 					if (pre.substring(1).match(/['">]/)) return;
 					else {
 						if ((lchar = pre.charAt(0)) === '<')
@@ -181,6 +189,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				while (m = pre.match(/%a_(\w+)%/i))
 					if (pathenv[a_ = m[1].toLowerCase()])
 						pre = pre.replace(m[0], pathenv[a_]);
+					else if (a_ === 'scriptdir')
+						pre = pre.replace(m[0], doc.scriptdir);
 					else return;
 				if (pre.charAt(pre.length - 1) === '/')
 					xg = '/';
@@ -337,6 +347,16 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				} else
 					items.push(it);
 			});
+			for (const uri in libfuncs) {
+				if (!list || !list[uri]) {
+					path = URI.parse(uri).fsPath;
+					libfuncs[uri].map(it => {
+						if (!funcs[it.name.toLowerCase()]) {
+							cpitem = convertNodeCompletion(it), cpitem.detail = `从'${path}'自动导入  ` + (cpitem.detail || ''), items.push(cpitem);
+						}
+					});
+				}
+			}
 			if (other)
 				addOther();
 			return items;

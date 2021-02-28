@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { resolve } from 'path';
-import { argv0, off } from 'process';
+import { argv0 } from 'process';
 import {
 	Position,
 	Range,
@@ -18,7 +18,7 @@ import {
 import { SemanticTokensBuilder } from 'vscode-languageserver/lib/sematicTokens.proposed';
 import { URI } from 'vscode-uri';
 import { builtin_variable } from './constants';
-import { ahkclasses, lexers, libdirs, pathenv } from './server';
+import { ahkclasses, lexers, libdirs, openFile, pathenv } from './server';
 
 export interface AhkDoc {
 	statement: StateMent
@@ -51,6 +51,7 @@ export interface FuncNode extends DocumentSymbol {
 }
 
 export interface ClassNode extends DocumentSymbol {
+	full: string
 	extends: string
 	parent?: DocumentSymbol
 	funccall: DocumentSymbol[]
@@ -133,6 +134,8 @@ export namespace acorn {
 
 const colorregexp = new RegExp(/\b(c|background)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
+const class_this = DocumentSymbol.create('this', '在类中, 通过 this 访问该类的其他实例变量和方法.', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
+const class_super = DocumentSymbol.create('super', '在继承类中, super 可以代替 this 来访问在派生类中被重写的方法或属性的超类版本.', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
 
 export class Lexer {
 	public beautify: Function;
@@ -143,10 +146,12 @@ export class Lexer {
 	public flattreecache: DocumentSymbol[] = [];
 	public reflat: boolean = false;
 	public scriptpath: string;
+	public scriptdir: string = '';
 	public uri: string;
 	public global: { [key: string]: DocumentSymbol } = {};
 	public define: { [key: string]: DocumentSymbol } = {};
 	public function: { [key: string]: FuncNode } = {};
+	public hotkey: FuncNode[] = [];
 	public label: DocumentSymbol[] = [];
 	public funccall: DocumentSymbol[] = [];
 	public texts: { [key: string]: string } = {};
@@ -167,7 +172,7 @@ export class Lexer {
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this;
 		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, _root_: DocumentSymbol[] = [];
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, tks: Token[] = [];
-		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string;;
+		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space: boolean = false;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
 		this.document = document, this.scriptpath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath.replace(/\\[^\\]+$/, ''), this.initlibdirs();
@@ -210,7 +215,7 @@ export class Lexer {
 
 		this.beautify = function (options: any) {
 			/*jshint onevar:true */
-			let t: Token, i: number, keep_whitespace: boolean, sweet_code: string;
+			let t: Token, i: number, keep_whitespace: boolean, sweet_code: string, top: boolean = false;
 			options = options ? options : {}, opt = {};
 			if (options.braces_on_own_line !== undefined) { //graceful handling of deprecated option
 				opt.brace_style = options.braces_on_own_line ? "expand" : "collapse";
@@ -279,7 +284,36 @@ export class Lexer {
 						}
 					}
 				}
-
+				if (top) {
+					top = false;
+					if (in_array(flags.mode, [MODE.BlockStatement, MODE.Statement])) {
+						if (token_type === 'TK_DOT' && last_type === 'TK_WORD')
+							top = true;
+						else if (token_type === 'TK_WORD') {
+							if (t.topofline)
+								top = true;
+							else {
+								switch (last_type) {
+									case 'TK_START_BLOCK':
+										top = true;
+										break;
+									case 'TK_WORD':
+										if (flags.last_text.slice(-2) === '::')
+											top = true;
+										break;
+									case 'TK_RESERVED':
+										if (flags.last_text.match(/^(try|else|finally)$/i))
+											top = true;
+										break;
+								}
+							}
+						} else if (token_type === 'TK_COMMA')
+							keep_comma_space = true;
+					}
+				} else if ((t.topofline && in_array(flags.mode, [MODE.Statement, MODE.BlockStatement]) &&
+					in_array(token_type, ['TK_WORD', 'TK_START_BLOCK', 'TK_HOT'])) ||
+					(token_type === 'TK_RESERVED' && token_text.match(/^(try|else|finally)$/i)))
+					top = true;
 				handlers[token_type]();
 
 				// The cleanest handling of inline comments is to treat them as though they aren't there.
@@ -323,16 +357,29 @@ export class Lexer {
 
 		this.parseScript = function (): void {
 			input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, tks.length = 0;
-			whitespace_before_token = [], beginpos = 0, last_text = '', last_type = 'TK_BLOCK';
+			whitespace_before_token = [], beginpos = 0;
 			following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 			let gg: any = {}, dd: any = {}, ff: any = {}, _low = '';
-			this.global = gg, this.define = dd, this.function = ff, this.label.length = this.funccall.length = this.diagnostics.length = 0;
+			this.global = gg, this.define = dd, this.function = ff, this.label.length = this.funccall.length = this.diagnostics.length = this.hotkey.length = 0;
 			this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map(), this.blocks = [], this.texts = {}, this.reflat = true;
 			this.include = includetable = {}, scriptpath = this.scriptpath, this.semantoken = new SemanticTokensBuilder, this.colors.length = this.foldingranges.length = 0;
+
 			this.symboltree = parse(), this.symboltree.push(...this.blocks), this.blocks = undefined;
-			for (const it of this.symboltree)
-				if (it.kind === SymbolKind.Function) { if (!ff[_low = it.name.toLowerCase()]) ff[_low] = ff[_low] || it; }
-				else if (it.kind === SymbolKind.Variable && !gg[_low = it.name.toLowerCase()]) dd[_low] = dd[_low] || it;
+			for (const it of this.symboltree) {
+				switch (it.kind) {
+					case SymbolKind.Function:
+						if (!ff[_low = it.name.toLowerCase()])
+							ff[_low] = ff[_low] || it;
+						break;
+					case SymbolKind.Variable:
+						if (!gg[_low = it.name.toLowerCase()])
+							dd[_low] = dd[_low] || it;
+					case SymbolKind.Event:
+						if (it.children)
+							this.hotkey.push(<FuncNode>it);
+						break;
+				}
+			}
 		}
 
 		function parse(mode = 0, scopevar = new Map<string, any>(), full: string = ''): DocumentSymbol[] {
@@ -346,7 +393,7 @@ export class Lexer {
 					case 'TK_SHARP':
 						let raw = '', o: any = '';
 						if (m = tk.content.match(/^\s*#include((again)?)\s+(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
-							raw = (m[3] || '').trim(), o = m[5], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.libdirs[0]).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
+							raw = (m[3] || '').trim(), o = m[5], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
 							_this.includedir.set(_this.document.positionAt(tk.offset).line, includedir);
 							if (m === '') includedir = _this.libdirs[0]; else {
 								if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir))) {
@@ -362,7 +409,6 @@ export class Lexer {
 						}
 						break;
 					case 'TK_LABEL':
-						topcontinue = true;
 						if (inswitch > -1 && tk.content.toLowerCase() === 'default:') break;
 						tn = SymbolNode.create(tk.content, SymbolKind.Field, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 1)), result.push(tn);
 						if (mode === 0) _this.label.push(tn); if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content); break;
@@ -375,9 +421,9 @@ export class Lexer {
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
 						lk = tk, tk = get_token_ingore_comment(cmm), comment = cmm.content;
 						if (tk.content === '{') {
-							let ht = lk, vars = new Map<string, any>(), sm: StateMent = { assume: FuncScope.DEFAULT };
-							sub = parse(1, vars), tn.children = sub, tn.range = makerange(ht.offset, parser_pos - ht.offset), (<FuncNode>tn).statement = sm;
-							(<FuncNode>tn).params = [Variable.create('ThisHotkey', SymbolKind.Variable, makerange(0, 0), makerange(0, 0))];
+							let ht = lk, vars = new Map<string, any>([['#parent', tn]]), sm: StateMent = { assume: FuncScope.DEFAULT };
+							(<FuncNode>tn).funccall = [], sub = parse(1, vars), tn.children = sub, tn.range = makerange(ht.offset, parser_pos - ht.offset);
+							(<FuncNode>tn).statement = sm, (<FuncNode>tn).params = [Variable.create('ThisHotkey', SymbolKind.Variable, makerange(0, 0), makerange(0, 0))];
 							_this.addFoldingRangePos(tn.range.start, tn.range.end);
 							if (vars.has('#assume')) sm.assume = vars.get('#assume');
 							for (const tp of ['global', 'local', 'define']) {
@@ -390,13 +436,12 @@ export class Lexer {
 						} else next = false;
 						result.push(tn); break;
 					case 'TK_HOTLINE':
-						topcontinue = false;
 						if (mode !== 0) _this.addDiagnostic('热键/热字串不能在函数/类中定义', tk.offset, tk.length);
 						tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2));
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
 						LF = input.indexOf('\n', parser_pos), parser_pos = LF > -1 ? LF + 1 : input_length, tn.range.end = document.positionAt(parser_pos - 2), result.push(tn);
 						break;
-					case 'TK_START_BLOCK': topcontinue = tk.topofline || false, blocks++, blockpos.push(parser_pos - 1); break;
+					case 'TK_START_BLOCK': blocks++, blockpos.push(parser_pos - 1); break;
 					case 'TK_END_BLOCK':
 						if (inswitch === blocks - 1) inswitch = -1;
 						if ((--blocks) < 0) {
@@ -407,32 +452,26 @@ export class Lexer {
 						break;
 					case 'TK_END_EXPR': _this.addDiagnostic(`多余的"${tk.content}"`, tk.offset, 1); break;
 					case 'TK_START_EXPR':
-						topcontinue = tk.topofline || false;
 						if (tk.content === '[') parsepair('[', ']');
 						else parsepair('(', ')');
 						break;
 					case 'TK_UNKNOWN':
-						topcontinue = false;
 						_this.addDiagnostic(`未知的Token, "${tk.content}"`, tk.offset, tk.length);
 						break;
-					case 'TK_DOT': break;
-					default: topcontinue = false; break;
-					case 'TK_OPERATOR':
-						if (tk.content === '%') {
-							if (tk.topofline)
-								topcontinue = true;
-							else if (!topcontinue || !input.charAt(tk.offset - 1).match(/\w|[^\x00-\xff]/))
-								topcontinue = false;
-							parsepair('%', '%');
-						} else
+					case 'TK_DOT':
+						if (topcontinue && lk.type !== 'TK_WORD')
 							topcontinue = false;
+						break;
+					default: break;
+					case 'TK_OPERATOR':
+						if (tk.content === '%')
+							parsepair('%', '%');
 						break;
 					case 'TK_WORD':
 						if (input.charAt(parser_pos) === '%')
 							break;
 						let comm = '', vr: Variable | undefined, predot = (input.charAt(tk.offset - 1) === '.'), isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
-						if (!predot)
-							topcontinue = tk.topofline || false;
+						topcontinue = predot ? topcontinue : tk.topofline || false;
 						if (!predot && input.charAt(parser_pos) === '(') {
 							if (input.charAt(tk.offset - 1) === '.') continue;
 							if (isstatic) { if (cmm.type !== '') comm = trimcomment(cmm.content); }
@@ -571,7 +610,7 @@ export class Lexer {
 									prop.children.push(tn);
 								}
 							} else {
-								if (!lk.topofline && (bak.type === 'TK_HOT' || bak.content === '{' || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i))))
+								if (!lk.topofline && (bak.type === 'TK_HOT' || (bak.topofline && bak.content === '{') || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i))))
 									lk.topofline = restore = topcontinue = true;
 								if (!predot && (!lk.topofline || tk.type === 'TK_EQUALS' || tk.content === '=' || input.charAt(lk.offset + lk.length).match(/[^\s,]/))) {
 									if (!lk.topofline && bak.type === 'TK_SHARP' && bak.content.match(/^#(MenuMaskKey|SingleInstance|Warn)/i)) break;
@@ -612,7 +651,7 @@ export class Lexer {
 									}
 								} else if (tk.type === 'TK_OPERATOR') {
 									if (vr && (!(tk.topofline && ['!', '~', 'not'].includes(tk.content.toLowerCase())))) {
-										vr.typeexp = tk.content === '.' ? '#string' : '#number';
+										vr.typeexp = tk.content === '.' ? '#string' : tk.content.match(/^[a-zA-Z]+$/) ? '#any' : '#number';
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 									}
 								} else if (tk.type === 'TK_UNKNOWN') {
@@ -623,7 +662,6 @@ export class Lexer {
 						}
 						break;
 					case 'TK_RESERVED':
-						topcontinue = false;
 						parse_reserved(); break;
 				}
 			}
@@ -652,7 +690,8 @@ export class Lexer {
 							if (tk.type !== 'TK_START_BLOCK') { next = false; break; }
 							if (cl.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic('非法的类命名', cl.offset, cl.length);
 							tn = DocumentSymbol.create(cl.content, undefined, SymbolKind.Class, makerange(0, 0), makerange(cl.offset, cl.length));
-							sv.set('#parent', tn), (<ClassNode>tn).funccall = [], tn.children = parse(2, sv, full + cl.content + '.'), tn.range = makerange(beginpos, parser_pos - beginpos);
+							sv.set('#parent', tn), (<ClassNode>tn).funccall = [], (<ClassNode>tn).full = full + cl.content;
+							tn.children = parse(2, sv, full + cl.content + '.'), tn.range = makerange(beginpos, parser_pos - beginpos);
 							_this.addFoldingRangePos(tn.selectionRange.start, tn.range.end, 'block');
 							if (comm) tn.detail = comm; if (ex) (<ClassNode>tn).extends = ex;
 							for (const item of tn.children) if (item.children && item.kind != SymbolKind.Property) (<FuncNode>item).parent = tn;
@@ -828,7 +867,9 @@ export class Lexer {
 								}
 								// parsepair('(', ')')
 							} break;
-						case 'TK_START_BLOCK': parseobj(); break;
+						case 'TK_START_BLOCK':
+							if (parseobj()) break;
+							else return result.splice(index);
 						case 'TK_END_BLOCK':
 						case 'TK_END_EXPR': _this.addDiagnostic(`多余的"${tk.content}"`, tk.offset, 1); break;
 						case 'TK_UNKNOWN': _this.addDiagnostic(`未知的Token, "${tk.content}"`, tk.offset, tk.length); break;
@@ -1034,8 +1075,11 @@ export class Lexer {
 								}
 							} break;
 						case 'TK_START_BLOCK':
-							if (lk.type === 'TK_EQUALS' || lk.type === 'TK_OPERATOR') {
-								tpexp += ' #object', parseobj(); break;
+							if (lk.type === 'TK_EQUALS') {
+								parseobj(true);
+								tpexp += ' #object'; break;
+							} else if (parseobj()) {
+								tpexp += ' #object'; break;
 							} else {
 								types[tpexp] = true;
 								next = false; return result.splice(pres);
@@ -1141,38 +1185,114 @@ export class Lexer {
 				return cache;
 			}
 
-			function parseobj() {
-				let beg = tk.offset;
-				while (objkey()) objval();
+			function parseobj(must: boolean = false): boolean {
+				let l = lk, b = tk, rl = result.length, isobj = true, nk: Token;
+				if (!next && tk.type === 'TK_START_BLOCK')
+					next = true;
+				while (objkey())
+					if (objval())
+						break;
+				if (!isobj) {
+					let e = tk;
+					lk = l, tk = b, result.splice(rl), parser_pos = tk.offset + tk.length;
+					if (must) {
+						parseerrobj();
+						_this.addDiagnostic('对象存在错误', e.offset, parser_pos - e.offset);
+						return true;
+					}
+					return next = false;
+				}
 				if (tk.type === 'TK_END_BLOCK')
-					_this.addFoldingRange(beg, tk.offset);
+					_this.addFoldingRange(b.offset, tk.offset);
+				else
+					_this.addDiagnostic('丢失对应的"}"', b.offset, 1);
+				return true;
 
 				function objkey(): boolean {
 					while (nexttoken()) {
 						switch (tk.type) {
 							case 'TK_RESERVED':
-							case 'TK_WORD': break;
-							case 'TK_STRING': _this.addDiagnostic('无效的对象属性名', tk.offset, tk.length); break;
-							case 'TK_START_EXPR': _this.addDiagnostic('无效的对象属性名', tk.offset); return false;
+							case 'TK_WORD':
+								if (input.charAt(parser_pos) === '%')
+									break;
+								nk = get_token_ingore_comment();
+								if (nk.content === ':') {
+									lk = tk, tk = nk;
+									return true;
+								}
+								return isobj = false;
+							case 'TK_STRING':
+								nk = get_token_ingore_comment();
+								if (nk.content === ':') {
+									lk = tk, tk = nk;
+									_this.addDiagnostic('对象字面量中的属性名无效', tk.offset, tk.length);
+									return true;
+								}
+								return isobj = false;
+							case 'TK_START_EXPR':
+								return isobj = false;
 							case 'TK_OPERATOR':
-								if (tk.content === ':') return true; else if (tk.content === '%') parsepair('%', '%'); else return false;
+								if (tk.content === '%') {
+									parsepair('%', '%');
+									if (acorn.isIdentifierChar(input.charCodeAt(parser_pos)))
+										break;
+									else {
+										nk = get_token_ingore_comment();
+										if (nk.content === ':') {
+											lk = tk, tk = nk;
+											return true;
+										}
+									}
+								}
+								return isobj = false;
 							case 'TK_LABEL':
-								if (tk.content.match(/^(\w|[^\x00-\xff])+:$/)) { addtext({ content: tk.content.replace(':', ''), type: '', offset: 0, length: 0 }); return true; }
-								return false;
-							case 'TK_COMMA':
+								if (tk.content.match(/^(\w|[^\x00-\xff])+:$/)) {
+									addtext({ content: tk.content.replace(':', ''), type: '', offset: 0, length: 0 });
+									return true;
+								}
+								return isobj = false;
 							case 'TK_COMMENT':
 							case 'TK_BLOCK_COMMENT':
 							case 'TK_INLINE_COMMENT':
 								break;
-							default: return false;
+							case 'TK_END_BLOCK':
+								if (lk.type === 'TK_START_BLOCK')
+									return false;
+							default:
+								return isobj = false;
 						}
 					}
 					return false;
 				}
 
-				function objval() {
+				function objval(): boolean {
 					let exp = parseexp(true);
 					result.push(...exp);
+					if (tk.type === 'TK_COMMA')
+						return !(next = true);
+					else if (tk.type === 'TK_END_BLOCK')
+						return next = true;
+					else if (tk.type === 'TK_EOF')
+						return true;
+					else
+						return !(isobj = false);
+				}
+			}
+
+			function parseerrobj() {
+				let num = 0;
+				if (!next && tk.type === 'TK_START_BLOCK')
+					next = true;
+				while (nexttoken()) {
+					switch (tk.type) {
+						case 'TK_START_BLOCK':
+							num++;
+							break;
+						case 'TK_END_BLOCK':
+							if ((--num) < 0)
+								return;
+							break;
+					}
 				}
 			}
 
@@ -1252,8 +1372,10 @@ export class Lexer {
 									adduserdefmethod(_parent.funccall[_parent.funccall.length - 1]);
 							}
 						}
-					} else if (tk.type === 'TK_START_BLOCK') parseobj(), tpexp += ' #object';
-					else if (tk.type === 'TK_STRING') { tpexp += ' #string'; if (b === '[' && is_next(']') && !tk.content.match(/\n|`n/)) addtext({ type: '', content: tk.content.substring(1, tk.content.length - 1), offset: 0, length: 0 }); }
+					} else if (tk.type === 'TK_START_BLOCK') {
+						tpexp += ' #object';
+						parseobj(true);
+					} else if (tk.type === 'TK_STRING') { tpexp += ' #string'; if (b === '[' && is_next(']') && !tk.content.match(/\n|`n/)) addtext({ type: '', content: tk.content.substring(1, tk.content.length - 1), offset: 0, length: 0 }); }
 					else if (tk.content === '[') {
 						let pre = !!input.charAt(tk.offset - 1).match(/^(\w|\)|%|[^\x00-\xff])$/);
 						parsepair('[', ']');
@@ -1261,8 +1383,7 @@ export class Lexer {
 							tpexp = tpexp.replace(/\S+$/, '') + '#any';
 						else
 							tpexp += ' #array';
-					} else if (tk.content === '{') parseobj(), tpexp += ' #object';
-					else if (tk.content === '%') {
+					} else if (tk.content === '%') {
 						if (input.charAt(tk.offset - 1).match(/\w|[^\x00-\xff]/))
 							tpexp = tpexp.replace(/\S+$/, '#any');
 						else
@@ -2289,8 +2410,18 @@ export class Lexer {
 			while (flags.mode === MODE.Statement) {
 				restore_mode();
 			}
-			let empty_braces = last_type === 'TK_START_BLOCK';
-
+			let empty_braces = false;;
+			if (last_type === 'TK_START_BLOCK') {
+				let t = output_lines[output_lines.length - 1].text, i = t.length - 2;
+				while (i > 0) {
+					if (t[i] === ' ' || t[i] === '\t') {
+						i--;
+						continue;
+					} else if (t[i] === ':=')
+						empty_braces = true;
+					break;
+				}
+			}
 			if (opt.brace_style === "expand") {
 				if (!empty_braces) {
 					print_newline();
@@ -2539,8 +2670,11 @@ export class Lexer {
 				if (input_wanted_newline) {
 					print_newline(false, true);
 				}
+				if (keep_comma_space)
+					output_space_before_token = true;
 				print_token();
 				output_space_before_token = true;
+				keep_comma_space = false;
 				return;
 			}
 
@@ -2584,10 +2718,14 @@ export class Lexer {
 					if (input_wanted_newline) {
 						print_newline();
 					}
+					// if (last_type === 'TK_WORD' && in_array(flags.mode, ['BlockStatement', 'Statement']) && in_array(input.charAt(parser_pos - 2), [' ', '\t']))
+					if (keep_comma_space)
+						output_space_before_token = true;
 					print_token();
 					output_space_before_token = true;
 				}
 			}
+			keep_comma_space = false;
 		}
 
 		function handle_operator() {
@@ -2920,7 +3058,7 @@ export class Lexer {
 						return { node: item, uri };
 					} else if (item.children) {
 						let local = false;
-						if ((item.kind === SymbolKind.Function || item.kind === SymbolKind.Method) && iskinds(SymbolKind.Variable, kind)) {
+						if ((item.kind === SymbolKind.Function || item.kind === SymbolKind.Method || (item.kind === SymbolKind.Event && (<FuncNode>item).params)) && iskinds(SymbolKind.Variable, kind)) {
 							for (const it of (<FuncNode>item).params) {
 								if (it.name.toLowerCase() === name)
 									(<any>it).userdef = true, node = it;
@@ -2931,10 +3069,9 @@ export class Lexer {
 							}
 							if ((<FuncNode>item).statement.assume & FuncScope.LOCAL)
 								local = true;
-							else if (this.global && !node && (!localscope || (<FuncNode>item).statement.assume === FuncScope.GLOBAL)) {
-								for (const key in this.global)
-									if (key.toLowerCase() === name)
-										node = this.global[key], (<any>node).userdef = true;
+							else if (this.global && (!node || (<any>node).globalspace) && (!localscope || (<FuncNode>item).statement.assume === FuncScope.GLOBAL)) {
+								if (this.global[name])
+									node = this.global[name], (<any>node).userdef = true;
 							}
 						}
 						if (temp = this.searchNode(name, position, kind, item.children, local)) {
@@ -3135,6 +3272,17 @@ export class Lexer {
 				scopenode = p, p = (<FuncNode>p).parent;
 			}
 			nodes.push(scopenode);
+			if (scopenode.kind === SymbolKind.Method) {
+				if ((<FuncNode>scopenode).parent)
+					scopenode = (<FuncNode>scopenode).parent;
+				else
+					nodes.push(class_this);
+			}
+			if (scopenode?.kind === SymbolKind.Class) {
+				nodes.push(class_this);
+				if ((<ClassNode>scopenode).extends)
+					nodes.push(class_super);
+			}
 			return nodes;
 		} else {
 			for (const it of this.symboltree) {
@@ -3150,8 +3298,9 @@ export class Lexer {
 	public initlibdirs() {
 		const workfolder = resolve().toLowerCase();
 		if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.indexOf(workfolder) !== -1) {
-			this.libdirs = [workfolder.replace(/\\lib$/, '') + '\\lib'];
-		} else this.libdirs = [this.scriptpath.replace(/\\lib$/, '') + '\\lib'];
+			this.scriptdir = workfolder.replace(/\\lib$/, '');
+		} else this.scriptdir = this.scriptpath.replace(/\\lib$/, '');
+		this.libdirs = [this.scriptdir + '\\lib'];
 		for (const t of libdirs) if (this.libdirs[0] !== t.toLowerCase()) this.libdirs.push(t);
 	}
 
@@ -3202,13 +3351,7 @@ export async function parseinclude(include: { [uri: string]: { path: string, raw
 	for (const uri in include) {
 		let path = include[uri].path;
 		if (!(lexers[uri]) && fs.existsSync(path)) {
-			let buf: any = fs.readFileSync(path);
-			if (buf[0] === 0xff && buf[1] === 0xfe)
-				buf = buf.toString('utf16le');
-			else if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
-				buf = buf.toString('utf8').substring(1);
-			else buf = buf.toString('utf8');
-			let doc = new Lexer(TextDocument.create(uri, 'ahk2', -10, buf));
+			let doc = new Lexer(openFile(path));
 			lexers[uri] = doc, doc.parseScript(), parseinclude(doc.include);
 			if (!doc.relevance)
 				doc.relevance = getincludetable(uri);
@@ -3258,11 +3401,11 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 				}
 			});
 		}
-		if (l = (<ClassNode>node).extends) {
-			let p = l.toLowerCase().split('.'), cl: any, mems: DocumentSymbol[], nd: DocumentSymbol | undefined, dc: Lexer;
+		if ((l = (<ClassNode>node).extends?.toLowerCase()) && l !== (<ClassNode>node).full.toLowerCase()) {
+			let p = l.split('.'), cl: any, mems: DocumentSymbol[], nd: DocumentSymbol | undefined, dc: Lexer;
 			cl = searchNode(doc, p[0], Position.create(0, 0), SymbolKind.Class);
-			if (cl.node) {
-				nd = cl.node, dc = lexers[cl.uri];
+			if (cl) {
+				nd = cl[0].node, dc = lexers[cl[0].uri || doc.uri];
 				while (nd) {
 					mems = getmems(dc, nd);
 					if (p.length === 1) {
@@ -3305,7 +3448,7 @@ export function detectVariableType(doc: Lexer, name: string, pos: Position) {
 				ite = it;
 		}
 	if (ite)
-		detectExp(doc, ((<Variable>ite).typeexp || '').toLowerCase(), pos,
+		detectExp(doc, ((<Variable>ite).typeexp || '').toLowerCase(), ite.range.end,
 			doc.document.getText(Range.create(ite.selectionRange.end, ite.range.end))).map(tp => types[tp] = true);
 	if (types['#any'])
 		return [];
@@ -3366,7 +3509,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			else if (l === 'guifromhwnd')
 				tp = '#gui';
 			else if (l === 'guictrlfromhwnd')
-				tp = '#guicontrol';
+				tp = '[#guicontrol,#listview,#treeview,#statusbar,#listbox,#ddl,#combobox,#tab]';
 			else if (l === 'map')
 				tp = '#map';
 			else if (l === 'menufromhandle')
@@ -3377,11 +3520,11 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 				tp = '#object';
 			return tp;
 		});
-		while (exp !== (t = exp.replace(/^\s*([@#]?)((\w|[^\x00-\xff])+)((\.(\w|[^\x00-\xff])+)+)\(\)/, (...m) => {
+		while (exp !== (t = exp.replace(/^\s*([@#]?)(((\w|[^\x00-\xff])+\.)+)(\w|[^\x00-\xff])\(\)/, (...m) => {
 			let c: RegExpMatchArray | null, isstatic = !m[1];
 			if (m[1]) {
-				if (m[2] === 'gui') {
-					if (c = m[4].match(/\.add(\w*)\(\)/)) {
+				if (m[2] === 'gui.') {
+					if (c = m[5].match(/\.add(\w*)\(\)/)) {
 						let ctl = '';
 						if (c[1]) {
 							ctl = c[1];
@@ -3397,15 +3540,21 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 					} else
 						tps = ['#any'];
 					return tps.length > 1 ? `[${tps.join(',')}]` : (tps.pop() || '#any');
+				} else if (m[2] === 'func.') {
+					if (m[5] === 'bind')
+						return '#func';
 				}
 				if (m[1] === '#')
 					return '#any';
 			}
 			let ns = searchNode(doc, m[2] + m[3], pos, SymbolKind.Method, isstatic), ts: any = {};
-			ns?.map(n => {
-				for (const tp in (<FuncNode>n.node).returntypes)
-					detectExp(tp).map(tp => { ts[tp] = true });
-			})
+			if (ns)
+				ns.map(n => {
+					for (const tp in (<FuncNode>n.node).returntypes)
+						detectExp(tp).map(tp => { ts[tp] = true });
+				});
+			else if (m[5] === 'clone')
+				return m[1] + m[2].replace(/\.$/, '');
 			ts = Object.keys(ts);
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#null');
 		})))
@@ -3423,23 +3572,31 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 		})) !== exp)
 			exp = t;
 		exp = exp.trim();
-		if (exp === '#func.call()')
-			return ['#any'];
-		else if (exp === '#func.bind()')
-			return ['#func'];
-		else if (exp.match(/^(\w|[^\x00-\xff])+(\.(\w|[^\x00-\xff])+)*$/))
-			return detectVariableType(doc, exp, pos);
-		else if (t = exp.match(/^\[([^\[\]]+)\]$/)) {
+		if (t = exp.match(/^([@#]?)(\w|[^\x00-\xff])+(\.(\w|[^\x00-\xff])+)*$/)) {
+			let ts: any = {};
+			if (t[1])
+				return [exp];
+			else if (!t[3])
+				return detectVariableType(doc, exp, pos);
+			searchNode(doc, exp.trim(), pos, [SymbolKind.Class, SymbolKind.Variable])?.map(n => {
+				switch (n.node.kind) {
+					case SymbolKind.Variable:
+					case SymbolKind.Property:
+						if ((<Variable>n.node).typeexp)
+							detectExp((<Variable>n.node).typeexp || '').map(tp => ts[tp] = true);
+						break;
+					case SymbolKind.Class:
+						break;
+				}
+			});
+			ts = Object.keys(ts);
+			return ts.length ? ts : ['#any'];
+		} else if (t = exp.match(/^\[([^\[\]]+)\]$/)) {
 			let ts: any = {};
 			t[1].split(',').map(tp => ts[tp] = true), tps.map(tp => ts[tp] = true);
 			return Object.keys(ts);
-		} else if (exp === '#guicontrol')
-			return ['#guicontrol', '#listview', '#treeview', '#statusbar', '#listbox', '#ddl', '#combobox', '#tab'];
-		else if (exp.match(/^[@#](\w|[^\x00-\xff])+$/))
-			return [exp];
-		else
-			return ['#any'];
-		return tps;
+		}
+		return ['#any'];
 	}
 }
 
@@ -3514,7 +3671,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 				res = { node: t[name], uri: u }; break;
 			}
 	}
-	if ((typeof kind === 'object') && (!res || !(<any>res.node).userdef) &&
+	if ((kind === SymbolKind.Class || typeof kind === 'object') && (!res || !(<any>res.node).userdef) &&
 		(t = name.match(/((?<=^[@#]?)(array|buffer|class|file|func|gui|map|object|regexmatch|inputhook)$|^menu(?=(bar)?$)|(?<=^#)(exception|guicontrol|listview|statusbar|treeview|ddl|dropdownlist|listbox|combobox|tab[23]?)$)/i)) &&
 		ahkclasses[name = t[1]]) {
 		res = { uri: '', node: DocumentSymbol.create(name, undefined, SymbolKind.Class, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0), []) };
@@ -3545,7 +3702,7 @@ export function getFuncCallInfo(doc: Lexer, position: Position) {
 	if (scope) {
 		while (scope && !(<FuncNode>scope).funccall)
 			scope = (<FuncNode>scope).parent;
-		funccall = (<FuncNode>scope).funccall || doc.funccall;
+		funccall = (<FuncNode>scope)?.funccall || doc.funccall;
 	} else
 		funccall = doc.funccall;
 	for (const item of funccall) {

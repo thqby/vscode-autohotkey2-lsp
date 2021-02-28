@@ -1,4 +1,5 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
+import { searchLibFunction } from './definitionProvider';
 import { detectExpType, FuncNode, getFuncCallInfo, searchNode } from './Lexer';
 import { ahkclasses, ahkfunctions, lexers, Maybe } from './server';
 
@@ -46,9 +47,12 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 					nodes?.push({ node, uri: '' })
 				});
 			if (!nodes?.length) return undefined;
-		} else if (kind === SymbolKind.Function && ahkfunctions[name])
-			nodes = [{ node: ahkfunctions[name], uri: '' }];
-		else return undefined;
+		} else if (kind === SymbolKind.Function) {
+			if (ahkfunctions[name])
+				nodes = [{ node: ahkfunctions[name], uri: '' }];
+			else if (!(nodes = searchLibFunction(name, doc.libdirs)))
+				return undefined;
+		} else return undefined;
 	}
 	nodes?.map((it: any) => {
 		const node = it.node;
