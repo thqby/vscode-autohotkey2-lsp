@@ -18,6 +18,7 @@ import {
 import { SemanticTokensBuilder } from 'vscode-languageserver/lib/sematicTokens.proposed';
 import { URI } from 'vscode-uri';
 import { builtin_variable } from './constants';
+import { completionitem, diagnostic } from './localize';
 import { ahkclasses, lexers, libdirs, openFile, pathenv } from './server';
 
 export interface AhkDoc {
@@ -134,8 +135,6 @@ export namespace acorn {
 
 const colorregexp = new RegExp(/\b(c|background)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
-const class_this = DocumentSymbol.create('this', '在类中, 通过 this 访问该类的其他实例变量和方法.', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
-const class_super = DocumentSymbol.create('super', '在继承类中, super 可以代替 this 来访问在派生类中被重写的方法或属性的超类版本.', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
 
 export class Lexer {
 	public beautify: Function;
@@ -369,11 +368,15 @@ export class Lexer {
 				switch (it.kind) {
 					case SymbolKind.Function:
 						if (!ff[_low = it.name.toLowerCase()])
-							ff[_low] = ff[_low] || it;
+							ff[_low] = it;
+						else
+							this.diagnostics.push({ range: it.selectionRange, message: diagnostic.funcdeferr(), severity: DiagnosticSeverity.Error });
 						break;
 					case SymbolKind.Variable:
 						if (!gg[_low = it.name.toLowerCase()])
 							dd[_low] = dd[_low] || it;
+						else if (gg[_low].kind === SymbolKind.Class && (<Variable>it).typeexp)
+							this.diagnostics.push({ range: it.selectionRange, message: diagnostic.classuseerr(), severity: DiagnosticSeverity.Error });
 					case SymbolKind.Event:
 						if (it.children)
 							this.hotkey.push(<FuncNode>it);
@@ -397,15 +400,15 @@ export class Lexer {
 							_this.includedir.set(_this.document.positionAt(tk.offset).line, includedir);
 							if (m === '') includedir = _this.libdirs[0]; else {
 								if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir))) {
-									_this.addDiagnostic('无效的文件路径', tk.offset, tk.length);
+									_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
 									break;
 								}
-								if (!fs.existsSync(m.path)) { if (!o) _this.addDiagnostic(`'${m.path}' 文件不存在`, tk.offset, tk.length); }
+								if (!fs.existsSync(m.path)) { if (!o) _this.addDiagnostic(diagnostic.filenotexist(m.path), tk.offset, tk.length); }
 								else if (fs.statSync(m.path).isDirectory()) includedir = m.path;
-								else if (m.path.match(/\.(ahk2?|ah2|txt|ext)$/i)) includetable[m.uri] = { path: m.path, raw };
-								else _this.addDiagnostic(`'${m.path}' 未知的include文件格式`, tk.offset, tk.length);
+								else if (m.path.match(/\.(ahk2?|ah2)$/i)) includetable[m.uri] = { path: m.path, raw };
+								else _this.addDiagnostic(diagnostic.unknowninclude(m.path), tk.offset, tk.length);
 							}
-							if (mode !== 0) _this.addDiagnostic('在函数、类中的#include无法正确地推导作用域和代码补全', tk.offset, tk.length, DiagnosticSeverity.Warning);
+							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
 						}
 						break;
 					case 'TK_LABEL':
@@ -414,9 +417,9 @@ export class Lexer {
 						if (mode === 0) _this.label.push(tn); if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content); break;
 					case 'TK_HOT':
 						topcontinue = true;
-						if (mode !== 0) _this.addDiagnostic('热键/热字串不能在函数/类中定义', tk.offset, tk.length);
+						if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
 						else if (tk.content.match(/\s::$/) || ((m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
-							_this.addDiagnostic('无效的热键定义', tk.offset, tk.length);
+							_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
 						tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2));
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
 						lk = tk, tk = get_token_ingore_comment(cmm), comment = cmm.content;
@@ -436,7 +439,7 @@ export class Lexer {
 						} else next = false;
 						result.push(tn); break;
 					case 'TK_HOTLINE':
-						if (mode !== 0) _this.addDiagnostic('热键/热字串不能在函数/类中定义', tk.offset, tk.length);
+						if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
 						tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2));
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
 						LF = input.indexOf('\n', parser_pos), parser_pos = LF > -1 ? LF + 1 : input_length, tn.range.end = document.positionAt(parser_pos - 2), result.push(tn);
@@ -445,18 +448,18 @@ export class Lexer {
 					case 'TK_END_BLOCK':
 						if (inswitch === blocks - 1) inswitch = -1;
 						if ((--blocks) < 0) {
-							if (mode === 0) _this.addDiagnostic('多余的"}"', tk.offset, 1), blocks = 0, blockpos.length = 0;
+							if (mode === 0) _this.addDiagnostic(diagnostic.unexpected('}'), tk.offset, 1), blocks = 0, blockpos.length = 0;
 							else return result;
 						} else if (mode === 0) _this.addFoldingRange(blockpos[blocks], parser_pos - 1);
 						else _this.addFoldingRange(blockpos[blocks + 1], parser_pos - 1);
 						break;
-					case 'TK_END_EXPR': _this.addDiagnostic(`多余的"${tk.content}"`, tk.offset, 1); break;
+					case 'TK_END_EXPR': _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1); break;
 					case 'TK_START_EXPR':
 						if (tk.content === '[') parsepair('[', ']');
 						else parsepair('(', ')');
 						break;
 					case 'TK_UNKNOWN':
-						_this.addDiagnostic(`未知的Token, "${tk.content}"`, tk.offset, tk.length);
+						_this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length);
 						break;
 					case 'TK_DOT':
 						if (topcontinue && lk.type !== 'TK_WORD')
@@ -479,12 +482,12 @@ export class Lexer {
 							lk = tk, tk = { content: '(', offset: parser_pos, length: 1, type: 'TK_START_EXPR' }, parser_pos++;
 							let fc = lk, rof = result.length, par = parsequt(), quoteend = parser_pos, nk = get_token_ingore_comment(), tn: FuncNode | undefined;
 							if (nk.content === '=>') {
-								if (!par) { par = [], result.splice(rof), _this.addDiagnostic('无效的参数默认值', fc.offset, tk.offset - fc.offset + 1); }
+								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
 								let storemode = mode;
 								mode = mode | 1, tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(_this.document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par);
 								tn.detail = comm || tn.detail, result.push(tn);
 								let sub = parseline(), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
-								if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(`非法的函数命名, "${fc.content}"`, fc.offset, fc.length);
+								if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 								tn.range.end = document.positionAt(lk.offset + lk.length), tn.statement.closure = mode === 0, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 								mode = storemode, tn.statement.static = isstatic, tn.children = []; for (const it of par) pars[it.name.toLowerCase()] = true;
 								for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) tn.children.push(sub[i]), sub.splice(i, 1); }
@@ -495,11 +498,11 @@ export class Lexer {
 								if (mode !== 0)
 									tn.parent = _parent;
 							} else if (nk.content === '{' && fc.topofline) {
-								if (!par) { par = [], result.splice(rof), _this.addDiagnostic('无效的参数默认值', fc.offset, tk.offset - fc.offset + 1); }
+								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
 								let vars = new Map<string, any>(), _low = fc.content.toLowerCase();
 								tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(_this.document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), par);
 								vars.set('#parent', tn), tn.funccall = [], tn.detail = comm || tn.detail, result.push(tn), tn.children = parse(mode | 1, vars);
-								if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(`非法的函数命名, "${fc.content}"`, fc.offset, fc.length);
+								if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 								tn.range.end = _this.document.positionAt(parser_pos - 1), tn.statement.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
 								if (mode !== 0) {
 									tn.parent = _parent;
@@ -542,7 +545,7 @@ export class Lexer {
 												let nk = get_next_token();
 												if (nk.type === 'TK_WORD' && tk.content.toLowerCase() === 'byref') byref = true;
 												else if ((lk.content === ',' || lk.content === '[') && (nk.content.match(/^(:=|,|\])$/))) {
-													if (tk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic('非法的变量命名', tk.offset, tk.length);
+													if (tk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.offset, tk.length);
 													tn = Variable.create(tk.content, SymbolKind.Variable, rg = makerange(tk.offset, tk.length), rg);
 													if (byref) byref = false, (<Variable>tn).byref = true;
 													par.push(tn), lk = tk, tk = nk;
@@ -571,7 +574,7 @@ export class Lexer {
 												tk = sk, mode = 3;
 												let off = parser_pos, sub = parseline(), pars: { [key: string]: any } = {};
 												mode = 2, tn = FuncNode.create(nk.content.toLowerCase(), SymbolKind.Function, makerange(off, parser_pos - off), rg, <Variable[]>par);
-												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(`非法的函数命名, "${nk.content}"`, nk.offset, nk.length);
+												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
 												tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 												(<FuncNode>tn).parent = _parent, tn.children = [], pars['value'] = true; for (const it of par) pars[it.name.toLowerCase()] = true;
 												for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) tn.children.push(sub[i]), sub.splice(i, 1); }
@@ -579,7 +582,7 @@ export class Lexer {
 												let vars = new Map<string, any>([['#parent', _parent]]), sub = parse(3, vars);
 												tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), par, sub), _this.addFoldingRangePos(tn.range.start, tn.range.end);
 												(<FuncNode>tn).parent = _parent;
-												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(`非法的函数命名, "${nk.content}"`, nk.offset, nk.length);
+												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
 												if (vars.has('#assume')) (<FuncNode>tn).statement.assume = vars.get('#assume');
 												for (const tp of ['global', 'local', 'define']) {
 													if (vars.has('#' + tp)) {
@@ -589,13 +592,13 @@ export class Lexer {
 													}
 												}
 											} else {
-												_this.addDiagnostic('不是有效的getter/setter属性', sk.offset);
+												_this.addDiagnostic(diagnostic.invalidprop(), sk.offset);
 												if (sk.content === '}') { next = false; break; } else return result;
 											}
 											if (nk.content === 'set') (<FuncNode>tn).params.push(Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
 											prop.children.push(tn);
 										} else {
-											_this.addDiagnostic('不是有效的getter/setter属性', tk.offset);
+											_this.addDiagnostic(diagnostic.invalidprop(), tk.offset);
 											return result;
 										}
 									}
@@ -616,11 +619,11 @@ export class Lexer {
 									if (!lk.topofline && bak.type === 'TK_SHARP' && bak.content.match(/^#(MenuMaskKey|SingleInstance|Warn)/i)) break;
 									if (addvariable(lk, mode))
 										vr = result[result.length - 1];
-									if (mode === 2 && tk.type !== 'TK_EQUALS' && input.charAt(lk.offset + lk.length) !== '.') _this.addDiagnostic('属性声明未初始化', lk.offset);
-								} else if (mode === 2) { if (input.charAt(lk.offset + lk.length) !== '.') _this.addDiagnostic('属性声明未初始化', lk.offset); }
+									if (mode === 2 && tk.type !== 'TK_EQUALS' && input.charAt(lk.offset + lk.length) !== '.') _this.addDiagnostic(diagnostic.propnotinit(), lk.offset);
+								} else if (mode === 2) { if (input.charAt(lk.offset + lk.length) !== '.') _this.addDiagnostic(diagnostic.propnotinit(), lk.offset); }
 								else if ((m = input.charAt(lk.offset + lk.length)).match(/^(\(|\s|,|)$/)) {
 									if (lk.topofline) {
-										if (m === ',') _this.addDiagnostic('函数调用需要一个空格或"("', tk.offset, 1);
+										if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
 										let fc = lk, sub = parseline();
 										if (restore) lk.topofline = false;
 										result.push(...sub);
@@ -631,7 +634,7 @@ export class Lexer {
 										// let prestr = input.substring(last_LF + 1, lk.offset);
 										if (tk.content === '(' || topcontinue) {
 											// if (tk.content === '(' || prestr.match(/^\s*(\w+\.)+$/)) {
-											if (m === ',') _this.addDiagnostic('函数调用需要一个空格或"("', tk.offset, 1);
+											if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
 											let fc = lk, sub = parseline();
 											result.push(...sub); //, _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
 											break;
@@ -655,7 +658,7 @@ export class Lexer {
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 									}
 								} else if (tk.type === 'TK_UNKNOWN') {
-									_this.addDiagnostic(`未知的Token, "${tk.content}"`, tk.offset, tk.length);
+									_this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length);
 								}
 							}
 							break;
@@ -665,7 +668,7 @@ export class Lexer {
 						parse_reserved(); break;
 				}
 			}
-			if (tk.type === 'TK_EOF' && blocks > (mode === 0 ? 0 : -1)) _this.addDiagnostic('丢失对应的"}"', blockpos[blocks - (mode === 0 ? 1 : 0)], 1);
+			if (tk.type === 'TK_EOF' && blocks > (mode === 0 ? 0 : -1)) _this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (mode === 0 ? 1 : 0)], 1);
 			return result;
 
 			function parse_reserved() {
@@ -673,14 +676,14 @@ export class Lexer {
 				switch (_low = tk.content.toLowerCase()) {
 					case 'class':
 						if (!tk.topofline) {
-							if (mode !== 2 && input.charAt(parser_pos) !== '(') _this.addDiagnostic('保留字不能用作变量名', tk.offset);
+							if (mode !== 2 && input.charAt(parser_pos) !== '(') _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 							next = false, tk.type = 'TK_WORD'; break;
 						}
 						let cl: Token, ex: string = '', sv = new Map(), beginpos = tk.offset, comm = '';
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) comm = trimcomment(lk.content), beginpos = lk.offset;
 						nexttoken();
 						if (tk.type === 'TK_WORD') {
-							if (mode & 1) _this.addDiagnostic('函数不能包含类', tk.offset);
+							if (mode & 1) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset);
 							cl = tk, lk = tk, tk = get_token_ingore_comment();
 							if (tk.content.toLowerCase() === 'extends') {
 								ex = get_next_token().content;
@@ -688,17 +691,22 @@ export class Lexer {
 								tk = get_token_ingore_comment();
 							}
 							if (tk.type !== 'TK_START_BLOCK') { next = false; break; }
-							if (cl.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic('非法的类命名', cl.offset, cl.length);
+							if (cl.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(cl.content), cl.offset, cl.length);
 							tn = DocumentSymbol.create(cl.content, undefined, SymbolKind.Class, makerange(0, 0), makerange(cl.offset, cl.length));
 							sv.set('#parent', tn), (<ClassNode>tn).funccall = [], (<ClassNode>tn).full = full + cl.content;
 							tn.children = parse(2, sv, full + cl.content + '.'), tn.range = makerange(beginpos, parser_pos - beginpos);
 							_this.addFoldingRangePos(tn.selectionRange.start, tn.range.end, 'block');
 							if (comm) tn.detail = comm; if (ex) (<ClassNode>tn).extends = ex;
 							for (const item of tn.children) if (item.children && item.kind != SymbolKind.Property) (<FuncNode>item).parent = tn;
-							if (mode === 0) (<{ [key: string]: Variable }>_this.global)[cl.content.toLowerCase()] = tn;
+							if (mode === 0) {
+								if ((<{ [key: string]: Variable }>_this.global)[_low = cl.content.toLowerCase()] || _low.match(/^(any|array|boundfunc|buffer|class|clipboardall|closure|enumerator|error|file|float|func|gui|indexerror|inputhook|integer|keyerror|map|membererror|memoryerror|menu|menubar|methoderror|number|object|oserror|primitive|propertyerror|regexmatch|string|targeterror|timeouterror|typeerror|valueerror|zerodivisionerror)$/i)) {
+									_this.diagnostics.push({ range: tn.selectionRange, message: diagnostic.classdeferr(), severity: DiagnosticSeverity.Error });
+								}
+								(<{ [key: string]: Variable }>_this.global)[_low] = tn;
+							}
 							result.push(tn);
 						} else {
-							if (mode !== 2 && input.charAt(lk.offset + lk.length) !== '(') _this.addDiagnostic('保留字不能用作变量名', lk.offset);
+							if (mode !== 2 && input.charAt(lk.offset + lk.length) !== '(') _this.addDiagnostic(diagnostic.reservedworderr(lk.content), lk.offset);
 							next = false, lk.type = 'TK_WORD', parser_pos = lk.offset + lk.length, tk = lk, lk = bak;
 						}
 						break;
@@ -710,7 +718,7 @@ export class Lexer {
 						if (tk.topofline) {
 							if (_low === 'global') scopevar.set('#assume', FuncScope.GLOBAL);
 							else scopevar.set('#assume', scopevar.get('#assume') | (_low === 'local' ? FuncScope.LOCAL : FuncScope.STATIC));
-							if (mode === 2 && lk.content.toLowerCase() !== 'static') _this.addDiagnostic('类属性声明不能使用global/local', lk.offset);
+							if (mode === 2 && lk.content.toLowerCase() !== 'static') _this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset);
 							if (cmm.type !== '') lk = cmm;
 						} else if (tk.type === 'TK_WORD' || tk.type === 'TK_RESERVED') {
 							while (parser_pos < input_length && input.charAt(parser_pos).match(/( |\t)/)) parser_pos++;
@@ -740,7 +748,7 @@ export class Lexer {
 							}
 						} else if (tk.type === 'TK_EQUALS') {
 							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak;
-							if (mode !== 2) _this.addDiagnostic('保留字不能用作变量名', tk.offset);
+							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 						}
 						next = false;
 						break;
@@ -748,7 +756,7 @@ export class Lexer {
 						lk = tk, tk = get_next_token();
 						if (['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type)) {
 							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
-							if (mode !== 2) _this.addDiagnostic('保留字不能用作变量名', tk.offset);
+							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 						} else if (next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(tk.content.toLowerCase())))
 							tk.type = 'TK_RESERVED';
 						break;
@@ -760,13 +768,13 @@ export class Lexer {
 							if (tk.type === 'TK_WORD') tk.ignore = true;
 							else if (tk.content !== '(') {
 								parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
-								if (mode !== 2) _this.addDiagnostic('保留字不能用作变量名', tk.offset);
+								if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 							}
 						}
 						break;
 					default:
 						nk = get_token_ingore_comment();
-						if (nk.type === 'TK_EQUALS' || nk.content.match(/^([<>]=?|~=|&&|\|\||[,.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) tk.type = 'TK_WORD', parser_pos = t, _this.addDiagnostic('保留字不能用作变量名', tk.offset);
+						if (nk.type === 'TK_EQUALS' || nk.content.match(/^([<>]=?|~=|&&|\|\||[,.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) tk.type = 'TK_WORD', parser_pos = t, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 						else {
 							lk = tk, tk = nk, next = false;
 							if (_low === 'switch') inswitch = blocks;
@@ -811,7 +819,7 @@ export class Lexer {
 									mode = mode | 1;
 									let sub = parseexp();
 									mode = storemode;
-									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(`非法的函数命名, "${fc.content}"`, fc.offset, fc.length);
+									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par);
 									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).statement.closure = mode === 0;
 									tn.children = [], _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
@@ -871,15 +879,15 @@ export class Lexer {
 							if (parseobj()) break;
 							else return result.splice(index);
 						case 'TK_END_BLOCK':
-						case 'TK_END_EXPR': _this.addDiagnostic(`多余的"${tk.content}"`, tk.offset, 1); break;
-						case 'TK_UNKNOWN': _this.addDiagnostic(`未知的Token, "${tk.content}"`, tk.offset, tk.length); break;
+						case 'TK_END_EXPR': _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1); break;
+						case 'TK_UNKNOWN': _this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length); break;
 						case 'TK_RESERVED':
 							if (tk.content.match(/\b(and|or|not)\b/i)) {
 								let t = parser_pos, nk = get_token_ingore_comment();
 								if (nk.type !== 'TK_EQUALS' && !nk.content.match(/^([<>]=?|~=|&&|\|\||[,.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) { lk = tk, tk = nk, next = false; break; }
 								parser_pos = t;
 							}
-							_this.addDiagnostic('保留字不能用作变量名', tk.offset), next = false, tk.type = 'TK_WORD'; break;
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset), next = false, tk.type = 'TK_WORD'; break;
 					}
 				}
 				return result.splice(index);
@@ -906,7 +914,7 @@ export class Lexer {
 									vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 								}
 							} else {
-								if (mode === 2 && input.charAt(lk.offset + lk.length) !== '.') _this.addDiagnostic('属性声明未初始化', lk.offset);
+								if (mode === 2 && input.charAt(lk.offset + lk.length) !== '.') _this.addDiagnostic(diagnostic.propnotinit(), lk.offset);
 								if (tk.type === 'TK_COMMA') { addvariable(lk, mode, sta); continue; }
 								else if (tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
 									addvariable(lk, mode, sta);
@@ -923,7 +931,7 @@ export class Lexer {
 						case 'TK_COMMA':
 							if (n_newlines > 1) nk.type = '';
 							continue;
-						case 'TK_UNKNOWN': nk.type = '', _this.addDiagnostic(`未知的Token, "${tk.content}"`, tk.offset, tk.length); break;
+						case 'TK_UNKNOWN': nk.type = '', _this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length); break;
 						case 'TK_RESERVED':
 							nk.type = '';
 							if (tk.content.match(/\b(and|or|not)\b/i)) {
@@ -931,9 +939,9 @@ export class Lexer {
 								if (nk.type !== 'TK_EQUALS' && !nk.content.match(/^([<>]=?|~=|&&|\|\||[,.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) { lk = tk, tk = nk, next = false; break; }
 								parser_pos = t;
 							}
-							_this.addDiagnostic('保留字不能用作变量名', tk.offset), next = false, tk.type = 'TK_WORD'; break;
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset), next = false, tk.type = 'TK_WORD'; break;
 						case 'TK_END_BLOCK':
-						case 'TK_END_EXPR': nk.type = '', _this.addDiagnostic(`多余的"${tk.content}"`, tk.offset, 1); break;
+						case 'TK_END_EXPR': nk.type = '', _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1); break;
 						default: break loop;
 					}
 				}
@@ -1052,7 +1060,7 @@ export class Lexer {
 									for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) cds.push(sub[i]), sub.splice(i, 1); }
 									if (fc) {
-										if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(`非法的函数命名, "${fc.content}"`, fc.offset, fc.length);
+										if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 										result.push(tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, cds));
 										(<FuncNode>tn).statement.closure = mode === 0, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 										if (mode !== 0)
@@ -1089,14 +1097,14 @@ export class Lexer {
 						case 'TK_END_BLOCK':
 						case 'TK_END_EXPR': next = false;
 						case 'TK_COMMA': types[tpexp] = true; return result.splice(pres);
-						case 'TK_UNKNOWN': _this.addDiagnostic(`未知的Token, "${tk.content}"`, tk.offset, tk.length); break;
+						case 'TK_UNKNOWN': _this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length); break;
 						case 'TK_RESERVED':
 							if (tk.content.match(/\b(and|or|not)\b/i)) {
 								let t = parser_pos, nk = get_token_ingore_comment();
 								if (nk.type !== 'TK_EQUALS' && !nk.content.match(/^([<>]=?|~=|&&|\|\||[,.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) { lk = tk, tk = nk, next = false; break; }
 								parser_pos = t;
 							}
-							_this.addDiagnostic('保留字不能用作变量名', tk.offset); break;
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset); break;
 						case 'TK_OPERATOR':
 							if (tk.content === '%') {
 								if (input.charAt(tk.offset - 1).match(/\w|[^\x00-\xff]/))
@@ -1107,7 +1115,7 @@ export class Lexer {
 							} else {
 								if (tk.content !== '.')
 									tpexp += ' ' + tk.content;
-								if (lk.type === 'TK_OPERATOR' && lk.content !== '%' && !tk.content.match(/[+\-%!]/)) _this.addDiagnostic('未知的操作符使用', tk.offset);
+								if (lk.type === 'TK_OPERATOR' && lk.content !== '%' && !tk.content.match(/[+\-%!]/)) _this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset);
 							}
 							break;
 						case 'TK_EQUALS': tpexp += ' :='; break;
@@ -1135,7 +1143,7 @@ export class Lexer {
 								}
 								lk = tk, tk = get_token_ingore_comment(cmm), comment = cmm.content;
 								if (tk.content === ',' || tk.content === ')') {
-									if (lk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic('非法的变量命名', lk.offset, lk.length);
+									if (lk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
 									tn = Variable.create(lk.content, SymbolKind.Variable, rg = makerange(lk.offset, lk.length), rg);
 									if (byref) byref = false, (<Variable>tn).byref = true; cache.push(tn);
 									if (tk.content === ')' && ((--pairnum) < 0)) break;
@@ -1148,7 +1156,7 @@ export class Lexer {
 										else { next = false, paramsdef = false, lk = tk, tk = nk; break; }
 									}
 									if (tk.type === 'TK_STRING' || tk.type === 'TK_NUMBER' || (tk.type === 'TK_WORD' && ['unset', 'true', 'false'].includes(tk.content.toLowerCase()))) {
-										if (lk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic('非法的变量命名', lk.offset, lk.length);
+										if (lk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
 										tn = Variable.create(lk.content, SymbolKind.Variable, rg = makerange(lk.offset, lk.length), rg);
 										if (byref) byref = false, (<Variable>tn).byref = true;
 										(<Variable>tn).defaultVal = tk.content, cache.push(tn), lk = tk, tk = get_token_ingore_comment(cmm), comment = cmm.content;
@@ -1197,7 +1205,7 @@ export class Lexer {
 					lk = l, tk = b, result.splice(rl), parser_pos = tk.offset + tk.length;
 					if (must) {
 						parseerrobj();
-						_this.addDiagnostic('对象存在错误', e.offset, parser_pos - e.offset);
+						_this.addDiagnostic(diagnostic.objectliteralerr(), e.offset, parser_pos - e.offset);
 						return true;
 					}
 					return next = false;
@@ -1205,7 +1213,7 @@ export class Lexer {
 				if (tk.type === 'TK_END_BLOCK')
 					_this.addFoldingRange(b.offset, tk.offset);
 				else
-					_this.addDiagnostic('丢失对应的"}"', b.offset, 1);
+					_this.addDiagnostic(diagnostic.missing('}'), b.offset, 1);
 				return true;
 
 				function objkey(): boolean {
@@ -1225,7 +1233,7 @@ export class Lexer {
 								nk = get_token_ingore_comment();
 								if (nk.content === ':') {
 									lk = tk, tk = nk;
-									_this.addDiagnostic('对象字面量中的属性名无效', tk.offset, tk.length);
+									_this.addDiagnostic(diagnostic.invalidpropname(), lk.offset, lk.length);
 									return true;
 								}
 								return isobj = false;
@@ -1301,7 +1309,7 @@ export class Lexer {
 				pairpos = pairbeg === undefined ? [parser_pos - 1] : [pairbeg];
 				while (nexttoken()) {
 					if (b === '%' && tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
-						_this.addDiagnostic('丢失对应的"%"', pairpos[0], 1);
+						_this.addDiagnostic(diagnostic.missing('%'), pairpos[0], 1);
 						next = false, tpexp = '#any'; break;
 					}
 					if (b !== '(' && tk.content === '(') parsepair('(', ')');
@@ -1317,12 +1325,19 @@ export class Lexer {
 						if (b === '(') tpexp += '(';
 					} else if (tk.content === '=>') {
 						if (b !== '(' || rpair !== 1) {
-							_this.addDiagnostic('未知的操作符使用', tk.offset, 2), next = true;
+							_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2), next = true;
 							continue;
 						}
 						result.splice(apos);
+						let bb = tk;
 						lk = llk, tk = { content: '(', offset: tp - 1, length: 1, type: 'TK_START_EXPR' }, parser_pos = tp;
-						let par = parsequt(), nk = get_token_ingore_comment(cmm), comment = cmm.content, sub = parseexp(true), pars: { [key: string]: boolean } = {};
+						let par = parsequt(), nk = get_token_ingore_comment();
+						if (nk.content !== '=>') {
+							tk = bb, parser_pos = bb.offset + bb.length, next = true, tpexp = '';
+							_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2);
+							continue;
+						}
+						let sub = parseexp(true), pars: { [key: string]: boolean } = {};
 						if (par) {
 							for (const it of par) pars[it.name.toLowerCase()] = true;
 							for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) sub.splice(i, 1); }
@@ -1339,7 +1354,7 @@ export class Lexer {
 								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_token_ingore_comment(cmm), comment = cmm.content;
 								if (nk.content === '=>') {
 									let sub = parseexp(true), pars: any = {};
-									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(`非法的函数命名, "${fc.content}"`, fc.offset, fc.length);
+									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par, sub);
 									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).statement.closure = mode === 0;
 									if (mode !== 0)
@@ -1390,7 +1405,7 @@ export class Lexer {
 							tpexp += ' #any';
 						parsepair('%', '%');
 					} else if (tk.content.match(/^[)}]$/)) {
-						_this.addDiagnostic('丢失对应的"' + e + '"', pairpos[pairnum], 1), next = false;
+						_this.addDiagnostic(diagnostic.missing(e), pairpos[pairnum], 1), next = false;
 						types[tpexp.indexOf('#any') === -1 ? '(' + tpexp + ')' : '#any'] = true;
 						return;
 					} else if (tk.type === 'TK_RESERVED') {
@@ -1402,9 +1417,9 @@ export class Lexer {
 							}
 							parser_pos = t, tpexp += ' ' + tk.content;
 						}
-						_this.addDiagnostic('保留字不能用作变量名', tk.offset);
+						_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 					} else if (tk.type === 'TK_END_BLOCK' || tk.type === 'TK_END_EXPR')
-						_this.addDiagnostic(`多余的"${tk.content}"`, tk.offset, 1);
+						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1);
 					else if (tk.type === 'TK_COMMA')
 						tpexp = '';
 					else if (tk.type === 'TK_NUMBER')
@@ -1416,13 +1431,13 @@ export class Lexer {
 				}
 				types['(' + tpexp + ')'] = true;
 				if (tk.type === 'TK_EOF')
-					_this.addDiagnostic('丢失对应的"' + e + '"', pairpos[pairnum], 1);
+					_this.addDiagnostic(diagnostic.missing(e), pairpos[pairnum], 1);
 			}
 
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
 				let _low = token.content.toLowerCase();
 				if (token.ignore || builtin_variable.includes(_low) || ((md & 2) && ['this', 'super'].includes(token.content.toLowerCase()))) return false;
-				if (token.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic('非法的变量命名', token.offset, token.length);
+				if (token.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(token.content), token.offset, token.length);
 				let rg = makerange(token.offset, token.length), tn = Variable.create(token.content, md === 2 ? SymbolKind.Property : SymbolKind.Variable, rg, rg);
 				if (comment) tn.detail = comment; if (md === 0) tn.globalspace = true; else if (md === 2) {
 					_this.object.property[_low] = _this.object.property[_low] || token.content;
@@ -3276,12 +3291,12 @@ export class Lexer {
 				if ((<FuncNode>scopenode).parent)
 					scopenode = (<FuncNode>scopenode).parent;
 				else
-					nodes.push(class_this);
+					nodes.push(DocumentSymbol.create('this', completionitem._this(), SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
 			}
 			if (scopenode?.kind === SymbolKind.Class) {
-				nodes.push(class_this);
+				nodes.push(DocumentSymbol.create('this', completionitem._this(), SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
 				if ((<ClassNode>scopenode).extends)
-					nodes.push(class_super);
+					nodes.push(DocumentSymbol.create('super', completionitem._super(), SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
 			}
 			return nodes;
 		} else {

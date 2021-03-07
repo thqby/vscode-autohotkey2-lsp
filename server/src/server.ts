@@ -17,9 +17,11 @@ import { codeActionProvider } from './CodeActionProvider';
 import { colorPresentation, colorProvider } from './colorProvider';
 import { completionProvider } from './completionProvider';
 import { defintionProvider } from './definitionProvider';
+import { executeCommandProvider } from './executeCommandProvider';
 import { documentFormatting, rangeFormatting } from './formattingProvider';
 import { hoverProvider } from './hoverProvider';
 import { FuncNode, getincludetable, Lexer, parseinclude, Variable } from './Lexer';
+import { setting } from './localize';
 import { referenceProvider } from './referencesProvider';
 import { prepareRename, renameProvider } from './renameProvider';
 import { runscript } from './scriptrunner';
@@ -30,21 +32,23 @@ export const languageServer = 'ahk2-language-server';
 export let globalSettings: AHKLSSettings = {
 	Path: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe'
 }, libdirs: string[] = [], documentSettings: Map<string, Thenable<AHKLSSettings>> = new Map();
-let connection = createConnection(ProposedFeatures.all), documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+export const connection = createConnection(ProposedFeatures.all);
+let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
-let workspaceFolders: any = null;
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { uri: string, sym: SymbolInformation[] } = { uri: '', sym: [] };
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], ahkclasses: { [key: string]: DocumentSymbol[] } = {}, ahkfunctions: { [key: string]: FuncNode } = {};
-export let libfuncs: { [uri: string]: FuncNode[] } = {};
+export let libfuncs: { [uri: string]: FuncNode[] } = {}, workfolder = '';
 export type Maybe<T> = T | undefined;
+
 interface AHKLSSettings {
 	Path: string;
 }
 
 connection.onInitialize((params: InitializeParams) => {
-	workspaceFolders = params.workspaceFolders;
 	let capabilities = params.capabilities;
+	workfolder = URI.parse(params.workspaceFolders?.pop()?.uri || '').fsPath.toLowerCase();
+	console.log(workfolder)
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
 	);
@@ -80,6 +84,7 @@ connection.onInitialize((params: InitializeParams) => {
 			definitionProvider: true,
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
+			executeCommandProvider: { commands: ['ahk2.fix.include'] },
 			hoverProvider: true,
 			foldingRangeProvider: true,
 			colorProvider: true,
@@ -123,30 +128,30 @@ connection.onDidChangeConfiguration(async change => {
 documents.onDidOpen(async e => {
 	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
 	lexers[uri] = doc, doc.actived = true;
-	if (uri.match(/\/lib\/(\w|[\x00-\xff])+\.ahk$/i)) {
+	if (uri.match(/\/lib\/(\w|[^\x00-\xff])+\.(ahk2?|ah2)$/i)) {
 		if (!libfuncs[uri])
 			libfuncs[uri] = [];
 	} else {
-		setTimeout(() => {
-			let path = resolve(doc.scriptdir, 'lib');
-			if (existsSync(path) && statSync(path).isDirectory()) {
-				readdirSync(path).map(file => {
-					let url = resolve(path, file), uri = URI.file(url).toString().toLowerCase(), d: Lexer;
-					if (!libfuncs[uri]) {
-						if (!(d = lexers[uri]))
-							d = new Lexer(openFile(url)), d.parseScript();
-						libfuncs[uri] = [];
-						let t = uri.match(/[/\\]((\w|[^\x00-\xff])+?)(_[^/\\]+)?\.ahk$/)
-						if (t) {
-							let re = new RegExp('^' + t[1] + '(_(\w|[^\x00-\xff])+)?$');
-							for (const f in doc.function)
-								if (re.test(f))
-									libfuncs[uri].push(doc.function[f]);
-						}
+		setTimeout(async () => {
+			let searchdir = '', workspace = false;
+			if (workfolder && (doc.scriptdir === workfolder || doc.scriptdir.indexOf(workfolder + '\\') !== -1))
+				searchdir = workfolder, workspace = true;
+			else
+				searchdir = doc.scriptdir + '\\lib';
+			getallahkfiles(searchdir).map(path => {
+				let u = URI.file(path).toString().toLowerCase(), d: Lexer;
+				if (u !== uri && !libfuncs[u]) {
+					libfuncs[u] = [];
+					if (!(d = lexers[u])) {
+						d = new Lexer(openFile(path)), d.parseScript();
+						if (workspace)
+							lexers[u] = d;
 					}
-				});
-			}
-		}, 500);
+					for (const f in d.function)
+						libfuncs[u].push(d.function[f]);
+				}
+			});
+		}, 1000);
 	}
 });
 
@@ -183,13 +188,8 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 	doc.parseScript();
 	if (libfuncs[uri]) {
 		libfuncs[uri].length = 0;
-		let t = uri.match(/[/\\]((\w|[^\x00-\xff])+?)(_[^/\\]+)?\.ahk$/)
-		if (t) {
-			let re = new RegExp('^' + t[1] + '(_(\w|[^\x00-\xff])+)?$');
-			for (const f in doc.function)
-				if (re.test(f))
-					libfuncs[uri].push(doc.function[f]);
-		}
+		for (const f in doc.function)
+			libfuncs[uri].push(doc.function[f]);
 	}
 	for (const t in doc.include)
 		if (!initial[t])
@@ -198,8 +198,8 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 		sendDiagnostics();
 		return;
 	}
-	parseinclude(doc.include), doc.relevance = getincludetable(uri);
-	resetrelevance(), sendDiagnostics();
+	parseinclude(doc.include), doc.relevance = getincludetable(uri), resetrelevance();
+	sendDiagnostics();
 	function resetrelevance() {
 		for (const u in initial)
 			if (lexers[u])
@@ -210,15 +210,17 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 documents.onWillSaveWaitUntil((e) => {
 	let doc = lexers[e.document.uri.toLowerCase()];
 	if (doc.version !== e.document.version) {
-		setTimeout(() => {
-			doc.version = doc.document.version;
-		}, 200);
 		let tk = doc.get_tokon(0);
 		if (tk.type === 'TK_BLOCK_COMMENT') {
 			let t: string = updateFileInfo(tk.content);
-			if (t !== tk.content)
+			if (t !== tk.content) {
+				setTimeout(() => {
+					doc.version = doc.document.version;
+				}, 200);
 				return [TextEdit.replace(Range.create(doc.document.positionAt(tk.offset), doc.document.positionAt(tk.offset + tk.length)), t)];
+			}
 		}
+		doc.version = doc.document.version;
 	}
 	return [];
 });
@@ -242,11 +244,11 @@ connection.onPrepareRename(prepareRename);
 connection.onReferences(referenceProvider);
 connection.onRenameRequest(renameProvider);
 connection.onSignatureHelp(signatureProvider);
+connection.onExecuteCommand(executeCommandProvider);
 documents.listen(connection);
 connection.listen();
-initAHKCache();
-
-
+initahk2cache();
+loadahk2();
 
 export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
 	if (!hasConfigurationCapability) return Promise.resolve(globalSettings);
@@ -262,16 +264,25 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	lexers[textDocument.uri.toLowerCase()].initlibdirs();
 }
 
-async function initAHKCache() {
-	const ahk2 = JSON.parse(readFileSync(resolve(__dirname, '../../syntaxes/ahk2.json'), { encoding: "utf8" }));
+function initahk2cache() {
+	completionItemCache = {
+		sharp: [],
+		method: [],
+		other: ['Any', 'Array', 'BoundFunc', 'Buffer', 'Class', 'ClipboardAll', 'Closure', 'Enumerator', 'Error', 'File', 'Float', 'Func', 'Gui', 'IndexError', 'InputHook', 'Integer', 'KeyError', 'Map', 'MemberError', 'MemoryError', 'Menu', 'MenuBar', 'MethodError', 'Number', 'Object', 'OSError', 'Primitive', 'PropertyError', 'RegExMatch', 'String', 'TargetError', 'TimeoutError', 'TypeError', 'ValueError', 'ZeroDivisionError'].map(it => {
+			const completionItem = CompletionItem.create(it);
+			completionItem.insertText = it;
+			completionItem.kind = CompletionItemKind.Class;
+			return completionItem;
+		}),
+		constant: [],
+		snippet: []
+	};
+}
+
+async function loadahk2(filename = 'ahk2') {
+	const ahk2 = JSON.parse(readFileSync(resolve(__dirname, `../../syntaxes/${filename}.json`), { encoding: 'utf8' }));
 	const cmd: Command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
 	let type: CompletionItemKind, t = '', snip: { prefix: string, body: string, description?: string }, rg = Range.create(0, 0, 0, 0);
-	for (const it of ['Any', 'Array', 'BoundFunc', 'Buffer', 'Class', 'ClipboardAll', 'Closure', 'Enumerator', 'Error', 'File', 'Float', 'Func', 'Gui', 'IndexError', 'InputHook', 'Integer', 'KeyError', 'Map', 'MemberError', 'MemoryError', 'Menu', 'MenuBar', 'MethodError', 'Number', 'Object', 'OSError', 'Primitive', 'PropertyError', 'RegExMatch', 'String', 'TargetError', 'TimeoutError', 'TypeError', 'ValueError', 'ZeroDivisionError']) {
-		const completionItem = CompletionItem.create(it);
-		completionItem.insertText = it;
-		completionItem.kind = CompletionItemKind.Class;
-		completionItemCache.other.push(completionItem);
-	}
 	for (const key in ahk2) {
 		if (key === 'methods') {
 			let meds: any = {};
@@ -364,7 +375,7 @@ async function initAHKCache() {
 			t = 'sharp', snip.body = bodytostring(snip.body).replace(/^#/, '');
 		else if (type === CompletionItemKind.Constant)
 			t = 'constant'; else t = 'other';
-		if (type === CompletionItemKind.Function && snip.body.indexOf('|}') === -1 && snip.body.indexOf('(${') !== -1)
+		if (type === CompletionItemKind.Function && snip.body.indexOf('|}') === -1 && snip.body.indexOf('(') !== -1)
 			completionItem.insertText = snip.prefix + '($0)', completionItem.command = cmd, completionItem.detail = snip.description;
 		else if (type === CompletionItemKind.Constant)
 			completionItem.insertText = '${1:' + snip.prefix + ' := }' + snip.body + '$0', completionItem.detail = snip.body;
@@ -406,16 +417,18 @@ async function initpathenv(config?: any) {
 	globalSettings.Path = config.Path;
 	let script = `
 	#NoTrayIcon
-	Append := SubStr(A_AhkVersion, 1, 3) = "2.0" ? "FileAppend" : "FileAppend2"
+	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 3) = "2.0" ? "FileAppend" : "FileAppend2"
 	for _, p in [A_MyDocuments,A_Desktop,A_AhkPath,A_ProgramFiles,A_Programs,A_AhkVersion]
-		p .= "|", %Append%(p, "*")
-	%Append%("\`n", "*")
+		s .= p "|"
+	try
+		_H := Func("NewThread").IsBuiltIn
+	%Append%(s _H "\`n", "*")
 	FileAppend2(text, file) {
 		FileAppend %text%, %file%
 	}
 	`
 	let ret = runscript(script, (data: string) => {
-		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version'], path = '', init = !pathenv.ahkpath;
+		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '', init = !pathenv.ahkpath;
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].toLowerCase();
 		if (!pathenv.ahkpath) {
@@ -426,38 +439,34 @@ async function initpathenv(config?: any) {
 		}
 		libdirs.length = 0, initnum = 1;
 		if (pathenv.version && pathenv.version.match(/^1\./))
-			connection.window.showErrorMessage('当前AutoHotkey.exe不是v2版本，无法获得正确的语法解析、补全等功能');
+			connection.window.showErrorMessage(setting.versionerr());
 		if (existsSync(path = pathenv.mydocuments + '\\autohotkey\\lib'))
 			libdirs.push(path);
 		if (existsSync(path = pathenv.ahkpath.replace(/[^\\/]+$/, 'lib')))
 			libdirs.push(path);
+		if (!hasahk2_hcache && pathenv.h)
+			hasahk2_hcache = true, loadahk2('ahk2_h');
 		if (init) {
 			for (const uri in lexers) {
 				let doc = lexers[uri];
 				doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include);
 				doc.relevance = getincludetable(doc.uri);
 			}
-			libdirs.map(dir => {
-				readdirSync(dir).map(file => {
-					let path = resolve(dir, file);
-					if (file.match(/\.ahk/i) && !statSync(path).isDirectory()) {
-						let uri = URI.file(path).toString().toLowerCase(), doc: Lexer, re = new RegExp('^' + file.replace(/(_(.+))?\.ahk$/, '') + '(_.+)?', 'i');
-						if (lexers[uri])
-							doc = lexers[uri];
-						else {
-							doc = new Lexer(openFile(path));
-							doc.parseScript();
-						}
+			setTimeout(() => {
+				libdirs.map(dir => {
+					getallahkfiles(dir).map(path => {
+						let uri = URI.file(path).toString(), d: Lexer;
+						if (!(d = lexers[uri]))
+							d = new Lexer(openFile(path)), d.parseScript();
 						libfuncs[uri] = [];
-						for (const name in doc.function)
-							if (re.test(name))
-								libfuncs[uri].push(doc.function[name]);
-					}
+						for (const f in d.function)
+							libfuncs[uri].push(d.function[f]);
+					});
 				});
-			});
+			}, 1000);
 		}
 	});
-	if (!ret) connection.window.showErrorMessage('AutoHotkey可执行文件的路径不正确, 在"设置-AutoHotkey2.Path"中重新指定');
+	if (!ret) connection.window.showErrorMessage(setting.ahkpatherr());
 	return ret;
 }
 
@@ -495,4 +504,38 @@ export function openFile(path: string): TextDocument {
 		buf = buf.toString('utf8').substring(1);
 	else buf = buf.toString('utf8');
 	return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, buf);
+}
+
+function getallahkfiles(dirpath: string, maxdeep = 3): string[] {
+	let files: string[] = [];
+	if (existsSync(dirpath) && statSync(dirpath).isDirectory())
+		enumfile(dirpath, 0);
+	return files;
+
+	function enumfile(dirpath: string, deep: number) {
+		readdirSync(dirpath).map(file => {
+			let path = resolve(dirpath, file);
+			if (statSync(path).isDirectory()) {
+				if (deep < maxdeep)
+					enumfile(path, deep + 1);
+			} else if (file.match(/\.(ahk2?|ah2)$/i))
+				files.push(path.toLowerCase());
+		});
+	}
+}
+
+export function restorePath(path: string): string {
+	if (!existsSync(path))
+		return path;
+	let dirs = path.toUpperCase().split('\\'), i = 1, s = dirs[0];
+	while (i < dirs.length) {
+		for (const d of readdirSync(s + '\\')) {
+			if (d.toUpperCase() === dirs[i]) {
+				s += '\\' + d;
+				break;
+			}
+		}
+		i++;
+	}
+	return s.toLowerCase() === path ? s : path;
 }

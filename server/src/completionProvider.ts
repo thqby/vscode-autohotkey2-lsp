@@ -3,7 +3,8 @@ import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 import { detectExp, detectExpType, detectVariableType, FuncNode, FuncScope, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
-import { ahkclasses, ahkfunctions, completionItemCache, lexers, libfuncs, Maybe, pathenv } from './server';
+import { completionitem } from './localize';
+import { ahkclasses, ahkfunctions, completionItemCache, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested) return undefined;
@@ -119,9 +120,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				});
 			if (isclass && isstatic) {
 				items.push(p = CompletionItem.create('Prototype')), props['prototype'] = p;
-				p.kind = CompletionItemKind.Property, p.detail = '检索或设置类的所有实例所基于的对象.';
+				p.kind = CompletionItemKind.Property, p.detail = completionitem.prototype();
 				items.push(p = CompletionItem.create('New')), meds['new'] = p;
-				p.kind = CompletionItemKind.Method, p.detail = '构造类的新实例.', p.insertText = `New(${hasparams ? '$0' : ''})`;
+				p.kind = CompletionItemKind.Method, p.detail = completionitem._new(), p.insertText = `New(${hasparams ? '$0' : ''})`;
 				p.insertTextFormat = InsertTextFormat.Snippet;
 			}
 			if (!unknown && (triggerKind !== 1 || content.text.match(/\..{0,2}$/)))
@@ -347,14 +348,19 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				} else
 					items.push(it);
 			});
-			for (const uri in libfuncs) {
-				if (!list || !list[uri]) {
-					path = URI.parse(uri).fsPath;
-					libfuncs[uri].map(it => {
-						if (!funcs[it.name.toLowerCase()]) {
-							cpitem = convertNodeCompletion(it), cpitem.detail = `从'${path}'自动导入  ` + (cpitem.detail || ''), items.push(cpitem);
-						}
-					});
+			let dir = (workfolder && doc.scriptpath.indexOf(workfolder + '\\') !== -1 ? workfolder : doc.scriptdir) + '\\';
+			for (const liburi in libfuncs) {
+				if (!list || !list[liburi]) {
+					path = URI.parse(liburi).fsPath;
+					if (path.indexOf(dir) !== -1)
+						libfuncs[liburi].map(it => {
+							if (!funcs[it.name.toLowerCase()]) {
+								cpitem = convertNodeCompletion(it);
+								cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
+								cpitem.command = { title: 'ahk2.fix.include', command: 'ahk2.fix.include', arguments: [path, uri] };
+								items.push(cpitem);
+							}
+						});
 				}
 			}
 			if (other)
@@ -362,7 +368,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			return items;
 	}
 	function addincludeitem(item: DocumentSymbol) {
-		cpitem = convertNodeCompletion(item), cpitem.detail = `从'${path}'自动导入  ` + (cpitem.detail || ''), items.push(cpitem);
+		cpitem = convertNodeCompletion(item), cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || ''), items.push(cpitem);
 	}
 	function addNodesIgnoreCurpos(nodes: DocumentSymbol[]) {
 		for (const item of nodes) {
@@ -420,7 +426,7 @@ function convertNodeCompletion(info: any): CompletionItem {
 				} else ci.insertText = ci.label + '($0)';
 				ci.insertTextFormat = InsertTextFormat.Snippet;
 				ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
-			} else ci.insertText = ci.label + '()';
+			} else ci.insertText = ci.label + '()$0', ci.insertTextFormat = InsertTextFormat.Snippet;
 			ci.detail = info.full, ci.documentation = info.detail; break;
 		case SymbolKind.Variable:
 			ci.kind = CompletionItemKind.Variable, ci.detail = info.detail; break;

@@ -1,9 +1,8 @@
 import { DefinitionParams, Definition, LocationLink, DocumentSymbol, Location, SymbolKind, Range } from 'vscode-languageserver';
 import { resolve } from 'path';
 import { detectExpType, FuncNode, Lexer, searchNode } from './Lexer';
-import { lexers, libfuncs } from './server';
-import { existsSync, readFileSync } from 'fs';
-import { TextDocument } from 'vscode-languageserver-textdocument';
+import { lexers, libfuncs, openFile, restorePath } from './server';
+import { existsSync } from 'fs';
 import { URI } from 'vscode-uri';
 
 export async function defintionProvider(params: DefinitionParams): Promise<Definition | LocationLink[] | undefined> {
@@ -51,7 +50,6 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 						for (const u in doc.relevance)
 							docs.push(lexers[u]);
 						for (const doc of docs) {
-							let n = doc.object.method[word]?.length;
 							if (doc.object.method[word]?.length)
 								nodes?.push(...doc.object.method[word].map(it => { return { node: it, uri: doc.uri }; }));
 						}
@@ -62,7 +60,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 		if (nodes) {
 			nodes.map(it => {
 				if (it.uri)
-					locas.push(Location.create(it.uri, it.node.selectionRange));
+					locas.push(Location.create(URI.file(restorePath(URI.parse(it.uri).fsPath)).toString(), it.node.selectionRange));
 			});
 			if (locas.length)
 				return locas;
@@ -82,13 +80,7 @@ export function searchLibFunction(name: string, libdirs: string[]): [{ node: Fun
 			if (!libfuncs[uri]) {
 				libfuncs[uri] = [];
 				if (existsSync(path)) {
-					let buf: any = readFileSync(path);
-					if (buf[0] === 0xff && buf[1] === 0xfe)
-						buf = buf.toString('utf16le');
-					else if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
-						buf = buf.toString('utf8').substring(1);
-					else buf = buf.toString('utf8');
-					let doc = new Lexer(TextDocument.create(uri, 'ahk2', -10, buf));
+					let doc = new Lexer(openFile(path));
 					doc.parseScript();
 					for (const name in doc.function)
 						if (re.test(name))
@@ -97,7 +89,7 @@ export function searchLibFunction(name: string, libdirs: string[]): [{ node: Fun
 			}
 			for (const node of libfuncs[uri])
 				if (node.name.toLowerCase() === name)
-					return [{ node, uri, lib: true }];
+					return [{ node, uri: URI.file(restorePath(URI.parse(uri).fsPath)).toString(), lib: true }];
 		}
 	}
 }

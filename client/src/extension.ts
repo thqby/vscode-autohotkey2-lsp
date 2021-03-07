@@ -26,6 +26,7 @@ let client: LanguageClient;
 let channel = window.createOutputChannel('AutoHotkey2');
 let ahkprocess: child_process.ChildProcess | undefined;
 let ahkhelp: child_process.ChildProcessWithoutNullStreams | undefined;
+let zhcn = !!process.env.VSCODE_NLS_CONFIG?.match(/"local"\s*:\s*"zh-(cn|tw)"/i);
 
 export function activate(context: ExtensionContext) {
 	// The server is implemented in node
@@ -88,7 +89,7 @@ export function activate(context: ExtensionContext) {
 		if (!editor) return;
 		let extname: string | undefined;
 		if (extlist.length === 0) {
-			window.showErrorMessage('未找到debug插件, 请先安装debug插件!');
+			window.showErrorMessage(zhcn ? '未找到debug扩展, 请先安装debug扩展!' : 'The debug extension was not found, please install the debug extension first!');
 			extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'cweijan.vscode-autohotkey-plus']);
 			if (extname)
 				commands.executeCommand('workbench.extensions.installExtension', extname);
@@ -100,8 +101,8 @@ export function activate(context: ExtensionContext) {
 		if (extname) {
 			let config: any = {
 				type: '',
-				request: "launch",
-				name: "AutoHotkey Debug",
+				request: 'launch',
+				name: 'AutoHotkey Debug',
 				runtime: executePath,
 				AhkExecutable: executePath,
 				program: editor.document.uri.fsPath
@@ -110,7 +111,7 @@ export function activate(context: ExtensionContext) {
 				if (debugexts[t] === extname) {
 					config.type = t;
 					if (extname === 'zero-plusplus.vscode-autohotkey-debug') {
-						let input = await window.showInputBox({ prompt: '输入需要传递的命令行参数' });
+						let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
 						if (input = input?.trim()) {
 							let args: string[] = [];
 							input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
@@ -190,11 +191,11 @@ async function compileScript() {
 	if (!editor) return;
 	compilePath = resolve(compilePath, '..\\Compiler\\Ahk2Exe.exe')
 	if (!existsSync(compilePath)) {
-		window.showErrorMessage(compilePath + '不存在');
+		window.showErrorMessage(zhcn ? `"${compilePath}"不存在!` : `"${compilePath}" not find!`);
 		return;
 	}
 	if (editor.document.isUntitled) {
-		window.showErrorMessage('不支持编译临时脚本');
+		window.showErrorMessage(zhcn ? '编译前请先保存脚本' : 'Please save the script before compiling');
 		return;
 	}
 	commands.executeCommand('workbench.action.files.save');
@@ -208,20 +209,20 @@ async function compileScript() {
 			if (!checkcompilesuccess()) {
 				if (end - start > 5000) {
 					clearInterval(timer);
-					window.showErrorMessage('编译失败!');
+					window.showErrorMessage(zhcn ? '编译失败!' : 'Compilation failed!');
 				}
 			} else
 				clearInterval(timer);
 			function checkcompilesuccess() {
 				if (existsSync(exePath)) {
-					window.showInformationMessage('编译成功!');
+					window.showInformationMessage(zhcn ? '编译成功!' : 'Compiled successfully!');
 					return true;
 				}
 				return false;
 			}
 		}, 1000);
 	} else
-		window.showErrorMessage('编译失败!');
+		window.showErrorMessage(zhcn ? '编译失败!' : 'Compilation failed!');
 }
 
 async function quickHelp() {
@@ -231,15 +232,19 @@ async function quickHelp() {
 	const range = document.getWordRangeAtPosition(position), line = position.line;
 	let word = '';
 	if (range && (word = document.getText(range)).match(/^[a-z_]+$/i)) {
-		if (range.start.character > 0 && document.getText(new Range(line, range.start.character - 1, line, range.start.character)) === "#")
-			word = "#" + word;
+		if (range.start.character > 0 && document.getText(new Range(line, range.start.character - 1, line, range.start.character)) === '#')
+			word = '#' + word;
 	}
 	const executePath: string = workspace.getConfiguration('AutoHotkey2').get('Path') || '';
 	if (!ahkhelp) {
-		let helpPath = resolve(executePath, '..\\AutoHotkey.chm')
+		let helpPath = resolve(executePath, '..\\AutoHotkey.chm');
+		if (!existsSync(helpPath)) {
+			window.showErrorMessage(zhcn ? `"${helpPath}"未找到!` : `"${helpPath}" not find!`);
+			return;
+		}
 		ahkhelp = child_process.spawn('C:/Windows/hh.exe', [helpPath]);
 		if (!ahkhelp.pid) {
-			window.showInformationMessage("打开帮助文件失败"), ahkhelp = undefined;
+			window.showWarningMessage(zhcn ? '打开帮助文件失败!' : 'Failed to open the help file!'), ahkhelp = undefined;
 			return;
 		}
 		ahkhelp.on('close', () => { ahkhelp = undefined; })

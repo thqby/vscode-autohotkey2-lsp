@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "0.4.3",
+	"version": "0.4.4",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -77,7 +77,7 @@
 					"scope": "window",
 					"type": "string",
 					"default": "C:\\Program Files\\Autohotkey\\AutoHotkey.exe",
-					"description": "AutoHotkey.exe可执行文件的路径。"
+					"description": "%ahk2.exepath%"
 				}
 			}
 		},
@@ -96,32 +96,32 @@
 		"commands": [
 			{
 				"command": "ahk2.debug",
-				"title": "调试脚本",
+				"title": "%ahk2.debug%",
 				"category": "ahk2"
 			},
 			{
 				"command": "ahk2.run",
-				"title": "运行脚本",
+				"title": "%ahk2.run%",
 				"category": "ahk2"
 			},
 			{
 				"command": "ahk2.selection.run",
-				"title": "运行选择的脚本",
+				"title": "%ahk2.selection.run%",
 				"category": "ahk2"
 			},
 			{
 				"command": "ahk2.stop",
-				"title": "停止运行中的脚本",
+				"title": "%ahk2.stop%",
 				"category": "ahk2"
 			},
 			{
 				"command": "ahk2.compile",
-				"title": "编译脚本",
+				"title": "%ahk2.compile%",
 				"category": "ahk2"
 			},
 			{
 				"command": "ahk2.help",
-				"title": "快捷帮助",
+				"title": "%ahk2.help%",
 				"category": "ahk2"
 			}
 		],
