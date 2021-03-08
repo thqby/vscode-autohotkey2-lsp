@@ -377,7 +377,7 @@ async function loadahk2(filename = 'ahk2') {
 		if (!hoverCache[n][_low]) hoverCache[n][_low] = [];
 		if (!n) {
 			let it = FuncNode.create(snip.prefix, SymbolKind.Function, rg, rg,
-				snip.body.replace(/^\w+[(\s]|\)/g, '').split(',').map(param => {
+				snip.body.replace(/^\w+[(\s]?|\)/g, '').split(',').map(param => {
 					return DocumentSymbol.create(param.trim(), undefined, SymbolKind.Variable, rg, rg);
 				}));
 			it.full = it.full.replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, (...m) => {

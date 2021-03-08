@@ -45,7 +45,7 @@ function fixinclude(libpath: string, docuri: string) {
 		line = doc.document.lineCount, text = '\n\n' + text;
 	else {
 		let space = doc.document.getText({ start: { line: line - 1, character: 0 }, end: { line, character: 0 } }).match(/^\s+/);
-		text = '\n' + (space ? space[0] : '') + text;
+		text = (space ? space[0] : '') + text;
 		if (line < doc.document.lineCount)
 			text += '\n';
 	}
