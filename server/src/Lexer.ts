@@ -343,6 +343,7 @@ export class Lexer {
 						flags.last_text = token_text;
 					}
 					flags.had_comment = false;
+					last_text = token_text_low;
 				} else flags.had_comment = token_type === 'TK_INLINE_COMMENT';
 			}
 
@@ -1134,7 +1135,7 @@ export class Lexer {
 				if (paramsdef)
 					while (nexttoken()) {
 						if (tk.content === ')') { if ((--pairnum) < 0) break; } //else if (tk.content === '(') pairnum++;
-						else if (tk.type.indexOf('COMMENT') > -1) continue;
+						else if (tk.type.endsWith('COMMENT')) continue;
 						else if (tk.type === 'TK_WORD') {
 							if (in_array(lk.content, [',', '('])) {
 								if (tk.content.toLowerCase() === 'byref') {
@@ -2503,10 +2504,9 @@ export class Lexer {
 				if (!flags.else_block && (token_type === 'TK_RESERVED' && token_text_low === 'else')) {
 					flags.else_block = true;
 				} else {
-					if (token_text_low !== 'if') {
-						while (flags.mode === MODE.Statement) {
+					if (token_text_low !== 'if' || last_text !== 'else') {
+						while (flags.mode === MODE.Statement)
 							restore_mode();
-						}
 					}
 					flags.if_block = false;
 					flags.else_block = false;
@@ -3312,7 +3312,7 @@ export class Lexer {
 
 	public initlibdirs() {
 		const workfolder = resolve().toLowerCase();
-		if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.indexOf(workfolder) !== -1) {
+		if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder)) {
 			this.scriptdir = workfolder.replace(/\\lib$/, '');
 		} else this.scriptdir = this.scriptpath.replace(/\\lib$/, '');
 		this.libdirs = [this.scriptdir + '\\lib'];

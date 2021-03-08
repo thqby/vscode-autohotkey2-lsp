@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
-import { resolve } from 'path';
+import { basename, resolve } from 'path';
 import {
 	Command, CompletionItem, CompletionItemKind, createConnection,
 	DidChangeConfigurationNotification, DocumentSymbol,
@@ -48,7 +48,6 @@ interface AHKLSSettings {
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
 	workfolder = URI.parse(params.workspaceFolders?.pop()?.uri || '').fsPath.toLowerCase();
-	console.log(workfolder)
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
 	);
@@ -128,31 +127,7 @@ connection.onDidChangeConfiguration(async change => {
 documents.onDidOpen(async e => {
 	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
 	lexers[uri] = doc, doc.actived = true;
-	if (uri.match(/\/lib\/(\w|[^\x00-\xff])+\.(ahk2?|ah2)$/i)) {
-		if (!libfuncs[uri])
-			libfuncs[uri] = [];
-	} else {
-		setTimeout(async () => {
-			let searchdir = '', workspace = false;
-			if (workfolder && (doc.scriptdir === workfolder || doc.scriptdir.indexOf(workfolder + '\\') !== -1))
-				searchdir = workfolder, workspace = true;
-			else
-				searchdir = doc.scriptdir + '\\lib';
-			getallahkfiles(searchdir).map(path => {
-				let u = URI.file(path).toString().toLowerCase(), d: Lexer;
-				if (u !== uri && !libfuncs[u]) {
-					libfuncs[u] = [];
-					if (!(d = lexers[u])) {
-						d = new Lexer(openFile(path)), d.parseScript();
-						if (workspace)
-							lexers[u] = d;
-					}
-					for (const f in d.function)
-						libfuncs[u].push(d.function[f]);
-				}
-			});
-		}, 1000);
-	}
+	parseproject(uri);
 });
 
 // Only keep settings for open documents
@@ -260,8 +235,14 @@ export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
 }
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-	getDocumentSettings(textDocument.uri);
-	lexers[textDocument.uri.toLowerCase()].initlibdirs();
+	let uri = textDocument.uri, doc = lexers[uri];
+	getDocumentSettings(uri);
+	lexers[uri = textDocument.uri.toLowerCase()].initlibdirs();
+	if (doc.diagnostics.length)
+		doc.parseScript();
+	parseproject(uri);
+	for (const f in doc.function)
+		libfuncs[uri].push(doc.function[f]);
 }
 
 function initahk2cache() {
@@ -428,7 +409,7 @@ async function initpathenv(config?: any) {
 	}
 	`
 	let ret = runscript(script, (data: string) => {
-		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '', init = !pathenv.ahkpath;
+		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '';
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].toLowerCase();
 		if (!pathenv.ahkpath) {
@@ -446,25 +427,24 @@ async function initpathenv(config?: any) {
 			libdirs.push(path);
 		if (!hasahk2_hcache && pathenv.h)
 			hasahk2_hcache = true, loadahk2('ahk2_h');
-		if (init) {
-			for (const uri in lexers) {
-				let doc = lexers[uri];
-				doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include);
-				doc.relevance = getincludetable(doc.uri);
-			}
-			setTimeout(() => {
-				libdirs.map(dir => {
-					getallahkfiles(dir).map(path => {
-						let uri = URI.file(path).toString(), d: Lexer;
-						if (!(d = lexers[uri]))
-							d = new Lexer(openFile(path)), d.parseScript();
-						libfuncs[uri] = [];
-						for (const f in d.function)
-							libfuncs[uri].push(d.function[f]);
-					});
-				});
-			}, 1000);
+		for (const uri in lexers) {
+			let doc = lexers[uri];
+			doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include);
+			doc.relevance = getincludetable(doc.uri);
 		}
+		libfuncs = {};
+		setTimeout(() => {
+			libdirs.map(dir => {
+				getallahkfiles(dir).map(path => {
+					let uri = URI.file(path).toString().toLowerCase(), d: Lexer;
+					if (!(d = lexers[uri]))
+						d = new Lexer(openFile(path)), d.parseScript();
+					libfuncs[uri] = [], Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
+					for (const f in d.function)
+						libfuncs[uri].push(d.function[f]);
+				});
+			});
+		}, 1000);
 	});
 	if (!ret) connection.window.showErrorMessage(setting.ahkpatherr());
 	return ret;
@@ -538,4 +518,45 @@ export function restorePath(path: string): string {
 		i++;
 	}
 	return s.toLowerCase() === path ? s : path;
+}
+
+export function inlibdirs(path: string, ...dirs: string[]) {
+	let file = basename(path), i = 0, a = file.endsWith('.ahk');
+	for (const p of dirs) {
+		if (path.startsWith(p + '\\')) {
+			if (a) for (let j = i - 1; j >= 0; j--) {
+				if (libfuncs[dirs[j] + '\\' + file])
+					return false;
+			}
+			return true;
+		}
+		i++;
+	}
+	return false;
+}
+
+async function parseproject(uri: string) {
+	let doc: Lexer = lexers[uri];
+	if (!libfuncs[uri])
+		libfuncs[uri] = [], Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(URI.parse(uri).toString(), ...libdirs), enumerable: false });
+	setTimeout(async () => {
+		let searchdir = '', workspace = false;
+		if (workfolder && (doc.scriptdir === workfolder || doc.scriptdir.startsWith(workfolder + '\\')))
+			searchdir = workfolder, workspace = true;
+		else
+			searchdir = doc.scriptdir + '\\lib';
+		getallahkfiles(searchdir).map(path => {
+			let u = URI.file(path).toString().toLowerCase(), d: Lexer;
+			if (u !== uri && !libfuncs[u]) {
+				libfuncs[u] = [], Object.defineProperty(libfuncs[u], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
+				if (!(d = lexers[u])) {
+					d = new Lexer(openFile(path)), d.parseScript();
+					if (workspace)
+						lexers[u] = d;
+				}
+				for (const f in d.function)
+					libfuncs[u].push(d.function[f]);
+			}
+		});
+	}, 1000);
 }

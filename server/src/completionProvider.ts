@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { detectExp, detectExpType, detectVariableType, FuncNode, FuncScope, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
 import { completionitem } from './localize';
-import { ahkclasses, ahkfunctions, completionItemCache, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
+import { ahkclasses, ahkfunctions, completionItemCache, inlibdirs, lexers, libdirs, libfuncs, Maybe, pathenv, workfolder } from './server';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested) return undefined;
@@ -348,12 +348,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				} else
 					items.push(it);
 			});
-			let dir = (workfolder && doc.scriptpath.indexOf(workfolder + '\\') !== -1 ? workfolder : doc.scriptdir) + '\\';
-			for (const liburi in libfuncs) {
-				if (!list || !list[liburi]) {
-					path = URI.parse(liburi).fsPath;
-					if (path.indexOf(dir) !== -1)
-						libfuncs[liburi].map(it => {
+			let dir = (workfolder && doc.scriptpath.startsWith(workfolder + '\\') ? workfolder : doc.scriptdir);
+			for (const u in libfuncs) {
+				if (!list || !list[u]) {
+					path = URI.parse(u).fsPath;
+					if ((<any>libfuncs[u]).islib || path.startsWith(dir + '\\'))
+						libfuncs[u].map(it => {
 							if (!funcs[it.name.toLowerCase()]) {
 								cpitem = convertNodeCompletion(it);
 								cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');

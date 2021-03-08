@@ -15,11 +15,11 @@ export async function executeCommandProvider(params: ExecuteCommandParams) {
 function fixinclude(libpath: string, docuri: string) {
 	let doc = lexers[docuri], text = '', line = -1, curdir = '';
 	for (const p of doc.libdirs.slice(1)) {
-		if (libpath.indexOf(p + '\\') !== -1) {
+		if (libpath.startsWith(p + '\\')) {
 			let ext = extname(libpath);
 			if (ext === '.ahk')
 				text = `#Include <${basename(restorePath(libpath), ext)}>`;
-			else if (pathenv.mydocuments && libpath.indexOf(pathenv.mydocuments + '\\autohotkey\\lib') !== -1)
+			else if (pathenv.mydocuments && libpath.startsWith(pathenv.mydocuments + '\\autohotkey\\lib'))
 				text = `#Include '%A_MyDocuments%\\AutoHotkey\\Lib\\${basename(restorePath(libpath))}'`;
 			else
 				text = `#Include '${restorePath(libpath)}'`;
@@ -29,10 +29,10 @@ function fixinclude(libpath: string, docuri: string) {
 	}
 	if (text === '') {
 		for (const l of doc.includedir) {
-			if (libpath.indexOf(l[1] + '\\') !== -1) {
+			if (libpath.startsWith(l[1] + '\\')) {
 				if (l[1].length > curdir.length)
 					line = l[0] + 1, curdir = l[1];
-			} else if (!curdir && libpath.indexOf(resolve(l[1], '..') + '\\') !== -1)
+			} else if (!curdir && libpath.startsWith(resolve(l[1], '..') + '\\'))
 				line = l[0] + 1, curdir = l[1];
 		}
 		curdir = curdir || doc.scriptdir;

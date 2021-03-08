@@ -1,7 +1,7 @@
 import { DefinitionParams, Definition, LocationLink, DocumentSymbol, Location, SymbolKind, Range } from 'vscode-languageserver';
 import { resolve } from 'path';
 import { detectExpType, FuncNode, Lexer, searchNode } from './Lexer';
-import { lexers, libfuncs, openFile, restorePath } from './server';
+import { inlibdirs, lexers, libdirs, libfuncs, openFile, restorePath } from './server';
 import { existsSync } from 'fs';
 import { URI } from 'vscode-uri';
 
@@ -69,16 +69,16 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 	return undefined;
 }
 
-export function searchLibFunction(name: string, libdirs: string[]): [{ node: FuncNode, uri: string, lib?: boolean }] | undefined {
+export function searchLibFunction(name: string, dirs: string[]): [{ node: FuncNode, uri: string, lib?: boolean }] | undefined {
 	let fc = name.toLowerCase(), names = [fc], t: any, re = new RegExp('^' + fc + '(_.+)?$', 'i');
 	if (t = name.match(/^((\w|[^\x00-\xff])+?)_/))
 		names.push(fc = t[1].toLowerCase());
-	for (let path of libdirs) {
+	for (let path of dirs) {
 		for (const name of names) {
 			path = resolve(path, name + '.ahk');
 			let uri = URI.file(path).toString().toLowerCase();
 			if (!libfuncs[uri]) {
-				libfuncs[uri] = [];
+				libfuncs[uri] = [], Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
 				if (existsSync(path)) {
 					let doc = new Lexer(openFile(path));
 					doc.parseScript();
