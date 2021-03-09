@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "0.3.0",
+	"version": "0.4.7",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -17,7 +17,11 @@
 		"AutoHotkey2"
 	],
 	"repository": "https://gitee.com/orz707/vscode-autohotkey2-lsp/tree/master",
+	"homepage": "https://gitee.com/orz707/vscode-autohotkey2-lsp/blob/master/README.md",
 	"icon": "icon.png",
+	"bugs": {
+		"url": "https://gitee.com/orz707/vscode-autohotkey2-lsp/issues"
+	},
 	"engines": {
 		"vscode": "^1.43.0"
 	},
@@ -26,6 +30,11 @@
 	],
 	"main": "./client/dist/extension",
 	"contributes": {
+		"breakpoints": [
+			{
+				"language": "ahk2"
+			}
+		],
 		"languages": [
 			{
 				"id": "ahk2",
@@ -68,18 +77,7 @@
 					"scope": "window",
 					"type": "string",
 					"default": "C:\\Program Files\\Autohotkey\\AutoHotkey.exe",
-					"description": "AutoHotkey.exe可执行文件的路径。"
-				},
-				"AutoHotkey2.Trace": {
-					"scope": "window",
-					"type": "string",
-					"enum": [
-						"off",
-						"messages",
-						"verbose"
-					],
-					"default": "off",
-					"description": "跟踪VS Code和AutoHotKey2语言服务器之间的通信。"
+					"description": "%ahk2.exepath%"
 				}
 			}
 		},
@@ -97,37 +95,57 @@
 		},
 		"commands": [
 			{
+				"command": "ahk2.debug",
+				"title": "%ahk2.debug%",
+				"category": "ahk2"
+			},
+			{
 				"command": "ahk2.run",
-				"title": "运行脚本",
+				"title": "%ahk2.run%",
 				"category": "ahk2"
 			},
 			{
 				"command": "ahk2.selection.run",
-				"title": "运行选择的脚本",
+				"title": "%ahk2.selection.run%",
 				"category": "ahk2"
 			},
 			{
 				"command": "ahk2.stop",
-				"title": "停止运行中的脚本",
+				"title": "%ahk2.stop%",
+				"category": "ahk2"
+			},
+			{
+				"command": "ahk2.compile",
+				"title": "%ahk2.compile%",
 				"category": "ahk2"
 			},
 			{
 				"command": "ahk2.help",
-				"title": "快捷帮助",
+				"title": "%ahk2.help%",
 				"category": "ahk2"
 			}
 		],
 		"menus": {
 			"editor/context": [
 				{
-					"when": "editorLangId == ahk2 && !ahk2:isRunning && editorHasSelection",
+					"when": "editorLangId == ahk2 && !inDebugMode",
+					"command": "ahk2.debug",
+					"group": "navigation@1"
+				},
+				{
+					"when": "editorLangId == ahk2 && editorHasSelection",
 					"command": "ahk2.selection.run",
 					"group": "navigation@0"
 				},
 				{
-					"when": "editorLangId == ahk2 && !ahk2:isRunning && !editorHasSelection",
+					"when": "editorLangId == ahk2 && !editorHasSelection",
 					"command": "ahk2.run",
 					"group": "navigation@0"
+				},
+				{
+					"when": "editorLangId == ahk2",
+					"command": "ahk2.compile",
+					"group": "navigation@1"
 				},
 				{
 					"when": "editorLangId == ahk2",
@@ -145,12 +163,22 @@
 			{
 				"command": "ahk2.run",
 				"key": "ctrl+f5",
-				"when": "editorLangId == ahk2 && !ahk2:isRunning && !editorHasSelection"
+				"when": "editorLangId == ahk2 && !editorHasSelection"
 			},
 			{
 				"command": "ahk2.selection.run",
 				"key": "ctrl+f5",
-				"when": "editorLangId == ahk2 && !ahk2:isRunning && editorHasSelection"
+				"when": "editorLangId == ahk2 && editorHasSelection"
+			},
+			{
+				"command": "ahk2.compile",
+				"key": "ctrl+shift+f5",
+				"when": "editorLangId == ahk2"
+			},
+			{
+				"command": "ahk2.debug",
+				"key": "f5",
+				"when": "editorLangId == ahk2 && !inDebugMode"
 			},
 			{
 				"command": "ahk2.help",

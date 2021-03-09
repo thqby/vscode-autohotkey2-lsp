@@ -119,7 +119,7 @@
       "patterns": [
         {
           "name": "support.class",
-          "match": "\\b(?i:array|object|map|gui|class|menu|menubar)\\b"
+          "match": "\\b(?i:any|array|boundfunc|buffer|class|clipboardall|closure|enumerator|error|file|float|func|gui|indexerror|inputhook|integer|keyerror|map|membererror|memoryerror|menu|menubar|methoderror|number|object|oserror|primitive|propertyerror|regexmatch|string|targeterror|timeouterror|typeerror|valueerror|zerodivisionerror)\\b"
         }
       ]
     },
@@ -269,7 +269,7 @@
     },
     "class_block": {
       "name": "meta.block.class.ahk2",
-      "begin": "^\\s*((?i:class))\\s+(\\w+)",
+      "begin": "^\\s*((?i:class))\\s+(\\w+(\\.\\w+)*)",
       "beginCaptures": {
         "1": {
           "name": "storage.type.class.ahk2"
@@ -661,7 +661,7 @@
     "funccallnotparens": {
       "patterns": [
         {
-          "match": "(?<=^\\s*|(::|\\{)\\s*|(?i:(try|else|finally)\\s+))([[:alpha:]_][[:alnum:]_]*\\b(?<!^\\s*(?i:class)\\b))(?=$|\\s((?!(\\s*[+\\-*/^&:.|]?=|<<=|>>=|\\?|\\{))|$))",
+          "match": "(?<=^\\s*(\\{\\s*)?|::\\s*|(?i:(try|else|finally)\\s+))([[:alpha:]_][[:alnum:]_]*\\b(?<!^\\s*(?i:class)\\b))(?=$|\\s((?!(\\s*[+\\-*/^&:.|]?=|<<=|>>=|\\?|\\{))|$))",
           "name": "entity.name.function.ahk2",
           "captures": {
             "0": {
@@ -674,7 +674,7 @@
           }
         },
         {
-          "match": "(?<=(^|::)\\s*(([[:alpha:]_][[:alnum:]_]*\\.)+))([[:alpha:]_][[:alnum:]_]*\\b)(?=$|\\s+((?!([+\\-*/^&:|]?=|<<=|>>=|\\?))|$))",
+          "match": "(?<=(^\\s*(\\{\\s*)?|::\\s*|(?i:(try|else|finally)\\s+))([[:alpha:]_][[:alnum:]_]*\\.)+)([[:alpha:]_][[:alnum:]_]*\\b)(?=$|\\s((?!(\\s*[+\\-*/^&:.|]?=|<<=|>>=|\\?|\\{))|$))",
           "name": "entity.name.function.member.ahk2"
         }
       ]
@@ -798,7 +798,7 @@
       ]
     },
     "numbers": {
-      "match": "(?<!\\w)\\.?\\d(?:(?:[0-9a-zA-Z_\\.]|')|(?<=[eEpP])[+-])*",
+      "match": "(?<!\\w)\\.?\\d(?:(?:[0-9a-zA-Z_\\.]|')|(?<=[eE])[+-])*",
       "captures": {
         "0": {
           "patterns": [
@@ -1041,7 +1041,7 @@
                   }
                 },
                 {
-                  "match": "(?:(?:[0-9a-zA-Z_\\.]|')|(?<=[eEpP])[+-])+",
+                  "match": "(?:(?:[0-9a-zA-Z_\\.]|')|(?<=[eE])[+-])+",
                   "name": "invalid.illegal.constant.numeric"
                 }
               ]

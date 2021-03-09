@@ -8,5 +8,6 @@
 !ahk2.configuration.json
 !icon.png
 !package.json
+!package.*.json
 !README.md
 !CHANGELOG.md
