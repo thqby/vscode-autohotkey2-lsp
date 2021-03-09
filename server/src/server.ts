@@ -81,15 +81,16 @@ connection.onInitialize((params: InitializeParams) => {
 				triggerCharacters: ['.', '#', '_']
 			},
 			signatureHelpProvider: {
-				triggerCharacters: ['(', ',']
+				triggerCharacters: ['('],
+				retriggerCharacters: [',']
 			},
-			documentSymbolProvider: true,
-			definitionProvider: true,
-			documentFormattingProvider: true,
-			documentRangeFormattingProvider: true,
+			colorProvider: true,
 			hoverProvider: true,
+			definitionProvider: true,
 			foldingRangeProvider: true,
-			colorProvider: true
+			documentSymbolProvider: true,
+			documentFormattingProvider: true,
+			documentRangeFormattingProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -169,7 +170,7 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 	// }, 300);
 });
 
-connection.onDidChangeWatchedFiles(_change => {
+connection.onDidChangeWatchedFiles(change => {
 	// Monitored files have change in VSCode
 	// console.log('We received an file change event');
 });
@@ -308,31 +309,33 @@ connection.onDefinition(async (params: DefinitionParams, token: CancellationToke
 	return undefined;
 });
 
-connection.onSignatureHelp(async (params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> => {
-	if (cancellation.isCancellationRequested) return undefined;
+connection.onSignatureHelp(async (params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> => {
+	if (token.isCancellationRequested) return undefined;
 	let uri = params.textDocument.uri.toLowerCase(), docLexer = doctree[uri], kind: SymbolKind = SymbolKind.Function;
-	let res: any, name: string, pos: Position, index: number, signinfo: SignatureHelp = { activeSignature: 0, signatures: [], activeParameter: 0 }
+	let res: any, name: string, pos: Position, index: number, signinfo: SignatureHelp = { activeSignature: 0, signatures: [], activeParameter: 0 };
 	if (!(res = getFuncCallInfo(docLexer, params.position))) return;
 	name = res.name, pos = res.pos, index = res.index;
-	if (pos.character > 0)
-		if (docLexer.document.getText(Range.create({ line: pos.line, character: pos.character - 1 }, pos)) === '.') kind = SymbolKind.Method;
-	if (kind === SymbolKind.Method) return undefined;
-	else {
-		let { node } = searchNode(docLexer, name, pos, kind);
-		if (node) {
-			signinfo.signatures.push({
-				label: (<FuncNode>node).full,
-				parameters: (<FuncNode>node).params.map(param => { return { label: param.name.trim() } }),
-				documentation: node.detail
-			});
-		} else if (!funcCache[name]) return undefined;
+	if (!params.context?.activeSignatureHelp?.signatures[0].label.match(new RegExp(`^${name}\b`, 'i'))) {
+		if (pos.character > 0)
+			if (docLexer.document.getText(Range.create({ line: pos.line, character: pos.character - 1 }, pos)) === '.') kind = SymbolKind.Method;
+		if (kind === SymbolKind.Method) return undefined;
 		else {
-			let t = funcCache[name];
-			signinfo.signatures.push({
-				label: t.body,
-				parameters: t.body.replace(/^\w+[(\s]|\)/g, '').split(',').map(param => { return { label: param.trim() } }),
-				documentation: t.description
-			});
+			let { node } = searchNode(docLexer, name, pos, kind);
+			if (node) {
+				signinfo.signatures.push({
+					label: (<FuncNode>node).full,
+					parameters: (<FuncNode>node).params.map(param => { return { label: param.name.trim() } }),
+					documentation: node.detail
+				});
+			} else if (!funcCache[name]) return undefined;
+			else {
+				let t = funcCache[name];
+				signinfo.signatures.push({
+					label: t.body,
+					parameters: t.body.replace(/^\w+[(\s]|\)/g, '').split(',').map(param => { return { label: param.trim() } }),
+					documentation: t.description
+				});
+			}
 		}
 	}
 	signinfo.activeParameter = index < 0 ? (signinfo.signatures[0].parameters?.length || 0) : index;
@@ -523,17 +526,11 @@ connection.onCompletion(async (params: CompletionParams, token: CancellationToke
 	}
 });
 
-connection.onCompletionResolve(async (item: CompletionItem): Promise<CompletionItem> => item);
+connection.onFoldingRanges(async (params, token): Promise<Maybe<FoldingRange[]>> => { if (!token.isCancellationRequested) return doctree[params.textDocument.uri.toLowerCase()].foldingranges; });
 
-connection.onFoldingRanges(async (params: FoldingRangeParams): Promise<FoldingRange[]> => {
-	return doctree[params.textDocument.uri.toLowerCase()].foldingranges;
-});
+connection.onDocumentColor(async (params, token): Promise<Maybe<ColorInformation[]>> => { if (!token.isCancellationRequested) return doctree[params.textDocument.uri.toLowerCase()].colors; });
 
-connection.onDocumentColor(async (params): Promise<ColorInformation[]> => {
-	return doctree[params.textDocument.uri.toLowerCase()].colors;
-});
-
-connection.onColorPresentation(async (params): Promise<Maybe<ColorPresentation[]>> => {
+connection.onColorPresentation(async (params): Promise<ColorPresentation[]> => {
 	let label = 'RGB: ', textEdit: TextEdit = { range: params.range, newText: '' }, color = params.color, m: any;
 	let text = doctree[params.textDocument.uri.toLowerCase()].document.getText(params.range), hex = '';
 	for (const i of [color.alpha, color.red, color.green, color.blue])
@@ -761,23 +758,39 @@ function searchNode(doc: Lexer, name: string, pos: Position, kind: SymbolKind | 
 }
 
 function getFuncCallInfo(doc: Lexer, position: Position) {
-	let func: DocumentSymbol | undefined, offset = doc.document.offsetAt(position), off = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
+	let func: DocumentSymbol | undefined, offset = doc.document.offsetAt(position), res = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
+	let i = 0, j = doc.funccall.length - 1, k = Math.round((i + j) / 2), funcs = doc.funccall;
+	while (i < j) {
+		const start = doc.document.offsetAt(funcs[k].range.start), end = doc.document.offsetAt(funcs[k].range.end);
+		if (start > offset) {
+			j = k - 1, k = Math.round((i + j) / 2);
+			continue;
+		} else if (end <= offset) {
+			i = k + 1, k = Math.round((i + j) / 2);
+			continue;
+		} else {
+			const line = funcs[k].range.start.line, character = funcs[k].range.start.character + funcs[k].name.length;
+			let char = doc.document.getText(Range.create(line, character, line, character + 1));
+			if (char === '(' || line !== position.line) continue;
+		}
+		if (!func || (res.start <= start && end <= res.end)) func = funcs[k], res = { start, end }, pos = func.range.start;
+	}
 	for (const item of doc.funccall) {
 		const start = doc.document.offsetAt(item.range.start), end = doc.document.offsetAt(item.range.end);
 		if (start <= offset) {
-			if (offset > end) {
+			if (offset >= end) {
 				const line = item.range.start.line, character = item.range.start.character + item.name.length;
 				let char = doc.document.getText(Range.create(line, character, line, character + 1));
 				if (char === '(' || line !== position.line) continue;
 			}
-			if (!func || (off.start <= start && end <= off.end)) func = item, off = { start, end }, pos = item.range.start;
+			if (!func || (res.start <= start && end <= res.end)) func = item, res = { start, end }, pos = item.range.start;
 		}
 	}
 	if (!func) return undefined;
 	let text = doc.document.getText(func.range), index = -1, len = 0, name = func.name.toLowerCase(), tt: any;
-	offset = offset - off.start;
+	offset = offset - res.start;
 	while (tt = text.match(/('|").*?(?<!`)\1/)) text = text.replace(tt[0], '_'.repeat(tt[0].length));
-	len = off.end - off.start - func.name.length;
+	len = res.end - res.start - func.name.length;
 	for (const pair of [['\\{', '\\}'], ['\\[', '\\]'], ['\\(', '\\)']]) {
 		const rg = new RegExp(pair[0] + '[^' + pair[0] + ']*?' + pair[1]);
 		while (tt = rg.exec(text)) {

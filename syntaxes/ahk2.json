@@ -2109,17 +2109,12 @@
 			"prefix": "SetScrollLockState"
 		},
 		{
-			"body": "SetStoreCapsLockMode ${1:Mode}",
+			"body": "SetStoreCapsLockMode ${1|true,false|}",
 			"description": "在 Send 之后是否恢复 CapsLock 的状态.",
 			"prefix": "SetStoreCapsLockMode"
 		},
 		{
-			"body": "SetStoreCapslockMode ${1:On|Off}",
-			"description": "发送后是否恢复CapsLock的状态.",
-			"prefix": "SetStoreCapslockMode"
-		},
-		{
-			"body": "SetTitleMatchMode ${1:'Fast'|'Slow'|'RegEx'|1|2|3}",
+			"body": "SetTitleMatchMode ${1|'Fast','Slow','RegEx',1,2,3|}",
 			"description": "在诸如WinWait之类的命令中设置WinTitle参数的匹配行为.",
 			"prefix": "SetTitleMatchMode"
 		},
