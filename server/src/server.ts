@@ -36,7 +36,7 @@ export const connection = createConnection(ProposedFeatures.all);
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { uri: string, sym: SymbolInformation[] } = { uri: '', sym: [] };
-export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
+export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] }, isahk2_h = false;
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], ahkclasses: { [key: string]: DocumentSymbol[] } = {}, ahkfunctions: { [key: string]: FuncNode } = {};
 export let libfuncs: { [uri: string]: FuncNode[] } = {}, workfolder = '';
 export type Maybe<T> = T | undefined;
@@ -77,8 +77,7 @@ connection.onInitialize((params: InitializeParams) => {
 				triggerCharacters: ['.', '#']
 			},
 			signatureHelpProvider: {
-				triggerCharacters: ['('],
-				retriggerCharacters: [',']
+				triggerCharacters: ['(', ',']
 			},
 			documentSymbolProvider: true,
 			definitionProvider: true,
@@ -247,6 +246,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 }
 
 function initahk2cache() {
+	ahkclasses = {};
 	completionItemCache = {
 		sharp: [],
 		method: [],
@@ -267,7 +267,7 @@ async function loadahk2(filename = 'ahk2') {
 	let type: CompletionItemKind, t = '', snip: { prefix: string, body: string, description?: string }, rg = Range.create(0, 0, 0, 0);
 	for (const key in ahk2) {
 		if (key === 'methods') {
-			let meds: any = {};
+			let meds: any = {}, props: any = {};
 			t = 'method';
 			for (const objname in ahk2[key]) {
 				let arr: any[] = ahk2[key][objname], _ = objname.toLowerCase();
@@ -287,25 +287,33 @@ async function loadahk2(filename = 'ahk2') {
 					snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => {
 						return m[2] ? m[3].replace(/,/g, '|') : m[3] || '';
 					});
-					if (!meds[_low]) {
-						completionItem.documentation = snip.description;
-						if (objname !== 'class')
-							completionItemCache[t].push(meds[_low] = completionItem);
-					} else {
-						meds[_low].documentation = undefined;
-						if (meds[_low].insertText !== completionItem.insertText) {
-							meds[_low].detail = '(...) ' + snip.prefix + '()';
-							meds[_low].insertText = snip.prefix + (snip.body.indexOf('()') !== -1 ? '()' : '($0)');
-						} else
-							meds[_low].detail = '(...) ' + snip.body;
-					}
 					if (completionItem.kind === CompletionItemKind.Property) {
+						if (!props[_low]) {
+							completionItem.documentation = snip.description;
+							if (objname !== 'class')
+								completionItemCache[t].push(props[_low] = completionItem);
+						} else {
+							props[_low].documentation = undefined;
+							props[_low].detail = '(...) ' + snip.body;
+						}
 						let it: Variable;
 						ahkclasses[_].push(it = DocumentSymbol.create(snip.prefix, snip.description,
 							SymbolKind.Property, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
 						it.full = completionItem.detail = `(${_}) ` + it.name;
 						completionItem.documentation = snip.description;
 					} else {
+						if (!meds[_low]) {
+							completionItem.documentation = snip.description;
+							if (objname !== 'class')
+								completionItemCache[t].push(meds[_low] = completionItem);
+						} else {
+							meds[_low].documentation = undefined;
+							if (meds[_low].insertText !== completionItem.insertText) {
+								meds[_low].detail = '(...) ' + snip.prefix + '()';
+								meds[_low].insertText = snip.prefix + (snip.body.indexOf('()') !== -1 ? '()' : '($0)');
+							} else
+								meds[_low].detail = '(...) ' + snip.body;
+						}
 						let it = FuncNode.create(_low === 'new' ? '__New' : snip.prefix, SymbolKind.Method, rg, rg,
 							snip.body.replace(/^\w+[(\s]|\)/g, '').split(',').filter(param => param != '').map(param => {
 								return DocumentSymbol.create(param.trim(), undefined, SymbolKind.Variable, rg, rg);
@@ -426,8 +434,15 @@ async function initpathenv(config?: any) {
 			libdirs.push(path);
 		if (existsSync(path = pathenv.ahkpath.replace(/[^\\/]+$/, 'lib')))
 			libdirs.push(path);
-		if (!hasahk2_hcache && pathenv.h)
-			hasahk2_hcache = true, loadahk2('ahk2_h');
+		if (pathenv.h === '1') {
+			isahk2_h = true;
+			if (!hasahk2_hcache)
+				hasahk2_hcache = true, loadahk2('ahk2_h');
+		} else {
+			isahk2_h = false;
+			if (hasahk2_hcache)
+				hasahk2_hcache = false, initahk2cache(), loadahk2();
+		}
 		for (const uri in lexers) {
 			let doc = lexers[uri];
 			doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include);

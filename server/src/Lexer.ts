@@ -19,7 +19,7 @@ import { SemanticTokensBuilder } from 'vscode-languageserver/lib/sematicTokens.p
 import { URI } from 'vscode-uri';
 import { builtin_variable } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { ahkclasses, lexers, libdirs, openFile, pathenv } from './server';
+import { ahkclasses, isahk2_h, lexers, libdirs, openFile, pathenv } from './server';
 
 export interface AhkDoc {
 	statement: StateMent
@@ -135,6 +135,7 @@ export namespace acorn {
 
 const colorregexp = new RegExp(/\b(c|background)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
+let searchcache: { [name: string]: any } = {};
 
 export class Lexer {
 	public beautify: Function;
@@ -475,6 +476,8 @@ export class Lexer {
 						if (input.charAt(parser_pos) === '%')
 							break;
 						let comm = '', vr: Variable | undefined, predot = (input.charAt(tk.offset - 1) === '.'), isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
+						if (isahk2_h && lk.topofline && lk.content.toLowerCase() === 'macro')
+							tk.topofline = true;
 						topcontinue = predot ? topcontinue : tk.topofline || false;
 						if (!predot && input.charAt(parser_pos) === '(') {
 							if (input.charAt(tk.offset - 1) === '.') continue;
@@ -485,7 +488,7 @@ export class Lexer {
 							if (nk.content === '=>') {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
 								let storemode = mode;
-								mode = mode | 1, tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(_this.document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par);
+								mode = mode | 1, tn = FuncNode.create(fc.content, storemode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(_this.document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par);
 								tn.detail = comm || tn.detail, result.push(tn);
 								let sub = parseline(), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
 								if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
@@ -636,8 +639,12 @@ export class Lexer {
 										if (tk.content === '(' || topcontinue) {
 											// if (tk.content === '(' || prestr.match(/^\s*(\w+\.)+$/)) {
 											if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
-											let fc = lk, sub = parseline();
-											result.push(...sub); //, _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+											let sub: DocumentSymbol[], fc = lk;
+											if (tk.content === '(') {
+												next = true, parsepair('(', ')');
+											} else sub = parseline(), result.push(...sub); //, _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+											if (input.charAt(fc.offset - 1) !== '%')
+												_parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
 											break;
 										}
 									}
@@ -650,7 +657,7 @@ export class Lexer {
 									let o = {}, equ = tk.content, ep = parseexp(false, o);
 									result.push(...ep);
 									if (vr) {
-										vr.typeexp = equ === ':=' ? Object.keys(o).pop() : '#number';
+										vr.typeexp = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() : equ === '.=' ? '#string' : '#number';
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 									}
 								} else if (tk.type === 'TK_OPERATOR') {
@@ -794,7 +801,29 @@ export class Lexer {
 				}
 			}
 
-			function parseline(): DocumentSymbol[] {
+			function parseline(types?: any): DocumentSymbol[] {
+				let res: DocumentSymbol[] = [], hascomma = false, b = parser_pos;
+				while (true) {
+					let o: any = {};
+					res.push(...parseexp(false, o));
+					lk = tk, tk = get_token_ingore_comment();
+					if (tk.type === 'TK_COMMA')
+						hascomma = true;
+					else {
+						next = false;
+						if (types) {
+							if (o = Object.keys(o).pop()?.toLowerCase())
+								types[o] = true;
+							if (hascomma)
+								_this.addDiagnostic('', b, lk.offset + lk.length - b);
+						}
+						break;
+					}
+				}
+				return res;
+			}
+
+			function parseline2(): DocumentSymbol[] {
 				// let result: DocumentSymbol[] = [];
 				let index = result.length;
 				while (nexttoken()) {
@@ -902,8 +931,8 @@ export class Lexer {
 					switch (tk.type) {
 						case 'TK_WORD':
 							lk = tk, tk = get_token_ingore_comment();
-							if (tk.content === ':=') {
-								let vr: Variable | undefined, o = {};
+							if (tk.type === 'TK_EQUALS') {
+								let vr: Variable | undefined, o = {}, equ = tk.content;
 								if (addvariable(lk, mode, sta)) {
 									vr = sta[sta.length - 1];
 									if (['TK_COMMENT', 'TK_BLOCK_COMMENT'].includes(nk.type))
@@ -911,7 +940,7 @@ export class Lexer {
 								}
 								result.push(...parseexp(false, o));
 								if (vr) {
-									vr.typeexp = Object.keys(o).pop();
+									vr.typeexp = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() : equ === '.=' ? '#string' : '#number';
 									vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 								}
 							} else {
@@ -1021,7 +1050,7 @@ export class Lexer {
 										let o: any = {}, equ = tk.content;
 										next = true;
 										result.push(...parseexp(inpair, o));
-										vr.typeexp = equ === ':=' ? Object.keys(o).pop() : '#number';
+										vr.typeexp = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() : equ === '.=' ? '#string' : '#number';
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 										tpexp += vr.typeexp;
 									} else
@@ -1128,10 +1157,10 @@ export class Lexer {
 
 			function parsequt(types = {}) {
 				let pairnum = 0, paramsdef = true, beg = parser_pos - 1;
+				let cache = [], rg, byref = false, bak = tk;
 				if (!tk.topofline && ((lk.type === 'TK_OPERATOR' && !lk.content.match(/(:=|\?|:)/)) || !in_array(lk.type, ['TK_START_EXPR', 'TK_WORD', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA'])
 					|| (lk.type === 'TK_WORD' && in_array(input.charAt(tk.offset - 1), whitespace))))
 					paramsdef = false;
-				let cache = [], rg, byref = false;
 				if (paramsdef)
 					while (nexttoken()) {
 						if (tk.content === ')') { if ((--pairnum) < 0) break; } //else if (tk.content === '(') pairnum++;
@@ -1154,40 +1183,39 @@ export class Lexer {
 										let nk = get_next_token();
 										if (nk.type === 'TK_NUMBER')
 											tk.content = tk.content + nk.content, tk.length = tk.content.length, tk.type = 'TK_NUMBER';
-										else { next = false, paramsdef = false, lk = tk, tk = nk; break; }
+										else { paramsdef = false, lk = tk, tk = nk; break; }
 									}
 									if (tk.type === 'TK_STRING' || tk.type === 'TK_NUMBER' || (tk.type === 'TK_WORD' && ['unset', 'true', 'false'].includes(tk.content.toLowerCase()))) {
 										if (lk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
 										tn = Variable.create(lk.content, SymbolKind.Variable, rg = makerange(lk.offset, lk.length), rg);
 										if (byref) byref = false, (<Variable>tn).byref = true;
 										(<Variable>tn).defaultVal = tk.content, cache.push(tn), lk = tk, tk = get_token_ingore_comment(cmm), comment = cmm.content;
-										if (tk.type === 'TK_COMMA') continue; else if (tk.content === ')' && ((--pairnum) < 0)) break; else { paramsdef = false, next = false; break; }
-									} else { paramsdef = false, next = false; break; }
+										if (tk.type === 'TK_COMMA') continue; else if (tk.content === ')' && ((--pairnum) < 0)) break; else { paramsdef = false; break; }
+									} else { paramsdef = false; break; }
 								} else if (tk.type === 'TK_OPERATOR') {
 									if (tk.content === '*') {
 										let nk = get_next_token();
-										if (nk.content !== ')') { next = false, paramsdef = false, lk = tk, tk = nk; break; }
+										if (nk.content !== ')') { paramsdef = false, lk = tk, tk = nk; break; }
 										else { lk = tk, tk = nk, next = false; }
-									} else { next = false, paramsdef = false; break; }
+									} else { paramsdef = false; break; }
 									continue;
 								} else if (tk.content === '(') {
-									next = false, paramsdef = false, parser_pos = lk.offset + lk.length, tk = lk; break;
-								} else { paramsdef = false, next = false; addvariable(lk, mode); break; }
-							} else { paramsdef = false, next = false; break; }
+									paramsdef = false, parser_pos = lk.offset + lk.length, tk = lk; break;
+								} else { paramsdef = false; addvariable(lk, mode); break; }
+							} else { paramsdef = false; break; }
 						} else if (tk.content === '*' && [',', '('].includes(lk.content)) {
 							lk = tk, tk = get_next_token();
 							if (tk.content === ')') {
 								if ((--pairnum) < 0) break;
 							} else {
-								paramsdef = false, next = false; break;
+								paramsdef = false; break;
 							}
 						} else {
-							paramsdef = false, next = false; break;
+							paramsdef = false; break;
 						}
 					}
 				if (!paramsdef) {
-					if (cache.length)
-						for (const it of cache) if (!builtin_variable.includes(it.name.toLowerCase())) result.push(it); cache.length = 0;
+					parser_pos = beg + 1, tk = bak, next = true;
 					parsepair('(', ')', beg, types);
 					return;
 				}
@@ -1391,8 +1419,11 @@ export class Lexer {
 					} else if (tk.type === 'TK_START_BLOCK') {
 						tpexp += ' #object';
 						parseobj(true);
-					} else if (tk.type === 'TK_STRING') { tpexp += ' #string'; if (b === '[' && is_next(']') && !tk.content.match(/\n|`n/)) addtext({ type: '', content: tk.content.substring(1, tk.content.length - 1), offset: 0, length: 0 }); }
-					else if (tk.content === '[') {
+					} else if (tk.type === 'TK_STRING') {
+						tpexp += ' #string';
+						if (b === '[' && is_next(']') && !tk.content.match(/\n|`n/))
+							addtext({ type: '', content: tk.content.substring(1, tk.content.length - 1), offset: 0, length: 0 });
+					} else if (tk.content === '[') {
 						let pre = !!input.charAt(tk.offset - 1).match(/^(\w|\)|%|[^\x00-\xff])$/);
 						parsepair('[', ']');
 						if (pre)
@@ -1431,7 +1462,7 @@ export class Lexer {
 					}
 				}
 				types['(' + tpexp + ')'] = true;
-				if (tk.type === 'TK_EOF')
+				if (tk.type === 'TK_EOF' && pairnum > -1)
 					_this.addDiagnostic(diagnostic.missing(e), pairpos[pairnum], 1);
 			}
 
@@ -1488,10 +1519,10 @@ export class Lexer {
 
 		function trimcomment(comment: string): string {
 			if (comment.charAt(0) === ';') return comment.replace(/^\s*;\s*/, '');
-			let c = comment.split('\n'), cc = '';
+			let c = comment.split(/\r?\n/), cc = '';
 			c.slice(1, c.length - 1).map(l => {
-				cc += '\n' + l.replace(/^\s*\*\s*/, '');
-			})
+				cc += '\n' + l.replace(/^\s*\*/, '').trim();
+			});
 			return cc.substring(1);
 		}
 
@@ -2143,7 +2174,12 @@ export class Lexer {
 							while (LF.trim().indexOf(')' + sep) !== 0) {
 								resulting_string += LF, pos = parser_pos + 1, parser_pos = input.indexOf('\n', pos);
 								if (parser_pos === -1) {
-									resulting_string += input.substring(pos, parser_pos = input_length);
+									LF = input.substring(pos, input_length);
+									let t = new RegExp('^\\s*\\)' + sep).exec(LF);
+									if (t)
+										parser_pos = pos + t[0].length, resulting_string += t[0];
+									else
+										resulting_string += input.substring(pos, parser_pos = input_length);
 									return createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
 								}
 								last_LF = parser_pos, LF = input.substring(pos, parser_pos + 1);
@@ -3440,20 +3476,24 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 	}
 }
 
-export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [type: string]: boolean }) {
+export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [type: string]: DocumentSymbol | boolean }) {
 	let nd = new Lexer(TextDocument.create('', 'ahk2', -10, '$ := ' + exp));
-	nd.parseScript();
+	searchcache = {}, nd.parseScript();
 	for (const it of nd.symboltree)
 		if (it.kind === SymbolKind.Variable && it.name === '$' && (<Variable>it).typeexp) {
 			detectExp(doc, (<Variable>it).typeexp || '', pos,
-				nd.document.getText(Range.create(it.selectionRange.end, it.range.end))).map(tp => types[tp] = true);
+				nd.document.getText(Range.create(it.selectionRange.end, it.range.end))).map(tp => types[tp] = searchcache[tp] || false);
 			return;
 		}
 }
 
-export function detectVariableType(doc: Lexer, name: string, pos: Position) {
+function detectVariableType(doc: Lexer, name: string, pos: Position) {
 	if (name.match(/^[@#]([\w.]|[^\x00-\xff])+$/))
 		return [name];
+	else if (name === 'a_args')
+		return ['#array'];
+	else if (name.substr(0, 2) === 'a_')
+		return ['#string'];
 	let scope = doc.searchScopedNode(pos), types: any = {}, ite: DocumentSymbol | undefined;
 	for (const it of (scope ? scope.children || [] : doc.symboltree))
 		if ((it.kind === SymbolKind.Variable) && name === it.name.toLowerCase()) {
@@ -3470,14 +3510,14 @@ export function detectVariableType(doc: Lexer, name: string, pos: Position) {
 	else return Object.keys(types);
 }
 
-export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: string): string[] {
+function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: string): string[] {
 	let functable: { [func: string]: any } = {};
-	return detectExp(exp, fullexp);
-	function detectExp(exp: string, fullexp?: string): string[] {
+	return detectExp(exp, 0, fullexp);
+	function detectExp(exp: string, deep: number = 0, fullexp?: string): string[] {
 		let t: string | RegExpMatchArray | null, tps: string[] = [];
 		exp = exp.replace(/#any(\(\)|\.(\w|[^\x00-\xff])+)+/g, '#any').replace(/\b((\w|[^\x00-\xff])+(\.(\w|[^\x00-\xff])+)*)\.new\(\)/g, '@$1').replace(/\b(true|false)\b/gi, '#number');
 		while ((t = exp.replace(/\(((\(\)|[^\(\)])+)\)/g, (...m) => {
-			let ts = detectExp(m[1]);
+			let ts = detectExp(m[1], deep + 1);
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#any');
 		})) !== exp)
 			exp = t;
@@ -3491,90 +3531,19 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			exp = t;
 		while ((t = exp.replace(/(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*(and|&&)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/g, ' #number ')) !== exp)
 			exp = t;
-		exp = exp.replace(/\b(?<!\.)((\w|[^\x00-\xff])+)\(\)/g, (...m) => {
-			let tp = '#null', l = m[1] as string;
-			if (functable[l] === undefined)
-				functable[l] = searchNode(doc, l, pos, SymbolKind.Function) || false;
-			if (functable[l]) {
-				let n = functable[l][0].node as FuncNode, ts: any = {};
-				for (const e in n.returntypes)
-					detectExp(e).map(tp => { ts[tp] = true });
-				n.returntypes = ts, ts = Object.keys(ts);
-				return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || tp);
-			} else if (l.match(/^(abs|asin|acos|atan|callbackcreate|caretgetpos|ceil|clipwait|comobjflags|comobjvalue|controladditem|controlchoosestring|controlfinditem|controlfocus|controlgetchecked|controlgetenabled|controlgetfocus|controlgethwnd|controlgetindex|controlgetstyle|controlgetexstyle|controlgetvisible|cos|datediff|drivegetcapacity|drivegetspacefree|editgetcurrentcol|editgetcurrentline|editgetlinecount|exp|filegetsize|float|floor|getkeyvk|getkeysc|hasbase|hasmethod|hasprop|il_create|il_add|il_destroy|imagesearch|instr|integer|isbyref|isfunc|islabel|isobject|isset|keywait|loadpicture|log|ln|max|min|mod|monitorget|monitorgetcount|monitorgetprimary|monitorgetworkarea|numget|numput|objaddref|objgetcapacity|objownpropcount|ord|pixelsearch|processclose|processexist|processsetpriority|processwait|processwaitclose|random|regexmatch|round|runwait|sendmessage|sin|soundgetmute|soundgetvolume|sqrt|statusbarwait|strcompare|strlen|strput|tan|varsetstrcapacity|winactive|winexist|wingetcount|wingetid|wingetidlast|wingetminmax|wingetpid|wingetstyle|wingetexstyle|wingettransparent|winwait|winwaitactive|winwaitclose)$/))
-				tp = '#number';
-			else if (l.match(/^(chr|controlgetchoice|controlgetclassnn|controlgettext|dateadd|direxist|dirselect|drivegetfilesystem|drivegetlabel|drivegetlist|drivegetserial|drivegetstatus|drivegetstatuscd|drivegettype|editgetline|editgetselectedtext|envget|fileexist|filegetattrib|filegetshortcut|filegettime|filegetversion|fileselect|format|formattime|getkeyname|getkeystate|iniread|inputbox|listviewgetcontent|monitorgetname|msgbox|pixelgetcolor|regexreplace|regread|sort|soundgetname|statusbargettext|strget|string|strlower|strreplace|strupper|substr|sysget|sysgetipaddresses|[lr]?trim|type|wingetclass|wingetprocessname|wingetprocesspath|wingettext|wingettitle|wingettranscolor)$/))
-				tp = '#string';
-			else if (l.match(/^(array|controlgetitems|strsplit|wingetcontrols|wingetcontrolshwnd|wingetlist)$/))
-				tp = '#array';
-			else if (l === 'clipboardall' || l === 'bufferalloc')
-				tp = '#buffer';
-			else if (l.match(/^(comobjactive|comobjarray|comobjcreate|comobject|comobjget|comobjquery|soundgetinterface)$/))
-				tp = '#comobject';
-			else if (l.match(/^(comcall|comobjtype|dllcall)$/))
-				tp = '[#number,#string]';
-			else if (l === 'exception')
-				tp = '#exception';
-			else if (l === 'fileopen')
-				tp = '#file';
-			else if (l === 'fileread')
-				tp = '[#string,#buffer]';
-			else if (l.match(/^(func|getmethod|objbindmethod)$/))
-				tp = '#func';
-			else if (l === 'guifromhwnd')
-				tp = '#gui';
-			else if (l === 'guictrlfromhwnd')
-				tp = '[#guicontrol,#listview,#treeview,#statusbar,#listbox,#ddl,#combobox,#tab]';
-			else if (l === 'map')
-				tp = '#map';
-			else if (l === 'menufromhandle')
-				tp = '#menu';
-			else if (l === 'inputhook')
-				tp = '#inputhook';
-			else if (l === 'object' || l === 'objgetbase')
-				tp = '#object';
-			return tp;
-		});
-		while (exp !== (t = exp.replace(/^\s*([@#]?)(((\w|[^\x00-\xff])+\.)+)(\w|[^\x00-\xff])\(\)/, (...m) => {
-			let c: RegExpMatchArray | null, isstatic = !m[1];
-			if (m[1]) {
-				if (m[2] === 'gui.') {
-					if (c = m[5].match(/\.add(\w*)\(\)/)) {
-						let ctl = '';
-						if (c[1]) {
-							ctl = c[1];
-						} else if (fullexp) {
-							let t = fullexp.match(/\.add\(\s*('|")(\w+)\1/i);
-							if (t)
-								ctl = t[2].toLowerCase();
-						}
-						if (ctl.match(/^(listview|treeview|statusbar|listbox|ddl|dropdownlist|combobox|tab[23]?)$/))
-							tps = ['#guicontrol', '#' + ctl];
-						else
-							tps = ctl ? ['#guicontrol'] : ['#guicontrol', '#listview', '#treeview', '#statusbar', '#listbox', '#ddl', '#combobox', '#tab'];
-					} else
-						tps = ['#any'];
-					return tps.length > 1 ? `[${tps.join(',')}]` : (tps.pop() || '#any');
-				} else if (m[2] === 'func.') {
-					if (m[5] === 'bind')
-						return '#func';
-				}
-				if (m[1] === '#')
-					return '#any';
+		while ((t = exp.replace(/(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*(or|\|\|)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/g, (...m) => {
+			let ts: any = {}, mt: RegExpMatchArray | null;
+			for (let i = 1; i < 4; i += 2) {
+				if (mt = m[i].match(/^\[([^\[\]]+)\]$/)) {
+					mt[1].split(',').map(tp => ts[tp] = true);
+				} else
+					ts[m[i]] = true;
 			}
-			let ns = searchNode(doc, m[2] + m[3], pos, SymbolKind.Method, isstatic), ts: any = {};
-			if (ns)
-				ns.map(n => {
-					for (const tp in (<FuncNode>n.node).returntypes)
-						detectExp(tp).map(tp => { ts[tp] = true });
-				});
-			else if (m[5] === 'clone')
-				return m[1] + m[2].replace(/\.$/, '');
 			ts = Object.keys(ts);
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#null');
-		})))
+		})) !== exp)
 			exp = t;
-		while ((t = exp.replace(/(([@#\w.]|[^\x00-\xff])+|\[[^\[\]]+\])\s*\?\s*(([@#\w.]|[^\x00-\xff])+|\[[^\[\]]+\])\s*:\s*(([@#\w.]|[^\x00-\xff])+|\[[^\[\]]+\])/, (...m) => {
+		while ((t = exp.replace(/(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*\?\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*:\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/, (...m) => {
 			let ts: any = {}, mt: RegExpMatchArray | null;
 			for (let i = 3; i < 6; i += 2) {
 				if (mt = m[i].match(/^\[([^\[\]]+)\]$/)) {
@@ -3586,32 +3555,130 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#null');
 		})) !== exp)
 			exp = t;
-		exp = exp.trim();
-		if (t = exp.match(/^([@#]?)(\w|[^\x00-\xff])+(\.(\w|[^\x00-\xff])+)*$/)) {
-			let ts: any = {};
-			if (t[1])
-				return [exp];
-			else if (!t[3])
-				return detectVariableType(doc, exp, pos);
-			searchNode(doc, exp.trim(), pos, [SymbolKind.Class, SymbolKind.Variable])?.map(n => {
-				switch (n.node.kind) {
-					case SymbolKind.Variable:
-					case SymbolKind.Property:
-						if ((<Variable>n.node).typeexp)
-							detectExp((<Variable>n.node).typeexp || '').map(tp => ts[tp] = true);
-						break;
-					case SymbolKind.Class:
-						break;
-				}
+		if (deep === 0) {
+			exp = exp.replace(/\b(?<!\.)((\w|[^\x00-\xff])+)\(\)/g, (...m) => {
+				let tp = '#null', l = m[1] as string;
+				if (functable[l] === undefined)
+					functable[l] = searchNode(doc, l, pos, SymbolKind.Function) || false;
+				if (functable[l]) {
+					let n = functable[l][0].node as FuncNode, ts: any = {};
+					for (const e in n.returntypes)
+						detectExp(e, deep + 1).map(tp => { ts[tp] = true });
+					n.returntypes = ts, ts = Object.keys(ts);
+					return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || tp);
+				} else if (l.match(/^(abs|asin|acos|atan|callbackcreate|caretgetpos|ceil|clipwait|comobjflags|comobjvalue|controladditem|controlchoosestring|controlfinditem|controlfocus|controlgetchecked|controlgetenabled|controlgetfocus|controlgethwnd|controlgetindex|controlgetstyle|controlgetexstyle|controlgetvisible|cos|datediff|drivegetcapacity|drivegetspacefree|editgetcurrentcol|editgetcurrentline|editgetlinecount|exp|filegetsize|float|floor|getkeyvk|getkeysc|hasbase|hasmethod|hasprop|il_create|il_add|il_destroy|imagesearch|instr|integer|isbyref|isfunc|islabel|isobject|isset|keywait|loadpicture|log|ln|max|min|mod|monitorget|monitorgetcount|monitorgetprimary|monitorgetworkarea|numget|numput|objaddref|objgetcapacity|objownpropcount|ord|pixelsearch|processclose|processexist|processsetpriority|processwait|processwaitclose|random|regexmatch|round|runwait|sendmessage|sin|soundgetmute|soundgetvolume|sqrt|statusbarwait|strcompare|strlen|strput|tan|varsetstrcapacity|winactive|winexist|wingetcount|wingetid|wingetidlast|wingetminmax|wingetpid|wingetstyle|wingetexstyle|wingettransparent|winwait|winwaitactive|winwaitclose)$/))
+					tp = '#number';
+				else if (l.match(/^(chr|controlgetchoice|controlgetclassnn|controlgettext|dateadd|direxist|dirselect|drivegetfilesystem|drivegetlabel|drivegetlist|drivegetserial|drivegetstatus|drivegetstatuscd|drivegettype|editgetline|editgetselectedtext|envget|fileexist|filegetattrib|filegetshortcut|filegettime|filegetversion|fileselect|format|formattime|getkeyname|getkeystate|iniread|inputbox|listviewgetcontent|monitorgetname|msgbox|pixelgetcolor|regexreplace|regread|sort|soundgetname|statusbargettext|strget|string|strlower|strreplace|strupper|substr|sysget|sysgetipaddresses|[lr]?trim|type|wingetclass|wingetprocessname|wingetprocesspath|wingettext|wingettitle|wingettranscolor)$/))
+					tp = '#string';
+				else if (l.match(/^(array|controlgetitems|strsplit|wingetcontrols|wingetcontrolshwnd|wingetlist)$/))
+					tp = '#array';
+				else if (l === 'clipboardall' || l === 'bufferalloc')
+					tp = '#buffer';
+				else if (l.match(/^(comobjactive|comobjarray|comobjcreate|comobject|comobjget|comobjquery|soundgetinterface)$/))
+					tp = '#comobject';
+				else if (l.match(/^(comcall|comobjtype|dllcall)$/))
+					tp = '[#number,#string]';
+				else if (l === 'exception')
+					tp = '#exception';
+				else if (l === 'fileopen')
+					tp = '#file';
+				else if (l === 'fileread')
+					tp = '[#string,#buffer]';
+				else if (l.match(/^(func|getmethod|objbindmethod)$/))
+					tp = '#func';
+				else if (l === 'guifromhwnd')
+					tp = '#gui';
+				else if (l === 'guictrlfromhwnd')
+					tp = '[#guicontrol,#listview,#treeview,#statusbar,#listbox,#ddl,#combobox,#tab]';
+				else if (l === 'map')
+					tp = '#map';
+				else if (l === 'menufromhandle')
+					tp = '#menu';
+				else if (l === 'inputhook')
+					tp = '#inputhook';
+				else if (l === 'object' || l === 'objgetbase')
+					tp = '#object';
+				return tp;
 			});
-			ts = Object.keys(ts);
-			return ts.length ? ts : ['#any'];
-		} else if (t = exp.match(/^\[([^\[\]]+)\]$/)) {
+			while (exp !== (t = exp.replace(/([@#]?)(((\w|[^\x00-\xff])+\.)+)((\w|[^\x00-\xff])+)\(\)/, (...m) => {
+				let isstatic = !m[1], ns = searchNode(doc, m[2] + m[5], pos, SymbolKind.Method, isstatic), ts: any = {}, c: RegExpMatchArray | null | undefined;
+				if (ns) {
+					ns.map(n => {
+						if ((<FuncNode>n.node).returntypes) {
+							for (const tp in (<FuncNode>n.node).returntypes)
+								detectExp(tp, deep + 1).map(tp => { ts[tp] = true });
+						} else if (c = (<FuncNode>n.node).full?.toLowerCase().match(/\(([^()]+)\)\s*([^()]+)/)) {
+							switch (c[1]) {
+								case 'gui':
+									if (c = c[2].match(/^add((listview|treeview|statusbar|listbox|ddl|dropdownlist|combobox|tab[23]?)|\w+)?$/)) {
+										if (!c[1]) {
+											if (c = fullexp?.toLowerCase().match(/\.add\(\s*(('|")((listview|treeview|statusbar|listbox|ddl|dropdownlist|combobox|tab[23]?)|\w+)\2)?/)) {
+												if (c[4])
+													ts['#' + c[4]] = true;
+												else if (!c[1])
+													ts['#listview'] = ts['#treeview'] = ts['#statusbar'] = ts['#listbox'] = ts['#ddl'] = ts['#combobox'] = ts['#tab'] = true;
+												ts['#guicontrol'] = true;
+											}
+										} else if (c[2]) {
+											ts['#guicontrol'] = ts['#' + c[2]] = true;
+										} else
+											ts['#guicontrol'] = true;
+									}
+									break;
+								case 'func':
+									if (c[2] === 'bind')
+										ts['#func'] = true;
+									break;
+								default:
+									if (c[2] === 'clone')
+										return m[1] + c[1];
+									return '#any';
+							}
+						}
+					});
+				} else if (m[5] === 'clone')
+					return m[1] + m[2].replace(/\.$/, '');
+				else
+					return '#any';
+				ts = Object.keys(ts);
+				return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#null');
+			})))
+				exp = t;
+		}
+		let tpexp = exp.trim(), exps: string[] = [], ts: any = {};
+		if (t = tpexp.match(/^\[([^\[\]]+)\]$/)) {
 			let ts: any = {};
 			t[1].split(',').map(tp => ts[tp] = true), tps.map(tp => ts[tp] = true);
-			return Object.keys(ts);
+			exps = Object.keys(ts);
+		} else
+			exps = [tpexp];
+		if (deep)
+			return exps;
+		for (let exp of exps) {
+			if (t = exp.match(/^([@#]?)(\w|[^\x00-\xff])+(\.(\w|[^\x00-\xff])+)*$/)) {
+				if ((t[1] && !t[3]) || searchcache[exp])
+					ts[exp] = true;
+				else for (const n of searchNode(doc, exp, pos, [SymbolKind.Class, SymbolKind.Variable]) || []) {
+					switch (n.node.kind) {
+						case SymbolKind.Variable:
+							detectVariableType(doc, exp, pos).map(tp => ts[tp] = true);
+							break;
+						case SymbolKind.Property:
+							if ((<Variable>n.node).typeexp)
+								detectExp((<Variable>n.node).typeexp || '').map(tp => ts[tp] = true);
+							break;
+						case SymbolKind.Object:
+							ts['#object'] = true, searchcache[exp] = n;
+							break;
+						case SymbolKind.Class:
+							ts[exp] = true, searchcache[exp] = n;
+							break;
+					}
+				}
+			}
 		}
-		return ['#any'];
+		ts = Object.keys(ts);
+		return ts.length ? ts : ['#any'];
 	}
 }
 
@@ -3621,7 +3688,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 		let p = name.split('.'), nodes = searchNode(doc, p[0], pos, [SymbolKind.Class, SymbolKind.Variable]), i = 0, ps = 0;
 		if (!nodes)
 			return undefined;
-		if (name.match(/^[@#]/) || nodes[0].ref)
+		if (isstatic && (name.match(/^[@#]/) || nodes[0].ref))
 			isstatic = false;
 		let { node: n, uri: u } = nodes[0];
 		if (n.kind === SymbolKind.Variable) {
@@ -3629,7 +3696,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 			if (tps.length === 0) {
 
 			} else for (const tp of tps) {
-				let i = searchNode(lexers[uri], name.replace(new RegExp('^' + p[0]), tp.replace(/^@/, '')), pos, kind, false);
+				let i = searchNode(lexers[uri], name.replace(new RegExp('^' + p[0]), tp), pos, kind, !tp.match(/^[@#]/));
 				if (i)
 					(<any>i).type = tp, rs.push(...i);
 			}
@@ -3675,7 +3742,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 		if (node)
 			return [{ node, uri }];
 		else return undefined;
-	} else if (!(res = doc.searchNode(name, pos, kind))) {
+	} else if (!(res = doc.searchNode(name = name.replace(/^@/, ''), pos, kind))) {
 		if (res = searchIncludeNode(doc.uri, name, kind))
 			return [res];
 	} else if (typeof kind === 'object' && (<Variable>res.node).globalspace) {
@@ -3722,8 +3789,9 @@ export function getFuncCallInfo(doc: Lexer, position: Position) {
 		funccall = doc.funccall;
 	for (const item of funccall) {
 		const start = doc.document.offsetAt(item.range.start), end = doc.document.offsetAt(item.range.end);
-		if (start <= offset) {
-			if (offset > end) {
+		const left = start + item.name.length;
+		if (left < offset) {
+			if (offset >= end) {
 				const line = item.range.start.line, character = item.range.start.character + item.name.length;
 				let char = doc.document.getText(Range.create(line, character, line, character + 1));
 				if (char === '(' || line !== position.line)
@@ -3784,5 +3852,22 @@ export function getincludetable(fileuri: string) {
 					traverseinclude(doc.include, uri);
 			}
 		}
+	}
+}
+
+export function formatMarkdowndetail(detail: string, name?: string): string {
+	let params: { [name: string]: string[] } = {}, details: string[] = [], lastparam = '', m: RegExpMatchArray | null;
+	if (name === undefined) {
+		return detail.replace(/^@((param|参数)\s+\S+|\S+):?/gm, '\n@$1 — ');
+	} else {
+		detail.split('\n').map(line => {
+			if (m = line.match(/^@(param|参数)\s+(\S+):?\s+?(.*)$/i))
+				params[lastparam = m[2].toLowerCase()] = [m[3]];
+			else if (lastparam && line.charAt(0) !== '@')
+				params[lastparam].push(line);
+			else
+				lastparam = '', details.push(line.replace(/^(@\S+):?/, '\n$1 — '));
+		});
+		return (params[name = name.toLowerCase()] ? params[name].join('\n') + '\n\n' : '') + details.join('\n');
 	}
 }

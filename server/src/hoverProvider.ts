@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
 import { searchLibFunction } from './definitionProvider';
-import { ClassNode, detectExpType, FuncNode, searchNode } from './Lexer';
+import { ClassNode, detectExpType, formatMarkdowndetail, FuncNode, searchNode } from './Lexer';
 import { lexers, hoverCache, Maybe } from './server';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
@@ -30,7 +30,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			}), params.position, ts);
 			if (word && !ts['#any'])
 				for (const tp in ts)
-					searchNode(doc, tp + word, context.range.end, kind, false)?.map(it => {
+					searchNode(doc, tp + word, context.range.end, kind)?.map(it => {
 						nodes?.push(it);
 					});
 			if (!nodes?.length)
@@ -51,20 +51,25 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		if (nodes) {
 			if (nodes.length > 1) {
 				nodes.map(it => {
-					hover.push({ language: 'ahk2', value: (<any>(it.node)).full })
+					hover.push({ kind: 'ahk2', value: (<any>(it.node)).full })
 				})
 				if (hover.length)
 					return { contents: hover }; else return undefined;
 			}
 			node = nodes[0].node, uri = nodes[0].uri;
 			if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method)
-				hover.push({ language: 'ahk2', value: (<FuncNode>node).full });
+				hover.push({ kind: 'ahk2', value: (<FuncNode>node).full });
 			else if (node.kind === SymbolKind.Class)
-				hover.push({ language: 'ahk2', value: 'class ' + ((<ClassNode>node).full || node.name) });
+				hover.push({ kind: 'ahk2', value: 'class ' + ((<ClassNode>node).full || node.name) });
 			if (node.detail)
-				hover.push(node.detail.replace(/(\r?\n)+/g, '$1$1'));
+				hover.push({ kind: 'markdown' , value: formatMarkdowndetail(node.detail) });
 			if (hover.length)
-				return { contents: hover };
+				return { contents: { kind: 'markdown', value: hover.map(it => {
+					if (it.kind === 'ahk2') {
+						return '```ahk2\n' + it.value + '\n```';
+					} else
+						return it.value;
+				}).join('\n\n') } };
 		}
 	}
 	return undefined;

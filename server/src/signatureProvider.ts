@@ -1,13 +1,13 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
 import { searchLibFunction } from './definitionProvider';
-import { detectExpType, FuncNode, getFuncCallInfo, searchNode } from './Lexer';
+import { detectExpType, formatMarkdowndetail, FuncNode, getFuncCallInfo, searchNode } from './Lexer';
 import { ahkclasses, ahkfunctions, lexers, Maybe } from './server';
 
 export async function signatureProvider(params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (cancellation.isCancellationRequested) return undefined;
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], kind: SymbolKind = SymbolKind.Function, nodes: any;
 	let res: any, name: string, pos: Position, index: number, signinfo: SignatureHelp = { activeSignature: 0, signatures: [], activeParameter: 0 }
-	if (!(res = getFuncCallInfo(doc, params.position)))
+	if (!(res = getFuncCallInfo(doc, params.position)) || res.index < 0)
 		return undefined;
 	name = res.name, pos = res.pos, index = res.index;
 	if (pos.character > 0)
@@ -23,7 +23,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 			nodes = [], detectExpType(doc, t, params.position, ts);
 			if (!ts['#any'])
 				for (const tp in ts)
-					searchNode(doc, tp + '.' + name, params.position, SymbolKind.Method, false)?.map(it => {
+					searchNode(doc, tp + '.' + name, params.position, SymbolKind.Method)?.map(it => {
 						nodes.push(it);
 					});
 			if (!nodes.length)
@@ -55,17 +55,20 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		} else return undefined;
 	}
 	nodes?.map((it: any) => {
-		const node = it.node;
+		const node = it.node as FuncNode;
 		signinfo.signatures.push({
-			label: (<FuncNode>node).full,
-			parameters: (<FuncNode>node).params.map(param => {
+			label: node.full,
+			parameters: node.params.map(param => {
 				return {
 					label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...')
 				}
 			}),
-			documentation: node.detail
+			documentation: node.detail ? {
+				kind: 'markdown',
+				value: formatMarkdowndetail(node.detail, index < node.params.length ? node.params[index].name : undefined)
+			} : undefined
 		});
 	});
-	signinfo.activeParameter = index < 0 ? 9999 : index;
+	signinfo.activeParameter = index;
 	return signinfo;
 }

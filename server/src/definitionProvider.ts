@@ -40,7 +40,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 				}), params.position, ts);
 				if (word && !ts['#any'])
 					for (const tp in ts)
-						searchNode(doc, tp + word, context.range.end, kind, false)?.map(it => {
+						searchNode(doc, tp + word, context.range.end, kind)?.map(it => {
 							nodes?.push(it);
 						});
 				if (!nodes?.length) {

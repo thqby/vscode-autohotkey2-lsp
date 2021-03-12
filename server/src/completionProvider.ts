@@ -2,7 +2,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { detectExp, detectExpType, detectVariableType, FuncNode, FuncScope, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
+import { detectExpType, FuncNode, FuncScope, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
 import { completionitem } from './localize';
 import { ahkclasses, ahkfunctions, completionItemCache, inlibdirs, lexers, libdirs, libfuncs, Maybe, pathenv, workfolder } from './server';
 
@@ -22,7 +22,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			else quote = '', percent = false;
 		} else if (char === '%') {
 			percent = !percent;
-		} else if (quote === '' && (char === '"' || char === "'"))
+		} else if (quote === '' && (char === '"' || char === "'") && (i === 0 || linetext.charAt(i - 1).match(/[([%,\s]/)))
 			quote = char;
 	}
 	if (quote || (prechar !== '.' && prechar !== '#'))
@@ -39,55 +39,18 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			content.text = c.text, content.kind = c.kind, content.linetext = c.linetext;;
 			let p: any = content.pre.replace(/('|").*?(?<!`)\1/, `''`), t: any, unknown = true;
 			let props: any = {}, meds: any = {}, l = '', isstatic = true, tps: any = [], isclass = false, isobj = false, hasparams = false;
-			while (t = p.match(/\([^\(\)]+\)/))
-				p = p.replace(t[0], '()');
-			p = p.replace(/(\.new\(\))?\.?$/i, (...m: string[]) => {
-				if (m[1])
-					isstatic = false;
-				return '';
-			});
-			if (p.indexOf('(') !== -1) {
-				if (isstatic) {
-					let ts: any = {};
-					p = content.pre.toLowerCase();
-					detectExpType(doc, p, position, ts);
-					if (!ts['#any'])
-						for (const tp in ts) {
-							unknown = false;
-							searchNode(doc, tp.replace(/^@/, ''), position, [SymbolKind.Class, SymbolKind.Variable])?.map(it => {
-								tps.push(it.node);
-								isstatic = false;
-							});
-						}
+			let ts: any = {};
+			p = content.pre.toLowerCase();
+			detectExpType(doc, p, position, ts);
+			if (!ts['#any'])
+				for (const tp in ts) {
+					unknown = false, isstatic = !tp.match(/^[@#]/);
+					if (ts[tp])
+						tps.push(ts[tp].node);
+					else searchNode(doc, tp, position, [SymbolKind.Class, SymbolKind.Variable])?.map(it => {
+						tps.push(it.node);
+					});
 				}
-			} else {
-				if (p = searchNode(doc, p.toLowerCase(), position, [SymbolKind.Class, SymbolKind.Variable])) {
-					let node = p[0].node;
-					if (node.kind === SymbolKind.Property) {
-						if (node.typeexp && node.full?.charAt(0) === '(') {
-							let ts: any = {};
-							detectExp(doc, node.typeexp.toLowerCase(), node.range.start,
-								lexers[p[0].uri].document.getText(Range.create(node.selectionRange.end, node.range.end))).map(tp => ts[tp] = true);
-							if (!ts['#any'])
-								for (const tp in ts) {
-									unknown = false;
-									searchNode(doc, tp.replace(/^@/, ''), position, [SymbolKind.Class, SymbolKind.Variable])?.map(it => {
-										tps.push(it.node);
-										isstatic = false;
-									});
-								}
-						}
-					} else if (node.kind !== SymbolKind.Class && node.kind !== SymbolKind.Object) {
-						isstatic = false;
-						for (const tp of detectVariableType(lexers[uri], node.name.toLowerCase(), position)) {
-							if (tp.match(/^[#@]/))
-								unknown = false;
-							searchNode(doc, tp.replace(/^@/, ''), position, [SymbolKind.Class, SymbolKind.Variable])?.map(it => { unknown = false, tps.push(it.node) });
-						}
-					} else
-						tps.push(node), unknown = false, isstatic = isstatic && !(p[0].ref);
-				}
-			}
 			for (const node of tps) {
 				switch (node.kind) {
 					case SymbolKind.Class:
