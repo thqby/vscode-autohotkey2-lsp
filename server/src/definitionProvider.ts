@@ -38,10 +38,11 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 					word = m.match(/^\.[^.]+$/) ? m : '';
 					return '';
 				}), params.position, ts);
-				if (word && !ts['#any'])
+				if (word && ts['#any'] === undefined)
 					for (const tp in ts)
 						searchNode(doc, tp + word, context.range.end, kind)?.map(it => {
-							nodes?.push(it);
+							if (!nodes?.map(i => i.node).includes(it.node))
+								nodes?.push(it);
 						});
 				if (!nodes?.length) {
 					if (kind === SymbolKind.Method) {

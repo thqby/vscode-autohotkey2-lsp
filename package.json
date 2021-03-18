@@ -123,6 +123,11 @@
 				"command": "ahk2.help",
 				"title": "%ahk2.help%",
 				"category": "ahk2"
+			},
+			{
+				"command": "ahk2.generate.comment",
+				"title": "%ahk2.generatecomment%",
+				"category": "ahk2"
 			}
 		],
 		"menus": {
@@ -156,6 +161,11 @@
 					"when": "editorLangId == ahk2 && ahk2:isRunning",
 					"command": "ahk2.stop",
 					"group": "navigation@0"
+				},
+				{
+					"when": "editorLangId == ahk2",
+					"command": "ahk2.generate.comment",
+					"group": "navigation@2"
 				}
 			]
 		},

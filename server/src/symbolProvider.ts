@@ -1,13 +1,13 @@
 import { DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, FuncNode, FuncScope } from './Lexer';
-import { lexers, symbolcache } from './server';
+import { ahkclasses, lexers, symbolcache } from './server';
 
 export async function symbolProvider(params: DocumentSymbolParams): Promise<SymbolInformation[]> {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
 	if (!doc || (!doc.reflat && symbolcache.uri === uri)) return symbolcache.sym;
 	let tree = <DocumentSymbol[]>doc.symboltree, superglobal: { [key: string]: DocumentSymbol } = {}, gvar: any = {}, glo = doc.global;
-	for (const key of ['any', 'array', 'boundfunc', 'buffer', 'class', 'clipboardall', 'closure', 'enumerator', 'error', 'file', 'float', 'func', 'gui', 'indexerror', 'inputhook', 'integer', 'keyerror', 'map', 'membererror', 'memoryerror', 'menu', 'menubar', 'methoderror', 'number', 'object', 'oserror', 'primitive', 'propertyerror', 'regexmatch', 'string', 'targeterror', 'timeouterror', 'typeerror', 'valueerror', 'zerodivisionerror'])
-		gvar[key] = superglobal[key] = DocumentSymbol.create(key, undefined, SymbolKind.Class, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0));
+	for (const key in ahkclasses)
+		gvar[key] = superglobal[key] = ahkclasses[key];
 	for (const key in glo) {
 		superglobal[key] = glo[key];
 		if (glo[key].kind === SymbolKind.Class)

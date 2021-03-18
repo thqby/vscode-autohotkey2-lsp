@@ -3,6 +3,7 @@
 	"ahk2.debug": "Debug Script",
 	"ahk2.description": "Autohotkey2 Language Support using vscode-lsp",
 	"ahk2.exepath": "The path of the AutoHotkey.exe executable file.",
+	"ahk2.generatecomment": "Generate Comment Template",
 	"ahk2.help": "Quick Help",
 	"ahk2.run": "Run Script",
 	"ahk2.selection.run": "Run Selected Script",

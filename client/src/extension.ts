@@ -10,11 +10,15 @@ import {
 	ExtensionContext,
 	workspace,
 	window,
-	Range
+	Range,
+	SnippetString,
+	Position,
+	WorkspaceEdit
 } from 'vscode';
 import {
 	LanguageClient,
 	LanguageClientOptions,
+	ResponseError,
 	ServerOptions,
 	TransportKind
 } from 'vscode-languageclient';
@@ -67,14 +71,31 @@ export function activate(context: ExtensionContext) {
 	);
 
 	// Start the client. This will also launch the server
+	client.onReady().then(ready => {
+		client.onRequest('ahk2.executeCommands', async (cmds: { command: string, args?: string[], wait?: boolean }[]) => {
+			let result: any[] = [];
+			for (const cmd of cmds)
+				result.push(cmd.wait ? await commands.executeCommand(cmd.command, cmd.args) : commands.executeCommand(cmd.command, cmd.args));
+			return result;
+		});
+		client.onRequest('ahk2.getpos', () => {
+			const editor = window.activeTextEditor;
+			if (!editor) return;
+			const uri = editor.document.uri.toString(), pos = editor.selection.end;
+			return { uri, pos };
+		});
+		client.onRequest('ahk2.insertSnippet', async (value: string, range?: Range) => {
+			let editor = window.activeTextEditor;
+			if (!editor) return;
+			if (range) {
+				let { start, end } = range;
+				await editor.insertSnippet(new SnippetString(value), new Range(start.line, start.character, end.line, end.character));
+			} else
+				editor.insertSnippet(new SnippetString(value));
+		})
+	});
 	client.start();
-	context.subscriptions.push(
-		commands.registerCommand('ahk2.run', () => runCurrentScriptFile()),
-		commands.registerCommand('ahk2.selection.run', () => runCurrentScriptFile(true)),
-		commands.registerCommand('ahk2.stop', () => stopRunningScript()),
-		commands.registerCommand('ahk2.compile', () => compileScript()),
-		commands.registerCommand('ahk2.help', () => quickHelp())
-	);
+
 	let extlist: string[] = [], debugexts: { [type: string]: string } = {};
 	for (const ext of extensions.all) {
 		if (ext.id.match(/ahk|autohotkey/i) && ext.packageJSON?.contributes?.debuggers) {
@@ -84,49 +105,16 @@ export function activate(context: ExtensionContext) {
 		}
 	}
 	extlist = Object.values(debugexts);
-	context.subscriptions.push(commands.registerCommand('ahk2.debug', async () => {
-		const editor = window.activeTextEditor, executePath = workspace.getConfiguration('AutoHotkey2').get('Path');
-		if (!editor) return;
-		let extname: string | undefined;
-		if (extlist.length === 0) {
-			window.showErrorMessage(zhcn ? '未找到debug扩展, 请先安装debug扩展!' : 'The debug extension was not found, please install the debug extension first!');
-			extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'cweijan.vscode-autohotkey-plus']);
-			if (extname)
-				commands.executeCommand('workbench.extensions.installExtension', extname);
-			return;
-		} else if (extlist.length === 1)
-			extname = extlist[0];
-		else
-			extname = await window.showQuickPick(extlist);
-		if (extname) {
-			let config: any = {
-				type: '',
-				request: 'launch',
-				name: 'AutoHotkey Debug',
-				runtime: executePath,
-				AhkExecutable: executePath,
-				program: editor.document.uri.fsPath
-			};
-			for (const t in debugexts)
-				if (debugexts[t] === extname) {
-					config.type = t;
-					if (extname === 'zero-plusplus.vscode-autohotkey-debug') {
-						let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
-						if (input = input?.trim()) {
-							let args: string[] = [];
-							input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
-								args.push(m[4] || m[2]);
-								return '';
-							});
-							config.args = args;
-						}
-					}
-					break;
-				}
-			debug.startDebugging(workspace.getWorkspaceFolder(editor.document.uri), config);
-		}
-	}));
+
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
+	context.subscriptions.push(
+		commands.registerCommand('ahk2.run', () => runCurrentScriptFile()),
+		commands.registerCommand('ahk2.selection.run', () => runCurrentScriptFile(true)),
+		commands.registerCommand('ahk2.stop', () => stopRunningScript()),
+		commands.registerCommand('ahk2.compile', () => compileScript()),
+		commands.registerCommand('ahk2.help', () => quickHelp()),
+		commands.registerCommand('ahk2.debug', async () => begindebug(extlist, debugexts))
+	);
 }
 
 export function deactivate(): Thenable<void> | undefined {
@@ -253,6 +241,49 @@ async function quickHelp() {
 		let ahkpro = child_process.exec(`\"${executePath}\" /ErrorStdOut *`, { cwd: `${resolve(editor.document.fileName, '..')}` });
 		ahkpro.stdin?.write(`#NoTrayIcon\ntry if (WinGetMinMax("ahk_pid ${ahkhelp.pid}")=-1)\nWinRestore("ahk_pid ${ahkhelp.pid}"), Sleep(500)\nWinActivate("ahk_pid ${ahkhelp.pid}")\nif !WinWaitActive("ahk_pid ${ahkhelp.pid}", , 5)\nExitApp()\nSendInput("!s"), Sleep(100)\nSendInput("^{Backspace}"), Sleep(200)\nSendInput("{Text}${word}\`n")`);
 		ahkpro.stdin?.end();
+	}
+}
+
+async function begindebug(extlist: string[], debugexts: any) {
+	const editor = window.activeTextEditor, executePath = workspace.getConfiguration('AutoHotkey2').get('Path');
+	if (!editor) return;
+	let extname: string | undefined;
+	if (extlist.length === 0) {
+		window.showErrorMessage(zhcn ? '未找到debug扩展, 请先安装debug扩展!' : 'The debug extension was not found, please install the debug extension first!');
+		extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'cweijan.vscode-autohotkey-plus']);
+		if (extname)
+			commands.executeCommand('workbench.extensions.installExtension', extname);
+		return;
+	} else if (extlist.length === 1)
+		extname = extlist[0];
+	else
+		extname = await window.showQuickPick(extlist);
+	if (extname) {
+		let config: any = {
+			type: '',
+			request: 'launch',
+			name: 'AutoHotkey Debug',
+			runtime: executePath,
+			AhkExecutable: executePath,
+			program: editor.document.uri.fsPath
+		};
+		for (const t in debugexts)
+			if (debugexts[t] === extname) {
+				config.type = t;
+				if (extname === 'zero-plusplus.vscode-autohotkey-debug') {
+					let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
+					if (input = input?.trim()) {
+						let args: string[] = [];
+						input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
+							args.push(m[4] || m[2]);
+							return '';
+						});
+						config.args = args;
+					}
+				}
+				break;
+			}
+		debug.startDebugging(workspace.getWorkspaceFolder(editor.document.uri), config);
 	}
 }
 

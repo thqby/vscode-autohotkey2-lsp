@@ -21,10 +21,11 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 			let ts: any = {};
 			t = t.replace(/\.(\w|[^\x00-\xff])+$/, '');
 			nodes = [], detectExpType(doc, t, params.position, ts);
-			if (!ts['#any'])
+			if (ts['#any'] === undefined)
 				for (const tp in ts)
 					searchNode(doc, tp + '.' + name, params.position, SymbolKind.Method)?.map(it => {
-						nodes.push(it);
+						if (!nodes.map((i: any) => i.node).includes(it.node))
+							nodes.push(it);
 					});
 			if (!nodes.length)
 				nodes = undefined;
@@ -35,9 +36,10 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		if (kind === SymbolKind.Method) {
 			nodes = [];
 			for (const key in ahkclasses)
-				ahkclasses[key].map(node => {
-					if (!key.match(/^(tab\d|listbox|ddl|dropdownlist|combobox)$/i) && node.kind === SymbolKind.Method && node.name.toLowerCase() === name)
-						nodes?.push({ node, uri: '' })
+				ahkclasses[key].children?.map(node => {
+					if (node.kind === SymbolKind.Method && node.name.toLowerCase() === name &&
+						!nodes.map((it: any) => it.node).includes(node))
+						nodes.push({ node, uri: '' });
 				});
 			doc.object.method[name]?.map(node => {
 				nodes?.push({ node, uri: '' })

@@ -4,6 +4,8 @@ import { resolve } from 'path';
 let loadedCollection: { [key: string]: string };
 
 export namespace completionitem {
+	export const author = localize('completionitem.author', 'Add file infos about author, description, date, version.');
+	export const comment = localize('completionitem.generatecomment', 'Generate comment template of current function/method.');
 	export const include = localize('completionitem.include', 'Auto import from \'{0}\'');
 	export const prototype = localize("completionitem.prototype", "Retrieve or set the object on which all instances of the class are based.");
 	export const _new = localize("completionitem.new", "export construct a new instance of the class.");
@@ -19,6 +21,7 @@ export namespace diagnostic {
 	export const classdeferr = localize('diagnostic.classdeferr', 'This class declaration conflicts with an existing class');
 	export const classinfuncerr = localize('diagnostic.classinfuncerr', 'Functions cannot contain classes');
 	export const classuseerr = localize('diagnostic.classuseerr', 'This class cannot be used as an output variable');
+	export const defaultvalmissing = localize('diagnostic.defaultvalmissing', 'Parameter default required. Specifically: \'{0}\'');
 	export const filenotexist = localize('diagnostic.filenotexist', '\'{0}\' not exist');
 	export const funccallerr = localize('diagnostic.funccallerr', 'Function calls require a space or \'(\',  use comma only between parameters');
 	export const funcdeferr = localize('diagnostic.funcdeferr', 'Duplicate function definition');
@@ -34,6 +37,7 @@ export namespace diagnostic {
 	export const propdeclaraerr = localize('diagnostic.propdeclaraerr', 'Class property declaration cannot use global/local');
 	export const propnotinit = localize('diagnostic.propnotinit', 'Property declaration is not initialized');
 	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word must not be used as a variable name \'{0}\'');
+	export const returnmultival = localize('diagnostic.returnmultival', '\'Return\' accepts at most 1 parameter.');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');
 	export const unknowninclude = localize('diagnostic.unknowninclude', '\'{0}\' invalid include file format');
 	export const unknownoperatoruse = localize('diagnostic.unknownoperatoruse', 'Unknown operator use');

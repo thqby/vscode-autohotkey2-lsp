@@ -18,7 +18,6 @@ export async function codeActionProvider(params: CodeActionParams): Promise<Mayb
 			let textEdit: TextEdit = { range: it.range, newText: includes.join('\n') };
 			let act: any = { title: codeaction.include(path + '*' + t[2]), edit: { changes: {} }, kind: CodeActionKind.QuickFix };
 			act.edit.changes[params.textDocument.uri] = [textEdit];
-			console.log(params.context.only?.join(','))
 			return [act];
 		}
 	}

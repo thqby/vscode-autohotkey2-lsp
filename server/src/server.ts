@@ -20,8 +20,8 @@ import { defintionProvider } from './definitionProvider';
 import { executeCommandProvider } from './executeCommandProvider';
 import { documentFormatting, rangeFormatting } from './formattingProvider';
 import { hoverProvider } from './hoverProvider';
-import { FuncNode, getincludetable, Lexer, parseinclude, Variable } from './Lexer';
-import { setting } from './localize';
+import { ClassNode, FuncNode, getincludetable, Lexer, parseinclude, Variable } from './Lexer';
+import { completionitem, setting } from './localize';
 import { referenceProvider } from './referencesProvider';
 import { prepareRename, renameProvider } from './renameProvider';
 import { runscript } from './scriptrunner';
@@ -37,9 +37,11 @@ let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), ha
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { uri: string, sym: SymbolInformation[] } = { uri: '', sym: [] };
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] }, isahk2_h = false;
-export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], ahkclasses: { [key: string]: DocumentSymbol[] } = {}, ahkfunctions: { [key: string]: FuncNode } = {};
+export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], ahkclasses: { [key: string]: ClassNode } = {}, ahkfunctions: { [key: string]: FuncNode } = {};
 export let libfuncs: { [uri: string]: FuncNode[] } = {}, workfolder = '';
 export type Maybe<T> = T | undefined;
+export let builtin_class: CompletionItem[] = [];
+export let dllcalltpe: string[] = [];
 
 interface AHKLSSettings {
 	Path: string;
@@ -83,7 +85,13 @@ connection.onInitialize((params: InitializeParams) => {
 			definitionProvider: true,
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
-			executeCommandProvider: { commands: ['ahk2.fix.include'] },
+			executeCommandProvider: {
+				commands: [
+					'ahk2.fix.include',
+					'ahk2.generate.comment',
+					'ahk2.generate.author'
+				]
+			},
 			hoverProvider: true,
 			foldingRangeProvider: true,
 			colorProvider: true,
@@ -247,97 +255,44 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 
 function initahk2cache() {
 	ahkclasses = {};
+	dllcalltpe = ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'HRESULT'];
+	builtin_class = ['Any', 'Array', 'BoundFunc', 'Buffer', 'Class', 'ClipboardAll', 'Closure', 'Enumerator', 'Error', 'File', 'Float', 'Func', 'Gui', 'IndexError', 'InputHook', 'Integer', 'KeyError', 'Map', 'MemberError', 'MemoryError', 'Menu', 'MenuBar', 'MethodError', 'Number', 'Object', 'OSError', 'Primitive', 'PropertyError', 'RegExMatch', 'String', 'TargetError', 'TimeoutError', 'TypeError', 'ValueError', 'ZeroDivisionError'].map(it => {
+		const completionItem = CompletionItem.create(it);
+		completionItem.insertText = it;
+		completionItem.kind = CompletionItemKind.Class;
+		return completionItem;
+	});
 	completionItemCache = {
 		sharp: [],
 		method: [],
-		other: ['Any', 'Array', 'BoundFunc', 'Buffer', 'Class', 'ClipboardAll', 'Closure', 'Enumerator', 'Error', 'File', 'Float', 'Func', 'Gui', 'IndexError', 'InputHook', 'Integer', 'KeyError', 'Map', 'MemberError', 'MemoryError', 'Menu', 'MenuBar', 'MethodError', 'Number', 'Object', 'OSError', 'Primitive', 'PropertyError', 'RegExMatch', 'String', 'TargetError', 'TimeoutError', 'TypeError', 'ValueError', 'ZeroDivisionError'].map(it => {
-			const completionItem = CompletionItem.create(it);
-			completionItem.insertText = it;
-			completionItem.kind = CompletionItemKind.Class;
-			return completionItem;
-		}),
+		other: [],
 		constant: [],
-		snippet: []
+		snippet: [{
+			label: 'zs-Comment',
+			detail: completionitem.comment(),
+			kind: CompletionItemKind.Snippet,
+			command: { title: 'ahk2.generate.comment', command: 'ahk2.generate.comment', arguments: [] }
+		},
+		{
+			label: 'zs-Author',
+			detail: completionitem.author(),
+			kind: CompletionItemKind.Snippet,
+			command: { title: 'ahk2.generate.author', command: 'ahk2.generate.author' }
+		}]
 	};
 }
 
 async function loadahk2(filename = 'ahk2') {
-	const ahk2 = JSON.parse(readFileSync(resolve(__dirname, `../../syntaxes/${filename}.json`), { encoding: 'utf8' }));
+	const file = resolve(__dirname, `../../syntaxes/${filename}`);
+	if (existsSync(file + '.d.ahk'))
+		new Lexer(openFile(file + '.d.ahk')).parseScript(true);
+	if (!existsSync(file + '.json'))
+		return;
+	const ahk2 = JSON.parse(readFileSync(file + '.json', { encoding: 'utf8' }));
 	const cmd: Command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
 	let type: CompletionItemKind, t = '', snip: { prefix: string, body: string, description?: string }, rg = Range.create(0, 0, 0, 0);
 	for (const key in ahk2) {
-		if (key === 'methods') {
-			let meds: any = {}, props: any = {};
-			t = 'method';
-			for (const objname in ahk2[key]) {
-				let arr: any[] = ahk2[key][objname], _ = objname.toLowerCase();
-				if (!ahkclasses[_])
-					ahkclasses[_] = [];
-				for (snip of arr) {
-					const completionItem = CompletionItem.create(snip.prefix), _low = snip.prefix.toLowerCase();
-					snip.body = bodytostring(snip.body);
-					completionItem.kind = snip.body.indexOf('(') === -1 ? CompletionItemKind.Property : CompletionItemKind.Method;
-					if (snip.body.indexOf('|') === -1)
-						completionItem.insertText = snip.body.replace(/\(.+\)/, () => {
-							completionItem.command = cmd; return '($0)';
-						});
-					else
-						completionItem.insertText = snip.body, completionItem.command = cmd;
-					completionItem.insertTextFormat = InsertTextFormat.Snippet;
-					snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => {
-						return m[2] ? m[3].replace(/,/g, '|') : m[3] || '';
-					});
-					if (completionItem.kind === CompletionItemKind.Property) {
-						if (!props[_low]) {
-							completionItem.documentation = snip.description;
-							if (objname !== 'class')
-								completionItemCache[t].push(props[_low] = completionItem);
-						} else {
-							props[_low].documentation = undefined;
-							props[_low].detail = '(...) ' + snip.body;
-						}
-						let it: Variable;
-						ahkclasses[_].push(it = DocumentSymbol.create(snip.prefix, snip.description,
-							SymbolKind.Property, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
-						it.full = completionItem.detail = `(${_}) ` + it.name;
-						completionItem.documentation = snip.description;
-					} else {
-						if (!meds[_low]) {
-							completionItem.documentation = snip.description;
-							if (objname !== 'class')
-								completionItemCache[t].push(meds[_low] = completionItem);
-						} else {
-							meds[_low].documentation = undefined;
-							if (meds[_low].insertText !== completionItem.insertText) {
-								meds[_low].detail = '(...) ' + snip.prefix + '()';
-								meds[_low].insertText = snip.prefix + (snip.body.indexOf('()') !== -1 ? '()' : '($0)');
-							} else
-								meds[_low].detail = '(...) ' + snip.body;
-						}
-						let it = FuncNode.create(_low === 'new' ? '__New' : snip.prefix, SymbolKind.Method, rg, rg,
-							snip.body.replace(/^\w+[(\s]|\)/g, '').split(',').filter(param => param != '').map(param => {
-								return DocumentSymbol.create(param.trim(), undefined, SymbolKind.Variable, rg, rg);
-							}));
-						it.full = it.full.replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, (...m) => {
-							snip.body = snip.body.replace(m[0], m[1] + '|...');
-							return m[1] + '|...';
-						});
-						it.full = `(${_}) ${it.full}`, it.detail = snip.description, ahkclasses[_].push(it);
-						completionItem.detail = completionItem.detail || it.full;
-					}
-				}
-				if (_.indexOf(',') !== -1) {
-					let cls = ahkclasses[_];
-					delete ahkclasses[_];
-					_.split(',').map(n => {
-						if (!ahkclasses[n])
-							ahkclasses[n] = [];
-						ahkclasses[n].push(...cls);
-					});
-				}
-			}
-			ahkclasses['dropdownlist'] = ahkclasses['ddl'], ahkclasses['tab2'] = ahkclasses['tab3'] = ahkclasses['tab'];
-		} else if (key === 'snippet') {
+		if (key === 'snippet') {
 			for (snip of ahk2['snippet']) {
 				const completionItem = CompletionItem.create(snip.prefix);
 				completionItem.kind = CompletionItemKind.Snippet;
@@ -378,7 +333,8 @@ async function loadahk2(filename = 'ahk2') {
 			return m[2] ? m[3].replace(/,/g, '|') : m[3] || '';
 		});
 		completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' };
-		completionItemCache[t].push(completionItem);
+		if (type !== CompletionItemKind.Function)
+			completionItemCache[t].push(completionItem);
 		if (type === CompletionItemKind.Constant || type === CompletionItemKind.Text)
 			return;
 		hover.contents = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```\n\n' + snip.description };
