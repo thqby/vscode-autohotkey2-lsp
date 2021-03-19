@@ -90,6 +90,8 @@ export namespace FuncNode {
 			full += ', ' + (param.byref ? 'ByRef ' : '') + param.name + (param.defaultVal ? ' := ' + param.defaultVal : (<any>param).arr ? '*' : '');
 		});
 		full = (isstatic ? 'static ' : '') + name + '(' + full.substring(2) + ')';
+		if (params.length && params[params.length - 1].name === '*')
+			params.pop();
 		return { name, kind, range, selectionRange, params, full, children, statement };
 	}
 }
@@ -1319,8 +1321,10 @@ export class Lexer {
 						} else if ([',', '('].includes(lk.content)) {
 							if (tk.content === '*') {
 								lk = tk, tk = get_next_token();
-								if (tk.content === ')')
+								if (tk.content === ')') {
+									cache.push(Variable.create('*', SymbolKind.Null, rg = makerange(0, 0), rg));
 									break;
+								}
 							} else if (tk.content === '&') {
 								tk = get_next_token();
 								if (tk.type === 'TK_WORD') {
@@ -3354,8 +3358,12 @@ export class Lexer {
 		suf = suf.trimRight();
 		if (kind === SymbolKind.Function && pre.match(/^(static|)$/i)) {
 			let scope = this.searchScopedNode(position);
-			if (scope && scope.kind === SymbolKind.Method && position.line === scope.selectionRange.start.line)
+			if (scope && scope.kind === SymbolKind.Method && position.line === scope.selectionRange.start.line) {
 				kind = SymbolKind.Method;
+				let fc = scope as FuncNode, cc = fc.full.match(/^\(([^)]+)\)/);
+				if (cc && word.text === scope.name)
+					word.text = (fc.statement.static ? cc[1] : cc[1].replace(/([^.]+)$/, '@$1')) + '.' + word.text;
+			}
 		}
 		return { text: word.text, range: word.range, kind, pre, suf, linetext };
 
@@ -3664,7 +3672,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			exp = t;
 		while ((t = exp.replace(/\s(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*(~=|<|>|[<>]=|!?=?=|\b(is|in|contains)\b)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*/g, ' #number ')) !== exp)
 			exp = t;
-		while ((t = exp.replace(/(not|!|~)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/g, ' #number ')) !== exp)
+		while ((t = exp.replace(/(not|!|~|\+|-)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/g, ' #number ')) !== exp)
 			exp = t;
 		while ((t = exp.replace(/(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*(\band\b|&&)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/g, ' #number ')) !== exp)
 			exp = t;
