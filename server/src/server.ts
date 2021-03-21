@@ -37,7 +37,8 @@ let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), ha
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { uri: string, sym: SymbolInformation[] } = { uri: '', sym: [] };
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] }, isahk2_h = false;
-export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], ahkclasses: { [key: string]: ClassNode } = {}, ahkfunctions: { [key: string]: FuncNode } = {};
+export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], ahkclasses: { [key: string]: ClassNode } = {};
+export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let libfuncs: { [uri: string]: FuncNode[] } = {}, workfolder = '';
 export type Maybe<T> = T | undefined;
 export let builtin_class: CompletionItem[] = [];
@@ -254,7 +255,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 }
 
 function initahk2cache() {
-	ahkclasses = {};
+	ahkvars = {};
 	dllcalltpe = ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'HRESULT'];
 	builtin_class = ['Any', 'Array', 'BoundFunc', 'Buffer', 'Class', 'ClipboardAll', 'Closure', 'Enumerator', 'Error', 'File', 'Float', 'Func', 'Gui', 'IndexError', 'InputHook', 'Integer', 'KeyError', 'Map', 'MemberError', 'MemoryError', 'Menu', 'MenuBar', 'MethodError', 'Number', 'Object', 'OSError', 'Primitive', 'PropertyError', 'RegExMatch', 'String', 'TargetError', 'TimeoutError', 'TypeError', 'ValueError', 'ZeroDivisionError'].map(it => {
 		const completionItem = CompletionItem.create(it);
@@ -349,7 +350,7 @@ async function loadahk2(filename = 'ahk2') {
 				snip.body = snip.body.replace(m[0], m[1] + '|...');
 				return m[1] + '|...';
 			});
-			it.detail = snip.description, ahkfunctions[_low] = it;
+			it.detail = snip.description, ahkvars[_low] = it;
 		}
 		hoverCache[n][_low].push(hover);
 	}
@@ -422,7 +423,7 @@ async function initpathenv(config?: any) {
 	return ret;
 }
 
-function sendDiagnostics() {
+export function sendDiagnostics() {
 	let doc: Lexer;
 	for (const uri in lexers) {
 		doc = lexers[uri];

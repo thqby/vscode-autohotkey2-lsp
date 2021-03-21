@@ -1,7 +1,7 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
 import { searchLibFunction } from './definitionProvider';
-import { detectExpType, formatMarkdowndetail, FuncNode, getFuncCallInfo, searchNode } from './Lexer';
-import { ahkclasses, ahkfunctions, lexers, Maybe } from './server';
+import { ClassNode, detectExp, detectExpType, formatMarkdowndetail, FuncNode, getFuncCallInfo, searchNode } from './Lexer';
+import { ahkvars, lexers, Maybe } from './server';
 
 export async function signatureProvider(params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (cancellation.isCancellationRequested) return undefined;
@@ -32,11 +32,39 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		}
 	} else
 		nodes = searchNode(doc, name, pos, kind);
-	if (!nodes) {
+	let ttt: any;
+	do {
+		ttt = nodes || [], nodes = [];
+		ttt.map((it: any) => {
+			let nn = it.node, kind = nn.kind;
+			if (kind === SymbolKind.Class) {
+				let dec = (<ClassNode>nn).staticdeclaration;
+				if (dec && dec['call']) {
+					nodes.push({ node: dec['call'], uri: '' });
+				} else {
+					dec = (<ClassNode>nn).declaration;
+					if (dec && dec['__new'])
+						nodes.push({ node: dec['__new'], uri: '' });
+				}
+			} else if (kind === SymbolKind.Function || kind === SymbolKind.Method)
+				nodes.push(it);
+			else {
+				if (nn.typeexp) {
+					for (const tp of detectExp(lexers[it.uri], nn.typeexp, nn.range.end)) {
+						searchNode(doc, tp, pos, SymbolKind.Function)?.map(it => {
+							if (it.node.kind === SymbolKind.Function || it.node.kind === SymbolKind.Method)
+								nodes.push(it);
+						});
+					}
+				}
+			}
+		});
+	} while (nodes.length > 0 && (nodes[0].node.kind !== SymbolKind.Function && nodes[0].node.kind !== SymbolKind.Method));
+	if (!nodes || !nodes.length) {
 		if (kind === SymbolKind.Method) {
 			nodes = [];
-			for (const key in ahkclasses)
-				ahkclasses[key].children?.map(node => {
+			for (const key in ahkvars)
+				ahkvars[key].children?.map(node => {
 					if (node.kind === SymbolKind.Method && node.name.toLowerCase() === name &&
 						!nodes.map((it: any) => it.node).includes(node))
 						nodes.push({ node, uri: '' });
@@ -50,9 +78,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 				});
 			if (!nodes?.length) return undefined;
 		} else if (kind === SymbolKind.Function) {
-			if (ahkfunctions[name])
-				nodes = [{ node: ahkfunctions[name], uri: '' }];
-			else if (!(nodes = searchLibFunction(name, doc.libdirs)))
+			if (!(nodes = searchLibFunction(name, doc.libdirs)))
 				return undefined;
 		} else return undefined;
 	}

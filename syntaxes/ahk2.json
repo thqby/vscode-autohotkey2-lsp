@@ -221,7 +221,7 @@
 			"prefix": "catch"
 		},
 		{
-			"body": "class ${1:classname} {\n\t$0\n}",
+			"body": "class ${1:classname} $0{\n\t\n}",
 			"prefix": "class"
 		},
 		{

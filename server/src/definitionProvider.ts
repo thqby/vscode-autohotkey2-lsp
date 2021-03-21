@@ -33,28 +33,19 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 			if (kind === SymbolKind.Function) {
 				nodes = searchLibFunction(word, doc.libdirs);
 			} else {
-				let ts: any = {};
-				nodes = <any>[], detectExpType(doc, word.replace(/\.[^.]+$/, m => {
-					word = m.match(/^\.[^.]+$/) ? m : '';
-					return '';
-				}), params.position, ts);
-				if (word && ts['#any'] === undefined)
-					for (const tp in ts)
-						searchNode(doc, tp + word, context.range.end, kind)?.map(it => {
-							if (!nodes?.map(i => i.node).includes(it.node))
-								nodes?.push(it);
-						});
-				if (!nodes?.length) {
-					if (kind === SymbolKind.Method) {
-						let docs = [doc];
-						word = word.replace(/^\./, '');
+				if (kind === SymbolKind.Method) {
+					nodes = <any>[];
+					let docs = [doc];
+					word.replace(/\.([^.]+)$/, (...m) => {
+						word = m[1];
 						for (const u in doc.relevance)
 							docs.push(lexers[u]);
 						for (const doc of docs) {
 							if (doc.object.method[word]?.length)
 								nodes?.push(...doc.object.method[word].map(it => { return { node: it, uri: doc.uri }; }));
 						}
-					}
+						return '';
+					});
 				}
 			}
 		}

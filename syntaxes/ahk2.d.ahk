@@ -10,11 +10,6 @@ Abs(Number) => Number
 ACos(Number) => Number
 
 /**
- * 数组对象包含值的列表或序列.
- */
-Array(Values*) => Array
-
-/**
  * 返回以弧度表示的反正弦值(其正弦值为 Number).
  */
 ASin(Number) => Number
@@ -53,11 +48,6 @@ Ceil(Number) => Number
  * 返回与指定数字所表示的编码相对应的字符串(通常是单个字符).
  */
 Chr(Number) => String
-
-/**
- * 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
- */
-ClipboardAll([Data, Size]) => Buffer
 
 /**
  * 等待直到剪贴板包含数据.
@@ -137,7 +127,7 @@ ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeT
 /**
  * 发送鼠标按钮或鼠标滚轮事件到控件.
  */
-ControlClick([Control-or-Pos, WinTitle, WinText, WhichButton, ClickCount, Options, ExcludeTitle, ExcludeText]) => void
+ControlClick([Control_or_Pos, WinTitle, WinText, WhichButton, ClickCount, Options, ExcludeTitle, ExcludeText]) => void
 
 /**
  * 从 ListBox 或 ComboBox 中删除指定的条目.
@@ -545,11 +535,6 @@ FileSetAttrib(Attributes [, FilePattern, Mode]) => void
 FileSetTime([YYYYMMDDHH24MISS, FilePattern, WhichTime, Mode]) => void
 
 /**
- * 将数字字符串或整数值转换为浮点数.
- */
-Float(Value) => Number
-
-/**
  * 返回 Number 向下取整后的整数(不含任何 .00 后缀).
  */
 Floor(Number) => Number
@@ -563,11 +548,6 @@ Format(FormatStr, Values*) => Number|string
  * 将YYYYMMDDHH24MISS时间戳转换为指定的日期/时间格式.
  */
 FormatTime([YYYYMMDDHH24MISS, Format]) => String
-
-/**
- * 检索指定函数的引用.
- */
-Func(FunctionName) => Func
 
 /**
  * 检索按键的名称.
@@ -690,19 +670,9 @@ IniWrite(Value, Filename, Section [, Key]) => void
 InputBox([Prompt, Title, Options, Default]) => Object
 
 /**
- * 创建一个对象, 该对象可用于收集或拦截键盘输入.
- */
-InputHook([Options, EndKeys, MatchList]) => Inputhook
-
-/**
  * 在一个字符串中向右或向左搜索指定内容.
  */
 InStr(Haystack, Needle [, CaseSense, StartingPos, Occurrence]) => Number
-
-/**
- * 将数字字符串或浮点值转换为整数.
- */
-Integer(Value) => Number
 
 /**
  * 除了还允许 0 到 9 的数字外, 其他与 IsAlpha 相同.
@@ -820,11 +790,6 @@ Log(Number) => Number
 LTrim(String, OmitChars = ' `t') => String
 
 /**
- * Map对象将一组称为键的值关联或映射到另一组值.
- */
-Map([Key1, Value1, *]) => Map
-
-/**
  * 返回一个或多个数字的最大值.
  */
 Max(Numbers*) => Number
@@ -918,11 +883,6 @@ ObjAddRef(Ptr) => Number
  * 创建一个绑定函数对象, 它能调用指定对象的方法.
  */
 ObjBindMethod(Obj, Method, Params) => Func
-
-/**
- * Object是从AutoHotkey对象类派生的基本类.
- */
-Object(Key1, Val1, *) => Object
 
 /**
  * 返回值的Base对象.
@@ -1213,11 +1173,6 @@ StrCompare(String1, String2 [, CaseSense]) => Number
  * 从内存地址或缓冲中复制字符串, 可选地从给定的代码页进行转换.
  */
 StrGet(Source [, Length] [, Encoding]) => String
-
-/**
- * 将值转换为字符串.
- */
-String(Value) => String
 
 /**
  * 检索字符串中的字符数.
@@ -1559,6 +1514,10 @@ class Any {
 
 class Array extends Object {
 	/**
+	* 数组对象包含值的列表或序列.
+	*/
+	static Call(Values*) => Array
+	/**
 	 * 返回对象的一个浅拷贝.
 	 */
 	Clone() => Array
@@ -1623,7 +1582,7 @@ class Class extends Object {
 	/**
 	 * 构造类的新实例.
 	 */
-	static New(Params)
+	static Call(Params)
 
 	/**
 	 * 检索或设置类的所有实例所基于的对象.
@@ -1631,7 +1590,11 @@ class Class extends Object {
 	static Prototype => Object
 }
 
-class ClipboardAll extends Buffer {
+class ClipboardAll extends Buffer {	
+	/**
+	* 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
+	*/
+	static Call([Data, Size]) => Buffer
 }
 
 class Closure extends Func {
@@ -1825,6 +1788,10 @@ class File extends Object {
 }
 
 class Float {
+	/**
+	* 将数字字符串或整数值转换为浮点数.
+	*/
+	static Call(Value) => Number
 }
 
 class Func extends Object {
@@ -1918,7 +1885,7 @@ class Gui extends Object {
 	/**
 	 * 创建一个新的Gui对象.
 	 */
-	New([Options, Title := A_ScriptName, EventObj]) => Gui
+	static Call([Options, Title := A_ScriptName, EventObj]) => Gui
 
 	/**
 	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
@@ -2540,6 +2507,11 @@ class InputHook extends Object {
 	VisibleText => Number
 
 	/**
+	* 创建一个对象, 该对象可用于收集或拦截键盘输入.
+	*/
+	static Call([Options, EndKeys, MatchList]) => Inputhook
+
+	/**
 	 * 设置按键或按键列表的选项.
 	 */
 	KeyOpt(Keys, KeyOptions) => void
@@ -2561,12 +2533,21 @@ class InputHook extends Object {
 }
 
 class Integer {
+	/**
+	* 将数字字符串或浮点值转换为整数.
+	*/
+	static Call(Value) => Number
 }
 
 class KeyError extends Error {
 }
 
 class Map extends Object {
+	/**
+	* Map对象将一组称为键的值关联或映射到另一组值.
+	*/
+	static Call([Key1, Value1, *]) => 
+
 	/**
 	 * 从映射中删除所有键-值对.
 	 */
@@ -2633,12 +2614,12 @@ class Menu extends Object {
 	/**
 	 * 创建一个新的Menu或MenuBar对象.
 	 */
-	New() => Menu
+	static Call() => Menu
 
 	/**
 	 * 添加或修改菜单项.
 	 */
-	Add([MenuItemName, Callback-or-Submenu, Options]) => void
+	Add([MenuItemName, Callback_or_Submenu, Options]) => void
 
 	/**
 	 * 在菜单项旁边添加一个可见的选中标记.
@@ -2663,7 +2644,7 @@ class Menu extends Object {
 	/**
 	 * 在指定的项之前插入一个新项.
 	 */
-	Insert([ItemToInsertBefore, NewItemName, Callback-or-Submenu, Options]) => void
+	Insert([ItemToInsertBefore, NewItemName, Callback_or_Submenu, Options]) => void
 
 	/**
 	 * 重命名菜单项(如果NewName为空或省略，则MenuItemName将转换为分隔线).
@@ -2716,6 +2697,11 @@ class Number {
 }
 
 class Object extends Any {
+	/**
+	* Object是从AutoHotkey对象类派生的基本类.
+	*/
+	static Call() => Object
+
 	/**
 	 * 返回对象的一个浅拷贝.
 	 */
@@ -2776,7 +2762,7 @@ class Primitive {
 class PropertyError extends Error {
 }
 
-class RegExMatch extends Object {
+class RegExMatchInfo extends Object {
 	/**
 	 * 返回整体匹配或捕获的子模式的位置.
 	 */
@@ -2809,6 +2795,10 @@ class RegExMatch extends Object {
 }
 
 class String {
+	/**
+	* 将值转换为字符串.
+	*/
+	static Call(Value) => String
 }
 
 class TargetError extends Error {

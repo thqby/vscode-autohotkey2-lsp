@@ -2,9 +2,9 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { detectExpType, FuncNode, FuncScope, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
+import { detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
 import { completionitem } from './localize';
-import { ahkclasses, ahkfunctions, completionItemCache, dllcalltpe, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
+import { ahkvars, completionItemCache, dllcalltpe, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested) return undefined;
@@ -12,7 +12,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	let scopenode: DocumentSymbol | undefined, other = true, triggerKind = params.context?.triggerKind;
 	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], content = doc.buildContext(position, false), nodes: DocumentSymbol[];
 	let quote = '', char = '', _low = '', percent = false, linetext = content.linetext, triggerchar = linetext.charAt(content.range.start.character - 1);
-	let list = doc.relevance, cpitem: CompletionItem, scope: FuncScope = FuncScope.GLOBAL, temp: any, path: string, { line, character } = position;
+	let list = doc.relevance, cpitem: CompletionItem, temp: any, path: string, { line, character } = position;
 	['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
 	for (let i = 0; i < position.character; i++) {
 		char = linetext.charAt(i);
@@ -41,17 +41,23 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			return items;
 		}
-		let glo = [doc.global];
+		if (!temp[3] && !temp[2]) {
+			cpitem = CompletionItem.create('extends');
+			cpitem.kind = CompletionItemKind.Keyword;
+			return [cpitem];
+		}
+		let glo = [doc.declaration];
 		for (const uri in list)
-			glo.push(lexers[uri].global);
+			glo.push(lexers[uri].declaration);
 		glo.map(g => {
 			for (const name in g) {
 				if (g[name].kind === SymbolKind.Class)
 					items.push(convertNodeCompletion(g[name]));
 			}
 		});
-		for (const cl in ahkclasses)
-			items.push(convertNodeCompletion(ahkclasses[cl]));
+		for (const cl in ahkvars)
+			if (ahkvars[cl].kind === SymbolKind.Class)
+				items.push(convertNodeCompletion(ahkvars[cl]));
 		return items;
 	}
 	switch (triggerchar) {
@@ -63,16 +69,26 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			content.pre = c.text.slice(0, content.text === '' && content.pre.match(/\.$/) ? -1 : -content.text.length);
 			content.text = c.text, content.kind = c.kind, content.linetext = c.linetext;;
 			let p: any = content.pre.replace(/('|").*?(?<!`)\1/, `''`), t: any, unknown = true;
-			let props: any = {}, meds: any = {}, l = '', isstatic = true, tps: any = [], isclass = false, isobj = false, hasparams = false;
+			let props: any = {}, l = '', isstatic = true, tps: any = [], isclass = false, isfunc = false, isobj = false, hasparams = false;
 			let ts: any = {};
 			p = content.pre.toLowerCase();
 			detectExpType(doc, p, position, ts);
 			if (ts['#any'] === undefined)
 				for (const tp in ts) {
 					unknown = false, isstatic = !tp.match(/[@#][^.]+$/);
-					if (ts[tp])
+					if (ts[tp]) {
+						let kind = ts[tp].node.kind;
+						if (kind === SymbolKind.Function || kind === SymbolKind.Method) {
+							if (isfunc)
+								continue;
+							else {
+								isfunc = true;
+								if (ahkvars['func'])
+									tps.push(ahkvars['func']), isstatic = false;
+							}
+						}
 						tps.push(ts[tp].node);
-					else searchNode(doc, tp, position, [SymbolKind.Class, SymbolKind.Variable])?.map(it => {
+					} else searchNode(doc, tp, position, [SymbolKind.Class, SymbolKind.Variable])?.map(it => {
 						tps.push(it.node);
 					});
 				}
@@ -89,10 +105,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 									props[l].detail = '(...) ' + it.name, props[l].insertText = it.name;
 							} else if (it.kind === SymbolKind.Method) {
 								if (!it.name.match(/^__(get|set|call|new|delete)$/i)) {
-									if (!meds[l = it.name.toLowerCase()])
-										items.push(meds[l] = convertNodeCompletion(it));
-									else if (meds[l].detail !== it.full)
-										meds[l].detail = '(...) ' + it.name + '()', meds[l].documentation = '';
+									if (!props[l = it.name.toLowerCase()])
+										items.push(props[l] = convertNodeCompletion(it));
+									else if (props[l].detail !== it.full)
+										props[l].detail = '(...) ' + it.name + '()', props[l].documentation = '';
 								} else if (it.name.toLowerCase() === '__new' && (<FuncNode>it).params.length)
 									hasparams = true;
 							}
@@ -105,22 +121,21 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				}
 			}
 			if (isobj)
-				getClassMembers(doc, ahkclasses['object'], false).map((it: any) => {
+				getClassMembers(doc, ahkvars['object'], false).map((it: any) => {
 					_low = it.name.toLowerCase();
 					if (it.kind === SymbolKind.Property) {
 						if (!props[_low])
 							items.push(props[_low] = convertNodeCompletion(it));
 					} else if (isclass && it.kind === SymbolKind.Method) {
-						if (!meds[_low])
-							items.push(meds[_low] = convertNodeCompletion(it));
+						if (!props[_low])
+							items.push(props[_low] = convertNodeCompletion(it));
 					}
 				});
 			if (isclass && isstatic) {
-				items.push(p = CompletionItem.create('Prototype')), props['prototype'] = p;
-				p.kind = CompletionItemKind.Property, p.detail = completionitem.prototype();
-				items.push(p = CompletionItem.create('New')), meds['new'] = p;
-				p.kind = CompletionItemKind.Method, p.detail = completionitem._new(), p.insertText = `New(${hasparams ? '$0' : ''})`;
-				p.insertTextFormat = InsertTextFormat.Snippet;
+				if (!props['prototype'])
+					items.push(p = CompletionItem.create('Prototype')), props['prototype'] = p, p.kind = CompletionItemKind.Property, p.detail = completionitem.prototype();
+				if (!props['call'])
+					items.push(p = CompletionItem.create('Call')), props['call'] = p, p.kind = CompletionItemKind.Method, p.detail = completionitem._new(), p.insertText = `Call(${hasparams ? '$0' : ''})`, p.insertTextFormat = InsertTextFormat.Snippet;
 			}
 			if (!unknown && (triggerKind !== 1 || content.text.match(/\..{0,2}$/)))
 				return items;
@@ -133,30 +148,32 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						items.push(props[it] = convertNodeCompletion({ name: obj.property[it], kind: SymbolKind.Property }));
 					else props[it].detail = props[it].label;
 				for (const it in obj.method)
-					if (!meds[it])
-						items.push(meds[it] = convertNodeCompletion(obj.method[it][0]));
-					else if (typeof meds[it] === 'object')
-						meds[it].detail = '(...) ' + meds[it].label + '()';
+					if (!props[it])
+						items.push(props[it] = convertNodeCompletion(obj.method[it][0]));
+					else if (typeof props[it] === 'object')
+						props[it].detail = '(...) ' + props[it].label;
 				for (const it in obj.userdef)
-					if (!meds[it])
-						items.push(meds[it] = convertNodeCompletion(obj.userdef[it]));
+					if (!props[it])
+						items.push(props[it] = convertNodeCompletion(obj.userdef[it]));
 			}
-			for (const cl in ahkclasses) {
-				if (isobj && cl === 'object')
+			for (const cl in ahkvars) {
+				if ((isobj && cl === 'object') || (isfunc && cl === 'func') || (isclass && cl === 'class') || !ahkvars[cl].children)
 					continue;
-				ahkclasses[cl].children?.map((it: any) => {
+				let cls: DocumentSymbol[] = [];
+				ahkvars[cl].children?.map((it: any) => {
+					if (it.kind === SymbolKind.Class) {
+						cls.push(...it.children);
+					} else
+						cls.push(it);
+				});
+				cls.map((it: any) => {
+					if (it.kind === SymbolKind.Class)
+						return;
 					_low = it.name.toLowerCase();
-					if (it.kind === SymbolKind.Property) {
-						if (!props[_low])
-							items.push(props[_low] = convertNodeCompletion(it));
-						else if (props[_low].detail !== it.full)
-							props[_low].detail = '(...) ' + it.name;
-					} else if (it.kind === SymbolKind.Method) {
-						if (!meds[_low])
-							items.push(meds[_low] = convertNodeCompletion(it));
-						else if (meds[_low].detail !== it.full)
-							meds[_low].detail = '(...) ' + it.name + '()';
-					}
+					if (!props[_low])
+						items.push(props[_low] = convertNodeCompletion(it));
+					else if (props[_low].detail !== it.full)
+						props[_low].detail = '(...) ' + it.name, props[_low].insertText = it.name, props[_low].documentation = undefined;
 				});
 			}
 			return items;
@@ -249,29 +266,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								}
 							}
 							break;
-						case 'func':
-							if (res.index !== 0) break;
-							for (const name in ahkfunctions)
-								if (name.charAt(0) !== '.')
-									cpitem = CompletionItem.create(ahkfunctions[name].name), cpitem.kind = CompletionItemKind.Function,
-										items.push(cpitem), vars[name] = true;
-							if (scopenode = doc.searchScopedNode(position)) {
-								nodes = doc.getScopeChildren(scopenode);
-								for (const it of nodes)
-									if (it.kind === SymbolKind.Function && !vars[_low = it.name.toLowerCase()]) {
-										vars[_low] = true, cpitem = CompletionItem.create(it.name),
-											cpitem.kind = CompletionItemKind.Function, items.push(cpitem);
-									}
-							}
-							for (const name in (temp = doc.function))
-								if (!vars[name]) vars[name] = true, cpitem = CompletionItem.create(temp[name].name),
-									cpitem.kind = CompletionItemKind.Function, items.push(cpitem);
-							for (const t in list)
-								for (const name in (temp = lexers[t].function))
-									if (!vars[name])
-										vars[name] = true, cpitem = CompletionItem.create(temp[name].name),
-											cpitem.kind = CompletionItemKind.Function, items.push(cpitem);
-							return items;
 						case 'dllcall':
 							if (res.index === 0) {
 
@@ -375,68 +369,56 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			} else
 				other = !percent;
 			scopenode = doc.searchScopedNode(position);
-			if (scopenode && !linetext.match(/^\s*global\s/i)) {
-				let s = (<FuncNode>scopenode).statement;
-				if (!s) scope = FuncScope.DEFAULT;
-				else if (s.assume & FuncScope.LOCAL)
-					scope = FuncScope.LOCAL;
-				else if (s.assume !== FuncScope.GLOBAL)
-					scope = FuncScope.DEFAULT;
+			for (const n in ahkvars)
+				vars[n] = convertNodeCompletion(ahkvars[n]);
+			for (const n in doc.declaration) {
+				const item = doc.declaration[n];
+				if (item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character)
+					continue;
+				vars[n] = convertNodeCompletion(item);
 			}
-			if (scope === FuncScope.GLOBAL) {
-				addGlobalVar();
-				if (scopenode)
-					addNodesIgnoreCurpos(doc.getScopeChildren(scopenode));
-				addFunction();
-				for (const name in (temp = doc.define)) {
-					const item = temp[name];
-					if (!vars[name] && !(item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character))
-						vars[name] = true, items.push(convertNodeCompletion(item));
+			for (const t in list) {
+				path = list[t].path;
+				for (const n in (temp = lexers[t].declaration)) {
+					if (!vars[n] || (vars[n].kind === CompletionItemKind.Variable && temp[n].kind !== SymbolKind.Variable)) {
+						cpitem = convertNodeCompletion(temp[n]), cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
+						vars[n] = cpitem;
+					}
 				}
-				for (const t in list) {
-					path = list[t].path;
-					for (const name in (temp = lexers[t].define))
-						if (!vars[name])
-							vars[name] = true, addincludeitem(temp[name]);
-				}
-			} else {
-				if (scope === FuncScope.DEFAULT) addGlobalVar();
-				addNodesIgnoreCurpos(doc.getScopeChildren(scopenode)), addFunction();
+			}
+			if (scopenode) {
+				doc.getScopeChildren(scopenode).map(it => {
+					vars[it.name.toLowerCase()] = convertNodeCompletion(it);
+				});
 			}
 			completionItemCache.other.map(it => {
 				if (it.kind === CompletionItemKind.Text) {
 					if (!scopenode && !percent)
 						items.push(it);
 				} else if (it.kind === CompletionItemKind.Function) {
-					if (!funcs[it.label.toLowerCase()])
-						items.push(it);
+					if (!vars[_low = it.label.toLowerCase()])
+						vars[_low] = it;
 				} else
 					items.push(it);
 			});
-			for (const fc in ahkfunctions)
-				if (!funcs[fc])
-					items.push(convertNodeCompletion(ahkfunctions[fc])), funcs[fc] = true;
-			for (const cl in ahkclasses)
-				if (!vars[cl])
-					items.push(convertNodeCompletion(ahkclasses[cl])), vars[cl] = true;
 			let dir = (workfolder && doc.scriptpath.startsWith(workfolder + '\\') ? workfolder : doc.scriptdir);
 			for (const u in libfuncs) {
 				if (!list || !list[u]) {
 					path = URI.parse(u).fsPath;
 					if ((<any>libfuncs[u]).islib || path.startsWith(dir + '\\'))
 						libfuncs[u].map(it => {
-							if (!funcs[it.name.toLowerCase()]) {
+							if (!vars[_low = it.name.toLowerCase()]) {
 								cpitem = convertNodeCompletion(it);
 								cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
 								cpitem.command = { title: 'ahk2.fix.include', command: 'ahk2.fix.include', arguments: [path, uri] };
-								items.push(cpitem);
+								vars[_low] = cpitem;
 							}
 						});
 				}
 			}
 			if (other)
 				addOther();
-			return items;
+			return items.concat(Object.values(vars));
 	}
 	function addincludeitem(item: DocumentSymbol) {
 		cpitem = convertNodeCompletion(item), cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || ''), items.push(cpitem);
