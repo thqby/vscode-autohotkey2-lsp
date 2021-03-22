@@ -927,7 +927,7 @@ export class Lexer {
 							if (mode !== 2 && input.charAt(parser_pos) !== '(') _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 							next = false, tk.type = 'TK_WORD'; break;
 						}
-						let cl: Token, ex: string = '', sv = new Map(), beginpos = tk.offset, comm = '';
+						let cl: Token, ex: string = '', sv = new Map(), rg: Range, beginpos = tk.offset, comm = '';
 						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) comm = trimcomment(lk.content), beginpos = lk.offset;
 						nexttoken();
 						if (tk.type === 'TK_WORD') {
@@ -937,6 +937,7 @@ export class Lexer {
 								tk = get_next_token();
 								if (tk.type === 'TK_WORD') {
 									ex = tk.content;
+									result.push(Variable.create(tk.content, SymbolKind.Variable, rg = makerange(tk.offset, tk.length), rg));
 									while (parser_pos < input_length && input.charAt(parser_pos) === '.') {
 										parser_pos++;
 										tk = get_next_token();

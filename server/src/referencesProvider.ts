@@ -15,23 +15,26 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 	if (!context.text) return undefined;
 	let nodes = searchNode(doc, name, context.range.end, context.kind === SymbolKind.Variable ?
 		[SymbolKind.Class, SymbolKind.Variable] : context.kind);
-	if (!nodes)
+	if (!nodes || nodes.length > 1)
 		return undefined;
-	let scope = doc.searchScopedNode(nodes[0].node.selectionRange.start), docs: Lexer[];
-	switch (context.kind) {
+	let { node, uri } = nodes[0];
+	let scope = doc.searchScopedNode(node.selectionRange.start), docs: Lexer[];
+	switch (node.kind) {
 		case SymbolKind.Function:
 		case SymbolKind.Variable:
 		case SymbolKind.Class:
 			if (scope) {
-				if (scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Event) {
-					if (context.kind !== SymbolKind.Variable)
+				if (scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Event) {
+					if (node.kind !== SymbolKind.Variable)
 						scope = (<FuncNode>scope).parent;
 					if (scope && (<FuncNode>scope).global && (<FuncNode>scope).global[name])
 						scope = undefined;
 				}
 			}
-			doc = lexers[nodes[0].uri];
-			references[nodes[0].uri] = findAllFromDoc(doc, name, SymbolKind.Variable, scope);
+			doc = lexers[uri];
+			let rgs = findAllFromDoc(doc, name, SymbolKind.Variable, scope);
+			if (rgs.length)
+				references[uri] = rgs;
 			if (!scope) {
 				for (const uri in doc.relevance) {
 					let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, undefined);
