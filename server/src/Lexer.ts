@@ -768,6 +768,7 @@ export class Lexer {
 										_this.addDiagnostic(diagnostic.invalidparam(), fc.offset, lk.offset - fc.offset + 1);
 								}
 								let prop = DocumentSymbol.create(fc.content, comm, SymbolKind.Property, rg = makerange(fc.offset, fc.length), rg);
+								(<FuncNode>prop).parent = _parent;
 								(<Variable>prop).full = `(${full.slice(0, -1)}) ${fc.content}` + (par.length ? `[${par.map((it: Variable) => {
 									return (it.ref ? '&' : '') + it.name + (it.defaultVal ? ' := ' + it.defaultVal : '');
 								}).join(', ')}]` : '');
@@ -1023,7 +1024,7 @@ export class Lexer {
 						break;
 					case 'loop':
 						lk = tk, tk = get_next_token();
-						if (['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type)) {
+						if (tk.type === 'TK_EQUALS') {
 							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
 							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 						} else if (next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(tk.content.toLowerCase())))
@@ -3355,7 +3356,7 @@ export class Lexer {
 			if (scope) {
 				while (scope) {
 					let dec = (<FuncNode>scope).declaration;
-					if (dec[name])
+					if (dec && dec[name])
 						return { node: dec[name], uri };
 					else if ((<FuncNode>scope).global && (node = (<FuncNode>scope).global[name]))
 						return { node, uri }
