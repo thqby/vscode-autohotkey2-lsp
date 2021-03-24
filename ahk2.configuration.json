@@ -1,7 +1,7 @@
 {
 	"comments": {
 		"lineComment": ";",
-		"blockComment": [ "/*", "*/" ]
+		"blockComment": ["/*", "*/"]
 	},
 	"brackets": [
 		["{", "}"],
@@ -18,7 +18,7 @@
 		["'", "'"],
 		{
 			"open": "/*",
-			"close": "\n\n*/",
+			"close": " */",
 			"notIn": [
 				"string"
 			]

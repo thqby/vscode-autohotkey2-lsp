@@ -221,7 +221,7 @@
 			"prefix": "catch"
 		},
 		{
-			"body": "class ${1:classname} $0{\n\t\n}",
+			"body": "class $0 {\n\t\n}",
 			"prefix": "class"
 		},
 		{
@@ -268,7 +268,7 @@
 			"prefix": "in"
 		},
 		{
-			"body": "is ${1:Class}",
+			"body": "is ",
 			"description": "如果Value是Class的实例,则返回true（1）,否则返回false（0）.",
 			"prefix": "is"
 		},
@@ -293,7 +293,7 @@
 			"prefix": "loop reg"
 		},
 		{
-			"body": "loop ${1:[Count]}",
+			"body": "loop ",
 			"description": "重复执行一系列函数: 可以指定表示重复次数的数字或直到遇到 break.",
 			"prefix": "loop"
 		},
@@ -335,7 +335,7 @@
 			"prefix": "try"
 		},
 		{
-			"body": "try {\n\t$1\n} catch e {\n\t$0\n}",
+			"body": "try {\n\t$1\n} catch ${2:e} {\n\t$0\n}",
 			"prefix": "try-catch"
 		},
 		{
@@ -365,11 +365,11 @@
 			"prefix": "__Get"
 		},
 		{
-			"body": "__Item[${1:}]",
+			"body": "__Item[$0]",
 			"prefix": "__Item"
 		},
 		{
-			"body": "__New(${1:})",
+			"body": "__New($0)",
 			"prefix": "__New"
 		},
 		{
@@ -452,11 +452,6 @@
 			"body": "Pause ${1:[NewState]}",
 			"description": "暂停脚本的当前线程.",
 			"prefix": "Pause"
-		},
-		{
-			"body": "RunAs ${1:[User, Password, Domain]}",
-			"description": "指定在后续所有的 Run 和 RunWait 中使用的一组用户凭据.",
-			"prefix": "RunAs"
 		},
 		{
 			"body": "SendLevel ${1:Level}",
