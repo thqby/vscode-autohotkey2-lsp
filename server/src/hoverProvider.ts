@@ -1,5 +1,4 @@
 import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
-import { searchLibFunction } from './definitionProvider';
 import { ClassNode, detectExpType, formatMarkdowndetail, FuncNode, searchNode } from './Lexer';
 import { lexers, hoverCache, Maybe } from './server';
 
@@ -44,7 +43,6 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			} else if (kind === SymbolKind.Function) {
 				if ((t = hoverCache[0]) && t[word])
 					return t[word][0];
-				else nodes = searchLibFunction(word, doc.libdirs);
 			} else if (kind === SymbolKind.Method) {
 
 			}

@@ -18,18 +18,16 @@ export namespace codeaction {
 }
 
 export namespace diagnostic {
-	export const classdeferr = localize('diagnostic.classdeferr', 'This class declaration conflicts with an existing class');
+	export const assignerr = localize('diagnostic.assignerr', 'This {0} cannot be used as an output variable');
 	export const classinfuncerr = localize('diagnostic.classinfuncerr', 'Functions cannot contain classes');
 	export const classuseerr = localize('diagnostic.classuseerr', 'This class cannot be used as an output variable');
-	export const defaultvalmissing = localize('diagnostic.defaultvalmissing', 'Parameter default required. Specifically: \'{0}\'');
-	export const filenotexist = localize('diagnostic.filenotexist', '\'{0}\' not exist');
-	export const funccallerr = localize('diagnostic.funccallerr', 'Function calls require a space or \'(\',  use comma only between parameters');
-	export const funcdeferr = localize('diagnostic.funcdeferr', 'Duplicate function definition');
-	export const assignerr = localize('diagnostic.assignerr', 'This {0} cannot be used as an output variable');
-	export const declarationerr = localize('diagnostic.declarationerr', 'Unexpected declaration');
-	export const funcassignerr = localize('diagnostic.funcassignerr', 'This Func cannot be assigned a value');
 	export const conflictserr = localize('diagnostic.conflictserr', 'This {0} declaration conflicts with an existing {1}');
+	export const declarationerr = localize('diagnostic.declarationerr', 'Unexpected declaration');
+	export const defaultvalmissing = localize('diagnostic.defaultvalmissing', 'Parameter default required. Specifically: \'{0}\'');
 	export const dupdeclaration = localize('diagnostic.dupdeclaration', 'Duplicate declaration');
+	export const filenotexist = localize('diagnostic.filenotexist', '\'{0}\' not exist');
+	export const funcassignerr = localize('diagnostic.funcassignerr', 'This Func cannot be assigned a value');
+	export const funccallerr = localize('diagnostic.funccallerr', 'Function calls require a space or \'(\',  use comma only between parameters');
 	export const globalconflicts = localize('diagnostic.globalconflicts', 'This global declaration conflicts with an existing {0}');
 	export const hotdeferr = localize('diagnostic.hotdeferr', 'Hotkeys/hotstrings cannot be defined in functions/classes');
 	export const invalidhotdef = localize('diagnostic.invalidhotdef', 'Invalid hotkey definition');

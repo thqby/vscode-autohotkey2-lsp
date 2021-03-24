@@ -48,7 +48,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 		}
 		let glo = [doc.declaration];
 		for (const uri in list)
-			glo.push(lexers[uri].declaration);
+			if (lexers[uri])
+				glo.push(lexers[uri].declaration);
 		glo.map(g => {
 			for (const name in g) {
 				if (g[name].kind === SymbolKind.Class)
@@ -379,7 +380,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			for (const t in list) {
 				path = list[t].path;
-				for (const n in (temp = lexers[t].declaration)) {
+				for (const n in (temp = lexers[t]?.declaration)) {
 					if (!vars[n] || (vars[n].kind === CompletionItemKind.Variable && temp[n].kind !== SymbolKind.Variable)) {
 						cpitem = convertNodeCompletion(temp[n]), cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
 						vars[n] = cpitem;
@@ -408,7 +409,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					if ((<any>libfuncs[u]).islib || path.startsWith(dir + '\\'))
 						libfuncs[u].map(it => {
 							if (!vars[_low = it.name.toLowerCase()]) {
-								cpitem = convertNodeCompletion(it);
+								cpitem = convertNodeCompletion(it), cpitem.insertText = cpitem.label + '($0)', cpitem.insertTextFormat = 2;
 								cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
 								cpitem.command = { title: 'ahk2.fix.include', command: 'ahk2.fix.include', arguments: [path, uri] };
 								vars[_low] = cpitem;
@@ -434,28 +435,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 		}
 	}
-	function addGlobalVar() {
-		for (const name in (temp = doc.global)) {
-			const item = temp[name];
-			if (!(item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character))
-				vars[name] = true, items.push(convertNodeCompletion(item));
-		}
-		for (const t in list) {
-			path = list[t].path;
-			for (const name in (temp = lexers[t].global))
-				if (!vars[name]) vars[name] = true, addincludeitem(temp[name]);
-		}
-	}
-	function addFunction() {
-		for (const name in (temp = doc.function))
-			if (!funcs[name])
-				funcs[name] = true, items.push(convertNodeCompletion(temp[name]));
-		for (const t in list) {
-			path = list[t].path;
-			for (const name in (temp = lexers[t].function))
-				if (!funcs[name]) funcs[name] = true, addincludeitem(temp[name]);
-		}
-	}
+
 	function addOther() {
 		items.push(...completionItemCache.snippet);
 		if (triggerKind === 1 && content.text.length > 2 && content.text.match(/^[a-z]+_/i)) {
@@ -473,18 +453,20 @@ function convertNodeCompletion(info: any): CompletionItem {
 		case SymbolKind.Function:
 		case SymbolKind.Method:
 			ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
+			ci.command = { title: 'ahk2.parameterhints', command: 'ahk2.parameterhints' };
+			ci.commitCharacters = ['.', '('];
 			if ((<FuncNode>info).params.length) {
 				if ((<FuncNode>info).params[0].name.includes('|')) {
 					ci.insertText = ci.label + '(${1|' + (<FuncNode>info).params[0].name.replace(/\|/g, ',') + '|})';
-				} else ci.insertText = ci.label + '($0)';
-				ci.insertTextFormat = InsertTextFormat.Snippet;
-				ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
-			} else ci.insertText = ci.label + '()$0', ci.insertTextFormat = InsertTextFormat.Snippet;
+					ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
+					ci.insertTextFormat = InsertTextFormat.Snippet, delete ci.commitCharacters;
+				}
+			}
 			ci.detail = info.full, ci.documentation = info.detail; break;
 		case SymbolKind.Variable:
 			ci.kind = CompletionItemKind.Variable, ci.detail = info.detail; break;
 		case SymbolKind.Class:
-			ci.kind = CompletionItemKind.Class, ci.commitCharacters = ['.'];
+			ci.kind = CompletionItemKind.Class, ci.commitCharacters = ['.', '('];
 			ci.detail = 'class ' + ci.label, ci.documentation = info.detail; break;
 		case SymbolKind.Event:
 			ci.kind = CompletionItemKind.Event; break;

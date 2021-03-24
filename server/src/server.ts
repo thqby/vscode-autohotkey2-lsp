@@ -20,7 +20,7 @@ import { defintionProvider } from './definitionProvider';
 import { executeCommandProvider } from './executeCommandProvider';
 import { documentFormatting, rangeFormatting } from './formattingProvider';
 import { hoverProvider } from './hoverProvider';
-import { ClassNode, FuncNode, getincludetable, Lexer, parseinclude, Variable } from './Lexer';
+import { ClassNode, FuncNode, getincludetable, Lexer, parseinclude } from './Lexer';
 import { completionitem, setting } from './localize';
 import { referenceProvider } from './referencesProvider';
 import { prepareRename, renameProvider } from './renameProvider';
@@ -39,7 +39,7 @@ export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: stri
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] }, isahk2_h = false;
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], ahkclasses: { [key: string]: ClassNode } = {};
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
-export let libfuncs: { [uri: string]: FuncNode[] } = {}, workfolder = '';
+export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '';
 export type Maybe<T> = T | undefined;
 export let builtin_class: CompletionItem[] = [];
 export let dllcalltpe: string[] = [];
@@ -90,7 +90,8 @@ connection.onInitialize((params: InitializeParams) => {
 				commands: [
 					'ahk2.fix.include',
 					'ahk2.generate.comment',
-					'ahk2.generate.author'
+					'ahk2.generate.author',
+					'ahk2.parameterhints'
 				]
 			},
 			hoverProvider: true,
@@ -172,8 +173,7 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 	doc.parseScript();
 	if (libfuncs[uri]) {
 		libfuncs[uri].length = 0;
-		for (const f in doc.function)
-			libfuncs[uri].push(doc.function[f]);
+		libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
 	}
 	for (const t in doc.include)
 		if (!initial[t])
@@ -244,14 +244,13 @@ export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
 }
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-	let uri = textDocument.uri, doc = lexers[uri];
+	let uri = textDocument.uri, doc: Lexer;
 	getDocumentSettings(uri);
-	lexers[uri = textDocument.uri.toLowerCase()].initlibdirs();
+	(doc = lexers[uri = uri.toLowerCase()]).initlibdirs();
 	if (doc.diagnostics.length)
 		doc.parseScript();
 	parseproject(uri);
-	for (const f in doc.function)
-		libfuncs[uri].push(doc.function[f]);
+	libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
 }
 
 function initahk2cache() {
@@ -412,9 +411,8 @@ async function initpathenv(config?: any) {
 					let uri = URI.file(path).toString().toLowerCase(), d: Lexer;
 					if (!(d = lexers[uri]))
 						d = new Lexer(openFile(path)), d.parseScript();
-					libfuncs[uri] = [], Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
-					for (const f in d.function)
-						libfuncs[uri].push(d.function[f]);
+					libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
+					Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
 				});
 			});
 		}, 1000);
@@ -527,8 +525,7 @@ async function parseproject(uri: string) {
 					if (workspace)
 						lexers[u] = d;
 				}
-				for (const f in d.function)
-					libfuncs[u].push(d.function[f]);
+				libfuncs[u].push(...Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
 			}
 		});
 	}, 1000);

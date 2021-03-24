@@ -11,14 +11,11 @@ import {
 	workspace,
 	window,
 	Range,
-	SnippetString,
-	Position,
-	WorkspaceEdit
+	SnippetString
 } from 'vscode';
 import {
 	LanguageClient,
 	LanguageClientOptions,
-	ResponseError,
 	ServerOptions,
 	TransportKind
 } from 'vscode-languageclient';

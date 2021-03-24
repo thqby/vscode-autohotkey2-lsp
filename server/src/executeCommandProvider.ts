@@ -3,6 +3,8 @@ import { ExecuteCommandParams, Position, Range, SymbolKind, TextEdit } from 'vsc
 import { detectExp, FuncNode } from './Lexer';
 import { connection, lexers, pathenv, restorePath } from './server';
 
+export var noparammoveright: boolean = false;
+
 export async function executeCommands(cmds: { command: string, args?: any[], wait?: boolean }[]) {
 	return connection.sendRequest('ahk2.executeCommands', [cmds]);
 }
@@ -23,10 +25,13 @@ export async function executeCommandProvider(params: ExecuteCommandParams) {
 		case 'ahk2.generate.author':
 			generateAuthor();
 			break;
+		case 'ahk2.parameterhints':
+			parameterhints(true);
+			break;
 	}
 }
 
-function fixinclude(libpath: string, docuri: string) {
+async function fixinclude(libpath: string, docuri: string) {
 	let doc = lexers[docuri], text = '', line = -1, curdir = '';
 	for (const p of doc.libdirs.slice(1)) {
 		if (libpath.startsWith(p + '\\')) {
@@ -64,6 +69,7 @@ function fixinclude(libpath: string, docuri: string) {
 			text += '\n';
 	}
 	connection.workspace.applyEdit({ changes: { [docuri]: [TextEdit.insert({ line, character: 0 }, text)] } });
+	executeCommands([{ command: 'editor.action.triggerParameterHints' }]);
 	return;
 }
 
@@ -166,4 +172,10 @@ async function generateAuthor() {
 	if (doc.document.positionAt(tk.offset).line === 0)
 		info.push('');
 	insertSnippet(info.join('\n'), range);
+}
+
+export function parameterhints(val = false) {
+	let ret = noparammoveright;
+	noparammoveright = val;
+	return ret;
 }

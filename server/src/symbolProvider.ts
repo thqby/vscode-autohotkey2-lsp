@@ -12,7 +12,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		gvar[key] = glo[key];
 	let list = doc.relevance;
 	for (const uri in list) {
-		const gg = lexers[uri].declaration;
+		const gg = lexers[uri]?.declaration;
 		for (let key in gg)
 			if (!gvar[key])
 				gvar[key] = gg[key];

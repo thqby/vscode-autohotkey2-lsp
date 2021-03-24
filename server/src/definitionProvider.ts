@@ -30,23 +30,19 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 		if (word === '')
 			return undefined;
 		else if (!(nodes = searchNode(doc, word, context.range.end, kind))) {
-			if (kind === SymbolKind.Function) {
-				nodes = searchLibFunction(word, doc.libdirs);
-			} else {
-				if (kind === SymbolKind.Method) {
-					nodes = <any>[];
-					let docs = [doc];
-					word.replace(/\.([^.]+)$/, (...m) => {
-						word = m[1];
-						for (const u in doc.relevance)
-							docs.push(lexers[u]);
-						for (const doc of docs) {
-							if (doc.object.method[word]?.length)
-								nodes?.push(...doc.object.method[word].map(it => { return { node: it, uri: doc.uri }; }));
-						}
-						return '';
-					});
-				}
+			if (kind === SymbolKind.Method) {
+				nodes = <any>[];
+				let docs = [doc];
+				word.replace(/\.([^.]+)$/, (...m) => {
+					word = m[1];
+					for (const u in doc.relevance)
+						docs.push(lexers[u]);
+					for (const doc of docs) {
+						if (doc.object.method[word]?.length)
+							nodes?.push(...doc.object.method[word].map(it => { return { node: it, uri: doc.uri }; }));
+					}
+					return '';
+				});
 			}
 		}
 		if (nodes) {
@@ -59,29 +55,4 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 		}
 	}
 	return undefined;
-}
-
-export function searchLibFunction(name: string, dirs: string[]): [{ node: FuncNode, uri: string, lib?: boolean }] | undefined {
-	let fc = name.toLowerCase(), names = [fc], t: any, re = new RegExp('^' + fc + '(_.+)?$', 'i');
-	if (t = name.match(/^((\w|[^\x00-\xff])+?)_/))
-		names.push(fc = t[1].toLowerCase());
-	for (let path of dirs) {
-		for (const name of names) {
-			path = resolve(path, name + '.ahk');
-			let uri = URI.file(path).toString().toLowerCase();
-			if (!libfuncs[uri]) {
-				libfuncs[uri] = [], Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
-				if (existsSync(path)) {
-					let doc = new Lexer(openFile(path));
-					doc.parseScript();
-					for (const name in doc.function)
-						if (re.test(name))
-							libfuncs[uri].push(doc.function[name]);
-				}
-			}
-			for (const node of libfuncs[uri])
-				if (node.name.toLowerCase() === name)
-					return [{ node, uri: URI.file(restorePath(URI.parse(uri).fsPath)).toString(), lib: true }];
-		}
-	}
 }

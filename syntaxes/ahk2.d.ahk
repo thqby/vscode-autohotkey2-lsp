@@ -37,7 +37,7 @@ CallbackFree(Function) => void
 /**
  * 检索插入符号的当前位置(文本插入点).
  */
-CaretGetPos([OutputVarX, OutputVarY]) => Number
+CaretGetPos([&OutputVarX, &OutputVarY]) => Number
 
 /**
  * 返回 Number 向上取整后的整数(不含任何 .00 后缀).
@@ -647,7 +647,7 @@ IL_Destroy(ImageListID) => Number
 /**
  * 在屏幕区域中搜索图像.
  */
-ImageSearch(OutputVarX, OutputVarY, X1, Y1, X2, Y2, ImageFile) => Number
+ImageSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ImageFile) => Number
 
 /**
  * 删除标准格式的 .ini 文件中的值.
@@ -777,7 +777,7 @@ Ln(Number) => Number
 /**
  * 载入图像文件并返回位图或图标句柄.
  */
-LoadPicture(Filename [, Options, ByRef ImageType]) => Number
+LoadPicture(Filename [, Options, &ImageType]) => Number
 
 /**
  * 返回Number的对数（以10为底）.
@@ -852,7 +852,7 @@ MouseClickDrag(WhichButton, X1, Y1, X2, Y2 [, Speed, Relative]) => void
 /**
  * 获取鼠标光标的当前位置, 以及它悬停在哪个窗口和控件上.
  */
-MouseGetPos([OutputVarX, OutputVarY, OutputVarWin, OutputVarControl, Flag]) => void
+MouseGetPos([&OutputVarX, &OutputVarY, &OutputVarWin, &OutputVarControl, Flag]) => void
 
 /**
  * 移动鼠标光标.
@@ -967,7 +967,7 @@ PixelGetColor(X, Y [, Mode]) => String
 /**
  * 在屏幕区域中搜索指定颜色的像素.
  */
-PixelSearch(OutputVarX, OutputVarY, X1, Y1, X2, Y2, ColorID [, Variation]) => Number
+PixelSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ColorID [, Variation]) => Number
 
 /**
  * 将消息放置在窗口或控件的消息队列中.
@@ -1017,12 +1017,12 @@ RegDeleteKey([KeyName]) => void
 /**
  * 确定字符串是否包含某个匹配模式（正则表达式）.
  */
-RegExMatch(Haystack, NeedleRegEx [, OutputVar, StartingPosition]) => Number
+RegExMatch(Haystack, NeedleRegEx [, &OutputVar, StartingPosition]) => Number
 
 /**
  * 替换字符串中匹配模式(正则表达式) 出现的地方.
  */
-RegExReplace(Haystack, NeedleRegEx [, Replacement, OutputVarCount, Limit, StartingPosition]) => String
+RegExReplace(Haystack, NeedleRegEx [, Replacement, &OutputVarCount, Limit, StartingPosition]) => String
 
 /**
  * 从注册表读取值.
@@ -1047,12 +1047,12 @@ RTrim(String, OmitChars = ' `t') => String
 /**
  * 运行外部程序.
  */
-Run(Target [, WorkingDir, Options, OutputVarPID]) => void
+Run(Target [, WorkingDir, Options, &OutputVarPID]) => void
 
 /**
  * 运行外部程序并等待程序结束才继续往后执行.
  */
-RunWait(Target [, WorkingDir, Options, OutputVarPID]) => Number
+RunWait(Target [, WorkingDir, Options, &OutputVarPID]) => Number
 
 /**
  * 将模拟的击键和鼠标单击发送到活动窗口.默认情况下, Send 等同于 SendInput.
@@ -1197,7 +1197,7 @@ StrPut(String, Address [, Length] [, Encoding]) => Number
 /**
  * 用新字符串替换指定的子字符串.
  */
-StrReplace(Haystack, SearchText [, ReplaceText, CaseSense, OutputVarCount, Limit]) => String
+StrReplace(Haystack, SearchText [, ReplaceText, CaseSense, &OutputVarCount, Limit]) => String
 
 /**
  * 使用指定的分隔符将字符串分成子字符串数组.
