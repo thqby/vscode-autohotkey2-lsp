@@ -18,10 +18,10 @@ export namespace codeaction {
 }
 
 export namespace diagnostic {
-	export const assignerr = localize('diagnostic.assignerr', 'This {0} cannot be used as an output variable');
+	export const assignerr = localize('diagnostic.assignerr', 'This {0} \'{1}\' cannot be used as an output variable');
 	export const classinfuncerr = localize('diagnostic.classinfuncerr', 'Functions cannot contain classes');
 	export const classuseerr = localize('diagnostic.classuseerr', 'This class cannot be used as an output variable');
-	export const conflictserr = localize('diagnostic.conflictserr', 'This {0} declaration conflicts with an existing {1}');
+	export const conflictserr = localize('diagnostic.conflictserr', 'This {0} \'{2}\' declaration conflicts with an existing {1}');
 	export const declarationerr = localize('diagnostic.declarationerr', 'Unexpected declaration');
 	export const defaultvalmissing = localize('diagnostic.defaultvalmissing', 'Parameter default required. Specifically: \'{0}\'');
 	export const dupdeclaration = localize('diagnostic.dupdeclaration', 'Duplicate declaration');

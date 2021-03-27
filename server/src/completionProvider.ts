@@ -89,7 +89,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							}
 						}
 						tps.push(ts[tp].node);
-					} else searchNode(doc, tp, position, [SymbolKind.Class, SymbolKind.Variable])?.map(it => {
+					} else searchNode(doc, tp, position, SymbolKind.Variable)?.map(it => {
 						tps.push(it.node);
 					});
 				}
@@ -236,16 +236,18 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			} else if (temp = linetext.match(/(?<!\.)\b(goto|continue|break)\b(?!\s*:)(\s+|\(\s*('|")?)/i)) {
 				let t = temp[2].trim();
 				if (scopenode = doc.searchScopedNode(position))
-					doc.getScopeChildren(scopenode).map(it => {
+					scopenode.children?.map(it => {
 						if (it.kind === SymbolKind.Field)
 							items.push(convertNodeCompletion(it));
 					});
 				else {
-					doc.label.map(it => {
-						items.push(convertNodeCompletion(it));
+					doc.children.map(it => {
+						if (it.kind === SymbolKind.Field)
+							items.push(convertNodeCompletion(it));
 					});
-					for (const t in list) lexers[t].label.map(it => {
-						items.push(convertNodeCompletion(it));
+					for (const t in list) lexers[t].children.map(it => {
+						if (it.kind === SymbolKind.Field)
+							items.push(convertNodeCompletion(it));
 					});
 				}
 				if (t === '' || temp[3])
@@ -370,6 +372,14 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			} else
 				other = !percent;
 			scopenode = doc.searchScopedNode(position);
+			let classdec = false;
+			if (scopenode && scopenode.kind === SymbolKind.Class) {
+				if (linetext.match(/^\s*\S*\s*$/)) {
+					classdec = true;
+				} else if (linetext.match(/^\s*(static\s+)?(\w|[^\x00-\xff])+\(/i))
+					classdec = true;
+			}
+			if (classdec) {}
 			for (const n in ahkvars)
 				vars[n] = convertNodeCompletion(ahkvars[n]);
 			for (const n in doc.declaration) {
@@ -411,6 +421,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							if (!vars[_low = it.name.toLowerCase()]) {
 								cpitem = convertNodeCompletion(it), cpitem.insertText = cpitem.label + '($0)', cpitem.insertTextFormat = 2;
 								cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
+								delete cpitem.commitCharacters;
 								cpitem.command = { title: 'ahk2.fix.include', command: 'ahk2.fix.include', arguments: [path, uri] };
 								vars[_low] = cpitem;
 							}
@@ -421,21 +432,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				addOther();
 			return items.concat(Object.values(vars));
 	}
-	function addincludeitem(item: DocumentSymbol) {
-		cpitem = convertNodeCompletion(item), cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || ''), items.push(cpitem);
-	}
-	function addNodesIgnoreCurpos(nodes: DocumentSymbol[]) {
-		for (const item of nodes) {
-			if (item.kind === SymbolKind.Variable) {
-				if (!vars[_low = item.name.toLowerCase()] && !(item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character))
-					vars[_low] = true, items.push(convertNodeCompletion(item));
-			} else if (item.kind === SymbolKind.Function) {
-				if (!funcs[_low = item.name.toLowerCase()])
-					funcs[_low] = true, items.push(convertNodeCompletion(item));
-			}
-		}
-	}
-
 	function addOther() {
 		items.push(...completionItemCache.snippet);
 		if (triggerKind === 1 && content.text.length > 2 && content.text.match(/^[a-z]+_/i)) {
@@ -471,7 +467,7 @@ function convertNodeCompletion(info: any): CompletionItem {
 		case SymbolKind.Event:
 			ci.kind = CompletionItemKind.Event; break;
 		case SymbolKind.Field:
-			ci.kind = CompletionItemKind.Field, ci.insertText = ci.label.replace(/:$/, ''); break;
+			ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.replace(/:$/, ''); break;
 		case SymbolKind.Property:
 			ci.kind = CompletionItemKind.Property, ci.detail = (info.full || ci.label), ci.documentation = (info.detail || '');
 			if (info.children) for (const it of info.children) {

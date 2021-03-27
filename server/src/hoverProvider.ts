@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, detectExpType, formatMarkdowndetail, FuncNode, searchNode } from './Lexer';
-import { lexers, hoverCache, Maybe } from './server';
+import { lexers, hoverCache, Maybe, ahkvars } from './server';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return undefined;
@@ -14,14 +14,12 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			if ((t = hoverCache[1]) && (t = t[word = '#' + word]))
 				return t[0];
 			else return undefined;
-		} else if (context.pre.match(/(?<!\.)\b(goto|break|continue)(?!\s*:)(\(\s*['"]|\s*)$/i)) {
-			kind = SymbolKind.Field, word = word + ':';
 		} else kind = context.kind;
 		if (kind === SymbolKind.Variable)
 			kind = [SymbolKind.Variable, SymbolKind.Class];
 		if (word === '')
 			return undefined;
-		else if (!(nodes = searchNode(doc, word, context.range.end, kind))) {
+		else if (!(nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
 			let ts: any = {};
 			nodes = <any>[], detectExpType(doc, word.replace(/\.[^.]+$/, m => {
 				word = m.match(/^\.[^.]+$/) ? m : '';
@@ -37,15 +35,14 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 				nodes = undefined;
 		}
 		if (!nodes) {
-			if (typeof kind === 'object') {
-				if ((t = hoverCache[1]) && t[word])
-					return t[word][0];
-			} else if (kind === SymbolKind.Function) {
+			if (kind === SymbolKind.Method) {
+			} else if (ahkvars[word])
+				nodes = [{ node: ahkvars[word], uri: '' }];
+			else if (kind === SymbolKind.Function) {
 				if ((t = hoverCache[0]) && t[word])
 					return t[word][0];
-			} else if (kind === SymbolKind.Method) {
-
-			}
+			} else if ((t = hoverCache[1]) && t[word])
+				return t[word][0];
 		}
 		if (nodes) {
 			if (nodes.length > 1) {

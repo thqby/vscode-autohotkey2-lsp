@@ -13,8 +13,7 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string]: Range[] }> {
 	let cls = '', name = context.text.toLowerCase(), references: { [uri: string]: Range[] } = {};
 	if (!context.text) return undefined;
-	let nodes = searchNode(doc, name, context.range.end, context.kind === SymbolKind.Variable ?
-		[SymbolKind.Class, SymbolKind.Variable] : context.kind);
+	let nodes = searchNode(doc, name, context.range.end, context.kind);
 	if (!nodes || nodes.length > 1)
 		return undefined;
 	let { node, uri } = nodes[0];
@@ -25,9 +24,7 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 		case SymbolKind.Class:
 			if (scope) {
 				if (scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Event) {
-					if (node.kind !== SymbolKind.Variable)
-						scope = (<FuncNode>scope).parent;
-					if (scope && (<FuncNode>scope).global && (<FuncNode>scope).global[name])
+					if ((<FuncNode>scope).global && (<FuncNode>scope).global[name])
 						scope = undefined;
 				}
 			}
@@ -43,8 +40,8 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 				}
 			}
 			break;
-		case SymbolKind.Method:
-		case SymbolKind.Property:
+		case SymbolKind.Field:
+
 			break;
 		default:
 			return undefined;

@@ -1,10 +1,10 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, FuncNode, FuncScope, samenameerr, Variable } from './Lexer';
-import { ahkclasses, ahkvars, lexers, sendDiagnostics, symbolcache } from './server';
+import { ahkvars, lexers, sendDiagnostics, symbolcache } from './server';
 
 export async function symbolProvider(params: DocumentSymbolParams): Promise<SymbolInformation[]> {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
-	if (!doc || (!doc.reflat && symbolcache.uri === uri)) return symbolcache.sym;
+	if (!doc || (!doc.reflat && symbolcache[uri])) return symbolcache[uri];
 	let tree = <DocumentSymbol[]>doc.children, gvar: any = {}, glo = doc.declaration, diags = doc.diagnostics.length;
 	for (const key in ahkvars)
 		gvar[key] = ahkvars[key];
@@ -17,14 +17,14 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			if (!gvar[key])
 				gvar[key] = gg[key];
 	}
-	symbolcache.uri = uri, doc.reflat = false;
-	symbolcache.sym = (lexers[uri].flattreecache = flatTree(tree)).map(info => {
+	doc.reflat = false;
+	symbolcache[uri] = flatTree(tree).map(info => {
 		return SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, uri,
 			info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
 	});
 	if (doc.diagnostics.length !== diags)
 		sendDiagnostics();
-	return symbolcache.sym;
+	return symbolcache[uri];
 
 	function flatTree(tree: DocumentSymbol[], vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
 		const result: DocumentSymbol[] = [], t: DocumentSymbol[] = [], p: { [name: string]: DocumentSymbol } = {};

@@ -22,8 +22,6 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 					}
 			}
 			return undefined;
-		} else if (context.pre.match(/(?<!\.)\b(goto|break|continue)(?!\s*:)(\(\s*['"]|\s*)$/i) || (context.pre.trim() === '' && context.suf.match(/^:\s*(\s;.*)?$/))) {
-			kind = SymbolKind.Field, word = context.text.toLowerCase() + ':';
 		} else word = context.text.toLowerCase(), kind = context.kind;
 		if (kind === SymbolKind.Variable)
 			kind = [SymbolKind.Variable, SymbolKind.Class];

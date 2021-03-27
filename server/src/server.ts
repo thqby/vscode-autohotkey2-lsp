@@ -20,7 +20,7 @@ import { defintionProvider } from './definitionProvider';
 import { executeCommandProvider } from './executeCommandProvider';
 import { documentFormatting, rangeFormatting } from './formattingProvider';
 import { hoverProvider } from './hoverProvider';
-import { ClassNode, FuncNode, getincludetable, Lexer, parseinclude } from './Lexer';
+import { checksamenameerr, ClassNode, FuncNode, getincludetable, Lexer, parseinclude } from './Lexer';
 import { completionitem, setting } from './localize';
 import { referenceProvider } from './referencesProvider';
 import { prepareRename, renameProvider } from './renameProvider';
@@ -35,15 +35,15 @@ export let globalSettings: AHKLSSettings = {
 export const connection = createConnection(ProposedFeatures.all);
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
-export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { uri: string, sym: SymbolInformation[] } = { uri: '', sym: [] };
+export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { [uri: string]: SymbolInformation[] } = {};
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] }, isahk2_h = false;
-export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], ahkclasses: { [key: string]: ClassNode } = {};
-export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '';
-export type Maybe<T> = T | undefined;
+export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}];
+export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let builtin_class: CompletionItem[] = [];
 export let dllcalltpe: string[] = [];
-
+export type Maybe<T> = T | undefined;
+let timer: NodeJS.Timeout | undefined;
 interface AHKLSSettings {
 	Path: string;
 }
@@ -178,16 +178,38 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 	for (const t in doc.include)
 		if (!initial[t])
 			initial[t] = doc.include[t], cg = true;
+	if (timer)
+		clearTimeout(timer);
+	timer = setTimeout(() => {
+		checksamename(doc);
+	}, 1500);
 	if (!cg && Object.keys(initial).length === Object.keys(doc.include).length) {
+		if (!doc.relevance)
+			doc.relevance = getincludetable(uri).list;
 		sendDiagnostics();
 		return;
 	}
-	parseinclude(doc.include), doc.relevance = getincludetable(uri), resetrelevance();
+	parseinclude(doc.include), doc.relevance = getincludetable(uri).list, resetrelevance();
 	sendDiagnostics();
 	function resetrelevance() {
 		for (const u in initial)
 			if (lexers[u])
-				lexers[u].relevance = getincludetable(u);
+				lexers[u].relevance = getincludetable(u).list;
+	}
+	function checksamename(doc: Lexer) {
+		let dec: any = {}, dd: Lexer;
+		for (const uri in doc.relevance) {
+			if (dd = lexers[uri]) {
+				dd.diagnostics.splice(dd.diags);
+				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
+			}
+		}
+		checksamenameerr(dec, Object.values(doc.declaration), doc.diagnostics);
+		for (const uri in doc.relevance) {
+			if (dd = lexers[uri])
+				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
+		}
+		sendDiagnostics();
 	}
 });
 
@@ -402,7 +424,7 @@ async function initpathenv(config?: any) {
 		for (const uri in lexers) {
 			let doc = lexers[uri];
 			doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include);
-			doc.relevance = getincludetable(doc.uri);
+			doc.relevance = getincludetable(doc.uri).list;
 		}
 		libfuncs = {};
 		setTimeout(() => {

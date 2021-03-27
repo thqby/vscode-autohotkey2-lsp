@@ -1856,7 +1856,7 @@ class Func extends Object {
 	/**
 	 * 绑定参数到函数并返回绑定函数对象.
 	 */
-	Bind(Params*) => Func
+	Bind(Params*)
 
 	/**
 	 * 确定参数是否为 ByRef 类型(如果省略参数, 表示此函数是否含有 ByRef 参数).
