@@ -236,7 +236,7 @@ async function quickHelp() {
 	}
 	if (word !== '' && executePath !== '' && existsSync(executePath)) {
 		let ahkpro = child_process.exec(`\"${executePath}\" /ErrorStdOut *`, { cwd: `${resolve(editor.document.fileName, '..')}` });
-		ahkpro.stdin?.write(`#NoTrayIcon\ntry if (WinGetMinMax("ahk_pid ${ahkhelp.pid}")=-1)\nWinRestore("ahk_pid ${ahkhelp.pid}"), Sleep(500)\nWinActivate("ahk_pid ${ahkhelp.pid}")\nif !WinWaitActive("ahk_pid ${ahkhelp.pid}", , 5)\nExitApp()\nSendInput("!s"), Sleep(100)\nSendInput("^{Backspace}"), Sleep(200)\nSendInput("{Text}${word}\`n")`);
+		ahkpro.stdin?.write(`#NoTrayIcon\ntry if (WinGetMinMax("ahk_pid ${ahkhelp.pid}")=-1)\nWinRestore("ahk_pid ${ahkhelp.pid}"), Sleep(500)\nWinActivate("ahk_pid ${ahkhelp.pid}")\nif !WinWaitActive("ahk_pid ${ahkhelp.pid}", , 5)\nExitApp()\nSendInput("!s"), Sleep(150)\nSendInput("^{Backspace}"), Sleep(250)\nSendInput("{Text}${word}\`n")`);
 		ahkpro.stdin?.end();
 	}
 }

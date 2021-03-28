@@ -104,11 +104,6 @@ Swap(Var1, Var2)
 StrBuf(String [, Encoding])
 
 /**
- * Struct是一个内置函数, 用于创建并返回结构对象.该对象可用于使用对象语法访问定义的结构.SetCapacity方法可用于将内存分配给结构和指针.
- */
-Struct(Definition , StructMemory, InitObject)
-
-/**
  * 内置函数可以计算结构或类型的大小, 例如TCHAR或PTR或VOID ..., 有关用法和示例, 另请参见Struct.
  */
 sizeof(Definition [, offset])
@@ -211,6 +206,11 @@ ZipRawMemory(AddressOrBufferObject [, Size , Password])
 
 class Object extends Any {
 	/**
+	* Object是从AutoHotkey对象类派生的基本类.
+	*/
+	static Call() => Object
+
+	/**
 	 * 返回对象的一个浅拷贝.
 	 */
 	Clone() => Object
@@ -267,6 +267,11 @@ class Object extends Any {
 }
 
 class Struct {
+	/**
+	* Struct是一个内置函数, 用于创建并返回结构对象.该对象可用于使用对象语法访问定义的结构.SetCapacity方法可用于将内存分配给结构和指针.
+	*/
+	static Call(Definition , StructMemory, InitObject) => Struct
+
 	/**
 	 * 返回数组定义的大小；如果结构或字段不是数组, 则返回0.
 	 */

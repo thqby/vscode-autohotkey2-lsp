@@ -52,13 +52,13 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				glo.push(lexers[uri].declaration);
 		glo.map(g => {
 			for (const name in g) {
-				if (g[name].kind === SymbolKind.Class)
-					items.push(convertNodeCompletion(g[name]));
+				if (g[name].kind === SymbolKind.Class && !vars[name])
+					items.push(convertNodeCompletion(g[name])), vars[name] = true;
 			}
 		});
 		for (const cl in ahkvars)
-			if (ahkvars[cl].kind === SymbolKind.Class)
-				items.push(convertNodeCompletion(ahkvars[cl]));
+			if (ahkvars[cl].kind === SymbolKind.Class && !vars[cl])
+				items.push(convertNodeCompletion(ahkvars[cl])), vars[cl] = true;
 		return items;
 	}
 	switch (triggerchar) {
@@ -286,7 +286,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							}
 							break;
 						case 'numget':
-							if (res.index === 2) {
+							if (res.index === 2 || res.index === 1) {
 								for (const name of dllcalltpe.filter(v => (v.match(/str$/i) ? false : true)))
 									cpitem = CompletionItem.create(name), cpitem.kind = CompletionItemKind.TypeParameter, items.push(cpitem);
 								return items;
@@ -372,14 +372,22 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			} else
 				other = !percent;
 			scopenode = doc.searchScopedNode(position);
-			let classdec = false;
 			if (scopenode && scopenode.kind === SymbolKind.Class) {
-				if (linetext.match(/^\s*\S*\s*$/)) {
-					classdec = true;
-				} else if (linetext.match(/^\s*(static\s+)?(\w|[^\x00-\xff])+\(/i))
-					classdec = true;
+				let its: CompletionItem[] = [], t = linetext.trim();
+				if (t.match(/^\S*$/)) {
+					completionItemCache.other.map(it => {
+						if (it.label.match(/\b(static|class)\b/))
+							its.push(it);
+						else if (it.label.match(/^__\w+/)) {
+							let t = Object.assign({}, it);
+							t.insertText = t.insertText?.replace('$0', '$1') + ' {\n\t$0\n}';
+							its.push(t);
+						}
+					})
+					return its;
+				} else if (t.match(/^(static\s+)?(\w|[^\x00-\xff])+(\(|$)/i))
+					return undefined;
 			}
-			if (classdec) {}
 			for (const n in ahkvars)
 				vars[n] = convertNodeCompletion(ahkvars[n]);
 			for (const n in doc.declaration) {
