@@ -1734,7 +1734,7 @@ RegWrite(Value, ValueType, KeyName [, ValueName]) => void
 /**
  * 返回数字,四舍五入到小数点后N位
  */
-Round(Number) => Number
+Round(Number, N := 0) => Number | String
 
 /**
  * 从字符串的结尾修剪字符.

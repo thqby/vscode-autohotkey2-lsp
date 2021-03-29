@@ -1,11 +1,10 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
-import { executeCommands, parameterhints } from './executeCommandProvider';
 import { ClassNode, detectExp, detectExpType, detectVariableType, formatMarkdowndetail, FuncNode, getFuncCallInfo, searchNode } from './Lexer';
 import { ahkvars, lexers, Maybe } from './server';
 
 export async function signatureProvider(params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (cancellation.isCancellationRequested) return undefined;
-	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], kind: SymbolKind = SymbolKind.Function, nodes: any, mv = parameterhints();
+	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], kind: SymbolKind = SymbolKind.Function, nodes: any;
 	let res: any, name: string, pos: Position, index: number, signinfo: SignatureHelp = { activeSignature: 0, signatures: [], activeParameter: 0 };
 	if (!(res = getFuncCallInfo(doc, params.position)) || res.index < 0)
 		return undefined;
@@ -106,7 +105,5 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		});
 	});
 	signinfo.activeParameter = index;
-	if (mv && signinfo.signatures.length === 1 && signinfo.signatures[0].parameters?.length === 0)
-		executeCommands([{ command: 'cursorRight' }]);
 	return signinfo;
 }

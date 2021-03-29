@@ -25,9 +25,6 @@ export async function executeCommandProvider(params: ExecuteCommandParams) {
 		case 'ahk2.generate.author':
 			generateAuthor();
 			break;
-		case 'ahk2.parameterhints':
-			parameterhints(true);
-			break;
 	}
 }
 
@@ -68,8 +65,15 @@ async function fixinclude(libpath: string, docuri: string) {
 		if (line < doc.document.lineCount)
 			text += '\n';
 	}
-	connection.workspace.applyEdit({ changes: { [docuri]: [TextEdit.insert({ line, character: 0 }, text)] } });
-	executeCommands([{ command: 'editor.action.triggerParameterHints' }]);
+	let { pos } = await connection.sendRequest('ahk2.getpos'), char = doc.document.getText(Range.create(pos.line, pos.character - 1, pos.line, pos.character));
+	await connection.workspace.applyEdit({ changes: { [docuri]: [TextEdit.insert({ line, character: 0 }, text)] } });
+	if (char === '(')
+		executeCommands([{ command: 'editor.action.triggerParameterHints' }]);
+	else {
+		await insertSnippet('$0', Range.create(pos, pos));
+		if (char === '.')
+			executeCommands([{ command: 'editor.action.triggerSuggest' }]);
+	}
 	return;
 }
 
@@ -172,10 +176,4 @@ async function generateAuthor() {
 	if (doc.document.positionAt(tk.offset).line === 0)
 		info.push('');
 	insertSnippet(info.join('\n'), range);
-}
-
-export function parameterhints(val = false) {
-	let ret = noparammoveright;
-	noparammoveright = val;
-	return ret;
 }

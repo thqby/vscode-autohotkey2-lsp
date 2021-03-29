@@ -186,7 +186,13 @@ async function compileScript() {
 	commands.executeCommand('workbench.action.files.save');
 	const currentPath = editor.document.uri.fsPath;
 	const exePath = currentPath.replace(/\.\w+$/, '.exe');
-	unlinkSync(exePath);
+	try {
+		if (existsSync(exePath))
+			unlinkSync(exePath);
+	} catch (e) {
+		window.showErrorMessage(e.message);
+		return;
+	}
 	if (child_process.exec(`"${compilePath}" /in "${currentPath}" /out "${exePath}" /compress 0`, { cwd: resolve(currentPath, '..') })) {
 		let start = new Date().getTime();
 		let timer = setInterval(() => {

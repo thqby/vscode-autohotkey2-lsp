@@ -1,5 +1,5 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, FuncNode, FuncScope, samenameerr, Variable } from './Lexer';
+import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, samenameerr, Variable } from './Lexer';
 import { ahkvars, lexers, sendDiagnostics, symbolcache } from './server';
 
 export async function symbolProvider(params: DocumentSymbolParams): Promise<SymbolInformation[]> {
@@ -22,8 +22,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		return SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, uri,
 			info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
 	});
-	if (doc.diagnostics.length !== diags)
-		sendDiagnostics();
+	checksamename(doc), sendDiagnostics();
 	return symbolcache[uri];
 
 	function flatTree(tree: DocumentSymbol[], vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
@@ -84,5 +83,19 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			}
 		});
 		return result;
+	}
+	function checksamename(doc: Lexer) {
+		let dec: any = {}, dd: Lexer;
+		for (const uri in doc.relevance) {
+			if (dd = lexers[uri]) {
+				dd.diagnostics.splice(dd.diags);
+				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
+			}
+		}
+		checksamenameerr(dec, Object.values(doc.declaration), doc.diagnostics);
+		for (const uri in doc.relevance) {
+			if (dd = lexers[uri])
+				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
+		}
 	}
 }

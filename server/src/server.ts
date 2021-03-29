@@ -43,7 +43,6 @@ export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let builtin_class: CompletionItem[] = [];
 export let dllcalltpe: string[] = [];
 export type Maybe<T> = T | undefined;
-let timer: NodeJS.Timeout | undefined;
 interface AHKLSSettings {
 	Path: string;
 }
@@ -90,8 +89,7 @@ connection.onInitialize((params: InitializeParams) => {
 				commands: [
 					'ahk2.fix.include',
 					'ahk2.generate.comment',
-					'ahk2.generate.author',
-					'ahk2.parameterhints'
+					'ahk2.generate.author'
 				]
 			},
 			hoverProvider: true,
@@ -178,11 +176,6 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 	for (const t in doc.include)
 		if (!initial[t])
 			initial[t] = doc.include[t], cg = true;
-	if (timer)
-		clearTimeout(timer);
-	timer = setTimeout(() => {
-		checksamename(doc);
-	}, 1500);
 	if (!cg && Object.keys(initial).length === Object.keys(doc.include).length) {
 		if (!doc.relevance)
 			doc.relevance = getincludetable(uri).list;
@@ -195,21 +188,6 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 		for (const u in initial)
 			if (lexers[u])
 				lexers[u].relevance = getincludetable(u).list;
-	}
-	function checksamename(doc: Lexer) {
-		let dec: any = {}, dd: Lexer;
-		for (const uri in doc.relevance) {
-			if (dd = lexers[uri]) {
-				dd.diagnostics.splice(dd.diags);
-				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
-			}
-		}
-		checksamenameerr(dec, Object.values(doc.declaration), doc.diagnostics);
-		for (const uri in doc.relevance) {
-			if (dd = lexers[uri])
-				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
-		}
-		sendDiagnostics();
 	}
 });
 

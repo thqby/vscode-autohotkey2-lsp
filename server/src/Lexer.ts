@@ -592,8 +592,10 @@ export class Lexer {
 						if ((--blocks) < 0) {
 							if (mode === 0) _this.addDiagnostic(diagnostic.unexpected('}'), tk.offset, 1), blocks = 0, blockpos.length = 0;
 							else return result;
-						} else if (mode === 0) _this.addFoldingRange(blockpos[blocks], parser_pos - 1);
-						else _this.addFoldingRange(blockpos[blocks + 1], parser_pos - 1);
+						} else if (blockpos.length)
+							_this.addFoldingRange(blockpos.pop() || 0, parser_pos - 1);
+						// if (mode === 0) _this.addFoldingRange(blockpos[blocks], parser_pos - 1);
+						// else _this.addFoldingRange(blockpos[blocks + 1], parser_pos - 1);
 						break;
 					case 'TK_END_EXPR': _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1); break;
 					case 'TK_START_EXPR':
@@ -2873,7 +2875,7 @@ export class Lexer {
 					if (t[i] === ' ' || t[i] === '\t') {
 						i--;
 						continue;
-					} else if (t[i] === ':=')
+					} else if ([':=', ',', ':', '[', '('].includes(t[i]))
 						empty_braces = true;
 					break;
 				}

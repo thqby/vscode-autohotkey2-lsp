@@ -427,9 +427,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					if ((<any>libfuncs[u]).islib || path.startsWith(dir + '\\'))
 						libfuncs[u].map(it => {
 							if (!vars[_low = it.name.toLowerCase()]) {
-								cpitem = convertNodeCompletion(it), cpitem.insertText = cpitem.label + '($0)', cpitem.insertTextFormat = 2;
+								cpitem = convertNodeCompletion(it);
 								cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
-								delete cpitem.commitCharacters;
 								cpitem.command = { title: 'ahk2.fix.include', command: 'ahk2.fix.include', arguments: [path, uri] };
 								vars[_low] = cpitem;
 							}
@@ -457,15 +456,13 @@ function convertNodeCompletion(info: any): CompletionItem {
 		case SymbolKind.Function:
 		case SymbolKind.Method:
 			ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
-			ci.command = { title: 'ahk2.parameterhints', command: 'ahk2.parameterhints' };
-			ci.commitCharacters = ['.', '('];
 			if ((<FuncNode>info).params.length) {
+				ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
 				if ((<FuncNode>info).params[0].name.includes('|')) {
 					ci.insertText = ci.label + '(${1|' + (<FuncNode>info).params[0].name.replace(/\|/g, ',') + '|})';
-					ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
-					ci.insertTextFormat = InsertTextFormat.Snippet, delete ci.commitCharacters;
-				}
-			}
+					ci.insertTextFormat = InsertTextFormat.Snippet;
+				} else ci.insertText = ci.label + '($0)', ci.insertTextFormat = InsertTextFormat.Snippet;
+			} else ci.insertText = ci.label + '()';
 			ci.detail = info.full, ci.documentation = info.detail; break;
 		case SymbolKind.Variable:
 			ci.kind = CompletionItemKind.Variable, ci.detail = info.detail; break;
