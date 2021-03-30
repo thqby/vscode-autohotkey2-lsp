@@ -498,6 +498,7 @@ export class Lexer {
 						switch (it.kind) {
 							case SymbolKind.Function:
 							case SymbolKind.Class:
+								(<any>it).uri = document.uri;
 								ahkvars[it.name.toLowerCase()] = it as ClassNode;
 								break;
 						}
@@ -1795,7 +1796,7 @@ export class Lexer {
 			}
 
 			function adddeclaration(node: FuncNode | ClassNode) {
-				let dec = node.declaration, _diags = _this.diagnostics;
+				let dec = node.declaration, _diags = _this.diagnostics, pars: { [name: string]: Variable } = {};
 				if (!dec)
 					return;
 				if (node.kind === SymbolKind.Class) {
@@ -1833,18 +1834,25 @@ export class Lexer {
 								dec[_low] = it;
 							else
 								_diags.push({ message: samenameerr(it, dec[_low]), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+							pars[_low] = it;
 						});
 						for (const n in (<FuncNode>node).local) {
 							if (!dec[n])
 								dec[n] = (<FuncNode>node).local[n];
+							else if (pars[n])
+								_diags.push({ message: diagnostic.conflictserr('local', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
 						}
 						for (const n in (<FuncNode>node).global) {
-							if (dec[n]) {
-								_this.declaration[n] = dec[n];
-								delete dec[n];
-							} else
-								_this.declaration[n] = (<FuncNode>node).global[n];
-							(<any>_this.declaration[n]).infunc = true;
+							if (pars[n])
+								_diags.push({ message: diagnostic.conflictserr('global', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
+							else {
+								if (dec[n]) {
+									_this.declaration[n] = dec[n];
+									delete dec[n];
+								} else
+									_this.declaration[n] = (<FuncNode>node).global[n];
+								(<any>_this.declaration[n]).infunc = true;
+							}
 						}
 						let gdec = _this.declaration;
 						node.children?.map(it => {
@@ -1878,22 +1886,31 @@ export class Lexer {
 								dec[_low] = it;
 							else
 								_diags.push({ message: samenameerr(it, dec[_low]), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+							pars[_low] = it;
 						});
 						for (const n in (<FuncNode>node).local) {
 							if (!dec[n])
 								dec[n] = (<FuncNode>node).local[n];
+							else if (pars[n])
+								_diags.push({ message: diagnostic.conflictserr('local', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
 						}
 						for (const n in (<FuncNode>node).global) {
-							if (dec[n]) {
-								_this.declaration[n] = dec[n];
-								if (dec[n].kind !== SymbolKind.Variable)
-									(<FuncNode>node).global[n] = dec[n];
-								delete dec[n];
-							} else
-								_this.declaration[n] = (<FuncNode>node).global[n];
-							(<any>_this.declaration[n]).infunc = true;
+							if (pars[n])
+								_diags.push({ message: diagnostic.conflictserr('global', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
+							else {
+								if (dec[n]) {
+									_this.declaration[n] = dec[n];
+									if (dec[n].kind !== SymbolKind.Variable)
+										(<FuncNode>node).global[n] = dec[n];
+									delete dec[n];
+								} else
+									_this.declaration[n] = (<FuncNode>node).global[n];
+								(<any>_this.declaration[n]).infunc = true;
+							}
 						}
 					}
+					for (const n in pars)
+						(<FuncNode>node).local[n] = pars[n];
 				}
 			}
 
@@ -3474,43 +3491,36 @@ export class Lexer {
 			if (position) {
 				scope = this.searchScopedNode(position);
 				if (scope) {
-					let p = scope.selectionRange.start;
-					switch (scope.kind) {
-						case SymbolKind.Function:
-						case SymbolKind.Method:
-							if (position.line === p.line &&
-								position.character >= p.character && position.character <= scope.selectionRange.end.character)
-								scope = (<FuncNode>scope).parent;
-							break;
-						case SymbolKind.Class:
-							if (position.line === p.line &&
-								position.character >= p.character && position.character <= scope.selectionRange.end.character)
-								scope = (<ClassNode>scope).parent;
-							else if ((<ClassNode>scope).extends) {
-								let o = this.document.offsetAt(scope.selectionRange.end) + 1;
-								let tk = this.get_tokon(o);
-								while (tk.content.toLowerCase() !== 'extends') {
-									o = tk.offset + tk.length;
-									tk = this.get_tokon(o);
-								}
-								if (this.document.positionAt(tk.offset).line === position.line)
-									scope = undefined;
-							}
-							break;
+					if (scope.kind === SymbolKind.Class && (<ClassNode>scope).extends) {
+						let o = this.document.offsetAt(scope.selectionRange.end) + 1;
+						let tk = this.get_tokon(o);
+						while (tk.content.toLowerCase() !== 'extends') {
+							o = tk.offset + tk.length;
+							tk = this.get_tokon(o);
+						}
+						if (this.document.positionAt(tk.offset).line === position.line)
+							scope = undefined;
 					}
 					bak = scope;
 				}
 			}
 			if (scope) {
 				while (scope) {
-					let dec = (<FuncNode>scope).declaration;
-					if (dec && dec[name])
-						return { node: dec[name], uri };
-					else if ((<FuncNode>scope).global && (node = (<FuncNode>scope).global[name]))
-						return { node, uri }
+					let dec = (<FuncNode>scope).declaration, loc = (<FuncNode>scope).local, glo = (<FuncNode>scope).global;
+					if (loc && loc[name])
+						return { node: loc[name], uri };
+					else if (glo && glo[name])
+						return { node: glo[name], uri };
+					else if (dec && scope.kind !== SymbolKind.Class && dec[name]) {
+						if (scope.kind === SymbolKind.Method || !(<FuncNode>scope).parent)
+							return { node: dec[name], uri };
+						node = dec[name];
+					}
 					scope = (<any>scope).parent;
 				}
-				if (!node && name.match(/^(this|super)$/i)) {
+				if (node)
+					return { node, uri };
+				else if (name.match(/^(this|super)$/i)) {
 					scope = bak;
 					while (scope && scope.kind !== SymbolKind.Class) {
 						if (scope.kind === SymbolKind.Method && (<FuncNode>scope).static)
@@ -3696,10 +3706,18 @@ export class Lexer {
 		if (!root)
 			root = this.children;
 		for (const item of root) {
-			if ((item.range.start.line === line && item.range.start.line === item.range.end.line && character >= item.range.start.character && character <= item.range.end.character)
-				|| (item.range.end.line > item.range.start.line && line >= item.range.start.line && line <= item.range.end.line))
-				if (item.kind !== SymbolKind.Variable && (its = item.children))
-					if (!(it = this.searchScopedNode(position, its))) return item;
+			if (line < item.range.start.line)
+				continue;
+			else if (line === item.range.start.line) {
+				if (line === item.range.end.line) {
+					if (character <= item.selectionRange.end.character || character > item.range.end.character)
+						continue;
+				} else if (character <= item.selectionRange.end.character)
+					continue;
+			} else if (line > item.range.end.line)
+				continue;
+			if (item.kind !== SymbolKind.Variable && (its = item.children))
+				if (!(it = this.searchScopedNode(position, its))) return item;
 		}
 		return it;
 	}

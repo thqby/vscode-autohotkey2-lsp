@@ -17,6 +17,8 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 	if (!nodes || nodes.length > 1)
 		return undefined;
 	let { node, uri } = nodes[0];
+	if (!uri)
+		return undefined;
 	let scope = doc.searchScopedNode(node.selectionRange.start), docs: Lexer[];
 	switch (node.kind) {
 		case SymbolKind.Function:
@@ -85,11 +87,16 @@ export function findAllVar(node: FuncNode, name: string, global: boolean = false
 			if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
 				ranges.push(it.selectionRange);
 		});
-	} else
+	} else {
 		node.children?.map(it => {
 			if (it.children)
 				findAllVar(it as FuncNode, name, global, ranges);
 		});
+		node.funccall?.map(it => {
+			if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
+				ranges.push(it.selectionRange);
+		});
+	}
 }
 
 function findAllFunc(node: { children?: DocumentSymbol[], funccall?: DocumentSymbol[] }, name: string, ranges: Range[], check = false) {
