@@ -71,7 +71,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						for (const k in tt)
 							if (!inherit[k]) {
 								inherit[k] = tt[k], result.push(inherit[k]);
-							} else {
+							} else if (tt[k] !== inherit[k]) {
 								if (tt[k].kind !== SymbolKind.Variable || (inherit[k] === gvar[k] && (<Variable>tt[k]).def))
 									inherit[k] = tt[k], result.push(tt[k]);
 							}

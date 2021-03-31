@@ -28,7 +28,7 @@ export interface AhkDoc {
 }
 
 export enum FuncScope {
-	DEFAULT = 0, LOCAL = 1, STATIC = 2, GLOBAL = 4
+	DEFAULT = 0, GLOBAL = 1
 }
 
 export interface FuncNode extends DocumentSymbol {
@@ -633,13 +633,13 @@ export class Lexer {
 								let storemode = mode;
 								mode = mode | 1;
 								let tn = FuncNode.create(fc.content, storemode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(_this.document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par, undefined, isstatic);
-								tn.detail = comm || tn.detail, result.push(tn);
+								tn.detail = comm || tn.detail, result.push(tn), mode = storemode;
 								if (mode !== 0)
 									tn.parent = _parent;
 								let o: any = {}, sub = parseline(o), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase(), lasthasval = false;
 								if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 								tn.range.end = document.positionAt(lk.offset + lk.length), tn.closure = true, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-								tn.returntypes = o, mode = storemode, tn.static = isstatic, tn.children = [], adddeclaration(tn);
+								tn.returntypes = o, tn.static = isstatic, tn.children = [], adddeclaration(tn);
 								for (const t in o)
 									o[t] = tn.range.end;
 								for (const it of par) {
@@ -652,6 +652,8 @@ export class Lexer {
 								for (let i = sub.length - 1; i >= 0; i--) {
 									if (pars[sub[i].name.toLowerCase()])
 										tn.children.push(sub[i]), sub.splice(i, 1);
+									else
+										(<Variable>sub[i]).def = false;
 								}
 								if (mode === 2) {
 									tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
@@ -790,7 +792,12 @@ export class Lexer {
 												(<FuncNode>tn).returntypes = o, tn.children = [], pars['value'] = true; for (const it of par) pars[it.name.toLowerCase()] = true;
 												for (const t in o)
 													o[t] = tn.range.end;
-												for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) tn.children.push(sub[i]), sub.splice(i, 1); }
+												for (let i = sub.length - 1; i >= 0; i--) {
+													if (pars[sub[i].name.toLowerCase()])
+														tn.children.push(sub[i]), sub.splice(i, 1);
+													else
+														(<Variable>sub[i]).def = false;
+												}
 												adddeclaration(tn as FuncNode), prop.children.push(...sub);
 											} else if (sk.content === '{') {
 												let vars = new Map<string, any>([['#parent', prop]]);
@@ -819,7 +826,12 @@ export class Lexer {
 										o[t] = tn.range.end;
 									tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 									pars['value'] = true; for (const it of par) pars[it.name.toLowerCase()] = true;
-									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) tn.children.push(sub[i]), sub.splice(i, 1); }
+									for (let i = sub.length - 1; i >= 0; i--) {
+										if (pars[sub[i].name.toLowerCase()])
+											tn.children.push(sub[i]), sub.splice(i, 1);
+										else
+											(<Variable>sub[i]).def = false;
+									}
 									adddeclaration(tn as FuncNode), _parent.children.push(...sub), prop.children.push(tn);
 								}
 							} else {
@@ -1273,7 +1285,12 @@ export class Lexer {
 								if (nk.content === '=>' && par) {
 									let o: any = {}, sub = parseexp(inpair, o), pars: { [key: string]: boolean } = {}, cds: DocumentSymbol[] = [], lasthasval = false;
 									for (const it of par) pars[it.name.toLowerCase()] = true;
-									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) cds.push(sub[i]), sub.splice(i, 1); }
+									for (let i = sub.length - 1; i >= 0; i--) {
+										if (pars[sub[i].name.toLowerCase()])
+											cds.push(sub[i]), sub.splice(i, 1);
+										else
+											(<Variable>sub[i]).def = false;
+									}
 									if (fc) {
 										if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 										result.push(tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, cds));
@@ -1352,7 +1369,12 @@ export class Lexer {
 								if (result[result.length - 1].name === lk.content)
 									result.pop();
 								let o = {}, sub = parseexp(inpair, o);
-								for (let i = sub.length - 1; i >= 0; i--) { if (sub[i].name.toLowerCase() === p) sub.splice(i, 1); }
+								for (let i = sub.length - 1; i >= 0; i--) {
+									if (sub[i].name.toLowerCase() === p)
+										sub.splice(i, 1);
+									else
+										(<Variable>sub[i]).def = false;
+								}
 								result.push(...sub);
 								tpexp = tpexp.replace(/\S+$/, '#func');
 							} else {
@@ -1617,7 +1639,12 @@ export class Lexer {
 							else if (lasthasval)
 								_this.addDiagnostic(diagnostic.defaultvalmissing(it.name), _this.document.offsetAt(it.range.start), it.name.length);
 						}
-						for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) sub.splice(i, 1); }
+						for (let i = sub.length - 1; i >= 0; i--) {
+							if (pars[sub[i].name.toLowerCase()])
+								sub.splice(i, 1);
+							else
+								(<Variable>sub[i]).def = false;
+						}
 						result.push(...sub);
 						tpexp = tpexp.replace(/\([^()]*\)$/, '') + ' #func';
 					} else if (tk.type === 'TK_WORD') {
@@ -1662,7 +1689,12 @@ export class Lexer {
 										else if (lasthasval)
 											_this.addDiagnostic(diagnostic.defaultvalmissing(it.name), _this.document.offsetAt(it.range.start), it.name.length);
 									}
-									for (let i = sub.length - 1; i >= 0; i--) { if (pars[sub[i].name.toLowerCase()]) sub.splice(i, 1); }
+									for (let i = sub.length - 1; i >= 0; i--) {
+										if (pars[sub[i].name.toLowerCase()])
+											sub.splice(i, 1);
+										else
+											(<Variable>sub[i]).def = false;
+									}
 									result.push(...sub), tpexp += ' #func';
 								} else {
 									if (input.charAt(fc.offset - 1) !== '%') {
@@ -1796,7 +1828,7 @@ export class Lexer {
 			}
 
 			function adddeclaration(node: FuncNode | ClassNode) {
-				let dec = node.declaration, _diags = _this.diagnostics, pars: { [name: string]: Variable } = {};
+				let dec = node.declaration, _diags = _this.diagnostics, pars: { [name: string]: Variable } = {}, funcs: { [name: string]: DocumentSymbol } = {};
 				if (!dec)
 					return;
 				if (node.kind === SymbolKind.Class) {
@@ -1826,6 +1858,7 @@ export class Lexer {
 									dec[_low] = it;
 								} else
 									_diags.push({ message: samenameerr(dec[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+								funcs[_low] = it;
 							}
 						});
 						(<FuncNode>node).params?.map(it => {
@@ -1878,6 +1911,8 @@ export class Lexer {
 									} else
 										_diags.push({ message: samenameerr(dec[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 								}
+								if (it.kind === SymbolKind.Function)
+									funcs[_low] = it;
 							}
 						});
 						(<FuncNode>node).params?.map(it => {
@@ -1911,6 +1946,8 @@ export class Lexer {
 					}
 					for (const n in pars)
 						(<FuncNode>node).local[n] = pars[n];
+					for (const n in funcs)
+						(<FuncNode>node).local[n] = funcs[n];
 				}
 			}
 
@@ -3510,8 +3547,12 @@ export class Lexer {
 					if (loc && loc[name])
 						return { node: loc[name], uri };
 					else if (glo && glo[name])
-						return { node: glo[name], uri };
-					else if (dec && scope.kind !== SymbolKind.Class && dec[name]) {
+						return { node: this.declaration[name] || glo[name], uri };
+					else if ((<FuncNode>scope).assume === FuncScope.GLOBAL) {
+						if (node = this.declaration[name])
+							return { node, uri };
+						return undefined;
+					} else if (dec && scope.kind !== SymbolKind.Class && dec[name]) {
 						if (scope.kind === SymbolKind.Method || !(<FuncNode>scope).parent)
 							return { node: dec[name], uri };
 						node = dec[name];
