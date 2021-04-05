@@ -1,5 +1,6 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver';
 import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, samenameerr, Variable } from './Lexer';
+import { diagnostic } from './localize';
 import { ahkvars, lexers, sendDiagnostics, symbolcache } from './server';
 
 export async function symbolProvider(params: DocumentSymbolParams): Promise<SymbolInformation[]> {
@@ -85,11 +86,17 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		return result;
 	}
 	function checksamename(doc: Lexer) {
-		let dec: any = {}, dd: Lexer;
+		let dec: any = {}, dd: Lexer, lbs: any = {};
+		Object.keys(doc.labels).map(lb => lbs[lb] = true);
 		for (const uri in doc.relevance) {
 			if (dd = lexers[uri]) {
 				dd.diagnostics.splice(dd.diags);
 				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
+				for (const lb in dd.labels)
+					if ((<any>dd.labels[lb][0]).def)
+						if (lbs[lb])
+							dd.diagnostics.push({ message: diagnostic.duplabel(), range: dd.labels[lb][0].selectionRange, severity: 1 });
+						else lbs[lb] = true;
 			}
 		}
 		checksamenameerr(dec, Object.values(doc.declaration), doc.diagnostics);

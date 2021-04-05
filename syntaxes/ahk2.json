@@ -311,6 +311,14 @@
 			"prefix": "or"
 		},
 		{
+			"body": "case",
+			"prefix": "case"
+		},
+		{
+			"body": "default",
+			"prefix": "default"
+		},
+		{
 			"body": "return",
 			"description": "从先前通过函数调用,热键激活或其他方式跳转到执行的子例程返回.",
 			"prefix": "return"

@@ -23,6 +23,7 @@
 	"diagnostic.declarationerr": "错误声明",
 	"diagnostic.defaultvalmissing": "'{0}' 需要参数默认值",
 	"diagnostic.dupdeclaration": "重复声明",
+	"diagnostic.duplabel": "重复的标签声明",
 	"diagnostic.filenotexist": "'{0}'文件不存在",
 	"diagnostic.funcassignerr": "无法为函数分配值",
 	"diagnostic.funccallerr": "函数调用需要空格或'(', 仅在参数之间使用逗号",

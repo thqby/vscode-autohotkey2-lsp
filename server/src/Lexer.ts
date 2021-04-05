@@ -41,6 +41,7 @@ export interface FuncNode extends DocumentSymbol {
 	full: string
 	parent?: DocumentSymbol
 	funccall?: DocumentSymbol[]
+	labels: { [key: string]: DocumentSymbol[] }
 	declaration: { [name: string]: FuncNode | ClassNode | Variable };
 	returntypes?: { [exp: string]: any }
 }
@@ -92,7 +93,7 @@ export namespace FuncNode {
 		full = (isstatic ? 'static ' : '') + name + '(' + full.substring(2) + ')';
 		if (params.length && params[params.length - 1].name === '*')
 			params.pop();
-		return { assume: FuncScope.DEFAULT, name, kind, range, selectionRange, params, full, children, declaration: {}, global: {}, local: {} };
+		return { assume: FuncScope.DEFAULT, name, kind, range, selectionRange, params, full, children, declaration: {}, global: {}, local: {}, labels: {} };
 	}
 }
 
@@ -145,6 +146,7 @@ export class Lexer {
 	public blocks: DocumentSymbol[] | undefined;
 	public children: DocumentSymbol[] = [];
 	public colors: ColorInformation[] = [];
+	public d: boolean = false;
 	public declaration: { [name: string]: FuncNode | ClassNode | Variable } = {};
 	public diagnostics: Diagnostic[] = [];
 	public diags = 0;
@@ -156,6 +158,7 @@ export class Lexer {
 	public include: { [uri: string]: { url: string, path: string, raw: string } } = {};
 	public includedir: Map<number, string> = new Map();
 	public label: DocumentSymbol[] = [];
+	public labels: { [key: string]: DocumentSymbol[] } = {};
 	public libdirs: string[] = [];
 	public object: { method: { [key: string]: FuncNode[] }, property: { [key: string]: any }, userdef: { [key: string]: FuncNode } } = { method: {}, property: {}, userdef: {} };
 	public parseScript: Function;
@@ -493,8 +496,8 @@ export class Lexer {
 					}
 				}
 				if (islib) {
+					this.d = true;
 					this.children.map(it => {
-						let fc: FuncNode;
 						switch (it.kind) {
 							case SymbolKind.Function:
 							case SymbolKind.Class:
@@ -513,7 +516,7 @@ export class Lexer {
 				tks.length = 0, whitespace_before_token = [], beginpos = 0, following_bracket = false, begin_line = true;
 				bracketnum = 0, parser_pos = 0, last_LF = -1;
 				this.label.length = this.funccall.length = this.diagnostics.length = this.hotkey.length = 0;
-				this.colors.length = this.foldingranges.length = this.children.length = 0
+				this.colors.length = this.foldingranges.length = this.children.length = 0, this.labels = {};
 				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map();
 				this.blocks = [], this.texts = {}, this.reflat = true, this.declaration = {};
 				this.include = includetable = {}, this.semantoken = new SemanticTokensBuilder;
@@ -556,7 +559,16 @@ export class Lexer {
 							break;
 						}
 						tn = SymbolNode.create(tk.content, SymbolKind.Field, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 1)), result.push(tn);
-						if (mode === 0) _this.label.push(tn); if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content); break;
+						if (_parent.labels) {
+							_low = tk.content.toLowerCase().slice(0, -1), (<any>tn).def = true;
+							if (!_parent.labels[_low])
+								_parent.labels[_low] = [tn];
+							else if (_parent.labels[_low][0].def)
+								_this.addDiagnostic(diagnostic.duplabel(), tk.offset, tk.length - 1), _parent.labels[_low].push(tn);
+							else
+								_parent.labels[_low].unshift(tn);
+						}
+						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content); break;
 					case 'TK_HOT':
 						topcontinue = true;
 						if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
@@ -837,7 +849,7 @@ export class Lexer {
 							} else {
 								if (!lk.topofline && (bak.type === 'TK_HOT' || (bak.topofline && bak.content === '{') || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i))))
 									lk.topofline = restore = topcontinue = true;
-								if (!predot && (!lk.topofline || tk.type === 'TK_EQUALS' || tk.content === '=' || input.charAt(lk.offset + lk.length).match(/[^\s,]/))) {
+								if (!predot && (!lk.topofline || tk.type === 'TK_EQUALS' || ['=', '?'].includes(tk.content) || input.charAt(lk.offset + lk.length).match(/[^\s,]/))) {
 									if (!lk.topofline && bak.type === 'TK_SHARP' && bak.content.match(/^#(MenuMaskKey|SingleInstance|Warn)/i)) break;
 									if (addvariable(lk, mode)) {
 										vr = result[result.length - 1];
@@ -1056,10 +1068,17 @@ export class Lexer {
 						lk = tk, tk = get_next_token(), next = false;
 						if (!tk.topofline) {
 							if (tk.type === 'TK_WORD') {
-								tk.ignore = true;
-							} else if (tk.content !== '(') {
+								tk.ignore = true, addlabel(tk);
+							} else if (tk.content !== '(' || input.charAt(lk.offset + lk.length) !== '(') {
 								parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
 								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+							} else {
+								let s: Token[] = [];
+								next = true, parsepair('(', ')', undefined, {}, s);
+								s.map(i => {
+									if (i.content.indexOf('\n') === -1)
+										addlabel({ content: i.content.slice(1, -1), offset: i.offset + 1, length: i.length - 2, type: '' });
+								});
 							}
 						}
 						break;
@@ -1088,6 +1107,16 @@ export class Lexer {
 							}
 						}
 						break;
+				}
+
+				function addlabel(tk: Token) {
+					if (_parent.labels) {
+						_low = tk.content.toLowerCase();
+						if (!_parent.labels[_low])
+							_parent.labels[_low] = [];
+						let rg = makerange(tk.offset, tk.length);
+						_parent.labels[_low].push(DocumentSymbol.create(tk.content, undefined, SymbolKind.Field, rg, rg));
+					}
 				}
 			}
 
@@ -1125,7 +1154,7 @@ export class Lexer {
 								if (addvariable(lk, mode, sta)) {
 									vr = sta[sta.length - 1];
 									if (['TK_COMMENT', 'TK_BLOCK_COMMENT'].includes(nk.type))
-										vr.detail = trimcomment(nk.content);
+										vr.detail = trimcomment(nk.content), nk.type = '';
 								}
 								result.push(...parseexp(false, o));
 								if (vr) {
@@ -1145,7 +1174,6 @@ export class Lexer {
 									break loop;
 								}
 							}
-							nk.type = '';
 							break;
 						case 'TK_COMMENT':
 						case 'TK_BLOCK_COMMENT':
@@ -1281,7 +1309,7 @@ export class Lexer {
 										}
 										continue;
 									} else fc = lk;
-								par = parsequt(tpe), quoteend = parser_pos, nk = get_token_ingore_comment(cmm), comment = cmm.content;
+								cmm.type = '', par = parsequt(tpe), quoteend = parser_pos, nk = get_token_ingore_comment(cmm), comment = cmm.content;
 								if (nk.content === '=>' && par) {
 									let o: any = {}, sub = parseexp(inpair, o), pars: { [key: string]: boolean } = {}, cds: DocumentSymbol[] = [], lasthasval = false;
 									for (const it of par) pars[it.name.toLowerCase()] = true;
@@ -1311,7 +1339,7 @@ export class Lexer {
 									tpexp += ' #func', types[tpexp] = true;
 									return sub;
 								} else {
-									next = false, lk = tk, tk = nk;
+									next = false, lk = n_newlines === 1 && cmm.type ? Object.assign({}, cmm) : tk, tk = nk;
 									if (fc) {
 										if (input.charAt(fc.offset - 1) !== '%')
 											tpexp += ' ' + fc.content + '()', _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
@@ -1333,7 +1361,8 @@ export class Lexer {
 											(<Variable>it).def = true;
 									}
 								}
-							} break;
+							}
+							break;
 						case 'TK_START_BLOCK':
 							if (lk.type === 'TK_EQUALS') {
 								parseobj(true);
@@ -1591,7 +1620,7 @@ export class Lexer {
 				}
 			}
 
-			function parsepair(b: string, e: string, pairbeg?: number, types: any = {}) {
+			function parsepair(b: string, e: string, pairbeg?: number, types: any = {}, strs?: Token[]) {
 				let pairnum = 0, apos = result.length, tp = parser_pos, llk = lk, pairpos: number[], rpair = 0, tpexp = '', byref = false;
 				pairpos = pairbeg === undefined ? [parser_pos - 1] : [pairbeg];
 				while (nexttoken()) {
@@ -1727,6 +1756,7 @@ export class Lexer {
 						parseobj(true);
 					} else if (tk.type === 'TK_STRING') {
 						tpexp += ' #string';
+						strs?.push(tk);
 						if (b === '[' && is_next(']') && !tk.content.match(/\n|`n/))
 							addtext({ type: '', content: tk.content.substring(1, tk.content.length - 1), offset: 0, length: 0 });
 					} else if (tk.content === '[') {
@@ -1801,7 +1831,7 @@ export class Lexer {
 
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
 				let _low = token.content.toLowerCase();
-				if (token.ignore || builtin_variable.includes(_low) || (classfullname !== '' && ['this', 'super'].includes(_low))) return false;
+				if (token.ignore || (mode !== 2 && (builtin_variable.includes(_low) || (classfullname !== '' && ['this', 'super'].includes(_low))))) return false;
 				if (token.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(token.content), token.offset, token.length);
 				let rg = makerange(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg, rg);
 				if (md === 2) {
@@ -3586,12 +3616,14 @@ export class Lexer {
 			} else if (node = this.declaration[name])
 				return { node, uri };
 		} else if (kind === SymbolKind.Field) {
-			let scope = position ? this.searchScopedNode(position) : undefined;
-			if (name.substr(-1) !== ':')
-				name += ':';
-			for (const node of scope ? scope.children || [] : this.children)
-				if (node.kind === SymbolKind.Field && node.name.toLowerCase() === name)
-					return { node, uri };
+			let scope = position ? this.searchScopedNode(position) : undefined, lbs = (<any>(scope || this)).labels;
+			if (lbs) {
+				if (name.substr(-1) === ':')
+					name = name.slice(0, -1);
+				let a = lbs[name.toLowerCase()];
+				if (a && a[0].def)
+					return { node: a[0], uri };
+			}
 			if (scope)
 				return null;
 		}
@@ -3660,24 +3692,30 @@ export class Lexer {
 		else
 			kind = SymbolKind.Property;
 		suf = suf.trimRight();
-		if (kind === SymbolKind.Function && pre.match(/^(static|)$/i)) {
-			let scope = this.searchScopedNode(position);
-			if (scope && scope.kind === SymbolKind.Method && position.line === scope.selectionRange.start.line) {
-				kind = SymbolKind.Method;
-				let fc = scope as FuncNode, cc = fc.full.match(/^\(([^)]+)\)/);
-				if (cc && word.text === scope.name)
-					word.text = (fc.static ? cc[1] : cc[1].replace(/([^.]+)$/, '@$1')) + '.' + word.text;
-			}
-		} else if (kind === SymbolKind.Variable) {
-			if (pre.match(/(?<!\.)\b(goto|break|continue)(\(\s*['"]|\s*)$/i))
-				kind = SymbolKind.Field;
-			else if (pre.trim() === '' && suf.match(/^:\s*(\s;.+)?$/)) {
-				let scope = this.searchScopedNode(position), nn = word + ':';
-				for (const it of scope ? scope.children || [] : this.children)
-					if (it.kind === SymbolKind.Field && it.name.toLowerCase() === nn) {
-						kind = SymbolKind.Field;
-						break;
+		if (word.text) {
+			if (kind === SymbolKind.Function && pre.match(/^(static|)$/i)) {
+				let scope = this.searchScopedNode(position);
+				if (scope && scope.kind === SymbolKind.Class) {
+					let fc: FuncNode | Variable, nm = word.text.toLowerCase();
+					if (((fc = (<ClassNode>scope).declaration[nm]) && fc.selectionRange.start.line === position.line && fc.selectionRange.end.character >= position.character)
+						|| ((fc = (<ClassNode>scope).staticdeclaration[nm]) && fc.selectionRange.start.line === position.line && fc.selectionRange.end.character >= position.character)) {
+						kind = SymbolKind.Method;
+						let cc = fc.full?.match(/^\(([^)]+)\)/);
+						if (cc && word.text === fc.name)
+							word.text = (fc.static ? cc[1] : cc[1].replace(/([^.]+)$/, '@$1')) + '.' + word.text;
 					}
+				}
+			} else if (kind === SymbolKind.Variable) {
+				if ((pre.trim() === '' && suf.match(/^:($|\s)/)) || pre.match(/(?<!\.)\b(goto|break|continue)(\(\s*['"]|\s*)$/i))
+					kind = SymbolKind.Field;
+				else if (pre.trim() === '' && suf.match(/^:\s*(\s;.+)?$/)) {
+					let scope = this.searchScopedNode(position), nn = word + ':';
+					for (const it of scope ? scope.children || [] : this.children)
+						if (it.kind === SymbolKind.Field && it.name.toLowerCase() === nn) {
+							kind = SymbolKind.Field;
+							break;
+						}
+				}
 			}
 		}
 		return { text: word.text, range: word.range, kind, pre, suf, linetext };
@@ -3869,9 +3907,9 @@ export async function parseinclude(include: { [uri: string]: { path: string, raw
 		let path = include[uri].path;
 		if (!(lexers[uri]) && fs.existsSync(path)) {
 			let doc = new Lexer(openFile(path));
-			lexers[uri] = doc, doc.parseScript(), parseinclude(doc.include);
-			if (!doc.relevance)
-				doc.relevance = getincludetable(uri).list;
+			lexers[uri] = doc, doc.parseScript();
+			await parseinclude(doc.include);
+			doc.relevance = getincludetable(uri).list;
 		}
 	}
 }
@@ -4328,16 +4366,26 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 			if ((t = lexers[u].declaration[name]) && t.kind !== SymbolKind.Variable)
 				return [{ node: t, uri: u }];
 	}
-	if ((!res || res.node.kind !== SymbolKind.Variable || !(<Variable>res.node).def) && ((t = ahkvars[name]) || (t = ahkvars[name.replace(/^[@#]/, '')])))
+	if (kind !== SymbolKind.Field && (!res || res.node.kind !== SymbolKind.Variable || !(<Variable>res.node).def) && ((t = ahkvars[name]) || (t = ahkvars[name.replace(/^[@#]/, '')])))
 		return [{ uri: '', node: t }];
 	if (res)
 		return [res];
 	else return undefined;
 	function searchIncludeNode(fileuri: string, name: string): { node: DocumentSymbol, uri: string } | undefined {
 		let node: DocumentSymbol, list = lexers[fileuri].relevance;
-		for (const uri in list)
-			if (node = lexers[uri].declaration[name])
+		for (const uri in list) {
+			let d = lexers[uri];
+			if (!d) {
+				let path = URI.parse(uri).fsPath;
+				if (fs.existsSync(path)) {
+					d = lexers[uri] = new Lexer(openFile(path));
+					d.parseScript();
+				} else
+					continue;
+			}
+			if (node = d.declaration[name])
 				return { node, uri };
+		}
 		return undefined;
 	}
 }
@@ -4430,9 +4478,13 @@ export function getincludetable(fileuri: string): { count: number, list: { [uri:
 	}
 	return res;
 	function traverseinclude(include: any, cururi: string) {
+		let s = '';
 		for (const uri in include) {
-			if (fileuri === uri)
+			if (fileuri === uri) {
 				has = true;
+				if (!list[cururi])
+					list[cururi] = include[cururi] || { path: s = URI.parse(cururi).fsPath, raw: '' }, count++;
+			}
 			if (doc = lexers[uri]) {
 				if (!list[uri])
 					list[uri] = include[uri], count++;

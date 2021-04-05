@@ -141,10 +141,12 @@ documents.onDidOpen(async e => {
 // Only keep settings for open documents
 documents.onDidClose(async e => {
 	let uri = e.document.uri.toLowerCase();
+	if (lexers[uri].d)
+		return;
 	documentSettings.delete(uri), lexers[uri].actived = false;
 	for (let u in lexers)
 		if (lexers[u].actived)
-			for (let f in lexers[u].include)
+			for (let f in lexers[u].relevance)
 				if (f === uri) return;
 	delete lexers[uri];
 	connection.sendDiagnostics({ uri, diagnostics: [] });
@@ -152,7 +154,7 @@ documents.onDidClose(async e => {
 	for (let u in lexers)
 		if (!lexers[u].actived) {
 			let del = true;
-			for (let f in lexers[u].include)
+			for (let f in lexers[u].relevance)
 				if (lexers[f] && lexers[f].actived) {
 					del = false; break;
 				}
@@ -182,7 +184,8 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 		sendDiagnostics();
 		return;
 	}
-	parseinclude(doc.include), doc.relevance = getincludetable(uri).list, resetrelevance();
+	await parseinclude(doc.include);
+	doc.relevance = getincludetable(uri).list, resetrelevance();
 	sendDiagnostics();
 	function resetrelevance() {
 		for (const u in initial)

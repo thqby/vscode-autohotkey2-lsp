@@ -23,8 +23,6 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 			}
 			return undefined;
 		} else word = context.text.toLowerCase(), kind = context.kind;
-		if (kind === SymbolKind.Variable)
-			kind = [SymbolKind.Variable, SymbolKind.Class];
 		if (word === '')
 			return undefined;
 		else if (!(nodes = searchNode(doc, word, context.range.end, kind))) {

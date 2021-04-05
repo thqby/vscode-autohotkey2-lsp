@@ -43,7 +43,20 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 			}
 			break;
 		case SymbolKind.Field:
-
+			if (scope) {
+				let lbs = (<FuncNode>scope).labels;
+				if (lbs && lbs[name])
+					references[uri] = lbs[name].map(it => it.selectionRange);
+			} else {
+				let lbs = doc.labels;
+				if (lbs[name])
+					references[uri] = lbs[name].map(it => it.selectionRange);
+				for (const uri in doc.relevance) {
+					lbs = lexers[uri].labels;
+					if (lbs[name])
+						references[uri] = lbs[name].map(it => it.selectionRange);
+				}
+			}
 			break;
 		default:
 			return undefined;
@@ -67,7 +80,7 @@ export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope
 			if (it.name.toLowerCase() === name)
 				ranges.push(it.selectionRange);
 			if (it.children)
-				findAllVar(it as FuncNode, name, gg, ranges, it.kind === SymbolKind.Function ? c : undefined);
+				findAllVar(it as FuncNode, name, gg, ranges, gg || it.kind === SymbolKind.Function ? c : undefined);
 		});
 		node.funccall?.map(it => {
 			if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
@@ -92,7 +105,7 @@ export function findAllVar(node: FuncNode, name: string, global: boolean = false
 			if (it.name.toLowerCase() === name && (it.kind !== SymbolKind.Property && it.kind !== SymbolKind.Method && it.kind !== SymbolKind.Class))
 				ranges.push(it.selectionRange);
 			if (it.children)
-				findAllVar(it as FuncNode, name, global, ranges, it.kind === SymbolKind.Function ? closure : undefined);
+				findAllVar(it as FuncNode, name, global, ranges, it.kind === SymbolKind.Function ? closure : global || undefined);
 		});
 		node.funccall?.map(it => {
 			if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
@@ -109,19 +122,4 @@ export function findAllVar(node: FuncNode, name: string, global: boolean = false
 					ranges.push(it.selectionRange);
 			});
 	}
-}
-
-function findAllFunc(node: { children?: DocumentSymbol[], funccall?: DocumentSymbol[] }, name: string, ranges: Range[], check = false) {
-	if (check && node.children)
-		for (const it of node.children)
-			if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
-				return;
-	node.children?.map(it => {
-		if (it.children)
-			findAllFunc(it as FuncNode, name, ranges, true);
-	});
-	node.funccall?.map(it => {
-		if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
-			ranges.push(it.selectionRange);
-	});
 }

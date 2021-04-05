@@ -91,18 +91,19 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 	}
 	nodes?.map((it: any) => {
 		const node = it.node as FuncNode;
-		signinfo.signatures.push({
-			label: node.full,
-			parameters: node.params.map(param => {
-				return {
-					label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...')
-				}
-			}),
-			documentation: node.detail ? {
-				kind: 'markdown',
-				value: formatMarkdowndetail(node.detail, index < node.params.length ? node.params[index].name : undefined)
-			} : undefined
-		});
+		if (node.params)
+			signinfo.signatures.push({
+				label: node.full,
+				parameters: node.params.map(param => {
+					return {
+						label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...')
+					}
+				}),
+				documentation: node.detail ? {
+					kind: 'markdown',
+					value: formatMarkdowndetail(node.detail, index < node.params.length ? node.params[index].name : undefined)
+				} : undefined
+			});
 	});
 	signinfo.activeParameter = index;
 	return signinfo;
