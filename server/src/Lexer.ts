@@ -495,7 +495,7 @@ export class Lexer {
 							break;
 					}
 				}
-				if (islib) {
+				if (islib || this.d) {
 					this.d = true;
 					this.children.map(it => {
 						switch (it.kind) {
@@ -3970,6 +3970,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 			cl = searchNode(doc, p[0], Position.create(0, 0), SymbolKind.Class);
 			if (cl) {
 				nd = cl[0].node, dc = lexers[cl[0].uri || doc.uri];
+				(<any>nd).uri = cl[0].uri;
 				while (nd) {
 					if (p.length === 1) {
 						mems = getmems(dc, nd, staticmem);

@@ -44,7 +44,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 		if (nodes) {
 			let uri = '';
 			nodes.map(it => {
-				if (uri = it.uri || (<any>it.node).uri)
+				if (uri = (<any>it.node).uri || it.uri)
 					locas.push(Location.create(URI.file(restorePath(URI.parse(uri).fsPath)).toString(), it.node.selectionRange));
 			});
 			if (locas.length)

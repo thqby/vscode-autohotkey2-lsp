@@ -630,6 +630,16 @@ EnvSet(EnvVar, Value) => void
 Exception(Message [, What, Extra]) => Error
 
 /**
+ * 退出当前线程. 脚本退出时, 返回给其调用者的-2147483648和2147483647之间的整数.
+ */
+Exit(ExitCode := 0) => void
+
+/**
+ * 退出当前线程. 脚本退出时, 返回给其调用者的-2147483648和2147483647之间的整数.
+ */
+ExitApp(ExitCode := 0) => void
+
+/**
  * 返回 e(近似值为 2.71828182845905) 的 N 次幂.
  */
 Exp(N) => Number
@@ -684,6 +694,23 @@ FileCreateShortcut(Target, LinkFile [, WorkingDir, Args, Description, IconFile, 
  * 要删除整个文件夹及其所有子文件夹和文件, 请使用 DirDelete
  */
 FileDelete(FilePattern) => void
+
+/**
+ * 为 FileRead, Loop Read, FileAppend 和 FileOpen 设置默认编码.
+ * @param Encoding 以下值之一(如果省略, 它默认为 CP0):
+ * UTF-8: Unicode UTF-8, 等同于 CP65001.
+ * 
+ * UTF-8-RAW: 像上面一样, 但创建新文件时不写入字节顺序标记.
+ * 
+ * UTF-16: Unicode UTF-16 带小端字节顺序标识, 等同于 CP1200.
+ * 
+ * UTF-16-RAW: 像上面一样, 但创建新文件时不写入字节顺序标记.
+ * 
+ * CPnnn: 带数值标识符 nnn 的代码页. 请参阅代码页标识符 ¬.
+ * 
+ * nnn: 数字代码页标识符.
+ */
+FileEncoding(Encoding := 'CP0') => void
 
 /**
  * 检查文件或目录是否存在并返回它的属性.
@@ -1185,6 +1212,16 @@ IniWrite(Value, Filename, Section [, Key]) => void
 InputBox([Prompt, Title, Options, Default]) => Object
 
 /**
+ * 安装鼠标钩子
+ */
+InstallMouseHook(Install := true, Force := false)
+
+/**
+ * 安装键盘钩子
+ */
+InstallKeybdHook(Install := true, Force := false)
+
+/**
  * 在一个字符串中向右或向左搜索指定内容.
  * @param CaseSense 下列值之一(如果省略, 默认为 0):
  * 
@@ -1280,6 +1317,13 @@ IsUpper(Value) => Number
  * 十六进制数字: 与 digit 相同, 但也允许使用字符 A 到 F(大写或小写). 如果存在前缀 0x, 则可以接受.
  */
 IsXDigit(Value) => Number
+
+/**
+ * 显示脚本信息以及最近的击键和鼠标单击的历史记录.
+ * @param MaxEvents 忽略此参数以显示脚本的主窗口, 等效于选择“查看->键历史记录”菜单项.
+ * 否则, 此参数设置可以记录在窗口中显示的最大键盘和鼠标事件数（默认为40, 限制为500）. 密钥历史记录也被重置, 但是主窗口未显示或刷新. 指定0以完全禁用密钥历史记录.
+ */
+KeyHistory(MaxEvents)
 
 /**
  * 等待按键或鼠标/操纵杆按钮被释放或按下.
@@ -1630,6 +1674,13 @@ Ord(String) => Number
  * 发送字符串到调试器(如果有) 显示出来.
  */
 OutputDebug(Text) => void
+
+/**
+ * 阻止脚本在其最后一个线程完成时自动退出，从而使其保持在空闲状态下运行。
+ * @param Persist 如果为true或忽略，则即使退出脚本的其他条件均不满足，在所有线程退出后脚本仍将保持运行。
+ * 如果为false，将恢复默认行为。
+ */
+Persistent(Persist := true) => void
 
 /**
  * 检索指定x,y坐标处像素的颜色.
@@ -3535,7 +3586,7 @@ class Menu extends Object {
 	Insert([ItemToInsertBefore, NewItemName, Callback_or_Submenu, Options]) => void
 
 	/**
-	 * 重命名菜单项(如果NewName为空或省略，则MenuItemName将转换为分隔线).
+	 * 重命名菜单项(如果NewName为空或省略, 则MenuItemName将转换为分隔线).
 	 */
 	Rename(MenuItemName [, NewName]) => void
 

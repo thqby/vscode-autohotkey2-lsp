@@ -102,11 +102,6 @@
 			"prefix": "#NoTrayIcon"
 		},
 		{
-			"body": "#Persistent",
-			"description": "让脚本持续运行(即, 直到用户关闭或遇到 ExitApp).",
-			"prefix": "#Persistent"
-		},
-		{
 			"body": "#Requires ",
 			"description": "如果不符合版本要求, 则显示错误并退出.",
 			"prefix": "#Requires"
@@ -412,21 +407,6 @@
 			"prefix": "DetectHiddenWindows"
 		},
 		{
-			"body": "Exit ${1:[ExitCode]}",
-			"description": "退出当前线程.",
-			"prefix": "Exit"
-		},
-		{
-			"body": "ExitApp ${1:[ExitCode]}",
-			"description": "无条件终止脚本.",
-			"prefix": "ExitApp"
-		},
-		{
-			"body": "FileEncoding ${1:[Encoding]}",
-			"description": "为 FileRead, Loop Read, FileAppend 和 FileOpen 设置默认编码.",
-			"prefix": "FileEncoding"
-		},
-		{
 			"body": "HotIf ${1:[FunctionObject|'Expression']}",
 			"description": "指定后续创建或修改热键变体的条件.",
 			"prefix": "HotIf"
@@ -684,6 +664,16 @@
 			"prefix": "A_FileEncoding"
 		},
 		{
+			"body": "A_HotkeyModifierTimeout",
+			"description": "定义在按下热键后多长时间假定(Alt/Ctrl/Win/Shift)仍处于按下状态.",
+			"prefix": "A_HotkeyModifierTimeout"
+		},
+		{
+			"body": "A_HotkeyInterval",
+			"description": "A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框.",
+			"prefix": "A_HotkeyInterval"
+		},
+		{
 			"body": "A_Hour",
 			"description": "在 24 小时制(例如, 17 表示 5pm) 中 2 位数表示的当前小时数(00-23). 要获取带 AM/PM 提示的 12 小时制的时间, 请参照此例: FormatTime(, 'h:mm:ss tt')",
 			"prefix": "A_Hour"
@@ -894,9 +884,19 @@
 			"prefix": "A_LoopRegType"
 		},
 		{
+			"body": "A_MaxHotkeysPerInterval",
+			"description": "A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框.",
+			"prefix": "A_MaxHotkeysPerInterval"
+		},
+		{
 			"body": "A_MDay",
 			"description": "2 位数表示的当前月份的日期(01-31).",
 			"prefix": "A_MDay"
+		},
+		{
+			"body": "A_MenuMaskKey",
+			"description": "控制使用哪个键来掩盖Win或Alt键事件.",
+			"prefix": "A_MenuMaskKey"
 		},
 		{
 			"body": "A_MM",
