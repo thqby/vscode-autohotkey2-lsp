@@ -38,6 +38,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 				if (!vars[_l]) {
 					if (info.kind === SymbolKind.Variable && !(<Variable>info).def && gvar[_l]) {
 						vars[_l] = gvar[_l];
+						if (info === gvar[_l])
+							result.push(info);
 					} else
 						vars[_l] = info, result.push(info);
 				} else if (info.kind === SymbolKind.Variable) {
