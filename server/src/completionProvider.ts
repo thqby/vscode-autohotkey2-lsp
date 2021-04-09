@@ -390,12 +390,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			for (const n in ahkvars)
 				vars[n] = convertNodeCompletion(ahkvars[n]);
-			for (const n in doc.declaration) {
-				const item = doc.declaration[n];
-				if (item.range.end.line === line && item.range.start.character <= character && character <= item.range.end.character)
-					continue;
-				vars[n] = convertNodeCompletion(item);
-			}
+			Object.values(doc.declaration).map(it => {
+				if (!ateditpos(it))
+					vars[it.name.toLowerCase()] = convertNodeCompletion(it);
+			});
 			for (const t in list) {
 				path = list[t].path;
 				for (const n in (temp = lexers[t]?.declaration)) {
@@ -435,6 +433,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						});
 				}
 			}
+			scopenode?.children?.map(it => {
+				if (!vars[_low = it.name.toLowerCase()] && !ateditpos(it))
+					vars[_low] = convertNodeCompletion(it);
+			});
 			if (other)
 				addOther();
 			return items.concat(Object.values(vars));
@@ -447,6 +449,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (rg.test(it.label))
 					items.push(it);
 		}
+	}
+	function ateditpos(it: DocumentSymbol) {
+		return it.range.end.line === line && it.range.start.character <= character && character <= it.range.end.character;
 	}
 }
 

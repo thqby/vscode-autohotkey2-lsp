@@ -16,9 +16,25 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		let context: any, t = res.full;
 		if (t === '')
 			context = doc.buildContext(pos), t = context.text.toLowerCase();
-		if (t.match(/^(((\w|[^\x00-\xff])+\.)+(\w|[^\x00-\xff])+)$/))
+		if (t.match(/^(((\w|[^\x00-\xff])+\.)+(\w|[^\x00-\xff])+)$/)) {
 			nodes = searchNode(doc, t, pos, SymbolKind.Method);
-		else {
+			if (!nodes) {
+				let word: string = t, ts: any = {};
+				nodes = [];
+				detectExpType(doc, word.replace(/\.[^.]+$/, m => {
+					word = m.match(/^\.[^.]+$/) ? m : '';
+					return '';
+				}), params.position, ts);
+				if (word && ts['#any'] === undefined)
+					for (const tp in ts)
+						searchNode(doc, tp + word, context.range.end, kind)?.map(it => {
+							if (!nodes?.map((i: any) => i.node).includes(it.node))
+								nodes?.push(it);
+						});
+				if (!nodes.length)
+					nodes = undefined;
+			}
+		} else {
 			let ts: any = {};
 			t = t.replace(/\.(\w|[^\x00-\xff])+$/, '');
 			nodes = [], detectExpType(doc, t, params.position, ts);

@@ -102,6 +102,11 @@
 			"prefix": "#NoTrayIcon"
 		},
 		{
+			"body": "#Persistent",
+			"description": "让脚本持续运行(即, 直到用户关闭或遇到 ExitApp).",
+			"prefix": "#Persistent"
+		},
+		{
 			"body": "#Requires ",
 			"description": "如果不符合版本要求, 则显示错误并退出.",
 			"prefix": "#Requires"

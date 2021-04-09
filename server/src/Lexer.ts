@@ -1376,8 +1376,8 @@ export class Lexer {
 						case 'TK_NUMBER': tpexp += ' #number'; break;
 						case 'TK_STRING': tpexp += ' #string'; break;
 						case 'TK_END_BLOCK':
-						case 'TK_END_EXPR': next = false;
-						case 'TK_COMMA': types[tpexp] = true; return result.splice(pres);
+						case 'TK_END_EXPR':
+						case 'TK_COMMA': next = false, types[tpexp] = true; return result.splice(pres);
 						case 'TK_UNKNOWN': _this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length); break;
 						case 'TK_RESERVED':
 							if (tk.content.match(/\b(and|or|not)\b/i)) {
@@ -1919,7 +1919,7 @@ export class Lexer {
 						}
 						let gdec = _this.declaration;
 						node.children?.map(it => {
-							if (it.kind === SymbolKind.Variable && (<Variable>it).def) {
+							if (it.kind === SymbolKind.Variable) {
 								if (!dec[_low = it.name.toLowerCase()]) {
 									if (!gdec[_low]) {
 										gdec[_low] = it;

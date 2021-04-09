@@ -25,8 +25,19 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 		} else word = context.text.toLowerCase(), kind = context.kind;
 		if (word === '')
 			return undefined;
-		else if (!(nodes = searchNode(doc, word, context.range.end, kind))) {
-			if (kind === SymbolKind.Method) {
+		else if (!(nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
+			let ts: any = {};
+			nodes = <any>[], detectExpType(doc, word.replace(/\.[^.]+$/, m => {
+				word = m.match(/^\.[^.]+$/) ? m : '';
+				return '';
+			}), params.position, ts);
+			if (word && ts['#any'] === undefined)
+				for (const tp in ts)
+					searchNode(doc, tp + word, context.range.end, kind)?.map(it => {
+						if (!nodes?.map(i => i.node).includes(it.node))
+							nodes?.push(it);
+					});
+			if (!nodes?.length && kind === SymbolKind.Method) {
 				nodes = <any>[];
 				let docs = [doc];
 				word.replace(/\.([^.]+)$/, (...m) => {
