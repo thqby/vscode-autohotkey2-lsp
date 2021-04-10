@@ -144,18 +144,22 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			for (const uri in list)
 				objs.push(lexers[uri].object);
 			for (const obj of objs) {
-				for (const it in obj.property)
-					if (!props[it])
-						items.push(props[it] = convertNodeCompletion({ name: obj.property[it], kind: SymbolKind.Property }));
-					else props[it].detail = props[it].label;
-				for (const it in obj.method)
-					if (!props[it])
-						items.push(props[it] = convertNodeCompletion(obj.method[it][0]));
-					else if (typeof props[it] === 'object')
-						props[it].detail = '(...) ' + props[it].label;
-				for (const it in obj.userdef)
-					if (!props[it])
-						items.push(props[it] = convertNodeCompletion(obj.userdef[it]));
+				if (obj === doc.object) {
+					for (const n in obj.property)
+						if (!props[n]) {
+							let i = obj.property[n];
+							if (!ateditpos(i))
+								items.push(props[n] = convertNodeCompletion(i));
+						} else props[n].detail = props[n].label;
+				} else for (const n in obj.property)
+					if (!props[n])
+						items.push(props[n] = convertNodeCompletion(obj.property[n]));
+					else props[n].detail = props[n].label;
+				for (const n in obj.method)
+					if (!props[n])
+						items.push(props[n] = convertNodeCompletion(obj.method[n][0]));
+					else if (typeof props[n] === 'object')
+						props[n].detail = '(...) ' + props[n].label;
 			}
 			for (const cl in ahkvars) {
 				if ((isobj && cl === 'object') || (isfunc && cl === 'func') || (isclass && cl === 'class') || !ahkvars[cl].children)
@@ -331,15 +335,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 												funcs[it] = true, cpitem = CompletionItem.create(med[it][0].name),
 													cpitem.kind = CompletionItemKind.Method, items.push(cpitem);
 								}
-								let defs = [doc.object.userdef];
-								for (const uri in list)
-									defs.push(lexers[uri].object.userdef);
-								defs.map(def => {
-									for (const name in def) {
-										if (!funcs[name])
-											funcs[name] = true, cpitem = CompletionItem.create(def[name].name), cpitem.kind = CompletionItemKind.Method, items.push(cpitem);
-									}
-								});
 								return items;
 							}
 							break;
