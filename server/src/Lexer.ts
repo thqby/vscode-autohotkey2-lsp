@@ -669,6 +669,8 @@ export class Lexer {
 								}
 								if (mode === 2) {
 									tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
+									if (!isstatic && tn.name.toLowerCase() === '__new')
+										tn.returntypes = { [classfullname.replace(/([^.]+)\.?$/, '@$1')]: tn.range.end };
 									if (!_this.object.method[_low])
 										_this.object.method[_low] = [];
 									_this.object.method[_low].push(tn);
@@ -694,6 +696,8 @@ export class Lexer {
 								if (mode !== 0) {
 									if (mode === 2) {
 										tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
+										if (!isstatic && tn.name.toLowerCase() === '__new')
+											tn.returntypes = { [classfullname.replace(/([^.]+)\.?$/, '@$1')]: tn.range.end };
 										if (!_this.object.method[_low])
 											_this.object.method[_low] = [];
 										_this.object.method[_low].push(tn);
@@ -2840,7 +2844,7 @@ export class Lexer {
 					}
 				}
 				else if (last_type === 'TK_END_EXPR') {
-					output_space_before_token = true;
+					output_space_before_token = in_array(input.charAt(parser_pos - 2), [' ', '\t']);
 				}
 				else if (last_type === 'TK_WORD') {
 					if (parser_pos > 1 && in_array(input.charAt(parser_pos - 2), [' ', '\t'])) {
@@ -3715,6 +3719,18 @@ export class Lexer {
 							kind = SymbolKind.Field;
 							break;
 						}
+				} else {
+					let scope = this.searchScopedNode(position);
+					if (scope && scope.kind === SymbolKind.Class) {
+						let fc: FuncNode | Variable, nm = word.text.toLowerCase();
+						if (((fc = (<ClassNode>scope).declaration[nm]) && fc.selectionRange.start.line === position.line && fc.selectionRange.end.character >= position.character && fc.selectionRange.start.character <= position.character)
+							|| ((fc = (<ClassNode>scope).staticdeclaration[nm]) && fc.selectionRange.start.line === position.line && fc.selectionRange.end.character >= position.character && fc.selectionRange.start.character <= position.character)) {
+							kind = SymbolKind.Property;
+							let cc = fc.full?.match(/^\(([^)]+)\)/);
+							if (cc && word.text === fc.name)
+								word.text = (fc.static ? cc[1] : cc[1].replace(/([^.]+)$/, '@$1')) + '.' + word.text;
+						}
+					}
 				}
 			}
 		}
@@ -3915,8 +3931,15 @@ export async function parseinclude(include: { [uri: string]: { path: string, raw
 }
 
 export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boolean = true) {
-	let v: any = {}, l = '';
-	return getmems(doc, node, staticmem);
+	let v: any = {}, l = '', mems = getmems(doc, node, staticmem);
+	if (staticmem && v['call'].def !== false) {
+		for (const i in mems)
+			if (mems[i].name.toLowerCase() === 'call') {
+				mems[i] = v['call'];
+				break;
+			}
+	}
+	return mems;
 
 	function getmems(doc: Lexer, node: DocumentSymbol, staticmem: boolean) {
 		let members: DocumentSymbol[] = [], u = (<any>node).uri;
@@ -3930,7 +3953,8 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 									v[l] = it, (<any>it).uri = u, members.push(it);
 							} else if ((<FuncNode>it).static)
 								v[l] = it, (<any>it).uri = u, members.push(it);
-						}
+						} else if (l === 'call' && v['call'].def === false)
+							v['call'] = it;
 						break;
 					case SymbolKind.Property:
 						if ((<Variable>it).static && !v[l = it.name.toLowerCase()])
@@ -3944,11 +3968,13 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 			let tn: DocumentSymbol;
 			if (!v['prototype']) {
 				members.push(tn = DocumentSymbol.create('Prototype', undefined, SymbolKind.Object, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
-				(<Variable>tn).static = true, v['prototype'] = tn, (<any>tn).uri = u;
+				(<Variable>tn).static = true, v['prototype'] = tn, (<any>tn).uri = '';
 			}
 			if (!v['call']) {
-				members.push(tn = FuncNode.create('Call', SymbolKind.Method, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0), [], []));
-				(<Variable>tn).static = true, v['call'] = tn, (<any>tn).uri = u;
+				if (!(tn = (<ClassNode>node).declaration['__new']))
+					tn = FuncNode.create('Call', SymbolKind.Method, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0), [], []), (<any>tn).uri = '';
+				else tn = Object.assign({}, tn), tn.name = 'Call', (<any>tn).uri = u;
+				members.push(tn), (<Variable>tn).static = true, v['call'] = tn, (<any>tn).def = false;
 				(<FuncNode>tn).returntypes = { [(<ClassNode>node).full.replace(/([^.]+)$/, '@$1').toLowerCase()]: node.selectionRange.start };
 			}
 		} else {
@@ -4151,6 +4177,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 				if (ns) {
 					ns.map(it => {
 						let n = it.node as FuncNode;
+						swlb:
 						switch (n.kind) {
 							case SymbolKind.Method:
 								c = n.full.toLowerCase().match(/\(([^()]+)\)\s*([^()]+)/);
@@ -4198,6 +4225,13 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 								}
 								break;
 							case SymbolKind.Class:
+								for (const i of getClassMembers(lexers[it.uri], n, true))
+									if (i.name.toLowerCase() === 'call') {
+										n = i as FuncNode;
+										for (const e in n.returntypes)
+											detect(e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
+										break swlb;
+									}
 								if (s = Object.keys(n.returntypes || {}).pop() || '')
 									ts[s] = true;
 								break;
@@ -4316,9 +4350,8 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 					let ss = isstatic && i > 0 && !p[i - 1].match(/^[@#]/), _ = p[i].replace(/[@#]/, '');
 					let mem = getClassMembers(doc, n, ss);
 					if (i === ps) {
-						let reg = new RegExp((p[i] === 'call' ? '^(__new|call)' : '^' + _) + '$', 'i');
 						for (const it of mem) {
-							if (it.kind !== SymbolKind.Variable && reg.test(it.name)) {
+							if (it.kind !== SymbolKind.Variable && it.name.toLowerCase() === _) {
 								node = it, uri = (<any>it).uri || '';
 								break;
 							}
