@@ -27,11 +27,6 @@
 			"prefix": "#HotIfTimeout"
 		},
 		{
-			"body": "#HotkeyInterval ",
-			"description": "与 #MaxHotkeysPerInterval 一起指定热键激活的速率, 超过此速率会显示警告对话框.",
-			"prefix": "#HotkeyInterval"
-		},
-		{
 			"body": "#HotkeyModifierTimeout ",
 			"description": "影响热键修饰符的行为: Ctrl, Alt, Win, and Shift.",
 			"prefix": "#HotkeyModifierTimeout"
@@ -57,26 +52,6 @@
 			"prefix": "#InputLevel"
 		},
 		{
-			"body": "#InstallKeybdHook",
-			"description": "强制无条件安装键盘钩子.",
-			"prefix": "#InstallKeybdHook"
-		},
-		{
-			"body": "#InstallMouseHook",
-			"description": "强制无条件安装鼠标钩子.",
-			"prefix": "#InstallMouseHook"
-		},
-		{
-			"body": "#KeyHistory ",
-			"description": "设置在 KeyHistory 窗口中显示的键盘和鼠标事件的最大数目. 您可以将其设置为 0 来禁用按键历史.",
-			"prefix": "#KeyHistory"
-		},
-		{
-			"body": "#MaxHotkeysPerInterval ",
-			"description": "与 #HotkeyInterval 一起使用, 指定热键激活的速率, 超过此速率会显示警告对话框.",
-			"prefix": "#MaxHotkeysPerInterval"
-		},
-		{
 			"body": "#MaxThreads ",
 			"description": "设置可同时存在的线程的最大数目.",
 			"prefix": "#MaxThreads"
@@ -100,11 +75,6 @@
 			"body": "#NoTrayIcon",
 			"description": "禁止显示托盘图标.",
 			"prefix": "#NoTrayIcon"
-		},
-		{
-			"body": "#Persistent",
-			"description": "让脚本持续运行(即, 直到用户关闭或遇到 ExitApp).",
-			"prefix": "#Persistent"
 		},
 		{
 			"body": "#Requires ",

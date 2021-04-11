@@ -101,34 +101,15 @@ ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Number|string
 ComObjActive(CLSID) => Comobjct
 
 /**
- * 创建用于 COM 的安全数组.
- * @param VarType 数组的基类型(数组中每个元素的 VARTYPE). VARTYPE 被限制为变体类型的子集.
- * 不能设置为 VT_ARRAY 或 VT_BYREF 标志. VT_EMPTY 和 VT_NULL 不是数组的有效基类型. 其他所有类型是合法的. 
- * @param Counts* 每个维度的大小. 支持最多 8 维的数组.
- */
-ComObjArray(VarType, Counts*) => Comobject
-
-/**
  * 将对象的事件源连接到具有给定前缀的函数.
  */
 ComObjConnect(ComObject [, Prefix]) => void
 
-/**
- * 创建 COM 对象.
- * @param CLSID 要创建的 COM 对象的 CLSID 或可读的 Prog ID.
- * @param IID 要返回的接口的标识符. 在大多数情况下, 它是省略的; 如果省略, 它默认为IID_IDispatch
+/*
+ * 包装原始IDispatch指针.
+ * IDispatch或派生接口的非空接口指针。
  */
-ComObjCreate(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => Comobject
-
-/**
- * 包装一个值, 安全数组或 COM 对象, 以供脚本使用或传递给 COM 方法.
- * `高级:` 装包或拆包原始 IDispatch 指针, 以供脚本使用.
- * ComObject := ComObject(DispPtr)
- * @param VarType 表示值类型的整数. 类型列表见 ComObjType.
- * @param Value 要包装的值. 当前仅支持整数和指针值.
- * @param Flags 影响包装器对象行为的标志; 有关详情, 请参阅 ComObjFlags.
- */
-ComObject(VarType, Value [, Flags]) => Comobject
+ComObjFromPtr(DispPtr) => ComObject
 
 /**
  * 获取或改变控制 COM 包装器对象行为的标志.
@@ -615,19 +596,6 @@ EnvGet(EnvVarName) => String
  * 将值写入环境变量包含的变量中.
  */
 EnvSet(EnvVar, Value) => void
-
-/**
- * 创建一个对象, 其属性与运行时错误创建的异常的属性是通用的.
- * @param What 指示错误的来源. 它可以是任意字符串, 但应该是负整数或正在运行的函数的名称. 指定 -1 表示当前函数, -2 表示调用它的函数, 依此类推.
- * 如果脚本被编译或者该值不能识别有效的堆栈帧, 那么该值将被转换为字符串并赋值给 NewError.What. 否则, 将使用标识的堆栈帧来确定其他属性:
- *
- * NewError.What 包含函数的名称.
- *
- * NewError.Line 和 NewError.File 表示 调用 函数的行.
- *
- * NewError.Stack 包含部分堆栈跟踪, 在顶部指示堆栈帧.
- */
-Exception(Message [, What, Extra]) => Error
 
 /**
  * 退出当前线程. 脚本退出时, 返回给其调用者的-2147483648和2147483647之间的整数.
@@ -2477,7 +2445,7 @@ class Class extends Object {
 	static Prototype => Object
 }
 
-class ClipboardAll extends Buffer {	
+class ClipboardAll extends Buffer {
 	/**
 	* 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
 	*/
@@ -2485,6 +2453,44 @@ class ClipboardAll extends Buffer {
 }
 
 class Closure extends Func {
+}
+
+class ComObjArray extends ComValue {
+	/**
+	* 创建用于 COM 的安全数组.
+	* @param VarType 数组的基类型(数组中每个元素的 VARTYPE). VARTYPE 被限制为变体类型的子集.
+	* 不能设置为 VT_ARRAY 或 VT_BYREF 标志. VT_EMPTY 和 VT_NULL 不是数组的有效基类型. 其他所有类型是合法的. 
+	* @param Counts* 每个维度的大小. 支持最多 8 维的数组.
+	*/
+	static Call(VarType, Counts*) => ComObjArray
+
+	MaxIndex(n) => Number
+
+	MinIndex(n) => Number
+
+	Clone() => ComObjArray
+}
+
+class ComObject extends ComValue {
+	/**
+	* 创建 COM 对象.
+	* @param CLSID 要创建的 COM 对象的 CLSID 或可读的 Prog ID.
+	* @param IID 要返回的接口的标识符. 在大多数情况下, 它是省略的; 如果省略, 它默认为IID_IDispatch
+	*/
+	static Call(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => ComObject | ComValue
+}
+
+class ComValue extends Any {
+	/**
+	* 包装一个值, 安全数组或 COM 对象, 以供脚本使用或传递给 COM 方法.
+	* @param VarType 表示值类型的整数. 类型列表见 ComObjType.
+	* @param Value 要包装的值. 当前仅支持整数和指针值.
+	* @param Flags 影响包装器对象行为的标志; 有关详情, 请参阅 ComObjFlags.
+	*/
+	static Call(VarType, Value [, Flags]) => Comobject
+}
+
+class ComValueRef extends ComValue {
 }
 
 class Enumerator extends Func {
@@ -3673,6 +3679,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
+	static Call(code) => OSError
 }
 
 class Primitive extends Any {

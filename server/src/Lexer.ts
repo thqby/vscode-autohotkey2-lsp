@@ -414,7 +414,7 @@ export class Lexer {
 													else
 														tn.defaultVal = lk.content;
 												} else if (lk.content === '*')
-													tn.name += '*';
+													tn.arr = true, j++;
 												break;
 											case 'TK_STRING':
 												params.push(Variable.create(lk.content, SymbolKind.String, rg = makerange(lk.offset, lk.length), rg));
@@ -428,14 +428,14 @@ export class Lexer {
 												break;
 										}
 									}
-									let rets: string[] | undefined, r = '';
+									let rets: string[] | undefined, r = '', lt = '';
 									lk = tokens[j];
 									if (j < l - 2 && tokens[j + 1].content === '=>') {
 										rets = [];
 										do {
-											j = j + 1, r = '';
-											while ((lk = tokens[j + 1]).type === 'TK_WORD' || lk.type === 'TK_DOT')
-												r += lk.content, j++;
+											j = j + 1, r = '', lt = '';
+											while (((lk = tokens[j + 1]).type === 'TK_WORD' || lk.type === 'TK_DOT') && (!lk.topofline && lt !== lk.type))
+												r += lk.content, j++, lt = lk.type;
 											rets.push(r.replace(/(\w+)$/, '#$1'));
 										} while (tokens[j + 1].content === '|');
 										lk = tokens[j];
@@ -501,7 +501,7 @@ export class Lexer {
 						switch (it.kind) {
 							case SymbolKind.Function:
 							case SymbolKind.Class:
-								(<any>it).uri = document.uri;
+								(<any>it).uri = this.uri;
 								ahkvars[it.name.toLowerCase()] = it as ClassNode;
 								break;
 						}
@@ -4204,13 +4204,14 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 								}
 								break;
 							case SymbolKind.Class:
-								for (const i of getClassMembers(lexers[it.uri], n, true))
-									if (i.name.toLowerCase() === 'call') {
-										n = i as FuncNode;
-										for (const e in n.returntypes)
-											detect(e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
-										break swlb;
-									}
+								if (it.uri && lexers[it.uri])
+									for (const i of getClassMembers(lexers[it.uri], n, true))
+										if (i.name.toLowerCase() === 'call') {
+											n = i as FuncNode;
+											for (const e in n.returntypes)
+												detect(e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
+											break swlb;
+										}
 								if (s = Object.keys(n.returntypes || {}).pop() || '')
 									ts[s] = true;
 								break;
@@ -4325,7 +4326,8 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 						n = cc;
 				}
 				if (n.kind === SymbolKind.Class) {
-					cc = n, (<any>n).uri = u;
+					cc = n;
+					if (u && !(<any>n).uri) (<any>n).uri = u;
 					let ss = isstatic && i > 0 && !p[i - 1].match(/^[@#]/), _ = p[i].replace(/[@#]/, '');
 					let mem = getClassMembers(doc, n, ss);
 					if (i === ps) {

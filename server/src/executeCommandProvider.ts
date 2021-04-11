@@ -70,6 +70,8 @@ async function fixinclude(libpath: string, docuri: string) {
 	if (char === '(')
 		executeCommands([{ command: 'editor.action.triggerParameterHints' }]);
 	else {
+		if (line <= pos.line)
+			pos.line++;
 		await insertSnippet('$0', Range.create(pos, pos));
 		if (char === '.')
 			executeCommands([{ command: 'editor.action.triggerSuggest' }]);

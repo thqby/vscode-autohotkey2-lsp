@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "0.6.0",
+	"version": "0.6.1",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -100,6 +100,11 @@
 				"category": "ahk2"
 			},
 			{
+				"command": "ahk2.debug.params",
+				"title": "%ahk2.debug.params%",
+				"category": "ahk2"
+			},
+			{
 				"command": "ahk2.run",
 				"title": "%ahk2.run%",
 				"category": "ahk2"
@@ -136,6 +141,11 @@
 					"when": "editorLangId == ahk2 && !inDebugMode",
 					"command": "ahk2.debug",
 					"group": "navigation@1"
+				},
+				{
+					"when": "editorLangId == ahk2 && !inDebugMode",
+					"command": "ahk2.debug.params",
+					"group": "navigation@2"
 				},
 				{
 					"when": "editorLangId == ahk2 && editorHasSelection",

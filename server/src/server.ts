@@ -287,8 +287,10 @@ function initahk2cache() {
 
 async function loadahk2(filename = 'ahk2') {
 	const file = resolve(__dirname, `../../syntaxes/${filename}`);
-	if (existsSync(file + '.d.ahk'))
-		new Lexer(openFile(file + '.d.ahk')).parseScript(true);
+	if (existsSync(file + '.d.ahk')) {
+		let doc = new Lexer(openFile(file + '.d.ahk'));
+		doc.parseScript(true), lexers[doc.uri] = doc;
+	}
 	if (!existsSync(file + '.json'))
 		return;
 	const ahk2 = JSON.parse(readFileSync(file + '.json', { encoding: 'utf8' }));

@@ -10,9 +10,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	if (token.isCancellationRequested) return undefined;
 	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, funcs: { [key: string]: any } = {}, txs: any = {};
 	let scopenode: DocumentSymbol | undefined, other = true, triggerKind = params.context?.triggerKind;
-	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], content = doc.buildContext(position, false), nodes: DocumentSymbol[];
+	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], content = doc.buildContext(position, false);
 	let quote = '', char = '', _low = '', percent = false, linetext = content.linetext, triggerchar = linetext.charAt(content.range.start.character - 1);
-	let list = doc.relevance, cpitem: CompletionItem, temp: any, path: string, { line, character } = position;
+	let list = doc.relevance, cpitem: CompletionItem, temp: any, path: string, { line, character } = position, expg = new RegExp(content.text.replace(/(.)/g, '$1.*'), 'i');
 	['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
 	for (let i = 0; i < position.character; i++) {
 		char = linetext.charAt(i);
@@ -34,7 +34,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			if (temp[3]) {
 				searchNode(doc, doc.buildContext(position, true).text.replace(/\.[^.]*$/, ''), position, SymbolKind.Class)?.map(it => {
 					getClassMembers(doc, it.node, true).map(it => {
-						if (it.kind === SymbolKind.Class && !vars[_low = it.name.toLowerCase()])
+						if (it.kind === SymbolKind.Class && !vars[_low = it.name.toLowerCase()] && expg.test(_low))
 							items.push(convertNodeCompletion(it)), vars[_low] = true;
 					});
 				});
@@ -51,13 +51,13 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			if (lexers[uri])
 				glo.push(lexers[uri].declaration);
 		glo.map(g => {
-			for (const name in g) {
-				if (g[name].kind === SymbolKind.Class && !vars[name])
-					items.push(convertNodeCompletion(g[name])), vars[name] = true;
+			for (const cl in g) {
+				if (g[cl].kind === SymbolKind.Class && !vars[cl] && expg.test(cl))
+					items.push(convertNodeCompletion(g[cl])), vars[cl] = true;
 			}
 		});
 		for (const cl in ahkvars)
-			if (ahkvars[cl].kind === SymbolKind.Class && !vars[cl])
+			if (ahkvars[cl].kind === SymbolKind.Class && !vars[cl] && expg.test(cl))
 				items.push(convertNodeCompletion(ahkvars[cl])), vars[cl] = true;
 		return items;
 	}
@@ -99,19 +99,21 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						isclass = isobj = true;
 						let mems = getClassMembers(doc, node, isstatic);
 						mems.map((it: any) => {
-							if (it.kind === SymbolKind.Property || it.kind === SymbolKind.Class) {
-								if (!props[l = it.name.toLowerCase()])
-									items.push(props[l] = convertNodeCompletion(it));
-								else if (props[l].detail !== it.full)
-									props[l].detail = '(...) ' + it.name, props[l].insertText = it.name;
-							} else if (it.kind === SymbolKind.Method) {
-								if (!it.name.match(/^__(get|set|call|new|delete)$/i)) {
+							if (expg.test(it.name)) {
+								if (it.kind === SymbolKind.Property || it.kind === SymbolKind.Class) {
 									if (!props[l = it.name.toLowerCase()])
 										items.push(props[l] = convertNodeCompletion(it));
 									else if (props[l].detail !== it.full)
-										props[l].detail = '(...) ' + it.name + '()', props[l].documentation = '';
-								} else if (it.name.toLowerCase() === '__new' && (<FuncNode>it).params.length)
-									hasparams = true;
+										props[l].detail = '(...) ' + it.name, props[l].insertText = it.name;
+								} else if (it.kind === SymbolKind.Method) {
+									if (!it.name.match(/^__(get|set|call|new|delete)$/i)) {
+										if (!props[l = it.name.toLowerCase()])
+											items.push(props[l] = convertNodeCompletion(it));
+										else if (props[l].detail !== it.full)
+											props[l].detail = '(...) ' + it.name + '()', props[l].documentation = '';
+									} else if (it.name.toLowerCase() === '__new' && (<FuncNode>it).params.length)
+										hasparams = true;
+								}
 							}
 						});
 						if (node.name.match(/^(number|string)$/i))
@@ -123,13 +125,14 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			if (isobj)
 				getClassMembers(doc, ahkvars['object'], false).map((it: any) => {
-					_low = it.name.toLowerCase();
-					if (it.kind === SymbolKind.Property) {
-						if (!props[_low])
-							items.push(props[_low] = convertNodeCompletion(it));
-					} else if (isclass && it.kind === SymbolKind.Method) {
-						if (!props[_low])
-							items.push(props[_low] = convertNodeCompletion(it));
+					if (expg.test(_low = it.name.toLowerCase())) {
+						if (it.kind === SymbolKind.Property) {
+							if (!props[_low])
+								items.push(props[_low] = convertNodeCompletion(it));
+						} else if (isclass && it.kind === SymbolKind.Method) {
+							if (!props[_low])
+								items.push(props[_low] = convertNodeCompletion(it));
+						}
 					}
 				});
 			if (isclass && isstatic) {
@@ -146,20 +149,23 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			for (const obj of objs) {
 				if (obj === doc.object) {
 					for (const n in obj.property)
-						if (!props[n]) {
-							let i = obj.property[n];
-							if (!ateditpos(i))
-								items.push(props[n] = convertNodeCompletion(i));
-						} else props[n].detail = props[n].label;
+						if (expg.test(n))
+							if (!props[n]) {
+								let i = obj.property[n];
+								if (!ateditpos(i))
+									items.push(props[n] = convertNodeCompletion(i));
+							} else props[n].detail = props[n].label;
 				} else for (const n in obj.property)
-					if (!props[n])
-						items.push(props[n] = convertNodeCompletion(obj.property[n]));
-					else props[n].detail = props[n].label;
+					if (expg.test(n))
+						if (!props[n])
+							items.push(props[n] = convertNodeCompletion(obj.property[n]));
+						else props[n].detail = props[n].label;
 				for (const n in obj.method)
-					if (!props[n])
-						items.push(props[n] = convertNodeCompletion(obj.method[n][0]));
-					else if (typeof props[n] === 'object')
-						props[n].detail = '(...) ' + props[n].label;
+					if (expg.test(n))
+						if (!props[n])
+							items.push(props[n] = convertNodeCompletion(obj.method[n][0]));
+						else if (typeof props[n] === 'object')
+							props[n].detail = '(...) ' + props[n].label;
 			}
 			for (const cl in ahkvars) {
 				if ((isobj && cl === 'object') || (isfunc && cl === 'func') || (isclass && cl === 'class') || !ahkvars[cl].children)
@@ -174,11 +180,11 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				cls.map((it: any) => {
 					if (it.kind === SymbolKind.Class)
 						return;
-					_low = it.name.toLowerCase();
-					if (!props[_low])
-						items.push(props[_low] = convertNodeCompletion(it));
-					else if (props[_low].detail !== it.full)
-						props[_low].detail = '(...) ' + it.name, props[_low].insertText = it.name, props[_low].documentation = undefined;
+					if (expg.test(_low = it.name.toLowerCase()))
+						if (!props[_low])
+							items.push(props[_low] = convertNodeCompletion(it));
+						else if (props[_low].detail !== it.full)
+							props[_low].detail = '(...) ' + it.name, props[_low].insertText = it.name, props[_low].documentation = undefined;
 				});
 			}
 			return items;
@@ -188,7 +194,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				let pre = linetext.substring(linetext.length - tt.length, position.character), xg = '\\', m: any, a_ = '';
 				if (percent) {
 					completionItemCache.other.map(it => {
-						if (it.kind === CompletionItemKind.Variable)
+						if (it.kind === CompletionItemKind.Variable && expg.test(it.label))
 							items.push(it);
 					})
 					return items;
@@ -220,17 +226,18 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					xg = '/';
 				for (let path of paths) {
 					if (!existsSync(path = resolve(path, pre) + '\\')) continue;
-					for (const it of readdirSync(path)) {
+					for (let it of readdirSync(path)) {
 						try {
 							if (inlib) {
-								if (it.match(/\.ahk$/i))
-									cpitem = CompletionItem.create(it.replace(/\.ahk/i, '')), cpitem.insertText = cpitem.label + lchar,
+								if (it.match(/\.ahk$/i) && expg.test(it = it.replace(/\.ahk$/i, '')))
+									cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + lchar,
 										cpitem.kind = CompletionItemKind.File, items.push(cpitem);
-							} else if (statSync(path + it).isDirectory())
-								cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + xg,
-									cpitem.command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' },
-									cpitem.kind = CompletionItemKind.Folder, items.push(cpitem);
-							else if (it.match(/\.(ahk2?|ah2)$/i))
+							} else if (statSync(path + it).isDirectory()) {
+								if (expg.test(it))
+									cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + xg,
+										cpitem.command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' },
+										cpitem.kind = CompletionItemKind.Folder, items.push(cpitem);
+							} else if (it.match(/\.(ahk2?|ah2)$/i) && expg.test(it.replace(/\.(ahk2?|ah2)$/i, '')))
 								cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + lchar,
 									cpitem.kind = CompletionItemKind.File, items.push(cpitem);
 						} catch (err) { };
@@ -241,16 +248,16 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				let t = temp[2].trim();
 				if (scopenode = doc.searchScopedNode(position))
 					scopenode.children?.map(it => {
-						if (it.kind === SymbolKind.Field)
+						if (it.kind === SymbolKind.Field && expg.test(it.name))
 							items.push(convertNodeCompletion(it));
 					});
 				else {
 					doc.children.map(it => {
-						if (it.kind === SymbolKind.Field)
+						if (it.kind === SymbolKind.Field && expg.test(it.name))
 							items.push(convertNodeCompletion(it));
 					});
 					for (const t in list) lexers[t].children.map(it => {
-						if (it.kind === SymbolKind.Field)
+						if (it.kind === SymbolKind.Field && expg.test(it.name))
 							items.push(convertNodeCompletion(it));
 					});
 				}
@@ -317,7 +324,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 												ns = [ts[tp]];
 											ns?.map((it: any) => {
 												getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/)).map(it => {
-													if (it.kind === SymbolKind.Method && !funcs[temp = it.name.toLowerCase()]) {
+													if (it.kind === SymbolKind.Method && !funcs[temp = it.name.toLowerCase()] && expg.test(temp)) {
 														funcs[temp] = true, cpitem = CompletionItem.create(it.name), cpitem.kind = CompletionItemKind.Method, items.push(cpitem);
 													}
 												});
@@ -331,7 +338,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 										meds.push(lexers[uri].object.method);
 									for (const med of meds)
 										for (const it in med)
-											if (!funcs[it])
+											if (!funcs[it] && expg.test(it))
 												funcs[it] = true, cpitem = CompletionItem.create(med[it][0].name),
 													cpitem.kind = CompletionItemKind.Method, items.push(cpitem);
 								}
@@ -349,19 +356,19 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					}
 				}
 				if (other)
-					completionItemCache.other.map(value => {
-						if (value.kind === CompletionItemKind.Text)
-							vars[value.label.toLowerCase()] = true, items.push(value);
+					completionItemCache.other.map(it => {
+						if (it.kind === CompletionItemKind.Text && expg.test(it.label))
+							vars[it.label.toLowerCase()] = true, items.push(it);
 					});
 				for (const t in vars)
 					txs[t] = true;
 				for (const t in funcs) txs[t] = true;
 				for (const t in doc.texts)
-					if (!txs[t])
+					if (!txs[t] && expg.test(t))
 						txs[t] = true, items.push(cpitem = CompletionItem.create(doc.texts[t])), cpitem.kind = CompletionItemKind.Text;
 				for (const u in list)
 					for (const t in (temp = lexers[u].texts))
-						if (!txs[t])
+						if (!txs[t] && expg.test(t))
 							txs[t] = true, items.push(cpitem = CompletionItem.create(temp[t])), cpitem.kind = CompletionItemKind.Text;
 				return items;
 			} else
@@ -384,15 +391,16 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					return undefined;
 			}
 			for (const n in ahkvars)
-				vars[n] = convertNodeCompletion(ahkvars[n]);
+				if (expg.test(n))
+					vars[n] = convertNodeCompletion(ahkvars[n]);
 			Object.values(doc.declaration).map(it => {
-				if (!ateditpos(it))
-					vars[it.name.toLowerCase()] = convertNodeCompletion(it);
+				if (expg.test(_low = it.name.toLowerCase()) && !ateditpos(it))
+					vars[_low] = convertNodeCompletion(it);
 			});
 			for (const t in list) {
 				path = list[t].path;
 				for (const n in (temp = lexers[t]?.declaration)) {
-					if (!vars[n] || (vars[n].kind === CompletionItemKind.Variable && temp[n].kind !== SymbolKind.Variable)) {
+					if (expg.test(n) && (!vars[n] || (vars[n].kind === CompletionItemKind.Variable && temp[n].kind !== SymbolKind.Variable))) {
 						cpitem = convertNodeCompletion(temp[n]), cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
 						vars[n] = cpitem;
 					}
@@ -400,36 +408,41 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			if (scopenode) {
 				doc.getScopeChildren(scopenode).map(it => {
-					vars[it.name.toLowerCase()] = convertNodeCompletion(it);
+					if (expg.test(_low = it.name.toLowerCase()))
+						vars[_low] = convertNodeCompletion(it);
 				});
 			}
 			completionItemCache.other.map(it => {
-				if (it.kind === CompletionItemKind.Text) {
-					if (!scopenode && !percent)
+				if (expg.test(it.label)) {
+					if (it.kind === CompletionItemKind.Text) {
+						if (!scopenode && !percent)
+							items.push(it);
+					} else if (it.kind === CompletionItemKind.Function) {
+						if (!vars[_low = it.label.toLowerCase()])
+							vars[_low] = it;
+					} else
 						items.push(it);
-				} else if (it.kind === CompletionItemKind.Function) {
-					if (!vars[_low = it.label.toLowerCase()])
-						vars[_low] = it;
-				} else
-					items.push(it);
+				}
 			});
-			let dir = (workfolder && doc.scriptpath.startsWith(workfolder + '\\') ? workfolder : doc.scriptdir);
+			let dir = (workfolder && doc.scriptpath.startsWith(workfolder + '\\') ? workfolder : doc.scriptdir), exportnum = 0;
 			for (const u in libfuncs) {
 				if (!list || !list[u]) {
 					path = URI.parse(u).fsPath;
 					if ((<any>libfuncs[u]).islib || path.startsWith(dir + '\\'))
 						libfuncs[u].map(it => {
-							if (!vars[_low = it.name.toLowerCase()]) {
+							if (!vars[_low = it.name.toLowerCase()] && expg.test(_low)) {
 								cpitem = convertNodeCompletion(it);
 								cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
 								cpitem.command = { title: 'ahk2.fix.include', command: 'ahk2.fix.include', arguments: [path, uri] };
-								vars[_low] = cpitem;
+								vars[_low] = cpitem, exportnum++;
 							}
 						});
+					if (exportnum > 300)
+						break;
 				}
 			}
 			scopenode?.children?.map(it => {
-				if (!vars[_low = it.name.toLowerCase()] && !ateditpos(it))
+				if (!vars[_low = it.name.toLowerCase()] && expg.test(_low) && !ateditpos(it))
 					vars[_low] = convertNodeCompletion(it);
 			});
 			if (other)
@@ -439,9 +452,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	function addOther() {
 		items.push(...completionItemCache.snippet);
 		if (triggerKind === 1 && content.text.length > 2 && content.text.match(/^[a-z]+_/i)) {
-			const rg = new RegExp(content.text.replace(/(.)/g, '$1.*'), 'i'), constants = completionItemCache.constant;
+			const constants = completionItemCache.constant;
 			for (const it of constants)
-				if (rg.test(it.label))
+				if (expg.test(it.label))
 					items.push(it);
 		}
 	}

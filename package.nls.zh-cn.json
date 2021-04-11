@@ -1,6 +1,7 @@
 {
 	"ahk2.compile": "编译脚本",
 	"ahk2.debug": "调试脚本",
+	"ahk2.debug.params": "带参调试",
 	"ahk2.description": "基于 vscode-lsp 协议的 Autohotkey2 语言支持",
 	"ahk2.exepath": "AutoHotkey.exe可执行文件的路径.",
 	"ahk2.generatecomment": "生成注释模板",

@@ -110,7 +110,8 @@ export function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.stop', () => stopRunningScript()),
 		commands.registerCommand('ahk2.compile', () => compileScript()),
 		commands.registerCommand('ahk2.help', () => quickHelp()),
-		commands.registerCommand('ahk2.debug', async () => begindebug(extlist, debugexts))
+		commands.registerCommand('ahk2.debug', async () => begindebug(extlist, debugexts)),
+		commands.registerCommand('ahk2.debug.params', async () => begindebug(extlist, debugexts, true))
 	);
 }
 
@@ -247,11 +248,16 @@ async function quickHelp() {
 	}
 }
 
-async function begindebug(extlist: string[], debugexts: any) {
+async function begindebug(extlist: string[], debugexts: any, params = false) {
 	const editor = window.activeTextEditor, executePath = workspace.getConfiguration('AutoHotkey2').get('Path');
 	if (!editor) return;
 	let extname: string | undefined;
-	if (extlist.length === 0) {
+	if (params) {
+		if (!extlist.includes(extname = 'zero-plusplus.vscode-autohotkey-debug')) {
+			window.showErrorMessage('zero-plusplus.vscode-autohotkey-debug was not found!');
+			return;
+		}
+	} else if (extlist.length === 0) {
 		window.showErrorMessage(zhcn ? '未找到debug扩展, 请先安装debug扩展!' : 'The debug extension was not found, please install the debug extension first!');
 		extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'cweijan.vscode-autohotkey-plus']);
 		if (extname)
@@ -273,9 +279,11 @@ async function begindebug(extlist: string[], debugexts: any) {
 		for (const t in debugexts)
 			if (debugexts[t] === extname) {
 				config.type = t;
-				if (extname === 'zero-plusplus.vscode-autohotkey-debug') {
+				if (extname === 'zero-plusplus.vscode-autohotkey-debug' && params) {
 					let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
-					if (input = input?.trim()) {
+					if (input === undefined)
+						return;
+					if (input = input.trim()) {
 						let args: string[] = [];
 						input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
 							args.push(m[4] || m[2]);
