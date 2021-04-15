@@ -44,7 +44,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						vars[_l] = info, result.push(info);
 				} else if (info.kind === SymbolKind.Variable) {
 					let kind = vars[_l].kind
-					if ((<Variable>info).def && (kind === SymbolKind.Function || kind === SymbolKind.Class || kind === SymbolKind.Method)) {
+					if (vars[_l] !== glo[_l] && (<Variable>info).def && (kind === SymbolKind.Function || kind === SymbolKind.Class || kind === SymbolKind.Method)) {
 						doc.diagnostics.push({ message: samenameerr(vars[_l], info), range: info.selectionRange, severity: DiagnosticSeverity.Error });
 					}
 				} else if (info !== vars[_l])
