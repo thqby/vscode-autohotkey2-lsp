@@ -820,6 +820,7 @@ export class Lexer {
 												tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), par), _this.addFoldingRangePos(tn.range.start, tn.range.end);
 												(<FuncNode>tn).parent = prop, tn.children = parseblock(3, vars, classfullname), tn.range.end = _this.document.positionAt(parser_pos);
 												adddeclaration(tn as FuncNode);
+												_this.addFoldingRangePos(tn.range.start, tn.range.end);
 												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
 											} else {
 												_this.addDiagnostic(diagnostic.invalidprop(), sk.offset);
@@ -833,6 +834,7 @@ export class Lexer {
 										}
 									}
 									prop.range.end = document.positionAt(parser_pos - 1), mode = mmm;
+									_this.addFoldingRangePos(prop.range.start, prop.range.end, 'block');
 								} else if (tk.content === '=>') {
 									mode = 3;
 									let off = parser_pos, o: any = {}, sub: DocumentSymbol[], pars: { [key: string]: any } = {};
