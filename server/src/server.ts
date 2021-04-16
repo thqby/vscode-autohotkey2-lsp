@@ -20,7 +20,7 @@ import { defintionProvider } from './definitionProvider';
 import { executeCommandProvider } from './executeCommandProvider';
 import { documentFormatting, rangeFormatting } from './formattingProvider';
 import { hoverProvider } from './hoverProvider';
-import { checksamenameerr, ClassNode, FuncNode, getincludetable, Lexer, parseinclude } from './Lexer';
+import { FuncNode, getincludetable, Lexer, parseinclude } from './Lexer';
 import { completionitem, setting } from './localize';
 import { referenceProvider } from './referencesProvider';
 import { prepareRename, renameProvider } from './renameProvider';
@@ -40,7 +40,6 @@ export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '';
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}];
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
-export let builtin_class: CompletionItem[] = [];
 export let dllcalltpe: string[] = [];
 export type Maybe<T> = T | undefined;
 interface AHKLSSettings {
@@ -259,12 +258,6 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 function initahk2cache() {
 	ahkvars = {};
 	dllcalltpe = ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'HRESULT'];
-	builtin_class = ['Any', 'Array', 'BoundFunc', 'Buffer', 'Class', 'ClipboardAll', 'Closure', 'Enumerator', 'Error', 'File', 'Float', 'Func', 'Gui', 'IndexError', 'InputHook', 'Integer', 'KeyError', 'Map', 'MemberError', 'MemoryError', 'Menu', 'MenuBar', 'MethodError', 'Number', 'Object', 'OSError', 'Primitive', 'PropertyError', 'RegExMatch', 'String', 'TargetError', 'TimeoutError', 'TypeError', 'ValueError', 'ZeroDivisionError'].map(it => {
-		const completionItem = CompletionItem.create(it);
-		completionItem.insertText = it;
-		completionItem.kind = CompletionItemKind.Class;
-		return completionItem;
-	});
 	completionItemCache = {
 		sharp: [],
 		method: [],
@@ -378,7 +371,7 @@ async function initpathenv(config?: any) {
 		FileAppend %text%, %file%
 	}
 	`
-	let ret = runscript(script, (data: string) => {
+	let ret = runscript(script, async (data: string) => {
 		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '';
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].toLowerCase();
@@ -406,9 +399,12 @@ async function initpathenv(config?: any) {
 		}
 		for (const uri in lexers) {
 			let doc = lexers[uri];
-			doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include);
-			doc.relevance = getincludetable(doc.uri).list;
+			if (!doc.d && (Object.keys(doc.include).length || doc.diagnostics.length)) {
+				doc.initlibdirs(), doc.parseScript(), await parseinclude(doc.include);
+				doc.relevance = getincludetable(doc.uri).list;
+			}
 		}
+		sendDiagnostics();
 		libfuncs = {};
 		setTimeout(() => {
 			libdirs.map(dir => {

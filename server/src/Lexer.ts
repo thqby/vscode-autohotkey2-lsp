@@ -173,7 +173,7 @@ export class Lexer {
 	constructor(document: TextDocument) {
 		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this;
-		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string;
+		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, _customblocks: number[] = [];
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, tks: Token[] = [];
 		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space: boolean = false;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
@@ -366,7 +366,7 @@ export class Lexer {
 				following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
 				this.semantoken = new SemanticTokensBuilder(), this.children.length = this.foldingranges.length = this.diagnostics.length = 0;
-				this.declaration = {};
+				this.declaration = {}, this.blocks = [], _customblocks.length = 0;
 				let blocks = 0, rg: Range, tokens: Token[] = [], cls: string[] = [];
 				let p: DocumentSymbol[] = [DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg = makerange(0, 0), rg, this.children)];
 				(<FuncNode>p[0]).declaration = this.declaration;
@@ -508,13 +508,15 @@ export class Lexer {
 					});
 				}
 				checksamenameerr({}, this.children, this.diagnostics);
-				this.diags = this.diagnostics.length;
+				this.children.push(...this.blocks);
+				this.diags = this.diagnostics.length, this.blocks = undefined;
+				_customblocks.map(o => this.addFoldingRange(o, parser_pos - 1, 'line'));
 			}
 		} else {
 			this.parseScript = function (islib?: boolean): void {
 				input = this.document.getText(), input_length = input.length, scriptpath = includedir = this.scriptpath;
 				tks.length = 0, whitespace_before_token = [], beginpos = 0, following_bracket = false, begin_line = true;
-				bracketnum = 0, parser_pos = 0, last_LF = -1;
+				bracketnum = 0, parser_pos = 0, last_LF = -1, _customblocks.length = 0;
 				this.label.length = this.funccall.length = this.diagnostics.length = this.hotkey.length = 0;
 				this.colors.length = this.foldingranges.length = this.children.length = 0, this.labels = {};
 				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map();
@@ -523,6 +525,7 @@ export class Lexer {
 				this.children.push(...parseblock()), this.children.push(...this.blocks), this.blocks = undefined;
 				checksamenameerr(this.declaration, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length;
+				_customblocks.map(o => this.addFoldingRange(o, parser_pos - 1, 'line'));
 			}
 		}
 
@@ -1090,7 +1093,7 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset);
 							break;
 						}
-						if (nk.type === 'TK_EQUALS' || nk.content.match(/^([<>]=?|~=|&&|\|\||[,.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) tk.type = 'TK_WORD', parser_pos = t, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+						if (nk.type === 'TK_EQUALS' || nk.content.match(/^([<>]=?|~=|&&|\|\||[.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) tk.type = 'TK_WORD', parser_pos = t, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 						else {
 							lk = tk, tk = nk, next = false;
 							if (_low === 'switch') inswitch = blocks;
@@ -1124,7 +1127,7 @@ export class Lexer {
 				let res: DocumentSymbol[] = [], hascomma = false, b = next ? parser_pos : tk.offset;
 				while (true) {
 					let o: any = {};
-					res.push(...parseexp(false, o));
+					res.push(...parseexp(false, o, true));
 					if (tk.type === 'TK_COMMA')
 						hascomma = next = true;
 					else {
@@ -1200,7 +1203,7 @@ export class Lexer {
 				return sta;
 			}
 
-			function parseexp(inpair = false, types: any = {}): DocumentSymbol[] {
+			function parseexp(inpair = false, types: any = {}, mustexp = false): DocumentSymbol[] {
 				let pres = result.length, tpexp = '', byref = false;
 				while (nexttoken()) {
 					if (tk.topofline && !inpair && !(['TK_OPERATOR', 'TK_EQUALS', 'TK_DOT'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
@@ -1358,7 +1361,7 @@ export class Lexer {
 							if (lk.type === 'TK_EQUALS') {
 								parseobj(true);
 								tpexp += ' #object'; break;
-							} else if (parseobj()) {
+							} else if (parseobj(mustexp)) {
 								tpexp += ' #object'; break;
 							} else {
 								types[tpexp] = true;
@@ -1516,7 +1519,8 @@ export class Lexer {
 						return true;
 					}
 					return next = false;
-				}
+				} else if (lk.content === ':')
+					_this.addDiagnostic(diagnostic.objectliteralerr(), lk.offset, parser_pos - lk.offset);
 				if (tk.type === 'TK_END_BLOCK')
 					_this.addFoldingRange(b.offset, tk.offset);
 				else
@@ -1973,7 +1977,8 @@ export class Lexer {
 						_this.addFoldingRange(tk.offset, tk.offset + tk.length, 'comment');
 						break;
 					case 'TK_STRING':
-						addcolorinformation(tk);
+						if (addcolorinformation(tk))
+							_this.addFoldingRange(tk.offset, tk.offset + tk.length, 'line');
 						break;
 				}
 				return tk.type !== 'TK_EOF';
@@ -1981,9 +1986,11 @@ export class Lexer {
 		}
 
 		function addcolorinformation(tk: Token) {
-			if (_this.document.version < 0 || tk.content.indexOf('\n') !== -1) return;
+			if (_this.document.version < 0)
+				return 0;
+			else if (tk.content.indexOf('\n') !== -1) return 1;
 			let m = colorregexp.exec(tk.content), range: Range, v = '';
-			if (!m || (!m[1] && tk.length !== m[2].length + 2)) return;
+			if (!m || (!m[1] && tk.length !== m[2].length + 2)) return 0;
 			range = makerange(tk.offset + m.index + (m[1] ? m[1].length : 0), m[2].length);
 			v = m[5] ? colortable[m[5]] : m[3] === undefined ? m[2] : m[2].substring(2);
 			let color: any = { red: 0, green: 0, blue: 0, alpha: 1 }, cls: string[] = ['red', 'green', 'blue'];
@@ -2017,6 +2024,10 @@ export class Lexer {
 					case 'TK_INLINE_COMMENT':
 						if (comment) comment.content = tk.content, comment.type = tk.type;
 						continue;
+					case 'TK_STRING':
+						if (addcolorinformation(tk))
+							_this.addFoldingRange(tk.offset, tk.offset + tk.length, 'line');
+						break;
 				}
 				break;
 			}
@@ -2585,7 +2596,7 @@ export class Lexer {
 				if (following_bracket) {
 					end_bracket_of_expression(input.indexOf('\n', parser_pos));
 				}
-				let comment = '', comment_type = 'TK_INLINE_COMMENT';
+				let comment = '', comment_type = 'TK_INLINE_COMMENT', t: any;
 				if (bg) {
 					comment_type = 'TK_COMMENT'
 				}
@@ -2599,7 +2610,16 @@ export class Lexer {
 					last_LF = parser_pos;
 				}
 				comment = comment.trimRight();
-				if (bg && _this.blocks && comment.match(/^;;/)) _this.blocks.push(DocumentSymbol.create(comment.replace(/^[;\s]+/, ''), undefined, SymbolKind.Object, makerange(offset, comment.length), makerange(offset, comment.length)));
+				if (bg && _this.blocks && (t = comment.match(/^;(;|\s*#)((end)?region\b)?/i))) {
+					if (t[3]) {
+						if ((t = _customblocks.pop()) !== undefined)
+							_this.addFoldingRange(t, offset, 'line');
+					} else {
+						if (t[2])
+							_customblocks.push(offset);
+						_this.blocks.push(DocumentSymbol.create(comment.replace(/^;(;|\s*#)((end)?region\b)?\s*/i, '') || comment, undefined, SymbolKind.Object, makerange(offset, comment.length), makerange(offset, comment.length)));
+					}
+				}
 				return createToken(comment, comment_type, offset, comment.length, bg);
 			}
 
@@ -2608,16 +2628,16 @@ export class Lexer {
 				// peek for comment /* ... */
 				if (input.charAt(parser_pos) === '*') {
 					parser_pos += 1;
-					let LF = input.indexOf('\n', parser_pos), b = parser_pos;
-					while (LF !== -1 && !input.substring(parser_pos, LF).match(/\*\/\s*$/)) {
-						last_LF = LF, LF = input.indexOf('\n', parser_pos = LF + 1);
-					}
+					let LF = input.indexOf('\n', parser_pos), b = parser_pos, ln = 0, tp = 'TK_COMMENT';
+					while (LF !== -1 && !input.substring(parser_pos, LF).match(/\*\/\s*$/))
+						last_LF = LF, LF = input.indexOf('\n', parser_pos = LF + 1), ln++;
+					if (ln) tp = 'TK_BLOCK_COMMENT';
 					if (LF === -1) {
 						parser_pos = input_length;
-						return createToken(input.substring(offset, input_length), 'TK_BLOCK_COMMENT', offset, input_length - offset, bg);
+						return createToken(input.substring(offset, input_length), tp, offset, input_length - offset, bg);
 					} else {
 						parser_pos = LF;
-						return createToken(input.substring(offset, LF).trimRight(), 'TK_BLOCK_COMMENT', offset, LF - offset, bg)
+						return createToken(input.substring(offset, LF).trimRight(), tp, offset, LF - offset, bg)
 					}
 				}
 			}

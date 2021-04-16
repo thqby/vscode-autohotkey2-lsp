@@ -1,5 +1,14 @@
 {
-	"snippet": [],
+	"snippet": [
+		{
+			"body": ";#region",
+			"prefix": "region begin"
+		},
+		{
+			"body": ";#endregion",
+			"prefix": "region end"
+		}
+	],
 	"keywords": [
 		{
 			"body": "#ClipboardTimeout ",

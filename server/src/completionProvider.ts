@@ -2,7 +2,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
+import { detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
 import { ahkvars, completionItemCache, dllcalltpe, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
 
@@ -64,6 +64,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	switch (triggerchar) {
 		case '#':
 			items.push(...completionItemCache.sharp);
+			items.push(...completionItemCache.snippet);
 			return items;
 		case '.':
 			let c = doc.buildContext(position, true);
@@ -394,7 +395,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (expg.test(n))
 					vars[n] = convertNodeCompletion(ahkvars[n]);
 			Object.values(doc.declaration).map(it => {
-				if (expg.test(_low = it.name.toLowerCase()) && !ateditpos(it))
+				if (expg.test(_low = it.name.toLowerCase()) && !ateditpos(it) && (!vars[_low] || it.kind !== SymbolKind.Variable))
 					vars[_low] = convertNodeCompletion(it);
 			});
 			for (const t in list) {
@@ -408,7 +409,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			if (scopenode) {
 				doc.getScopeChildren(scopenode).map(it => {
-					if (expg.test(_low = it.name.toLowerCase()))
+					if (expg.test(_low = it.name.toLowerCase()) && (!vars[_low] || it.kind !== SymbolKind.Variable || (<Variable>it).returntypes))
 						vars[_low] = convertNodeCompletion(it);
 				});
 			}

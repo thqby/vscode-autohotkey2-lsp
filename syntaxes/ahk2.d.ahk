@@ -1,4 +1,4 @@
-;; functions
+;#region functions
 /**
  * 返回 Number 的绝对值.
  */
@@ -2338,7 +2338,9 @@ WinWaitClose([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Number
  * 等待直到指定的窗口不活动.
  */
 WinWaitNotActive([ WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
+;#endregion
 
+;#region class
 
 class Any {
 	/**
@@ -3741,3 +3743,4 @@ class ValueError extends Error {
 
 class ZeroDivisionError extends Error {
 }
+;#endregion
