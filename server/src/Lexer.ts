@@ -4396,9 +4396,9 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 	} else if (!(res = doc.searchNode(name = name.replace(/^@/, ''), pos, kind))) {
 		if (res === null)
 			return undefined;
-		if (res = searchIncludeNode(doc.uri, name))
-			return [res];
-	} else if (res.node.kind === SymbolKind.Variable && res.node === doc.declaration[name]) {
+		res = searchIncludeNode(doc.uri, name);
+	}
+	if (res && res.node.kind === SymbolKind.Variable && res.node === doc.declaration[name]) {
 		for (const u in doc.relevance)
 			if ((t = lexers[u].declaration[name]) && t.kind !== SymbolKind.Variable)
 				return [{ node: t, uri: u }];
