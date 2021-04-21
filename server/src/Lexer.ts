@@ -3977,6 +3977,13 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 				else tn = Object.assign({}, tn), tn.name = 'Call', (<any>tn).uri = u;
 				members.push(tn), (<Variable>tn).static = true, v['call'] = tn, (<any>tn).def = false;
 				(<FuncNode>tn).returntypes = { [(<ClassNode>node).full.replace(/([^.]+)$/, '@$1').toLowerCase()]: node.selectionRange.start };
+			} else if (v['call'].def === false && (tn = (<ClassNode>node).declaration['__new'])) {
+				for (let k in tn) {
+					if (k !== 'name' && k !== 'returntypes')
+						v['call'][k] = (<any>tn)[k];
+				}
+				v['call'].uri = u;
+				delete v['call'].def;
 			}
 		} else {
 			node.children?.map(it => {
@@ -4177,7 +4184,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 				let ns = searchNode(doc, m[1], pos, SymbolKind.Variable), s = '', ts: any = {}, c: RegExpMatchArray | null | undefined;
 				if (ns) {
 					ns.map(it => {
-						let n = it.node as FuncNode;
+						let n = it.node as FuncNode, uri = it.uri;
 						swlb:
 						switch (n.kind) {
 							case SymbolKind.Method:
@@ -4194,13 +4201,13 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 							case SymbolKind.Function:
 								if (n === ahkvars['objbindmethod'] && (c = fullexp?.toLowerCase().match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,\s*('|")([^'"]+)\3\s*[,)]/))) {
 									ts[c[1] + '.' + c[4]] = true;
-								} else
+								} else if ((uri = (<any>n).uri || uri) && lexers[uri])
 									for (const e in n.returntypes)
-										detect(e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
+										detectExp(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
 								break;
 							case SymbolKind.Variable:
-								if (it.uri)
-									detectVariableType(lexers[it.uri], n.name.toLowerCase(), it.uri === doc.uri ? pos : undefined).map(tp => {
+								if (uri && lexers[uri])
+									detectVariableType(lexers[uri], n.name.toLowerCase(), uri === doc.uri ? pos : undefined).map(tp => {
 										if (searchcache[tp]) {
 											n = searchcache[tp].node;
 											if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
@@ -4210,9 +4217,9 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 									});
 								break;
 							case SymbolKind.Property:
-								if (it.uri && (s = Object.keys(n.returntypes || {}).pop() || '')) {
+								if (uri && lexers[uri] && (s = Object.keys(n.returntypes || {}).pop() || '')) {
 									let tps: any = {};
-									detectExpType(lexers[it.uri], s, n.range.end, tps);
+									detectExpType(lexers[uri], s, n.range.end, tps);
 									if (tps['#any'])
 										return '#any';
 									for (const tp in tps)
@@ -4226,8 +4233,8 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 								}
 								break;
 							case SymbolKind.Class:
-								if (it.uri && lexers[it.uri])
-									for (const i of getClassMembers(lexers[it.uri], n, true))
+								if ((uri = (<any>n).uri || uri) && lexers[uri])
+									for (const i of getClassMembers(lexers[uri], n, true))
 										if (i.name.toLowerCase() === 'call') {
 											n = i as FuncNode;
 											for (const e in n.returntypes)

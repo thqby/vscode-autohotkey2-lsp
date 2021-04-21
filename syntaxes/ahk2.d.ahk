@@ -2523,6 +2523,11 @@ class Error extends Object {
 	 * 自动设置为发生错误的语句行号.
 	 */
 	Line => Number
+
+	/**
+	 * 创建 Error 对象.
+	 */
+	static Call(Message [, What, Extra]) => Error
 }
 
 class File extends Object {

@@ -1,5 +1,5 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, detectExp, detectExpType, detectVariableType, formatMarkdowndetail, FuncNode, getFuncCallInfo, searchNode } from './Lexer';
+import { ClassNode, detectExp, detectExpType, detectVariableType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
 import { ahkvars, lexers, Maybe } from './server';
 
 export async function signatureProvider(params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> {
@@ -55,14 +55,20 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		ttt.map((it: any) => {
 			let nn = it.node, kind = nn.kind;
 			if (kind === SymbolKind.Class) {
-				let dec = (<ClassNode>nn).staticdeclaration;
-				if (dec && dec['call']) {
-					nodes.push({ node: dec['call'], uri: '' });
-				} else {
-					dec = (<ClassNode>nn).declaration;
-					if (dec && dec['__new'])
-						nodes.push({ node: dec['__new'], uri: '' });
+				let mems = getClassMembers(lexers[nn.uri || it.uri], nn, true);
+				let n: FuncNode | undefined;
+				for (const m of mems) {
+					if ((<any>m).def !== false) {
+						if (m.name.toLowerCase() === 'call') {
+							n = undefined;
+							nodes.push({ node: m, uri: '' });
+							break;
+						} else
+							n = m as FuncNode;
+					}
 				}
+				if (n)
+					nodes.push({ node: n, uri: '' });
 			} else if (kind === SymbolKind.Function || kind === SymbolKind.Method)
 				nodes.push(it);
 			else if (it.uri) {
