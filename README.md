@@ -2,6 +2,12 @@
 
 Turn down the pages of the [English](#Language-support-for-AutoHotkey2-for-Visual-Studio-Code) version of README
 
+## repositories:
+
+[Github](https://github.com/thqby/vscode-autohotkey2-lsp)
+
+[Gitee](https://gitee.com/orz707/vscode-autohotkey2-lsp)
+
 AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 - [语言特性](#语言特性)
