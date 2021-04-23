@@ -182,7 +182,7 @@ export class Lexer {
 		whitespace = "\n\r\t ".split(''), digits = '0123456789'.split(''), wordchar = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$'.split('');
 		punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >> << >>= <<= && &= | || ! ~ , : ? ^ ^= |= :: =>'.split(' ');
 		line_starters = 'class,try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
-		reserved_words = line_starters.concat(['extends', 'in', 'is', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not']);
+		reserved_words = line_starters.concat(['extends', 'in', 'is', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not', 'as', 'unset']);
 		MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', ForInitializer: 'ForInitializer', Conditional: 'Conditional', Expression: 'Expression' };
 		handlers = {
 			'TK_START_EXPR': handle_start_expr,

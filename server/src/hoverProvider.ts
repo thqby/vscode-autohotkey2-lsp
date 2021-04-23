@@ -47,13 +47,15 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		if (nodes) {
 			if (nodes.length > 1) {
 				nodes.map(it => {
-					hover.push({ kind: 'ahk2', value: (<any>(it.node)).full })
+					if ((<any>(it.node)).full)
+						hover.push({ kind: 'ahk2', value: (<any>(it.node)).full })
 				});
 			} else {
 				node = nodes[0].node, uri = nodes[0].uri;
-				if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method || node.kind === SymbolKind.Property)
-					hover.push({ kind: 'ahk2', value: (<FuncNode>node).full });
-				else if (node.kind === SymbolKind.Class)
+				if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method || node.kind === SymbolKind.Property) {
+					if ((<FuncNode>node).full)
+						hover.push({ kind: 'ahk2', value: (<FuncNode>node).full });
+				} else if (node.kind === SymbolKind.Class)
 					hover.push({ kind: 'ahk2', value: 'class ' + ((<ClassNode>node).full || node.name) });
 				if (node.detail)
 					hover.push({ kind: 'markdown', value: formatMarkdowndetail(node.detail) });
