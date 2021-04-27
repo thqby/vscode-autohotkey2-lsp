@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, dllcalltpe, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
+import { ahkvars, completionItemCache, dllcalltpe, extsettings, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested) return undefined;
@@ -428,8 +428,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			let dir = (workfolder && doc.scriptpath.startsWith(workfolder + '\\') ? workfolder : doc.scriptdir), exportnum = 0;
 			for (const u in libfuncs) {
 				if (!list || !list[u]) {
-					path = URI.parse(u).fsPath;
-					if ((<any>libfuncs[u]).islib || path.startsWith(dir + '\\'))
+					if ((extsettings.AutoLibInclude && (<any>libfuncs[u]).islib) || (path = URI.parse(u).fsPath).startsWith(dir + '\\')) {
 						libfuncs[u].map(it => {
 							if (!vars[_low = it.name.toLowerCase()] && expg.test(_low)) {
 								cpitem = convertNodeCompletion(it);
@@ -438,8 +437,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								vars[_low] = cpitem, exportnum++;
 							}
 						});
-					if (exportnum > 300)
-						break;
+						if (exportnum > 300)
+							break;
+					}
 				}
 			}
 			scopenode?.children?.map(it => {

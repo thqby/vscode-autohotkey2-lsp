@@ -787,6 +787,8 @@ export class Lexer {
 									}
 									if (err)
 										_this.addDiagnostic(diagnostic.invalidparam(), fc.offset, lk.offset - fc.offset + 1);
+									if (par.length === 0)
+										_this.addDiagnostic(diagnostic.propemptyparams(), fc.offset, lk.offset - fc.offset + 1);
 								}
 								let prop = DocumentSymbol.create(fc.content, comm, SymbolKind.Property, rg = makerange(fc.offset, fc.length), rg);
 								(<FuncNode>prop).parent = _parent;
@@ -1136,7 +1138,7 @@ export class Lexer {
 							if (o = Object.keys(o).pop()?.toLowerCase())
 								types[o] = true;
 							if (hascomma)
-								_this.addDiagnostic(diagnostic.returnmultival(), b, lk.offset + lk.length - b);
+								_this.addDiagnostic(diagnostic.returnmultival(), b, lk.offset > 0 ? lk.offset + lk.length - b : 0);
 						}
 						break;
 					}
@@ -1418,7 +1420,7 @@ export class Lexer {
 			}
 
 			function parsequt(types: any = {}) {
-				let paramsdef = true, beg = parser_pos - 1, cache = [], rg, byref = false, bak = tk, tpexp = '';
+				let paramsdef = true, beg = parser_pos - 1, cache = [], rg, byref = false, bak = tk, tpexp = '', col = _this.colors.length;
 				if (!tk.topofline && ((lk.type === 'TK_OPERATOR' && !lk.content.match(/(:=|\?|:)/)) || !in_array(lk.type, ['TK_START_EXPR', 'TK_WORD', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA'])
 					|| (lk.type === 'TK_WORD' && in_array(input.charAt(tk.offset - 1), whitespace))))
 					paramsdef = false;
@@ -1496,6 +1498,7 @@ export class Lexer {
 					}
 				if (!paramsdef) {
 					parser_pos = beg + 1, tk = bak, next = true;
+					_this.colors.splice(col);
 					parsepair('(', ')', beg, types);
 					return;
 				}
@@ -2610,15 +2613,19 @@ export class Lexer {
 					last_LF = parser_pos;
 				}
 				comment = comment.trimRight();
-				if (bg && _this.blocks && (t = comment.match(/^;(;|\s*#)((end)?region\b)?/i))) {
-					if (t[3]) {
-						if ((t = _customblocks.pop()) !== undefined)
-							_this.addFoldingRange(t, offset, 'line');
-					} else {
-						if (t[2])
-							_customblocks.push(offset);
-						_this.blocks.push(DocumentSymbol.create(comment.replace(/^;(;|\s*#)((end)?region\b)?\s*/i, '') || comment, undefined, SymbolKind.Object, makerange(offset, comment.length), makerange(offset, comment.length)));
-					}
+				if (_this.blocks) {
+					let rg: Range;
+					if (bg && (t = comment.match(/^;(;|\s*#)((end)?region\b)?/i))) {
+						if (t[3]) {
+							if ((t = _customblocks.pop()) !== undefined)
+								_this.addFoldingRange(t, offset, 'line');
+						} else {
+							if (t[2])
+								_customblocks.push(offset);
+							_this.blocks.push(DocumentSymbol.create(comment.replace(/^;(;|\s*#)((end)?region\b)?\s*/i, '') || comment, undefined, SymbolKind.Module, rg = makerange(offset, comment.length), rg));
+						}
+					} else if (t = comment.match(/^;(\s*~?\s*)todo(:?\s*)(.*)/i))
+						_this.blocks.push(DocumentSymbol.create('TODO: ' + t[3].trim(), undefined, SymbolKind.Module, rg = makerange(offset, comment.length), rg));
 				}
 				return createToken(comment, comment_type, offset, comment.length, bg);
 			}
@@ -3919,13 +3926,13 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 	}
 }
 
-export async function parseinclude(include: { [uri: string]: { path: string, raw: string } }) {
+export function parseinclude(include: { [uri: string]: { path: string, raw: string } }) {
 	for (const uri in include) {
 		let path = include[uri].path;
 		if (!(lexers[uri]) && fs.existsSync(path)) {
 			let doc = new Lexer(openFile(path));
 			lexers[uri] = doc, doc.parseScript();
-			await parseinclude(doc.include);
+			parseinclude(doc.include);
 			doc.relevance = getincludetable(uri).list;
 		}
 	}

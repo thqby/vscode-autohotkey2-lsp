@@ -55,7 +55,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		ttt.map((it: any) => {
 			let nn = it.node, kind = nn.kind;
 			if (kind === SymbolKind.Class) {
-				let mems = getClassMembers(lexers[nn.uri || it.uri], nn, true);
+				let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, true);
 				let n: FuncNode | undefined;
 				for (const m of mems) {
 					if ((<any>m).def !== false && m.name.toLowerCase() === 'call') {

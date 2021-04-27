@@ -20,15 +20,6 @@ ASin(Number) => Number
 ATan(Number) => Number
 
 /**
- * 分配一个内存块,并将其返回到缓冲区对象中.
- * @param ByteCount 要分配的字节数. 对应于 Buffer.Size.
- * @param FillByte 指定一个介于 0 到 255 之间的数字, 以将缓冲中的每个字节设置为该数字.
- * 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
- * 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
- */
-BufferAlloc(ByteCount [, FillByte]) => Buffer
-
-/**
  * 创建机器码地址, 当它被调用时会重定向到脚本中的函数.
  * @param Address 函数名或函数对象. 每当调用 Address 时会自动调用此函数. 此函数同时会接收到传递给 Address 的参数.
  * 闭包或绑定函数可以用来区分多个回调函数调用相同的脚本函数.
@@ -2425,6 +2416,15 @@ class BoundFunc extends Func {
 
 class Buffer extends Object {
 	/**
+	* 分配一个内存块,并将其返回到缓冲区对象中.
+	* @param ByteCount 要分配的字节数. 对应于 Buffer.Size.
+	* @param FillByte 指定一个介于 0 到 255 之间的数字, 以将缓冲中的每个字节设置为该数字.
+	* 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
+	* 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
+	*/
+	static Call(ByteCount [, FillByte]) => Buffer
+
+	/**
 	 * 检索缓冲区的当前内存地址.
 	 */
 	Ptr => Number
@@ -3516,6 +3516,11 @@ class Map extends Object {
 	Delete(Key) => Any
 
 	/**
+	 * 返回与键关联的值或默认值.
+	 */
+	Get(Key [, Default]) => Any
+
+	/**
 	 * 如果 Key 在映射中有关联的值, 则返回 true, 否则返回 false.
 	 */
 	Has(Key) => Number
@@ -3539,6 +3544,11 @@ class Map extends Object {
 	 * 检索或设置映射的大小写敏感性设置.
 	 */
 	CaseSense => Number
+
+	/**
+	 * 定义找不到键时返回的默认值.
+	 */
+	Default => Any
 }
 
 class MemberError extends Error {
@@ -3707,11 +3717,6 @@ class RegExMatchInfo extends Object {
 	Len(N) => Number
 
 	/**
-	 * 返回整体匹配或捕获的子模式.
-	 */
-	Value(N) => String
-
-	/**
 	 * 返回给定子模式的名称(如果有的话).
 	 */
 	Name(N) => String
@@ -3719,12 +3724,12 @@ class RegExMatchInfo extends Object {
 	/**
 	 * 返回子模式的总数.
 	 */
-	Count() => Number
+	Count => Number
 
 	/**
 	 * 如果适用, 返回最后遇到的名称(*MARK：NAME).
 	 */
-	Mark() => String
+	Mark => String
 }
 
 class String extends Primitive {

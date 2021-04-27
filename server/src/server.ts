@@ -29,9 +29,10 @@ import { signatureProvider } from './signatureProvider';
 import { symbolProvider } from './symbolProvider';
 
 export const languageServer = 'ahk2-language-server';
-export let globalSettings: AHKLSSettings = {
-	Path: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe'
-}, libdirs: string[] = [], documentSettings: Map<string, Thenable<AHKLSSettings>> = new Map();
+export let libdirs: string[] = [], extsettings: AHKLSSettings = {
+	Path: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
+	AutoLibInclude: false
+};
 export const connection = createConnection(ProposedFeatures.all);
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
@@ -43,7 +44,8 @@ export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let dllcalltpe: string[] = [];
 export type Maybe<T> = T | undefined;
 interface AHKLSSettings {
-	Path: string;
+	Path: string
+	AutoLibInclude: boolean
 }
 
 connection.onInitialize((params: InitializeParams) => {
@@ -124,16 +126,23 @@ connection.onInitialized(() => {
 
 connection.onDidChangeConfiguration(async change => {
 	if (hasConfigurationCapability) {
-		// Reset all cached document settings
-		documentSettings.clear();
+		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
+		let changes: any = { Path: false, AutoLibInclude: false };
+		for (let k in extsettings)
+			if ((<any>extsettings)[k] !== (<any>newset)[k])
+				changes[k] = true;
+		extsettings = newset;
+		if (changes['Path']) {
+			if (initpathenv())
+				documents.all().forEach(validateTextDocument);
+		} else if (changes['AutoLibInclude'] && extsettings.AutoLibInclude)
+			parseuserlibs();
 	}
-	if (initpathenv())
-		documents.all().forEach(validateTextDocument);
 });
 
 documents.onDidOpen(async e => {
-	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
-	lexers[uri] = doc, doc.actived = true;
+	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document), d = lexers[uri]?.d;
+	lexers[uri] = doc, doc.actived = true, doc.d = d;
 	parseproject(uri);
 });
 
@@ -142,7 +151,7 @@ documents.onDidClose(async e => {
 	let uri = e.document.uri.toLowerCase();
 	if (lexers[uri].d)
 		return;
-	documentSettings.delete(uri), lexers[uri].actived = false;
+	lexers[uri].actived = false;
 	for (let u in lexers)
 		if (lexers[u].actived)
 			for (let f in lexers[u].relevance)
@@ -183,7 +192,7 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 		sendDiagnostics();
 		return;
 	}
-	await parseinclude(doc.include);
+	parseinclude(doc.include);
 	doc.relevance = getincludetable(uri).list, resetrelevance();
 	sendDiagnostics();
 	function resetrelevance() {
@@ -236,18 +245,8 @@ connection.listen();
 initahk2cache();
 loadahk2();
 
-export function getDocumentSettings(resource: string): Thenable<AHKLSSettings> {
-	if (!hasConfigurationCapability) return Promise.resolve(globalSettings);
-	let result = documentSettings.get(resource.toLowerCase());
-	if (!result)
-		documentSettings.set(resource.toLowerCase(),
-			result = connection.workspace.getConfiguration({ scopeUri: resource, section: 'AutoHotkey2' }));
-	return result;
-}
-
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	let uri = textDocument.uri, doc: Lexer;
-	getDocumentSettings(uri);
 	(doc = lexers[uri = uri.toLowerCase()]).initlibdirs();
 	if (doc.diagnostics.length)
 		doc.parseScript();
@@ -355,10 +354,11 @@ async function loadahk2(filename = 'ahk2') {
 }
 
 let initnum = 0;
-async function initpathenv(config?: any) {
-	config = config || await connection.workspace.getConfiguration('AutoHotkey2');
-	if (!config) return false;
-	globalSettings.Path = config.Path;
+async function initpathenv(hasconfig = false) {
+	if (!hasconfig) {
+		extsettings = await connection.workspace.getConfiguration('AutoHotkey2');
+		if (!extsettings.Path) return false;
+	}
 	let script = `
 	#NoTrayIcon
 	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 3) = "2.0" ? "FileAppend" : "FileAppend2"
@@ -377,7 +377,7 @@ async function initpathenv(config?: any) {
 			pathenv[s[i]] = paths[i].toLowerCase();
 		if (!pathenv.ahkpath) {
 			if (initnum < 3) setTimeout(() => {
-				initnum++, initpathenv();
+				initnum++, initpathenv(true);
 			}, 1000);
 			return;
 		}
@@ -400,26 +400,36 @@ async function initpathenv(config?: any) {
 		for (const uri in lexers) {
 			let doc = lexers[uri];
 			if (!doc.d && (Object.keys(doc.include).length || doc.diagnostics.length)) {
-				doc.initlibdirs(), doc.parseScript(), await parseinclude(doc.include);
+				doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include);
 				doc.relevance = getincludetable(doc.uri).list;
 			}
 		}
 		sendDiagnostics();
 		libfuncs = {};
-		setTimeout(() => {
-			libdirs.map(dir => {
-				getallahkfiles(dir).map(path => {
-					let uri = URI.file(path).toString().toLowerCase(), d: Lexer;
-					if (!(d = lexers[uri]))
-						d = new Lexer(openFile(path)), d.parseScript();
-					libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
-					Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
-				});
-			});
-		}, 1000);
+		if (extsettings.AutoLibInclude)
+			parseuserlibs();
 	});
 	if (!ret) connection.window.showErrorMessage(setting.ahkpatherr());
 	return ret;
+}
+
+async function sleep(ms: number) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function parseuserlibs() {
+	libdirs.map(dir => {
+		getallahkfiles(dir).map(async (path) => {
+			let uri = URI.file(path).toString().toLowerCase(), d: Lexer;
+			if (!libfuncs[uri]) {
+				if (!(d = lexers[uri]))
+					d = new Lexer(openFile(path)), d.parseScript();
+				libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
+				Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
+				await sleep(40);
+			}
+		});
+	});
 }
 
 export function sendDiagnostics() {
@@ -511,13 +521,13 @@ async function parseproject(uri: string) {
 	let doc: Lexer = lexers[uri];
 	if (!libfuncs[uri])
 		libfuncs[uri] = [], Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(URI.parse(uri).toString(), ...libdirs), enumerable: false });
-	setTimeout(async () => {
+	setTimeout(() => {
 		let searchdir = '', workspace = false;
 		if (workfolder && (doc.scriptdir === workfolder || doc.scriptdir.startsWith(workfolder + '\\')))
 			searchdir = workfolder, workspace = true;
 		else
 			searchdir = doc.scriptdir + '\\lib';
-		getallahkfiles(searchdir).map(path => {
+		getallahkfiles(searchdir).map(async (path) => {
 			let u = URI.file(path).toString().toLowerCase(), d: Lexer;
 			if (u !== uri && !libfuncs[u]) {
 				libfuncs[u] = [], Object.defineProperty(libfuncs[u], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
@@ -527,7 +537,8 @@ async function parseproject(uri: string) {
 						lexers[u] = d;
 				}
 				libfuncs[u].push(...Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
+				await sleep(20);
 			}
 		});
-	}, 1000);
+	}, 100);
 }

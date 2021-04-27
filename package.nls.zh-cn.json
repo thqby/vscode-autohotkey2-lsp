@@ -1,7 +1,9 @@
 {
+	"ahk2.autolibinclude": "对用户库和标准库提供补全和自动include",
 	"ahk2.compile": "编译脚本",
 	"ahk2.debug": "调试脚本",
 	"ahk2.debug.params": "带参调试",
+	"ahk2.defaultdebugger": "设置默认调试器",
 	"ahk2.description": "基于 vscode-lsp 协议的 Autohotkey2 语言支持",
 	"ahk2.exepath": "AutoHotkey.exe可执行文件的路径.",
 	"ahk2.generatecomment": "生成注释模板",
@@ -38,6 +40,7 @@
 	"diagnostic.objectliteralerr": "对象字面量存在错误",
 	"diagnostic.pathinvalid": "无效的文件路径",
 	"diagnostic.propdeclaraerr": "不是有效的方法, 类或属性定义",
+	"diagnostic.propemptyparams": "动态属性不允许使用空[]",
 	"diagnostic.propnotinit": "属性声明未初始化",
 	"diagnostic.reservedworderr": "保留字不得用作变量名 '{0}'",
 	"diagnostic.returnmultival": "'Return' 最多接受1个返回值",

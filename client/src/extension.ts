@@ -265,8 +265,10 @@ async function begindebug(extlist: string[], debugexts: any, params = false) {
 		return;
 	} else if (extlist.length === 1)
 		extname = extlist[0];
-	else
-		extname = await window.showQuickPick(extlist);
+	else {
+		let def = workspace.getConfiguration('AutoHotkey2').get('DefaultDebugger') as string;
+		extname = extlist.includes(def) ? def : await window.showQuickPick(extlist);
+	}
 	if (extname) {
 		let config: any = {
 			type: '',
