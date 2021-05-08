@@ -8,12 +8,12 @@ import { ahkvars, completionItemCache, dllcalltpe, extsettings, lexers, libfuncs
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested) return undefined;
-	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, funcs: { [key: string]: any } = {}, txs: any = {};
+	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, txs: any = {};
 	let scopenode: DocumentSymbol | undefined, other = true, triggerKind = params.context?.triggerKind;
 	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], content = doc.buildContext(position, false);
 	let quote = '', char = '', _low = '', percent = false, linetext = content.linetext, triggerchar = linetext.charAt(content.range.start.character - 1);
-	let list = doc.relevance, cpitem: CompletionItem, temp: any, path: string, { line, character } = position, expg = new RegExp(content.text.replace(/(.)/g, '$1.*'), 'i');
-	['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
+	let list = doc.relevance, cpitem: CompletionItem, temp: any, path: string, { line, character } = position;
+	let expg = new RegExp(content.text.match(/[^\w]/) ? content.text.replace(/(.)/g, '$1.*') : '(' + content.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	for (let i = 0; i < position.character; i++) {
 		char = linetext.charAt(i);
 		if (quote === char) {
@@ -313,7 +313,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							break;
 						case 'objbindmethod':
 							if (res.index === 1) {
-								let ns: any;
+								let ns: any, funcs: { [key: string]: any } = {};
+								['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
 								if (temp = content.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,/i)) {
 									let ts: any = {};
 									detectExpType(doc, temp[1], position, ts);
@@ -363,7 +364,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					});
 				for (const t in vars)
 					txs[t] = true;
-				for (const t in funcs) txs[t] = true;
 				for (const t in doc.texts)
 					if (!txs[t] && expg.test(t))
 						txs[t] = true, items.push(cpitem = CompletionItem.create(doc.texts[t])), cpitem.kind = CompletionItemKind.Text;

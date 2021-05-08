@@ -1,6 +1,9 @@
 # AutoHotkey2语言支持
 
-Turn down the pages of the [English](#Language-support-for-AutoHotkey2-for-Visual-Studio-Code) version of README
+[![installs](https://vsmarketplacebadge.apphb.com/installs/thqby.vscode-autohotkey2-lsp.svg?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
+[![version](https://vsmarketplacebadge.apphb.com/version/thqby.vscode-autohotkey2-lsp.svg?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
+
+Turn down the pages of the [English](#language-support-for-autohotkey2-for-visual-studio-code) version of README
 
 ## repositories:
 
@@ -97,18 +100,18 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis
 
-- [Language Features](#Language-Features)
-  - [Rename Symbol](#Rename-Symbol)
-  - [Diagnostics](#Diagnostics)
-  - [IntelliSense](#IntelliSense)
-  - [Signature](#Signature)
-  - [Document Symbol](#Document-Symbol)
-  - [Blocks](#Blocks)
-  - [Document Color](#Document-Color)
-  - [Hover](#Hover)
-  - [Goto Definition](#Goto-Definition)
-  - [Find All References](#Find-All-References)
-  - [CodeFormat](#CodeFormat)
+- [Language Features](#language-features)
+  - [Rename Symbol](#rename-symbol)
+  - [Diagnostics](#diagnostics)
+  - [IntelliSense](#intellisense)
+  - [Signature](#signature)
+  - [Document Symbol](#document-symbol)
+  - [Blocks](#blocks)
+  - [Document Color](#document-color)
+  - [Hover](#hover)
+  - [Goto Definition](#goto-definition)
+  - [Find All References](#find-all-references)
+  - [CodeFormat](#codeformat)
 
 ## Language Features
 
