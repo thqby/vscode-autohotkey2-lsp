@@ -2364,7 +2364,7 @@ class Array extends Object {
 	/**
 	* 数组对象包含值的列表或序列.
 	*/
-	static Call(Values*) => Array
+	__New(Values*) => Array
 	/**
 	 * 返回对象的一个浅拷贝.
 	 */
@@ -2422,7 +2422,7 @@ class Buffer extends Object {
 	* 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
 	* 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
 	*/
-	static Call(ByteCount [, FillByte]) => Buffer
+	__New(ByteCount [, FillByte]) => Buffer
 
 	/**
 	 * 检索缓冲区的当前内存地址.
@@ -2451,7 +2451,7 @@ class ClipboardAll extends Buffer {
 	/**
 	* 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
 	*/
-	static Call([Data, Size]) => Buffer
+	__New([Data, Size]) => Buffer
 }
 
 class Closure extends Func {
@@ -2464,7 +2464,7 @@ class ComObjArray extends ComValue {
 	* 不能设置为 VT_ARRAY 或 VT_BYREF 标志. VT_EMPTY 和 VT_NULL 不是数组的有效基类型. 其他所有类型是合法的. 
 	* @param Counts* 每个维度的大小. 支持最多 8 维的数组.
 	*/
-	static Call(VarType, Counts*) => ComObjArray
+	__New(VarType, Counts*) => ComObjArray
 
 	MaxIndex(n) => Number
 
@@ -2479,7 +2479,7 @@ class ComObject extends ComValue {
 	* @param CLSID 要创建的 COM 对象的 CLSID 或可读的 Prog ID.
 	* @param IID 要返回的接口的标识符. 在大多数情况下, 它是省略的; 如果省略, 它默认为IID_IDispatch
 	*/
-	static Call(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => ComObject | ComValue
+	__New(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => ComObject | ComValue
 }
 
 class ComValue extends Any {
@@ -2489,7 +2489,7 @@ class ComValue extends Any {
 	* @param Value 要包装的值. 当前仅支持整数和指针值.
 	* @param Flags 影响包装器对象行为的标志; 有关详情, 请参阅 ComObjFlags.
 	*/
-	static Call(VarType, Value [, Flags]) => Comobject
+	__New(VarType, Value [, Flags]) => Comobject
 }
 
 class ComValueRef extends ComValue {
@@ -2527,7 +2527,7 @@ class Error extends Object {
 	/**
 	 * 创建 Error 对象.
 	 */
-	static Call(Message [, What, Extra]) => Error
+	__New(Message [, What, Extra]) => Error
 }
 
 class File extends Object {
@@ -2691,7 +2691,7 @@ class Float extends Number {
 	/**
 	* 将数字字符串或整数值转换为浮点数.
 	*/
-	static Call(Value) => Number
+	__New(Value) => Number
 }
 
 class Func extends Object {
@@ -2785,7 +2785,7 @@ class Gui extends Object {
 	/**
 	 * 创建一个新的Gui对象.
 	 */
-	static Call([Options, Title := A_ScriptName, EventObj]) => Gui
+	__New([Options, Title := A_ScriptName, EventObj]) => Gui
 
 	/**
 	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
@@ -3443,7 +3443,7 @@ class InputHook extends Object {
 	 * 
 	 * 因为 MatchList 中的项目不被视为单独的参数, 所以列表可以完全包含在一个变量中. 事实上, 如果此列表的长度超过 16383, 那么列表的全部或部分必须包含在变量中, 因为这个长度是任何脚本行的最大长度. 例如, MatchList 可能由 List1 "," List2 "," List3 组成 -- 其中每个变量都包含匹配词组的子列表.
 	 */
-	static Call(Options := '', EndKeys := '', MatchList := '') => Inputhook
+	__New(Options := '', EndKeys := '', MatchList := '') => Inputhook
 
 	/**
 	 * 设置按键或按键列表的选项.
@@ -3488,7 +3488,7 @@ class Integer extends Number {
 	/**
 	* 将数字字符串或浮点值转换为整数.
 	*/
-	static Call(Value) => Number
+	__New(Value) => Number
 }
 
 class KeyError extends IndexError {
@@ -3498,7 +3498,7 @@ class Map extends Object {
 	/**
 	* Map对象将一组称为键的值关联或映射到另一组值.
 	*/
-	static Call([Key1, Value1, *]) => Map
+	__New([Key1, Value1, *]) => Map
 
 	/**
 	 * 从映射中删除所有键-值对.
@@ -3576,7 +3576,7 @@ class Menu extends Object {
 	/**
 	 * 创建一个新的Menu或MenuBar对象.
 	 */
-	static Call() => Menu
+	__New() => Menu
 
 	/**
 	 * 添加或修改菜单项.
@@ -3662,7 +3662,7 @@ class Object extends Any {
 	/**
 	* Object是从AutoHotkey对象类派生的基本类.
 	*/
-	static Call() => Object
+	__New() => Object
 
 	/**
 	 * 返回对象的一个浅拷贝.
@@ -3696,7 +3696,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	static Call(code) => OSError
+	__New(code) => OSError
 }
 
 class Primitive extends Any {
@@ -3736,7 +3736,7 @@ class String extends Primitive {
 	/**
 	* 将值转换为字符串.
 	*/
-	static Call(Value) => String
+	__New(Value) => String
 }
 
 class TargetError extends Error {

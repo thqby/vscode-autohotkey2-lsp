@@ -93,7 +93,7 @@ export namespace FuncNode {
 		full = (isstatic ? 'static ' : '') + name + '(' + full.substring(2) + ')';
 		if (params.length && params[params.length - 1].name === '*')
 			params.pop();
-		return { assume: FuncScope.DEFAULT, name, kind, range, selectionRange, params, full, children, declaration: {}, global: {}, local: {}, labels: {} };
+		return { assume: FuncScope.DEFAULT, name, kind, range, selectionRange, params, full, children, funccall: [], declaration: {}, global: {}, local: {}, labels: {} };
 	}
 }
 
@@ -805,10 +805,10 @@ export class Lexer {
 											nk = tk, sk = get_token_ingore_comment();
 											if (sk.content === '=>') {
 												tk = sk, mode = 3;
-												let off = parser_pos, o: any = {}, sub: DocumentSymbol[], pars: { [key: string]: any } = {};
-												tn = FuncNode.create(nk.content.toLowerCase(), SymbolKind.Function, makerange(off, parser_pos - off), rg, <Variable[]>par);
+												let off = parser_pos, o: any = {}, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
+												tn = FuncNode.create(nk.content.toLowerCase(), SymbolKind.Function, makerange(off, parser_pos - off), rg, [...par]);
 												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
-												(<FuncNode>tn).parent = prop, sub = parseline(o), mode = 2;
+												(<FuncNode>tn).parent = prop, sub = parseline(o), mode = 2, tn.funccall?.push(..._parent.funccall.splice(fcs));
 												tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 												(<FuncNode>tn).returntypes = o, tn.children = [], pars['value'] = true; for (const it of par) pars[it.name.toLowerCase()] = true;
 												for (const t in o)
@@ -822,7 +822,7 @@ export class Lexer {
 												adddeclaration(tn as FuncNode), prop.children.push(...sub);
 											} else if (sk.content === '{') {
 												let vars = new Map<string, any>([['#parent', prop]]);
-												tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), par), _this.addFoldingRangePos(tn.range.start, tn.range.end);
+												tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), [...par]), _this.addFoldingRangePos(tn.range.start, tn.range.end);
 												(<FuncNode>tn).parent = prop, tn.children = parseblock(3, vars, classfullname), tn.range.end = _this.document.positionAt(parser_pos);
 												adddeclaration(tn as FuncNode);
 												_this.addFoldingRangePos(tn.range.start, tn.range.end);
@@ -842,9 +842,9 @@ export class Lexer {
 									_this.addFoldingRangePos(prop.range.start, prop.range.end, 'block');
 								} else if (tk.content === '=>') {
 									mode = 3;
-									let off = parser_pos, o: any = {}, sub: DocumentSymbol[], pars: { [key: string]: any } = {};
+									let off = parser_pos, o: any = {}, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
 									mode = 2, tn = FuncNode.create('get', SymbolKind.Function, makerange(off, parser_pos - off), rg, <Variable[]>par), (<FuncNode>tn).returntypes = o;
-									(<FuncNode>tn).parent = _parent, tn.children = [], sub = parseline(o);
+									(<FuncNode>tn).parent = _parent, tn.children = [], sub = parseline(o), (<FuncNode>tn).funccall?.push(..._parent.funccall.splice(fcs));
 									for (const t in o)
 										o[t] = tn.range.end;
 									tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
