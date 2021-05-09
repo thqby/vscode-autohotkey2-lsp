@@ -1206,7 +1206,7 @@ export class Lexer {
 			}
 
 			function parseexp(inpair = false, types: any = {}, mustexp = false): DocumentSymbol[] {
-				let pres = result.length, tpexp = '', byref = false;
+				let pres = result.length, tpexp = '', byref = false, t: any;
 				while (nexttoken()) {
 					if (tk.topofline && !inpair && !(['TK_OPERATOR', 'TK_EQUALS', 'TK_DOT'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
 						if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) === '.')
@@ -1221,7 +1221,7 @@ export class Lexer {
 							lk = tk, tk = get_token_ingore_comment(cmm), comment = cmm.content;
 							if (tk.type === 'TK_COMMA') {
 								if (predot)
-									addprop(lk), maybeclassprop(lk);
+									addprop(lk), maybeclassprop(lk), tpexp += '.' + lk.content;
 								else if (input.charAt(lk.offset - 1) !== '%') {
 									if (addvariable(lk) && byref) {
 										let vr = (<Variable>result[result.length - 1]);
@@ -1361,10 +1361,10 @@ export class Lexer {
 							break;
 						case 'TK_START_BLOCK':
 							if (lk.type === 'TK_EQUALS') {
-								parseobj(true);
-								tpexp += ' #object'; break;
-							} else if (parseobj(mustexp)) {
-								tpexp += ' #object'; break;
+								parseobj(true, t = {});
+								tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
+							} else if (parseobj(mustexp, t = {})) {
+								tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
 							} else {
 								types[tpexp] = true;
 								next = false; return result.splice(pres);
@@ -1506,8 +1506,8 @@ export class Lexer {
 				return cache;
 			}
 
-			function parseobj(must: boolean = false): boolean {
-				let l = lk, b = tk, rl = result.length, isobj = true, nk: Token;
+			function parseobj(must: boolean = false, tp: any = {}): boolean {
+				let l = lk, b = tk, rl = result.length, isobj = true, ts: any = {}, k: Token | undefined, nk: Token;
 				if (!next && tk.type === 'TK_START_BLOCK')
 					next = true;
 				while (objkey())
@@ -1532,6 +1532,7 @@ export class Lexer {
 
 				function objkey(): boolean {
 					while (nexttoken()) {
+						k = undefined;
 						switch (tk.type) {
 							case 'TK_RESERVED':
 							case 'TK_WORD':
@@ -1539,7 +1540,7 @@ export class Lexer {
 									break;
 								nk = get_token_ingore_comment();
 								if (nk.content === ':') {
-									lk = tk, tk = nk;
+									lk = tk, tk = nk, k = lk;
 									return true;
 								}
 								return isobj = false;
@@ -1588,8 +1589,16 @@ export class Lexer {
 				}
 
 				function objval(): boolean {
-					let exp = parseexp(true);
+					let exp = parseexp(true, ts = {});
 					result.push(...exp);
+					if (k) {
+						if (k.content.toLowerCase() === 'base') {
+							let t = Object.keys(ts).pop();
+							if (t && t.match(/\.prototype$/i))
+								tp[t.slice(0, -10).trim().toLowerCase().replace(/([^.]+)$/, '@$1')] = true;
+						} else
+							addprop(k);
+					}
 					if (tk.type === 'TK_COMMA')
 						return !(next = true);
 					else if (tk.type === 'TK_END_BLOCK')
@@ -1747,8 +1756,9 @@ export class Lexer {
 						} else
 							addprop(tk), maybeclassprop(tk);
 					} else if (tk.type === 'TK_START_BLOCK') {
-						tpexp += ' #object';
-						parseobj(true);
+						let t: any = {};
+						parseobj(true, t);
+						tpexp += ' ' + (Object.keys(t).pop() || '#object');
 					} else if (tk.type === 'TK_STRING') {
 						tpexp += ' #string';
 						strs?.push(tk);
@@ -3984,7 +3994,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 				else tn = Object.assign({}, tn), tn.name = 'Call', (<any>tn).uri = u;
 				members.push(tn), (<Variable>tn).static = true, v['call'] = tn, (<any>tn).def = false;
 				(<FuncNode>tn).returntypes = { [(<ClassNode>node).full.replace(/([^.]+)$/, '@$1').toLowerCase()]: node.selectionRange.start };
-			} else if (v['call'].def === false && (tn = (<ClassNode>node).declaration['__new'])) {
+			} else if (!v['__new'] && v['call'].def === false && (tn = (<ClassNode>node).declaration['__new'])) {
 				for (let k in tn) {
 					if (k !== 'name' && k !== 'returntypes')
 						v['call'][k] = (<any>tn)[k];
