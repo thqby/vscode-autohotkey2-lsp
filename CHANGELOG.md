@@ -1,7 +1,8 @@
 ## 0.6.9
 - 修复悬浮提示/自动补全功能存在堆栈溢出的bug [#3](https://github.com/thqby/vscode-autohotkey2-lsp/issues/3)
+- 修复字符串延长段未能正确地结束 [#4](https://github.com/thqby/vscode-autohotkey2-lsp/issues/4)
 - 修复部分关键字被标记为错误 [#5](https://github.com/thqby/vscode-autohotkey2-lsp/issues/5)
-- 修复字符串延长段未能正确地结束
+- 减少.触发的自动补全 [#6](https://github.com/thqby/vscode-autohotkey2-lsp/issues/6)
 - 更新高亮文件
 
 ## 0.6.8
