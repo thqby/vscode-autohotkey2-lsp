@@ -2746,7 +2746,7 @@ export class Lexer {
 				// http://mxr.mozilla.org/mozilla-central/source/js/src/jsscan.cpp around line 1935
 				let sharp = '#';
 				c = input.charAt(parser_pos);
-				if (bg && parser_pos < input_length && !in_array(c, whitespace)) {
+				if (parser_pos < input_length && !in_array(c, whitespace)) {
 					while (parser_pos < input_length && !in_array(c = input.charAt(parser_pos), whitespace)) {
 						sharp += c;
 						parser_pos += 1;
@@ -2759,7 +2759,9 @@ export class Lexer {
 						sharp += ' ' + input.substring(parser_pos, LF).trim();
 						last_LF = parser_pos = LF;
 					}
-					return createToken(sharp, 'TK_SHARP', offset, parser_pos - offset, bg);
+					if (bg)
+						return createToken(sharp, 'TK_SHARP', offset, parser_pos - offset, true);
+					return createToken(sharp, 'TK_UNKNOWN', offset, parser_pos - offset, false);
 				}
 			}
 
@@ -3145,7 +3147,7 @@ export class Lexer {
 				} else if ((token_text_low === 'else' && flags.last_word.toLowerCase() === 'if')
 					|| (token_text_low === 'until' && flags.last_word.toLowerCase() === 'loop')
 					|| (token_text_low === 'catch' && flags.last_word.toLowerCase() === 'try')
-					|| (token_text_low === 'finally' && flags.last_word.toLowerCase() === 'catch')) {
+					|| (token_text_low === 'finally' && flags.last_word.match(/^(catch|try)$/i))) {
 					trim_output(true);
 					let line = output_lines[output_lines.length - 1];
 					// If we trimmed and there's something other than a close block before us
