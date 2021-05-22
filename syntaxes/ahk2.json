@@ -36,11 +36,6 @@
 			"prefix": "#HotIfTimeout"
 		},
 		{
-			"body": "#HotkeyModifierTimeout ",
-			"description": "影响热键修饰符的行为: Ctrl, Alt, Win, and Shift.",
-			"prefix": "#HotkeyModifierTimeout"
-		},
-		{
 			"body": "#Hotstring ${1|NoMouse,EndChars |}",
 			"description": "改变热字串的选项或终止符.",
 			"prefix": "#Hotstring"
@@ -188,11 +183,6 @@
 			"body": "break",
 			"description": "退出（终止）任何类型的循环语句.",
 			"prefix": "break"
-		},
-		{
-			"body": "ByRef",
-			"description": "ByRef 的使用让相应的参数变成从调用者传递进来的变量的一个别名. 换句话说, 参数和调用者的变量都引用内存中相同的内容.",
-			"prefix": "ByRef"
 		},
 		{
 			"body": "catch",
