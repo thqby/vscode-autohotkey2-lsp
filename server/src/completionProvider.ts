@@ -14,6 +14,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	let quote = '', char = '', _low = '', percent = false, linetext = content.linetext, triggerchar = linetext.charAt(content.range.start.character - 1);
 	let list = doc.relevance, cpitem: CompletionItem, temp: any, path: string, { line, character } = position;
 	let expg = new RegExp(content.text.match(/[^\w]/) ? content.text.replace(/(.)/g, '$1.*') : '(' + content.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
+	let istr = doc.instrorcomm(position);
+	if (istr === 1)
+		return;
 	for (let i = 0; i < position.character; i++) {
 		char = linetext.charAt(i);
 		if (quote === char) {
@@ -25,8 +28,11 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 		} else if (quote === '' && (char === '"' || char === "'") && (i === 0 || linetext.charAt(i - 1).match(/[([%,\s]/)))
 			quote = char;
 	}
-	if (quote || (triggerchar !== '.' && triggerchar !== '#'))
+	if (quote || istr) {
+		if (triggerKind === 2)
+			return;
 		triggerchar = '';
+	}
 	if (!percent && triggerchar === '.' && content.pre.match(/^\s*#include/i))
 		triggerchar = '';
 	if (temp = linetext.match(/^\s*((class\s+\S+\s+)?(extends)|class)\s/i)) {
@@ -68,6 +74,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			return items;
 		case '.':
 			let c = doc.buildContext(position, true);
+			if (c.text.match(/\d+\.$/) || c.linetext.match(/\s\.$/))
+				return;
 			content.pre = c.text.slice(0, content.text === '' && content.pre.match(/\.$/) ? -1 : -content.text.length);
 			content.text = c.text, content.kind = c.kind, content.linetext = c.linetext;;
 			let p: any = content.pre.replace(/('|").*?(?<!`)\1/, `''`), t: any, unknown = true;
