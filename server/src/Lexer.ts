@@ -4198,7 +4198,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			exp = t;
 		if (deep === 0) {
 			while (exp !== (t = exp.replace(/((\w|[@#.]|[^\x00-\xff])+)\(\)/, (...m) => {
-				let ns = searchNode(doc, m[1], pos, SymbolKind.Variable), s = '', ts: any = {}, c: RegExpMatchArray | null | undefined;
+				let ns = searchNode(doc, m[1], exp.trim() === m[0] ? {line: pos.line, character: pos.character - exp.length} : pos, SymbolKind.Variable), s = '', ts: any = {}, c: RegExpMatchArray | null | undefined;
 				if (ns) {
 					ns.map(it => {
 						let n = it.node as FuncNode, uri = it.uri;
@@ -4281,15 +4281,16 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			exps = [tpexp];
 		if (deep)
 			return exps;
-		for (let exp of exps) {
-			if (t = exp.match(/^([@#]?)(\w|[^\x00-\xff])+(\.[@#]?(\w|[^\x00-\xff])+)*$/)) {
+		exp = exp.trim();
+		for (let ex of exps) {
+			if (t = ex.match(/^([@#]?)(\w|[^\x00-\xff])+(\.[@#]?(\w|[^\x00-\xff])+)*$/)) {
 				let ll = '', ttt: any;
-				if ((t[1] && !t[3]) || searchcache[exp])
-					ts[exp] = true;
-				else for (const n of searchNode(doc, exp, pos, SymbolKind.Variable) || []) {
+				if ((t[1] && !t[3]) || searchcache[ex])
+					ts[ex] = true;
+				else for (const n of searchNode(doc, ex, ex === exp ? {line: pos.line, character: pos.character - ex.length} : pos, SymbolKind.Variable) || []) {
 					switch (n.node.kind) {
 						case SymbolKind.Variable:
-							detectVariableType(doc, exp, pos).map(tp => ts[tp] = true);
+							detectVariableType(doc, n.node.name.toLowerCase(), n.node.selectionRange.end).map(tp => ts[tp] = true);
 							break;
 						case SymbolKind.Property:
 							if ((<Variable>n.node).returntypes) {
@@ -4308,10 +4309,10 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 							}
 							break;
 						case SymbolKind.Object:
-							if (exp.endsWith('.prototype'))
-								ts['@' + exp.slice(0, -10)] = true;
+							if (ex.endsWith('.prototype'))
+								ts['@' + ex.slice(0, -10)] = true;
 							else
-								ts['#object'] = true, searchcache[exp] = n;
+								ts['#object'] = true, searchcache[ex] = n;
 							break;
 						case SymbolKind.Function:
 							ts[ll = n.node.name.toLowerCase()] = true, searchcache[ll] = n;
@@ -4322,7 +4323,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 							ts[ll] = true, searchcache[ll] = n;
 							break;
 						case SymbolKind.Class:
-							ts[exp = (n.ref ? '@' : '') + exp] = true, searchcache[exp] = n;
+							ts[ex = (n.ref ? '@' : '') + ex] = true, searchcache[ex] = n;
 							break;
 					}
 				}
@@ -4343,7 +4344,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 		if (nodes[0].ref && p[0].match(/^[^@#]/))
 			p[0] = '@' + p[0];
 		if (n.kind === SymbolKind.Variable) {
-			let tps = detectVariableType(lexers[uri], p[0].replace(/^[@#]/, ''), pos), rs: any = [], qc: DocumentSymbol[] = [];
+			let tps = detectVariableType(lexers[uri], p[0].replace(/^[@#]/, ''), nodes[0].node.selectionRange.end || pos), rs: any = [], qc: DocumentSymbol[] = [];
 			if (tps.length === 0) {
 
 			} else for (const tp of tps) {
