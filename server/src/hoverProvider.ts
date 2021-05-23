@@ -5,7 +5,7 @@ import { lexers, hoverCache, Maybe, ahkvars } from './server';
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return undefined;
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
-	if (!doc) return;
+	if (!doc || doc.instrorcomm(params.position)) return;
 	let context = doc.buildContext(params.position), t: any, hover: any[] = [];
 	if (context) {
 		let word = context.text.toLowerCase(), kind: SymbolKind | SymbolKind[] = SymbolKind.Variable;

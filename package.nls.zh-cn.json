@@ -42,7 +42,7 @@
 	"diagnostic.propdeclaraerr": "不是有效的方法, 类或属性定义",
 	"diagnostic.propemptyparams": "动态属性不允许使用空[]",
 	"diagnostic.propnotinit": "属性声明未初始化",
-	"diagnostic.reservedworderr": "保留字不得用作变量名 '{0}'",
+	"diagnostic.reservedworderr": "保留字'{0}'不得用作变量名",
 	"diagnostic.returnmultival": "'Return' 最多接受1个返回值",
 	"diagnostic.unexpected": "意外的'{0}'",
 	"diagnostic.unknowninclude": "'{0}' 无效的include文件格式",

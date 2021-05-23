@@ -42,7 +42,7 @@ export namespace diagnostic {
 	export const propdeclaraerr = localize('diagnostic.propdeclaraerr', 'Not a valid method, class or property definition');
 	export const propemptyparams = localize('diagnostic.propemptyparams', 'Empty [] not permitted');
 	export const propnotinit = localize('diagnostic.propnotinit', 'Property declaration is not initialized');
-	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word must not be used as a variable name \'{0}\'');
+	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name');
 	export const returnmultival = localize('diagnostic.returnmultival', '\'Return\' accepts at most 1 parameter.');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');
 	export const unknowninclude = localize('diagnostic.unknowninclude', '\'{0}\' invalid include file format');

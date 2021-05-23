@@ -21,7 +21,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 			}
 			return undefined;
 		} else word = context.text.toLowerCase(), kind = context.kind;
-		if (word === '')
+		if (word === '' || doc.instrorcomm(params.position))
 			return undefined;
 		else if (!(nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
 			let ts: any = {};

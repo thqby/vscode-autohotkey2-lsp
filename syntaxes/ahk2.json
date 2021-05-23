@@ -190,6 +190,10 @@
 			"prefix": "catch"
 		},
 		{
+			"body": "as",
+			"prefix": "as"
+		},
+		{
 			"body": "class $0 {\n\t\n}",
 			"prefix": "class"
 		},

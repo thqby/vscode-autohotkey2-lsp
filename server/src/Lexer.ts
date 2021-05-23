@@ -1307,7 +1307,10 @@ export class Lexer {
 										}
 										continue;
 									} else fc = lk;
-								cmm.type = '', par = parsequt(tpe), quoteend = parser_pos, nk = get_token_ingore_comment(cmm), comment = cmm.content;
+								cmm.type = '', par = parsequt(tpe), quoteend = parser_pos;
+								if (next)
+									nk = get_token_ingore_comment(cmm), comment = cmm.content;
+								else nk = tk, comment = '';
 								if (nk.content === '=>' && par) {
 									let o: any = {}, sub = parseexp(inpair, o), pars: { [key: string]: boolean } = {}, cds: DocumentSymbol[] = [], lasthasval = false;
 									for (const it of par) pars[it.name.toLowerCase()] = true;
