@@ -1310,7 +1310,7 @@
               "name": "punctuation.definition.string.begin.ahk2"
             }
           },
-          "end": "^\\s*\\).*(\\1)",
+          "end": "^\\s*\\).*?(\\1)",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.string.end.ahk2"

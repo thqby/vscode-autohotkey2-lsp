@@ -2701,7 +2701,7 @@ export class Lexer {
 								resulting_string += LF, pos = parser_pos + 1, parser_pos = input.indexOf('\n', pos);
 								if (parser_pos === -1) {
 									LF = input.substring(pos, input_length);
-									let t = new RegExp('^\\s*\\).*' + sep).exec(LF);
+									let t = new RegExp('^\\s*\\).*?' + sep).exec(LF);
 									if (t)
 										parser_pos = pos + t[0].length, resulting_string += t[0];
 									else {
