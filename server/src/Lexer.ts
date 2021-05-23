@@ -77,6 +77,15 @@ export interface ReferenceInfomation {
 	line: number
 }
 
+export interface Token {
+	type: string;
+	content: string;
+	offset: number;
+	length: number;
+	topofline?: boolean;
+	ignore?: boolean;
+}
+
 export namespace SymbolNode {
 	export function create(name: string, kind: SymbolKind, range: Range, selectionRange: Range, children?: DocumentSymbol[]): DocumentSymbol {
 		return { name, kind, range, selectionRange, children };
@@ -136,7 +145,7 @@ export namespace acorn {
 	}
 }
 
-const colorregexp = new RegExp(/\b(c|background)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
+const colorregexp = new RegExp(/(?<=['"\s])(c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
 let searchcache: { [name: string]: any } = {};
 
@@ -145,7 +154,6 @@ export class Lexer {
 	public beautify: Function;
 	public blocks: DocumentSymbol[] | undefined;
 	public children: DocumentSymbol[] = [];
-	public colors: ColorInformation[] = [];
 	public d: boolean = false;
 	public declaration: { [name: string]: FuncNode | ClassNode | Variable } = {};
 	public diagnostics: Diagnostic[] = [];
@@ -192,7 +200,6 @@ export class Lexer {
 			'TK_END_BLOCK': handle_end_block,
 			'TK_WORD': handle_word,
 			'TK_RESERVED': handle_word,
-			'TK_SEMICOLON': handle_semicolon,
 			'TK_STRING': handle_string,
 			'TK_EQUALS': handle_equals,
 			'TK_OPERATOR': handle_operator,
@@ -519,7 +526,7 @@ export class Lexer {
 				tks.length = 0, whitespace_before_token = [], beginpos = 0, following_bracket = false, begin_line = true;
 				bracketnum = 0, parser_pos = 0, last_LF = -1, _customblocks.length = 0;
 				this.label.length = this.funccall.length = this.diagnostics.length = this.hotkey.length = 0;
-				this.colors.length = this.foldingranges.length = this.children.length = 0, this.labels = {};
+				this.foldingranges.length = this.children.length = 0, this.labels = {};
 				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map();
 				this.blocks = [], this.texts = {}, this.reflat = true, this.declaration = {}, this.strcommpos = {};
 				this.include = includetable = {}, this.semantoken = new SemanticTokensBuilder;
@@ -531,7 +538,7 @@ export class Lexer {
 		}
 
 		function parseblock(mode = 0, scopevar = new Map<string, any>(), classfullname: string = ''): DocumentSymbol[] {
-			const result: DocumentSymbol[] = [], cmm: Token = { content: '', offset: 0, type: '', length: 0 }, _parent = scopevar.get('#parent') || _this;
+			const result: DocumentSymbol[] = [], cmm: Token = { content: '', offset: 0, type: '', length: 0 }, _parent = scopevar.get('#parent') || _this, document = _this.document;
 			let tk: Token = { content: '', type: '', offset: 0, length: 0 }, lk: Token = tk, next: boolean = true, LF: number = 0, comment = '', topcontinue = false;
 			let blocks = 0, inswitch = -1, blockpos: number[] = [], tn: DocumentSymbol | FuncNode | Variable | undefined, m: any, _low = '';
 			let raw = '', o: any = '';
@@ -1425,7 +1432,7 @@ export class Lexer {
 			}
 
 			function parsequt(types: any = {}) {
-				let paramsdef = true, beg = parser_pos - 1, cache = [], rg, byref = false, bak = tk, tpexp = '', col = _this.colors.length;
+				let paramsdef = true, beg = parser_pos - 1, cache = [], rg, byref = false, bak = tk, tpexp = '';
 				if (!tk.topofline && ((lk.type === 'TK_OPERATOR' && !lk.content.match(/(:=|\?|:)/)) || !in_array(lk.type, ['TK_START_EXPR', 'TK_WORD', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA'])
 					|| (lk.type === 'TK_WORD' && in_array(input.charAt(tk.offset - 1), whitespace))))
 					paramsdef = false;
@@ -1503,7 +1510,6 @@ export class Lexer {
 					}
 				if (!paramsdef) {
 					parser_pos = beg + 1, tk = bak, next = true;
-					_this.colors.splice(col);
 					parsepair('(', ')', beg, types);
 					return;
 				}
@@ -2002,26 +2008,12 @@ export class Lexer {
 						_this.addFoldingRange(tk.offset, tk.offset + tk.length, 'comment');
 						break;
 					case 'TK_STRING':
-						if (addcolorinformation(tk))
+						if (tk.content.indexOf('\n') !== -1)
 							_this.addFoldingRange(tk.offset, tk.offset + tk.length, 'line');
 						break;
 				}
 				return tk.type !== 'TK_EOF';
 			}
-		}
-
-		function addcolorinformation(tk: Token) {
-			if (_this.document.version < 0)
-				return 0;
-			else if (tk.content.indexOf('\n') !== -1) return 1;
-			let m = colorregexp.exec(tk.content), range: Range, v = '';
-			if (!m || (!m[1] && tk.length !== m[2].length + 2)) return 0;
-			range = makerange(tk.offset + m.index + (m[1] ? m[1].length : 0), m[2].length);
-			v = m[5] ? colortable[m[5]] : m[3] === undefined ? m[2] : m[2].substring(2);
-			let color: any = { red: 0, green: 0, blue: 0, alpha: 1 }, cls: string[] = ['red', 'green', 'blue'];
-			if (m[4] !== undefined) cls.unshift('alpha');
-			for (const i of cls) color[i] = (parseInt('0x' + v.substr(0, 2)) / 255), v = v.slice(2);
-			_this.colors.push({ range, color });
 		}
 
 		function trimcomment(comment: string): string {
@@ -2034,7 +2026,7 @@ export class Lexer {
 		}
 
 		function makerange(offset: number, length: number): Range {
-			return Range.create(document.positionAt(offset), document.positionAt(offset + length));
+			return Range.create(_this.document.positionAt(offset), _this.document.positionAt(offset + length));
 		}
 
 		function get_token_ingore_comment(comment?: Token): Token {
@@ -2050,22 +2042,13 @@ export class Lexer {
 						if (comment) comment.content = tk.content, comment.type = tk.type;
 						continue;
 					case 'TK_STRING':
-						if (addcolorinformation(tk))
+						if (tk.content.indexOf('\n') !== -1)
 							_this.addFoldingRange(tk.offset, tk.offset + tk.length, 'line');
 						break;
 				}
 				break;
 			}
 			return tk;
-		}
-
-		interface Token {
-			type: string;
-			content: string;
-			offset: number;
-			length: number;
-			topofline?: boolean;
-			ignore?: boolean;
 		}
 
 		function createToken(content: string, type: string, offset: number, length: number, topofline?: boolean): Token {
@@ -2674,38 +2657,52 @@ export class Lexer {
 			}
 
 			if (c === "'" || c === '"') { // string
-				let sep = c, esc = false, end = 0;
+				let sep = c, esc = false, end = 0, pos = 0, LF = '', tr = '';
 				resulting_string = c;
 				if (parser_pos < input_length) {
 					// handle string
 					while ((c = input.charAt(parser_pos)) !== sep || esc) {
 						resulting_string += c;
 						if (c === '\n') {
-							let pos = parser_pos + 1, LF = input.substring(pos, (parser_pos = input.indexOf('\n', pos)) + 1);
-							end = last_LF = parser_pos;
-							while (LF.trim() === '') {
+							last_LF = input.indexOf('\n', pos = parser_pos + 1);
+							LF = input.substring(pos, parser_pos = last_LF === -1 ? input_length : last_LF);
+							end = parser_pos;
+							while ((tr = LF.trim()) === '' || tr.startsWith(';') || tr.startsWith('/*')) {
+								if (tr) {
+									if (tr.startsWith(';')) {
+										resulting_string += LF;
+									} else {
+										parser_pos = pos, begin_line = true;
+										resulting_string += LF.substring(0, LF.indexOf('/*'));
+										resulting_string += get_next_token().content + (LF.slice(-2) === '\r\n' ? '\r\n' : '\n');
+									}
+								}
 								pos = parser_pos + 1, parser_pos = input.indexOf('\n', pos);
 								if (parser_pos === -1) {
 									resulting_string += input.substring(pos, parser_pos = input_length);
-									_this.strcommpos[offset] = { end: end - 1, type: 2 };
-									return createToken(resulting_string, 'TK_STRING', offset, resulting_string.trimRight().length, bg);
+									_this.strcommpos[offset] = { end: end, type: 2 };
+									len = resulting_string.trimRight().length;
+									if (_this.blocks)
+										_this.addDiagnostic(diagnostic.missing(sep), offset, len);
+									return createToken(resulting_string, 'TK_STRING', offset, len, bg);
 								}
 								last_LF = parser_pos, LF = input.substring(pos, parser_pos + 1);
 							}
-							let whitespace: any = LF.match(/^(\s*)\(/);
+							let whitespace: any = LF.match(/^(\s*)\(/), t: RegExpExecArray | null;
 							if (!whitespace) {
-								parser_pos = pos, n_newlines++;
+								parser_pos = - 1, len = resulting_string.trimRight().length;
 								if (_this.blocks)
-									_this.addDiagnostic(diagnostic.missing(sep), offset, resulting_string.length);
-								_this.strcommpos[offset] = { end: end - 1, type: 2 };
-								return createToken(resulting_string = resulting_string.trimRight(), 'TK_STRING', offset, resulting_string.length, bg);
+									_this.addDiagnostic(diagnostic.missing(sep), offset, len);
+								_this.strcommpos[offset] = { end: end === -1 ? input_length : end - 1, type: 2 };
+								parser_pos = offset + len;
+								return createToken(resulting_string = resulting_string.trimRight(), 'TK_STRING', offset, len, bg);
 							}
 							whitespace = whitespace[1];
 							while (LF.trim().indexOf(')') !== 0) {
 								resulting_string += LF, pos = parser_pos + 1, parser_pos = input.indexOf('\n', pos);
 								if (parser_pos === -1) {
 									LF = input.substring(pos, input_length);
-									let t = new RegExp('^\\s*\\).*?' + sep).exec(LF);
+									t = new RegExp('^\\s*\\)([^`' + sep + ']|`.)*' + sep).exec(LF);
 									if (t)
 										parser_pos = pos + t[0].length, resulting_string += t[0];
 									else {
@@ -2718,13 +2715,14 @@ export class Lexer {
 								}
 								last_LF = parser_pos, LF = input.substring(pos, parser_pos + 1);
 							}
-							let p = LF.indexOf(sep);
-							if (p === -1) {
+							t = new RegExp('^\\s*\\)([^`' + sep + ']|`.)*' + sep).exec(LF);
+							if (t) {
+								parser_pos = pos + t[0].length;
+							} else {
 								parser_pos = input_length + 1;
 								if (_this.blocks)
 									_this.addDiagnostic(diagnostic.missing(sep), offset, 1);
-							} else
-								parser_pos = pos + p + 1;
+							}
 							resulting_string += whitespace + input.substring(pos, parser_pos).trim();
 							_this.strcommpos[offset] = { end: parser_pos - 1, type: 3 };
 							return createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
@@ -2742,7 +2740,8 @@ export class Lexer {
 							return createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
 						}
 					}
-				}
+				} else if (_this.blocks)
+					_this.addDiagnostic(diagnostic.missing(sep), offset, 1);
 
 				parser_pos += 1;
 				resulting_string += sep;
@@ -3125,11 +3124,6 @@ export class Lexer {
 						output_space_before_token = true;
 					}
 				}
-			} else if (last_type === 'TK_SEMICOLON' && flags.mode === MODE.BlockStatement) {
-				// TODO: Should this be for STATEMENT as well?
-				prefix = 'NEWLINE';
-			} else if (last_type === 'TK_SEMICOLON' && is_expression(flags.mode)) {
-				prefix = 'SPACE';
 			} else if (last_type === 'TK_STRING') {
 				prefix = 'SPACE';
 			} else if (last_type === 'TK_RESERVED' || last_type === 'TK_WORD') {
@@ -3139,12 +3133,13 @@ export class Lexer {
 			} else if (last_type === 'TK_END_EXPR') {
 				output_space_before_token = true;
 				prefix = 'NEWLINE';
-			}
+			} else if (n_newlines)
+				prefix = 'NEWLINE';
 
 			if (token_type === 'TK_RESERVED' && in_array(token_text_low, line_starters) && flags.last_text !== ')') {
 				if (flags.last_text.match(/^else$/i)) {
 					prefix = 'SPACE';
-				} else if (flags.last_text.toLowerCase() === 'try' && in_array(token_text_low, ['if', 'while', 'loop', 'for'])) {
+				} else if (flags.last_text.toLowerCase() === 'try' && in_array(token_text_low, ['if', 'while', 'loop', 'for', 'return'])) {
 					prefix = 'SPACE';
 				} else if (flags.last_text !== '::') {
 					prefix = 'NEWLINE';
@@ -3206,23 +3201,6 @@ export class Lexer {
 
 			if (token_type === 'TK_RESERVED' && token_text_low === 'if') {
 				flags.if_block = true;
-			}
-		}
-
-		function handle_semicolon() {
-			if (start_of_statement()) {
-				// The conditional starts the statement if appropriate.
-				// Semicolon can be the start (and end) of a statement
-				output_space_before_token = false;
-			}
-			while (flags.mode === MODE.Statement && !flags.if_block && !flags.do_block) {
-				restore_mode();
-			}
-			print_token();
-			if (flags.mode === MODE.ObjectLiteral) {
-				// if we're in OBJECT mode and see a semicolon, its invalid syntax
-				// recover back to treating this as a BLOCK
-				flags.mode = MODE.BlockStatement;
 			}
 		}
 
@@ -3696,7 +3674,7 @@ export class Lexer {
 				if (i > 0) {
 					j = i, i--, t = linetext, c = t.charCodeAt(i);
 				} else {
-					l--, t = document.getText(Range.create(l, 0, l + 1, 0));
+					l--, t = this.document.getText(Range.create(l, 0, l + 1, 0));
 					let m = t.replace(/('|").*?(?<!`)\1/, '').match(/(^|\s+)(;.*|\/\*.*\*\/\s*)?[\r\n]*$/);
 					j = t.length - (m ? m[0].length : 0), i = j - 1, c = t.charCodeAt(i);
 				}
@@ -3934,6 +3912,24 @@ export class Lexer {
 			if (t[o].end >= offset)
 				return t[o].type;
 		}
+	}
+
+	public colors() {
+		let t = this.strcommpos, document = this.document, text = document.getText(), colors: ColorInformation[] = [];
+		for (let o in t) {
+			if (t[o].type === 2) {
+				let a = t[o], b = parseInt(o);
+				let m = colorregexp.exec(text.substring(b, a.end)), range: Range, v = '';
+				if (!m || (!m[1] && a.end - b + 1 !== m[2].length + 2)) continue;
+				range = Range.create(document.positionAt(b += m.index + (m[1] ? m[1].length : 0)), document.positionAt(b + m[2].length));
+				v = m[5] ? colortable[m[5]] : m[3] === undefined ? m[2] : m[2].substring(2);
+				let color: any = { red: 0, green: 0, blue: 0, alpha: 1 }, cls: string[] = ['red', 'green', 'blue'];
+				if (m[4] !== undefined) cls.unshift('alpha');
+				for (const i of cls) color[i] = (parseInt('0x' + v.substr(0, 2)) / 255), v = v.slice(2);
+				colors.push({ range, color });
+			}
+		}
+		return colors;
 	}
 
 	private addDiagnostic(message: string, offset: number, length?: number, severity: DiagnosticSeverity = DiagnosticSeverity.Error) {

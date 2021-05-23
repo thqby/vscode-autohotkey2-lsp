@@ -125,7 +125,7 @@ Rename variables and function names in the scope in batches.
 
 Simple syntax error diagnosis.
 
-![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/diagnostics.png)
+![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/diagnostics2.png)
 
 ### IntelliSense
 

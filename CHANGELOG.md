@@ -1,3 +1,9 @@
+## 0.7.0
+- 修复bug[#4](https://github.com/thqby/vscode-autohotkey2-lsp/issues/4)
+- 修复对象字面量中含有in,and等提示为无效[#7](https://github.com/thqby/vscode-autohotkey2-lsp/issues/7)
+- 字符串/备注中不在触发悬浮提示/定义跳转
+- 其他bug
+
 ## 0.6.9
 - 修复悬浮提示/自动补全功能存在堆栈溢出的bug [#3](https://github.com/thqby/vscode-autohotkey2-lsp/issues/3)
 - 修复字符串延长段未能正确地结束 [#4](https://github.com/thqby/vscode-autohotkey2-lsp/issues/4)

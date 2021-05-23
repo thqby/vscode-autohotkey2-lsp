@@ -1300,6 +1300,9 @@
           "patterns": [
             {
               "include": "#string_escaped_char"
+            },
+            {
+              "include": "#comments"
             }
           ]
         },
