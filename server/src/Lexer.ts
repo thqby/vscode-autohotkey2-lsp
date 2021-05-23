@@ -3951,7 +3951,7 @@ export class Lexer {
 				let m = colorregexp.exec(text.substring(b, a.end)), range: Range, v = '';
 				if (!m || (!m[1] && a.end - b + 1 !== m[2].length + 2)) continue;
 				range = Range.create(document.positionAt(b += m.index + (m[1] ? m[1].length : 0)), document.positionAt(b + m[2].length));
-				v = m[5] ? colortable[m[5]] : m[3] === undefined ? m[2] : m[2].substring(2);
+				v = m[5] ? colortable[m[5].toLowerCase()] : m[3] === undefined ? m[2] : m[2].substring(2);
 				let color: any = { red: 0, green: 0, blue: 0, alpha: 1 }, cls: string[] = ['red', 'green', 'blue'];
 				if (m[4] !== undefined) cls.unshift('alpha');
 				for (const i of cls) color[i] = (parseInt('0x' + v.substr(0, 2)) / 255), v = v.slice(2);
