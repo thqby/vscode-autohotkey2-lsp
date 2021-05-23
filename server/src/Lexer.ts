@@ -1585,9 +1585,10 @@ export class Lexer {
 							case 'TK_COMMENT':
 							case 'TK_BLOCK_COMMENT':
 							case 'TK_INLINE_COMMENT':
+								tk = lk;
 								break;
 							case 'TK_END_BLOCK':
-								if (lk.type === 'TK_START_BLOCK')
+								if (lk.type === 'TK_START_BLOCK' || lk.type === 'TK_COMMA')
 									return false;
 							default:
 								return isobj = false;
