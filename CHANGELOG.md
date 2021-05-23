@@ -1,3 +1,9 @@
+## 0.7.1
+- 修复变量的注释错乱问题 [#8](https://github.com/thqby/vscode-autohotkey2-lsp/issues/8)
+- 修复getter/setter中函数无法显示参数提示
+- 注释支持多行格式的(;...\n;...)
+- 修复部分class被识别为关键字
+
 ## 0.7.0
 - 修复bug[#4](https://github.com/thqby/vscode-autohotkey2-lsp/issues/4)
 - 修复对象字面量中含有in,and等提示为无效[#7](https://github.com/thqby/vscode-autohotkey2-lsp/issues/7)

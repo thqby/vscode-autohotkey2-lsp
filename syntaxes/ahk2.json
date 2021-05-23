@@ -194,6 +194,10 @@
 			"prefix": "as"
 		},
 		{
+			"body": "unset",
+			"prefix": "unset"
+		},
+		{
 			"body": "class $0 {\n\t\n}",
 			"prefix": "class"
 		},

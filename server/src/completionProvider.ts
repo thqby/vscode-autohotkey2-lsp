@@ -382,22 +382,24 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				return items;
 			} else
 				other = !percent;
-			scopenode = doc.searchScopedNode(position);
-			if (scopenode && scopenode.kind === SymbolKind.Class) {
-				let its: CompletionItem[] = [], t = linetext.trim();
-				if (t.match(/^\S*$/)) {
-					completionItemCache.other.map(it => {
-						if (it.label.match(/\b(static|class)\b/))
-							its.push(it);
-						else if (it.label.match(/^__\w+/)) {
-							let t = Object.assign({}, it);
-							t.insertText = t.insertText?.replace('$0', '$1') + ' {\n\t$0\n}';
-							its.push(t);
-						}
-					})
-					return its;
-				} else if (t.match(/^(static\s+)?(\w|[^\x00-\xff])+(\(|$)/i))
-					return undefined;
+			if (scopenode = doc.searchScopedNode(position)) {
+				if (scopenode.kind === SymbolKind.Class) {
+					let its: CompletionItem[] = [], t = linetext.trim();
+					if (t.match(/^\S*$/)) {
+						completionItemCache.other.map(it => {
+							if (it.label.match(/\b(static|class)\b/))
+								its.push(it);
+							else if (it.label.match(/^__\w+/)) {
+								let t = Object.assign({}, it);
+								t.insertText = t.insertText?.replace('$0', '$1') + ' {\n\t$0\n}';
+								its.push(t);
+							}
+						})
+						return its;
+					} else if (t.match(/^(static\s+)?(\w|[^\x00-\xff])+(\(|$)/i))
+						return undefined;
+				} else if (scopenode.kind === SymbolKind.Property && scopenode.children)
+					return [{label: 'get', kind: CompletionItemKind.Function}, {label: 'set', kind: CompletionItemKind.Function}]
 			}
 			for (const n in ahkvars)
 				if (expg.test(n))
