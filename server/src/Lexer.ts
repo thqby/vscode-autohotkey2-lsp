@@ -1568,6 +1568,12 @@ export class Lexer {
 											return true;
 										}
 									}
+								} else if (tk.content.match(/^\w+$/)) {
+									nk = get_token_ingore_comment();
+									if (nk.content === ':') {
+										lk = tk, tk = nk, k = lk;
+										return true;
+									}
 								}
 								return isobj = false;
 							case 'TK_LABEL':
@@ -3455,7 +3461,8 @@ export class Lexer {
 					space_before = false;
 				if (input.charAt(parser_pos) === ')')
 					space_after = false;
-			}
+			} else if (flags.last_text === '{' && token_text.match(/^\w+$/))
+				space_before = false;
 			if (input_wanted_newline) {
 				output_space_before_token = false;
 				print_newline(false, true);
