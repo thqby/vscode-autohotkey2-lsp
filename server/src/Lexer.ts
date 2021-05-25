@@ -1627,6 +1627,14 @@ export class Lexer {
 							case 'TK_END_BLOCK':
 								if (lk.type === 'TK_START_BLOCK' || lk.type === 'TK_COMMA')
 									return false;
+							case 'TK_NUMBER':
+								if (tk.content.match(/^\d+$/)) {
+									nk = get_token_ingore_comment();
+									if (nk.content === ':') {
+										lk = tk, tk = nk;
+										return true;
+									}
+								}
 							default:
 								return isobj = false;
 						}
