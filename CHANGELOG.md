@@ -1,3 +1,7 @@
+## 0.7.2
+- 增加换行时自动缩进(if/while/loop ...) [#9](https://github.com/thqby/vscode-autohotkey2-lsp/issues/9)
+- 变量上一行的注释将对多个变量生效(;...\na:=1, b:=2) [#8](https://github.com/thqby/vscode-autohotkey2-lsp/issues/8#issuecomment-848663235)
+
 ## 0.7.1
 - 修复变量的注释错乱问题 [#8](https://github.com/thqby/vscode-autohotkey2-lsp/issues/8)
 - 修复getter/setter中函数无法显示参数提示

@@ -207,7 +207,7 @@
 			"prefix": "continue"
 		},
 		{
-			"body": "else if ($0)",
+			"body": "else if ",
 			"prefix": "elif"
 		},
 		{
@@ -236,7 +236,7 @@
 			"prefix": "goto"
 		},
 		{
-			"body": "if ($0)",
+			"body": "if ",
 			"description": "指定在表达式计算为true时要执行的一个或多个语句.",
 			"prefix": "if"
 		},
@@ -324,12 +324,12 @@
 			"prefix": "try-catch"
 		},
 		{
-			"body": "until ($0)",
+			"body": "until ",
 			"description": "将条件应用于循环或for循环的继续.",
 			"prefix": "until"
 		},
 		{
-			"body": "while ($0)",
+			"body": "while ",
 			"description": "重复执行一系列功能,直到指定的表达式计算为false.",
 			"prefix": "while"
 		},

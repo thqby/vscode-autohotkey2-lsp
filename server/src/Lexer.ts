@@ -541,7 +541,7 @@ export class Lexer {
 			const result: DocumentSymbol[] = [], cmm: Token = { content: '', offset: 0, type: '', length: 0 }, _parent = scopevar.get('#parent') || _this, document = _this.document;
 			let tk: Token = { content: '', type: '', offset: 0, length: 0 }, lk: Token = tk, next: boolean = true, LF: number = 0, comment = '', topcontinue = false;
 			let blocks = 0, inswitch = -1, blockpos: number[] = [], tn: DocumentSymbol | FuncNode | Variable | undefined, m: any, _low = '';
-			let raw = '', o: any = '';
+			let raw = '', o: any = '', last_comm = '';
 			if (mode !== 0)
 				blockpos.push(parser_pos - 1);
 			while (nexttoken()) {
@@ -898,7 +898,10 @@ export class Lexer {
 									if (!lk.topofline && bak.type === 'TK_SHARP' && bak.content.match(/^#(MenuMaskKey|SingleInstance|Warn)/i)) break;
 									if (addvariable(lk, mode)) {
 										vr = result[result.length - 1];
-										if (comm) vr.detail = comm;
+										if (comm) vr.detail = last_comm = comm;
+										else if (last_comm && bak.content === ',')
+											vr.detail = last_comm;
+										else last_comm = '';
 										if (bak.content === '&') {
 											if (input.substring(last_LF + 1, bak.offset - 1).trim().match(/(:=|,|\()$/))
 												vr.def = true;
@@ -2940,6 +2943,8 @@ export class Lexer {
 				else if (flags.last_text.toLowerCase() === 'until') {
 					output_space_before_token = true;
 				}
+				else if (last_type === 'TK_RESERVED' && flags.last_text.match(/^(break|continue)$/i))
+					output_space_before_token = false;
 			}
 
 			if (input_wanted_newline) {
@@ -3423,7 +3428,7 @@ export class Lexer {
 
 			if (in_array(token_text, ['--', '++', '!', '%']) || (in_array(token_text, ['-', '+']) && (in_array(last_type, ['TK_START_BLOCK', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR']) || in_array(flags.last_text.toLowerCase(), line_starters) || flags.last_text === ','))) {
 				// unary operators (and binary +/- pretending to be unary) special cases
-				space_before = false;
+				space_before = token_text === '!' && in_array(last_type, ['TK_WORD', 'TK_RESERVED']) ;
 				space_after = false;
 
 				if (flags.last_text === ';' && is_expression(flags.mode)) {
@@ -4366,7 +4371,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 				else for (const n of searchNode(doc, ex, ex === exp ? { line: pos.line, character: pos.character - ex.length } : pos, SymbolKind.Variable) || []) {
 					switch (n.node.kind) {
 						case SymbolKind.Variable:
-							detectVariableType(doc, n.node.name.toLowerCase(), n.node.selectionRange.end).map(tp => ts[tp] = true);
+							detectVariableType(doc, n.node.name.toLowerCase(), n.uri === doc.uri ? pos : n.node.selectionRange.end).map(tp => ts[tp] = true);
 							break;
 						case SymbolKind.Property:
 							if ((<Variable>n.node).returntypes) {

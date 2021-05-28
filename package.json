@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "0.7.1",
+	"version": "0.7.2",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -96,8 +96,9 @@
 		"configurationDefaults": {
 			"[ahk2]": {
 				"editor.detectIndentation": true,
-				"editor.autoIndent": "brackets",
-				"editor.insertSpaces": false,
+				"editor.autoIndent": "full",
+				"editor.formatOnPaste": true,
+				"editor.defaultFormatter": "thqby.vscode-autohotkey2-lsp",
 				"editor.quickSuggestions": {
 					"other": true,
 					"comments": false,

@@ -2278,7 +2278,7 @@ WinSetEnabled(Value [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * 分别改变指定窗口的样式和扩展样式.
  */
-WinSetExStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetExStyle(Value [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * 将指定窗口的形状更改为指定的矩形,椭圆或多边形.
@@ -2288,7 +2288,7 @@ WinSetRegion([Options, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * 分别改变指定窗口的样式和扩展样式.
  */
-WinSetStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetStyle(Value [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * 更改指定窗口的标题.
