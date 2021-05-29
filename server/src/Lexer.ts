@@ -2648,7 +2648,7 @@ export class Lexer {
 				if (bg) {
 					comment_type = 'TK_COMMENT'
 				}
-				while (parser_pos <= input_length && (c != '\n' || (bg && is_next(';')))) {
+				while (parser_pos <= input_length && (c != '\n' || (bg && is_next(';') && !is_next('\n')))) {
 					comment += c;
 					c = input.charAt(parser_pos);
 					parser_pos += 1;
