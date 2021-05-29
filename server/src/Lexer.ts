@@ -697,7 +697,7 @@ export class Lexer {
 								adddeclaration(tn), tn.closure = !!(mode & 1);
 								if (fc.content.charAt(0).match(/[\d$]/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-								tn.range.end = _this.document.positionAt(parser_pos - 1), tn.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
+								tn.range.end = _this.document.positionAt(parser_pos), tn.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
 								par.map((it: Variable) => {
 									if (it.defaultVal)
 										lasthasval = true;

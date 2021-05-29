@@ -1,3 +1,7 @@
+## 0.7.3
+- 粘贴格式化将在字符串/备注中不生效 [#10](https://github.com/thqby/vscode-autohotkey2-lsp/issues/10)
+- 修复备注被错误的关联
+
 ## 0.7.2
 - 增加换行时自动缩进(if/while/loop ...) [#9](https://github.com/thqby/vscode-autohotkey2-lsp/issues/9)
 - 变量上一行的注释将对多个变量生效(;...\na:=1, b:=2) [#8](https://github.com/thqby/vscode-autohotkey2-lsp/issues/8#issuecomment-848663235)

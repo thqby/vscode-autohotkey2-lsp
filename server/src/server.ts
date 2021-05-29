@@ -18,7 +18,7 @@ import { colorPresentation, colorProvider } from './colorProvider';
 import { completionProvider } from './completionProvider';
 import { defintionProvider } from './definitionProvider';
 import { executeCommandProvider } from './executeCommandProvider';
-import { documentFormatting, rangeFormatting } from './formattingProvider';
+import { documentFormatting, rangeFormatting, typeFormatting } from './formattingProvider';
 import { hoverProvider } from './hoverProvider';
 import { FuncNode, getincludetable, Lexer, parseinclude } from './Lexer';
 import { completionitem, setting } from './localize';
@@ -86,6 +86,7 @@ connection.onInitialize((params: InitializeParams) => {
 			definitionProvider: true,
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
+			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['{'] },
 			executeCommandProvider: {
 				commands: [
 					'ahk2.fix.include',
@@ -111,7 +112,7 @@ connection.onInitialize((params: InitializeParams) => {
 	return result;
 });
 
-connection.onInitialized(() => {
+connection.onInitialized(async () => {
 	if (hasConfigurationCapability) {
 		// Register for all configuration changes.
 		connection.client.register(DidChangeConfigurationNotification.type, undefined);
@@ -121,7 +122,7 @@ connection.onInitialized(() => {
 			// console.log('Workspace folder change event received.');
 		});
 	}
-	initpathenv();
+	await initpathenv();
 });
 
 connection.onDidChangeConfiguration(async change => {
@@ -232,6 +233,7 @@ connection.onDocumentColor(colorProvider);
 connection.onDefinition(defintionProvider);
 connection.onDocumentFormatting(documentFormatting);
 connection.onDocumentRangeFormatting(rangeFormatting);
+connection.onDocumentOnTypeFormatting(typeFormatting);
 connection.onDocumentSymbol(symbolProvider);
 connection.onFoldingRanges(async (params: FoldingRangeParams): Promise<FoldingRange[]> => lexers[params.textDocument.uri.toLowerCase()].foldingranges);
 connection.onHover(hoverProvider);

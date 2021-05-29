@@ -82,7 +82,7 @@
 	],
 	"indentationRules": {
 		"increaseIndentPattern": "^((?!;).)*(\\{[^}\"'`]*|\\([^)\"'`]*|\\[[^\\]\"'`]*)$",
-		"decreaseIndentPattern": "^((?!.*?\\/\\*).*\\*/)?\\s*([\\])}]|\\{\\}).*$",
+		"decreaseIndentPattern": "^((?!.*?\\/\\*).*\\*/)?\\s*[\\])}].*$",
 		"indentNextLinePattern": "^\\s*(((\\}\\s*)?([Ee]lse|[Ff]inally)\\b|[Tt]ry\\b)(?=\\s*([;{].*)?$)|(((\\}\\s*)?([Ee]lse|[Ff]inally)|[Tt]ry)\\s+)?([Ii]f|[Ff]or|[Ww]hile|[Ll]oop)\\b|(\\}\\s*)?[Cc]atch\\b)"
 	},
 	"onEnterRules": [
