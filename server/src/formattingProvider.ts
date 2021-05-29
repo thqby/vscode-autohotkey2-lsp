@@ -1,7 +1,7 @@
 import { DocumentFormattingParams, DocumentRangeFormattingParams, Range, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Lexer } from './Lexer';
-import { lexers } from './server';
+import { lexers, Maybe } from './server';
 
 const opts = {
 	indent_size: "1",
@@ -25,10 +25,12 @@ export async function documentFormatting(params: DocumentFormattingParams): Prom
 	return [{ range, newText }];
 }
 
-export async function rangeFormatting(params: DocumentRangeFormattingParams): Promise<TextEdit[]> {
+export async function rangeFormatting(params: DocumentRangeFormattingParams): Promise<Maybe<TextEdit[]>> {
 	if (params.options.insertSpaces)
 		opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
-	let range = params.range, document = lexers[params.textDocument.uri.toLowerCase()].document, newText = document.getText(range);
+	let range = params.range, doc = lexers[params.textDocument.uri.toLowerCase()], document = doc.document, newText = document.getText(range);
+	if (doc.instrorcomm(range.start) || doc.instrorcomm(range.end))
+		return;
 	let t = '';
 	if (range.start.character > 0 && (t = document.getText(Range.create(range.start.line, 0, range.start.line, range.start.character))).trim() === '')
 		newText = t + newText, range.start.character = 0;
