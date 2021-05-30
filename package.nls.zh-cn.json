@@ -32,7 +32,7 @@
 	"diagnostic.funccallerr": "函数调用需要空格或'(', 仅在参数之间使用逗号",
 	"diagnostic.hotdeferr": "热键/热字串不能在函数/类中定义",
 	"diagnostic.invalidhotdef": "无效的热键定义",
-	"diagnostic.invalidparam": "无效的参数默认值",
+	"diagnostic.invalidparam": "无效的参数定义",
 	"diagnostic.invalidprop": "不是有效的getter/setter属性",
 	"diagnostic.invalidpropname": "对象字面量中的属性名无效",
 	"diagnostic.invalidsymbolname": "无效的符号命名 '{0}'",

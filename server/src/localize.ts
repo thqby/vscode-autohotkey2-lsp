@@ -32,7 +32,7 @@ export namespace diagnostic {
 	export const globalconflicts = localize('diagnostic.globalconflicts', 'This global declaration conflicts with an existing {0}');
 	export const hotdeferr = localize('diagnostic.hotdeferr', 'Hotkeys/hotstrings cannot be defined in functions/classes');
 	export const invalidhotdef = localize('diagnostic.invalidhotdef', 'Invalid hotkey definition');
-	export const invalidparam = localize('diagnostic.invalidparam', 'Invalid parameter default value');
+	export const invalidparam = localize('diagnostic.invalidparam', 'Invalid parameter definition');
 	export const invalidprop = localize('diagnostic.invalidprop', 'Invalid dynamic property');
 	export const invalidpropname = localize('diagnostic.invalidpropname', 'Invalid property name in object literal');
 	export const invalidsymbolname = localize('diagnostic.invalidsymbolname', 'Invalid symbol naming \'{0}\'');
