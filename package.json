@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "0.7.3",
+	"version": "0.7.4",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -95,8 +95,6 @@
 		},
 		"configurationDefaults": {
 			"[ahk2]": {
-				"editor.formatOnPaste": true,
-				"editor.formatOnType": true,
 				"editor.defaultFormatter": "thqby.vscode-autohotkey2-lsp",
 				"editor.quickSuggestions": {
 					"other": true,

@@ -139,7 +139,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							if (!props[_low])
 								items.push(props[_low] = convertNodeCompletion(it));
 						} else if (isclass && it.kind === SymbolKind.Method) {
-							if (!props[_low])
+							if (!props[_low] && _low !== '__new')
 								items.push(props[_low] = convertNodeCompletion(it));
 						}
 					}

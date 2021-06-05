@@ -25,6 +25,14 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
   - [转到定义](#转到定义)
   - [查找所有引用](#查找所有引用)
   - [代码格式化](#代码格式化)
+  - [自定义折叠](#自定义折叠)
+- [上下文菜单](#上下文菜单)
+  - [快捷帮助](#快捷帮助)
+  - [运行脚本](#运行脚本)
+  - [运行选定的脚本](#运行选定的脚本)
+  - [编译脚本](#编译脚本)
+  - [调试脚本](#调试脚本)
+  - [生成注释](#生成注释)
 
 ## 语言特性
 
@@ -61,7 +69,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 ### 代码标记
 
-用法: 在注释代码块中添加两个分号  
+用法: 在注释代码块中添加`;;`或`; TODO `  
 ![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeSymbol.png)
 
 ### 颜色提示
@@ -93,8 +101,44 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 - 右键弹出菜单然后点击 格式化文档.  
 - 或按 `Shift+Alt+F`.  
+- 支持粘贴或键入函数或类的`}`时自动格式化。(需要开启`editor.format OnPaste`或`editor.format OnType`)  
 
 ![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeFormat.gif)
+
+### 自定义折叠
+
+折叠`;#region`和`;#endregion`之间部分
+```
+;#region
+code
+;#endregion
+```
+
+## 上下文菜单
+
+### 快速帮助
+
+打开帮助文件并导航到当前光标处的关键字。
+
+### 运行脚本
+
+运行当前打开的脚本。
+
+### 运行选定的脚本
+
+运行光标选择范围的代码片段。
+
+### 编译脚本
+
+编译脚本生成可执行的 EXE 文件.
+
+### 调试脚本
+
+无需额外配置即可启动已安装的Debug扩展，支持带参数调试.
+
+### 生成注释
+
+为函数或方法生成 JSDOC 样式的注释文档.
 
 # Language support for AutoHotkey2 for Visual Studio Code
 
@@ -112,6 +156,14 @@ AutoHotKey V2 Language support for VS Code, Function realization based on v2 syn
   - [Goto Definition](#goto-definition)
   - [Find All References](#find-all-references)
   - [CodeFormat](#codeformat)
+  - [Custom folding](#custom-folding)
+-[Context Menu](#context-menu)
+  - [Quick Help](#quick-Help)
+  - [Run Script](#run-script)
+  - [Run Selected Script](#run-selected-script)
+  - [Compile Script](#compile-script)
+  - [Debug Script](#debug-script)
+  - [Generate Comment](#generate-comment)
 
 ## Language Features
 
@@ -149,7 +201,7 @@ Support for intelligent prompts for function parameters.
 
 ### Blocks
 
-usage: Add two semicolons to the comment code block.  
+usage: Add `;;` or `; TODO ` to the comment code block.  
 ![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeSymbol.png)
 
 ### Document Color
@@ -180,6 +232,42 @@ See all the source code locations where a certain variable/function is being use
 usage:  
 
 - Right-click the popup menu and click "Format document".  
-- or Press `Shift+Alt+F`.  
+- Press `Shift+Alt+F`.  
+- Support automatic formatting when pasting or typing `}` of a function or class. (`editor.formatOnPaste` or `editor.formatOnType` needs to be enabled)
 
 ![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeFormat.gif)
+
+### Custom folding
+
+Fold the part between `;#region` and `;#endregion`
+```
+;#region
+code
+;#endregion
+```
+
+## Context Menu
+
+### Quick Help
+
+Open the help file and navigate to the keyword at the current cursor.
+
+### Run Script
+
+Run the currently open script.
+
+### Run Selected Script
+
+Run the code snippet at the cursor selection.
+
+### Compile Script
+
+Compile the script to generate executable EXE files.
+
+### Debug Script
+
+No additional configuration is required to start the installed Debug extensions, and support debugging with parameters.
+
+### Generate Comment
+
+Generate JSDOC-style comments for a function or method.

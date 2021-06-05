@@ -444,7 +444,7 @@ export class Lexer {
 											j = j + 1, r = '', lt = '';
 											while (((lk = tokens[j + 1]).type === 'TK_WORD' || lk.type === 'TK_DOT') && (!lk.topofline && lt !== lk.type))
 												r += lk.content, j++, lt = lk.type;
-											rets.push(r.replace(/(\w+)$/, '#$1'));
+											rets.push(r.replace(/(\w+)$/, '@$1'));
 										} while (tokens[j + 1].content === '|');
 										lk = tokens[j];
 									}
@@ -4289,14 +4289,20 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 						switch (n.kind) {
 							case SymbolKind.Method:
 								c = n.full.toLowerCase().match(/\(([^()]+)\)\s*([^()]+)/);
-								if (c && c[1] === 'gui' && c[2] === 'add') {
-									let ctls: { [key: string]: string } = { dropdownlist: 'ddl', tab2: 'tab', tab3: 'tab', picture: 'pic' };
-									if (c = fullexp?.toLowerCase().match(/\.add\(\s*(('|")(\w+)\2)?/)) {
-										if (c[3])
-											ts['gui.@' + (ctls[c[3]] || c[3])] = true;
-										else
-											ts['gui.@tab'] = ts['gui.@listview'] = ts['gui.@treeview'] = ts['gui.@statusbar'] = true;
+								if (c && c[1] === 'gui') {
+									if (c[2] === 'add') {
+										let ctls: { [key: string]: string } = { dropdownlist: 'ddl', tab2: 'tab', tab3: 'tab', picture: 'pic' };
+										if (c = fullexp?.toLowerCase().match(/\.add\(\s*(('|")(\w+)\2)?/)) {
+											if (c[3])
+												ts['gui.@' + (ctls[c[3]] || c[3])] = true;
+											else
+												ts['gui.@tab'] = ts['gui.@listview'] = ts['gui.@treeview'] = ts['gui.@statusbar'] = true;
+										}
+									} else {
+										for (const t in n.returntypes)
+											ts[t] = true;
 									}
+									break;
 								}
 							case SymbolKind.Function:
 								if (n === ahkvars['objbindmethod'] && (c = fullexp?.toLowerCase().match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,\s*('|")([^'"]+)\3\s*[,)]/))) {

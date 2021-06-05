@@ -1,3 +1,8 @@
+## 0.7.4
+- 取消粘贴/键入时自动格式化(editor.formatOnPaste,editor.formatOnType中设置启用)
+- 修复无法正确识别某些字符串('string ;comment'...)
+- 修复格式化未能识别设置的缩进格式
+
 ## 0.7.3
 - 粘贴格式化将在字符串/备注中不生效 [#10](https://github.com/thqby/vscode-autohotkey2-lsp/issues/10)
 - 修复备注被错误的关联

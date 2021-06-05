@@ -3,7 +3,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Lexer } from './Lexer';
 import { lexers } from './server';
 
-const opts = {
+const default_format_options = {
 	indent_size: "1",
 	indent_char: "\t",
 	max_preserve_newlines: "2",
@@ -19,15 +19,19 @@ const opts = {
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, doc.document.lineCount, 0);
+	let opts = Object.assign({}, default_format_options);
 	if (params.options.insertSpaces)
 		opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
+	else opts.indent_char = "\t";
 	let newText = doc.beautify(opts);
 	return [{ range, newText }];
 }
 
 export async function rangeFormatting(params: DocumentRangeFormattingParams): Promise<TextEdit[] | undefined> {
+	let opts = Object.assign({}, default_format_options);
 	if (params.options.insertSpaces)
 		opts.indent_char = " ", opts.indent_size = params.options.tabSize.toString();
+	else opts.indent_char = "\t";
 	let range = params.range, doc = lexers[params.textDocument.uri.toLowerCase()], document = doc.document, newText = document.getText(range);
 	if (doc.instrorcomm(range.start) || doc.instrorcomm(range.end))
 		return;
