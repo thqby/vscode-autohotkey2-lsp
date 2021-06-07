@@ -183,7 +183,7 @@ export class Lexer {
 		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this;
 		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, _customblocks: number[] = [];
-		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, tks: Token[] = [];
+		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, tks: Token[] = [];
 		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space: boolean = false;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
@@ -3052,15 +3052,17 @@ export class Lexer {
 			let empty_braces = false;;
 			if (last_type === 'TK_START_BLOCK') {
 				let t = output_lines[output_lines.length - 1].text, i = t.length - 2;
+				end_of_object = false;
 				while (i > 0) {
 					if (t[i] === ' ' || t[i] === '\t') {
 						i--;
 						continue;
 					} else if ([':=', ',', ':', '[', '('].includes(t[i]))
-						empty_braces = true;
+						empty_braces = true, end_of_object = true;
 					break;
 				}
-			}
+			} else
+				end_of_object = flags.mode === MODE.ObjectLiteral;
 			if (opt.brace_style === "expand") {
 				if (!empty_braces) {
 					print_newline();
@@ -3158,7 +3160,7 @@ export class Lexer {
 			prefix = 'NONE';
 
 			if (last_type === 'TK_END_BLOCK') {
-				if (!(token_type === 'TK_RESERVED' && in_array(token_text_low, ['else', 'until', 'catch', 'finally']))) {
+				if (end_of_object || !(token_type === 'TK_RESERVED' && in_array(token_text_low, ['else', 'until', 'catch', 'finally']))) {
 					prefix = 'NEWLINE';
 				} else {
 					if (opt.brace_style === "expand" || opt.brace_style === "end-expand") {
@@ -3191,7 +3193,7 @@ export class Lexer {
 			}
 
 			if (token_type === 'TK_RESERVED' && in_array(token_text_low, ['else', 'until', 'catch', 'finally'])) {
-				if (last_type !== 'TK_END_BLOCK' || opt.brace_style === "expand" || opt.brace_style === "end-expand") {
+				if (end_of_object || last_type !== 'TK_END_BLOCK' || opt.brace_style === "expand" || opt.brace_style === "end-expand") {
 					print_newline();
 				} else if ((token_text_low === 'else' && flags.last_word.toLowerCase() === 'if')
 					|| (token_text_low === 'until' && flags.last_word.toLowerCase() === 'loop')
@@ -3239,12 +3241,18 @@ export class Lexer {
 			print_token();
 			flags.last_word = token_text;
 
-			if (token_type === 'TK_RESERVED' && token_text_low === 'loop') {
-				flags.do_block = true;
-			}
-
-			if (token_type === 'TK_RESERVED' && token_text_low === 'if') {
-				flags.if_block = true;
+			if (token_type === 'TK_RESERVED') {
+				switch (token_text_low) {
+					case 'loop':
+						flags.do_block = true;
+						break;
+					case 'if':
+						flags.if_block = true;
+						break;
+					case 'else':
+						output_space_before_token = true;
+						break;
+				}
 			}
 		}
 
