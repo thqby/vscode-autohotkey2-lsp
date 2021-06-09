@@ -1,3 +1,7 @@
+## 0.7.5
+- 修复格式化错误 [#11](https://github.com/thqby/vscode-autohotkey2-lsp/issues/11)
+- 修复悬浮提示等不能正常显示与内置函数同名的用户函数
+
 ## 0.7.4
 - 取消粘贴/键入时自动格式化(editor.formatOnPaste,editor.formatOnType中设置启用)
 - 修复无法正确识别某些字符串('string ;comment'...)

@@ -689,7 +689,7 @@
           "match": "^\\s*(:(?i:\\s|\\*|\\?|c[01]?|[pk]\\d+|s[ipe]|[brto]0?|x|z)*:(?<!^\\s*:[^xX]*:)[\\x09\\x20-\\x7E]+?)(::)",
           "captures": {
             "1": {
-              "name": "entity.name.function.hotstring.ahk2"
+              "name": "keyword.keys.ahk2"
             },
             "3": {
               "name": "punctuation.definition.equals.colon"
@@ -699,7 +699,7 @@
         {
           "captures": {
             "1": {
-              "name": "entity.name.function.hotstring.ahk2"
+              "name": "keyword.keys.ahk2"
             },
             "3": {
               "name": "punctuation.definition.equals.colon"

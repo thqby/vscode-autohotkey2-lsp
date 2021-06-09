@@ -181,7 +181,7 @@ export class Lexer {
 	public version: number = 0;
 	constructor(document: TextDocument) {
 		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
-		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this;
+		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this, h = isahk2_h;
 		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, _customblocks: number[] = [];
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, tks: Token[] = [];
 		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space: boolean = false;
@@ -561,6 +561,9 @@ export class Lexer {
 								else _this.addDiagnostic(diagnostic.unknowninclude(m.path), tk.offset, tk.length);
 							}
 							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+						} else if (m = tk.content.match(/^\s*#dllimport\s+((\w|[^\x00-\xff])+)/i)) {
+							let rg = makerange(tk.offset, tk.length);
+							h = true, result.push(FuncNode.create(m[1], SymbolKind.Function, rg, rg, []));
 						}
 						break;
 					case 'TK_LABEL':
@@ -642,7 +645,7 @@ export class Lexer {
 						if (input.charAt(parser_pos) === '%')
 							break;
 						let comm = '', vr: Variable | undefined, predot = (input.charAt(tk.offset - 1) === '.'), isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
-						if (isahk2_h && lk.topofline && lk.content.toLowerCase() === 'macro')
+						if (h && lk.topofline && lk.content.toLowerCase() === 'macro')
 							tk.topofline = true;
 						topcontinue = predot ? topcontinue : tk.topofline || false;
 						if (!predot && input.charAt(parser_pos) === '(') {
@@ -2802,7 +2805,7 @@ export class Lexer {
 						sharp += c;
 						parser_pos += 1;
 					}
-					if ((c === ' ' || c === '\t') && sharp.match(/#(dllload|hotstring|include|requires|errorstdout)/i)) {
+					if ((c === ' ' || c === '\t') && sharp.match(/#(dllload|dllimport|definedefault|hotstring|include|requires|errorstdout|WarnContinuableException|WindowClass)/i)) {
 						let LF = input.indexOf('\n', parser_pos);
 						if (LF === -1) {
 							LF = input_length;
@@ -4525,7 +4528,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 			if ((t = lexers[u].declaration[name]) && t.kind !== SymbolKind.Variable)
 				return [{ node: t, uri: u }];
 	}
-	if (kind !== SymbolKind.Field && (!res || res.node.kind !== SymbolKind.Variable || !(<Variable>res.node).def) && ((t = ahkvars[name]) || (t = ahkvars[name.replace(/^[@#]/, '')])))
+	if (kind !== SymbolKind.Field && (!res || (res.node.kind === SymbolKind.Variable && !(<Variable>res.node).def)) && ((t = ahkvars[name]) || (t = ahkvars[name.replace(/^[@#]/, '')])))
 		return [{ uri: '', node: t }];
 	if (res)
 		return [res];

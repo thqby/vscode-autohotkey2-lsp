@@ -24,26 +24,6 @@ DynaCall(Function, ParameterDefinition, Params)
 ComObjDll(hModule, CLSID [, IID])
 
 /**
- * 创建或更新包含进度条的窗口.
- */
-Progress(ProgressParam1 [, SubText, MainText, WinTitle, FontName])
-
-/**
- * 创建或更新包含图像的窗口.
- */
-SplashImage(ImageFile [, Options, SubText, MainText, WinTitle, FontName])
-
-/**
- * 创建一个可自定义的文本弹出窗口.
- */
-SplashTextOn([Width, Height, Title, Text])
-
-/**
- * 创建一个可自定义的文本弹出窗口.
- */
-SplashTextOff()
-
-/**
  * 将指定的dll加载到进程中.与LoadLibrary类似, 但是从内存而不是从磁盘加载模块, 并允许多次加载模块.
  */
 MemoryLoadLibrary(PathToDll)
@@ -79,16 +59,6 @@ MemoryLoadString(Handle, Id [, Language])
 ResourceLoadLibrary(ResName)
 
 /**
- * 检查变量的内容是数字形式还是字母形式, 介于两个值(包括两个值)之间.
- */
-Between(VariableOrValue, LowerBound, UpperBound)
-
-/**
- * 通知操作系统和所有正在运行的应用程序环境变量已更改.
- */
-EnvUpdate()
-
-/**
  * 检索指向变量的低级指针.
  */
 GetVar(VarName [, ResolveAlias])
@@ -99,24 +69,9 @@ GetVar(VarName [, ResolveAlias])
 Swap(Var1, Var2)
 
 /**
- * 将字符串复制到缓冲区, 可以选择在给定的代码页之间进行转换.
- */
-StrBuf(String [, Encoding])
-
-/**
  * 内置函数可以计算结构或类型的大小, 例如TCHAR或PTR或VOID ..., 有关用法和示例, 另请参见Struct.
  */
 sizeof(Definition [, offset])
-
-/**
- * 在不使用AutoHotkey.dll(基于NewThread)的情况下, 在当前进程中创建一个真正的附加AutoHotkey线程.
- */
-ExeThread(Script [, Parameters, Title, Wait])
-
-/**
- * 在不使用AutoHotkey.dll(基于NewThread)的情况下, 在当前进程中创建一个真正的附加AutoHotkey线程.
- */
-ThreadObj(Script [, Parameters, Title])
 
 /**
  * 使用线程本地存储(不使用AutoHotkey.dll)在当前进程中创建一个真正的其他AutoHotkey线程.
@@ -204,68 +159,6 @@ ZipOptions(ZipHandle, Options)
 ZipRawMemory(AddressOrBufferObject [, Size , Password])
 
 
-class Object extends Any {
-	/**
-	* Object是从AutoHotkey对象类派生的基本类.
-	*/
-	static Call() => Object
-
-	/**
-	 * 返回对象的一个浅拷贝.
-	 */
-	Clone() => Object
-
-	/*
-	 * 为object, map, array定义默认值代替显示错误, 当键/项/属性不存在时.
-	 */
-	DefineDefault([Value])
-
-	/**
-	 * 定义一个新的方法.
-	 */
-	DefineMethod(Name, MethodFunc) => void
-
-	/**
-	 * 定义一个新的自有属性.
-	 */
-	DefineProp(Name, Desc) => void
-
-	/**
-	 * 删除对象拥有的方法.
-	 */
-	DeleteMethod(Name) => void
-
-	/**
-	 * 删除对象拥有的属性.
-	 */
-	DeleteProp(Name) => Object
-
-	/**
-	 * 返回给定自有属性的描述符, 兼容于 DefineProp.
-	 */
-	GetOwnPropDesc(Name) => Object
-
-	/**
-	 * 如果对象拥有该名称的方法, 则返回 true, 否则返回 false.
-	 */
-	HasOwnMethod(Name) => Number
-
-	/**
-	 * 如果对象拥有该名称的属性, 则返回 true, 否则返回 false.
-	 */
-	HasOwnProp(Name) => Number
-
-	/**
-	 * 枚举对象拥有的方法.
-	 */
-	OwnMethods() => Enumerator
-
-	/**
-	 * 枚举对象自有的属性.
-	 */
-	OwnProps() => Enumerator
-}
-
 class Struct {
 	/**
 	* Struct是一个内置函数, 用于创建并返回结构对象.该对象可用于使用对象语法访问定义的结构.SetCapacity方法可用于将内存分配给结构和指针.
@@ -288,6 +181,7 @@ class Struct {
 	GetAddress([field])
 
 	GetCapacity([field])
+
 	/**
 	 * 返回保存在结构或字段中的已分配内存的指针.
 	 */

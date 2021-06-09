@@ -368,6 +368,8 @@ async function initpathenv(hasconfig = false) {
 		s .= p "|"
 	try
 		_H := Func("NewThread").IsBuiltIn
+	catch
+		_H := IsSet(NewThread)
 	%Append%(s _H "\`n", "*")
 	FileAppend2(text, file) {
 		FileAppend %text%, %file%
