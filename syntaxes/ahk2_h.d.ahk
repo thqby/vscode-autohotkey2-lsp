@@ -1,4 +1,81 @@
 /**
+ * 将局部变量转换为别名以表示另一个变量, 例如在另一个线程中.
+ */
+Alias(VariableOrName, VariableOrPointer)
+
+/**
+ * 将值从一种数据类型转换为另一种数据类型.
+ */
+Cast(DataType, VarOrValue, NewDataType)
+
+/**
+ * 从dll创建一个COM对象.
+ */
+ComObjDll(hModule, CLSID [, IID])
+
+/**
+ * 可包装对象以供多线程使用.可以从多个线程使用此类对象, 而不会导致崩溃.
+ */
+CriticalObject([Object, lpCriticalSection])
+ 
+/**
+ * 加密和解密数据.
+ */
+CryptAES(AddressOrVar, Size, password [, EncryptOrDecrypt, Algorithm])
+
+/**
+ * 内置函数, 类似于DllCall, 但可用于DllCall结构并使用Object语法.它通常比DllCall更快, 更易于使用, 并且节省了大量的键入和代码.
+ */
+DynaCall(Function, ParameterDefinition, Params)
+
+/**
+ * 检索指向变量的低级指针.
+ */
+GetVar(VarName [, ResolveAlias])
+
+MemoryCallEntryPoint(hModule, cmdLine)
+
+/**
+ * 在先前加载了MemoryLoadLibrary的指定dll中找到资源.类似于FindResource和FindResourceEx.
+ */
+MemoryFindResource(hModule, Name, Type [, Language])
+
+/**
+ * 释放指定的 dll 先前加载的 MemoryLoadLibrary.类似于 FreeLibrary.
+ */
+MemoryFreeLibrary(hModule)
+
+/**
+ * 在先前加载了MemoryLoadLibrary的指定dll中找到函数指针.类似于GetProcAddress.
+ */
+MemoryGetProcAddress(hModule, FuncName)
+
+/**
+ * 将指定的dll加载到进程中.与LoadLibrary类似, 但是从内存而不是从磁盘加载模块, 并允许多次加载模块.
+ */
+MemoryLoadLibrary(PathToDll)
+
+/**
+ * 将资源加载到以前通过MemoryLoadLibrary加载的指定dll中.类似于LoadResource.
+ */
+MemoryLoadResource(hModule, hResource)
+
+/**
+ * 在之前使用 MemoryLoadLibrary 加载的指定 dll 中加载字符串资源.类似于 LoadString.
+ */
+MemoryLoadString(hModule, Id [, Language])
+
+/*
+ * 找出之前使用 MemoryLoadLibrary 加载的指定 dll 中的资源大小.类似于 SizeOfResource.
+ */
+MemorySizeOfResource(hModule, hReslnfo)
+
+/**
+ * 使用线程本地存储(不使用AutoHotkey.dll)在当前进程中创建一个真AutoHotkey线程.
+ */
+NewThread(Script [, Parameters, Title])
+
+/**
  * 将对象转储到内存或保存到文件以供以后使用.
  */
 ObjDump(obj [, compress, password])
@@ -7,61 +84,11 @@ ObjDump(obj [, compress, password])
  * 从内存或文件加载转储的对象.
  */
 ObjLoad(AddressOrPath [, password])
-
-/**
- * 将值从一种数据类型转换为另一种数据类型.
- */
-Cast(DataType, VarOrValue, NewDataType)
-
-/**
- * 内置函数, 类似于DllCall, 但可用于DllCall结构并使用Object语法.它通常比DllCall更快, 更易于使用, 并且节省了大量的键入和代码.
- */
-DynaCall(Function, ParameterDefinition, Params)
-
-/**
- * 从dll创建一个COM对象.
- */
-ComObjDll(hModule, CLSID [, IID])
-
-/**
- * 将指定的dll加载到进程中.与LoadLibrary类似, 但是从内存而不是从磁盘加载模块, 并允许多次加载模块.
- */
-MemoryLoadLibrary(PathToDll)
-
-/**
- * 在先前加载了MemoryLoadLibrary的指定dll中找到函数指针.类似于GetProcAddress.
- */
-MemoryGetProcAddress(Handle, FuncName)
-
-/**
- * Free the specified dll previousle loaded with MemoryLoadLibrary. Similar to FreeLibrary.
- */
-MemoryFreeLibrary(Handle)
-
-/**
- * 在先前加载了MemoryLoadLibrary的指定dll中找到资源.类似于FindResource和FindResourceEx.
- */
-MemoryFindResource(Handle, Name, Type [, Language])
-
-/**
- * 将资源加载到以前通过MemoryLoadLibrary加载的指定dll中.类似于LoadResource.
- */
-MemoryLoadResource(Handle, hResource)
-
-/**
- * Loads a string resource in the specified dll previously loaded with MemoryLoadLibrary. Similar to LoadString.
- */
-MemoryLoadString(Handle, Id [, Language])
-
+ 
 /**
  * 将指定的dll从资源加载到进程中.类似于MemoryLoadLibrary.
  */
 ResourceLoadLibrary(ResName)
-
-/**
- * 检索指向变量的低级指针.
- */
-GetVar(VarName [, ResolveAlias])
 
 /**
  * 交换两个变量.
@@ -73,25 +100,20 @@ Swap(Var1, Var2)
  */
 sizeof(Definition [, offset])
 
-/**
- * 使用线程本地存储(不使用AutoHotkey.dll)在当前进程中创建一个真正的其他AutoHotkey线程.
+/*
+ * 创建未排序的 Array(适用于属性).
  */
-NewThread(Script [, Parameters, Title])
+UArray([Value1, ...])
 
-/**
- * 将局部变量转换为别名以表示另一个变量, 例如在另一个线程中.
+/*
+ * 创建未排序的 Map(适用于项目/属性).
  */
-Alias(VariableOrName, VariableOrPointer)
+UMap([Key1, Value1, ...])
 
-/**
- * 可包装对象以供多线程使用.可以从多个线程使用此类对象, 而不会导致崩溃.
+/*
+ * 创建未排序的 Object(适用于属性).
  */
-CriticalObject([Object, lpCriticalSection])
-
-/**
- * 加密和解密数据.
- */
-CryptAES(AddressOrVar, Size, password [, EncryptOrDecrypt, Algorithm])
+UObject([Key1, Value1, ...])
 
 /**
  * 从zip存档中提取一项或所有项.

@@ -35,5 +35,51 @@
 			"description": "将主窗口类名称从AutoHotkey更改为其他名称.",
 			"prefix": "#WindowClassMain"
 		}
+	],
+	"variables": [
+		{
+			"body": "A_AhkDir",
+			"prefix": "A_AhkDir"
+		},
+		{
+			"body": "A_DllDir",
+			"prefix": "A_DllDir"
+		},
+		{
+			"body": "A_DllPath",
+			"prefix": "A_DllPath"
+		},
+		{
+			"body": "A_GlobalStruct",
+			"prefix": "A_GlobalStruct"
+		},
+		{
+			"body": "A_IsDll",
+			"prefix": "A_IsDll"
+		},
+		{
+			"body": "A_MainThreadID",
+			"prefix": "A_MainThreadID"
+		},
+		{
+			"body": "A_MemoryModule",
+			"prefix": "A_MemoryModule"
+		},
+		{
+			"body": "A_ModuleHandle",
+			"prefix": "A_ModuleHandle"
+		},
+		{
+			"body": "A_ScriptStruct",
+			"prefix": "A_ScriptStruct"
+		},
+		{
+			"body": "A_ThreadID",
+			"prefix": "A_ThreadID"
+		},
+		{
+			"body": "A_ZipCompressionLevel",
+			"prefix": "A_ZipCompressionLevel"
+		}
 	]
 }

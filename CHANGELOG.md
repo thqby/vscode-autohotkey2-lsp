@@ -1,3 +1,6 @@
+## 0.7.6
+- 增加ahk_h补全项
+
 ## 0.7.5
 - 修复格式化错误 [#11](https://github.com/thqby/vscode-autohotkey2-lsp/issues/11)
 - 修复悬浮提示等不能正常显示与内置函数同名的用户函数
