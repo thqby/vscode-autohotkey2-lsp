@@ -27,6 +27,9 @@
       "name": "keyword.keys.ahk2"
     },
     {
+      "include": "#default_classes"
+    },
+    {
       "include": "#operators"
     },
     {
@@ -36,11 +39,10 @@
       "include": "#strings"
     },
     {
-      "include": "#funccallnotparens"
+      "include": "#constant"
     },
     {
-      "match": "(?<!\\.)\\b(?i:a_ahkpath|a_ahkversion|a_allowmainwindow|a_appdata|a_appdatacommon|a_args|a_clipboard|a_computername|a_comspec|a_controldelay|a_cursor|a_dd|a_ddd|a_dddd|a_defaultmousespeed|a_desktop|a_desktopcommon|a_detecthiddentext|a_detecthiddenwindows|a_endchar|a_eventinfo|a_fileencoding|a_hotkeyinterval|a_hotkeymodifiertimeout|a_hour|a_iconfile|a_iconhidden|a_iconnumber|a_icontip|a_index|a_initialworkingdir|a_isadmin|a_iscompiled|a_iscritical|a_ispaused|a_issuspended|a_keydelay|a_keydelayplay|a_keyduration|a_keydurationplay|a_language|a_lasterror|a_linefile|a_linenumber|a_listlines|a_loopfield|a_loopfileattrib|a_loopfiledir|a_loopfileext|a_loopfilefullpath|a_loopfilename|a_loopfilepath|a_loopfileshortname|a_loopfileshortpath|a_loopfilesize|a_loopfilesizekb|a_loopfilesizemb|a_loopfiletimeaccessed|a_loopfiletimecreated|a_loopfiletimemodified|a_loopreadline|a_loopregkey|a_loopregname|a_loopregtimemodified|a_loopregtype|a_maxhotkeysperinterval|a_mday|a_menumaskkey|a_min|a_mm|a_mmm|a_mmmm|a_mon|a_mousedelay|a_mousedelayplay|a_msec|a_mydocuments|a_now|a_nowutc|a_osversion|a_priorhotkey|a_priorkey|a_priorline|a_programfiles|a_programs|a_programscommon|a_ptrsize|a_regview|a_screendpi|a_screenheight|a_screenwidth|a_scriptdir|a_scriptfullpath|a_scripthwnd|a_scriptname|a_sec|a_sendlevel|a_sendmode|a_space|a_startmenu|a_startmenucommon|a_startup|a_startupcommon|a_storecapslockmode|a_stringcasesense|a_tab|a_temp|a_thisfunc|a_thishotkey|a_tickcount|a_timeidle|a_timeidlekeyboard|a_timeidlemouse|a_timeidlephysical|a_timesincepriorhotkey|a_timesincethishotkey|a_titlematchmode|a_titlematchmodespeed|a_traymenu|a_username|a_wday|a_windelay|a_windir|a_workfilename|a_workingdir|a_yday|a_year|a_yweek|a_yyyy|true|false|u_\\w+)\\b",
-      "name": "constant.language.ahk2"
+      "include": "#funccallnotparens"
     },
     {
       "include": "#pre-definition"
@@ -119,12 +121,18 @@
     {
       "name": "variable.other.ahk2",
       "match": "\\b(?<!\\.)[_[:alpha:]][_[:alnum:]]*\\b",
-      "patterns": [
-        {
-          "name": "support.class",
-          "match": "\\b(?i:any|array|boundfunc|buffer|class|clipboardall|closure|enumerator|error|file|float|func|gui|indexerror|inputhook|integer|keyerror|map|membererror|memoryerror|menu|menubar|methoderror|number|object|oserror|primitive|propertyerror|regexmatch|string|targeterror|timeouterror|typeerror|valueerror|zerodivisionerror)\\b"
+      "captures": {
+        "1": {
+          "patterns": [
+            {
+              "include": "#default_classes"
+            },
+            {
+              "include": "#function-defaultLibrary"
+            }
+          ]
         }
-      ]
+      }
     },
     {
       "name": "variable.object.ahk2",
@@ -214,6 +222,10 @@
     "block_innards": {
       "patterns": [
         {
+          "match": "\\b(?<!\\.)(?i:this|super)\\b",
+          "name": "variable.language.this.ahk2"
+        },
+        {
           "include": "#method_access"
         },
         {
@@ -257,10 +269,6 @@
               "include": "#block_innards"
             }
           ]
-        },
-        {
-          "match": "\\b(?<!\\.)(?i:this|super)\\b",
-          "name": "variable.language.this.ahk2"
         },
         {
           "include": "#parens-block"
@@ -427,7 +435,7 @@
               "include": "#numbers"
             },
             {
-              "match": "\\b([_[:alpha:]][_[:alnum:]]*)\\b",
+              "match": "\\b([_[:alpha:]][_[:alnum:]]*)(?=\\s*=)",
               "name": "constant.language.ahk2"
             },
             {
@@ -450,6 +458,14 @@
           }
         }
       ]
+    },
+    "constant": {
+      "match": "(?<!\\.)\\b(?i:a_ahkpath|a_ahkversion|a_allowmainwindow|a_appdata|a_appdatacommon|a_args|a_clipboard|a_computername|a_comspec|a_controldelay|a_cursor|a_dd|a_ddd|a_dddd|a_defaultmousespeed|a_desktop|a_desktopcommon|a_detecthiddentext|a_detecthiddenwindows|a_endchar|a_eventinfo|a_fileencoding|a_hotkeyinterval|a_hotkeymodifiertimeout|a_hour|a_iconfile|a_iconhidden|a_iconnumber|a_icontip|a_index|a_initialworkingdir|a_isadmin|a_iscompiled|a_iscritical|a_ispaused|a_issuspended|a_keydelay|a_keydelayplay|a_keyduration|a_keydurationplay|a_language|a_lasterror|a_linefile|a_linenumber|a_listlines|a_loopfield|a_loopfileattrib|a_loopfiledir|a_loopfileext|a_loopfilefullpath|a_loopfilename|a_loopfilepath|a_loopfileshortname|a_loopfileshortpath|a_loopfilesize|a_loopfilesizekb|a_loopfilesizemb|a_loopfiletimeaccessed|a_loopfiletimecreated|a_loopfiletimemodified|a_loopreadline|a_loopregkey|a_loopregname|a_loopregtimemodified|a_loopregtype|a_maxhotkeysperinterval|a_mday|a_menumaskkey|a_min|a_mm|a_mmm|a_mmmm|a_mon|a_mousedelay|a_mousedelayplay|a_msec|a_mydocuments|a_now|a_nowutc|a_osversion|a_priorhotkey|a_priorkey|a_priorline|a_programfiles|a_programs|a_programscommon|a_ptrsize|a_regview|a_screendpi|a_screenheight|a_screenwidth|a_scriptdir|a_scriptfullpath|a_scripthwnd|a_scriptname|a_sec|a_sendlevel|a_sendmode|a_space|a_startmenu|a_startmenucommon|a_startup|a_startupcommon|a_storecapslockmode|a_stringcasesense|a_tab|a_temp|a_thisfunc|a_thishotkey|a_tickcount|a_timeidle|a_timeidlekeyboard|a_timeidlemouse|a_timeidlephysical|a_timesincepriorhotkey|a_timesincethishotkey|a_titlematchmode|a_titlematchmodespeed|a_traymenu|a_username|a_wday|a_windelay|a_windir|a_workfilename|a_workingdir|a_yday|a_year|a_yweek|a_yyyy|true|false|u_\\w+)\\b",
+      "name": "constant.language.ahk2"
+    },
+    "default_classes": {
+      "name": "support.class",
+      "match": "(?<!\\.)\\b(?i:any|array|boundfunc|buffer|clipboardall|closure|comobjarray|comobject|comvalue|comvalueref|enumerator|error|file|float|func|gui|activex|button|checkbox|combobox|control|custom|datetime|ddl|edit|groupbox|hotkey|link|list|listbox|listview|monthcal|pic|progress|radio|slider|statusbar|tab|text|treeview|updown|indexerror|inputhook|integer|keyerror|map|membererror|memoryerror|menu|menubar|methoderror|number|object|oserror|primitive|propertyerror|regexmatchinfo|string|targeterror|timeouterror|typeerror|valueerror|zerodivisionerror)\\b"
     },
     "default_statement": {
       "name": "meta.conditional.case.ahk2",
@@ -541,10 +557,6 @@
           "patterns": [
             {
               "include": "#function-call-innards"
-            },
-            {
-              "match": "(?<=[,(]\\s*)(?i:byref)(?=\\s+\\w+\\s*(,|\\)|:=))(?=.+\\)\\s*=>)",
-              "name": "storage.modifier.ahk2"
             }
           ]
         },
@@ -568,10 +580,6 @@
           ]
         },
         {
-          "match": "(?<=[,(]\\s*)(?i:byref)(?=\\s+\\w+\\s*(,|\\)|:=))(?=.+\\)\\s*=>)",
-          "name": "storage.modifier.ahk2"
-        },
-        {
           "include": "#block_innards"
         }
       ]
@@ -579,11 +587,11 @@
     "function-defaultLibrary": {
       "patterns": [
         {
-          "match": "\\b(?i:blockinput|coordmodetooltip|coordmodepixel|coordmodemouse|coordmodecaret|coordmodemenu|detecthiddentext|detecthiddenwindows|fileencoding|hotif|listlines|pause|runas|sendlevel|sendmode|setcapslockstate|setcontroldelay|setdefaultmousespeed|setkeydelay|setmousedelay|setnumlockstate|setregview|setscrolllockstate|setstorecapslockmode|settitlematchmode|setwindelay|setworkingdir|shutdown|suspend|thread)\\b",
+          "match": "(?<!\\.)\\b(?i:blockinput|coordmodetooltip|coordmodepixel|coordmodemouse|coordmodecaret|coordmodemenu|detecthiddentext|detecthiddenwindows|fileencoding|hotif|listlines|pause|runas|sendlevel|sendmode|setcapslockstate|setcontroldelay|setdefaultmousespeed|setkeydelay|setmousedelay|setnumlockstate|setregview|setscrolllockstate|setstorecapslockmode|settitlematchmode|setwindelay|setworkingdir|shutdown|suspend|thread)\\b",
           "name": "support.function.ahk2"
         },
         {
-          "match": "\\b(?i:abs|acos|array|asin|atan|bufferalloc|callbackcreate|callbackfree|caretgetpos|ceil|chr|clipboardall|clipwait|comcall|comobjactive|comobjarray|comobjconnect|comobjcreate|comobject|comobjflags|comobjget|comobjquery|comobjtype|comobjvalue|controladditem|controlchooseindex|controlchoosestring|controlclick|controldeleteitem|controlfinditem|controlfocus|controlgetchecked|controlgetchoice|controlgetclassnn|controlgetenabled|controlgetexstyle|controlgetfocus|controlgethwnd|controlgetindex|controlgetitems|controlgetpos|controlgetstyle|controlgettext|controlgetvisible|controlhide|controlhidedropdown|controlmove|controlsend|controlsetchecked|controlsetenabled|controlsetexstyle|controlsetstyle|controlsettext|controlshow|controlshowdropdown|cos|dateadd|datediff|dircopy|dircreate|dirdelete|direxist|dirmove|dirselect|dllcall|download|driveeject|drivegetcapacity|drivegetfilesystem|drivegetlabel|drivegetlist|drivegetserial|drivegetspacefree|drivegetstatus|drivegetstatuscd|drivegettype|drivelock|drivesetlabel|driveunlock|editgetcurrentcol|editgetcurrentline|editgetline|editgetlinecount|editgetselectedtext|editpaste|envget|envset|exception|exp|fileappend|filecopy|filecreateshortcut|filedelete|fileexist|filegetattrib|filegetshortcut|filegetsize|filegettime|filegetversion|fileinstall|filemove|fileopen|fileread|filerecycle|filerecycleempty|fileselect|filesetattrib|filesettime|float|floor|format|formattime|func|getkeyname|getkeysc|getkeystate|getkeyvk|getmethod|groupactivate|groupadd|groupclose|groupdeactivate|guictrlfromhwnd|guifromhwnd|hasbase|hasmethod|hasprop|hotkey|imagesearch|inidelete|iniread|iniwrite|inputbox|inputhook|instr|integer|isalnum|isalpha|isbyref|isdate|isdigit|isfloat|isfunc|isinteger|islabel|islower|isnumber|isobject|isset|issomething|isspace|istime|isupper|isxdigit|keywait|listviewgetcontent|ln|loadpicture|log|map|max|menufromhandle|menuselect|min|mod|monitorget|monitorgetcount|monitorgetname|monitorgetprimary|monitorgetworkarea|mouseclick|mouseclickdrag|mousegetpos|mousemove|msgbox|numget|numput|objaddref|objbindmethod|object|objfromptr|objfromptraddref|objgetbase|objgetcapacity|objhasownprop|objownpropcount|objownprops|objptr|objptraddref|objrelease|objsetbase|objsetcapacity|onclipboardchange|onerror|onexit|onmessage|ord|outputdebug|pixelgetcolor|pixelsearch|postmessage|processclose|processexist|processsetpriority|processwait|processwaitclose|random|regdelete|regdeletekey|regexmatch|regexreplace|regread|regwrite|round|run|runwait|send|sendevent|sendinput|sendmessage|sendplay|sendraw|sendtext|settimer|sin|sleep|sort|soundbeep|soundgetinterface|soundgetmute|soundgetname|soundgetvolume|soundplay|soundsetmute|soundsetvolume|splitpath|sqrt|statusbargettext|statusbarwait|strcompare|strget|string|strlen|strptr|strput|strreplace|strsplit|substr|sysget|sysgetipaddresses|tan|tooltip|trayseticon|traytip|trim|type|varsetstrcapacity|winactivate|winactivatebottom|winactive|winclose|winexist|wingetclass|wingetclientpos|wingetcontrols|wingetcontrolshwnd|wingetcount|wingetid|wingetidlast|wingetlist|wingetminmax|wingetpid|wingetpos|wingetprocessname|wingetprocesspath|wingettext|wingettitle|wingettranscolor|wingettransparent|wingetexstyle|wingetstyle|winsetexstyle|winsetstyle|winhide|winkill|winmaximize|winminimize|winmove|winmovebottom|winmovetop|winredraw|winrestore|winsetalwaysontop|winsetenabled|winsetregion|winsettitle|winsettranscolor|winsettransparent|winshow|winwait|winwaitactive|winwaitclose|winwaitnotactive)\\b",
+          "match": "(?<!\\.)\\b(?i:abs|acos|array|asin|atan|bufferalloc|callbackcreate|callbackfree|caretgetpos|ceil|chr|clipboardall|clipwait|comcall|comobjactive|comobjarray|comobjconnect|comobjcreate|comobject|comobjflags|comobjget|comobjquery|comobjtype|comobjvalue|controladditem|controlchooseindex|controlchoosestring|controlclick|controldeleteitem|controlfinditem|controlfocus|controlgetchecked|controlgetchoice|controlgetclassnn|controlgetenabled|controlgetexstyle|controlgetfocus|controlgethwnd|controlgetindex|controlgetitems|controlgetpos|controlgetstyle|controlgettext|controlgetvisible|controlhide|controlhidedropdown|controlmove|controlsend|controlsetchecked|controlsetenabled|controlsetexstyle|controlsetstyle|controlsettext|controlshow|controlshowdropdown|cos|dateadd|datediff|dircopy|dircreate|dirdelete|direxist|dirmove|dirselect|dllcall|download|driveeject|drivegetcapacity|drivegetfilesystem|drivegetlabel|drivegetlist|drivegetserial|drivegetspacefree|drivegetstatus|drivegetstatuscd|drivegettype|drivelock|drivesetlabel|driveunlock|editgetcurrentcol|editgetcurrentline|editgetline|editgetlinecount|editgetselectedtext|editpaste|envget|envset|exception|exp|fileappend|filecopy|filecreateshortcut|filedelete|fileexist|filegetattrib|filegetshortcut|filegetsize|filegettime|filegetversion|fileinstall|filemove|fileopen|fileread|filerecycle|filerecycleempty|fileselect|filesetattrib|filesettime|float|floor|format|formattime|func|getkeyname|getkeysc|getkeystate|getkeyvk|getmethod|groupactivate|groupadd|groupclose|groupdeactivate|guictrlfromhwnd|guifromhwnd|hasbase|hasmethod|hasprop|hotkey|imagesearch|inidelete|iniread|iniwrite|inputbox|inputhook|instr|integer|isalnum|isalpha|isbyref|isdate|isdigit|isfloat|isfunc|isinteger|islabel|islower|isnumber|isobject|isset|issomething|isspace|istime|isupper|isxdigit|keywait|listviewgetcontent|ln|loadpicture|log|map|max|menufromhandle|menuselect|min|mod|monitorget|monitorgetcount|monitorgetname|monitorgetprimary|monitorgetworkarea|mouseclick|mouseclickdrag|mousegetpos|mousemove|msgbox|numget|numput|objaddref|objbindmethod|object|objfromptr|objfromptraddref|objgetbase|objgetcapacity|objhasownprop|objownpropcount|objownprops|objptr|objptraddref|objrelease|objsetbase|objsetcapacity|onclipboardchange|onerror|onexit|onmessage|ord|outputdebug|pixelgetcolor|pixelsearch|postmessage|processclose|processexist|processsetpriority|processwait|processwaitclose|random|regdelete|regdeletekey|regexmatch|regexreplace|regread|regwrite|round|run|runwait|send|sendevent|sendinput|sendmessage|sendplay|sendraw|sendtext|settimer|sin|sleep|sort|soundbeep|soundgetinterface|soundgetmute|soundgetname|soundgetvolume|soundplay|soundsetmute|soundsetvolume|splitpath|sqrt|statusbargettext|statusbarwait|strcompare|strget|string|strlen|strptr|strput|strreplace|strsplit|substr|sysget|sysgetipaddresses|tan|tooltip|trayseticon|traytip|trim|type|varsetstrcapacity|winactivate|winactivatebottom|winactive|winclose|winexist|wingetclass|wingetclientpos|wingetcontrols|wingetcontrolshwnd|wingetcount|wingetid|wingetidlast|wingetlist|wingetminmax|wingetpid|wingetpos|wingetprocessname|wingetprocesspath|wingettext|wingettitle|wingettranscolor|wingettransparent|wingetexstyle|wingetstyle|winsetexstyle|winsetstyle|winhide|winkill|winmaximize|winminimize|winmove|winmovebottom|winmovetop|winredraw|winrestore|winsetalwaysontop|winsetenabled|winsetregion|winsettitle|winsettranscolor|winsettransparent|winshow|winwait|winwaitactive|winwaitclose|winwaitnotactive)\\b",
           "name": "support.function.ahk2"
         }
       ]
@@ -622,15 +630,8 @@
           },
           "patterns": [
             {
-              "match": "(?<=[,(]\\s*)(?i:byref)(?=\\s+\\w+\\s*(,|\\)|:=))",
-              "name": "storage.modifier.ahk2"
-            },
-            {
               "match": "(?<=:=\\s*)(?i:unset)(?=\\s*[,)])",
               "name": "constant.language.undefined.ahk2"
-            },
-            {
-              "include": "#probably_a_parameter"
             },
             {
               "include": "#function-innards"
@@ -1143,11 +1144,23 @@
       },
       "patterns": [
         {
-          "include": "$base"
+          "name": "variable.other.ahk2",
+          "match": "^\\s*([_[:alpha:]][_[:alnum:]]*)\\b(?!\\()",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#default_classes"
+                },
+                {
+                  "include": "#function-defaultLibrary"
+                }
+              ]
+            }
+          }
         },
         {
-          "match": "(?<=[,(]\\s*)(?i:byref)(?=\\s+\\w+\\s*(,|\\)|:=))(?=.+\\)\\s*=>)",
-          "name": "storage.modifier.ahk2"
+          "include": "$base"
         }
       ]
     },
@@ -1263,14 +1276,6 @@
           }
         }
       ]
-    },
-    "probably_a_parameter": {
-      "match": "(?<=(\\(|,|(?i:byref)\\s)\\s*)([_[:alpha:]][_[:alnum:]]*\\*?)\\s*(?=(,|\\)|:=))",
-      "captures": {
-        "2": {
-          "name": "variable.parameter.probably.ahk2"
-        }
-      }
     },
     "string_escaped_char": {
       "patterns": [
@@ -1388,6 +1393,10 @@
               "include": "#string_escaped_char"
             }
           ]
+        },
+        {
+          "name": "variable.other.ahk2",
+          "match": "^\\s*([_[:alpha:]][_[:alnum:]]*)\\b(?!\\()"
         },
         {
           "include": "$base"
