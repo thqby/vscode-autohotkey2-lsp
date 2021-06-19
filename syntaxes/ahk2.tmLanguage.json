@@ -52,6 +52,9 @@
       "include": "#block"
     },
     {
+      "include": "#string_in_closed_cycle"
+    },
+    {
       "include": "#parens"
     },
     {
@@ -686,7 +689,7 @@
     "hotkey-hotstring": {
       "patterns": [
         {
-          "match": "^\\s*(:(?i:\\s|\\*|\\?|c[01]?|[pk]\\d+|s[ipe]|[brto]0?|x|z)*:(?<!^\\s*:[^xX]*:)[\\x09\\x20-\\x7E]+?)(::)",
+          "match": "^\\s*(:(?i:\\s|\\*|\\?0?|c[01]?|[pk]\\d+|s[ipe]|[brto]0?|x|z)*:(?<!^\\s*:[^xX]*:)[\\x09\\x20-\\x7E]+?)(::)",
           "captures": {
             "1": {
               "name": "keyword.keys.ahk2"
@@ -1313,7 +1316,7 @@
               "name": "punctuation.definition.string.begin.ahk2"
             }
           },
-          "end": "^\\s*\\).*?(\\1)",
+          "end": "(\\1)",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.string.end.ahk2"
@@ -1322,9 +1325,72 @@
           "name": "string.quoted.brack",
           "patterns": [
             {
+              "include": "#comments"
+            },
+            {
+              "begin": "^\\s*(\\()",
+              "beginCaptures": {
+                "1": {
+                  "name": "punctuation.section.parens.begin.bracket.round.ahk2"
+                }
+              },
+              "end": "^\\s*(\\))",
+              "endCaptures": {
+                "1": {
+                  "name": "punctuation.section.parens.end.bracket.round.ahk2"
+                }
+              },
+              "name": "string.continuation",
+              "patterns": [
+                {
+                  "include": "#string_escaped_char"
+                }
+              ]
+            },
+            {
               "include": "#string_escaped_char"
             }
           ]
+        }
+      ]
+    },
+    "string_in_closed_cycle": {
+      "name": "meta.parens.ahk2",
+      "begin": "^\\s*(\\()([^)]*)$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.section.parens.begin.ahk2"
+        }
+      },
+      "end": "^\\s*(\\))",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.section.parens.end.ahk2"
+        }
+      },
+      "patterns": [
+        {
+          "name": "string.in_closed_cycle.ahk2",
+          "begin": "('|\")",
+          "beingCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.begin.ahk2"
+            }
+          },
+          "end": "(\\1)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.end.ahk2"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#string_escaped_char"
+            }
+          ]
+        },
+        {
+          "include": "$base"
         }
       ]
     },

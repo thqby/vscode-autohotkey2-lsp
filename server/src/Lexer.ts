@@ -182,8 +182,8 @@ export class Lexer {
 	constructor(document: TextDocument) {
 		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this, h = isahk2_h;
-		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, _customblocks: number[] = [];
-		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, tks: Token[] = [];
+		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, _customblocks: number[] = [], ck: Token;
+		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, closed_cycle: number, tks: Token[] = [];
 		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space: boolean = false;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
@@ -226,7 +226,7 @@ export class Lexer {
 
 		this.beautify = function (options: any) {
 			/*jshint onevar:true */
-			let t: Token, i: number, keep_whitespace: boolean, sweet_code: string, top: boolean = false;
+			let i: number, keep_whitespace: boolean, sweet_code: string, top: boolean = false;
 			options = options ? options : {}, opt = {};
 			if (options.braces_on_own_line !== undefined) { //graceful handling of deprecated option
 				opt.brace_style = options.braces_on_own_line ? "expand" : "collapse";
@@ -261,9 +261,9 @@ export class Lexer {
 			input = source_text, input_length = input.length, whitespace_before_token = [];
 			following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 			while (true) {
-				t = get_next_token();
-				token_text = t.content, token_text_low = token_text.toLowerCase();
-				token_type = t.type;
+				ck = get_next_token();
+				token_text = ck.content, token_text_low = token_text.toLowerCase();
+				token_type = ck.type;
 
 				if (token_type === 'TK_EOF') {
 					// Unwind any open statements
@@ -301,7 +301,7 @@ export class Lexer {
 						if (token_type === 'TK_DOT' && last_type === 'TK_WORD')
 							top = true;
 						else if (token_type === 'TK_WORD') {
-							if (t.topofline)
+							if (ck.topofline)
 								top = true;
 							else {
 								switch (last_type) {
@@ -321,7 +321,7 @@ export class Lexer {
 						} else if (token_type === 'TK_COMMA')
 							keep_comma_space = true;
 					}
-				} else if ((t.topofline && in_array(flags.mode, [MODE.Statement, MODE.BlockStatement]) &&
+				} else if ((ck.topofline && in_array(flags.mode, [MODE.Statement, MODE.BlockStatement]) &&
 					in_array(token_type, ['TK_WORD', 'TK_START_BLOCK', 'TK_HOT'])) ||
 					(token_type === 'TK_RESERVED' && token_text.match(/^(try|else|finally)$/i)))
 					top = true;
@@ -524,7 +524,7 @@ export class Lexer {
 			this.parseScript = function (islib?: boolean): void {
 				input = this.document.getText(), input_length = input.length, scriptpath = includedir = this.scriptpath;
 				tks.length = 0, whitespace_before_token = [], beginpos = 0, following_bracket = false, begin_line = true;
-				bracketnum = 0, parser_pos = 0, last_LF = -1, _customblocks.length = 0;
+				bracketnum = 0, parser_pos = 0, last_LF = -1, _customblocks.length = 0, closed_cycle = 0;
 				this.label.length = this.funccall.length = this.diagnostics.length = this.hotkey.length = 0;
 				this.foldingranges.length = this.children.length = 0, this.labels = {};
 				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map();
@@ -2558,7 +2558,7 @@ export class Lexer {
 				let m: RegExpMatchArray | null;
 				if (line.indexOf('::') === -1) {
 
-				} else if (m = line.match(/^(:(\s|\*|\?|c[01]?|[pk]\d+|s[ipe]|[brto]0?|x|z)*:[\x09\x20-\x7E]+?::)(.*)$/i)) {
+				} else if (m = line.match(/^(:(\s|\*|\?0?|c[01]?|[pk]\d+|s[ipe]|[brto]0?|x|z)*:[\x09\x20-\x7E]+?::)(.*)$/i)) {
 					if ((m[2] && m[2].match(/[xX]/)) || (m[3] && m[3].trim().match(/^\{\s*(\s;.*)?$/))) {
 						parser_pos += m[1].length - 1;
 						return createToken(m[1], 'TK_HOT', offset, m[1].length, true);
@@ -2623,15 +2623,34 @@ export class Lexer {
 			}
 
 			if (c === '(' || c === '[') {
-				if (following_bracket && c === '(') {
-					bracketnum++;
+				if (c === '(') {
+					if (following_bracket)
+						bracketnum++;
+					if (closed_cycle)
+						closed_cycle++;
+					if (bg) {
+						let i = parser_pos, t = '';
+						while (i < input_length) {
+							t = input.charAt(i), i++;
+							if (t === '\n') {
+								bg = false, parser_pos = i - 1;
+								if (!closed_cycle)
+									closed_cycle = 1;
+								break;
+							} else if (t === ')')
+								break;
+						}
+					}
 				}
 				return createToken(c, 'TK_START_EXPR', offset, 1, bg);
 			}
 
 			if (c === ')' || c === ']') {
-				if (following_bracket && c === ')') {
-					bracketnum--;
+				if (c === ')') {
+					if (following_bracket)
+						bracketnum--;
+					if (closed_cycle > 0)
+						closed_cycle--;
 				}
 				return createToken(c, 'TK_END_EXPR', offset, 1, bg);
 			}
@@ -2707,7 +2726,8 @@ export class Lexer {
 					// handle string
 					while ((lc = c, c = input.charAt(parser_pos)) !== sep || esc) {
 						resulting_string += c;
-						if (c === '\n') {
+						if (closed_cycle) {
+						} else if (c === '\n') {
 							last_LF = input.indexOf('\n', pos = parser_pos + 1);
 							LF = input.substring(pos, parser_pos = last_LF === -1 ? input_length : last_LF);
 							end = parser_pos;
@@ -2779,8 +2799,8 @@ export class Lexer {
 						esc = esc ? false : c === '`';
 						parser_pos += 1;
 						if (parser_pos >= input_length) {
-							// incomplete string/rexp when end-of-file reached.
-							// bail out with what had been received so far.
+							if (_this.blocks)
+								_this.addDiagnostic(diagnostic.missing(sep), offset, 1);
 							_this.strcommpos[offset] = { end: input_length, type: 2 };
 							return createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
 						}
@@ -2791,6 +2811,11 @@ export class Lexer {
 				parser_pos += 1;
 				resulting_string += sep;
 				_this.strcommpos[offset] = { end: parser_pos - 1, type: 2 };
+				if (closed_cycle && _this.blocks) {
+					let i = 0, j = 0;
+					while ((j = resulting_string.substring(i).search(/(?<=^[ \t]*)\)/m)) !== -1)
+						_this.addDiagnostic(diagnostic.unexpected(')'), offset + i + j, 1), i = i + j + 1;
+				}
 				return createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
 			}
 
@@ -2950,6 +2975,8 @@ export class Lexer {
 				}
 				else if (last_type === 'TK_RESERVED' && flags.last_text.match(/^(break|continue)$/i))
 					output_space_before_token = false;
+				if (parser_pos !== ck.offset + 1)
+					token_text += input.substring(ck.offset + 1, parser_pos).trimRight();
 			}
 
 			if (input_wanted_newline) {
