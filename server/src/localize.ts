@@ -24,6 +24,7 @@ export namespace diagnostic {
 	export const conflictserr = localize('diagnostic.conflictserr', 'This {0} \'{2}\' declaration conflicts with an existing {1}');
 	export const declarationerr = localize('diagnostic.declarationerr', 'Unexpected declaration');
 	export const defaultvalmissing = localize('diagnostic.defaultvalmissing', 'Parameter default required. Specifically: \'{0}\'');
+	export const deprecated = localize('diagnostic.deprecated', 'Using \'{0}\' instead of \'{1}\'');
 	export const dupdeclaration = localize('diagnostic.dupdeclaration', 'Duplicate declaration');
 	export const duplabel = localize('diagnostic.duplabel', 'Duplicate label');
 	export const filenotexist = localize('diagnostic.filenotexist', '\'{0}\' not exist');

@@ -98,7 +98,7 @@ ComObjConnect(ComObject [, Prefix]) => void
 
 /*
  * 包装原始IDispatch指针.
- * IDispatch或派生接口的非空接口指针。
+ * IDispatch或派生接口的非空接口指针. 
  */
 ComObjFromPtr(DispPtr) => ComObject
 
@@ -467,9 +467,8 @@ DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number|strin
 Download(URL, Filename) => void
 
 /**
- * 弹出或收回指定 CD/DVD 驱动器的托盘.
- * @param Drive 驱动器字母后面跟着冒号和可选的反斜杠(也可以用于 UNC 路径和映射驱动器). 如果省略, 将使用默认的 CD/DVD 驱动器.
- * @param Retract 指定 1(true) 收回/关闭托盘. 指定 0(false) 或省略此参数以弹出/打开托盘.
+ * 弹出指定 CD/DVD 驱动器或可移动驱动器.
+ * @param Drive 驱动器字母后面跟着冒号和可选的反斜杠(也可以用于 UNC 路径和映射驱动器). 如果省略, 将使用默认的 CD/DVD 驱动器. 如果未找到驱动器, 则会引发异常.
  */
 DriveEject(Drive := '', Retract := false) => void
 
@@ -537,6 +536,11 @@ DriveGetType(Path) => String
  * 阻止指定驱动器的弹出功能正常工作.
  */
 DriveLock(Drive) => void
+
+/**
+ * 收回指定 CD/DVD 驱动器.
+ */
+DriveRetract([Drive])
 
 /**
  * 更改指定驱动器的卷标签.
@@ -1635,9 +1639,9 @@ Ord(String) => Number
 OutputDebug(Text) => void
 
 /**
- * 阻止脚本在其最后一个线程完成时自动退出，从而使其保持在空闲状态下运行。
- * @param Persist 如果为true或忽略，则即使退出脚本的其他条件均不满足，在所有线程退出后脚本仍将保持运行。
- * 如果为false，将恢复默认行为。
+ * 阻止脚本在其最后一个线程完成时自动退出, 从而使其保持在空闲状态下运行. 
+ * @param Persist 如果为true或忽略, 则即使退出脚本的其他条件均不满足, 在所有线程退出后脚本仍将保持运行. 
+ * 如果为false, 将恢复默认行为. 
  */
 Persistent(Persist := true) => void
 
@@ -1700,16 +1704,14 @@ ProcessWaitClose(PIDOrName [, Timeout]) => Number
 
 /**
  * 生成一个伪随机数字.
- */
-Random(Min := 0, Max := 2147483647) => Number
-
-/**
- * 使用 NewSeed 重新设定随机数生成器的种子.
- * @param NewSeed NewSeed 应该是 0 到 4294967295(0xFFFFFFFF) 之间的整数.
  *
- * Reseeding 可以提高产生的随机数的质量/安全性, 尤其当 NewSeed 是真正的随机数而不是质量不佳的伪随机数时.
+ * 要生成的最小和/或最大数量, 以任一顺序指定.  如果只指定了一个参数, 则另一个参数默认为0. 如果两者都省略, 则默认为0.0到1.0.
+ *
+ * 对于整数, 最小值和最大值都包含在可能返回的可能数字集合中.  支持全范围的 64 位整数.
+ *
+ * 对于浮点数, 通常不包括最大值. 
  */
-RandomSeed(NewSeed) => void
+Random([A, B]) => Number
 
 /**
  * 从注册表中删除值.
@@ -1978,9 +1980,9 @@ StrGet(Source, Length, Encoding := '') => String
 StrLen(String) => Number
 
 /**
- * 将字符串转换为小写或大写.
+ * 将字符串转换为小写.
  */
-StrLower(String [, 'T']) => String
+StrLower(String) => String
 
 /**
  * 返回字符串的当前内存地址.
@@ -2023,9 +2025,9 @@ StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputV
 StrSplit(String, Delimiters := '', OmitChars := '', MaxParts := -1) => Array
 
 /**
- * 将字符串转换为小写或大写.
+ * 将字符串转换为大写.
  */
-StrUpper(String [, 'T']) => String
+StrUpper(String) => String
 
 /**
  * 从字符串中的指定位置检索一个或多个字符.
@@ -2036,6 +2038,11 @@ StrUpper(String [, 'T']) => String
  * @param Length 如果省略这个参数, 则默认为 "全部字符". 其他情况下, 为需提取字符的最大数目(当字符串剩余部分太短时提取的数目会比最大值少). 您还可以指定负的 Length 从而在返回字符串的末尾省略这个数目的字符(如果省略了全部或过多字符, 则返回空字符串).
  */
 SubStr(String, StartingPos [, Length]) => String
+
+/**
+ * 将字符串转换为标题大小写.
+ */
+StrTitle(String) => String
 
 /**
  * 获取系统对象的尺寸和其他系统属性.
@@ -2099,6 +2106,11 @@ Type(Value) => String
  * 增加变量的容量或释放其内存. 一般情况下不需要, 但可以与 DllCall 或 SendMessage 一起使用, 或者优化重复连接.
  */
 VarSetStrCapacity(&TargetVar [, RequestedCapacity]) => Number
+
+/**
+ * 比较两个版本字符串.
+ */
+VerCompare(VersionA, VersionB)
 
 /**
  * 激活指定的窗口.

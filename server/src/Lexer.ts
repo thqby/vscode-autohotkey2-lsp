@@ -189,7 +189,7 @@ export class Lexer {
 
 		this.document = document, this.scriptpath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath.replace(/\\[^\\]+$/, ''), this.initlibdirs();
 		whitespace = "\n\r\t ".split(''), digits = '0123456789'.split(''), wordchar = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$'.split('');
-		punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >> << >>= <<= && &= | || ! ~ , : ? ^ ^= |= :: =>'.split(' ');
+		punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , : ? ^ ^= |= :: =>'.split(' ');
 		line_starters = 'class,try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
 		reserved_words = line_starters.concat(['extends', 'in', 'is', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not', 'as', 'unset']);
 		MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', ForInitializer: 'ForInitializer', Conditional: 'Conditional', Expression: 'Expression' };
@@ -541,7 +541,7 @@ export class Lexer {
 			const result: DocumentSymbol[] = [], cmm: Token = { content: '', offset: 0, type: '', length: 0 }, _parent = scopevar.get('#parent') || _this, document = _this.document;
 			let tk: Token = { content: '', type: '', offset: 0, length: 0 }, lk: Token = tk, next: boolean = true, LF: number = 0, comment = '', topcontinue = false;
 			let blocks = 0, inswitch = -1, blockpos: number[] = [], tn: DocumentSymbol | FuncNode | Variable | undefined, m: any, _low = '';
-			let raw = '', o: any = '', last_comm = '';
+			let raw = '', o: any = '', last_comm = '', tds: Diagnostic[] = [];
 			if (mode !== 0)
 				blockpos.push(parser_pos - 1);
 			while (nexttoken()) {
@@ -656,6 +656,7 @@ export class Lexer {
 							let fc = lk, rof = result.length, par = parsequt(o), quoteend = parser_pos, nk = get_token_ingore_comment(), tn: FuncNode | undefined;
 							if (nk.content === '=>') {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
+								_this.diagnostics.push(...tds);
 								let storemode = mode;
 								mode = mode | 1;
 								let tn = FuncNode.create(fc.content, storemode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par, undefined, isstatic);
@@ -692,6 +693,7 @@ export class Lexer {
 								result.push(...sub);
 							} else if (nk.content === '{' && fc.topofline) {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
+								_this.diagnostics.push(...tds);
 								let vars = new Map<string, any>(), _low = fc.content.toLowerCase(), lasthasval = false;
 								tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), par, undefined, isstatic);
 								if (mode !== 0)
@@ -746,6 +748,7 @@ export class Lexer {
 											case 'TK_WORD':
 												let nk = get_next_token();
 												if (nk.type === 'TK_WORD' && tk.content.toLowerCase() === 'byref') {
+													_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), tk.offset, 5, DiagnosticSeverity.Warning);
 													byref = true, tk = nk, next = false;
 													continue loop;
 												} else if ((lk.content === ',' || lk.content === '[') && (nk.content.match(/^(:=|,|\])$/))) {
@@ -1351,6 +1354,7 @@ export class Lexer {
 									nk = get_token_ingore_comment(cmm), comment = cmm.content;
 								else nk = tk, comment = '';
 								if (nk.content === '=>' && par) {
+									_this.diagnostics.push(...tds);
 									let o: any = {}, sub = parseexp(inpair, o), pars: { [key: string]: boolean } = {}, cds: DocumentSymbol[] = [], lasthasval = false;
 									for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (let i = sub.length - 1; i >= 0; i--) {
@@ -1470,7 +1474,8 @@ export class Lexer {
 				if (!tk.topofline && ((lk.type === 'TK_OPERATOR' && !lk.content.match(/(:=|\?|:)/)) || !in_array(lk.type, ['TK_START_EXPR', 'TK_WORD', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA'])
 					|| (lk.type === 'TK_WORD' && in_array(input.charAt(tk.offset - 1), whitespace))))
 					paramsdef = false;
-				if (paramsdef)
+				if (paramsdef) {
+					tds.length = 0;
 					while (nexttoken()) {
 						if (tk.content === ')') break;
 						else if (tk.type.endsWith('COMMENT')) continue;
@@ -1478,7 +1483,10 @@ export class Lexer {
 							if (in_array(lk.content, [',', '('])) {
 								if (tk.content.toLowerCase() === 'byref') {
 									nexttoken();
-									if (tk.type !== 'TK_WORD') { addvariable(lk), next = false; break; } else byref = true;
+									if (tk.type !== 'TK_WORD') {
+										addvariable(lk), next = false; break;
+									} else
+										byref = true, _this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), lk.offset, 5, DiagnosticSeverity.Warning, tds);
 								}
 								lk = tk, tk = get_token_ingore_comment(cmm), comment = cmm.content;
 								if (tk.content === ',' || tk.content === ')') {
@@ -1542,8 +1550,9 @@ export class Lexer {
 							paramsdef = false; break;
 						}
 					}
+				}
 				if (!paramsdef) {
-					parser_pos = beg + 1, tk = bak, next = true;
+					parser_pos = beg + 1, tk = bak, next = true, tds.length = 0;
 					_this.diagnostics.splice(ds);
 					parsepair('(', ')', beg, types);
 					return;
@@ -1769,6 +1778,7 @@ export class Lexer {
 								lk = tk, tk = get_next_token();
 								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_token_ingore_comment();
 								if (nk.content === '=>') {
+									_this.diagnostics.push(...tds);
 									let o: any = {}, sub = parseexp(true, o), pars: any = {}, lasthasval = false;
 									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par, sub);
@@ -4013,10 +4023,10 @@ export class Lexer {
 		return colors;
 	}
 
-	private addDiagnostic(message: string, offset: number, length?: number, severity: DiagnosticSeverity = DiagnosticSeverity.Error) {
+	private addDiagnostic(message: string, offset: number, length?: number, severity: DiagnosticSeverity = DiagnosticSeverity.Error, arr?: Diagnostic[]) {
 		let beg = this.document.positionAt(offset), end = beg;
 		if (length !== undefined) end = this.document.positionAt(offset + length);
-		this.diagnostics.push({ range: Range.create(beg, end), message, severity });
+		(arr || this.diagnostics).push({ range: Range.create(beg, end), message, severity });
 	}
 
 	private addFoldingRange(start: number, end: number, kind: string = 'block') {
