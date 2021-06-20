@@ -561,9 +561,9 @@ export class Lexer {
 								else _this.addDiagnostic(diagnostic.unknowninclude(m.path), tk.offset, tk.length);
 							}
 							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-						} else if (m = tk.content.match(/^\s*#dllimport\s+((\w|[^\x00-\xff])+)/i)) {
-							let rg = makerange(tk.offset, tk.length);
-							h = true, result.push(FuncNode.create(m[1], SymbolKind.Function, rg, rg, []));
+						} else if (m = tk.content.match(/^(\s*#dllimport\s+)((\w|[^\x00-\xff])+)/i)) {
+							let rg = makerange(tk.offset + m[1].length, m[2].length);
+							h = true, result.push(FuncNode.create(m[2], SymbolKind.Function, rg, rg, []));
 						}
 						break;
 					case 'TK_LABEL':
