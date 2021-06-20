@@ -140,7 +140,7 @@ code
 
 为函数或方法生成 JSDOC 样式的注释文档.
 
-# Language support for AutoHotkey2 for Visual Studio Code
+# AutoHotkey2 Language Support
 
 AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis
 

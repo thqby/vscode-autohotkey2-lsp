@@ -652,7 +652,7 @@ export class Lexer {
 							if (input.charAt(tk.offset - 1) === '.') continue;
 							if (isstatic) { if (cmm.type !== '') comm = trimcomment(cmm.content); }
 							else if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) comm = trimcomment(lk.content);
-							o = {}, lk = tk, tk = { content: '(', offset: parser_pos, length: 1, type: 'TK_START_EXPR' }, parser_pos++;
+							o = {}, lk = tk, tk = get_next_token();
 							let fc = lk, rof = result.length, par = parsequt(o), quoteend = parser_pos, nk = get_token_ingore_comment(), tn: FuncNode | undefined;
 							if (nk.content === '=>') {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
@@ -1714,7 +1714,7 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2), next = true;
 								continue;
 							}
-							lk = llk, tk = { content: '(', offset: tp - 1, length: 1, type: 'TK_START_EXPR' }, parser_pos = tp;
+							lk = llk, parser_pos = tp - 1, tk = get_next_token();
 							par = parsequt(), nk = get_token_ingore_comment();
 						} else if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) !== '.') {
 							let rg: Range;
@@ -1766,7 +1766,7 @@ export class Lexer {
 										tpexp += ' ' + tk.content;
 								}
 							} else {
-								lk = tk, tk = { content: '(', offset: parser_pos, length: 1, type: 'TK_START_EXPR' }, parser_pos++;
+								lk = tk, tk = get_next_token();
 								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_token_ingore_comment();
 								if (nk.content === '=>') {
 									let o: any = {}, sub = parseexp(true, o), pars: any = {}, lasthasval = false;
@@ -1808,7 +1808,7 @@ export class Lexer {
 							}
 						} else if (input.charAt(parser_pos) === '(') {
 							let ptk = tk;
-							tk = { content: '(', offset: parser_pos, length: 1, type: 'TK_START_EXPR' }, parser_pos++;
+							tk = get_next_token();
 							parsepair('(', ')');
 							if (input.charAt(ptk.offset - 1) !== '%') {
 								tpexp += '.' + ptk.content + '()';
@@ -2628,14 +2628,13 @@ export class Lexer {
 						bracketnum++;
 					if (closed_cycle)
 						closed_cycle++;
-					if (bg) {
+					else if (bg) {
 						let i = parser_pos, t = '';
 						while (i < input_length) {
 							t = input.charAt(i), i++;
 							if (t === '\n') {
 								bg = false, parser_pos = i - 1;
-								if (!closed_cycle)
-									closed_cycle = 1;
+								closed_cycle = 1;
 								break;
 							} else if (t === ')')
 								break;
