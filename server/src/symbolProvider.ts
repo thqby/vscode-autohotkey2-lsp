@@ -100,6 +100,12 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 	function checksamename(doc: Lexer) {
 		let dec: any = {}, dd: Lexer, lbs: any = {};
 		Object.keys(doc.labels).map(lb => lbs[lb] = true);
+		for (const k in ahkvars) {
+			let t = ahkvars[k];
+			dec[k] = t;
+			if (t.kind === SymbolKind.Function || t.name.toLowerCase() === 'struct')
+				(<Variable>t).def = false;
+		}
 		for (const uri in doc.relevance) {
 			if (dd = lexers[uri]) {
 				dd.diagnostics.splice(dd.diags);

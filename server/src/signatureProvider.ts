@@ -49,11 +49,11 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		}
 	} else
 		nodes = searchNode(doc, name, pos, kind);
-	let ttt: any;
+	let tns: any;
 	do {
-		ttt = nodes || [], nodes = [];
-		ttt.map((it: any) => {
-			let nn = it.node, kind = nn.kind;
+		tns = nodes || [], nodes = [];
+		tns.map((it: any) => {
+			let nn = it.node, kind = nn.kind, m: RegExpExecArray | null;
 			if (kind === SymbolKind.Class) {
 				let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, true);
 				let n: FuncNode | undefined;
@@ -75,7 +75,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 					if (s) {
 						detectExp(lexers[it.uri], s, Position.is(nn.returntypes[s]) ? nn.returntypes[s] : pos).map(tp => {
 							searchNode(doc, tp, pos, SymbolKind.Function)?.map(it => {
-								if (it.node.kind === SymbolKind.Function || it.node.kind === SymbolKind.Method || it.node.kind === SymbolKind.Class)
+								if (it.node.kind === SymbolKind.Function || it.node.kind === SymbolKind.Method || (it.node.kind === SymbolKind.Class && (<ClassNode>it.node).extends !== 'Primitive'))
 									nodes.push(it);
 							});
 						});
@@ -83,10 +83,18 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 				} else if (kind === SymbolKind.Variable)
 					detectVariableType(lexers[it.uri], it.node.name.toLowerCase(), it.uri === doc.uri ? pos : undefined).map(tp => {
 						searchNode(doc, tp, pos, SymbolKind.Function)?.map(it => {
-							if (it.node.kind === SymbolKind.Function || it.node.kind === SymbolKind.Method || it.node.kind === SymbolKind.Class)
+							if (it.node.kind === SymbolKind.Function || it.node.kind === SymbolKind.Method || (it.node.kind === SymbolKind.Class && (<ClassNode>it.node).extends !== 'Primitive'))
 								nodes.push(it);
 						});
 					});
+				else
+					return;
+				if (tns.length === 1 && !nodes.length && nn.detail && (m = new RegExp('\\b' + nn.name + '\\([^)]*\\)').exec(nn.detail))) {
+					let params: any = [], rg = Range.create(0, 0, 0, 0), node: FuncNode;
+					m[0].match(/(?<=[(,]\s*)(\w|[^\x00-\xff])+/g)?.map(name => params.push({ name }));
+					node = FuncNode.create(nn.name, SymbolKind.Function, rg, rg, params);
+					node.detail = nn.detail.replace(m[0], ''), nodes.push({ node });
+				}
 			}
 		});
 	} while (nodes.length > 0 && (nodes[0].node.kind !== SymbolKind.Function && nodes[0].node.kind !== SymbolKind.Method && nodes[0].node.kind !== SymbolKind.Class));
