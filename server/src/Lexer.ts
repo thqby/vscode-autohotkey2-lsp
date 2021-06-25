@@ -184,7 +184,7 @@ export class Lexer {
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this, h = isahk2_h;
 		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, _customblocks: number[] = [], ck: Token;
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, closed_cycle: number, tks: Token[] = [];
-		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space: boolean = false;
+		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space: boolean = false, lst: Token;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
 		this.document = document, this.scriptpath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath.replace(/\\[^\\]+$/, ''), this.initlibdirs();
@@ -696,7 +696,7 @@ export class Lexer {
 									o[t] = tn.range.end;
 								for (const it of par) {
 									pars[it.name.toLowerCase()] = true;
-									if ((<Variable>it).defaultVal)
+									if ((<Variable>it).defaultVal || (<Variable>it).arr)
 										lasthasval = true;
 									else if (lasthasval)
 										_this.addDiagnostic(diagnostic.defaultvalmissing(it.name), document.offsetAt(it.range.start), it.name.length);
@@ -729,7 +729,7 @@ export class Lexer {
 									_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 								tn.range.end = document.positionAt(parser_pos), tn.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
 								par.map((it: Variable) => {
-									if (it.defaultVal)
+									if (it.defaultVal || it.arr)
 										lasthasval = true;
 									else if (lasthasval)
 										_this.addDiagnostic(diagnostic.defaultvalmissing(it.name), document.offsetAt(it.range.start), it.name.length);
@@ -797,12 +797,13 @@ export class Lexer {
 															else if (nk.type !== 'TK_COMMA')
 																err = true;
 														} else if (tk.content === ']') {
-															_this.addDiagnostic(diagnostic.defaultvalmissing(tn.name), b, tn.name.length);
+															if (!(<Variable>tn).arr)
+																_this.addDiagnostic(diagnostic.defaultvalmissing(tn.name), b, tn.name.length);
 															next = byref = false;
 															continue;
 														} else err = true;
 													} else {
-														if (lasthasval)
+														if (lasthasval && !(<Variable>tn).arr)
 															_this.addDiagnostic(diagnostic.defaultvalmissing(tn.name), b, tn.name.length);
 														next = nk.content !== ']';
 													}
@@ -1434,7 +1435,7 @@ export class Lexer {
 										for (const t in o)
 											o[t] = tn.range.end;
 										par.map((it: Variable) => {
-											if (it.defaultVal)
+											if (it.defaultVal || it.arr)
 												lasthasval = true;
 											else if (lasthasval)
 												_this.addDiagnostic(diagnostic.defaultvalmissing(it.name), document.offsetAt(it.range.start), it.name.length);
@@ -1803,7 +1804,7 @@ export class Lexer {
 						let sub = parseexp(true), pars: { [key: string]: boolean } = {}, lasthasval = false;
 						for (const it of par) {
 							pars[it.name.toLowerCase()] = true;
-							if ((<Variable>it).defaultVal)
+							if ((<Variable>it).defaultVal || (<Variable>it).arr)
 								lasthasval = true;
 							else if (lasthasval)
 								_this.addDiagnostic(diagnostic.defaultvalmissing(it.name), document.offsetAt(it.range.start), it.name.length);
@@ -1854,7 +1855,7 @@ export class Lexer {
 									result.push(tn), _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 									if (par) for (const it of par) {
 										pars[it.name.toLowerCase()] = true;
-										if ((<Variable>it).defaultVal)
+										if ((<Variable>it).defaultVal || (<Variable>it).arr)
 											lasthasval = true;
 										else if (lasthasval)
 											_this.addDiagnostic(diagnostic.defaultvalmissing(it.name), document.offsetAt(it.range.start), it.name.length);
@@ -2034,7 +2035,9 @@ export class Lexer {
 								dec[_low] = it;
 							else
 								_diags.push({ message: samenameerr(it, dec[_low]), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							pars[_low] = it;
+							if (pars[_low])
+								_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+							else pars[_low] = it;
 						});
 						for (const n in (<FuncNode>node).local) {
 							if (!dec[n])
@@ -2088,7 +2091,9 @@ export class Lexer {
 								dec[_low] = it;
 							else
 								_diags.push({ message: samenameerr(it, dec[_low]), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							pars[_low] = it;
+							if (pars[_low])
+								_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+							else pars[_low] = it;
 						});
 						for (const n in (<FuncNode>node).local) {
 							if (!dec[n])
@@ -2204,7 +2209,7 @@ export class Lexer {
 		}
 
 		function createToken(content: string, type: string, offset: number, length: number, topofline?: boolean): Token {
-			return { content, type, offset, length, topofline };
+			return lst = { content, type, offset, length, topofline };
 		}
 
 		function create_flags(flags_base: any, mode: any) {
@@ -2655,6 +2660,7 @@ export class Lexer {
 			}
 
 			let offset = parser_pos - 1, len = 1;
+			let m: RegExpMatchArray | null;
 			beginpos = offset;
 			if (begin_line) {
 				begin_line = false, bg = true;
@@ -2663,7 +2669,6 @@ export class Lexer {
 					next_LF = input_length;
 				}
 				let line = input.substring(last_LF + 1, next_LF).trim();
-				let m: RegExpMatchArray | null;
 				if (line.indexOf('::') === -1) {
 
 				} else if (m = line.match(/^(:(\s|\*|\?0?|c[01]?|[pk]\d+|s[ipe]|[brto]0?|x|z)*:[\x09\x20-\x7E]+?::)(.*)$/i)) {
@@ -2683,6 +2688,9 @@ export class Lexer {
 						parser_pos = input.indexOf('::', parser_pos) + 2;
 						return createToken(m[1].replace(/\s+/g, ' '), 'TK_HOT', offset, m[1].length, true);
 					}
+				} else if (m = line.match(/^(\S+):\s*(\s;.*)$/)) {
+					parser_pos += m[1].length + 1;
+					return createToken(m[1] + ':', 'TK_LABEL', offset, m[1].length + 1, true);
 				}
 			}
 
@@ -2700,34 +2708,42 @@ export class Lexer {
 				}
 
 				// small and surprisingly unugly hack for 1E-10 representation
-				if (parser_pos !== input_length && c.match(/^[0-9]+[Ee]$/) && (input.charAt(parser_pos) === '-' || input.charAt(parser_pos) === '+')) {
-					let sign = input.charAt(parser_pos);
-					parser_pos += 1, c += sign + get_next_token().content;
-					return createToken(c, 'TK_NUMBER', offset, c.length, bg);
-				}
-				if (bg && input.charAt(parser_pos) === ':') {
-					let LF = input.indexOf('\n', parser_pos);
-					if (LF === -1) LF = input_length;
-					if (input.substring(parser_pos + 1, LF).trim().match(/^($|;)/)) {
-						parser_pos += 1;
-						return createToken(c + ':', 'TK_LABEL', offset, c.length + 1, true);
+				if (input.charAt(offset - 1) !== '.') {
+					if (m = c.match(/^(\d+[Ee](\d+)?|(0[Xx][\da-fA-F]+)|(\d+))$/)) {
+						if (m[2] || m[3])
+							return createToken(c, 'TK_NUMBER', offset, c.length, bg);
+						if (m[4]) {
+							if (parser_pos < input_length && input.charAt(parser_pos) === '.') {
+								let cc = '', t = '', p = parser_pos + 1;
+								while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
+									cc += input.charAt(p), p += 1;
+								if (cc.match(/^\d*([Ee]\d+)?$/)) {
+									c += '.' + cc, parser_pos = p;
+									return createToken(c, 'TK_NUMBER', offset, c.length, bg);
+								} else if (cc.match(/^\d*[Ee]$/) && p < input_length && input.charAt(p).match(/[+\-]/)) {
+									cc += input.charAt(p), p += 1;
+									while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
+										t += input.charAt(p), p += 1;
+									if (t.match(/^\d+$/))
+										c += '.' + cc + t, parser_pos = p;
+								}
+							}
+							return createToken(c, 'TK_NUMBER', offset, c.length, bg);
+						} else if (parser_pos < input_length && input.charAt(parser_pos).match(/[+\-]/)) {
+							let sign = input.charAt(parser_pos), p = parser_pos, t: Token;
+							parser_pos += 1, t = get_next_token();
+							if (t.type === 'TK_NUMBER' && t.content.match(/^\d+$/)) {
+								c += sign + t.content;
+								return createToken(c, 'TK_NUMBER', offset, c.length, bg);
+							} else
+								parser_pos = p;
+						}
 					}
-				}
-				if (input.charAt(offset - 1) !== '.' && in_array(c.toLowerCase(), reserved_words)) {
-					if (c.match(/^(and|or|not|in|is|contains)$/i)) { // hack for 'in' operator
-						return createToken(c, 'TK_OPERATOR', offset, c.length, bg);
+					if (in_array(c.toLowerCase(), reserved_words)) {
+						if (c.match(/^(and|or|not|in|is|contains)$/i)) // hack for 'in' operator
+							return createToken(c, 'TK_OPERATOR', offset, c.length, bg);
+						return createToken(c, 'TK_RESERVED', offset, c.length, bg);
 					}
-					return createToken(c, 'TK_RESERVED', offset, c.length, bg);
-				}
-				let t: any;
-				if (t = c.match(/^(0[xX][0-9a-fA-F]+|([0-9]+))$/)) {
-					if (t[2] !== undefined && input.charAt(parser_pos) === '.' && input.charAt(offset - 1) !== '.') {
-						let cc = '', p = parser_pos + 1;
-						while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
-							cc += input.charAt(p), p += 1;
-						if (input.charAt(p) !== '.' && cc.match(/^\d*$/)) c += '.' + cc, parser_pos = p;
-					}
-					return createToken(c, 'TK_NUMBER', offset, c.length, bg);
 				}
 				return createToken(c, 'TK_WORD', offset, c.length, bg);
 			}
@@ -2958,9 +2974,24 @@ export class Lexer {
 				if (nextc === '=') {
 					parser_pos++
 					return createToken('.=', 'TK_EQUALS', offset, 2, bg);
-				}
-				else if (in_array(nextc, [' ', '\t'])) {
+				} else if (in_array(nextc, [' ', '\t'])) {
 					return createToken(c, 'TK_OPERATOR', offset, 1, bg);
+				} else if (nextc.match(/\d/) && (lst.type === 'TK_EQUALS' || lst.type === 'TK_OPERATOR')) {
+					let p = parser_pos + 1, t = '';
+					while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
+						nextc += input.charAt(p), p += 1;
+					if (nextc.match(/^\d+([Ee]\d+)?$/)) {
+						parser_pos = p, c += nextc;
+						return createToken(c, 'TK_NUMBER', offset, c.length, bg);
+					} else if (p < input_length && nextc.match(/^\d+[Ee]$/) && input.charAt(p).match(/[+\-]/)) {
+						nextc += input.charAt(p), p += 1;
+						while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
+							t += input.charAt(p), p += 1;
+						if (t.match(/^\d+$/)) {
+							parser_pos = p, c += nextc + t;
+							return createToken(c, 'TK_NUMBER', offset, c.length, bg);
+						}
+					}
 				}
 				return createToken(c, 'TK_DOT', offset, 1, bg);
 			}
