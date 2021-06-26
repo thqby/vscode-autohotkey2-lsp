@@ -128,13 +128,19 @@ connection.onInitialized(async () => {
 connection.onDidChangeConfiguration(async change => {
 	if (hasConfigurationCapability) {
 		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		let changes: any = { Path: false, AutoLibInclude: false };
+		let changes: any = { Path: false, AutoLibInclude: false }, oldpath = extsettings.Path;
 		for (let k in extsettings)
 			if ((<any>extsettings)[k] !== (<any>newset)[k])
 				changes[k] = true;
-		extsettings = newset;
+		Object.assign(extsettings, newset);
 		if (changes['Path']) {
-			if (initpathenv())
+			libdirs.length = 0;
+			let uri = URI.file(resolve(oldpath, '../lib')).toString().toLowerCase();
+			for (const u in libfuncs) {
+				if (u.startsWith(uri))
+					delete libfuncs[u];
+			}
+			if (initpathenv(true))
 				documents.all().forEach(validateTextDocument);
 		} else if (changes['AutoLibInclude'] && extsettings.AutoLibInclude)
 			parseuserlibs();
@@ -350,7 +356,8 @@ async function loadahk2(filename = 'ahk2') {
 			});
 			it.detail = snip.description, ahkvars[_low] = it;
 		}
-		hoverCache[n][_low].push(hover);
+		if (snip.description)
+			hoverCache[n][_low].push(hover);
 	}
 	function bodytostring(body: any) { return (typeof body === 'object' ? body.join('\n') : body) };
 }

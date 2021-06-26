@@ -11,9 +11,9 @@
 			"prefix": "#CriticalObjectTimeOut"
 		},
 		{
-			"body": "#DefineDefaultObjectValue ",
+			"body": "#DefineDefault${1|Array,Map,Object|}Value ",
 			"description": "定义在object/array/map中找不到属性或项目时将使用的默认值.",
-			"prefix": "#DefineDefaultObjectValue"
+			"prefix": "#DefineDefault"
 		},
 		{
 			"body": "#DllImport ${1:Function_Name}, ${2:DllFile\\Function}${3:[, Type1, Arg1, Type2, Arg2, Cdecl ReturnType]}",

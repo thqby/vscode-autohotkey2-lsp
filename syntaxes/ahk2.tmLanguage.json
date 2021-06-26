@@ -15,7 +15,22 @@
       "include": "#switch_statement"
     },
     {
-      "match": "(?<!\\.)\\b(?i:break|continue|critical|loop|until|else|for|goto|if|throw|try|catch|finally|return|while)\\b(?!\\s*:)",
+      "match": "(?<!\\.)((?i:break|continue|goto))\\s+([^;]\\S*)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.ahk2"
+        },
+        "2": {
+          "name": "entity.name.label.ahk2"
+        }
+      }
+    },
+    {
+      "match": "(?<!\\.)\\b(?i:break|continue|critical|until|else|for|goto|if|throw|try|catch|finally|return|while)\\b(?!\\s*:)",
+      "name": "keyword.control.ahk2"
+    },
+    {
+      "match": "(?<!\\.)\\b(?i:loop)(\\s+(?i:files|parse|read|reg))?\\b",
       "name": "keyword.control.ahk2"
     },
     {
@@ -23,32 +38,31 @@
       "name": "storage.modifier.ahk2"
     },
     {
-      "match": "(?<=(^|[^.])\\b(?i:loop)\\s+)\\b(?i:files|parse|read|reg)\\b",
-      "name": "keyword.keys.ahk2"
-    },
-    {
-      "include": "#default_classes"
+      "include": "#numbers"
     },
     {
       "include": "#operators"
     },
     {
-      "include": "#numbers"
-    },
-    {
       "include": "#strings"
-    },
-    {
-      "include": "#constant"
-    },
-    {
-      "include": "#funccallnotparens"
     },
     {
       "include": "#pre-definition"
     },
     {
       "include": "#class_block"
+    },
+    {
+      "include": "#default_classes"
+    },
+    {
+      "include": "#function-defaultLibrary"
+    },
+    {
+      "include": "#funccallnotparens"
+    },
+    {
+      "include": "#variables"
     },
     {
       "include": "#block"
@@ -96,7 +110,7 @@
       "begin": "([_[:alpha:]][_[:alnum:]]*|(?<=[\\]\\)]))?(\\[)(?!\\])",
       "beginCaptures": {
         "1": {
-          "name": "variable.object.ahk2"
+          "name": "variable.property.ahk2"
         },
         "2": {
           "name": "punctuation.definition.begin.bracket.square.ahk2"
@@ -119,24 +133,8 @@
       "match": "\\[\\s*\\]"
     },
     {
-      "name": "variable.other.ahk2",
-      "match": "\\b(?<!\\.)[_[:alpha:]][_[:alnum:]]*\\b",
-      "captures": {
-        "1": {
-          "patterns": [
-            {
-              "include": "#default_classes"
-            },
-            {
-              "include": "#function-defaultLibrary"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "variable.object.ahk2",
-      "match": "\\b(?<=\\.)[_[:alpha:]][_[:alnum:]]*\\b"
+      "name": "variable.property.ahk2",
+      "match": "\\b(?<=\\.)[_[:alnum:]]+\\b"
     },
     {
       "match": ",",
@@ -149,10 +147,10 @@
       "begin": "([_[:alpha:]][_[:alnum:]]*|(?<=[\\]\\)]))\\s*(?:(\\.)|(->))((?:(?:[_[:alpha:]][_[:alnum:]]*)\\s*(?:(?:\\.)|(?:->)))*)\\s*([_[:alpha:]][_[:alnum:]]*)(\\()",
       "beginCaptures": {
         "1": {
-          "name": "variable.object.ahk2"
+          "name": "variable.property.ahk2"
         },
         "2": {
-          "name": "punctuation.separator.dot-access.ahk2"
+          "name": "punctuation.accessor.ahk2"
         },
         "3": {
           "name": "punctuation.separator.pointer-access.ahk2"
@@ -161,11 +159,11 @@
           "patterns": [
             {
               "match": "\\.",
-              "name": "punctuation.separator.dot-access.ahk2"
+              "name": "punctuation.accessor.ahk2"
             },
             {
               "match": "[_[:alpha:]][_[:alnum:]]*",
-              "name": "variable.object.ahk2"
+              "name": "variable.property.ahk2"
             },
             {
               "name": "everything.else.ahk2",
@@ -459,13 +457,9 @@
         }
       ]
     },
-    "constant": {
-      "match": "(?<!\\.)\\b(?i:a_ahkpath|a_ahkversion|a_allowmainwindow|a_appdata|a_appdatacommon|a_args|a_clipboard|a_computername|a_comspec|a_controldelay|a_cursor|a_dd|a_ddd|a_dddd|a_defaultmousespeed|a_desktop|a_desktopcommon|a_detecthiddentext|a_detecthiddenwindows|a_endchar|a_eventinfo|a_fileencoding|a_hotkeyinterval|a_hotkeymodifiertimeout|a_hour|a_iconfile|a_iconhidden|a_iconnumber|a_icontip|a_index|a_initialworkingdir|a_isadmin|a_iscompiled|a_iscritical|a_ispaused|a_issuspended|a_keydelay|a_keydelayplay|a_keyduration|a_keydurationplay|a_language|a_lasterror|a_linefile|a_linenumber|a_listlines|a_loopfield|a_loopfileattrib|a_loopfiledir|a_loopfileext|a_loopfilefullpath|a_loopfilename|a_loopfilepath|a_loopfileshortname|a_loopfileshortpath|a_loopfilesize|a_loopfilesizekb|a_loopfilesizemb|a_loopfiletimeaccessed|a_loopfiletimecreated|a_loopfiletimemodified|a_loopreadline|a_loopregkey|a_loopregname|a_loopregtimemodified|a_loopregtype|a_maxhotkeysperinterval|a_mday|a_menumaskkey|a_min|a_mm|a_mmm|a_mmmm|a_mon|a_mousedelay|a_mousedelayplay|a_msec|a_mydocuments|a_now|a_nowutc|a_osversion|a_priorhotkey|a_priorkey|a_priorline|a_programfiles|a_programs|a_programscommon|a_ptrsize|a_regview|a_screendpi|a_screenheight|a_screenwidth|a_scriptdir|a_scriptfullpath|a_scripthwnd|a_scriptname|a_sec|a_sendlevel|a_sendmode|a_space|a_startmenu|a_startmenucommon|a_startup|a_startupcommon|a_storecapslockmode|a_stringcasesense|a_tab|a_temp|a_thisfunc|a_thishotkey|a_tickcount|a_timeidle|a_timeidlekeyboard|a_timeidlemouse|a_timeidlephysical|a_timesincepriorhotkey|a_timesincethishotkey|a_titlematchmode|a_titlematchmodespeed|a_traymenu|a_username|a_wday|a_windelay|a_windir|a_workfilename|a_workingdir|a_yday|a_year|a_yweek|a_yyyy|true|false|u_\\w+)\\b",
-      "name": "constant.language.ahk2"
-    },
     "default_classes": {
       "name": "support.class",
-      "match": "(?<!\\.)\\b(?i:any|array|boundfunc|buffer|clipboardall|closure|comobjarray|comobject|comvalue|comvalueref|enumerator|error|file|float|func|gui|activex|button|checkbox|combobox|control|custom|datetime|ddl|edit|groupbox|hotkey|link|list|listbox|listview|monthcal|pic|progress|radio|slider|statusbar|tab|text|treeview|updown|indexerror|inputhook|integer|keyerror|map|membererror|memoryerror|menu|menubar|methoderror|number|object|oserror|primitive|propertyerror|regexmatchinfo|string|targeterror|timeouterror|typeerror|valueerror|zerodivisionerror)\\b"
+      "match": "(?<!\\.)\\b(?i:any|array|boundfunc|buffer|class|clipboardall|closure|comobjarray|comobject|comvalue|comvalueref|enumerator|error|file|float|func|gui|indexerror|inputhook|integer|keyerror|map|membererror|memoryerror|menu|menubar|methoderror|number|object|oserror|primitive|propertyerror|regexmatchinfo|string|targeterror|timeouterror|typeerror|valueerror|zerodivisionerror)\\b"
     },
     "default_statement": {
       "name": "meta.conditional.case.ahk2",
@@ -762,7 +756,7 @@
           "name": "variable.other.object.access.ahk2"
         },
         "2": {
-          "name": "punctuation.separator.dot-access.ahk2"
+          "name": "punctuation.accessor.ahk2"
         },
         "3": {
           "patterns": [
@@ -776,7 +770,7 @@
                   "name": "variable.other.object.access.ahk2"
                 },
                 "2": {
-                  "name": "punctuation.separator.dot-access.ahk2"
+                  "name": "punctuation.accessor.ahk2"
                 }
               }
             }
@@ -802,7 +796,7 @@
       ]
     },
     "numbers": {
-      "match": "(?<!\\w\\.?)\\.?\\d(?:(?:[0-9a-zA-Z_\\.])|(?<=[eE])[+-])*",
+      "match": "(?<!\\w\\.?)\\.?\\d(?:(?:[\\w\\.])|(?<=[eE])[+-])*",
       "captures": {
         "0": {
           "patterns": [
@@ -815,7 +809,7 @@
                   "name": "constant.numeric.ahk2"
                 },
                 {
-                  "match": "(?:(?:[0-9a-zA-Z_\\.]|')|(?<=[eE])[+-])+",
+                  "match": "(?:(?:[\\w\\.])|(?<=[eE])[+-])+",
                   "name": "invalid.illegal.constant.numeric"
                 }
               ]
@@ -843,11 +837,11 @@
           "name": "keyword.operator.assignment.compound.ahk2"
         },
         {
-          "match": "&=|\\^=|<<=|>>=|\\|=",
+          "match": "&=|\\^=|<<=|>>>=|>>=|\\|=",
           "name": "keyword.operator.assignment.compound.bitwise.ahk2"
         },
         {
-          "match": "<<|>>",
+          "match": "<<|>>>|>>",
           "name": "keyword.operator.bitwise.shift.ahk2"
         },
         {
@@ -867,12 +861,12 @@
           "name": "keyword.operator.assignment.ahk2"
         },
         {
-          "match": "\\*|/|-|\\+",
-          "name": "keyword.operator.ahk2"
+          "match": "\\.(?=\\w)",
+          "name": "punctuation.accessor.ahk2"
         },
         {
-          "match": "\\.(?=\\w)",
-          "name": "keyword.operator.dot.ahk2"
+          "match": "\\*|/|-|\\+|\\.",
+          "name": "keyword.operator.ahk2"
         },
         {
           "begin": "(\\?)",
@@ -991,7 +985,7 @@
           ]
         },
         {
-          "begin": "^\\s*((#)(?i:dllload|requires|errorstdout))\\b",
+          "begin": "^\\s*((#)(?i:dllload|requires|errorstdout|definedefault(array|map|object)value|windowclass(gui|main)))\\b",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
@@ -1035,7 +1029,7 @@
           ]
         },
         {
-          "match": "^\\s*((#)(?i:clipboardtimeout|hotif|hotiftimeout|hotkeymodifiertimeout|inputlevel|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|menumaskkey|notrayicon|singleinstance|suspendexempt|usehook|warn|winactivateforce))\\b",
+          "match": "^\\s*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|hotkeymodifiertimeout|inputlevel|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|menumaskkey|notrayicon|singleinstance|suspendexempt|usehook|warn|warncontinuableexception|winactivateforce))\\b",
           "captures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
@@ -1044,6 +1038,35 @@
               "name": "punctuation.definition.directive.ahk2"
             }
           }
+        },
+        {
+          "begin": "^\\s*((#)(?i:dllimport))(\\s+(\\w+)\\s*(,?))?",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.directive.ahk2"
+            },
+            "2": {
+              "name": "punctuation.definition.directive.ahk2"
+            },
+            "4": {
+              "name": "entity.name.function.ahk2"
+            },
+            "5": {
+              "name": "punctuation.separator.delimiter.ahk2"
+            }
+          },
+          "end": "(?=(?:;))|(?=\\n)",
+          "name": "meta.preprocessor.ahk2",
+          "patterns": [
+            {
+              "match": ",",
+              "name": "punctuation.separator.delimiter.ahk2"
+            },
+            {
+              "match": "[^,\\n\\r]+",
+              "name": "string.quoted.ahk2"
+            }
+          ]
         }
       ]
     },
@@ -1251,7 +1274,7 @@
           ]
         },
         "6": {
-          "name": "keyword.control.switch.ahk2"
+          "name": "keyword.control.ahk2"
         }
       },
       "end": "(?:(?<=\\})|(?=[>\\[\\]=]))",
@@ -1309,6 +1332,24 @@
           ]
         }
       ]
+    },
+    "variables": {
+      "match": "(?<!\\.)\\b\\w+\\b(?!\\()",
+      "captures": {
+        "0": {
+          "patterns": [
+            {
+              "match": "\\b(?i:true|false)\\b",
+              "name": "constant.language.ahk2"
+            },
+            {
+              "match": "\\b(?i:a_ahkdir|a_ahkpath|a_ahkversion|a_allowmainwindow|a_appdata|a_appdatacommon|a_args|a_clipboard|a_computername|a_comspec|a_controldelay|a_cursor|a_dd|a_ddd|a_dddd|a_defaultmousespeed|a_desktop|a_desktopcommon|a_detecthiddentext|a_detecthiddenwindows|a_dlldir|a_dllpath|a_endchar|a_eventinfo|a_fileencoding|a_globalstruct|a_hotkeyinterval|a_hotkeymodifiertimeout|a_hour|a_iconfile|a_iconhidden|a_iconnumber|a_icontip|a_index|a_initialworkingdir|a_isadmin|a_iscompiled|a_iscritical|a_isdll|a_ispaused|a_issuspended|a_keydelay|a_keydelayplay|a_keyduration|a_keydurationplay|a_language|a_lasterror|a_linefile|a_linenumber|a_listlines|a_loopfield|a_loopfileattrib|a_loopfiledir|a_loopfileext|a_loopfilefullpath|a_loopfilename|a_loopfilepath|a_loopfileshortname|a_loopfileshortpath|a_loopfilesize|a_loopfilesizekb|a_loopfilesizemb|a_loopfiletimeaccessed|a_loopfiletimecreated|a_loopfiletimemodified|a_loopreadline|a_loopregkey|a_loopregname|a_loopregtimemodified|a_loopregtype|a_mainthread|a_maxhotkeysperinterval|a_mday|a_memroymodule|a_menumaskkey|a_min|a_mm|a_mmm|a_mmmm|a_mon|a_modulehandle|a_mousedelay|a_mousedelayplay|a_msec|a_mydocuments|a_now|a_nowutc|a_osversion|a_priorhotkey|a_priorkey|a_priorline|a_programfiles|a_programs|a_programscommon|a_ptrsize|a_regview|a_screendpi|a_screenheight|a_screenwidth|a_scriptdir|a_scriptfullpath|a_scripthwnd|a_scriptname|a_scriptstruct|a_sec|a_sendlevel|a_sendmode|a_space|a_startmenu|a_startmenucommon|a_startup|a_startupcommon|a_storecapslockmode|a_stringcasesense|a_tab|a_temp|a_threadid|a_thisfunc|a_thishotkey|a_tickcount|a_timeidle|a_timeidlekeyboard|a_timeidlemouse|a_timeidlephysical|a_timesincepriorhotkey|a_timesincethishotkey|a_titlematchmode|a_titlematchmodespeed|a_traymenu|a_username|a_wday|a_windelay|a_windir|a_workfilename|a_workingdir|a_yday|a_year|a_yweek|a_yyyy|a_zipcompressionlevel)\\b",
+              "name": "variable.language.ahk2"
+            }
+          ]
+        }
+      },
+      "name": "variable.other.ahk2"
     }
   }
 }

@@ -32,6 +32,7 @@ export namespace diagnostic {
 	export const funccallerr = localize('diagnostic.funccallerr', 'Function calls require a space or \'(\',  use comma only between parameters');
 	export const globalconflicts = localize('diagnostic.globalconflicts', 'This global declaration conflicts with an existing {0}');
 	export const hotdeferr = localize('diagnostic.hotdeferr', 'Hotkeys/hotstrings cannot be defined in functions/classes');
+	export const invaliddefinition = localize('diagnostic.invaliddefinition', 'Invalid {0} definition');
 	export const invalidhotdef = localize('diagnostic.invalidhotdef', 'Invalid hotkey definition');
 	export const invalidparam = localize('diagnostic.invalidparam', 'Invalid parameter definition');
 	export const invalidprop = localize('diagnostic.invalidprop', 'Invalid dynamic property');

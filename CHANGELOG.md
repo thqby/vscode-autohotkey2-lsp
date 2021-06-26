@@ -1,3 +1,10 @@
+## 0.8.0
+- 增加检查函数定义中的参数重复 [#12](https://github.com/thqby/vscode-autohotkey2-lsp/issues/12)
+- 检查无效的胖箭头函数声明 [#13](https://github.com/thqby/vscode-autohotkey2-lsp/issues/13)
+- 修复不正确的可选参数提示 [#14](https://github.com/thqby/vscode-autohotkey2-lsp/issues/14)
+- 修复数值识别和高亮问题 [#15](https://github.com/thqby/vscode-autohotkey2-lsp/issues/15) [#16](https://github.com/thqby/vscode-autohotkey2-lsp/issues/16)
+- 修复未识别'`s'转义字符 [#17](https://github.com/thqby/vscode-autohotkey2-lsp/issues/17)
+
 ## 0.7.9
 - 修复h版#dllimport函数选择范围不正确, 并增加类型提示
 - 支持a136版的行延续
