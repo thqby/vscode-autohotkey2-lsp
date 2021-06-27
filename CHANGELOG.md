@@ -1,3 +1,8 @@
+## 0.8.1
+- 修复行末尾的%被识别为行延续
+- 修复部分对象字面量被识别为错误 [#18](https://github.com/thqby/vscode-autohotkey2-lsp/issues/18)
+- 修复setter中的隐藏变量提示缺少默认参数
+
 ## 0.8.0
 - 增加检查函数定义中的参数重复 [#12](https://github.com/thqby/vscode-autohotkey2-lsp/issues/12)
 - 检查无效的胖箭头函数声明 [#13](https://github.com/thqby/vscode-autohotkey2-lsp/issues/13)

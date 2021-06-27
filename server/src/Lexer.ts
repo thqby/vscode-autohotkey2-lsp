@@ -860,13 +860,13 @@ export class Lexer {
 													else
 														(<Variable>sub[i]).def = false;
 												}
-												if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.push(Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
+												if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
 												adddeclaration(tn as FuncNode), prop.children.push(...sub);
 											} else if (sk.content === '{') {
 												tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), [...par]), _this.addFoldingRangePos(tn.range.start, tn.range.end);
 												let vars = new Map<string, any>([['#parent', tn]]);
 												(<FuncNode>tn).parent = prop, tn.children = parseblock(3, vars, classfullname), tn.range.end = document.positionAt(parser_pos);
-												if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.push(Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
+												if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
 												adddeclaration(tn as FuncNode);
 												_this.addFoldingRangePos(tn.range.start, tn.range.end);
 												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
@@ -1147,7 +1147,7 @@ export class Lexer {
 									break;
 								case 'TK_OPERATOR':
 									if (tk.content.toLowerCase() === 'in') {
-										result.push(...parseexp());
+										result.push(...parseexp(false, undefined));
 										if (nk) {
 											if (tk.content !== ')') {
 												_this.addDiagnostic(diagnostic.missing(')'), nk.offset, nk.length);
@@ -1239,7 +1239,7 @@ export class Lexer {
 				let res: DocumentSymbol[] = [], hascomma = false, b = next ? parser_pos : tk.offset;
 				while (true) {
 					let o: any = {};
-					res.push(...parseexp(false, o, true));
+					res.push(...parseexp(false, o));
 					if (tk.type === 'TK_COMMA')
 						hascomma = next = true;
 					else {
@@ -1469,13 +1469,16 @@ export class Lexer {
 							if (lk.type === 'TK_EQUALS') {
 								parseobj(true, t = {});
 								tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
-							} else if (mustexp) {
-								_this.addDiagnostic(diagnostic.unexpected('{'), tk.offset, tk.length);
-								parseobj(mustexp, t = {});
-								tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
 							} else {
-								types[tpexp] = true;
-								next = false; return result.splice(pres);
+								let l = _this.diagnostics.length;
+								if (['TK_WORD', 'TK_STRING', 'TK_NUMBER'].includes(lk.type))
+									_this.addDiagnostic(diagnostic.unexpected('{'), tk.offset, tk.length);
+								if (parseobj(mustexp, t = {})) {
+									tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
+								} else {
+									types[tpexp] = true, _this.diagnostics.splice(l);
+									next = false; return result.splice(pres);
+								}
 							}
 						case 'TK_NUMBER': tpexp += ' #number'; break;
 						case 'TK_STRING': tpexp += ' #string'; break;
@@ -1718,7 +1721,7 @@ export class Lexer {
 				}
 
 				function objval(): boolean {
-					let exp = parseexp(true, ts = {});
+					let exp = parseexp(true, ts = {}, true);
 					result.push(...exp);
 					if (k) {
 						if (k.content.toLowerCase() === 'base') {
@@ -1796,7 +1799,7 @@ export class Lexer {
 							_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2);
 							continue;
 						}
-						let sub = parseexp(true), pars: { [key: string]: boolean } = {}, lasthasval = false;
+						let sub = parseexp(true, undefined, true), pars: { [key: string]: boolean } = {}, lasthasval = false;
 						for (const it of par) {
 							pars[it.name.toLowerCase()] = true;
 							if ((<Variable>it).defaultVal || (<Variable>it).arr)
@@ -1824,7 +1827,7 @@ export class Lexer {
 										if (tk.type === 'TK_EQUALS') {
 											let o: any = {}, equ = tk.content;
 											next = true;
-											result.push(...parseexp(true, o));
+											result.push(...parseexp(true, o, true));
 											vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 											vr.returntypes = { [o = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: vr.range.end };
 											tpexp += o, vr.def = true;
@@ -1838,7 +1841,7 @@ export class Lexer {
 								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_token_ingore_comment();
 								if (nk.content === '=>') {
 									_this.diagnostics.push(...tds);
-									let o: any = {}, sub = parseexp(true, o), pars: any = {};
+									let o: any = {}, sub = parseexp(true, o, true), pars: any = {};
 									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par, sub);
 									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).closure = !!(mode & 1);
@@ -2189,7 +2192,7 @@ export class Lexer {
 				case 'TK_EQUALS':
 					return true;
 				case 'TK_OPERATOR':
-					return !tk.content.match(/^(!|~|not|in|is|contains|\+\+|--)$/i);
+					return !tk.content.match(/^(!|~|not|in|is|contains|%|\+\+|--)$/i);
 				case 'TK_END_BLOCK':
 				case 'TK_END_EXPR':
 					return false;
@@ -2199,7 +2202,7 @@ export class Lexer {
 						case 'TK_EQUALS':
 							return true;
 						case 'TK_OPERATOR':
-							return !lk.content.match(/^(\+\+|--)$/);
+							return !lk.content.match(/^(\+\+|--|%)$/);
 						default:
 							return false;
 					}
