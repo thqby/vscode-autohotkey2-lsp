@@ -1038,7 +1038,11 @@ export class Lexer {
 									}
 									if (tk.type === 'TK_WORD')
 										tk = get_token_ingore_comment();
-								}
+								} else
+									_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+							} else if (is_next('{')) {
+								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+								lk = tk, tk = get_next_token();
 							}
 							if (tk.type !== 'TK_START_BLOCK') { next = false; break; }
 							if (cl.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(cl.content), cl.offset, cl.length);
@@ -4259,7 +4263,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 		if ((l = (<ClassNode>node).extends?.toLowerCase()) && l !== (<ClassNode>node).full.toLowerCase()) {
 			let p = l.split('.'), cl: any, mems: DocumentSymbol[], nd: DocumentSymbol | undefined, dc: Lexer;
 			cl = searchNode(doc, p[0], Position.create(0, 0), SymbolKind.Class);
-			if (cl) {
+			if (cl && cl.length && cl[0].node.kind === SymbolKind.Class ) {
 				nd = cl[0].node, dc = lexers[cl[0].uri || doc.uri];
 				(<any>nd).uri = cl[0].uri;
 				while (nd) {

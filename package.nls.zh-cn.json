@@ -47,6 +47,7 @@
 	"diagnostic.reservedworderr": "保留字'{0}'不得用作变量名",
 	"diagnostic.returnmultival": "'Return' 最多接受1个返回值",
 	"diagnostic.unexpected": "意外的'{0}'",
+	"diagnostic.unknown": "未知的{0}",
 	"diagnostic.unknowninclude": "'{0}' 无效的include文件格式",
 	"diagnostic.unknownoperatoruse": "未知的操作符使用",
 	"diagnostic.unknowntoken": "未知的Token '{0}'",

@@ -1,5 +1,5 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver';
-import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, samenameerr, Variable } from './Lexer';
+import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, samenameerr, Token, Variable } from './Lexer';
 import { diagnostic } from './localize';
 import { ahkvars, lexers, sendDiagnostics, symbolcache } from './server';
 
@@ -117,10 +117,42 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						else lbs[lb] = true;
 			}
 		}
-		checksamenameerr(dec, Object.values(doc.declaration), doc.diagnostics);
+		let t = Object.values(doc.declaration);
+		checksamenameerr(dec, t, doc.diagnostics);
 		for (const uri in doc.relevance) {
 			if (dd = lexers[uri])
 				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
+		}
+		t.map(it => {
+			if (it.kind === SymbolKind.Class && !checkextendsclassexist((<ClassNode>it).extends))
+				err_not_exist(doc, <ClassNode>it);
+		});
+		for (const uri in doc.relevance) {
+			if (dd = lexers[uri])
+				for (const it of Object.values(dd.declaration))
+					if (it.kind === SymbolKind.Class && !checkextendsclassexist((<ClassNode>it).extends))
+						err_not_exist(dd, <ClassNode>it);
+		}
+
+		function checkextendsclassexist(name: string) {
+			if (!name)
+				return true;
+			let n = name.toLowerCase().split('.'), l = n.length, c: ClassNode | undefined;
+			for (let i = 0; i < l; i++) {
+				c = c ? c.staticdeclaration[n[i]] : dec[n[i]];
+				if (!c || c.kind !== SymbolKind.Class || (<any>c).def === false)
+					return false;
+			}
+			return true;
+		}
+		function err_not_exist(doc: Lexer, it: ClassNode) {
+			let o = doc.document.offsetAt(it.selectionRange.end) + 1, tk: Token;
+			tk = doc.get_tokon(o);
+			while (tk.type !== 'TK_WORD')
+				tk = doc.get_tokon(o = tk.offset + tk.length);
+			o = tk.offset;
+			let rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
+			doc.diagnostics.push({ message: diagnostic.unknown("class '" + it.extends) + "'", range: rg, severity: DiagnosticSeverity.Error });
 		}
 	}
 }

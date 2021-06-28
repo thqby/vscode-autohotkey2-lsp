@@ -47,6 +47,7 @@ export namespace diagnostic {
 	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name');
 	export const returnmultival = localize('diagnostic.returnmultival', '\'Return\' accepts at most 1 parameter.');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');
+	export const unknown = localize('diagnostic.unknown', 'Unknown {0}');
 	export const unknowninclude = localize('diagnostic.unknowninclude', '\'{0}\' invalid include file format');
 	export const unknownoperatoruse = localize('diagnostic.unknownoperatoruse', 'Unknown operator use');
 	export const unknowntoken = localize('diagnostic.unknowntoken', 'Unknown token \'{0}\'');
