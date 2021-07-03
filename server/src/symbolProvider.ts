@@ -43,10 +43,10 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					} else
 						vars[_l] = info, result.push(info);
 				} else if (info.kind === SymbolKind.Variable) {
-					let kind = vars[_l].kind
-					if (vars[_l] !== glo[_l] && (<Variable>info).def && (kind === SymbolKind.Function || kind === SymbolKind.Class || kind === SymbolKind.Method)) {
-						doc.diagnostics.push({ message: samenameerr(vars[_l], info), range: info.selectionRange, severity: DiagnosticSeverity.Error });
-					}
+					// let kind = vars[_l].kind
+					// if (vars[_l] !== glo[_l] && (<Variable>info).def && (kind === SymbolKind.Function || kind === SymbolKind.Class || kind === SymbolKind.Method)) {
+						// doc.diagnostics.push({ message: samenameerr(vars[_l], info), range: info.selectionRange, severity: DiagnosticSeverity.Error });
+					// }
 				} else if (info !== vars[_l])
 					result.push(info), vars[_l] = info;
 				else if (info === gvar[_l])
@@ -99,6 +99,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 	}
 	function checksamename(doc: Lexer) {
 		let dec: any = {}, dd: Lexer, lbs: any = {};
+		if (doc.d)
+			return;
 		Object.keys(doc.labels).map(lb => lbs[lb] = true);
 		for (const k in ahkvars) {
 			let t = ahkvars[k];

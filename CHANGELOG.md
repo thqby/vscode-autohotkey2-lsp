@@ -1,3 +1,8 @@
+## 0.8.2
+- 诊断继承类的存在 [#19](https://github.com/thqby/vscode-autohotkey2-lsp/issues/19)
+- 更新类成员语法高亮 [#20](https://github.com/thqby/vscode-autohotkey2-lsp/issues/20)
+- 诊断catch语句格式错误和语法高亮 [#22](https://github.com/thqby/vscode-autohotkey2-lsp/issues/22)
+
 ## 0.8.1
 - 修复行末尾的%被识别为行延续
 - 修复部分对象字面量被识别为错误 [#18](https://github.com/thqby/vscode-autohotkey2-lsp/issues/18)
@@ -14,7 +19,7 @@
 - 修复h版#dllimport函数选择范围不正确, 并增加类型提示
 - 支持a136版的行延续
 - 修复一些代码格式化问题
-- 检测与内置类/函数的冲突
+- 诊断与内置类/函数的冲突
 
 ## 0.7.8
 - 同步a137

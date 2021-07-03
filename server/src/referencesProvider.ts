@@ -82,10 +82,10 @@ export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope
 			if (it.children)
 				findAllVar(it as FuncNode, name, gg, ranges, gg || it.kind === SymbolKind.Function ? c : undefined);
 		});
-		node.funccall?.map(it => {
-			if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
-				ranges.push(it.selectionRange);
-		});
+		// node.funccall?.map(it => {
+		// 	if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
+		// 		ranges.push(it.selectionRange);
+		// });
 	}
 	return ranges;
 }
@@ -107,10 +107,10 @@ export function findAllVar(node: FuncNode, name: string, global: boolean = false
 			if (it.children)
 				findAllVar(it as FuncNode, name, global, ranges, it.kind === SymbolKind.Function ? closure : global || undefined);
 		});
-		node.funccall?.map(it => {
-			if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
-				ranges.push(it.selectionRange);
-		});
+		// node.funccall?.map(it => {
+		// 	if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
+		// 		ranges.push(it.selectionRange);
+		// });
 	} else {
 		node.children?.map(it => {
 			if (it.children)

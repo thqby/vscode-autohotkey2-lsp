@@ -11,21 +11,21 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, txs: any = {};
 	let scopenode: DocumentSymbol | undefined, other = true, triggerKind = params.context?.triggerKind;
 	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], content = doc.buildContext(position, false);
-	let quote = '', char = '', _low = '', percent = false, linetext = content.linetext, triggerchar = linetext.charAt(content.range.start.character - 1);
+	let quote = '', char = '', _low = '', percent = false, lt = content.linetext, triggerchar = lt.charAt(content.range.start.character - 1);
 	let list = doc.relevance, cpitem: CompletionItem, temp: any, path: string, { line, character } = position;
 	let expg = new RegExp(content.text.match(/[^\w]/) ? content.text.replace(/(.)/g, '$1.*') : '(' + content.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	let istr = doc.instrorcomm(position);
 	if (istr === 1)
 		return;
 	for (let i = 0; i < position.character; i++) {
-		char = linetext.charAt(i);
+		char = lt.charAt(i);
 		if (quote === char) {
-			if (linetext.charAt(i - 1) === '`')
+			if (lt.charAt(i - 1) === '`')
 				continue;
 			else quote = '', percent = false;
 		} else if (char === '%') {
 			percent = !percent;
-		} else if (quote === '' && (char === '"' || char === "'") && (i === 0 || linetext.charAt(i - 1).match(/[([%,\s]/)))
+		} else if (quote === '' && (char === '"' || char === "'") && (i === 0 || lt.charAt(i - 1).match(/[([%,\s]/)))
 			quote = char;
 	}
 	if (quote || istr) {
@@ -35,7 +35,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	}
 	if (!percent && triggerchar === '.' && content.pre.match(/^\s*#include/i))
 		triggerchar = '';
-	if (temp = linetext.match(/^\s*((class\s+\S+\s+)?(extends)|class)\s/i)) {
+	if (temp = lt.match(/^\s*((class\s+(\w|[^\x00-\xff])+\s+)?(extends)|class)\s/i)) {
 		if (triggerchar === '.') {
 			if (temp[3]) {
 				searchNode(doc, doc.buildContext(position, true).text.replace(/\.[^.]*$/, ''), position, SymbolKind.Class)?.map(it => {
@@ -198,9 +198,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			return items;
 		default:
-			if (linetext.match(/^\s*#include/i)) {
-				let tt = linetext.replace(/^\s*#include(again)?\s+/i, '').replace(/\s*\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
-				let pre = linetext.substring(linetext.length - tt.length, position.character), xg = '\\', m: any, a_ = '';
+			if (lt.match(/^\s*#include/i)) {
+				let tt = lt.replace(/^\s*#include(again)?\s+/i, '').replace(/\s*\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
+				let pre = lt.substring(lt.length - tt.length, position.character), xg = '\\', m: any, a_ = '';
 				if (percent) {
 					completionItemCache.other.map(it => {
 						if (it.kind === CompletionItemKind.Variable && expg.test(it.label))
@@ -216,7 +216,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							paths = [temp];
 						else paths = [doc.scriptpath];
 						pre = pre.substring(1), lchar = lchar === '<' ? '>' : lchar;
-						if (linetext.substring(position.character).indexOf(lchar) !== -1)
+						if (lt.substring(position.character).indexOf(lchar) !== -1)
 							lchar = '';
 					}
 				} else if (pre.match(/\s+;/))
@@ -253,7 +253,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					}
 				}
 				return items;
-			} else if (temp = linetext.match(/(?<!\.)\b(goto|continue|break)\b(?!\s*:)(\s+|\(\s*('|")?)/i)) {
+			} else if (temp = lt.match(/(?<!\.)\b(goto|continue|break)\b(?!\s*:)(\s+|\(\s*('|")?)/i)) {
 				let t = temp[2].trim();
 				if (scopenode = doc.searchScopedNode(position))
 					scopenode.children?.map(it => {
@@ -279,7 +279,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (res) {
 					switch (res.name) {
 						case 'add':
-							if (res.index === 0 && linetext.charAt(res.pos.character - 1) === '.') {
+							if (res.index === 0 && lt.charAt(res.pos.character - 1) === '.') {
 								let c = doc.buildContext(res.pos, true), n = searchNode(doc, c.text, res.pos, SymbolKind.Method);
 								if (n && (<FuncNode>n[0].node).full?.match(/\(gui\)\s+add\(/i)) {
 									return ['Text', 'Edit', 'UpDown', 'Picture', 'Button', 'Checkbox', 'Radio', 'DropDownList', 'ComboBox', 'ListBox', 'ListView', 'TreeView', 'Link', 'Hotkey', 'DateTime', 'MonthCal', 'Slider', 'Progress', 'GroupBox', 'Tab', 'Tab2', 'Tab3', 'StatusBar', 'ActiveX', 'Custom'].map(name => {
@@ -384,7 +384,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				other = !percent;
 			if (scopenode = doc.searchScopedNode(position)) {
 				if (scopenode.kind === SymbolKind.Class) {
-					let its: CompletionItem[] = [], t = linetext.trim();
+					let its: CompletionItem[] = [], t = lt.trim();
 					if (t.match(/^\S*$/)) {
 						completionItemCache.other.map(it => {
 							if (it.label.match(/\b(static|class)\b/))
@@ -399,7 +399,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					} else if (t.match(/^(static\s+)?(\w|[^\x00-\xff])+(\(|$)/i))
 						return undefined;
 				} else if (scopenode.kind === SymbolKind.Property && scopenode.children)
-					return [{label: 'get', kind: CompletionItemKind.Function}, {label: 'set', kind: CompletionItemKind.Function}]
+					return [{ label: 'get', kind: CompletionItemKind.Function }, { label: 'set', kind: CompletionItemKind.Function }]
 			}
 			for (const n in ahkvars)
 				if (expg.test(n))

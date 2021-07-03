@@ -748,7 +748,7 @@ export class Lexer {
 								}
 							}
 							if (!tn && input.charAt(fc.offset - 1) !== '%')
-								_parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
+								addvariable(fc), _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
 						} else {
 							if (isstatic) { if (cmm.type !== '') comm = trimcomment(cmm.content); }
 							else if (n_newlines === 1) {
@@ -756,11 +756,13 @@ export class Lexer {
 								else if (cmm.type !== '') comm = trimcomment(cmm.content);
 							}
 							let bak = lk, restore = false, nn = 0, byref = false, rg: Range, par: DocumentSymbol[] = [];
-							lk = tk, tk = get_next_token(), next = false;
+							lk = tk, tk = get_token_ingore_comment(), next = false;
 							if (mode === 2 && lk.topofline && tk.content.match(/^(\[|=>|\{)$/)) {
 								let fc = lk;
 								next = true;
 								if (tk.content === '[') {
+									if (tk.topofline)
+										_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset);
 									let err = false, lasthasval = false, b: number;
 									loop:
 									while (nexttoken()) {
@@ -771,7 +773,7 @@ export class Lexer {
 													_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), tk.offset, 5, DiagnosticSeverity.Warning);
 													byref = true, tk = nk, next = false;
 													continue loop;
-												} else if ((lk.content === ',' || lk.content === '[') && (nk.content.match(/^(:=|,|\])$/))) {
+												} else if ((lk.content === ',' || lk.content === '[') && (nk.content.match(/^(:=|,|\]|\*)$/))) {
 													if (tk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.offset, tk.length);
 													tn = Variable.create(tk.content, SymbolKind.Variable, rg = makerange(b = tk.offset, tk.length), rg);
 													if (byref) (<Variable>tn).ref = true, (<Variable>tn).def = true, byref = false;
@@ -798,6 +800,11 @@ export class Lexer {
 															continue;
 														} else err = true;
 													} else {
+														if (nk.content === '*') {
+															if (is_next(']'))
+																(<Variable>tn).arr = true;
+															else _this.addDiagnostic(diagnostic.unexpected('*'), nk.offset);
+														}
 														if (lasthasval && !(<Variable>tn).arr)
 															_this.addDiagnostic(diagnostic.defaultvalmissing(tn.name), b, tn.name.length);
 														next = nk.content !== ']';
@@ -828,7 +835,7 @@ export class Lexer {
 									if (par.length === 0)
 										_this.addDiagnostic(diagnostic.propemptyparams(), fc.offset, lk.offset - fc.offset + 1);
 								}
-								let prop = DocumentSymbol.create(fc.content, comm, SymbolKind.Property, rg = makerange(fc.offset, fc.length), rg);
+								let prop = DocumentSymbol.create(fc.content, comm, SymbolKind.Property, rg = makerange(fc.offset, fc.length), Object.assign({}, rg));
 								(<FuncNode>prop).parent = _parent, (<FuncNode>prop).params = par;
 								(<Variable>prop).full = `(${classfullname.slice(0, -1)}) ${fc.content}` + (par.length ? `[${par.map((it: Variable) => {
 									return (it.ref ? '&' : '') + it.name + (it.defaultVal ? ' := ' + it.defaultVal : '');
@@ -906,8 +913,8 @@ export class Lexer {
 									_this.addFoldingRangePos(prop.range.start, prop.range.end, 'block');
 								} else if (tk.content === '=>') {
 									mode = 3;
-									let off = parser_pos, o: any = {}, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
-									mode = 2, tn = FuncNode.create('get', SymbolKind.Function, makerange(off, parser_pos - off), rg, <Variable[]>par), (<FuncNode>tn).returntypes = o;
+									let off = parser_pos, o: any = {}, tn: FuncNode, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
+									mode = 2, tn = FuncNode.create('get', SymbolKind.Function, makerange(off, parser_pos - off), Object.assign({}, rg), <Variable[]>par), (<FuncNode>tn).returntypes = o;
 									(<FuncNode>tn).parent = _parent, tn.children = [], sub = parseline(o), (<FuncNode>tn).funccall?.push(..._parent.funccall.splice(fcs));
 									if (lk.content === '=>')
 										_this.diagnostics.push({ message: diagnostic.invaliddefinition('function'), range: tn.selectionRange, severity: DiagnosticSeverity.Error });
@@ -950,7 +957,7 @@ export class Lexer {
 										if (restore) lk.topofline = false;
 										result.push(...sub);
 										if (input.charAt(fc.offset - 1) !== '%') {
-											_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+											addvariable(fc), _parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
 											if (tk.content === ')')
 												tn.range.end = document.positionAt(tk.offset + tk.length);
 										}
@@ -963,7 +970,7 @@ export class Lexer {
 												next = true, parsepair('(', ')');
 											} else sub = parseline(), result.push(...sub);
 											if (input.charAt(fc.offset - 1) !== '%') {
-												_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+												addvariable(fc), _parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
 												if (tk.content === ')')
 													tn.range.end = document.positionAt(tk.offset + tk.length);
 											}
@@ -1012,6 +1019,18 @@ export class Lexer {
 
 			function parse_reserved() {
 				let _low = tk.content.toLowerCase(), bak = lk, t = parser_pos, nk: Token | undefined;
+				if (mode === 2) {
+					nk = get_next_token();
+					next = false, parser_pos = tk.offset + tk.length, tk.type = 'TK_WORD';
+					if (nk.content.match(/^(:=|=>|\{)$/) || input.charAt(tk.offset + tk.length).match(/(\[|\()/)) {
+						return;
+					} else if (nk.content !== ':=' && (_low === 'class' || _low === 'static')) {
+						nk = undefined, next = true, tk.type = 'TK_RESERVED';
+					} else {
+						_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset);
+						return;
+					}
+				}
 				switch (_low) {
 					case 'class':
 						if (!tk.topofline || (mode & 1)) {
@@ -1084,9 +1103,10 @@ export class Lexer {
 								next = false;
 								break;
 							}
-							while (parser_pos < input_length && input.charAt(parser_pos).match(/( |\t)/)) parser_pos++;
+							// while (parser_pos < input_length && input.charAt(parser_pos).match(/( |\t)/)) parser_pos++;
 							if (nk) cmm = nk;
-							if (input.substr(parser_pos, 2).match(/^(\(|\[|\{|=>)/)) {
+							nk = get_token_ingore_comment(), parser_pos = tk.offset + tk.length;
+							if (nk.content.match(/^(\(|\[|\{|=>)/)) {
 								tk.topofline = true;
 							} else {
 								let sta: any[];
@@ -1201,14 +1221,39 @@ export class Lexer {
 							}
 						}
 						break;
+					case 'catch':
+						lk = nk = tk, tk = get_token_ingore_comment();
+						if (tk.topofline || (tk.type !== 'TK_WORD' && !tk.content.match(/^\w+$/)))
+							next = false;
+						else {
+							next = true;
+							if (tk.content.toLowerCase() !== 'as') {
+								if (tk.type !== 'TK_WORD')
+									_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+								else addvariable(tk);
+								lk = tk, tk = get_token_ingore_comment();
+							}
+							if (tk.content.toLowerCase() === 'as') {
+								lk = tk, tk = get_token_ingore_comment();
+								next = false;
+								if (tk.type !== 'TK_WORD' && !tk.content.match(/\w+/)) {
+									_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length);
+								} else if (tk.type !== 'TK_WORD')
+									_this.addDiagnostic(diagnostic.reservedworderr(nk.content), nk.offset), tk.type = 'TK_WORD';
+								else {
+									let t = get_token_ingore_comment();
+									parser_pos = tk.offset + tk.length;
+									if (!t.topofline && t.content !== '{')
+										_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length), next = false;
+									else if (addvariable(tk))
+										next = true, (<Variable>result[result.length - 1]).def = true;
+								}
+							} else if (!tk.topofline)
+								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset);
+						}
+						break;
 					default:
 						nk = get_token_ingore_comment();
-						if (mode === 2) {
-							next = false, parser_pos = tk.offset + tk.length, tk.type = 'TK_WORD';
-							if (nk.content !== ':=')
-								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset);
-							break;
-						}
 						if (nk.type === 'TK_EQUALS' || nk.content.match(/^([<>]=?|~=|&&|\|\||[.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) tk.type = 'TK_WORD', parser_pos = t, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 						else {
 							lk = tk, tk = nk, next = false;
@@ -1412,7 +1457,7 @@ export class Lexer {
 										let ptk = lk;
 										parsepair('(', ')');
 										if (input.charAt(ptk.offset - 1) !== '%') {
-											_parent.funccall.push(DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, makerange(ptk.offset, parser_pos - ptk.offset), makerange(ptk.offset, ptk.length)));
+											addvariable(ptk), _parent.funccall.push(DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, makerange(ptk.offset, parser_pos - ptk.offset), makerange(ptk.offset, ptk.length)));
 											tpexp += '.' + ptk.content + '()';
 										}
 										continue;
@@ -1448,7 +1493,7 @@ export class Lexer {
 									next = false, lk = n_newlines === 1 && cmm.type ? Object.assign({}, cmm) : tk, tk = nk;
 									if (fc) {
 										if (input.charAt(fc.offset - 1) !== '%')
-											tpexp += ' ' + fc.content + '()', _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
+											tpexp += ' ' + fc.content + '()', addvariable(fc), _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
 									} else {
 										let s = Object.keys(tpe).pop() || '';
 										if (input.charAt(quoteend) === '(') {
@@ -1864,7 +1909,7 @@ export class Lexer {
 									result.push(...sub), tpexp += ' #func';
 								} else {
 									if (input.charAt(fc.offset - 1) !== '%') {
-										_parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
+										addvariable(fc), _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
 										tpexp += ' ' + fc.content + '()';
 									}
 									next = false, lk = tk, tk = nk;
@@ -1880,7 +1925,7 @@ export class Lexer {
 							tk = get_next_token();
 							parsepair('(', ')');
 							if (input.charAt(ptk.offset - 1) !== '%') {
-								tpexp += '.' + ptk.content + '()';
+								tpexp += '.' + ptk.content + '()', addvariable(ptk);
 								_parent.funccall.push(DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, makerange(ptk.offset, parser_pos - ptk.offset), makerange(ptk.offset, ptk.length)));
 							}
 						} else
@@ -4063,20 +4108,24 @@ export class Lexer {
 				if (vars[n] === undefined)
 					vars[n] = ff.declaration[n];
 			p = ff.parent as FuncNode;
-			while (p && p.children && (p.kind === SymbolKind.Function || p.kind === SymbolKind.Method)) {
-				for (const n in p.local)
-					if (vars[n] === undefined)
-						vars[n] = p.local[n];
-				for (const n in p.global)
-					if (vars[n] === undefined)
-						vars[n] = null;
-				for (const n in p.declaration)
-					if (vars[n] === undefined)
-						vars[n] = p.declaration[n];
-				scopenode = p, p = p.parent as FuncNode;
+			if (p && p.kind === SymbolKind.Class && ff.kind === SymbolKind.Function) {
+				scopenode = p;
+			} else {
+				while (p && p.children && (p.kind === SymbolKind.Function || p.kind === SymbolKind.Method)) {
+					for (const n in p.local)
+						if (vars[n] === undefined)
+							vars[n] = p.local[n];
+					for (const n in p.global)
+						if (vars[n] === undefined)
+							vars[n] = null;
+					for (const n in p.declaration)
+						if (vars[n] === undefined)
+							vars[n] = p.declaration[n];
+					scopenode = p, p = p.parent as FuncNode;
+				}
+				if (vars[_l = scopenode.name.toLowerCase()] === undefined)
+					vars[_l] = scopenode;
 			}
-			if (vars[_l = scopenode.name.toLowerCase()] === undefined)
-				vars[_l] = scopenode;
 			if (scopenode.kind === SymbolKind.Method) {
 				if ((<FuncNode>scopenode).parent)
 					scopenode = (<FuncNode>scopenode).parent;
@@ -4263,7 +4312,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 		if ((l = (<ClassNode>node).extends?.toLowerCase()) && l !== (<ClassNode>node).full.toLowerCase()) {
 			let p = l.split('.'), cl: any, mems: DocumentSymbol[], nd: DocumentSymbol | undefined, dc: Lexer;
 			cl = searchNode(doc, p[0], Position.create(0, 0), SymbolKind.Class);
-			if (cl && cl.length && cl[0].node.kind === SymbolKind.Class ) {
+			if (cl && cl.length && cl[0].node.kind === SymbolKind.Class) {
 				nd = cl[0].node, dc = lexers[cl[0].uri || doc.uri];
 				(<any>nd).uri = cl[0].uri;
 				while (nd) {

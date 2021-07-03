@@ -1255,8 +1255,17 @@ IsObject(Value) => Number
 
 /**
  * 如果变量 Value 已经被赋值, 则 IsSet 为 True.
+ *
+ * @param Var 一个直接变量引用. 例如: `IsSet(MyVar)`.
  */
-IsSet(&Value) => Number
+IsSet(&Var) => Number
+
+/**
+ * 如果变量 Value 已经被赋值, 则 IsSet 为 True.
+ *
+ * @param Ref 对变量的间接引用. 通常不会像在 `IsSetRef(&MyVar)` 中那样直接传递, 而是间接传递, 比如在解引用一个 包含 VarRef 的参数之前检查它.
+ */
+IsSetRef(Ref) => Number
 
 /**
  * 如果 Value 是字符串, 可以为空字符串或仅包含下列空白字符: 空格(A_Space 或 `s), 制表符(A_Tab 或 `t), 换行符(`n), 回车符(`r), 垂直制表符(`v) 和 进纸符(`f), 则为 True.
