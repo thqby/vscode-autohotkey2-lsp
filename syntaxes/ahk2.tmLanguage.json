@@ -819,8 +819,26 @@
       ]
     },
     "default_classes": {
-      "name": "support.class.ahk2",
-      "match": "(?<!\\.)\\b(?i:any|array|boundfunc|buffer|class|clipboardall|closure|comobjarray|comobject|comvalue|comvalueref|enumerator|error|file|float|func|gui|indexerror|inputhook|integer|keyerror|map|membererror|memoryerror|menu|menubar|methoderror|number|object|oserror|primitive|propertyerror|regexmatchinfo|string|targeterror|timeouterror|typeerror|valueerror|zerodivisionerror)\\b"
+      "patterns": [
+        {
+          "name": "support.class.ahk2",
+          "match": "(?<!\\.)\\b(?i:Any|Array|BoundFunc|Buffer|Class|ClipboardAll|Closure|ComObjArray|ComObject|ComValue|ComValueRef|Enumerator|Error|File|Float|Func|Gui(?!\\.)|IndexError|InputHook|Integer|KeyError|Map|MemberError|MemoryError|Menu|MenuBar|MethodError|Number|Object|OSError|Primitive|PropertyError|RegExMatchInfo|String|TargetError|TimeoutError|TypeError|ValueError|VarRef|ZeroDivisionError)\\b"
+        },
+        {
+          "match": "(?<!\\.)\\b(?i:(Gui)\\b(\\.)\\b(ActiveX|Button|CheckBox|ComboBox|Control|Custom|DateTime|DDL|Edit|GroupBox|Hotkey|Link|List|ListBox|ListView|MonthCal|Pic|Progress|Radio|Slider|StatusBar|Tab|Text|TreeView|UpDown))\\b",
+          "captures": {
+            "1": {
+              "name": "support.class.ahk2"
+            },
+            "2": {
+              "name": "punctuation.accessor.ahk2"
+            },
+            "3": {
+              "name": "support.class.guicontrol.ahk2"
+            }
+          }
+        }
+      ]
     },
     "default_statement": {
       "name": "meta.conditional.case.ahk2",
