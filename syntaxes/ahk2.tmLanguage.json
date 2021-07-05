@@ -1344,7 +1344,7 @@
           ]
         },
         {
-          "match": "^\\s*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|hotkeymodifiertimeout|inputlevel|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|menumaskkey|notrayicon|singleinstance|suspendexempt|usehook|warn|warncontinuableexception|winactivateforce))\\b",
+          "match": "^\\s*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|inputlevel|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|notrayicon|singleinstance|suspendexempt|usehook|warn|warncontinuableexception|winactivateforce))\\b",
           "captures": {
             "1": {
               "name": "keyword.control.directive.ahk2"

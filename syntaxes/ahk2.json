@@ -71,11 +71,6 @@
 			"prefix": "#MaxThreadsPerHotkey"
 		},
 		{
-			"body": "#MenuMaskKey ",
-			"description": "更改用来掩饰(屏蔽) Win 或 Alt 键松开事件的按键.",
-			"prefix": "#MenuMaskKey"
-		},
-		{
 			"body": "#NoTrayIcon",
 			"description": "禁止显示托盘图标.",
 			"prefix": "#NoTrayIcon"
