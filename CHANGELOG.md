@@ -1,3 +1,6 @@
+## 0.8.3
+- 更新高亮文件 [#24](https://github.com/thqby/vscode-autohotkey2-lsp/issues/24)
+
 ## 0.8.2
 - 诊断继承类的存在 [#19](https://github.com/thqby/vscode-autohotkey2-lsp/issues/19)
 - 更新类成员语法高亮 [#20](https://github.com/thqby/vscode-autohotkey2-lsp/issues/20)

@@ -40,26 +40,26 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 作用域范围内的变量、函数名批量重命名.
 
-![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/rename.gif)
+![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/rename.gif)
 ### 错误诊断
 
 简单语法错误诊断.
 
-![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/diagnostics.png)
+![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/diagnostics.png)
 
 ### 智能感知
 
 支持对作用域范围内的变量、函数、参数、类名、方法名智能补全(简单的类型推导)，支持对include文件和函数库补全.
 
-![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/snippet.png)
+![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.png)
 
-![snippet2](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/snippet.gif)
+![snippet2](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.gif)
 
 ### 智能提示
 
 支持对函数、方法参数的智能提示.
 
-![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/signature.gif)
+![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/signature.gif)
 
 ### 大纲
 
@@ -70,26 +70,26 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 ### 代码标记
 
 用法: 在注释代码块中添加`;;`或`; TODO `  
-![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeSymbol.png)
+![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeSymbol.png)
 
 ### 颜色提示
 
 计算并解析文档中的颜色，并提供颜色选择器更直观地修改颜色数据。
 
-![documentcolor](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/documentcolor.png)
+![documentcolor](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/documentcolor.png)
 
 ### 悬停提示  
 
 支持对作用域范围内变量、函数、全局类、标签的悬停提示并显示相关备注.  
 用法: 移动鼠标到相关符号上.  
-![hover](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/hover.png)
+![hover](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/hover.png)
 
 ### 转到定义
 
 1. 支持跳转到作用域范围内变量、函数、全局类、标签的声明位置.  
 2. 用法: 按住 ctrl 然后移动鼠标到代码处点击.  
 
-![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/gotoDefinition.png)
+![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/gotoDefinition.png)
 
 ### 查找所有引用
 
@@ -103,7 +103,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 - 或按 `Shift+Alt+F`.  
 - 支持粘贴或键入函数或类的`}`时自动格式化。(需要开启`editor.format OnPaste`或`editor.format OnType`)  
 
-![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeFormat.gif)
+![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeFormat.gif)
 
 ### 自定义折叠
 
@@ -171,27 +171,27 @@ AutoHotKey V2 Language support for VS Code, Function realization based on v2 syn
 
 Rename variables and function names in the scope in batches.
 
-![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/rename.gif)
+![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/rename.gif)
 
 ### Diagnostics
 
 Simple syntax error diagnosis.
 
-![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/diagnostics2.png)
+![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/diagnostics2.png)
 
 ### IntelliSense
 
 Supports intelligent completion of variables, functions, parameters, class names, and method names within the scope (by simple type deduction), and supports the completion of include files and function libraries.
 
-![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/snippet.png)
+![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.png)
 
-![snippet2](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/snippet.gif)
+![snippet2](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.gif)
 
 ### Signature
 
 Support for intelligent prompts for function parameters.
 
-![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/signature.gif)
+![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/signature.gif)
 
 ### Document Symbol
 
@@ -202,26 +202,26 @@ Support for intelligent prompts for function parameters.
 ### Blocks
 
 usage: Add `;;` or `; TODO ` to the comment code block.  
-![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeSymbol.png)
+![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeSymbol.png)
 
 ### Document Color
 
 Compute and resolve colors inside a document to provide color picker in editor.
 
-![documentcolor](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/documentcolor.png)
+![documentcolor](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/documentcolor.png)
 
 ### Hover  
 
 Supports hover prompts and comments for scoped variables, functions, global classes, and labels.  
 usage: Move the mouse over the symbol.  
-![hover](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/hover.png)
+![hover](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/hover.png)
 
 ### Goto Definition
 
 1. Support for jumping to the declaration location of scoped variables, functions, global classes, and labels.  
 2. usage: Press ctrl Then move the mouse over to the code and click.  
 
-![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/gotoDefinition.png)
+![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/gotoDefinition.png)
 
 ### Find All References
 
@@ -235,7 +235,7 @@ usage:
 - Press `Shift+Alt+F`.  
 - Support automatic formatting when pasting or typing `}` of a function or class. (`editor.formatOnPaste` or `editor.formatOnType` needs to be enabled)
 
-![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/master/pic/codeFormat.gif)
+![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeFormat.gif)
 
 ### Custom folding
 
