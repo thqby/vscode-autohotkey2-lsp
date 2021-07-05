@@ -664,7 +664,7 @@ export class Lexer {
 					case 'TK_WORD':
 						if (input.charAt(parser_pos) === '%')
 							break;
-						let comm = '', vr: Variable | undefined, predot = (input.charAt(tk.offset - 1) === '.'), isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
+						let comm = '', pr: Variable | undefined, vr: Variable | undefined, predot = (input.charAt(tk.offset - 1) === '.'), isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
 						if (h && tk.topofline && tk.content.toLowerCase() === 'macro') {
 							let t = input.indexOf('\n', parser_pos);
 							t = t === -1 ? input_length : t;
@@ -686,7 +686,7 @@ export class Lexer {
 							if (nk.content === '=>') {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
 								_this.diagnostics.push(...tds);
-								let storemode = mode;
+								let storemode = mode, fcs = _parent.funccall?.length;
 								mode = mode | 1;
 								let tn = FuncNode.create(fc.content, storemode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par, undefined, isstatic);
 								tn.detail = comm || tn.detail, result.push(tn), mode = storemode;
@@ -699,6 +699,7 @@ export class Lexer {
 								if (lk.content === '=>')
 									_this.addDiagnostic(diagnostic.invaliddefinition('function'), fc.offset, fc.length);
 								tn.range.end = document.positionAt(lk.offset + lk.length), tn.closure = true, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
+								tn.funccall?.push(..._parent.funccall.splice(fcs));
 								tn.returntypes = o, tn.static = isstatic, tn.children = [], adddeclaration(tn);
 								for (const t in o)
 									o[t] = tn.range.end;
@@ -977,9 +978,9 @@ export class Lexer {
 											break;
 										}
 									} else if (predot)
-										addprop(lk), maybeclassprop(lk);
+										addprop(lk), pr = vr = maybeclassprop(lk);
 								} else if (predot)
-									addprop(lk), maybeclassprop(lk);
+									addprop(lk), pr = vr = maybeclassprop(lk);
 								if (tk.type === 'TK_EQUALS') {
 									next = true;
 									let o: any = {}, equ = tk.content, ep = parseexp(false, o);
@@ -987,7 +988,8 @@ export class Lexer {
 									if (vr) {
 										vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
-										vr.def = true;
+										if (!pr)
+											vr.def = true;
 										let tt = vr.returntypes;
 										for (const t in tt)
 											tt[t] = vr.range.end;
@@ -1037,7 +1039,9 @@ export class Lexer {
 							next = false, tk.type = 'TK_WORD'; break;
 						}
 						let cl: Token, ex: string = '', sv = new Map(), rg: Range, beginpos = tk.offset, comm = '';
-						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) comm = trimcomment(lk.content), beginpos = lk.offset;
+						if (n_newlines === 1 && (cmm.type === 'TK_COMMENT' || cmm.type === 'TK_BLOCK_COMMENT'))
+							comm = trimcomment(cmm.content), beginpos = cmm.offset;
+						else cmm.type = '';
 						nexttoken();
 						if (tk.type === 'TK_WORD') {
 							if (mode & 1) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset);
@@ -2008,9 +2012,11 @@ export class Lexer {
 						if (p && p.kind === SymbolKind.Class) {
 							let t = Variable.create(tk.content, SymbolKind.Property, rg = makerange(tk.offset, tk.length), rg);
 							t.static = s, p.cache.push(t);
+							return t;
 						}
 					}
 				}
+				return undefined;
 			}
 
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
@@ -3743,11 +3749,15 @@ export class Lexer {
 			if (input_wanted_newline) {
 				print_newline();
 			}
-			//  else {
-			//     trim_output(true);
-			// }
-			print_token();
-			// print_newline(false, true);
+			if (token_type === 'TK_COMMENT' && token_text.includes('\n')) {
+				let c = token_text.split('\n');
+				print_token(c.shift()?.trim() || '');
+				c.map(s => {
+					print_newline(false, true);
+					print_token(s.trim());
+				});
+			} else
+				print_token();
 		}
 
 		function handle_dot() {
@@ -3916,7 +3926,7 @@ export class Lexer {
 	public buildContext(position: Position, full: boolean = true) {
 		let word = this.getWordAtPosition(position, full), linetext = '', t = '', pre = '', suf = '', dot = false;
 		let kind: SymbolKind = SymbolKind.Variable, i = 0, j = 0, c = 0, l = 0, text = '', document = this.document;
-		linetext = this.document.getText(Range.create(word.range.start.line, 0, word.range.end.line + 1, 0));
+		linetext = this.document.getText(Range.create(word.range.start.line, 0, word.range.end.line + 1, 0)).replace(/\r?\n/, '');
 		if (full && (linetext.match(/^\./) || word.text.match(/^\./))) {
 			i = word.range.start.character;
 			l = word.range.start.line, text = word.text;
@@ -4633,7 +4643,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 	}
 }
 
-export function searchNode(doc: Lexer, name: string, pos: Position, kind: SymbolKind | SymbolKind[], isstatic = true): [{ node: DocumentSymbol, uri: string, ref?: boolean }] | undefined {
+export function searchNode(doc: Lexer, name: string, pos: Position | undefined, kind: SymbolKind | SymbolKind[], isstatic = true): [{ node: DocumentSymbol, uri: string, ref?: boolean }] | undefined {
 	let node: DocumentSymbol | undefined, res: { node: DocumentSymbol, uri: string } | undefined | null, t: any, uri = doc.uri;
 	if (kind === SymbolKind.Method || kind === SymbolKind.Property || name.indexOf('.') !== -1) {
 		let p = name.split('.'), nodes = searchNode(doc, p[0], pos, SymbolKind.Class), i = 0, ps = 0;
@@ -4666,6 +4676,23 @@ export function searchNode(doc: Lexer, name: string, pos: Position, kind: Symbol
 						continue;
 					} else if (ahkvars['func'])
 						n = ahkvars['func'], p[i - 1] = '@' + p[i - 1].replace(/^[@#]/, '');
+				} else if (n.kind === SymbolKind.Property || n.kind === SymbolKind.Variable) {
+					if (t = (<Variable>n).returntypes) {
+						let tps: any = {}, r = Object.keys(t).pop(), rs: any = [];
+						if (r) {
+							detectExpType(lexers[(<any>n).uri || uri], r, Position.is(t[r]) ? t[r] : n.selectionRange.end, tps);
+							let nm = p.slice(i).join('.');
+							for (const tp in tps) {
+								searchNode(lexers[uri], tp + '.' + nm, undefined, kind)?.map(it => {
+									if (!rs.map((i: any) => i.node).includes(it.node))
+										rs.push(it);
+								});
+							}
+							if (rs.length)
+								return rs;
+							else return undefined;
+						}
+					}
 				} else if (n.kind === SymbolKind.Object && (<Variable>n).static && n.name.toLowerCase() === 'prototype') {
 					p[i - 1] = '@prototype';
 					if (cc)

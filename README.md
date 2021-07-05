@@ -3,7 +3,7 @@
 [![installs](https://vsmarketplacebadge.apphb.com/installs/thqby.vscode-autohotkey2-lsp.svg?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
 [![version](https://vsmarketplacebadge.apphb.com/version/thqby.vscode-autohotkey2-lsp.svg?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
 
-Turn down the pages of the [English](#language-support-for-autohotkey2-for-visual-studio-code) version of README
+Turn down the pages of the [English](#autohotkey2-language-support) version of README
 
 ## repositories:
 

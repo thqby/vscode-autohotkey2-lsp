@@ -100,16 +100,6 @@
       "include": "#parens"
     },
     {
-      "name": "meta.function.ahk2",
-      "begin": "(?<=(^\\s*(?i:static\\s+)?))(?=[[:alpha:]_][[:alnum:]_]*\\()",
-      "end": "(?<=\\))",
-      "patterns": [
-        {
-          "include": "#function-innards"
-        }
-      ]
-    },
-    {
       "include": "#ahk_function_call"
     },
     {
@@ -245,6 +235,9 @@
     },
     "block_innards": {
       "patterns": [
+        {
+          "include": "#object_property"
+        },
         {
           "match": "\\b(?<!\\.)(?i:this|super)\\b",
           "name": "variable.language.this.ahk2"
@@ -418,6 +411,9 @@
                   "name": "meta.block.method.body.ahk2",
                   "patterns": [
                     {
+                      "include": "#object_property"
+                    },
+                    {
                       "match": "(?<!\\.)(?i:this|super)\\b",
                       "name": "variable.language.this.ahk2"
                     },
@@ -437,6 +433,9 @@
                   "name": "meta.block.method.body.ahk2",
                   "patterns": [
                     {
+                      "include": "#object_property"
+                    },
+                    {
                       "match": "(?<!\\.)(?i:this|super)\\b",
                       "name": "variable.language.this.ahk2"
                     },
@@ -452,6 +451,9 @@
                   "include": "#comments"
                 }
               ]
+            },
+            {
+              "include": "#object_property"
             },
             {
               "match": "(?<!\\.)(?i:this|super)\\b",
@@ -542,6 +544,9 @@
                           "end": "(?=})",
                           "patterns": [
                             {
+                              "include": "#object_property"
+                            },
+                            {
                               "match": "(?<!\\.)(?i:this|super)\\b",
                               "name": "variable.language.this.ahk2"
                             },
@@ -604,6 +609,9 @@
                           "end": "(?=})",
                           "patterns": [
                             {
+                              "include": "#object_property"
+                            },
+                            {
                               "match": "(?<!\\.)(?i:this|super)\\b",
                               "name": "variable.language.this.ahk2"
                             },
@@ -621,6 +629,9 @@
                           },
                           "end": "(?=\\n)",
                           "patterns": [
+                            {
+                              "include": "#object_property"
+                            },
                             {
                               "match": "(?<!\\.)(?i:this|super)\\b",
                               "name": "variable.language.this.ahk2"
@@ -1570,6 +1581,14 @@
               "name": "string.quoted.ahk2"
             }
           ]
+        }
+      ]
+    },
+    "object_property": {
+      "patterns": [
+        {
+          "match": "(?<=[,{]\\s*)(\\w+)(?=\\s*:)",
+          "name": "variable.property.ahk2"
         }
       ]
     },

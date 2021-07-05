@@ -7,7 +7,7 @@ import { completionitem } from './localize';
 import { ahkvars, completionItemCache, dllcalltpe, extsettings, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
-	if (token.isCancellationRequested) return undefined;
+	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
 	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, txs: any = {};
 	let scopenode: DocumentSymbol | undefined, other = true, triggerKind = params.context?.triggerKind;
 	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], content = doc.buildContext(position, false);
@@ -74,7 +74,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			return items;
 		case '.':
 			let c = doc.buildContext(position, true);
-			if (c.text.match(/\d+\.$/) || c.linetext.match(/\s\.$/))
+			if (c.text.match(/\b\d+\.$/) || c.linetext.match(/\s\.$/))
 				return;
 			content.pre = c.text.slice(0, content.text === '' && content.pre.match(/\.$/) ? -1 : -content.text.length);
 			content.text = c.text, content.kind = c.kind, content.linetext = c.linetext;;
@@ -395,6 +395,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								its.push(t);
 							}
 						})
+						if (position.line === scopenode.range.end.line && position.character > scopenode.range.end.character)
+							return undefined;
 						return its;
 					} else if (t.match(/^(static\s+)?(\w|[^\x00-\xff])+(\(|$)/i))
 						return undefined;
