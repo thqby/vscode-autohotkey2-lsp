@@ -38,7 +38,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	if (temp = lt.match(/^\s*((class\s+(\w|[^\x00-\xff])+\s+)?(extends)|class)\s/i)) {
 		if (triggerchar === '.') {
 			if (temp[3]) {
-				searchNode(doc, doc.buildContext(position, true).text.replace(/\.[^.]*$/, ''), position, SymbolKind.Class)?.map(it => {
+				searchNode(doc, doc.buildContext(position, true).text.replace(/\.[^.]*$/, '').toLowerCase(), position, SymbolKind.Class)?.map(it => {
 					getClassMembers(doc, it.node, true).map(it => {
 						if (it.kind === SymbolKind.Class && !vars[_low = it.name.toLowerCase()] && expg.test(_low))
 							items.push(convertNodeCompletion(it)), vars[_low] = true;

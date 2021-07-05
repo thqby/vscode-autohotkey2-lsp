@@ -4252,6 +4252,8 @@ export function parseinclude(include: { [uri: string]: { path: string, raw: stri
 }
 
 export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boolean = true) {
+	if (node.kind !== SymbolKind.Class)
+		return [];
 	let v: any = {}, l = '', mems = getmems(doc, node, staticmem);
 	if (staticmem && v['call'].def !== false) {
 		for (const i in mems)
