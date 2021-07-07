@@ -17,7 +17,7 @@ import {
 } from 'vscode-languageserver-textdocument';
 import { SemanticTokensBuilder } from 'vscode-languageserver/lib/sematicTokens.proposed';
 import { URI } from 'vscode-uri';
-import { builtin_variable } from './constants';
+import { builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
 import { ahkvars, isahk2_h, lexers, libdirs, openFile, pathenv } from './server';
 
@@ -2022,8 +2022,8 @@ export class Lexer {
 
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
 				let _low = token.content.toLowerCase();
-				if (token.ignore || (mode !== 2 && (builtin_variable.includes(_low) || (classfullname !== '' && ['this', 'super'].includes(_low))))) return false;
-				if (token.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(token.content), token.offset, token.length);
+				if (token.ignore || (mode !== 2 && ((classfullname !== '' && ['this', 'super'].includes(_low)) || builtin_variable.includes(_low) || (h && builtin_variable_h.includes(_low))))) return false;
+				if (_low.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(token.content), token.offset, token.length);
 				let rg = makerange(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg, rg);
 				if (md === 2) {
 					tn.kind = SymbolKind.Property;
@@ -2031,7 +2031,8 @@ export class Lexer {
 					if (classfullname) tn.full = `(${classfullname.slice(0, -1)}) ${tn.name}`;
 					tn.def = true;
 				}
-				if (p) p.push(tn); else result.push(tn); return true;
+				if (p) p.push(tn); else result.push(tn);
+				return true;
 			}
 
 			function addprop(tk: Token) {
