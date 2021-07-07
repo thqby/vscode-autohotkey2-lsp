@@ -821,11 +821,12 @@ export class Lexer {
 												if (tk.content === '[') nn++;
 											default:
 												if (tk.content === '&' && (lk.content === ',' || lk.content === '[')) {
-													lk = tk, tk = get_next_token(), next = false;
-													if (tk.type === 'TK_WORD') {
-														byref = true;
+													nk = get_next_token(), next = false;
+													if (nk.type === 'TK_WORD') {
+														byref = true, tk = nk;
 														break;
-													}
+													} else
+														lk = tk, tk = nk;
 												}
 												err = true;
 												break;

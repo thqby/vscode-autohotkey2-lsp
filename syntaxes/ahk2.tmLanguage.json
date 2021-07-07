@@ -299,7 +299,7 @@
           "name": "meta.block.class.body.ahk2",
           "patterns": [
             {
-              "match": "^\\s*(?i:static)(?=\\s+\\w+)",
+              "match": "(?<=^\\s*)(?i:static)(?=\\s+\\w)",
               "name": "storage.modifier.ahk2"
             },
             {
@@ -323,7 +323,7 @@
                   "name": "entity.name.function.method.ahk2"
                 }
               },
-              "end": "(?<=^\\s*)(})|\\n",
+              "end": "(?<=^\\s*)(})|(?=^\\s*\\w)",
               "endCaptures": {
                 "1": {
                   "name": "punctuation.definition.block.method.end.ahk2"
@@ -408,9 +408,9 @@
                 }
               },
               "name": "meta.block.property.ahk2",
-              "end": "}",
+              "end": "(?<=^\\s*)(})|(?=^\\s*\\w)",
               "endCaptures": {
-                "0": {
+                "1": {
                   "name": "punctuation.definition.block.property.end.ahk2"
                 }
               },
@@ -459,7 +459,7 @@
                           "name": "storage.type.setter.ahk2"
                         }
                       },
-                      "end": "(?<=^\\s*)(})|\\n",
+                      "end": "(?<=^\\s*)(})|(?=^\\s*\\w)",
                       "endCaptures": {
                         "1": {
                           "name": "punctuation.definition.block.property.setter.end.ahk2"
@@ -517,7 +517,7 @@
                           "name": "storage.type.getter.ahk2"
                         }
                       },
-                      "end": "(?<=^\\s*)(})|\\n",
+                      "end": "(?<=^\\s*)(})|(?=^\\s*\\w)",
                       "endCaptures": {
                         "1": {
                           "name": "punctuation.definition.block.property.getter.end.ahk2"
@@ -567,6 +567,27 @@
                           ]
                         }
                       ]
+                    },
+                    {
+                      "include": "$base"
+                    }
+                  ]
+                },
+                {
+                  "begin": "=>",
+                  "beginCaptures": {
+                    "0": {
+                      "name": "storage.type.function.arrow.ahk2"
+                    }
+                  },
+                  "name": "meta.block.property.getter.body.ahk2",
+                  "end": "(?=\\n)",
+                  "patterns": [
+                    {
+                      "include": "#variable_this"
+                    },
+                    {
+                      "include": "#line_continue"
                     },
                     {
                       "include": "$base"
@@ -900,7 +921,7 @@
               "name": "punctuation.definition.colon"
             }
           },
-          "end": "(?<=^\\s*)(})|\\n",
+          "end": "(?<=^\\s*)(})|(?<=::(;|\\s*[^;\\s])[^\\n]*)\\n|(?<=[\\w})\\]]\\s*)\\n",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.block.hotstring.end.ahk2"
