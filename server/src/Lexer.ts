@@ -648,6 +648,9 @@ export class Lexer {
 					case 'TK_UNKNOWN':
 						_this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length);
 						break;
+					case 'TK_EQUALS':
+						result.push(...parseexp());
+						break;
 					case 'TK_DOT':
 						if (topcontinue && lk.type !== 'TK_WORD')
 							topcontinue = false;
