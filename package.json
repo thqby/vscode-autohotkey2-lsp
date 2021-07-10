@@ -85,6 +85,12 @@
 					"default": false,
 					"description": "%ahk2.autolibinclude%"
 				},
+				"AutoHotkey2.CompilerCMD": {
+					"scope": "window",
+					"type": "string",
+					"default": "/compress 0",
+					"description": "%ahk2.compilercmd%"
+				},
 				"AutoHotkey2.DefaultDebugger": {
 					"scope": "window",
 					"type": "string",

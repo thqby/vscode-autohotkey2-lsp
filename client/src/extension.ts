@@ -172,8 +172,9 @@ async function stopRunningScript(wait = false) {
 }
 
 async function compileScript() {
-	const editor = window.activeTextEditor, executePath = workspace.getConfiguration('AutoHotkey2').get('Path');
-	let compilePath = executePath + '';
+	const editor = window.activeTextEditor, ops = workspace.getConfiguration('AutoHotkey2');
+	let executePath = ops.get('Path') + '', cmdop = ops.get('CompileCMD') + '';
+	let cmd = '', compilePath = executePath;
 	if (!editor) return;
 	compilePath = resolve(compilePath, '..\\Compiler\\Ahk2Exe.exe')
 	if (!existsSync(compilePath)) {
@@ -194,7 +195,17 @@ async function compileScript() {
 		window.showErrorMessage(e.message);
 		return;
 	}
-	if (child_process.exec(`"${compilePath}" /in "${currentPath}" /out "${exePath}" /compress 0`, { cwd: resolve(currentPath, '..') })) {
+	if (cmdop.match(/\bahk2exe\w*\.exe/i)) {
+		cmd = cmdop + ' /in ' + currentPath;
+		if (!cmd.toLowerCase().includes(' /out '))
+			cmd += ' /out ' + exePath;
+	} else {
+		cmd = `"${compilePath}" /in "${currentPath}" `;
+		if (!cmdop.toLowerCase().includes(' /out '))
+			cmd += '/out ' + exePath;
+		cmd += ' ' + cmdop;
+	}
+	if (child_process.exec(cmd, { cwd: resolve(currentPath, '..') })) {
 		let start = new Date().getTime();
 		let timer = setInterval(() => {
 			let end = new Date().getTime();

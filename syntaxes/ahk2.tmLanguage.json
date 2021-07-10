@@ -299,6 +299,9 @@
           "name": "meta.block.class.body.ahk2",
           "patterns": [
             {
+              "include": "#comments"
+            },
+            {
               "match": "(?<=^\\s*)(?i:static)(?=\\s+\\w)",
               "name": "storage.modifier.ahk2"
             },

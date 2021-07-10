@@ -1831,7 +1831,7 @@ SendText(Keys) => void
  * 如果 Period 为 0, 定时器被标记为删除. 如果由这个定时器启动的线程还在运行, 那么在线程结束后, 定时器就会被删除(除非它被重新启用); 否则, 它会被立即删除. 在任何情况下, 定时器之前的 Period 和 Priority 都不会被保留.
  * @param Priority 这个可选参数是一个介于 -2147483648 和 2147483647 之间的整数(或为表达式) 来表示计时器的优先级.
  */
-SetTimer(Callback, Period := 250, Priority := 0) => void
+SetTimer([Callback, Period := 250, Priority := 0]) => void
 
 /*
  * 返回 Number 的正弦.
@@ -2383,8 +2383,8 @@ class Any {
 
 class Array extends Object {
 	/**
-	* 数组对象包含值的列表或序列.
-	*/
+	 * 数组对象包含值的列表或序列.
+	 */
 	__New(Values*) => Array
 	/**
 	 * 返回对象的一个浅拷贝.
@@ -2437,12 +2437,12 @@ class BoundFunc extends Func {
 
 class Buffer extends Object {
 	/**
-	* 分配一个内存块,并将其返回到缓冲区对象中.
-	* @param ByteCount 要分配的字节数. 对应于 Buffer.Size.
-	* @param FillByte 指定一个介于 0 到 255 之间的数字, 以将缓冲中的每个字节设置为该数字.
-	* 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
-	* 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
-	*/
+	 * 分配一个内存块,并将其返回到缓冲区对象中.
+	 * @param ByteCount 要分配的字节数. 对应于 Buffer.Size.
+	 * @param FillByte 指定一个介于 0 到 255 之间的数字, 以将缓冲中的每个字节设置为该数字.
+	 * 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
+	 * 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
+	 */
 	__New(ByteCount [, FillByte]) => Buffer
 
 	/**
@@ -2470,8 +2470,8 @@ class Class extends Object {
 
 class ClipboardAll extends Buffer {
 	/**
-	* 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
-	*/
+	 * 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
+	 */
 	__New([Data, Size]) => Buffer
 }
 
@@ -2480,11 +2480,11 @@ class Closure extends Func {
 
 class ComObjArray extends ComValue {
 	/**
-	* 创建用于 COM 的安全数组.
-	* @param VarType 数组的基类型(数组中每个元素的 VARTYPE). VARTYPE 被限制为变体类型的子集.
-	* 不能设置为 VT_ARRAY 或 VT_BYREF 标志. VT_EMPTY 和 VT_NULL 不是数组的有效基类型. 其他所有类型是合法的. 
-	* @param Counts* 每个维度的大小. 支持最多 8 维的数组.
-	*/
+	 * 创建用于 COM 的安全数组.
+	 * @param VarType 数组的基类型(数组中每个元素的 VARTYPE). VARTYPE 被限制为变体类型的子集.
+	 * 不能设置为 VT_ARRAY 或 VT_BYREF 标志. VT_EMPTY 和 VT_NULL 不是数组的有效基类型. 其他所有类型是合法的. 
+	 * @param Counts* 每个维度的大小. 支持最多 8 维的数组.
+	 */
 	__New(VarType, Counts*) => ComObjArray
 
 	MaxIndex(n) => Number
@@ -2496,20 +2496,20 @@ class ComObjArray extends ComValue {
 
 class ComObject extends ComValue {
 	/**
-	* 创建 COM 对象.
-	* @param CLSID 要创建的 COM 对象的 CLSID 或可读的 Prog ID.
-	* @param IID 要返回的接口的标识符. 在大多数情况下, 它是省略的; 如果省略, 它默认为IID_IDispatch
-	*/
+	 * 创建 COM 对象.
+	 * @param CLSID 要创建的 COM 对象的 CLSID 或可读的 Prog ID.
+	 * @param IID 要返回的接口的标识符. 在大多数情况下, 它是省略的; 如果省略, 它默认为IID_IDispatch
+	 */
 	__New(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => ComObject | ComValue
 }
 
 class ComValue extends Any {
 	/**
-	* 包装一个值, 安全数组或 COM 对象, 以供脚本使用或传递给 COM 方法.
-	* @param VarType 表示值类型的整数. 类型列表见 ComObjType.
-	* @param Value 要包装的值. 当前仅支持整数和指针值.
-	* @param Flags 影响包装器对象行为的标志; 有关详情, 请参阅 ComObjFlags.
-	*/
+	 * 包装一个值, 安全数组或 COM 对象, 以供脚本使用或传递给 COM 方法.
+	 * @param VarType 表示值类型的整数. 类型列表见 ComObjType.
+	 * @param Value 要包装的值. 当前仅支持整数和指针值.
+	 * @param Flags 影响包装器对象行为的标志; 有关详情, 请参阅 ComObjFlags.
+	 */
 	__New(VarType, Value [, Flags]) => Comobject
 }
 
@@ -2710,8 +2710,8 @@ class File extends Object {
 
 class Float extends Number {
 	/**
-	* 将数字字符串或整数值转换为浮点数.
-	*/
+	 * 将数字字符串或整数值转换为浮点数.
+	 */
 	__New(Value) => Number
 }
 
@@ -3027,98 +3027,98 @@ class Gui extends Object {
 	
 	class Control extends Object {
 		/**
-		* 检索控件的 ClassNN.
-		*/
+		 * 检索控件的 ClassNN.
+		 */
 		ClassNN => String
 
 		/**
-		* 检索控件当前交互状态, 或启用或禁用(灰色)控件.
-		*/
+		 * 检索控件当前交互状态, 或启用或禁用(灰色)控件.
+		 */
 		Enabled => Number
 
 		/**
-		* 检索控件当前焦点状态.
-		*/
+		 * 检索控件当前焦点状态.
+		 */
 		Focused => Number
 
 		/**
-		* 检索控件的 Gui 父控件.
-		*/
+		 * 检索控件的 Gui 父控件.
+		 */
 		Gui => Gui
 
 		/**
-		* 检索控件的 HWND.
-		*/
+		 * 检索控件的 HWND.
+		 */
 		Hwnd => Number
 
 		/**
-		* 检索或设置控件的显式名称.
-		*/
+		 * 检索或设置控件的显式名称.
+		 */
 		Name => String
 
 		/**
-		* 检索或设置控件的文本/标题.
-		*/
+		 * 检索或设置控件的文本/标题.
+		 */
 		Text => String
 
 		/**
-		* 检索控件的类型.
-		*/
+		 * 检索控件的类型.
+		 */
 		Type => String
 
 		/**
-		* 检索新内容或将其设置为具有价值的控件.
-		*/
+		 * 检索新内容或将其设置为具有价值的控件.
+		 */
 		Value => Number|string
 
 		/**
-		* 检索控件的当前可见状态, 或显示或隐藏它.
-		*/
+		 * 检索控件的当前可见状态, 或显示或隐藏它.
+		 */
 		Visible => Number
 
 		/**
-		* 将键盘焦点设置为控件.
-		*/
+		 * 将键盘焦点设置为控件.
+		 */
 		Focus() => void
 
 		/**
-		* 检索控件的位置和大小.
-		*/
+		 * 检索控件的位置和大小.
+		 */
 		GetPos([X, Y, Width, Height]) => void
 
 		/**
-		* 移动/调整控件大小.
-		*/
+		 * 移动/调整控件大小.
+		 */
 		Move([X, Y, Width, Height]) => void
 
 		/**
-		* 注册引发给定事件时要调用的函数或方法.
-		*/
+		 * 注册引发给定事件时要调用的函数或方法.
+		 */
 		OnEvent(EventName, Callback, AddRemove := 1) => void
 
 		/**
-		* 注册通过WM_NOTIFY消息接收到控制通知时要调用的函数或方法.
-		*/
+		 * 注册通过WM_NOTIFY消息接收到控制通知时要调用的函数或方法.
+		 */
 		OnNotify(NotifyCode, Callback, AddRemove := 1) => void
 
 		/**
-		* 为控件的外观和行为设置各种选项和样式.
-		*/
+		 * 为控件的外观和行为设置各种选项和样式.
+		 */
 		Opt(Options) => void
 
 		/**
-		* 重绘该控件占用的GUI窗口区域.
-		*/
+		 * 重绘该控件占用的GUI窗口区域.
+		 */
 		Redraw() => void
 
 		/**
-		* 设置控件的字体字体, 大小, 样式和/或颜色.
-		*/
+		 * 设置控件的字体字体, 大小, 样式和/或颜色.
+		 */
 		SetFont([Options, FontName]) => void
 
 		/**
-		* 设置 DateTime 控件的显示格式.
-		*/
+		 * 设置 DateTime 控件的显示格式.
+		 */
 		SetFormat([TimeFormat]) => void
 	}
 	
@@ -3145,18 +3145,18 @@ class Gui extends Object {
 	
 	class List extends Gui.Control {
 		/**
-		* 在列表框, 下拉列表, 组合框或选项卡控件的当前列表中追加指定的项.
-		*/
+		 * 在列表框, 下拉列表, 组合框或选项卡控件的当前列表中追加指定的项.
+		 */
 		Add(Items*) => void
 
 		/**
-		* 将ListBox, DropDownList, ComboBox或Tab控件中的选择设置为指定值.
-		*/
+		 * 将ListBox, DropDownList, ComboBox或Tab控件中的选择设置为指定值.
+		 */
 		Choose(Value) => void
 
 		/**
-		* 删除ListBox, DropDownList, ComboBox或Tab控件的指定条目或所有条目.
-		*/
+		 * 删除ListBox, DropDownList, ComboBox或Tab控件的指定条目或所有条目.
+		 */
 		Delete([Index]) => void
 	}
 	
@@ -3165,58 +3165,58 @@ class Gui extends Object {
 	
 	class ListView extends Gui.Control {
 		/**
-		* 将新行添加到列表的底部, 并返回新行号, 如果ListView具有Sort或SortDesc样式, 则不一定是最后一行.
-		*/
+		 * 将新行添加到列表的底部, 并返回新行号, 如果ListView具有Sort或SortDesc样式, 则不一定是最后一行.
+		 */
 		Add([Options, Cols*]) => void
 
 		/**
-		* 删除指定的行, 成功则返回1, 失败则返回0.
-		*/
+		 * 删除指定的行, 成功则返回1, 失败则返回0.
+		 */
 		Delete([RowNumber]) => Number
 
 		/**
-		* 删除指定的列及其下的所有内容, 并在成功时返回1, 在失败时返回0.
-		*/
+		 * 删除指定的列及其下的所有内容, 并在成功时返回1, 在失败时返回0.
+		 */
 		DeleteCol(ColumnNumber) => Number
 
 		/**
-		* 返回控件中的行数或列数.
-		*/
+		 * 返回控件中的行数或列数.
+		 */
 		GetCount([Mode]) => Number
 
 		/**
-		* 返回下一个选定, 选中或关注的行的行号, 否则返回零.
-		*/
+		 * 返回下一个选定, 选中或关注的行的行号, 否则返回零.
+		 */
 		GetNext([StartingRowNumber, RowType]) => Number
 
 		/**
-		* 检索指定行号和列号的文本.
-		*/
+		 * 检索指定行号和列号的文本.
+		 */
 		GetText(RowNumber [, ColumnNumber]) => String
 
 		/**
-		* 在指定的行号处插入新行, 并返回新的行号.
-		*/
+		 * 在指定的行号处插入新行, 并返回新的行号.
+		 */
 		Insert(RowNumber [, Options, Cols*]) => Number
 
 		/**
-		* 在指定的列号处插入新列, 并返回新列的位置号.
-		*/
+		 * 在指定的列号处插入新列, 并返回新列的位置号.
+		 */
 		InsertCol(ColumnNumber [, Options, ColumnTitle]) => Number
 
 		/**
-		* 修改行的属性/文本, 并在成功时返回1, 在失败时返回0.
-		*/
+		 * 修改行的属性/文本, 并在成功时返回1, 在失败时返回0.
+		 */
 		Modify(RowNumber [, Options, NewCols*]) => Number
 
 		/**
-		* 修改指定列及其标题的属性/文本, 并在成功时返回1, 在失败时返回0.
-		*/
+		 * 修改指定列及其标题的属性/文本, 并在成功时返回1, 在失败时返回0.
+		 */
 		ModifyCol([ColumnNumber, Options, ColumnTitle]) => Number
 
 		/**
-		* 设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).
-		*/
+		 * 设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).
+		 */
 		SetImageList(ImageListID [, IconType]) => Number
 	}
 	
@@ -3237,27 +3237,27 @@ class Gui extends Object {
 	
 	class StatusBar extends Gui.Control {
 		/**
-		* 在指定部分的文本左侧显示一个小图标, 并返回图标的句柄.
-		*/
+		 * 在指定部分的文本左侧显示一个小图标, 并返回图标的句柄.
+		 */
 		SetIcon(Filename, IconNumber := 1, PartNumber := 1) => Number
 
 		/**
-		* 根据指定的宽度(以像素为单位)将条形划分为多个部分, 并返回非零值(状态条的HWND).
-		*/
+		 * 根据指定的宽度(以像素为单位)将条形划分为多个部分, 并返回非零值(状态条的HWND).
+		 */
 		SetParts(Widths*) => Number
 
 		/**
-		* 在状态栏的指定部分显示NewText, 成功则返回1, 失败则返回0.
-		*/
+		 * 在状态栏的指定部分显示NewText, 成功则返回1, 失败则返回0.
+		 */
 		SetText(NewText, PartNumber := 1, Style := 0) => Number
 	}
 	
 	class Tab extends Gui.List {
 		/**
-		* 导致随后添加的控件属于选项卡控件的指定选项卡.
-		* @param Value 参数为 1 表示第一个条目, 2 表示第二个, 等等. 如果 Value 不是一个整数, 前面部分与 Value 匹配的标签将被使用. 搜索不区分大小写. 例如, 如果一个控件包含 "UNIX Text" 标签, 指定单词 unix(小写) 就可以使用它. 如果 Value 为 0, 是一个空白字符串或被省略, 随后的控件将被添加到 Tab 控件之外.
-		* @param ExactMatch 如果该参数为 true, Value 必须完全匹配, 但不区分大小写.
-		*/
+		 * 导致随后添加的控件属于选项卡控件的指定选项卡.
+		 * @param Value 参数为 1 表示第一个条目, 2 表示第二个, 等等. 如果 Value 不是一个整数, 前面部分与 Value 匹配的标签将被使用. 搜索不区分大小写. 例如, 如果一个控件包含 "UNIX Text" 标签, 指定单词 unix(小写) 就可以使用它. 如果 Value 为 0, 是一个空白字符串或被省略, 随后的控件将被添加到 Tab 控件之外.
+		 * @param ExactMatch 如果该参数为 true, Value 必须完全匹配, 但不区分大小写.
+		 */
 		UseTab(Value := 0, ExactMatch := false) => void
 	}
 	
@@ -3266,65 +3266,65 @@ class Gui extends Object {
 	
 	class TreeView extends Gui.Control {
 		/**
-		* 将新项目添加到TreeView, 并返回其唯一的项目ID号.
-		*/
+		 * 将新项目添加到TreeView, 并返回其唯一的项目ID号.
+		 */
 		Add(Name [, ParentItemID, Options]) => Number
 
 		/**
-		* 删除指定的项目, 成功则返回1, 失败则返回0.
-		*/
+		 * 删除指定的项目, 成功则返回1, 失败则返回0.
+		 */
 		Delete([ItemID]) => Number
 
 		/**
-		* 如果指定的项目具有指定的属性, 则返回非零值(项目ID).
-		* @param ItemID 选中项目.
-		* @param Attribute 指定 "E", "Expand" 或 "Expanded" 来判断此项当前是否是展开的(即它的子项目是显示的); 指定 "C", "Check" 或 "Checked" 来判断此项是否含有复选标记; 或指定 "B" 或 "Bold" 来判断此项当前是否为粗体.
-		*/
+		 * 如果指定的项目具有指定的属性, 则返回非零值(项目ID).
+		 * @param ItemID 选中项目.
+		 * @param Attribute 指定 "E", "Expand" 或 "Expanded" 来判断此项当前是否是展开的(即它的子项目是显示的); 指定 "C", "Check" 或 "Checked" 来判断此项是否含有复选标记; 或指定 "B" 或 "Bold" 来判断此项当前是否为粗体.
+		 */
 		Get(ItemID, Attribute) => Number
 
 		/**
-		* 返回指定项目的第一个/顶部子项的ID号(如果没有, 则返回0).
-		*/
+		 * 返回指定项目的第一个/顶部子项的ID号(如果没有, 则返回0).
+		 */
 		GetChild(ParentItemID) => Number
 
 		/**
-		* 返回控件中的项目总数.
-		*/
+		 * 返回控件中的项目总数.
+		 */
 		GetCount() => Number
 
 		/**
-		* 返回指定项目下方的下一个项目的ID号(如果没有, 则返回0).
-		*/
+		 * 返回指定项目下方的下一个项目的ID号(如果没有, 则返回0).
+		 */
 		GetNext([ItemID, ItemType]) => Number
 
 		/**
-		* 返回指定项目的父项作为项目ID.
-		*/
+		 * 返回指定项目的父项作为项目ID.
+		 */
 		GetParent(ItemID) => Number
 
 		/**
-		* 返回指定项目上方的前一个项目的ID号(如果没有, 则返回0).
-		*/
+		 * 返回指定项目上方的前一个项目的ID号(如果没有, 则返回0).
+		 */
 		GetPrev(ItemID) => Number
 
 		/**
-		* 返回所选项目的ID号.
-		*/
+		 * 返回所选项目的ID号.
+		 */
 		GetSelection() => Number
 
 		/**
-		* 检索指定项目的文本/名称.
-		*/
+		 * 检索指定项目的文本/名称.
+		 */
 		GetText(ItemID) => String
 
 		/**
-		* 修改项目的属性/名称, 并返回项目自己的ID.
-		*/
+		 * 修改项目的属性/名称, 并返回项目自己的ID.
+		 */
 		Modify(ItemID [, Options, NewName]) => Number
 
 		/**
-		* 设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).
-		*/
+		 * 设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).
+		 */
 		SetImageList(ImageListID [, IconType]) => Number
 	}
 	
@@ -3507,8 +3507,8 @@ class InputHook extends Object {
 
 class Integer extends Number {
 	/**
-	* 将数字字符串或浮点值转换为整数.
-	*/
+	 * 将数字字符串或浮点值转换为整数.
+	 */
 	__New(Value) => Number
 }
 
@@ -3517,8 +3517,8 @@ class KeyError extends IndexError {
 
 class Map extends Object {
 	/**
-	* Map对象将一组称为键的值关联或映射到另一组值.
-	*/
+	 * Map对象将一组称为键的值关联或映射到另一组值.
+	 */
 	__New([Key1, Value1, *]) => Map
 
 	/**
@@ -3681,8 +3681,8 @@ class Number extends Primitive {
 
 class Object extends Any {
 	/**
-	* Object是从AutoHotkey对象类派生的基本类.
-	*/
+	 * Object是从AutoHotkey对象类派生的基本类.
+	 */
 	__New() => Object
 
 	/**
@@ -3755,8 +3755,8 @@ class RegExMatchInfo extends Object {
 
 class String extends Primitive {
 	/**
-	* 将值转换为字符串.
-	*/
+	 * 将值转换为字符串.
+	 */
 	__New(Value) => String
 }
 
