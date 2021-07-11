@@ -538,9 +538,10 @@ export class Lexer {
 		}
 
 		function parseblock(mode = 0, scopevar = new Map<string, any>(), classfullname: string = ''): DocumentSymbol[] {
-			const result: DocumentSymbol[] = [], _parent = scopevar.get('#parent') || _this, document = _this.document;
-			let tk: Token = { content: '', type: '', offset: 0, length: 0 }, lk: Token = tk, next: boolean = true, LF: number = 0, topcontinue = false;
-			let blocks = 0, inswitch = -1, blockpos: number[] = [], tn: DocumentSymbol | FuncNode | Variable | undefined, m: any, _low = '';
+			const result: DocumentSymbol[] = [], document = _this.document;
+			let _parent = scopevar.get('#parent') || _this, tk: Token = { content: '', type: '', offset: 0, length: 0 };
+			let lk: Token = tk, next: boolean = true, LF: number = 0, topcontinue = false, _low = '', m: any;
+			let blocks = 0, inswitch = -1, blockpos: number[] = [], tn: DocumentSymbol | FuncNode | Variable | undefined;
 			let raw = '', o: any = '', last_comm = '', tds: Diagnostic[] = [], cmm: Token = { content: '', offset: 0, type: '', length: 0 };
 			if (mode !== 0)
 				blockpos.push(parser_pos - 1);
@@ -616,11 +617,14 @@ export class Lexer {
 							_this.addFoldingRangePos(tn.range.start, tn.range.end);
 							adddeclaration(tn as FuncNode);
 						} else {
-							let hh = tn as FuncNode, cindex = _parent.funccall.length;
-							next = false, hh.children = parseline();
-							adddeclaration(hh);
+							let hh = tn as FuncNode, t = _parent, tm = mode;
+							_parent = tn, mode = 1;
+							if (tk.content.toLowerCase().match(/^(global|local|static)$/)) {
+								hh.children = [], parse_reserved();
+							} else
+								next = false, hh.children = parseline();
+							adddeclaration(hh), _parent = t, mode = tm;
 							hh.range = makerange(ht.offset, lk.offset + lk.length - ht.offset);
-							hh.funccall?.push(..._parent.funccall.splice(cindex));
 						}
 						break;
 					case 'TK_HOTLINE':
