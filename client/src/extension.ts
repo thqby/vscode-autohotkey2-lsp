@@ -25,7 +25,7 @@ import {
 import * as child_process from 'child_process';
 import { resolve } from 'path';
 import { existsSync, readdirSync, statSync, unlinkSync } from 'fs';
-import { getFileProperties } from './cfv';
+import { getFileProperties } from 'cfv';
 
 let client: LanguageClient;
 let channel = window.createOutputChannel('AutoHotkey2');

@@ -392,7 +392,7 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 			return;
 		}
 		initnum = 1;
-		if (pathenv.version && pathenv.version.match(/^1\./))
+		if (pathenv.version?.match(/^1\./))
 			connection.window.showErrorMessage(setting.versionerr());
 		if (!samefolder) {
 			libdirs.length = 0;
@@ -549,6 +549,8 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 
 export async function setInterpreter(path: string) {
 	let old = ahkpath_cur || extsettings.InterpreterPath;
+	if (path.toLowerCase() === old.toLowerCase())
+		return;
 	ahkpath_cur = path;
 	changeInterpreter(old, path || extsettings.InterpreterPath);
 }
