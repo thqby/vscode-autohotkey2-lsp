@@ -30,7 +30,7 @@ import { symbolProvider } from './symbolProvider';
 
 export const languageServer = 'ahk2-language-server';
 export let libdirs: string[] = [], extsettings: AHKLSSettings = {
-	DefaultInterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
+	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
 	AutoLibInclude: false
 };
 export const connection = createConnection(ProposedFeatures.all);
@@ -38,13 +38,13 @@ let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), ha
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { [uri: string]: SymbolInformation[] } = {};
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] }, isahk2_h = false;
-export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '', ahkpath_custom = '';
+export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '', ahkpath_cur = '';
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}];
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let dllcalltpe: string[] = [];
 export type Maybe<T> = T | undefined;
 interface AHKLSSettings {
-	DefaultInterpreterPath: string
+	InterpreterPath: string
 	AutoLibInclude: boolean
 }
 
@@ -129,13 +129,13 @@ connection.onInitialized(async () => {
 connection.onDidChangeConfiguration(async change => {
 	if (hasConfigurationCapability) {
 		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		let changes: any = { Path: false, AutoLibInclude: false }, oldpath = extsettings.DefaultInterpreterPath;
+		let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
 		for (let k in extsettings)
 			if ((<any>extsettings)[k] !== (<any>newset)[k])
 				changes[k] = true;
 		Object.assign(extsettings, newset);
-		if (changes['Path'] && !ahkpath_custom) {
-			changeInterpreter(oldpath, extsettings.DefaultInterpreterPath);
+		if (changes['InterpreterPath'] && !ahkpath_cur) {
+			changeInterpreter(oldpath, extsettings.InterpreterPath);
 		} else if (changes['AutoLibInclude'] && extsettings.AutoLibInclude)
 			parseuserlibs();
 	}
@@ -253,7 +253,10 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	if (doc.diagnostics.length)
 		doc.parseScript();
 	parseproject(uri);
-	libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
+	if (libfuncs[uri]) {
+		libfuncs[uri].length = 0;
+		libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
+	}
 }
 
 function initahk2cache() {
@@ -360,7 +363,7 @@ let initnum = 0;
 async function initpathenv(hasconfig = false, samefolder = false) {
 	if (!hasconfig) {
 		extsettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		if (!extsettings.DefaultInterpreterPath && !ahkpath_custom) return false;
+		if (!extsettings.InterpreterPath && !ahkpath_cur) return false;
 	}
 	let script = `
 	#NoTrayIcon
@@ -371,19 +374,21 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 		_H := Func("NewThread").IsBuiltIn
 	catch
 		_H := IsSet(NewThread)
-	%Append%(s _H "\`n", "*")
+	%Append%(s _H "\`n", "*", "UTF-8")
 	FileAppend2(text, file) {
-		FileAppend %text%, %file%
+		encode := "UTF-8"
+		FileAppend %text%, %file%, %encode%
 	}
 	`
-	let ret = runscript(script, async (data: string) => {
+	let ret = runscript(script, (data: string) => {
 		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '';
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].toLowerCase();
 		if (!pathenv.ahkpath) {
-			if (initnum < 3) setTimeout(() => {
-				initnum++, initpathenv(true);
-			}, 1000);
+			if (initnum < 3)
+				setTimeout(() => {
+					initnum++, initpathenv(true);
+				}, 1000);
 			return;
 		}
 		initnum = 1;
@@ -393,7 +398,7 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 			libdirs.length = 0;
 			if (existsSync(path = pathenv.mydocuments + '\\autohotkey\\lib'))
 				libdirs.push(path);
-			if (existsSync(path = pathenv.ahkpath.replace(/[^\\/]+$/, 'lib')))
+			if (existsSync(path = (ahkpath_cur || pathenv.ahkpath).replace(/[^\\/]+$/, 'lib')))
 				libdirs.push(path);
 		}
 		if (pathenv.h === '1') {
@@ -425,7 +430,7 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 	return ret;
 }
 
-async function sleep(ms: number) {
+export async function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -543,9 +548,9 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 }
 
 export async function setInterpreter(path: string) {
-	let old = ahkpath_custom || extsettings.DefaultInterpreterPath;
-	ahkpath_custom = path;
-	changeInterpreter(old, path || extsettings.DefaultInterpreterPath);
+	let old = ahkpath_cur || extsettings.InterpreterPath;
+	ahkpath_cur = path;
+	changeInterpreter(old, path || extsettings.InterpreterPath);
 }
 
 async function parseproject(uri: string) {

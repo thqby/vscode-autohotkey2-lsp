@@ -1,15 +1,16 @@
-import { spawn } from 'child_process';
-import { ahkpath_custom, extsettings } from './server';
+import { spawnSync } from 'child_process';
+import { ahkpath_cur, extsettings } from './server';
 import { existsSync } from 'fs';
 
 export function runscript(script: string, out?: Function): boolean {
-	let executePath = ahkpath_custom || extsettings.DefaultInterpreterPath;
+	let executePath = ahkpath_cur || extsettings.InterpreterPath;
 	if (existsSync(executePath)) {
-		const process = spawn(`\"${executePath}\" /CP65001 /ErrorStdOut *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true });
-		process.stdin.write(script);
-		if (out) process.stdout.on('data', data => out(data.toString()));
-		process.stdin.end();
-		return true;
+		const process = spawnSync(`\"${executePath}\" /CP65001 /ErrorStdOut *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
+		if (process) {
+			if (out)
+				out(process.stdout.toString());
+			return true;
+		}
 	}
 	return false;
 }

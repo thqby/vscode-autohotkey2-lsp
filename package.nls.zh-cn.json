@@ -5,7 +5,7 @@
 	"ahk2.debug": "调试脚本",
 	"ahk2.debug.params": "带参调试",
 	"ahk2.defaultdebugger": "设置默认调试器",
-	"ahk2.defaultinterpreterpath": "AutoHotkey.exe可执行文件的路径. 如果没有为工作区选择解释器, 则使用此默认设置. 扩展也不会设置或更改此设置的值, 它只会从中读取.",
+	"ahk2.interpreterpath": "AutoHotkey.exe可执行文件的路径. 如果没有为工作区选择解释器, 则使用此默认设置. 扩展也不会设置或更改此设置的值, 它只会从中读取.",
 	"ahk2.description": "基于 vscode-lsp 协议的 Autohotkey2 语言支持",
 	"ahk2.generatecomment": "生成注释模板",
 	"ahk2.help": "快捷帮助",
@@ -54,6 +54,6 @@
 	"diagnostic.unknownoperatoruse": "未知的操作符使用",
 	"diagnostic.unknowntoken": "未知的Token '{0}'",
 	"diagnostic.unsupportinclude": "函数、类中的#include无法正确地推导作用域和代码补全",
-	"setting.ahkpatherr": "AutoHotkey解释器不存在, 在'设置-AutoHotkey2.DefaultInterpreterPath'中重新指定",
+	"setting.ahkpatherr": "AutoHotkey解释器不存在, 在'设置-AutoHotkey2.InterpreterPath'中重新指定",
 	"setting.versionerr": "当前AutoHotkey.exe不是v2版本，无法获得正确的语法解析、补全等功能"
 }

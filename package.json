@@ -91,11 +91,11 @@
 					"default": "zero-plusplus.vscode-autohotkey-debug",
 					"description": "%ahk2.defaultdebugger%"
 				},
-				"AutoHotkey2.DefaultInterpreterPath": {
+				"AutoHotkey2.InterpreterPath": {
 					"scope": "window",
 					"type": "string",
 					"default": "C:\\Program Files\\Autohotkey\\AutoHotkey.exe",
-					"description": "%ahk2.defaultinterpreterpath%"
+					"description": "%ahk2.interpreterpath%"
 				}
 			}
 		},
