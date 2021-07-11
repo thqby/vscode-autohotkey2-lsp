@@ -1,7 +1,7 @@
 import { basename, extname, relative, resolve } from 'path';
 import { ExecuteCommandParams, Position, Range, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { detectExp, FuncNode } from './Lexer';
-import { connection, lexers, pathenv, restorePath } from './server';
+import { connection, lexers, pathenv, restorePath, setInterpreter } from './server';
 
 export var noparammoveright: boolean = false;
 
@@ -24,6 +24,9 @@ export async function executeCommandProvider(params: ExecuteCommandParams) {
 			break;
 		case 'ahk2.generate.author':
 			generateAuthor();
+			break;
+		case 'ahk2.resetinterpreterpath':
+			setInterpreter(args[0]);
 			break;
 	}
 }

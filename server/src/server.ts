@@ -30,7 +30,7 @@ import { symbolProvider } from './symbolProvider';
 
 export const languageServer = 'ahk2-language-server';
 export let libdirs: string[] = [], extsettings: AHKLSSettings = {
-	Path: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
+	DefaultInterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
 	AutoLibInclude: false
 };
 export const connection = createConnection(ProposedFeatures.all);
@@ -38,13 +38,13 @@ let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), ha
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { [uri: string]: SymbolInformation[] } = {};
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] }, isahk2_h = false;
-export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '';
+export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '', ahkpath_custom = '';
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}];
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let dllcalltpe: string[] = [];
 export type Maybe<T> = T | undefined;
 interface AHKLSSettings {
-	Path: string
+	DefaultInterpreterPath: string
 	AutoLibInclude: boolean
 }
 
@@ -91,7 +91,8 @@ connection.onInitialize((params: InitializeParams) => {
 				commands: [
 					'ahk2.fix.include',
 					'ahk2.generate.comment',
-					'ahk2.generate.author'
+					'ahk2.generate.author',
+					'ahk2.resetinterpreterpath'
 				]
 			},
 			hoverProvider: true,
@@ -128,20 +129,13 @@ connection.onInitialized(async () => {
 connection.onDidChangeConfiguration(async change => {
 	if (hasConfigurationCapability) {
 		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		let changes: any = { Path: false, AutoLibInclude: false }, oldpath = extsettings.Path;
+		let changes: any = { Path: false, AutoLibInclude: false }, oldpath = extsettings.DefaultInterpreterPath;
 		for (let k in extsettings)
 			if ((<any>extsettings)[k] !== (<any>newset)[k])
 				changes[k] = true;
 		Object.assign(extsettings, newset);
-		if (changes['Path']) {
-			libdirs.length = 0;
-			let uri = URI.file(resolve(oldpath, '../lib')).toString().toLowerCase();
-			for (const u in libfuncs) {
-				if (u.startsWith(uri))
-					delete libfuncs[u];
-			}
-			if (initpathenv(true))
-				documents.all().forEach(validateTextDocument);
+		if (changes['Path'] && !ahkpath_custom) {
+			changeInterpreter(oldpath, extsettings.DefaultInterpreterPath);
 		} else if (changes['AutoLibInclude'] && extsettings.AutoLibInclude)
 			parseuserlibs();
 	}
@@ -363,10 +357,10 @@ async function loadahk2(filename = 'ahk2') {
 }
 
 let initnum = 0;
-async function initpathenv(hasconfig = false) {
+async function initpathenv(hasconfig = false, samefolder = false) {
 	if (!hasconfig) {
 		extsettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		if (!extsettings.Path) return false;
+		if (!extsettings.DefaultInterpreterPath && !ahkpath_custom) return false;
 	}
 	let script = `
 	#NoTrayIcon
@@ -392,22 +386,29 @@ async function initpathenv(hasconfig = false) {
 			}, 1000);
 			return;
 		}
-		libdirs.length = 0, initnum = 1;
+		initnum = 1;
 		if (pathenv.version && pathenv.version.match(/^1\./))
 			connection.window.showErrorMessage(setting.versionerr());
-		if (existsSync(path = pathenv.mydocuments + '\\autohotkey\\lib'))
-			libdirs.push(path);
-		if (existsSync(path = pathenv.ahkpath.replace(/[^\\/]+$/, 'lib')))
-			libdirs.push(path);
+		if (!samefolder) {
+			libdirs.length = 0;
+			if (existsSync(path = pathenv.mydocuments + '\\autohotkey\\lib'))
+				libdirs.push(path);
+			if (existsSync(path = pathenv.ahkpath.replace(/[^\\/]+$/, 'lib')))
+				libdirs.push(path);
+		}
 		if (pathenv.h === '1') {
-			isahk2_h = true;
+			if (!isahk2_h)
+				isahk2_h = true, samefolder = false;
 			if (!hasahk2_hcache)
 				hasahk2_hcache = true, loadahk2('ahk2_h');
 		} else {
-			isahk2_h = false;
+			if (isahk2_h)
+				isahk2_h = false, samefolder = false;
 			if (hasahk2_hcache)
 				hasahk2_hcache = false, initahk2cache(), loadahk2();
 		}
+		if (samefolder)
+			return;
 		for (const uri in lexers) {
 			let doc = lexers[uri];
 			if (!doc.d && (Object.keys(doc.include).length || doc.diagnostics.length)) {
@@ -526,6 +527,25 @@ export function inlibdirs(path: string, ...dirs: string[]) {
 		i++;
 	}
 	return false;
+}
+
+async function changeInterpreter(oldpath: string, newpath: string) {
+	let samefolder = resolve(oldpath, '..').toLowerCase() === resolve(newpath, '..').toLowerCase();
+	if (!samefolder) {
+		let uri = URI.file(resolve(oldpath, '../lib')).toString().toLowerCase();
+		for (const u in libfuncs) {
+			if (u.startsWith(uri))
+				delete libfuncs[u];
+		}
+	}
+	if (await initpathenv(true, samefolder))
+		documents.all().forEach(validateTextDocument);
+}
+
+export async function setInterpreter(path: string) {
+	let old = ahkpath_custom || extsettings.DefaultInterpreterPath;
+	ahkpath_custom = path;
+	changeInterpreter(old, path || extsettings.DefaultInterpreterPath);
 }
 
 async function parseproject(uri: string) {

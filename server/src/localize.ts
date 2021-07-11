@@ -55,7 +55,7 @@ export namespace diagnostic {
 }
 
 export namespace setting {
-	export const ahkpatherr = localize('setting.ahkpatherr', 'The path of the AutoHotkey executable file is incorrect, re-specify in\'Settings-AutoHotkey2.Path\'');
+	export const ahkpatherr = localize('setting.ahkpatherr', 'The AutoHotkey interpreter does not exist, re-specify in\'Settings-AutoHotkey2.DefaultInterpreterPath\'');
 	export const versionerr = localize('setting.versionerr', 'The current AutoHotkey.exe is not the v2 version, and cannot get the correct syntax analysis, completion and other functions');
 }
 

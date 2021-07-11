@@ -5,11 +5,12 @@
 	"ahk2.debug": "Debug Script",
 	"ahk2.debug.params": "Debug Script with Params",
 	"ahk2.defaultdebugger": "Set the default debugger when there are multiple debuggers",
+	"ahk2.defaultinterpreterpath": "The path of the AutoHotkey.exe executable file. This default setting is used as a fallback if no interpreter is selected for the workspace. The extension will also not set nor change the value of this setting, it will only read from it.",
 	"ahk2.description": "Autohotkey2 Language Support using vscode-lsp",
-	"ahk2.exepath": "The path of the AutoHotkey.exe executable file.",
 	"ahk2.generatecomment": "Generate Comment Template",
 	"ahk2.help": "Quick Help",
 	"ahk2.run": "Run Script",
+	"ahk2.setinterpreter": "Select AutoHotkey2 Interpreter",
 	"ahk2.selection.run": "Run Selected Script",
 	"ahk2.stop": "Stop Running Script"
 }

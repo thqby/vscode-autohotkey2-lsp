@@ -1,3 +1,12 @@
+## 0.8.4
+- 增加遗漏的内置变量
+- 删除废弃的指令
+- 修复属性定义中`ByRef`参数不正确的错误诊断 [#29](https://github.com/thqby/vscode-autohotkey2-lsp/issues/29)
+- 增加识别h版的内置变量, 不在大纲中显示
+- 增加设置编译器额外的命令行选项
+- 修复一些赋值语句中保留词作为对象键名被提示为错误 [#32](https://github.com/thqby/vscode-autohotkey2-lsp/issues/32)
+- 增加脚本解释器切换
+
 ## 0.8.3
 - 更新高亮文件 [#24](https://github.com/thqby/vscode-autohotkey2-lsp/issues/24)
 

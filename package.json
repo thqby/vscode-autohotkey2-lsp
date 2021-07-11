@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "0.8.3",
+	"version": "0.8.4",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -73,12 +73,6 @@
 			"id": "AutoHotkey2",
 			"title": "AutoHotkey2",
 			"properties": {
-				"AutoHotkey2.Path": {
-					"scope": "window",
-					"type": "string",
-					"default": "C:\\Program Files\\Autohotkey\\AutoHotkey.exe",
-					"description": "%ahk2.exepath%"
-				},
 				"AutoHotkey2.AutoLibInclude": {
 					"scope": "window",
 					"type": "boolean",
@@ -96,6 +90,12 @@
 					"type": "string",
 					"default": "zero-plusplus.vscode-autohotkey-debug",
 					"description": "%ahk2.defaultdebugger%"
+				},
+				"AutoHotkey2.DefaultInterpreterPath": {
+					"scope": "window",
+					"type": "string",
+					"default": "C:\\Program Files\\Autohotkey\\AutoHotkey.exe",
+					"description": "%ahk2.defaultinterpreterpath%"
 				}
 			}
 		},
@@ -148,6 +148,11 @@
 			{
 				"command": "ahk2.generate.comment",
 				"title": "%ahk2.generatecomment%",
+				"category": "ahk2"
+			},
+			{
+				"command": "ahk2.setinterpreter",
+				"title": "%ahk2.setinterpreter%",
 				"category": "ahk2"
 			}
 		],
