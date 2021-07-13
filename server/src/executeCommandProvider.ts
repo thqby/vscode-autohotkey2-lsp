@@ -75,7 +75,7 @@ async function fixinclude(libpath: string, docuri: string) {
 	else {
 		if (line <= pos.line)
 			pos.line++;
-		await insertSnippet('$0', Range.create(pos, pos));
+		insertSnippet('$0', Range.create(pos, pos));
 		if (char === '.')
 			executeCommands([{ command: 'editor.action.triggerSuggest' }]);
 	}

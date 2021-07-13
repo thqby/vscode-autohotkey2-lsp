@@ -440,7 +440,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			let dir = (workfolder && doc.scriptpath.startsWith(workfolder + '\\') ? workfolder : doc.scriptdir), exportnum = 0;
 			for (const u in libfuncs) {
 				if (!list || !list[u]) {
-					if ((extsettings.AutoLibInclude && (<any>libfuncs[u]).islib) || (path = URI.parse(u).fsPath).startsWith(dir + '\\')) {
+					path = URI.parse(u).fsPath;
+					if ((extsettings.AutoLibInclude && (<any>libfuncs[u]).islib) || path.startsWith(dir + '\\')) {
 						libfuncs[u].map(it => {
 							if (!vars[_low = it.name.toLowerCase()] && expg.test(_low)) {
 								cpitem = convertNodeCompletion(it);

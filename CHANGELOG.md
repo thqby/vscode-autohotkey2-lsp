@@ -1,3 +1,8 @@
+## 0.8.6
+- 修复用户库标准库自动导入异常
+- 修复include可能引发的错误 [#31](https://github.com/thqby/vscode-autohotkey2-lsp/issues/31)
+- 支持含特殊符号的变量 [#33](https://github.com/thqby/vscode-autohotkey2-lsp/issues/33)
+
 ## 0.8.5
 - 调整配置项名
 - 打开文件夹或工作区时增加保存当前解释器路径

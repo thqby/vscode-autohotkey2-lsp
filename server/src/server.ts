@@ -397,9 +397,9 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 		if (!samefolder) {
 			libdirs.length = 0;
 			if (existsSync(path = pathenv.mydocuments + '\\autohotkey\\lib'))
-				libdirs.push(path);
+				libdirs.push(path.toLowerCase());
 			if (existsSync(path = (ahkpath_cur || pathenv.ahkpath).replace(/[^\\/]+$/, 'lib')))
-				libdirs.push(path);
+				libdirs.push(path.toLowerCase());
 		}
 		if (pathenv.h === '1') {
 			if (!isahk2_h)
@@ -416,9 +416,12 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 			return;
 		for (const uri in lexers) {
 			let doc = lexers[uri];
-			if (!doc.d && (Object.keys(doc.include).length || doc.diagnostics.length)) {
-				doc.initlibdirs(), doc.parseScript(), parseinclude(doc.include);
-				doc.relevance = getincludetable(doc.uri).list;
+			if (!doc.d) {
+				doc.initlibdirs();
+				if (Object.keys(doc.include).length || doc.diagnostics.length) {
+					doc.parseScript(), parseinclude(doc.include);
+					doc.relevance = getincludetable(doc.uri).list;
+				}
 			}
 		}
 		sendDiagnostics();
