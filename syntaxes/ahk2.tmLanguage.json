@@ -1050,6 +1050,9 @@
                   "include": "$base"
                 }
               ]
+            },
+            {
+              "include": "$self"
             }
           ]
         },
@@ -1139,7 +1142,7 @@
     "object_property": {
       "patterns": [
         {
-          "match": "(?<=[,{]\\s*)(\\w+)\\s*(:)",
+          "match": "(?<=[,{]\\s*)(\\w+)\\s*(:(?!=))",
           "captures": {
             "1": {
               "name": "variable.other.property.ahk2"
