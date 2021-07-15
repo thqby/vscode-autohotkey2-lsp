@@ -2737,8 +2737,8 @@ export class Lexer {
 						last_LF = next_LF, parser_pos += m[1].length - 1, begin_line = true;
 						return lst = createToken(m[1], 'TK_HOTLINE', offset, m[1].length, true);
 					}
-				} else if (m = line.match(/^(\$?[~*]{0,2}((([<>]?[!+#^]){0,4}(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+))|(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+)\s*&\s*(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+))(\s+up)?\s*::)(.*)$/i)) {
-					if (m[9].trim().match(/^([~*]{0,2}[<>]?[!+#^]){0,4}(`{|[\x21-\x7A\x7C-\x7E]|[a-z][a-z\d_]+)\s*(\s;.*)?$/i)) {
+				} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+))|(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+)\s*&\s*~?(`;|[\x21-\x3A\x3C-\x7E]|[a-z][a-z\d_]+))(\s+up)?\s*::)(.*)$/i)) {
+					if (m[9].trim().match(/^([<>~*!+#^])(`{|[\x21-\x7A\x7C-\x7E]|[a-z][a-z\d_]+)\s*(\s;.*)?$/i)) {
 						last_LF = next_LF, begin_line = true;
 						parser_pos = input.indexOf('::', parser_pos) + m[9].length - m[9].trimLeft().length + 2;
 						return lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, true);
