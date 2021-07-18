@@ -1,3 +1,8 @@
+## 0.8.7
+- 修复一些可能的热键提示为错误
+- 修复函数的参数高亮不正确
+- 修复连续多个热键定义高亮不正确 [#35](https://github.com/thqby/vscode-autohotkey2-lsp/issues/35)
+
 ## 0.8.6
 - 修复用户库标准库自动导入异常
 - 修复include可能引发的错误 [#31](https://github.com/thqby/vscode-autohotkey2-lsp/issues/31)
