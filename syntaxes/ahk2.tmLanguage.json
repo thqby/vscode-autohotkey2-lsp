@@ -29,7 +29,7 @@
       }
     },
     {
-      "match": "(?<!\\.)((?i:catch))(\\s+(\\w+)?(\\s+((?i:as))\\s+(\\w+))?)?",
+      "match": "(?<!\\.)((?i:catch))(\\s+\\(?\\s*([^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+(\\s*,\\s*[^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+)*)?(\\s+((?i:as))\\s+([^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+))?)?\\s*\\)?",
       "captures": {
         "1": {
           "name": "keyword.control.ahk2"
@@ -42,14 +42,21 @@
             },
             {
               "include": "#default_classes"
+            },
+            {
+              "match": ",",
+              "name": "punctuation.separator.comma.ahk2"
+            },
+            {
+              "match": "[^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+",
+              "name": "entity.name.type.class.ahk2"
             }
-          ],
-          "name": "entity.name.type.class.ahk2"
-        },
-        "5": {
-          "name": "keyword.control.ahk2"
+          ]
         },
         "6": {
+          "name": "keyword.control.ahk2"
+        },
+        "7": {
           "name": "variable.other.ahk2"
         }
       }
@@ -64,6 +71,10 @@
     },
     {
       "match": "(?<!\\.)\\b(?i:global|local|static)\\b",
+      "name": "storage.modifier.ahk2"
+    },
+    {
+      "match": "(?<=^\\s*)(?i:macro)(?=\\s+(\\w|[^\\x00-\\x7f])+\\()",
       "name": "storage.modifier.ahk2"
     },
     {
@@ -89,6 +100,9 @@
     },
     {
       "include": "#function_call_notparens"
+    },
+    {
+      "include": "#object_property"
     },
     {
       "include": "#variables"
@@ -234,7 +248,17 @@
       },
       "patterns": [
         {
-          "include": "#conditional_context"
+          "include": "#strings"
+        },
+        {
+          "include": "#numbers"
+        },
+        {
+          "match": ",",
+          "name": "punctuation.separator.comma.ahk2"
+        },
+        {
+          "include": "#variables"
         }
       ]
     },
@@ -755,6 +779,9 @@
           ]
         },
         {
+          "include": "#object_property"
+        },
+        {
           "include": "#variables"
         },
         {
@@ -1104,6 +1131,9 @@
           "captures": {
             "0": {
               "patterns": [
+                {
+                  "include": "#object_property"
+                },
                 {
                   "include": "#variables"
                 }

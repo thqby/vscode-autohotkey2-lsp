@@ -136,6 +136,7 @@ export namespace acorn {
 		return code > 127;
 		// return code >= 0xaa && nonASCIIidentifier.test(String.fromCharCode(code));
 	}
+	export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e\x60\x7b-\x7f]+$');
 }
 
 const colorregexp = new RegExp(/(?<=['"\s])(c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
@@ -437,7 +438,7 @@ export class Lexer {
 											j = j + 1, r = '', lt = '';
 											while (((lk = tokens[j + 1]).type === 'TK_WORD' || lk.type === 'TK_DOT') && (!lk.topofline && lt !== lk.type))
 												r += lk.content, j++, lt = lk.type;
-											rets.push(r.replace(/(\w+)$/, '@$1'));
+											rets.push(r.replace(/([^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e\x60\x7b-\x7f]+)$/, '@$1'));
 										} while (tokens[j + 1].content === '|');
 										lk = tokens[j];
 									}
@@ -555,7 +556,7 @@ export class Lexer {
 								else _this.addDiagnostic(diagnostic.unknowninclude(m.path), tk.offset, tk.length);
 							}
 							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-						} else if (m = tk.content.match(/^(\s*#dllimport\s+)((\w|[^\x00-\xff])+)/i)) {
+						} else if (m = tk.content.match(/^(\s*#dllimport\s+)((\w|[^\x00-\x7f])+)/i)) {
 							let rg = makerange(tk.offset + m[1].length, m[2].length), rg2 = Range.create(0, 0, 0, 0);
 							let tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', i6: 'int64' };
 							let n = m[2], args: Variable[] = [], u = '';
@@ -668,7 +669,7 @@ export class Lexer {
 						if (h && tk.topofline && tk.content.toLowerCase() === 'macro') {
 							let t = input.indexOf('\n', parser_pos);
 							t = t === -1 ? input_length : t;
-							if (input.substring(parser_pos, t).match(/^\s*(\w|[^\x00-\xff])+\(/))
+							if (input.substring(parser_pos, t).match(/^\s*(\w|[^\x00-\x7f])+\(/))
 								t = n_newlines, tk = get_next_token(), n_newlines = t, tk.topofline = true;
 						}
 						topcontinue = predot ? topcontinue : tk.topofline || false;
@@ -1021,7 +1022,7 @@ export class Lexer {
 			return result;
 
 			function parse_reserved() {
-				let _low = tk.content.toLowerCase(), bak = lk, t = parser_pos, nk: Token | undefined;
+				let _low = tk.content.toLowerCase(), bak = lk, t = parser_pos, p: Token | undefined, nk: Token | undefined;
 				if (mode === 2) {
 					nk = get_next_token();
 					next = false, parser_pos = tk.offset + tk.length, tk.type = 'TK_WORD';
@@ -1227,34 +1228,60 @@ export class Lexer {
 						}
 						break;
 					case 'catch':
+						if (is_next('('))
+							p = get_token_ingore_comment();
 						lk = nk = tk, tk = get_token_ingore_comment();
-						if (tk.topofline || (tk.type !== 'TK_WORD' && !tk.content.match(/^\w+$/)))
-							next = false;
-						else {
+						if (tk.topofline || (tk.type !== 'TK_WORD' && !acorn.allIdentifierChar.test(tk.content))) {
+							if (p) {
+								parser_pos = p.offset - 1;
+								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+							} else
+								next = false;
+						} else {
 							next = true;
 							if (tk.content.toLowerCase() !== 'as') {
-								if (tk.type !== 'TK_WORD')
-									_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
-								else addvariable(tk);
-								lk = tk, tk = get_token_ingore_comment();
+								while (true) {
+									if (tk.type !== 'TK_WORD')
+										_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+									else addvariable(tk);
+									lk = tk, tk = get_token_ingore_comment();
+									if (tk.content === ',') {
+										lk = tk, tk = get_token_ingore_comment();
+										if (!acorn.allIdentifierChar.test(tk.content))
+											break;
+									} else
+										break;
+								}
 							}
 							if (tk.content.toLowerCase() === 'as') {
 								lk = tk, tk = get_token_ingore_comment();
 								next = false;
-								if (tk.type !== 'TK_WORD' && !tk.content.match(/\w+/)) {
+								if (tk.type !== 'TK_WORD' && !acorn.allIdentifierChar.test(tk.content)) {
 									_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length);
 								} else if (tk.type !== 'TK_WORD')
 									_this.addDiagnostic(diagnostic.reservedworderr(nk.content), nk.offset), tk.type = 'TK_WORD';
 								else {
 									let t = get_token_ingore_comment();
 									parser_pos = tk.offset + tk.length;
-									if (!t.topofline && t.content !== '{')
+									if (!t.topofline && t.content !== '{' && !(p && t.content === ')'))
 										_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length), next = false;
-									else if (addvariable(tk))
-										next = true, (<Variable>result[result.length - 1]).def = true;
+									else {
+										if (p) {
+											if (t.content === ')')
+												parser_pos = t.offset + 1, next = true;
+											else
+												_this.addDiagnostic(diagnostic.missing('('), p.offset, 1);
+										}
+										if (addvariable(tk))
+											next = true, (<Variable>result[result.length - 1]).def = true;
+									}
 								}
-							} else if (!tk.topofline)
-								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset);
+							} else {
+								if (p && tk.content === ')')
+									lk = tk, tk = get_token_ingore_comment();
+								if (!tk.topofline)
+									_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset);
+							}
 						}
 						break;
 					default:
@@ -1448,7 +1475,7 @@ export class Lexer {
 							break;
 						case 'TK_START_EXPR':
 							if (tk.content === '[') {
-								let pre = !!input.charAt(tk.offset - 1).match(/^(\w|\)|%|[^\x00-\xff])$/);
+								let pre = !!input.charAt(tk.offset - 1).match(/^(\w|\)|%|[^\x00-\x7f])$/);
 								parsepair('[', ']');
 								if (pre) {
 									tpexp = tpexp.replace(/\S+$/, '') + '#any';
@@ -1502,7 +1529,7 @@ export class Lexer {
 									} else {
 										let s = Object.keys(tpe).pop() || '';
 										if (input.charAt(quoteend) === '(') {
-											let t = s.trim().match(/^\(\s*(([\w.]|[^\x00-\xff])+)\s*\)$/);
+											let t = s.trim().match(/^\(\s*(([\w.]|[^\x00-\x7f])+)\s*\)$/);
 											if (t)
 												s = t[1];
 										}
@@ -1551,7 +1578,7 @@ export class Lexer {
 							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset); break;
 						case 'TK_OPERATOR':
 							if (tk.content === '%') {
-								if (input.charAt(tk.offset - 1).match(/\w|[^\x00-\xff]/))
+								if (input.charAt(tk.offset - 1).match(/\w|[^\x00-\x7f]/))
 									tpexp = tpexp.replace(/\S+$/, '#any');
 								else
 									tpexp += (lk.type === 'TK_DOT' ? '.' : ' ') + '#any';
@@ -1737,7 +1764,7 @@ export class Lexer {
 											return true;
 										}
 									}
-								} else if (tk.content.match(/^\w+$/)) {
+								} else if (acorn.allIdentifierChar.test(tk.content)) {
 									nk = get_token_ingore_comment();
 									if (nk.content === ':') {
 										lk = tk, tk = nk, k = lk;
@@ -1746,7 +1773,7 @@ export class Lexer {
 								}
 								return isobj = false;
 							case 'TK_LABEL':
-								if (tk.content.match(/^(\w|[^\x00-\xff])+:$/)) {
+								if (tk.content.match(/^(\w|[^\x00-\x7f])+:$/)) {
 									addtext({ content: tk.content.replace(':', ''), type: '', offset: 0, length: 0 });
 									return true;
 								}
@@ -1947,14 +1974,14 @@ export class Lexer {
 						if (b === '[' && is_next(']') && !tk.content.match(/\n|`n/))
 							addtext({ type: '', content: tk.content.substring(1, tk.content.length - 1), offset: 0, length: 0 });
 					} else if (tk.content === '[') {
-						let pre = !!input.charAt(tk.offset - 1).match(/^(\w|\)|%|[^\x00-\xff])$/);
+						let pre = !!input.charAt(tk.offset - 1).match(/^(\w|\)|%|[^\x00-\x7f])$/);
 						parsepair('[', ']');
 						if (pre)
 							tpexp = tpexp.replace(/\S+$/, '') + '#any';
 						else
 							tpexp += ' #array';
 					} else if (tk.content === '%') {
-						if (input.charAt(tk.offset - 1).match(/\w|[^\x00-\xff]/))
+						if (input.charAt(tk.offset - 1).match(/\w|[^\x00-\x7f]/))
 							tpexp = tpexp.replace(/\S+$/, '#any');
 						else
 							tpexp += ' #any';
@@ -3701,7 +3728,7 @@ export class Lexer {
 					space_before = false;
 				if (input.charAt(parser_pos) === ')')
 					space_after = false;
-			} else if (flags.last_text === '{' && token_text.match(/^\w+$/))
+			} else if (flags.last_text === '{' && acorn.allIdentifierChar.test(token_text))
 				space_before = false;
 			if (input_wanted_newline) {
 				output_space_before_token = false;
@@ -3980,9 +4007,9 @@ export class Lexer {
 			pre = this.document.getText(Range.create(word.range.start.line, 0, word.range.start.line, word.range.start.character)).trim();
 		suf = this.document.getText(Range.create(word.range.end.line, word.range.end.character, word.range.end.line + 1, 0));
 		if (word.text.indexOf('.') === -1) {
-			if (suf.match(/^\(/) || (pre.match(/^(try|else|finally|)$/i) && suf.match(/^\s*(([\w,]|[^\x00-\xff])|$)/)))
+			if (suf.match(/^\(/) || (pre.match(/^(try|else|finally|)$/i) && suf.match(/^\s*(([\w,]|[^\x00-\x7f])|$)/)))
 				kind = SymbolKind.Function;
-		} else if (suf.match(/^\(/) || (pre.match(/^(try|else|finally|)$/i) && suf.match(/^\s*(([\w,]|[^\x00-\xff])|$)/)))
+		} else if (suf.match(/^\(/) || (pre.match(/^(try|else|finally|)$/i) && suf.match(/^\s*(([\w,]|[^\x00-\x7f])|$)/)))
 			kind = SymbolKind.Method;
 		else
 			kind = SymbolKind.Property;
@@ -4222,7 +4249,7 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 	if (path[0] === '<') {
 		if (!(path = path.replace('<', '').replace('>', ''))) return;
 		let search: string[] = [path + '.ahk'];
-		if (m = path.match(/^((\w|[^\x00-\xff])+)_.*/)) search.push(m[1] + '.ahk');
+		if (m = path.match(/^((\w|[^\x00-\x7f])+)_.*/)) search.push(m[1] + '.ahk');
 		for (const dir of libdirs) {
 			for (const file of search)
 				if (fs.existsSync(path = dir + '\\' + file)) {
@@ -4363,7 +4390,7 @@ export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [
 }
 
 export function detectVariableType(doc: Lexer, name: string, pos?: Position) {
-	if (name.match(/^[@#]([\w.]|[^\x00-\xff])+$/))
+	if (name.match(/^[@#]([\w.]|[^\x00-\x7f])+$/))
 		return [name];
 	else if (name === 'a_args')
 		return ['#array'];
@@ -4463,23 +4490,23 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 	return detect(exp, pos, 0, fullexp);
 	function detect(exp: string, pos: Position, deep: number = 0, fullexp?: string): string[] {
 		let t: string | RegExpMatchArray | null, tps: string[] = [];
-		exp = exp.replace(/#any(\(\)|\.(\w|[^\x00-\xff])+)+/g, '#any').replace(/\b(true|false)\b/gi, '#number');
+		exp = exp.replace(/#any(\(\)|\.(\w|[^\x00-\x7f])+)+/g, '#any').replace(/\b(true|false)\b/gi, '#number');
 		while ((t = exp.replace(/\(((\(\)|[^\(\)])+)\)/g, (...m) => {
 			let ts = detect(m[1], pos, deep + 1);
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#any');
 		})) !== exp)
 			exp = t;
-		while ((t = exp.replace(/\s(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*([+\-*/&|^]|\/\/|<<|>>|\*\*)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*/g, ' #number ')) !== exp)
+		while ((t = exp.replace(/\s(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*([+\-*/&|^]|\/\/|<<|>>|\*\*)\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*/g, ' #number ')) !== exp)
 			exp = t;
-		while ((t = exp.replace(/\s[+-]?(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s+(\.\s+)?[+-]?(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*/g, ' #string ')) !== exp)
+		while ((t = exp.replace(/\s[+-]?(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s+(\.\s+)?[+-]?(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*/g, ' #string ')) !== exp)
 			exp = t;
-		while ((t = exp.replace(/\s(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*(~=|<|>|[<>]=|!?=?=|\b(is|in|contains)\b)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*/g, ' #number ')) !== exp)
+		while ((t = exp.replace(/\s(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*(~=|<|>|[<>]=|!?=?=|\b(is|in|contains)\b)\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*/g, ' #number ')) !== exp)
 			exp = t;
-		while ((t = exp.replace(/(not|!|~|\+|-)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/g, ' #number ')) !== exp)
+		while ((t = exp.replace(/(not|!|~|\+|-)\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])/g, ' #number ')) !== exp)
 			exp = t;
-		while ((t = exp.replace(/(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*(\band\b|&&)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/g, ' #number ')) !== exp)
+		while ((t = exp.replace(/(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*(\band\b|&&)\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])/g, ' #number ')) !== exp)
 			exp = t;
-		while ((t = exp.replace(/(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*(\bor\b|\|\|)\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/g, (...m) => {
+		while ((t = exp.replace(/(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*(\bor\b|\|\|)\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])/g, (...m) => {
 			let ts: any = {}, mt: RegExpMatchArray | null;
 			for (let i = 1; i < 5; i += 3) {
 				if (mt = m[i].match(/^\[([^\[\]]+)\]$/)) {
@@ -4491,7 +4518,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#void');
 		})) !== exp)
 			exp = t;
-		while ((t = exp.replace(/(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*\?\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])\s*:\s*(([@#\w.]|[^\x00-\xff]|\(\))+|\[[^\[\]]+\])/, (...m) => {
+		while ((t = exp.replace(/(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*\?\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*:\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])/, (...m) => {
 			let ts: any = {}, mt: RegExpMatchArray | null;
 			for (let i = 3; i < 6; i += 2) {
 				if (mt = m[i].match(/^\[([^\[\]]+)\]$/)) {
@@ -4504,7 +4531,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 		})) !== exp)
 			exp = t;
 		if (deep === 0) {
-			while (exp !== (t = exp.replace(/((\w|[@#.]|[^\x00-\xff])+)\(\)/, (...m) => {
+			while (exp !== (t = exp.replace(/((\w|[@#.]|[^\x00-\x7f])+)\(\)/, (...m) => {
 				let ns = searchNode(doc, m[1], exp.trim() === m[0] ? { line: pos.line, character: pos.character - exp.length } : pos, SymbolKind.Variable), s = '', ts: any = {}, c: RegExpMatchArray | null | undefined;
 				if (ns) {
 					ns.map(it => {
@@ -4529,7 +4556,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 									break;
 								}
 							case SymbolKind.Function:
-								if (n === ahkvars['objbindmethod'] && (c = fullexp?.toLowerCase().match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,\s*('|")([^'"]+)\3\s*[,)]/))) {
+								if (n === ahkvars['objbindmethod'] && (c = fullexp?.toLowerCase().match(/objbindmethod\(\s*(([\w.]|[^\x00-\x7f])+)\s*,\s*('|")([^'"]+)\3\s*[,)]/))) {
 									ts[c[1] + '.' + c[4]] = true;
 								} else if ((uri = (<any>n).uri || uri) && lexers[uri])
 									for (const e in n.returntypes)
@@ -4596,7 +4623,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			return exps;
 		exp = exp.trim();
 		for (let ex of exps) {
-			if (t = ex.match(/^([@#]?)(\w|[^\x00-\xff])+(\.[@#]?(\w|[^\x00-\xff])+)*$/)) {
+			if (t = ex.match(/^([@#]?)(\w|[^\x00-\x7f])+(\.[@#]?(\w|[^\x00-\x7f])+)*$/)) {
 				let ll = '', ttt: any;
 				if ((t[1] && !t[3]) || searchcache[ex])
 					ts[ex] = true;
@@ -4805,7 +4832,7 @@ export function getFuncCallInfo(doc: Lexer, position: Position) {
 		let line = doc.document.getText(Range.create(position.line, 0, position.line + 1, 0));
 		while (tt = line.match(/('|").*?(?<!`)\1/))
 			line = line.replace(tt[0], '\x01'.repeat(tt[0].length));
-		let t = line.match(/^(.*\(\s*(([\w.]|[^\x00-\xff])+)\s*\))\((.*)\)/);
+		let t = line.match(/^(.*\(\s*(([\w.]|[^\x00-\x7f])+)\s*\))\((.*)\)/);
 		if (t && (offset = position.character - t[1].length) > 0) {
 			let q = 0, w = 0, e = 0, i = 0;
 			loop:

@@ -156,7 +156,7 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 	if (ahkprocess) {
 		commands.executeCommand('setContext', 'ahk2:isRunning', true);
 		ahkprocess.stderr?.on('data', (data) => {
-			channel.append(`[Error] ${data.toString().trim()}`);
+			channel.appendLine(`[Error] ${data.toString().trim()}`);
 		});
 		ahkprocess.on('error', (error) => {
 			console.error(error.message);
