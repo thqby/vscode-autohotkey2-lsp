@@ -83,7 +83,7 @@ ClipWait([Timeout, WaitForAnyData]) => Number
  * @param ComObject 目标 COM 对象; 也就是说, 一个 COM 接口指针.
  * 指针值可以直接传递, 也可以封装在带有 Ptr 属性的对象中, 如带有 VT_UNKNOWN 变量类型的 ComObj.
  */
-ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Number|string
+ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Number|String
 
 /**
  * 检索已使用 OLE(对象连接与嵌入) 注册的运行中的对象.
@@ -132,7 +132,7 @@ ComObjQuery(ComObject [, SID], IID) => Comobject
  * @param Type 第二个参数是指示返回的类型信息的字符串.
  * Name, IID, Class, CLSID
  */
-ComObjType(ComObject [, Type]) => Number|string
+ComObjType(ComObject [, Type]) => Number|String
 
 /**
  * 检索存储在 COM 包装器对象中的值或指针.
@@ -459,7 +459,7 @@ DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
 /**
  * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number|string
+DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number|String
 
 /**
  * 从互联网下载文件.
@@ -799,7 +799,7 @@ FileOpen(Filename, Flags [, Encoding]) => File
  *
  * `n(换行符): 把所有的回车换行符(`r`n) 替换为换行符(`n). 不过, 这种转换会降低性能而且往往不必要. 例如, 包含 `r`n 的文本已经以正确的格式添加到 Gui Edit 控件中. 下面的解析循环将正确工作, 不管每一行的结尾是 `r`n 还是 `n: Loop Parse, MyFileContents, "`n", "`r".
  */
-FileRead(Filename [, Options]) => buffer|string
+FileRead(Filename [, Options]) => Buffer|String
 
 /**
  * 如果可能, 发送文件或目录到回收站, 或永久删除该文件.
@@ -959,7 +959,7 @@ Floor(Number) => Number
  * 
  * c 字符编码 按照编码顺序输出一个单字符, 类似于 Chr(n). 如果输入值不在预期范围内将被回转. 例如, Format("{:c}", 116) 返回 t.
  */
-Format(FormatStr, Values*) => Number | string
+Format(FormatStr, Values*) => Number | String
 
 /**
  * 将YYYYMMDDHH24MISS时间戳转换为指定的日期/时间格式.
@@ -3069,7 +3069,7 @@ class Gui extends Object {
 		/**
 		 * 检索新内容或将其设置为具有价值的控件.
 		 */
-		Value => Number|string
+		Value => Number|String
 
 		/**
 		 * 检索控件的当前可见状态, 或显示或隐藏它.

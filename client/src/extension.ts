@@ -344,6 +344,8 @@ async function setInterpreter() {
 		await addpath(resolve(ahkpath, '..'));
 	if (!_.includes('c:\\program files\\autohotkey\\'))
 		await addpath('C:\\Program Files\\AutoHotkey\\');
+	if (ahkpath_cur.toLowerCase() !== ahkpath.toLowerCase() && !ahkpath_cur.toLowerCase().includes('c:\\program files\\autohotkey\\'))
+		await addpath(resolve(ahkpath_cur, '..'));
 	index = list.map(it => it.detail?.toLowerCase()).indexOf((ahkpath_cur || ahkpath).toLowerCase());
 	if (index !== -1)
 		active = list[index];

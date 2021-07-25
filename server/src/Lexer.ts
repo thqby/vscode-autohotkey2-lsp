@@ -559,7 +559,7 @@ export class Lexer {
 						} else if (m = tk.content.match(/^(\s*#dllimport\s+)((\w|[^\x00-\x7f])+)/i)) {
 							let rg = makerange(tk.offset + m[1].length, m[2].length), rg2 = Range.create(0, 0, 0, 0);
 							let tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', i6: 'int64' };
-							let n = m[2], args: Variable[] = [], u = '';
+							let n = m[2], args: Variable[] = [], u = '', i = 0;
 							h = true, m = tk.content.substring(m[0].length).match(/^\s*,[^,]+,([^,]*)/);
 							m = m[1].replace(/\s/g, '').replace(/^\w*=+/, '').toLowerCase();
 							(<string>m).split('').map(c => {
@@ -567,7 +567,7 @@ export class Lexer {
 									u = 'u';
 								else {
 									if (tps[c])
-										args.push(Variable.create(u + tps[c], SymbolKind.Variable, rg2, rg2));
+										args.push(Variable.create((++i).toString() + '_' + u + tps[c], SymbolKind.Variable, rg2, rg2));
 									u = '';
 								}
 							});
