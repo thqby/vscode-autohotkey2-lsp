@@ -1,3 +1,9 @@
+## 0.8.8
+- 加入自定义折叠`;{`和`;}`
+- 更新AHK_H补全项 [AHK_H beta.1下载](https://github.com/thqby/AutoHotkey_H/releases/tag/v2.0-beta.1)
+- 修复switch语句中部分case高亮不正确
+- 修复`catch TypeError, ValueError`高亮不正确
+
 ## 0.8.7
 - 修复一些可能的热键提示为错误
 - 修复函数的参数高亮不正确

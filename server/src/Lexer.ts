@@ -176,8 +176,8 @@ export class Lexer {
 	constructor(document: TextDocument) {
 		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this, h = isahk2_h;
-		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, _customblocks: number[] = [], ck: Token;
-		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, closed_cycle: number, tks: Token[] = [];
+		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, customblocks: { region: number[], bracket: number[] };
+		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, closed_cycle: number, tks: Token[] = [], ck: Token;
 		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space: boolean = false, lst: Token;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
@@ -368,7 +368,7 @@ export class Lexer {
 				following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
 				this.semantoken = new SemanticTokensBuilder(), this.children.length = this.foldingranges.length = this.diagnostics.length = 0;
-				this.declaration = {}, this.blocks = [], this.strcommpos = {}, _customblocks.length = 0;
+				this.declaration = {}, this.blocks = [], this.strcommpos = {}, customblocks = { region: [], bracket: [] };
 				let blocks = 0, rg: Range, tokens: Token[] = [], cls: string[] = [];
 				let p: DocumentSymbol[] = [DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg = makerange(0, 0), rg, this.children)];
 				(<FuncNode>p[0]).declaration = this.declaration;
@@ -512,13 +512,13 @@ export class Lexer {
 				checksamenameerr({}, this.children, this.diagnostics);
 				this.children.push(...this.blocks);
 				this.diags = this.diagnostics.length, this.blocks = undefined;
-				_customblocks.map(o => this.addFoldingRange(o, parser_pos - 1, 'line'));
+				customblocks.region.map(o => this.addFoldingRange(o, parser_pos - 1, 'line'));
 			}
 		} else {
 			this.parseScript = function (islib?: boolean): void {
 				input = this.document.getText(), input_length = input.length, scriptpath = includedir = this.scriptpath;
 				tks.length = 0, whitespace_before_token = [], beginpos = 0, following_bracket = false, begin_line = true;
-				bracketnum = 0, parser_pos = 0, last_LF = -1, _customblocks.length = 0, closed_cycle = 0, h = isahk2_h;
+				bracketnum = 0, parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, closed_cycle = 0, h = isahk2_h;
 				this.label.length = this.funccall.length = this.diagnostics.length = this.hotkey.length = 0;
 				this.foldingranges.length = this.children.length = 0, this.labels = {};
 				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map();
@@ -527,7 +527,7 @@ export class Lexer {
 				this.children.push(...parseblock()), this.children.push(...this.blocks), this.blocks = undefined;
 				checksamenameerr(this.declaration, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length;
-				_customblocks.map(o => this.addFoldingRange(o, parser_pos - 1, 'line'));
+				customblocks.region.map(o => this.addFoldingRange(o, parser_pos - 1, 'line'));
 			}
 		}
 
@@ -2882,13 +2882,19 @@ export class Lexer {
 					let rg: Range;
 					if (bg && (t = comment.match(/^;(;|\s*#)((end)?region\b)?/i))) {
 						if (t[3]) {
-							if ((t = _customblocks.pop()) !== undefined)
+							if ((t = customblocks.region.pop()) !== undefined)
 								_this.addFoldingRange(t, offset, 'line');
 						} else {
 							if (t[2])
-								_customblocks.push(offset);
+								customblocks.region.push(offset);
 							_this.blocks.push(DocumentSymbol.create(comment.replace(/^;(;|\s*#)((end)?region\b)?\s*/i, '') || comment, undefined, SymbolKind.Module, rg = makerange(offset, comment.length), rg));
 						}
+					} else if (t = comment.match(/^;+\s*([{}])/)) {
+						if (t[1] === '}') {
+							if ((t = customblocks.bracket.pop()) !== undefined)
+								_this.addFoldingRange(t, offset, 'line');
+						} else
+							customblocks.bracket.push(offset);
 					} else if (t = comment.match(/^;(\s*~?\s*)todo(:?\s*)(.*)/i))
 						_this.blocks.push(DocumentSymbol.create('TODO: ' + t[3].trim(), undefined, SymbolKind.Module, rg = makerange(offset, comment.length), rg));
 				}
