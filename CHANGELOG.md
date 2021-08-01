@@ -1,3 +1,6 @@
+## 0.8.9
+- 修复胖箭头函数的局部变量出现在函数外的bug
+
 ## 0.8.8
 - 加入自定义折叠`;{`和`;}`
 - 更新AHK_H补全项 [AHK_H beta.1下载](https://github.com/thqby/AutoHotkey_H/releases/tag/v2.0-beta.1)
@@ -15,7 +18,7 @@
 - 支持含特殊符号的变量 [#33](https://github.com/thqby/vscode-autohotkey2-lsp/issues/33)
 
 ## 0.8.5
-- 调整配置项名
+- 调整配置项名, 原设置选项`Path`更名为`InterpreterPath`
 - 打开文件夹或工作区时增加保存当前解释器路径
 - 修复单行热键定义`a::global b := 0`的提示错误
 

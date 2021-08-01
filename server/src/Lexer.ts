@@ -704,12 +704,6 @@ export class Lexer {
 								tn.returntypes = o, tn.static = isstatic, tn.children = [], adddeclaration(tn);
 								for (const t in o)
 									o[t] = tn.range.end;
-								for (let i = sub.length - 1; i >= 0; i--) {
-									if (pars[sub[i].name.toLowerCase()])
-										tn.children.push(sub[i]), sub.splice(i, 1);
-									else
-										(<Variable>sub[i]).def = false;
-								}
 								if (mode === 2) {
 									tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
 									if (!isstatic && tn.name.toLowerCase() === '__new')
@@ -718,7 +712,7 @@ export class Lexer {
 										_this.object.method[_low] = [];
 									_this.object.method[_low].push(tn);
 								}
-								result.push(...sub);
+								tn.children.push(...sub);
 							} else if (nk.content === '{' && fc.topofline) {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
 								_this.diagnostics.push(...tds);
@@ -859,19 +853,13 @@ export class Lexer {
 												lk = tk, tk = sk;
 												(<FuncNode>tn).parent = prop, sub = parseline(o), mode = 2, tn.funccall?.push(..._parent.funccall.splice(fcs));
 												tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-												(<FuncNode>tn).returntypes = o, tn.children = [], pars['value'] = true; for (const it of par) pars[it.name.toLowerCase()] = true;
+												(<FuncNode>tn).returntypes = o, tn.children = [];
 												if (lk.content === '=>')
 													_this.addDiagnostic(diagnostic.invaliddefinition('function'), nk.offset, nk.length);
 												for (const t in o)
 													o[t] = tn.range.end;
-												for (let i = sub.length - 1; i >= 0; i--) {
-													if (pars[sub[i].name.toLowerCase()])
-														tn.children.push(sub[i]), sub.splice(i, 1);
-													else
-														(<Variable>sub[i]).def = false;
-												}
 												if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
-												adddeclaration(tn as FuncNode), prop.children.push(...sub);
+												adddeclaration(tn as FuncNode), tn.children.push(...sub);
 											} else if (sk.content === '{') {
 												tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), [...par]), _this.addFoldingRangePos(tn.range.start, tn.range.end);
 												let vars = new Map<string, any>([['#parent', tn]]);
@@ -924,14 +912,7 @@ export class Lexer {
 									for (const t in o)
 										o[t] = tn.range.end;
 									tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-									pars['value'] = true; for (const it of par) pars[it.name.toLowerCase()] = true;
-									for (let i = sub.length - 1; i >= 0; i--) {
-										if (pars[sub[i].name.toLowerCase()])
-											tn.children.push(sub[i]), sub.splice(i, 1);
-										else
-											(<Variable>sub[i]).def = false;
-									}
-									adddeclaration(tn as FuncNode), _parent.children.push(...sub), prop.children.push(tn);
+									adddeclaration(tn as FuncNode), _parent.children.push(...sub), tn.children.push(tn);
 								}
 							} else {
 								if (!lk.topofline && (bak.type === 'TK_HOT' || (bak.topofline && bak.content === '{') || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i))))
@@ -1927,6 +1908,7 @@ export class Lexer {
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par, sub);
 									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).closure = !!(mode & 1);
 									(<FuncNode>tn).returntypes = o, adddeclaration(tn as FuncNode);
+									if (par) for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (const t in o)
 										o[t] = tn.range.end;
 									if (mode !== 0)
