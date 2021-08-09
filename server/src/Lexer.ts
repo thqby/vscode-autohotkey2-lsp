@@ -1533,8 +1533,14 @@ export class Lexer {
 								tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
 							} else {
 								let l = _this.diagnostics.length;
-								if (['TK_WORD', 'TK_STRING', 'TK_NUMBER'].includes(lk.type))
-									_this.addDiagnostic(diagnostic.unexpected('{'), tk.offset, tk.length);
+								if (['TK_WORD', 'TK_STRING', 'TK_NUMBER'].includes(lk.type)) {
+									if (mustexp)
+										_this.addDiagnostic(diagnostic.unexpected('{'), tk.offset, tk.length);
+									else {
+										types[tpexp] = true, _this.diagnostics.splice(l);
+										next = false; return result.splice(pres);
+									}
+								}
 								if (parseobj(mustexp, t = {})) {
 									tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
 								} else {
