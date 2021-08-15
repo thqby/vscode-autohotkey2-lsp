@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "0.8.9",
+	"version": "0.9.0",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",

@@ -610,6 +610,17 @@ export class Lexer {
 							tn.children = [], tn.children.push(...parseblock(1, vars)), tn.range = makerange(ht.offset, parser_pos - ht.offset);
 							_this.addFoldingRangePos(tn.range.start, tn.range.end);
 							adddeclaration(tn as FuncNode);
+						} else if (tk.content.toLowerCase() === 'return') {
+							if (tk.topofline) {
+								tn.children = [], tn.range = makerange(ht.offset, tk.offset + tk.length - ht.offset);
+								_this.addDiagnostic(diagnostic.invalidhotdef(), ht.offset, ht.length);
+								break;
+							}
+							let hh = tn as FuncNode, t = _parent, tm = mode;
+							_parent = tn, mode = 1;
+							tn.children = parseline();
+							adddeclaration(hh), _parent = t, mode = tm;
+							hh.range = makerange(ht.offset, lk.offset + lk.length - ht.offset);
 						} else {
 							let hh = tn as FuncNode, t = _parent, tm = mode;
 							_parent = tn, mode = 1;
@@ -657,6 +668,8 @@ export class Lexer {
 					case 'TK_OPERATOR':
 						if (tk.content === '%')
 							parsepair('%', '%');
+						else if (mode === 2 && tk.content.match(/^\w+$/))
+							tk.type = 'TK_WORD', next = false;
 						break;
 					case 'TK_NUMBER':
 						if (input.charAt(parser_pos).match(/\(|\[/))
@@ -1072,6 +1085,8 @@ export class Lexer {
 					case 'local':
 						if (n_newlines === 1 && cmm.type) nk = cmm;
 						lk = tk, tk = get_token_ingore_comment();
+						if (mode === 2 && tk.type === 'TK_OPERATOR' && tk.content.match(/^\w+$/))
+							tk.type = 'TK_WORD';
 						if (tk.topofline) {
 							if (mode === 2 && _low !== 'static')
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset);
