@@ -3421,7 +3421,8 @@ export class Lexer {
 			} else if (last_type === 'TK_STRING') {
 				prefix = 'SPACE';
 			} else if (last_type === 'TK_RESERVED' || last_type === 'TK_WORD') {
-				prefix = 'SPACE';
+				if (!last_text.match(/^:[^:xX]*[xX]/))
+					prefix = 'SPACE';
 			} else if (last_type === 'TK_START_BLOCK') {
 				prefix = 'NEWLINE';
 			} else if (last_type === 'TK_END_EXPR') {
@@ -3733,10 +3734,8 @@ export class Lexer {
 				if (last_type === 'TK_COMMA' || last_type === 'TK_START_EXPR')
 					space_before = false;
 			} else if (token_text === '*') {
-				if (flags.last_text === '(' || (last_type === 'TK_WORD' && is_next(')')))
-					space_before = false;
-				if (input.charAt(parser_pos) === ')')
-					space_after = false;
+				if (flags.last_text === '(' || (last_type === 'TK_WORD' && (is_next(')') || is_next(']'))))
+					space_before = space_after = false;
 			} else if (flags.last_text === '{' && acorn.allIdentifierChar.test(token_text))
 				space_before = false;
 			if (input_wanted_newline) {
