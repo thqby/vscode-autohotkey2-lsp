@@ -178,7 +178,7 @@ export class Lexer {
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this, h = isahk2_h;
 		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, customblocks: { region: number[], bracket: number[] };
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, closed_cycle: number, tks: Token[] = [], ck: Token;
-		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space: boolean = false, lst: Token;
+		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space = false, last_top = false, lst: Token;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
 		this.document = document, this.scriptpath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath.replace(/\\[^\\]+$/, ''), this.initlibdirs();
@@ -289,6 +289,7 @@ export class Lexer {
 						}
 					}
 				}
+				last_top = top;
 				if (top) {
 					top = false;
 					if (in_array(flags.mode, [MODE.BlockStatement, MODE.Statement])) {
@@ -316,7 +317,7 @@ export class Lexer {
 							keep_comma_space = true;
 					}
 				} else if ((ck.topofline && in_array(flags.mode, [MODE.Statement, MODE.BlockStatement]) &&
-					in_array(token_type, ['TK_WORD', 'TK_START_BLOCK', 'TK_HOT'])) ||
+					in_array(token_type, ['TK_WORD', 'TK_START_BLOCK', 'TK_HOT', 'TK_SHARP'])) ||
 					(token_type === 'TK_RESERVED' && token_text.match(/^(try|else|finally)$/i)))
 					top = true;
 				handlers[token_type]();
@@ -3738,6 +3739,8 @@ export class Lexer {
 					space_before = space_after = false;
 			} else if (flags.last_text === '{' && acorn.allIdentifierChar.test(token_text))
 				space_before = false;
+			else if (last_top && flags.mode === MODE.Statement && last_type === 'TK_WORD' && (token_text === '-' || token_text === '+'))
+				space_after = false;
 			if (input_wanted_newline) {
 				output_space_before_token = false;
 				print_newline(false, true);
