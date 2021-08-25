@@ -21,23 +21,23 @@ ATan(Number) => Number
 
 /**
  * 创建机器码地址, 当它被调用时会重定向到脚本中的函数.
- * @param Address 函数名或函数对象. 每当调用 Address 时会自动调用此函数. 此函数同时会接收到传递给 Address 的参数.
+ * @param Function 函数对象. 每当调用 Address 时会自动调用此函数对象. 此函数同时会接收到传递给 Address 的参数.
  * 闭包或绑定函数可以用来区分多个回调函数调用相同的脚本函数.
  * 回调函数保留对函数对象的引用, 并在脚本调用 CallbackFree 时释放它.
  * @param Options 指定零个或多个下列单词或字符串. 在选项间使用空格分隔(例如 "C Fast").
- * Fast 或 F: 避免每次调用 Function 时都启动新的线程. 尽管这样执行的更好, 但必须避免调用 Address 的线程发生变化(例如当回调函数被传入的消息触发). 这是因为 FunctionName 能改变在它被调用时正在运行的线程的全局设置(例如 A_LastError 和上次找到的窗口). 有关详情, 请参阅备注.
+ * Fast 或 F: 避免每次调用 Function 时都启动新的线程. 尽管这样执行的更好, 但必须避免调用 Address 的线程发生变化(例如当回调函数被传入的消息触发). 这是因为 Function 能改变在它被调用时正在运行的线程的全局设置(例如 A_LastError 和上次找到的窗口). 有关详情, 请参阅备注.
  *
  * CDecl 或 C: 让 Address 遵循 "C" 调用约定. 此选项通常省略, 因为在回调函数中使用标准调用约定更为常用. 64 位版本的 AutoHotkey 会忽略这个选项, 它使用 x64 调用约定.
  *
  * &: 将参数列表的地址(单个整数) 传递给 Function, 而不是传递给各个参数. 可以使用 NumGet 检索参数值. 当使用标准的 32 位调用约定时, ParamCount 必须以 DWORDs 指定参数列表的大小(字节数除以 4).
  * @param ParamCount Address 的调用者会传递给它的参数数目. 如果省略, 则它默认为 Function.MinParams, 这通常是 Function 定义中强制参数的数目. 在这两种情况中, 必须确保调用者准确传递此数目的参数.
  */
-CallbackCreate(Address [, Options, ParamCount]) => Number
+CallbackCreate(Function [, Options, ParamCount]) => Number
 
 /**
  * 释放回调对脚本函数对象的引用.
  */
-CallbackFree(Function) => void
+CallbackFree(Address) => void
 
 /**
  * 检索插入符号的当前位置(文本插入点).
@@ -356,6 +356,12 @@ ControlShowDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) =>
  * 返回 Number 的余弦值.
  */
 Cos(Number) => Number
+
+/**
+ * 防止当前线程被其他线程中断, 或使其能够被中断.
+ * @param OnOffNumeric 
+ */
+Critical(OnOffNumeric) => void
 
 /**
  * 从日期-时间值中添加或减去时间.

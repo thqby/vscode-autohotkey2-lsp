@@ -1,3 +1,8 @@
+## 0.9.1
+- 修复[#40](https://github.com/thqby/vscode-autohotkey2-lsp/issues/40)
+- 修复[#41](https://github.com/thqby/vscode-autohotkey2-lsp/issues/41)
+- 修复[#42](https://github.com/thqby/vscode-autohotkey2-lsp/issues/42)
+
 ## 0.8.9
 - 修复胖箭头函数的局部变量出现在函数外的bug
 

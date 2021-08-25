@@ -369,11 +369,6 @@
 			"prefix": "CoordMode"
 		},
 		{
-			"body": "critical ${1|'Off','On'|}",
-			"description": "防止当前线程被其他线程中断,或使其能够被中断.",
-			"prefix": "critical"
-		},
-		{
 			"body": "DetectHiddenText ${1|true,false|}",
 			"description": "设置在查找窗口时是否 '看见' 隐藏的文本. 这将影响 WinExist 和 WinActivate 等内置函数.",
 			"prefix": "DetectHiddenText"
