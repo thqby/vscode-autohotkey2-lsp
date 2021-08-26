@@ -61,8 +61,8 @@ export namespace setting {
 
 function load() {
 	let path = '';
-	const vscodeConfigString = process.env.VSCODE_NLS_CONFIG;
-	const locale = vscodeConfigString ? JSON.parse(vscodeConfigString).locale : 'en-us';
+	const vscodeConfigString = process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFIG;
+	const locale = vscodeConfigString ? JSON.parse(vscodeConfigString).locale || 'en-us' : 'en-us';
 	if (!existsSync(path = resolve(__dirname, `../../package.nls.${locale}.json`)) &&
 		!(locale === 'zh-tw' && existsSync(path = resolve(__dirname, '../../package.nls.zh-cn.json'))))
 		path = resolve(__dirname, '../../package.nls.json');

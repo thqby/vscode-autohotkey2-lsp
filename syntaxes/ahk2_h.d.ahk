@@ -178,6 +178,15 @@ ZipOptions(ZipHandle, Options) => Number
  */
 ZipRawMemory(AddOrBuf [, Size , Password]) => Buffer
 
+class JSON {
+	static parse(objtext) => Map | Array
+  
+	/**
+	 * 对象包括映射、数组、对象和带有`__enum`元函数的自定义对象
+	 * @param space 用于缩进的空格的数量或字符串
+	 */
+	static stringify(obj, space := 0) => String
+}
 
 class Struct {
 	/**

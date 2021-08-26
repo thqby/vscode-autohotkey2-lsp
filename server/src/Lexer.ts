@@ -148,7 +148,7 @@ export class Lexer {
 	public beautify: Function;
 	public blocks: DocumentSymbol[] | undefined;
 	public children: DocumentSymbol[] = [];
-	public d: boolean = false;
+	public d = 0;
 	public declaration: { [name: string]: FuncNode | ClassNode | Variable } = {};
 	public diagnostics: Diagnostic[] = [];
 	public diags = 0;
@@ -363,6 +363,7 @@ export class Lexer {
 		};
 
 		if (document.uri.match(/\.d\.(ahk2?|ah2)$/i)) {
+			this.d = 1;
 			this.parseScript = function (islib = false): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, tks.length = 0;
 				whitespace_before_token = [], beginpos = 0;
@@ -498,8 +499,8 @@ export class Lexer {
 							break;
 					}
 				}
-				if (islib || this.d) {
-					this.d = true;
+				if (islib || (this.d & 2)) {
+					this.d = 3;
 					this.children.map(it => {
 						switch (it.kind) {
 							case SymbolKind.Function:

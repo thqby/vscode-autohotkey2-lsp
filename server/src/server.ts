@@ -267,7 +267,7 @@ function initahk2cache() {
 		method: [],
 		other: [],
 		constant: [],
-		snippet: [{
+		snippet: process.env.AHK2_LS_CONFIG ? [] : [{
 			label: 'zs-Comment',
 			detail: completionitem.comment(),
 			kind: CompletionItemKind.Snippet,
@@ -362,8 +362,10 @@ async function loadahk2(filename = 'ahk2') {
 let initnum = 0;
 async function initpathenv(hasconfig = false, samefolder = false) {
 	if (!hasconfig) {
-		extsettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		if (!extsettings.InterpreterPath && !ahkpath_cur) return false;
+		let t = await connection.workspace.getConfiguration('AutoHotkey2');
+		if (!t && process.env.AHK2_LS_CONFIG)
+			t = JSON.parse(process.env.AHK2_LS_CONFIG);
+		if (!(extsettings = t || extsettings).InterpreterPath && !ahkpath_cur) return false;
 	}
 	let script = `
 	#NoTrayIcon

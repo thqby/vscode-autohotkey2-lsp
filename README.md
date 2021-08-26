@@ -33,6 +33,8 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
   - [编译脚本](#编译脚本)
   - [调试脚本](#调试脚本)
   - [生成注释](#生成注释)
+- [在其他编辑器中使用](#在其他编辑器中使用)
+  - [(n)vim](#nvim)
 
 ## 语言特性
 
@@ -107,7 +109,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
 ### 自定义折叠
 
-折叠`;#region`和`;#endregion`之间部分
+折叠`;#region`和`;#endregion`之间部分, `;{`和`;}`之间部分
 ```
 ;#region
 code
@@ -140,6 +142,43 @@ code
 
 为函数或方法生成 JSDOC 样式的注释文档.
 
+## 在其他编辑器中使用
+
+### (n)vim
+
+下载[coc.nvim插件](https://github.com/neoclide/coc.nvim)
+```bat
+cd $VIMRUNTIME\plugin
+git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
+```
+
+下载并解压[thqby.vscode-autohotkey2-lsp插件](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
+
+提取以下文件到coc.nvim\plugin
+- server/*
+- syntaxes/*
+- package.nls.json
+- package.nls.zh-cn.json
+
+打开(n)vim, 输入命令 `:CocConfig` 进入`coc.nvim`配置文件增加配置信息
+```json
+{
+	"languageserver": {
+		"autohotkey": {
+			"module": "plugin/coc.nvim/plugin/ahk2-lsp文件夹/server/dist/server.js",
+			"filetypes": [
+				"autohotkey",
+				"autohotkey2"
+			],
+			"args": ["--node-ipc"],
+			"env": {
+				"AHK2_LS_CONFIG": "{\"locale\":\"zh-cn\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":false}"
+			}
+		}
+	}
+}
+```
+
 # AutoHotkey2 Language Support
 
 AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis
@@ -157,13 +196,15 @@ AutoHotKey V2 Language support for VS Code, Function realization based on v2 syn
   - [Find All References](#find-all-references)
   - [CodeFormat](#codeformat)
   - [Custom folding](#custom-folding)
--[Context Menu](#context-menu)
+- [Context Menu](#context-menu)
   - [Quick Help](#quick-Help)
   - [Run Script](#run-script)
   - [Run Selected Script](#run-selected-script)
   - [Compile Script](#compile-script)
   - [Debug Script](#debug-script)
   - [Generate Comment](#generate-comment)
+- [Use in other editors](#use-in-other-editors)
+  - [(n)vim](#vim-and-neovim)
 
 ## Language Features
 
@@ -239,7 +280,7 @@ usage:
 
 ### Custom folding
 
-Fold the part between `;#region` and `;#endregion`
+Fold the part between `;#region` and `;#endregion`, `;{` and `;}`
 ```
 ;#region
 code
@@ -271,3 +312,40 @@ No additional configuration is required to start the installed Debug extensions,
 ### Generate Comment
 
 Generate JSDOC-style comments for a function or method.
+
+## Use in other editors
+
+### Vim and Neovim
+
+Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim)
+```bat
+cd $VIMRUNTIME\plugin
+git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
+```
+
+Download and unpack [thqby.vscode-autohotkey2-LSP plugin](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
+
+Extract the following files into the coc.nvim\plugin
+- server/*
+- syntaxes/*
+- package.nls.json
+- package.nls.zh-cn.json
+
+Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
+```json
+{
+	"languageserver": {
+		"autohotkey": {
+			"module": "plugin/coc.nvim/plugin/ahk2-lsp folder/server/dist/server.js",
+			"filetypes": [
+				"autohotkey",
+				"autohotkey2"
+			],
+			"args": ["--node-ipc"],
+			"env": {
+				"AHK2_LS_CONFIG": "{\"locale\":\"en-us\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":false}"
+			}
+		}
+	}
+}
+```
