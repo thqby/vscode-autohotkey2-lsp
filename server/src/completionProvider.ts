@@ -230,23 +230,22 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						pre = pre.replace(m[0], pathenv[a_]);
 					else if (a_ === 'scriptdir')
 						pre = pre.replace(m[0], doc.scriptdir);
+					else if (a_ === 'linefile')
+						pre = pre.replace(m[0], doc.scriptpath);
 					else return;
 				if (pre.charAt(pre.length - 1) === '/')
 					xg = '/';
+				let extreg = inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i);
 				for (let path of paths) {
 					if (!existsSync(path = resolve(path, pre) + '\\')) continue;
 					for (let it of readdirSync(path)) {
 						try {
-							if (inlib) {
-								if (it.match(/\.ahk$/i) && expg.test(it = it.replace(/\.ahk$/i, '')))
-									cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + lchar,
-										cpitem.kind = CompletionItemKind.File, items.push(cpitem);
-							} else if (statSync(path + it).isDirectory()) {
+							if (statSync(path + it).isDirectory()) {
 								if (expg.test(it))
 									cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + xg,
 										cpitem.command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' },
 										cpitem.kind = CompletionItemKind.Folder, items.push(cpitem);
-							} else if (it.match(/\.(ahk2?|ah2)$/i) && expg.test(it.replace(/\.(ahk2?|ah2)$/i, '')))
+							} else if (extreg.test(it) && expg.test(inlib ? it = it.replace(extreg, '') : it.replace(extreg, '')))
 								cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + lchar,
 									cpitem.kind = CompletionItemKind.File, items.push(cpitem);
 						} catch (err) { };

@@ -1,5 +1,5 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver';
-import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, samenameerr, Token, Variable } from './Lexer';
+import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenTypes, Token, Variable } from './Lexer';
 import { diagnostic } from './localize';
 import { ahkvars, lexers, sendDiagnostics, symbolcache } from './server';
 
@@ -33,24 +33,23 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		tree.map(info => {
 			if (info.children)
 				t.push(info);
-			if ((<SymbolKind[]>[SymbolKind.Variable, SymbolKind.Function, SymbolKind.Class]).includes(info.kind)) {
+			if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Variable || info.kind === SymbolKind.Class) {
 				let _l = info.name.toLowerCase();
 				if (!vars[_l]) {
 					if (info.kind === SymbolKind.Variable && !(<Variable>info).def && gvar[_l]) {
 						vars[_l] = gvar[_l];
 						if (info === gvar[_l])
-							result.push(info);
+							result.push(info), converttype(info);
+						else converttype(info, gvar[_l].kind);
 					} else
-						vars[_l] = info, result.push(info);
+						vars[_l] = info, converttype(info), result.push(info);
 				} else if (info.kind === SymbolKind.Variable) {
-					// let kind = vars[_l].kind
-					// if (vars[_l] !== glo[_l] && (<Variable>info).def && (kind === SymbolKind.Function || kind === SymbolKind.Class || kind === SymbolKind.Method)) {
-						// doc.diagnostics.push({ message: samenameerr(vars[_l], info), range: info.selectionRange, severity: DiagnosticSeverity.Error });
-					// }
+					if (info !== vars[_l])
+						converttype(info, vars[_l].kind);
 				} else if (info !== vars[_l])
-					result.push(info), vars[_l] = info;
+					result.push(info), vars[_l] = info, converttype(info);
 				else if (info === gvar[_l])
-					result.push(info);
+					result.push(info), converttype(info);
 			} else
 				result.push(info);
 		});
@@ -62,11 +61,11 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					for (const k in p.global)
 						inherit[k] = p.global[k];
 					(<FuncNode>info).params?.map(it => {
-						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true;
+						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true, converttype(it, SymbolKind.TypeParameter);
 					});
 					for (const k in p.local)
 						if (!ps[k])
-							inherit[k] = p.local[k], result.push(inherit[k]);
+							inherit[k] = p.local[k], result.push(inherit[k]), converttype(inherit[k]);
 					if (p.assume === FuncScope.GLOBAL || global) {
 						gg = true;
 					} else {
@@ -85,11 +84,12 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						}
 						for (const k in tt)
 							if (!inherit[k]) {
-								inherit[k] = tt[k], result.push(inherit[k]);
+								inherit[k] = tt[k], result.push(inherit[k]), converttype(tt[k]);
 							} else if (tt[k] !== inherit[k]) {
 								if (tt[k].kind !== SymbolKind.Variable || (inherit[k] === gvar[k] && (<Variable>tt[k]).def))
-									inherit[k] = tt[k], result.push(tt[k]);
-							}
+									inherit[k] = tt[k], result.push(tt[k]), converttype(tt[k]);
+								else converttype(tt[k], inherit[k].kind);
+							} else converttype(tt[k]);
 					}
 				}
 				result.push(...flatTree(info.children, inherit, gg));
@@ -156,5 +156,23 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			let rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
 			doc.diagnostics.push({ message: diagnostic.unknown("class '" + it.extends) + "'", range: rg, severity: DiagnosticSeverity.Error });
 		}
+	}
+	function converttype(it: DocumentSymbol, kind?: number) {
+		let tk: Token, stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined;
+		switch (kind || it.kind) {
+			case SymbolKind.TypeParameter:
+				st = SemanticTokenTypes.parameter; break;
+			case SymbolKind.Variable:
+				st = SemanticTokenTypes.variable; break;
+			case SymbolKind.Class:
+				st = SemanticTokenTypes.class; break;
+			case SymbolKind.Function:
+				st = SemanticTokenTypes.function; break;
+		}
+		if (st !== undefined)
+			if ((stk = (tk = doc.tokens[doc.document.offsetAt(it.selectionRange.start)]).semantic) === undefined)
+				tk.semantic = { type: st };
+			else if (kind !== undefined)
+				stk.type = st;
 	}
 }

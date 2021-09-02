@@ -8,18 +8,16 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 	if (!doc || doc.instrorcomm(params.position)) return;
 	let context = doc.buildContext(params.position), t: any, hover: any[] = [];
 	if (context) {
-		let word = context.text.toLowerCase(), kind: SymbolKind | SymbolKind[] = SymbolKind.Variable;
-		let nodes: [{ node: DocumentSymbol, uri: string }] | undefined, node: DocumentSymbol | undefined, uri: string = '';
+		let word = context.text.toLowerCase(), kind: SymbolKind = SymbolKind.Variable;
+		let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, node: DocumentSymbol | undefined, uri: string = '';
 		if (context.pre === '#') {
 			if ((t = hoverCache[1]) && (t = t[word = '#' + word]))
 				return t[0];
 			else return undefined;
 		} else kind = context.kind;
-		if (kind === SymbolKind.Variable)
-			kind = [SymbolKind.Variable, SymbolKind.Class];
 		if (word === '')
 			return undefined;
-		else if (!(nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
+		else if (undefined === (nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
 			let ts: any = {};
 			nodes = <any>[], detectExpType(doc, word.replace(/\.[^.]+$/, m => {
 				word = m.match(/^\.[^.]+$/) ? m : '';
@@ -33,7 +31,8 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 					});
 			if (!nodes?.length)
 				nodes = undefined;
-		}
+		} else if (nodes === null)
+			return undefined;
 		if (!nodes) {
 			if (kind === SymbolKind.Method) {
 			} else if (ahkvars[word])

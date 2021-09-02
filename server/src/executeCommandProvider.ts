@@ -37,7 +37,7 @@ async function fixinclude(libpath: string, docuri: string) {
 		if (libpath.startsWith(p + '\\')) {
 			let ext = extname(libpath);
 			if (ext === '.ahk')
-				text = `#Include <${basename(restorePath(libpath), ext)}>`;
+				text = `#Include <${relative(p, restorePath(libpath)).slice(0, -4)}>`;
 			else if (pathenv.mydocuments && libpath.startsWith(pathenv.mydocuments + '\\autohotkey\\lib'))
 				text = `#Include '%A_MyDocuments%\\AutoHotkey\\Lib\\${basename(restorePath(libpath))}'`;
 			else

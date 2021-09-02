@@ -8,12 +8,12 @@ import {
 	Command, CompletionItem, CompletionItemKind, createConnection,
 	DidChangeConfigurationNotification, DocumentSymbol,
 	FoldingRange, FoldingRangeParams, Hover, InitializeParams, InitializeResult, InsertTextFormat,
-	MarkupKind, ProposedFeatures, Range, SymbolInformation, SymbolKind,
+	MarkupKind, ProposedFeatures, Range, SemanticTokensDeltaParams, SemanticTokensDeltaPartialResult, SymbolInformation, SymbolKind,
 	TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit
-} from 'vscode-languageserver';
+} from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
-import { codeActionProvider } from './CodeActionProvider';
+import { codeActionProvider } from './codeActionProvider';
 import { colorPresentation, colorProvider } from './colorProvider';
 import { completionProvider } from './completionProvider';
 import { defintionProvider } from './definitionProvider';
@@ -27,6 +27,7 @@ import { prepareRename, renameProvider } from './renameProvider';
 import { runscript } from './scriptrunner';
 import { signatureProvider } from './signatureProvider';
 import { symbolProvider } from './symbolProvider';
+import { semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange } from './semanticTokensProvider';
 
 export const languageServer = 'ahk2-language-server';
 export let libdirs: string[] = [], extsettings: AHKLSSettings = {
@@ -43,6 +44,7 @@ export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}];
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let dllcalltpe: string[] = [];
 export type Maybe<T> = T | undefined;
+
 interface AHKLSSettings {
 	InterpreterPath: string
 	AutoLibInclude: boolean
@@ -100,7 +102,36 @@ connection.onInitialize((params: InitializeParams) => {
 			colorProvider: true,
 			codeActionProvider: true,
 			renameProvider: { prepareProvider: true },
-			referencesProvider: { workDoneProgress: true }
+			referencesProvider: { workDoneProgress: true },
+			semanticTokensProvider: {
+				legend: {
+					tokenTypes: [
+						"class",
+						"parameter",
+						"variable",
+						"property",
+						"function",
+						"method",
+						"keyword",
+						"string",
+						"number",
+						"event",
+						"modifier",
+						"comment"
+					],
+					tokenModifiers: [
+						"definition",
+						"readonly",
+						"static",
+						"deprecated",
+						"modification",
+						"documentation",
+						"defaultLibrary"
+					]
+				},
+				full: { delta: true },
+				range: true
+			}
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -242,6 +273,9 @@ connection.onReferences(referenceProvider);
 connection.onRenameRequest(renameProvider);
 connection.onSignatureHelp(signatureProvider);
 connection.onExecuteCommand(executeCommandProvider);
+connection.languages.semanticTokens.on(semanticTokensOnFull);
+connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
+connection.languages.semanticTokens.onRange(semanticTokensOnRange);
 documents.listen(connection);
 connection.listen();
 initahk2cache();
@@ -374,8 +408,10 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 		s .= p "|"
 	try
 		_H := Func("NewThread").IsBuiltIn
-	catch
-		_H := IsSet(NewThread)
+	catch {
+		FRD := "FileRead"
+		try _H := !!RegExMatch(%FRD%(A_AhkPath, "utf-16"), "NewThread\\0")
+	}
 	%Append%(s _H "\`n", "*", "UTF-8")
 	FileAppend2(text, file) {
 		encode := "UTF-8"
@@ -383,7 +419,12 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 	}
 	`
 	let ret = runscript(script, (data: string) => {
-		let paths = data.trim().split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '';
+		if (!(data = data.trim())) {
+			connection.window.showErrorMessage(setting.getenverr());
+			ret = false;
+			return;
+		}
+		let paths = data.split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '';
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].toLowerCase();
 		if (!pathenv.ahkpath) {

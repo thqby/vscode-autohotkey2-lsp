@@ -9,13 +9,13 @@ import {
 	Diagnostic,
 	DiagnosticSeverity,
 	FoldingRange,
-	ColorInformation
+	ColorInformation,
+	SemanticTokensBuilder
 } from 'vscode-languageserver';
 
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
-import { SemanticTokensBuilder } from 'vscode-languageserver/lib/sematicTokens.proposed';
 import { URI } from 'vscode-uri';
 import { builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
@@ -29,6 +29,31 @@ export interface AhkDoc {
 
 export enum FuncScope {
 	DEFAULT = 0, GLOBAL = 1
+}
+
+export enum SemanticTokenTypes {
+	class,
+	parameter,
+	variable,
+	property,
+	function,
+	method,
+	keyword,
+	string,
+	number,
+	event,
+	modifier,
+	comment
+}
+
+export enum SemanticTokenModifiers {
+	definition,
+	readonly,
+	static,
+	deprecated,
+	modification,
+	documentation,
+	defaultLibrary
 }
 
 export interface FuncNode extends DocumentSymbol {
@@ -77,13 +102,20 @@ export interface ReferenceInfomation {
 	line: number
 }
 
+export interface SemanticToken {
+	type: SemanticTokenTypes
+	modifier?: number
+}
+
 export interface Token {
-	type: string;
-	content: string;
-	offset: number;
-	length: number;
-	topofline?: boolean;
-	ignore?: boolean;
+	type: string
+	content: string
+	offset: number
+	length: number
+	topofline?: boolean
+	ignore?: boolean
+	semantic?: SemanticToken
+	pos?: Position
 }
 
 export namespace SymbolNode {
@@ -126,7 +158,6 @@ export namespace ReferenceInfomation {
 
 export namespace acorn {
 	export function isIdentifierChar(code: number) {
-		// let nonASCIIidentifier = new RegExp("[\xaa\xb5\xba\xc0-\xd6\xd8-\xf6\xf8-\u02c1\u02c6-\u02d1\u02e0-\u02e4\u02ec\u02ee\u0370-\u0374\u0376\u0377\u037a-\u037d\u0386\u0388-\u038a\u038c\u038e-\u03a1\u03a3-\u03f5\u03f7-\u0481\u048a-\u0527\u0531-\u0556\u0559\u0561-\u0587\u05d0-\u05ea\u05f0-\u05f2\u0620-\u064a\u066e\u066f\u0671-\u06d3\u06d5\u06e5\u06e6\u06ee\u06ef\u06fa-\u06fc\u06ff\u0710\u0712-\u072f\u074d-\u07a5\u07b1\u07ca-\u07ea\u07f4\u07f5\u07fa\u0800-\u0815\u081a\u0824\u0828\u0840-\u0858\u08a0\u08a2-\u08ac\u0904-\u0939\u093d\u0950\u0958-\u0961\u0971-\u0977\u0979-\u097f\u0985-\u098c\u098f\u0990\u0993-\u09a8\u09aa-\u09b0\u09b2\u09b6-\u09b9\u09bd\u09ce\u09dc\u09dd\u09df-\u09e1\u09f0\u09f1\u0a05-\u0a0a\u0a0f\u0a10\u0a13-\u0a28\u0a2a-\u0a30\u0a32\u0a33\u0a35\u0a36\u0a38\u0a39\u0a59-\u0a5c\u0a5e\u0a72-\u0a74\u0a85-\u0a8d\u0a8f-\u0a91\u0a93-\u0aa8\u0aaa-\u0ab0\u0ab2\u0ab3\u0ab5-\u0ab9\u0abd\u0ad0\u0ae0\u0ae1\u0b05-\u0b0c\u0b0f\u0b10\u0b13-\u0b28\u0b2a-\u0b30\u0b32\u0b33\u0b35-\u0b39\u0b3d\u0b5c\u0b5d\u0b5f-\u0b61\u0b71\u0b83\u0b85-\u0b8a\u0b8e-\u0b90\u0b92-\u0b95\u0b99\u0b9a\u0b9c\u0b9e\u0b9f\u0ba3\u0ba4\u0ba8-\u0baa\u0bae-\u0bb9\u0bd0\u0c05-\u0c0c\u0c0e-\u0c10\u0c12-\u0c28\u0c2a-\u0c33\u0c35-\u0c39\u0c3d\u0c58\u0c59\u0c60\u0c61\u0c85-\u0c8c\u0c8e-\u0c90\u0c92-\u0ca8\u0caa-\u0cb3\u0cb5-\u0cb9\u0cbd\u0cde\u0ce0\u0ce1\u0cf1\u0cf2\u0d05-\u0d0c\u0d0e-\u0d10\u0d12-\u0d3a\u0d3d\u0d4e\u0d60\u0d61\u0d7a-\u0d7f\u0d85-\u0d96\u0d9a-\u0db1\u0db3-\u0dbb\u0dbd\u0dc0-\u0dc6\u0e01-\u0e30\u0e32\u0e33\u0e40-\u0e46\u0e81\u0e82\u0e84\u0e87\u0e88\u0e8a\u0e8d\u0e94-\u0e97\u0e99-\u0e9f\u0ea1-\u0ea3\u0ea5\u0ea7\u0eaa\u0eab\u0ead-\u0eb0\u0eb2\u0eb3\u0ebd\u0ec0-\u0ec4\u0ec6\u0edc-\u0edf\u0f00\u0f40-\u0f47\u0f49-\u0f6c\u0f88-\u0f8c\u1000-\u102a\u103f\u1050-\u1055\u105a-\u105d\u1061\u1065\u1066\u106e-\u1070\u1075-\u1081\u108e\u10a0-\u10c5\u10c7\u10cd\u10d0-\u10fa\u10fc-\u1248\u124a-\u124d\u1250-\u1256\u1258\u125a-\u125d\u1260-\u1288\u128a-\u128d\u1290-\u12b0\u12b2-\u12b5\u12b8-\u12be\u12c0\u12c2-\u12c5\u12c8-\u12d6\u12d8-\u1310\u1312-\u1315\u1318-\u135a\u1380-\u138f\u13a0-\u13f4\u1401-\u166c\u166f-\u167f\u1681-\u169a\u16a0-\u16ea\u16ee-\u16f0\u1700-\u170c\u170e-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176c\u176e-\u1770\u1780-\u17b3\u17d7\u17dc\u1820-\u1877\u1880-\u18a8\u18aa\u18b0-\u18f5\u1900-\u191c\u1950-\u196d\u1970-\u1974\u1980-\u19ab\u19c1-\u19c7\u1a00-\u1a16\u1a20-\u1a54\u1aa7\u1b05-\u1b33\u1b45-\u1b4b\u1b83-\u1ba0\u1bae\u1baf\u1bba-\u1be5\u1c00-\u1c23\u1c4d-\u1c4f\u1c5a-\u1c7d\u1ce9-\u1cec\u1cee-\u1cf1\u1cf5\u1cf6\u1d00-\u1dbf\u1e00-\u1f15\u1f18-\u1f1d\u1f20-\u1f45\u1f48-\u1f4d\u1f50-\u1f57\u1f59\u1f5b\u1f5d\u1f5f-\u1f7d\u1f80-\u1fb4\u1fb6-\u1fbc\u1fbe\u1fc2-\u1fc4\u1fc6-\u1fcc\u1fd0-\u1fd3\u1fd6-\u1fdb\u1fe0-\u1fec\u1ff2-\u1ff4\u1ff6-\u1ffc\u2071\u207f\u2090-\u209c\u2102\u2107\u210a-\u2113\u2115\u2119-\u211d\u2124\u2126\u2128\u212a-\u212d\u212f-\u2139\u213c-\u213f\u2145-\u2149\u214e\u2160-\u2188\u2c00-\u2c2e\u2c30-\u2c5e\u2c60-\u2ce4\u2ceb-\u2cee\u2cf2\u2cf3\u2d00-\u2d25\u2d27\u2d2d\u2d30-\u2d67\u2d6f\u2d80-\u2d96\u2da0-\u2da6\u2da8-\u2dae\u2db0-\u2db6\u2db8-\u2dbe\u2dc0-\u2dc6\u2dc8-\u2dce\u2dd0-\u2dd6\u2dd8-\u2dde\u2e2f\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303c\u3041-\u3096\u309d-\u309f\u30a1-\u30fa\u30fc-\u30ff\u3105-\u312d\u3131-\u318e\u31a0-\u31ba\u31f0-\u31ff\u3400-\u4db5\u4e00-\u9fcc\ua000-\ua48c\ua4d0-\ua4fd\ua500-\ua60c\ua610-\ua61f\ua62a\ua62b\ua640-\ua66e\ua67f-\ua697\ua6a0-\ua6ef\ua717-\ua71f\ua722-\ua788\ua78b-\ua78e\ua790-\ua793\ua7a0-\ua7aa\ua7f8-\ua801\ua803-\ua805\ua807-\ua80a\ua80c-\ua822\ua840-\ua873\ua882-\ua8b3\ua8f2-\ua8f7\ua8fb\ua90a-\ua925\ua930-\ua946\ua960-\ua97c\ua984-\ua9b2\ua9cf\uaa00-\uaa28\uaa40-\uaa42\uaa44-\uaa4b\uaa60-\uaa76\uaa7a\uaa80-\uaaaf\uaab1\uaab5\uaab6\uaab9-\uaabd\uaac0\uaac2\uaadb-\uaadd\uaae0-\uaaea\uaaf2-\uaaf4\uab01-\uab06\uab09-\uab0e\uab11-\uab16\uab20-\uab26\uab28-\uab2e\uabc0-\uabe2\uac00-\ud7a3\ud7b0-\ud7c6\ud7cb-\ud7fb\uf900-\ufa6d\ufa70-\ufad9\ufb00-\ufb06\ufb13-\ufb17\ufb1d\ufb1f-\ufb28\ufb2a-\ufb36\ufb38-\ufb3c\ufb3e\ufb40\ufb41\ufb43\ufb44\ufb46-\ufbb1\ufbd3-\ufd3d\ufd50-\ufd8f\ufd92-\ufdc7\ufdf0-\ufdfb\ufe70-\ufe74\ufe76-\ufefc\uff21-\uff3a\uff41-\uff5a\uff66-\uffbe\uffc2-\uffc7\uffca-\uffcf\uffd2-\uffd7\uffda-\uffdc\u0300-\u036f\u0483-\u0487\u0591-\u05bd\u05bf\u05c1\u05c2\u05c4\u05c5\u05c7\u0610-\u061a\u0620-\u0649\u0672-\u06d3\u06e7-\u06e8\u06fb-\u06fc\u0730-\u074a\u0800-\u0814\u081b-\u0823\u0825-\u0827\u0829-\u082d\u0840-\u0857\u08e4-\u08fe\u0900-\u0903\u093a-\u093c\u093e-\u094f\u0951-\u0957\u0962-\u0963\u0966-\u096f\u0981-\u0983\u09bc\u09be-\u09c4\u09c7\u09c8\u09d7\u09df-\u09e0\u0a01-\u0a03\u0a3c\u0a3e-\u0a42\u0a47\u0a48\u0a4b-\u0a4d\u0a51\u0a66-\u0a71\u0a75\u0a81-\u0a83\u0abc\u0abe-\u0ac5\u0ac7-\u0ac9\u0acb-\u0acd\u0ae2-\u0ae3\u0ae6-\u0aef\u0b01-\u0b03\u0b3c\u0b3e-\u0b44\u0b47\u0b48\u0b4b-\u0b4d\u0b56\u0b57\u0b5f-\u0b60\u0b66-\u0b6f\u0b82\u0bbe-\u0bc2\u0bc6-\u0bc8\u0bca-\u0bcd\u0bd7\u0be6-\u0bef\u0c01-\u0c03\u0c46-\u0c48\u0c4a-\u0c4d\u0c55\u0c56\u0c62-\u0c63\u0c66-\u0c6f\u0c82\u0c83\u0cbc\u0cbe-\u0cc4\u0cc6-\u0cc8\u0cca-\u0ccd\u0cd5\u0cd6\u0ce2-\u0ce3\u0ce6-\u0cef\u0d02\u0d03\u0d46-\u0d48\u0d57\u0d62-\u0d63\u0d66-\u0d6f\u0d82\u0d83\u0dca\u0dcf-\u0dd4\u0dd6\u0dd8-\u0ddf\u0df2\u0df3\u0e34-\u0e3a\u0e40-\u0e45\u0e50-\u0e59\u0eb4-\u0eb9\u0ec8-\u0ecd\u0ed0-\u0ed9\u0f18\u0f19\u0f20-\u0f29\u0f35\u0f37\u0f39\u0f41-\u0f47\u0f71-\u0f84\u0f86-\u0f87\u0f8d-\u0f97\u0f99-\u0fbc\u0fc6\u1000-\u1029\u1040-\u1049\u1067-\u106d\u1071-\u1074\u1082-\u108d\u108f-\u109d\u135d-\u135f\u170e-\u1710\u1720-\u1730\u1740-\u1750\u1772\u1773\u1780-\u17b2\u17dd\u17e0-\u17e9\u180b-\u180d\u1810-\u1819\u1920-\u192b\u1930-\u193b\u1951-\u196d\u19b0-\u19c0\u19c8-\u19c9\u19d0-\u19d9\u1a00-\u1a15\u1a20-\u1a53\u1a60-\u1a7c\u1a7f-\u1a89\u1a90-\u1a99\u1b46-\u1b4b\u1b50-\u1b59\u1b6b-\u1b73\u1bb0-\u1bb9\u1be6-\u1bf3\u1c00-\u1c22\u1c40-\u1c49\u1c5b-\u1c7d\u1cd0-\u1cd2\u1d00-\u1dbe\u1e01-\u1f15\u200c\u200d\u203f\u2040\u2054\u20d0-\u20dc\u20e1\u20e5-\u20f0\u2d81-\u2d96\u2de0-\u2dff\u3021-\u3028\u3099\u309a\ua640-\ua66d\ua674-\ua67d\ua69f\ua6f0-\ua6f1\ua7f8-\ua800\ua806\ua80b\ua823-\ua827\ua880-\ua881\ua8b4-\ua8c4\ua8d0-\ua8d9\ua8f3-\ua8f7\ua900-\ua909\ua926-\ua92d\ua930-\ua945\ua980-\ua983\ua9b3-\ua9c0\uaa00-\uaa27\uaa40-\uaa41\uaa4c-\uaa4d\uaa50-\uaa59\uaa7b\uaae0-\uaae9\uaaf2-\uaaf3\uabc0-\uabe1\uabec\uabed\uabf0-\uabf9\ufb20-\ufb28\ufe00-\ufe0f\ufe20-\ufe26\ufe33\ufe34\ufe4d-\ufe4f\uff10-\uff19\uff3f]");
 		if (code < 48) return code === 36;
 		if (code < 58) return true;
 		if (code < 65) return false;
@@ -134,7 +165,6 @@ export namespace acorn {
 		if (code < 97) return code === 95;
 		if (code < 123) return true;
 		return code > 127;
-		// return code >= 0xaa && nonASCIIidentifier.test(String.fromCharCode(code));
 	}
 	export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e\x60\x7b-\x7f]+$');
 }
@@ -168,7 +198,8 @@ export class Lexer {
 	public relevance: { [uri: string]: { url: string, path: string, raw: string } } | undefined;
 	public scriptdir: string = '';
 	public scriptpath: string;
-	public semantoken: SemanticTokensBuilder | undefined;
+	public tokens: { [pos: number]: Token } = {};
+	public STB: SemanticTokensBuilder = new SemanticTokensBuilder;
 	public strcommpos: { [begin: number]: { end: number, type: 1 | 2 | 3 } } = {};
 	public texts: { [key: string]: string } = {};
 	public uri: string;
@@ -221,7 +252,7 @@ export class Lexer {
 		this.beautify = function (options: any) {
 			/*jshint onevar:true */
 			let i: number, keep_whitespace: boolean, sweet_code: string, top: boolean = false;
-			options = options ? options : {}, opt = {};
+			options = options ? options : {}, opt = {}, this.tokens = {};
 			if (options.braces_on_own_line !== undefined) { //graceful handling of deprecated option
 				opt.brace_style = options.braces_on_own_line ? "expand" : "collapse";
 			}
@@ -369,7 +400,7 @@ export class Lexer {
 				whitespace_before_token = [], beginpos = 0;
 				following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
-				this.semantoken = new SemanticTokensBuilder(), this.children.length = this.foldingranges.length = this.diagnostics.length = 0;
+				this.tokens = {}, this.children.length = this.foldingranges.length = this.diagnostics.length = 0;
 				this.declaration = {}, this.blocks = [], this.strcommpos = {}, customblocks = { region: [], bracket: [] };
 				let blocks = 0, rg: Range, tokens: Token[] = [], cls: string[] = [];
 				let p: DocumentSymbol[] = [DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg = makerange(0, 0), rg, this.children)];
@@ -389,6 +420,7 @@ export class Lexer {
 							if (j < l) {
 								if (blocks && ((lk = tokens[j]).topofline || lk.content === '=>')) {
 									let tn = Variable.create(tk.content, SymbolKind.Property, rg = makerange(tk.offset, tk.length), rg);
+									tk.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 									p[blocks].children?.push(tn), tn.static = isstatic, tn.full = `(${cls.join('.')}) ` + tn.name;
 									if (isstatic && blocks)
 										(<ClassNode>p[blocks]).staticdeclaration[tn.name.toLowerCase()] = tn;
@@ -410,7 +442,7 @@ export class Lexer {
 										switch (lk.type) {
 											case 'TK_WORD':
 												let tn = Variable.create(lk.content, SymbolKind.Variable, rg = makerange(lk.offset, lk.length), rg);
-												tn.ref = byref, byref = false, params.push(tn);
+												tn.ref = byref, byref = false, params.push(tn), lk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 												if ((lk = tokens[j + 1]).content === ':=') {
 													j = j + 2;
 													if ((lk = tokens[j]).content === '+' || lk.content === '-')
@@ -428,7 +460,7 @@ export class Lexer {
 												if (lk.content === '&')
 													byref = true;
 												else if (lk.content === '*')
-													params.push(Variable.create(lk.content, SymbolKind.Variable, rg = makerange(lk.offset, lk.length), rg));
+													params.push(Variable.create(lk.content, SymbolKind.Variable, rg = makerange(lk.offset, lk.length), rg)), lk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 												break;
 										}
 									}
@@ -445,7 +477,7 @@ export class Lexer {
 										lk = tokens[j];
 									}
 									let tn = FuncNode.create(tk.content, blocks ? SymbolKind.Method : SymbolKind.Function, makerange(tk.offset, lk.offset + lk.length - tk.offset), makerange(tk.offset, tk.length), params, [], isstatic);
-									tn.full = this.document.getText(tn.range), tn.static = isstatic, tn.declaration = {};
+									tn.full = this.document.getText(tn.range), tn.static = isstatic, tn.declaration = {}, tk.semantic = { type: blocks ? SemanticTokenTypes.method : SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 									if (blocks)
 										tn.full = `(${cls.join('.')}) ` + tn.full;
 									if (rets) {
@@ -472,6 +504,7 @@ export class Lexer {
 								let extends_ = '', tn = DocumentSymbol.create((tk = tokens[++i]).content.replace('_', '#'), tokens[i - 2].type.endsWith('COMMENT') ? trimcomment(tokens[i - 2].content) : undefined, SymbolKind.Class, makerange(tokens[i - 1].offset, 0), makerange(tk.offset, tk.length), []);
 								let cl = tn as ClassNode;
 								cl.declaration = {}, cl.staticdeclaration = {}, j = i + 1, cls.push(tn.name), cl.full = cls.join('.'), cl.returntypes = { [(cl.full.replace(/([^.]+)$/, '@$1')).toLowerCase()]: true };
+								tk.semantic = { type: SemanticTokenTypes.class, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 								cl.funccall = [], cl.extends = '', cl.declaration = {}, cl.staticdeclaration = {}, p[blocks].children?.push(tn);
 								if (blocks === 0)
 									(<FuncNode>p[0]).declaration[tn.name.toLowerCase()] = tn;
@@ -525,7 +558,7 @@ export class Lexer {
 				this.foldingranges.length = this.children.length = 0, this.labels = {};
 				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map();
 				this.blocks = [], this.texts = {}, this.reflat = true, this.declaration = {}, this.strcommpos = {};
-				this.include = includetable = {}, this.semantoken = new SemanticTokensBuilder;
+				this.include = includetable = {}, this.tokens = {};
 				this.children.push(...parseblock()), this.children.push(...this.blocks), this.blocks = undefined;
 				checksamenameerr(this.declaration, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length;
@@ -544,8 +577,8 @@ export class Lexer {
 			while (nexttoken()) {
 				switch (tk.type) {
 					case 'TK_SHARP':
-						if (m = tk.content.match(/^\s*#include((again)?)\s+(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
-							raw = (m[3] || '').trim(), o = m[5], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
+						if (m = tk.content.match(/^\s*#include((again)?)\s+((\*i\s+)?<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
+							raw = (m[3] || '').trim(), o = m[6], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir).replace(/%a_linefile%/i, _this.scriptpath).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
 							_this.includedir.set(document.positionAt(tk.offset).line, includedir);
 							if (m === '') includedir = _this.libdirs[0]; else {
 								if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir))) {
@@ -671,7 +704,7 @@ export class Lexer {
 						if (tk.content === '%')
 							parsepair('%', '%');
 						else if (mode === 2 && tk.content.match(/^\w+$/))
-							tk.type = 'TK_WORD', next = false;
+							tk.type = 'TK_WORD', next = false, tk.semantic = { type: SemanticTokenTypes.variable };
 						break;
 					case 'TK_NUMBER':
 						if (input.charAt(parser_pos).match(/\(|\[/))
@@ -685,11 +718,11 @@ export class Lexer {
 							let t = input.indexOf('\n', parser_pos);
 							t = t === -1 ? input_length : t;
 							if (input.substring(parser_pos, t).match(/^\s*(\w|[^\x00-\x7f])+\(/))
-								t = n_newlines, tk = get_next_token(), n_newlines = t, tk.topofline = true;
+								t = n_newlines, tk.semantic = { type: SemanticTokenTypes.keyword, modifier: 1 << SemanticTokenModifiers.static }, tk = get_next_token(), n_newlines = t, tk.topofline = true;
 						}
 						topcontinue = predot ? topcontinue : tk.topofline || false;
 						if (!predot && input.charAt(parser_pos) === '(') {
-							if (input.charAt(tk.offset - 1) === '.') continue;
+							let se: SemanticToken = tk.semantic = { type: SemanticTokenTypes.function };
 							if (isstatic) { if (cmm.type !== '') comm = trimcomment(cmm.content); }
 							else if (n_newlines === 1) {
 								if (cmm.type)
@@ -703,13 +736,13 @@ export class Lexer {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
 								_this.diagnostics.push(...tds);
 								let storemode = mode, fcs = _parent.funccall?.length;
-								mode = mode | 1;
-								let tn = FuncNode.create(fc.content, storemode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par, undefined, isstatic);
-								tn.detail = comm || tn.detail, result.push(tn), mode = storemode;
+								mode |= 1;
+								tn = FuncNode.create(fc.content, storemode === 2 ? (se.type = SemanticTokenTypes.method, SymbolKind.Method) : SymbolKind.Function, Range.create(fc.pos = document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par, undefined, isstatic);
+								tn.detail = comm || tn.detail, lk = tk, tk = nk;
+								let o: any = {}, sub = parseline(o), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
+								result.push(tn), mode = storemode, se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly;
 								if (mode !== 0)
 									tn.parent = _parent;
-								lk = tk, tk = nk;
-								let o: any = {}, sub = parseline(o), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
 								if (fc.content.charAt(0).match(/[\d$]/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 								if (lk.content === '=>')
@@ -732,11 +765,11 @@ export class Lexer {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
 								_this.diagnostics.push(...tds);
 								let vars = new Map<string, any>(), _low = fc.content.toLowerCase();
-								tn = FuncNode.create(fc.content, mode === 2 ? SymbolKind.Method : SymbolKind.Function, Range.create(document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), par, undefined, isstatic);
+								tn = FuncNode.create(fc.content, mode === 2 ? (se.type = SemanticTokenTypes.method, SymbolKind.Method) : SymbolKind.Function, Range.create(fc.pos = document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), par, undefined, isstatic);
 								if (mode !== 0)
 									tn.parent = _parent;
 								vars.set('#parent', tn), tn.funccall = [], tn.detail = comm || tn.detail, result.push(tn), tn.children = [], tn.children.push(...parseblock(mode | 1, vars, classfullname));
-								adddeclaration(tn), tn.closure = !!(mode & 1);
+								adddeclaration(tn), tn.closure = !!(mode & 1), se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly;
 								if (fc.content.charAt(0).match(/[\d$]/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 								tn.range.end = document.positionAt(parser_pos), tn.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
@@ -770,7 +803,7 @@ export class Lexer {
 							lk = tk, tk = get_token_ingore_comment(), next = false;
 							if (mode === 2 && lk.topofline && tk.content.match(/^(\[|=>|\{)$/)) {
 								let fc = lk;
-								next = true;
+								next = true, lk.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 								if (tk.content === '[') {
 									if (tk.topofline)
 										_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset);
@@ -787,6 +820,7 @@ export class Lexer {
 												} else if ((lk.content === ',' || lk.content === '[') && (nk.content.match(/^(:=|,|\]|\*)$/))) {
 													if (tk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.offset, tk.length);
 													tn = Variable.create(tk.content, SymbolKind.Variable, rg = makerange(b = tk.offset, tk.length), rg);
+													tk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 													if (byref) (<Variable>tn).ref = true, (<Variable>tn).def = true, byref = false;
 													par.push(tn);
 													if (nk.content === ':=') {
@@ -830,6 +864,10 @@ export class Lexer {
 											case 'TK_START_EXPR':
 												if (tk.content === '[') nn++;
 											default:
+												if (tk.content === '*' && (lk.content === ',' || lk.content === '[') && is_next(']')) {
+													tk.type = 'TK_WORD', next = false;
+													break;
+												}
 												if (tk.content === '&' && (lk.content === ',' || lk.content === '[')) {
 													nk = get_next_token(), next = false;
 													if (nk.type === 'TK_WORD') {
@@ -859,6 +897,7 @@ export class Lexer {
 									tk = get_token_ingore_comment(), next = false, mode = 1;
 									while (nexttoken() && tk.type !== 'TK_END_BLOCK') {
 										if (tk.topofline && (tk.content = tk.content.toLowerCase()).match(/^[gs]et$/)) {
+											tk.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 											nk = tk, sk = get_token_ingore_comment();
 											if (sk.content === '=>') {
 												tk = sk, mode = 3;
@@ -956,9 +995,12 @@ export class Lexer {
 										if (restore) lk.topofline = false;
 										result.push(...sub);
 										if (input.charAt(fc.offset - 1) !== '%') {
-											addvariable(fc), _parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
-											if (tk.content === ')')
-												tn.range.end = document.positionAt(tk.offset + tk.length);
+											fc.semantic = { type: SemanticTokenTypes.function };
+											if (addvariable(fc)) {
+												_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+												if (tk.content === ')')
+													tn.range.end = document.positionAt(tk.offset + tk.length);
+											}
 										}
 										break;
 									} else if (predot && !(tk.type === 'TK_EQUALS' || tk.content === '=')) {
@@ -969,6 +1011,7 @@ export class Lexer {
 												next = true, parsepair('(', ')');
 											} else sub = parseline(), result.push(...sub);
 											if (input.charAt(fc.offset - 1) !== '%') {
+												fc.semantic = { type: SemanticTokenTypes.method };
 												addvariable(fc), _parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
 												if (tk.content === ')')
 													tn.range.end = document.positionAt(tk.offset + tk.length);
@@ -1487,6 +1530,7 @@ export class Lexer {
 										let ptk = lk;
 										parsepair('(', ')');
 										if (input.charAt(ptk.offset - 1) !== '%') {
+											ptk.semantic = { type: SemanticTokenTypes.method };
 											addvariable(ptk), _parent.funccall.push(DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, makerange(ptk.offset, parser_pos - ptk.offset), makerange(ptk.offset, ptk.length)));
 											tpexp += '.' + ptk.content + '()';
 										}
@@ -1508,6 +1552,7 @@ export class Lexer {
 									}
 									if (fc) {
 										if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
+										fc.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 										result.push(tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, cds));
 										(<FuncNode>tn).returntypes = o, (<FuncNode>tn).closure = mode === 0, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 										adddeclaration(tn as FuncNode), (<FuncNode>tn).closure = !!(mode & 1);
@@ -1523,7 +1568,7 @@ export class Lexer {
 									next = false, lk = n_newlines === 1 && cmm.type ? Object.assign({}, cmm) : tk, tk = nk;
 									if (fc) {
 										if (input.charAt(fc.offset - 1) !== '%')
-											tpexp += ' ' + fc.content + '()', addvariable(fc), _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
+											tpexp += ' ' + fc.content + '()', addvariable(fc), fc.semantic = { type: SemanticTokenTypes.function }, _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
 									} else {
 										let s = Object.keys(tpe).pop() || '';
 										if (input.charAt(quoteend) === '(') {
@@ -1742,6 +1787,7 @@ export class Lexer {
 									break;
 								nk = get_token_ingore_comment();
 								if (nk.content === ':') {
+									tk.semantic = { type: SemanticTokenTypes.property };
 									lk = tk, tk = nk, k = lk;
 									return true;
 								}
@@ -1771,6 +1817,7 @@ export class Lexer {
 								} else if (acorn.allIdentifierChar.test(tk.content)) {
 									nk = get_token_ingore_comment();
 									if (nk.content === ':') {
+										tk.semantic = { type: SemanticTokenTypes.property };
 										lk = tk, tk = nk, k = lk;
 										return true;
 									}
@@ -1794,6 +1841,7 @@ export class Lexer {
 								if (tk.content.match(/^\d+$/)) {
 									nk = get_token_ingore_comment();
 									if (nk.content === ':') {
+										tk.semantic = { type: SemanticTokenTypes.property };
 										lk = tk, tk = nk;
 										return true;
 									}
@@ -1922,7 +1970,7 @@ export class Lexer {
 										tpexp += ' ' + tk.content;
 								}
 							} else {
-								lk = tk, tk = get_next_token();
+								lk = tk, tk = get_next_token(), lk.semantic = { type: SemanticTokenTypes.function };
 								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_token_ingore_comment();
 								if (nk.content === '=>') {
 									_this.diagnostics.push(...tds);
@@ -1930,7 +1978,7 @@ export class Lexer {
 									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par, sub);
 									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).closure = !!(mode & 1);
-									(<FuncNode>tn).returntypes = o, adddeclaration(tn as FuncNode);
+									(<FuncNode>tn).returntypes = o, adddeclaration(tn as FuncNode), (fc.semantic as SemanticToken).modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly;
 									if (par) for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (const t in o)
 										o[t] = tn.range.end;
@@ -1959,10 +2007,10 @@ export class Lexer {
 							}
 						} else if (input.charAt(parser_pos) === '(') {
 							let ptk = tk;
-							tk = get_next_token();
+							tk = get_next_token(), ptk.semantic = { type: SemanticTokenTypes.method };
 							parsepair('(', ')');
 							if (input.charAt(ptk.offset - 1) !== '%') {
-								tpexp += '.' + ptk.content + '()', addvariable(ptk);
+								tpexp += '.' + ptk.content + '()', ptk.semantic = { type: SemanticTokenTypes.method };
 								_parent.funccall.push(DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, makerange(ptk.offset, parser_pos - ptk.offset), makerange(ptk.offset, ptk.length)));
 							}
 						} else
@@ -2054,7 +2102,12 @@ export class Lexer {
 
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
 				let _low = token.content.toLowerCase();
-				if (token.ignore || (mode !== 2 && ((classfullname !== '' && ['this', 'super'].includes(_low)) || builtin_variable.includes(_low) || (h && builtin_variable_h.includes(_low))))) return false;
+				if (token.ignore || (mode !== 2 && ((classfullname !== '' && ['this', 'super'].includes(_low)) || builtin_variable.includes(_low) || (h && builtin_variable_h.includes(_low))))) {
+					if (_low === 'true' || _low === 'false') {
+						token.semantic = { type: SemanticTokenTypes.variable, modifier: 1 << SemanticTokenModifiers.readonly };
+					}
+					return false;
+				}
 				if (_low.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(token.content), token.offset, token.length);
 				let rg = makerange(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg, rg);
 				if (md === 2) {
@@ -2069,6 +2122,7 @@ export class Lexer {
 
 			function addprop(tk: Token) {
 				let l = tk.content.toLowerCase(), rg: Range;
+				tk.semantic = { type: SemanticTokenTypes.property };
 				if (!_this.object.property[l])
 					_this.object.property[l] = Variable.create(tk.content, SymbolKind.Property, rg = makerange(tk.offset, tk.length), rg);
 			}
@@ -2112,7 +2166,7 @@ export class Lexer {
 							}
 						});
 						(<FuncNode>node).params?.map(it => {
-							node.children?.unshift(it);
+							node.children?.unshift(it), it.def = true;
 							if (!dec[_low = it.name.toLowerCase()] || dec[_low].kind !== SymbolKind.Function)
 								dec[_low] = it;
 							else
@@ -2172,7 +2226,7 @@ export class Lexer {
 							}
 						});
 						(<FuncNode>node).params?.map(it => {
-							node.children?.unshift(it);
+							node.children?.unshift(it), it.def = true;
 							if (!dec[_low = it.name.toLowerCase()] || dec[_low].kind !== SymbolKind.Function)
 								dec[_low] = it;
 							else
@@ -2299,7 +2353,9 @@ export class Lexer {
 		}
 
 		function createToken(content: string, type: string, offset: number, length: number, topofline?: boolean): Token {
-			return { content, type, offset, length, topofline };
+			let tk = { content, type, offset, length, topofline };
+			_this.tokens[offset] = tk;
+			return tk;
 		}
 
 		function create_flags(flags_base: any, mode: any) {
@@ -2720,7 +2776,6 @@ export class Lexer {
 			if (parser_pos >= input_length) {
 				return lst = createToken('', 'TK_EOF', input_length - 1, 0, true);
 			}
-
 			let c = input.charAt(parser_pos);
 			input_wanted_newline = false, whitespace_before_token = [], parser_pos += 1;
 
@@ -2749,8 +2804,12 @@ export class Lexer {
 				parser_pos += 1;
 			}
 
-			let offset = parser_pos - 1, len = 1;
+			let offset = parser_pos - 1, len = 1, _tk = _this.tokens[offset];
 			let m: RegExpMatchArray | null;
+			if (_tk) {
+				parser_pos = offset + _tk.length;
+				return _tk;
+			}
 			beginpos = offset;
 			if (begin_line) {
 				begin_line = false, bg = true;
@@ -2794,7 +2853,7 @@ export class Lexer {
 				if (input.charAt(offset - 1) !== '.') {
 					if (m = c.match(/^(\d+[Ee](\d+)?|(0[Xx][\da-fA-F]+)|(\d+))$/)) {
 						if (m[2] || m[3])
-							return lst = createToken(c, 'TK_NUMBER', offset, c.length, bg);
+							return lst = createToken(c, 'TK_NUMBER', offset, c.length, bg), lst.semantic = { type: SemanticTokenTypes.number }, lst;
 						if (m[4]) {
 							if (parser_pos < input_length && input.charAt(parser_pos) === '.') {
 								let cc = '', t = '', p = parser_pos + 1;
@@ -2802,7 +2861,7 @@ export class Lexer {
 									cc += input.charAt(p), p += 1;
 								if (cc.match(/^\d*([Ee]\d+)?$/)) {
 									c += '.' + cc, parser_pos = p;
-									return lst = createToken(c, 'TK_NUMBER', offset, c.length, bg);
+									return lst = createToken(c, 'TK_NUMBER', offset, c.length, bg), lst.semantic = { type: SemanticTokenTypes.number }, lst;
 								} else if (cc.match(/^\d*[Ee]$/) && p < input_length && input.charAt(p).match(/[+\-]/)) {
 									cc += input.charAt(p), p += 1;
 									while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
@@ -2811,13 +2870,13 @@ export class Lexer {
 										c += '.' + cc + t, parser_pos = p;
 								}
 							}
-							return lst = createToken(c, 'TK_NUMBER', offset, c.length, bg);
+							return lst = createToken(c, 'TK_NUMBER', offset, c.length, bg), lst.semantic = { type: SemanticTokenTypes.number }, lst;
 						} else if (parser_pos < input_length && input.charAt(parser_pos).match(/[+\-]/)) {
 							let sign = input.charAt(parser_pos), p = parser_pos, t: Token;
 							parser_pos += 1, t = get_next_token();
 							if (t.type === 'TK_NUMBER' && t.content.match(/^\d+$/)) {
 								c += sign + t.content;
-								return lst = createToken(c, 'TK_NUMBER', offset, c.length, bg);
+								return lst = createToken(c, 'TK_NUMBER', offset, c.length, bg), lst.semantic = { type: SemanticTokenTypes.number }, lst;
 							} else
 								parser_pos = p;
 						}
@@ -2947,7 +3006,7 @@ export class Lexer {
 									_this.addDiagnostic(diagnostic.missing(sep), offset, len);
 								_this.strcommpos[offset] = { end: end === -1 ? input_length : end - 1, type: 2 };
 								parser_pos = offset + len;
-								return lst = createToken(resulting_string = resulting_string.trimRight(), 'TK_STRING', offset, len, bg);
+								return lst = createToken(resulting_string = resulting_string.trimRight(), 'TK_STRING', offset, len, bg), lst.semantic = { type: SemanticTokenTypes.string }, lst;
 							}
 							whitespace = whitespace[1];
 							while (LF.trim().indexOf(')') !== 0) {
@@ -2963,7 +3022,7 @@ export class Lexer {
 											_this.addDiagnostic(diagnostic.missing(sep), offset, 1);
 									}
 									_this.strcommpos[offset] = { end: parser_pos - 1, type: 3 };
-									return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
+									return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg), lst.semantic = { type: SemanticTokenTypes.string }, lst;
 								}
 								last_LF = parser_pos, LF = input.substring(pos, parser_pos + 1);
 							}
@@ -2977,7 +3036,7 @@ export class Lexer {
 							}
 							resulting_string += whitespace + input.substring(pos, parser_pos).trim();
 							_this.strcommpos[offset] = { end: parser_pos - 1, type: 3 };
-							return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
+							return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg), lst.semantic = { type: SemanticTokenTypes.string }, lst;
 						} else if (c === ';' && (lc === ' ' || lc === '\t')) {
 							parser_pos += 1;
 							while (parser_pos < input_length && (c = input.charAt(parser_pos)) !== '\n')
@@ -2990,7 +3049,7 @@ export class Lexer {
 							if (_this.blocks)
 								_this.addDiagnostic(diagnostic.missing(sep), offset, 1);
 							_this.strcommpos[offset] = { end: input_length, type: 2 };
-							return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
+							return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg), lst.semantic = { type: SemanticTokenTypes.string }, lst;
 						}
 					}
 				} else if (_this.blocks)
@@ -3004,7 +3063,7 @@ export class Lexer {
 					while ((j = resulting_string.substring(i).search(/(?<=^[ \t]*)\)/m)) !== -1)
 						_this.addDiagnostic(diagnostic.unexpected(')'), offset + i + j, 1), i = i + j + 1;
 				}
-				return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
+				return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg), lst.semantic = { type: SemanticTokenTypes.string }, lst;
 			}
 
 			if (c === '#') {
@@ -3045,14 +3104,14 @@ export class Lexer {
 						nextc += input.charAt(p), p += 1;
 					if (nextc.match(/^\d+([Ee]\d+)?$/)) {
 						parser_pos = p, c += nextc;
-						return lst = createToken('0' + c, 'TK_NUMBER', offset, c.length, bg);
+						return lst = createToken('0' + c, 'TK_NUMBER', offset, c.length, bg), lst.semantic = { type: SemanticTokenTypes.number }, lst;
 					} else if (p < input_length && nextc.match(/^\d+[Ee]$/) && input.charAt(p).match(/[+\-]/)) {
 						nextc += input.charAt(p), p += 1;
 						while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
 							t += input.charAt(p), p += 1;
 						if (t.match(/^\d+$/)) {
 							parser_pos = p, c += nextc + t;
-							return lst = createToken('0' + c, 'TK_NUMBER', offset, c.length, bg);
+							return lst = createToken('0' + c, 'TK_NUMBER', offset, c.length, bg), lst.semantic = { type: SemanticTokenTypes.number }, lst;
 						}
 					}
 				}
@@ -3074,7 +3133,7 @@ export class Lexer {
 					} else {
 						parser_pos = LF;
 						_this.strcommpos[offset] = { end: LF - 1, type: 1 };
-						return createToken(input.substring(offset, LF).trimRight(), tp, offset, LF - offset, bg)
+						return createToken(input.substring(offset, LF).trimRight(), tp, offset, LF - offset, bg);
 					}
 				}
 			}
@@ -3883,11 +3942,16 @@ export class Lexer {
 		return { text: '', range: Range.create(position, position) };
 	}
 
-	public searchNode(name: string, position?: Position, kind?: SymbolKind | SymbolKind[], root?: DocumentSymbol[])
-		: { node: DocumentSymbol, uri: string, ref?: boolean, scope?: DocumentSymbol } | undefined | null {
+	public searchNode(name: string, position?: Position, kind?: SymbolKind, root?: DocumentSymbol[])
+		: { node: DocumentSymbol, uri: string, ref?: boolean, scope?: DocumentSymbol } | undefined | false | null {
 		let node: DocumentSymbol | undefined, uri = this.uri;
-		if (kind === SymbolKind.Variable || kind === SymbolKind.Class || kind === SymbolKind.Function || typeof kind === 'object') {
+		if (kind === SymbolKind.Variable || kind === SymbolKind.Class || kind === SymbolKind.Function) {
 			let scope: DocumentSymbol | undefined, bak: DocumentSymbol | undefined, ref = true;
+			if (position) {
+				let tk = this.tokens[this.document.offsetAt(position) - name.length];
+				if (tk && tk.semantic && tk.semantic.type === SemanticTokenTypes.property)
+					return false;
+			}
 			name = name.toLowerCase();
 			if (position) {
 				scope = this.searchScopedNode(position);
@@ -3899,7 +3963,7 @@ export class Lexer {
 							o = tk.offset + tk.length;
 							tk = this.get_tokon(o);
 						}
-						if (this.document.positionAt(tk.offset).line === position.line)
+						if ((tk.pos || (tk.pos = this.document.positionAt(tk.offset))).line === position.line)
 							scope = undefined;
 					}
 					bak = scope;
@@ -4121,8 +4185,11 @@ export class Lexer {
 
 	public getNodeAtPosition(position: Position): DocumentSymbol | undefined {
 		let node: DocumentSymbol | undefined, context = this.buildContext(position);
-		if (context)
-			node = this.searchNode(context.text.toLowerCase(), context.range.end, context.kind)?.node;
+		if (context) {
+			let t = this.searchNode(context.text.toLowerCase(), context.range.end, context.kind);
+			if (t)
+				node = t.node;
+		}
 		return node;
 	}
 
@@ -4270,9 +4337,11 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 				}
 		}
 	} else {
-		if (m = path.match(/%a_(\w+)%/i)) {
+		while (m = path.match(/%a_(\w+)%/i)) {
 			let a_ = m[1];
-			if (pathenv[a_]) path = path.replace(m[0], <string>pathenv[a_]); else return;
+			if (pathenv[a_])
+				path = path.replace(m[0], <string>pathenv[a_]);
+			else return;
 		}
 		if (path.indexOf(':') === -1) path = resolve(workdir, path);
 		uri = URI.file(path).toString().toLowerCase();
@@ -4686,8 +4755,8 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 	}
 }
 
-export function searchNode(doc: Lexer, name: string, pos: Position | undefined, kind: SymbolKind | SymbolKind[], isstatic = true): [{ node: DocumentSymbol, uri: string, ref?: boolean }] | undefined {
-	let node: DocumentSymbol | undefined, res: { node: DocumentSymbol, uri: string } | undefined | null, t: any, uri = doc.uri;
+export function searchNode(doc: Lexer, name: string, pos: Position | undefined, kind: SymbolKind, isstatic = true): [{ node: DocumentSymbol, uri: string, ref?: boolean }] | undefined | null {
+	let node: DocumentSymbol | undefined, res: { node: DocumentSymbol, uri: string } | undefined | false | null, t: any, uri = doc.uri;
 	if (kind === SymbolKind.Method || kind === SymbolKind.Property || name.indexOf('.') !== -1) {
 		let p = name.split('.'), nodes = searchNode(doc, p[0], pos, SymbolKind.Class), i = 0, ps = 0;
 		if (!nodes)
@@ -4790,6 +4859,8 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 	} else if (!(res = doc.searchNode(name = name.replace(/^@/, ''), pos, kind))) {
 		if (res === null)
 			return undefined;
+		else if (res === false)
+			return null;
 		res = searchIncludeNode(doc.uri, name);
 	}
 	if (res && res.node.kind === SymbolKind.Variable && res.node === doc.declaration[name]) {

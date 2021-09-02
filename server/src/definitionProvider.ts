@@ -5,7 +5,7 @@ import { URI } from 'vscode-uri';
 
 export async function defintionProvider(params: DefinitionParams): Promise<Definition | LocationLink[] | undefined> {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc.buildContext(params.position), m: any;
-	let nodes: [{ node: DocumentSymbol, uri: string }] | undefined, locas: Location[] = [];
+	let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, locas: Location[] = [];
 	if (context) {
 		let word = '', kind: SymbolKind | SymbolKind[] = SymbolKind.Variable, t: any;
 		if (context.pre.match(/^\s*#/i)) {
@@ -23,7 +23,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 		} else word = context.text.toLowerCase(), kind = context.kind;
 		if (word === '' || doc.instrorcomm(params.position))
 			return undefined;
-		else if (!(nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
+		else if (undefined === (nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
 			let ts: any = {};
 			nodes = <any>[], detectExpType(doc, word.replace(/\.[^.]+$/, m => {
 				word = m.match(/^\.[^.]+$/) ? m : '';
@@ -49,7 +49,8 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 					return '';
 				});
 			}
-		}
+		} else if (nodes === null)
+			return undefined;
 		if (nodes) {
 			let uri = '';
 			nodes.map(it => {

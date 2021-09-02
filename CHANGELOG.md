@@ -1,3 +1,13 @@
+## 0.9.3
+- 修复[#43](https://github.com/thqby/vscode-autohotkey2-lsp/issues/43)
+- 增加语义着色支持
+- 修复低版本v2获取A_环境变量失败
+- 调整文档过滤器, 插件对临时文件`Untitled`也能生效
+- `#include`增加对`A_LineFile`的解析, 增加对`<folder\file>`补全支持
+
+## 0.9.2
+- `coc.nvim插件`增加环境设置项, README中增加插件配置说明
+
 ## 0.9.1
 - 修复[#40](https://github.com/thqby/vscode-autohotkey2-lsp/issues/40)
 - 修复[#41](https://github.com/thqby/vscode-autohotkey2-lsp/issues/41)

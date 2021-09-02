@@ -21,19 +21,18 @@ import {
 	LanguageClientOptions,
 	ServerOptions,
 	TransportKind
-} from 'vscode-languageclient';
+} from 'vscode-languageclient/node';
 import * as child_process from 'child_process';
 import { resolve } from 'path';
 import { existsSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { getFileProperties } from 'cfv';
 
 let client: LanguageClient;
-let channel = window.createOutputChannel('AutoHotkey2');
+let outputchannel = window.createOutputChannel('AutoHotkey2');
 let ahkprocess: child_process.ChildProcess | undefined;
 let ahkhelp: child_process.ChildProcessWithoutNullStreams | undefined;
-let zhcn = !!process.env.VSCODE_NLS_CONFIG?.match(/"locale"\s*:\s*"zh-(cn|tw)"/i);
 let ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
-let ahkpath_cur = '';
+let ahkpath_cur = '', server_is_ready = false, zhcn = false;
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
 
 export async function activate(context: ExtensionContext) {
@@ -59,11 +58,13 @@ export async function activate(context: ExtensionContext) {
 	// Options to control the language client
 	let clientOptions: LanguageClientOptions = {
 		// Register the server for plain text documents
-		documentSelector: [{ scheme: 'file', language: 'ahk2' }],
+		documentSelector: [{ language: 'ahk2' }],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
-		}
+		},
+		outputChannel: outputchannel,
+		outputChannelName: 'AutoHotkey2'
 	};
 
 	// Create the language client and start the client.
@@ -73,11 +74,12 @@ export async function activate(context: ExtensionContext) {
 		serverOptions,
 		clientOptions
 	);
+	zhcn = client.getLocale().startsWith('zh-');
 
 	// Start the client. This will also launch the server
 	client.onReady().then(ready => {
-		client.onRequest('ahk2.executeCommands', async (cmds: { command: string, args?: string[], wait?: boolean }[]) => {
-			let result: any[] = [];
+		client.onRequest('ahk2.executeCommands', async (params: any[]) => {
+			let result: any[] = [], cmds: { command: string, args?: string[], wait?: boolean }[] = params[0];
 			for (const cmd of cmds)
 				result.push(cmd.wait ? await commands.executeCommand(cmd.command, cmd.args) : commands.executeCommand(cmd.command, cmd.args));
 			return result;
@@ -88,17 +90,17 @@ export async function activate(context: ExtensionContext) {
 			const uri = editor.document.uri.toString(), pos = editor.selection.end;
 			return { uri, pos };
 		});
-		client.onRequest('ahk2.insertSnippet', async (value: string, range?: Range) => {
+		client.onRequest('ahk2.insertSnippet', async (params: any[]) => {
 			let editor = window.activeTextEditor;
 			if (!editor) return;
-			if (range) {
-				let { start, end } = range;
-				await editor.insertSnippet(new SnippetString(value), new Range(start.line, start.character, end.line, end.character));
+			if (params[1]) {
+				let { start, end } = params[1];
+				await editor.insertSnippet(new SnippetString(params[0]), new Range(start.line, start.character, end.line, end.character));
 			} else
-				editor.insertSnippet(new SnippetString(value));
+				editor.insertSnippet(new SnippetString(params[0]));
 		});
-		onDidChangeActiveTextEditor(window.activeTextEditor);
 		ahkStatusBarItem.show();
+		server_is_ready = true;
 	});
 	client.start();
 
@@ -126,6 +128,7 @@ export async function activate(context: ExtensionContext) {
 		ahkStatusBarItem
 	);
 	window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor);
+	onDidChangeActiveTextEditor(window.activeTextEditor);
 }
 
 export function deactivate(): Thenable<void> | undefined {
@@ -141,34 +144,34 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut `;
 	let startTime: Date;
 	await stopRunningScript(true);
-	channel.show(true), channel.clear();
+	outputchannel.show(true), outputchannel.clear();
 	if (selection || editor.document.isUntitled) selecttext = editor.document.getText(editor.selection);
 	if (selecttext !== '') {
-		command += path, channel.appendLine('[Running] ' + command), startTime = new Date();
+		command += path, outputchannel.appendLine('[Running] ' + command), startTime = new Date();
 		ahkprocess = child_process.spawn(command, { cwd: `${resolve(editor.document.fileName, '..')}`, shell: true });
 		ahkprocess.stdin?.write(selecttext), ahkprocess.stdin?.end();
 	} else {
 		commands.executeCommand('workbench.action.files.save');
 		path = editor.document.fileName, command += `"${path}"`;
-		channel.appendLine('[Running] ' + command), startTime = new Date();
+		outputchannel.appendLine('[Running] ' + command), startTime = new Date();
 		ahkprocess = child_process.spawn(command, { cwd: resolve(path, '..'), shell: true });
 	}
 	if (ahkprocess) {
 		commands.executeCommand('setContext', 'ahk2:isRunning', true);
 		ahkprocess.stderr?.on('data', (data) => {
-			channel.appendLine(`[Error] ${data.toString().trim()}`);
+			outputchannel.appendLine(`[Error] ${data.toString().trim()}`);
 		});
 		ahkprocess.on('error', (error) => {
 			console.error(error.message);
 		});
 		ahkprocess.stdout?.on('data', (data) => {
-			channel.append(data.toString());
+			outputchannel.append(data.toString());
 		});
 		ahkprocess.on('exit', (code) => {
 			ahkprocess = undefined;
 			commands.executeCommand('setContext', 'ahk2:isRunning', false);
-			channel.appendLine('');
-			channel.appendLine('[Done] exited with code=' + code + ' in ' + ((new Date()).getTime() - startTime.getTime()) / 1000 + ' seconds');
+			outputchannel.appendLine('');
+			outputchannel.appendLine('[Done] exited with code=' + code + ' in ' + ((new Date()).getTime() - startTime.getTime()) / 1000 + ' seconds');
 		});
 	} else
 		commands.executeCommand('setContext', 'ahk2:isRunning', false);
@@ -380,7 +383,8 @@ async function setInterpreter() {
 			ahkStatusBarItem.text = sel.label;
 			ahkStatusBarItem.tooltip = sel.detail;
 			ahkpath_cur = sel.detail.toLowerCase() === _ ? '' : sel.detail;
-			commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur);
+			if (server_is_ready)
+				commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur);
 			ahkconfig.update('InterpreterPath', ahkpath_cur);
 		}
 	});
@@ -438,6 +442,6 @@ async function onDidChangeActiveTextEditor(e?: TextEditor) {
 		ahkStatusBarItem.text = (zhcn ? '选择AutoHotkey2解释器' : 'Select AutoHotkey2 Interpreter');
 		ahkStatusBarItem.tooltip = undefined, path = '';
 	}
-	if (path !== ahkpath_cur)
+	if (server_is_ready && path !== ahkpath_cur)
 		commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur = path);
 }
