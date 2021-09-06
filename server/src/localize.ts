@@ -52,6 +52,7 @@ export namespace diagnostic {
 	export const unknownoperatoruse = localize('diagnostic.unknownoperatoruse', 'Unknown operator use');
 	export const unknowntoken = localize('diagnostic.unknowntoken', 'Unknown token \'{0}\'');
 	export const unsupportinclude = localize('diagnostic.unsupportinclude', '#Include in functions and classes cannot correctly deduce scope and code completion');
+	export const unsupportresinclude = localize('diagnostic.unsupportresinclude', 'Parsing library files in resource is not supported');
 }
 
 export namespace setting {

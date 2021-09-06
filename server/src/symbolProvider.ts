@@ -1,7 +1,9 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver';
-import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenTypes, Token, Variable } from './Lexer';
+import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable } from './Lexer';
 import { diagnostic } from './localize';
 import { ahkvars, lexers, sendDiagnostics, symbolcache } from './server';
+
+export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
 
 export async function symbolProvider(params: DocumentSymbolParams): Promise<SymbolInformation[]> {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
@@ -20,7 +22,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		if (!gvar[key] || gvar[key].kind === SymbolKind.Variable)
 			gvar[key] = glo[key];
 	}
-	doc.reflat = false;
+	doc.reflat = false, globalsymbolcache = gvar;
 	symbolcache[uri] = flatTree(tree).map(info => {
 		return SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, uri,
 			info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
@@ -40,16 +42,18 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						vars[_l] = gvar[_l];
 						if (info === gvar[_l])
 							result.push(info), converttype(info);
-						else converttype(info, gvar[_l].kind);
-					} else
-						vars[_l] = info, converttype(info), result.push(info);
+						else converttype(info, gvar[_l] === ahkvars[_l], gvar[_l].kind);
+					} else {
+						vars[_l] = info, result.push(info);
+						converttype(info, ahkvars[_l] && gvar[_l] === ahkvars[_l], gvar[_l]?.kind);
+					}
 				} else if (info.kind === SymbolKind.Variable) {
-					if (info !== vars[_l])
-						converttype(info, vars[_l].kind);
+					if (info !== vars[_l] && (vars[_l].kind !== SymbolKind.TypeParameter || vars[_l].selectionRange.start.character !== vars[_l].selectionRange.end.character))
+						converttype(info, vars[_l] === ahkvars[_l], vars[_l].kind);
 				} else if (info !== vars[_l])
-					result.push(info), vars[_l] = info, converttype(info);
+					result.push(info), vars[_l] = info, converttype(info, info === ahkvars[_l]);
 				else if (info === gvar[_l])
-					result.push(info), converttype(info);
+					result.push(info), converttype(info, info === ahkvars[_l]);
 			} else
 				result.push(info);
 		});
@@ -61,7 +65,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					for (const k in p.global)
 						inherit[k] = p.global[k];
 					(<FuncNode>info).params?.map(it => {
-						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true, converttype(it, SymbolKind.TypeParameter);
+						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true, converttype(it, false, SymbolKind.TypeParameter);
 					});
 					for (const k in p.local)
 						if (!ps[k])
@@ -88,8 +92,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 							} else if (tt[k] !== inherit[k]) {
 								if (tt[k].kind !== SymbolKind.Variable || (inherit[k] === gvar[k] && (<Variable>tt[k]).def))
 									inherit[k] = tt[k], result.push(tt[k]), converttype(tt[k]);
-								else converttype(tt[k], inherit[k].kind);
-							} else converttype(tt[k]);
+								else converttype(tt[k], false, inherit[k].kind);
+							} else if (!ps[k]) converttype(tt[k]);
 					}
 				}
 				result.push(...flatTree(info.children, inherit, gg));
@@ -157,10 +161,12 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			doc.diagnostics.push({ message: diagnostic.unknown("class '" + it.extends) + "'", range: rg, severity: DiagnosticSeverity.Error });
 		}
 	}
-	function converttype(it: DocumentSymbol, kind?: number) {
+	function converttype(it: DocumentSymbol, islib: boolean = false, kind?: number) {
 		let tk: Token, stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined;
 		switch (kind || it.kind) {
 			case SymbolKind.TypeParameter:
+				if (it.range.start.line === 0 && it.range.start.character === 0)
+					return;
 				st = SemanticTokenTypes.parameter; break;
 			case SymbolKind.Variable:
 				st = SemanticTokenTypes.variable; break;
@@ -169,10 +175,13 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			case SymbolKind.Function:
 				st = SemanticTokenTypes.function; break;
 		}
-		if (st !== undefined)
-			if ((stk = (tk = doc.tokens[doc.document.offsetAt(it.selectionRange.start)]).semantic) === undefined)
-				tk.semantic = { type: st };
+		if (st !== undefined && (tk = doc.tokens[doc.document.offsetAt(it.selectionRange.start)])) {
+			if ((stk = tk.semantic) === undefined)
+				tk.semantic = stk = { type: st };
 			else if (kind !== undefined)
 				stk.type = st;
+			if (st < 3)
+				stk.modifier = (stk.modifier || 0) | (1 << SemanticTokenModifiers.readonly) | (islib ? 1 << SemanticTokenModifiers.defaultLibrary : 0);
+		}
 	}
 }

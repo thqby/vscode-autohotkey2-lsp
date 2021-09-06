@@ -491,6 +491,7 @@ function convertNodeCompletion(info: any): CompletionItem {
 			} else ci.insertText = ci.label + '()';
 			ci.detail = info.full, ci.documentation = info.detail; break;
 		case SymbolKind.Variable:
+		case SymbolKind.TypeParameter:
 			ci.kind = CompletionItemKind.Variable, ci.detail = info.detail; break;
 		case SymbolKind.Class:
 			ci.kind = CompletionItemKind.Class, ci.commitCharacters = ['.', '('];

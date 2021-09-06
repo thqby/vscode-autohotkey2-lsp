@@ -139,7 +139,7 @@ export function deactivate(): Thenable<void> | undefined {
 }
 
 async function runCurrentScriptFile(selection = false): Promise<void> {
-	const editor = window.activeTextEditor, executePath = ahkpath_cur;
+	const editor = window.activeTextEditor, executePath = ahkpath_cur || getConfig('InterpreterPath');
 	if (!editor || !executePath) return;
 	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut `;
 	let startTime: Date;
@@ -189,7 +189,7 @@ async function stopRunningScript(wait = false) {
 
 async function compileScript() {
 	let editor = window.activeTextEditor, cmdop = getConfig('CompilerCMD');
-	let executePath = ahkpath_cur, cmd = '', compilePath = executePath;
+	let executePath = ahkpath_cur || getConfig('InterpreterPath'), cmd = '', compilePath = executePath;
 	if (!editor) return;
 	compilePath = resolve(compilePath, '..\\Compiler\\Ahk2Exe.exe')
 	if (!existsSync(compilePath)) {
@@ -206,7 +206,7 @@ async function compileScript() {
 	try {
 		if (existsSync(exePath))
 			unlinkSync(exePath);
-	} catch (e) {
+	} catch (e: any) {
 		window.showErrorMessage(e.message);
 		return;
 	}
@@ -271,13 +271,42 @@ async function quickHelp() {
 	}
 	if (word !== '' && executePath !== '' && existsSync(executePath)) {
 		let ahkpro = child_process.exec(`\"${executePath}\" /ErrorStdOut *`, { cwd: `${resolve(editor.document.fileName, '..')}` });
-		ahkpro.stdin?.write(`#NoTrayIcon\ntry if (WinGetMinMax("ahk_pid ${ahkhelp.pid}")=-1)\nWinRestore("ahk_pid ${ahkhelp.pid}"), Sleep(500)\ntry WinActivate("ahk_pid ${ahkhelp.pid}")\nif !WinWaitActive("ahk_pid ${ahkhelp.pid}", , 5)\nExitApp()\nSendInput("!s"), Sleep(150)\nSendInput("^{Backspace}"), Sleep(250)\nSendInput("{Text}${word}\`n")`);
+		ahkpro.stdin?.write(`
+		DllCall("LoadLibrary", "Str", "oleacc", "Ptr")
+		if !(WinGetExStyle(top := WinExist("A")) && 8)
+			top := 0
+		if !WinExist("AutoHotkey ahk_class HH Parent ahk_pid ${ahkhelp.pid}")
+			ExitApp
+		if top
+			WinSetAlwaysOnTop(0, top)
+		WinShow(), WinActivate(), WinWaitActive()
+		ctl := ControlGetHwnd("Internet Explorer_Server1")
+		NumPut("int64", 0x11CF3C3D618736E0, "int64", 0x719B3800AA000C81, IID_IAccessible := Buffer(16))	; {618736E0-3C3D-11CF-810C-00AA00389B71}
+		if !DllCall("oleacc\\AccessibleObjectFromWindow", "ptr", ctl, "uint", 0, "ptr", IID_IAccessible, "ptr*", IAccessible := ComValue(9, 0)) {
+			try {
+				IServiceProvider := ComObjQuery(IAccessible, IID_IServiceProvider := "{6D5140C1-7436-11CE-8034-00AA006009FA}")
+				NumPut("int64", 0x11D026CB332C4427, "int64", 0x1901D94FC00083B4, IID_IHTMLWindow2 := Buffer(16))	; {332C4427-26CB-11D0-B483-00C04FD90119}
+				ComCall(3, IServiceProvider, "ptr", IID_IHTMLWindow2, "ptr", IID_IHTMLWindow2, "ptr*", IHTMLWindow2 := ComValue(9, 0))	; IServiceProvider.QueryService
+				IHTMLWindow2.execScript("
+				(
+					document.querySelector('#head > div > div.h-tabs > ul > li:nth-child(3) > button').click()
+					searchinput = document.querySelector('#left > div.search > div.input > input[type=search]')
+					keyevent = document.createEvent('KeyboardEvent')
+					keyevent.initKeyboardEvent('keyup', false, true, document.defaultView, 13, null, false, false, false, false)
+					searchinput.value = '${word}'
+					searchinput.dispatchEvent(keyevent)
+					Object.defineProperties(keyevent, { type: { get: function() { return 'keydown' } }, which: { get: function() { return 13 } } })
+					searchinput.dispatchEvent(keyevent)
+				)")
+			}
+		}
+		`);
 		ahkpro.stdin?.end();
 	}
 }
 
 async function begindebug(extlist: string[], debugexts: any, params = false) {
-	const editor = window.activeTextEditor, executePath = ahkpath_cur;
+	const editor = window.activeTextEditor, executePath = ahkpath_cur || getConfig('InterpreterPath');
 	if (!editor) return;
 	let extname: string | undefined;
 	if (params) {
@@ -382,7 +411,7 @@ async function setInterpreter() {
 				sel.label = await getAHKversion(sel.detail);
 			ahkStatusBarItem.text = sel.label;
 			ahkStatusBarItem.tooltip = sel.detail;
-			ahkpath_cur = sel.detail.toLowerCase() === _ ? '' : sel.detail;
+			ahkpath_cur = sel.detail;
 			if (server_is_ready)
 				commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur);
 			ahkconfig.update('InterpreterPath', ahkpath_cur);
@@ -442,6 +471,9 @@ async function onDidChangeActiveTextEditor(e?: TextEditor) {
 		ahkStatusBarItem.text = (zhcn ? '选择AutoHotkey2解释器' : 'Select AutoHotkey2 Interpreter');
 		ahkStatusBarItem.tooltip = undefined, path = '';
 	}
-	if (server_is_ready && path !== ahkpath_cur)
-		commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur = path);
+	if (path !== ahkpath_cur)
+		if (server_is_ready)
+			commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur = path);
+		else
+			ahkpath_cur = path;
 }

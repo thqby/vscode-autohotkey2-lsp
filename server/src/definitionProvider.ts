@@ -7,7 +7,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc.buildContext(params.position), m: any;
 	let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, locas: Location[] = [];
 	if (context) {
-		let word = '', kind: SymbolKind | SymbolKind[] = SymbolKind.Variable, t: any;
+		let word = '', kind: SymbolKind = SymbolKind.Variable, t: any;
 		if (context.pre.match(/^\s*#/i)) {
 			if ((m = context.linetext.match(/^(\s*#include(again)?\s+)(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)\s*(\s;.*)?$/i)) && m[3]) {
 				let line = context.range.start.line, file = m[3].trim();

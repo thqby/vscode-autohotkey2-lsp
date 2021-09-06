@@ -37,9 +37,10 @@ export let libdirs: string[] = [], extsettings: AHKLSSettings = {
 export const connection = createConnection(ProposedFeatures.all);
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
-export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {}, symbolcache: { [uri: string]: SymbolInformation[] } = {};
-export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] }, isahk2_h = false;
-export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '', ahkpath_cur = '';
+export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
+export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
+export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
+export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '', ahkpath_cur = '', isahk2_h = false;
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}];
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let dllcalltpe: string[] = [];
@@ -106,27 +107,26 @@ connection.onInitialize((params: InitializeParams) => {
 			semanticTokensProvider: {
 				legend: {
 					tokenTypes: [
-						"class",
-						"parameter",
-						"variable",
-						"property",
-						"function",
-						"method",
-						"keyword",
-						"string",
-						"number",
-						"event",
-						"modifier",
-						"comment"
+						'class',
+						'function',
+						'method',
+						'parameter',
+						'variable',
+						'property',
+						'keyword',
+						'string',
+						'number',
+						'event',
+						'modifier'
 					],
 					tokenModifiers: [
-						"definition",
-						"readonly",
-						"static",
-						"deprecated",
-						"modification",
-						"documentation",
-						"defaultLibrary"
+						'definition',
+						'readonly',
+						'static',
+						'deprecated',
+						'modification',
+						'documentation',
+						'defaultLibrary'
 					]
 				},
 				full: { delta: true },
@@ -173,8 +173,8 @@ connection.onDidChangeConfiguration(async change => {
 });
 
 documents.onDidOpen(async e => {
-	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document), d = lexers[uri]?.d;
-	lexers[uri] = doc, doc.actived = true, doc.d = d;
+	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
+	lexers[uri] = doc, doc.actived = true, doc.d = lexers[uri]?.d || doc.d;
 	parseproject(uri);
 });
 

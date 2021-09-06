@@ -23,6 +23,7 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 	switch (node.kind) {
 		case SymbolKind.Function:
 		case SymbolKind.Variable:
+		case SymbolKind.TypeParameter:
 		case SymbolKind.Class:
 			if (scope) {
 				if (scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Event) {

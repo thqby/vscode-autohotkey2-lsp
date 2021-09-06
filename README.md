@@ -19,6 +19,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
   - [智能感知](#智能感知)
   - [智能提示](#智能提示)
   - [大纲](#大纲)
+  - [语义高亮](#语义高亮)
   - [代码标记](#代码标记)
   - [颜色提示](#颜色提示)
   - [悬停提示](#悬停提示)
@@ -68,6 +69,11 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 1. 在左侧大纲栏目显示类、方法、函数、变量、标签、热键、热字串、区块信息  
 2. 按Ctrl + P, 输入@符号名检索并跳转  
 3. 您可以在函数、变量的上一行使用分号或/* */向方法添加注释  
+
+### 语义高亮
+
+语义高亮显示是语法高亮显示的补充，改进和改进语法中的语法突出显示。编辑器在来自语法的高亮显示之上应用来自语义标记的高亮显示。
+![semanticTokens](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/semanticTokens.png)
 
 ### 代码标记
 
@@ -189,6 +195,7 @@ AutoHotKey V2 Language support for VS Code, Function realization based on v2 syn
   - [IntelliSense](#intellisense)
   - [Signature](#signature)
   - [Document Symbol](#document-symbol)
+  - [Semantic Highlight](#semantic-highlight)
   - [Blocks](#blocks)
   - [Document Color](#document-color)
   - [Hover](#hover)
@@ -239,6 +246,10 @@ Support for intelligent prompts for function parameters.
 1. Displays class, method, function, variable, label, hotkey, hot string, block information in the left outline column.  
 2. press Ctrl + P, Input @symbol_name to retrieve and jump  
 3. You can comment a method with a semicolon or /* */ on the top line of a function, variable.  
+
+### Semantic Highlight
+Semantic highlighting is an addition to syntax highlighting, resolves symbols in the context of a project. The editor applies the highlighting from semantic tokens on top of the highlighting from grammars.
+![semanticTokens](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/semanticTokens.png)
 
 ### Blocks
 
