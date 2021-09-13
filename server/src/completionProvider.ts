@@ -209,13 +209,14 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					else if (a_ === 'scriptdir')
 						pre = pre.replace(m[0], doc.scriptdir);
 					else if (a_ === 'linefile')
-						pre = pre.replace(m[0], doc.scriptpath);
+						pre = pre.replace(m[0], URI.parse(doc.uri).fsPath);
 					else return;
 				if (pre.charAt(pre.length - 1) === '/')
 					xg = '/';
 				let extreg = inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i);
 				for (let path of paths) {
-					if (!existsSync(path = resolve(path, pre) + '\\')) continue;
+					if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory())
+						continue;
 					for (let it of readdirSync(path)) {
 						try {
 							if (statSync(path + it).isDirectory()) {

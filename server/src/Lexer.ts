@@ -206,12 +206,12 @@ export class Lexer {
 	constructor(document: TextDocument) {
 		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this, h = isahk2_h;
-		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], scriptpath: string, customblocks: { region: number[], bracket: number[] };
+		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], filepath: string, customblocks: { region: number[], bracket: number[] };
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, closed_cycle: number, tks: Token[] = [], ck: Token;
 		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space = false, last_top = false, lst: Token;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
-		this.document = document, this.scriptpath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath.replace(/\\[^\\]+$/, ''), this.initlibdirs();
+		this.document = document, this.scriptpath = (filepath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath).replace(/\\[^\\]+$/, ''), this.initlibdirs();
 		whitespace = "\n\r\t ".split(''), digits = '0123456789'.split(''), wordchar = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$'.split('');
 		punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , : ? ^ ^= |= :: =>'.split(' ');
 		line_starters = 'try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
@@ -550,7 +550,7 @@ export class Lexer {
 			}
 		} else {
 			this.parseScript = function (islib?: boolean): void {
-				input = this.document.getText(), input_length = input.length, scriptpath = includedir = this.scriptpath;
+				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
 				tks.length = 0, whitespace_before_token = [], beginpos = 0, following_bracket = false, begin_line = true;
 				bracketnum = 0, parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, closed_cycle = 0, h = isahk2_h;
 				this.label.length = this.funccall.length = this.diagnostics.length = this.hotkey.length = 0;
@@ -577,7 +577,7 @@ export class Lexer {
 				switch (tk.type) {
 					case 'TK_SHARP':
 						if (m = tk.content.match(/^\s*#include((again)?)\s+((\*i\s+)?<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
-							raw = (m[3] || '').trim(), o = m[4] || m[6], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir).replace(/%a_linefile%/i, _this.scriptpath).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
+							raw = (m[3] || '').trim(), o = m[4] || m[6], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir).replace(/%a_linefile%/i, filepath).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
 							_this.includedir.set(document.positionAt(tk.offset).line, includedir);
 							if (m === '') {
 								_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
@@ -1638,8 +1638,14 @@ export class Lexer {
 								let t = parser_pos, nk = get_token_ingore_comment();
 								if (nk.type !== 'TK_EQUALS' && !nk.content.match(/^([<>]=?|~=|&&|\|\||[,.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) { lk = tk, tk = nk, next = false; break; }
 								parser_pos = t;
-							} else if (tk.content.toLowerCase() === 'class') {
-								next = false, tk.type = 'TK_WORD'; continue;
+							} else if (tk.content.match(/^(class|super|isset)$/i)) {
+								if (tk.content.toLowerCase() === 'isset') {
+									tpexp += ' isset';
+									if (input.charAt(tk.offset + tk.length) !== '(')
+										_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
+								} else
+									next = false, tk.type = 'TK_WORD';
+								continue;
 							}
 							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset); break;
 						case 'TK_OPERATOR':
@@ -2070,8 +2076,14 @@ export class Lexer {
 								continue;
 							}
 							parser_pos = t, tpexp += ' ' + tk.content;
-						} else if (tk.content.toLowerCase() === 'class') {
-							next = false, tk.type = 'TK_WORD'; continue;
+						} else if (tk.content.match(/^(class|super|isset)$/i)) {
+							if (tk.content.toLowerCase() === 'isset') {
+								tpexp += ' isset';
+								if (input.charAt(tk.offset + tk.length) !== '(')
+									_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
+							} else
+								next = false, tk.type = 'TK_WORD';
+							continue;
 						}
 						_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 					} else if (tk.type === 'TK_END_BLOCK' || tk.type === 'TK_END_EXPR')
@@ -4456,8 +4468,8 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 			let p = l.split('.'), cl: any, mems: DocumentSymbol[], nd: DocumentSymbol | undefined, dc: Lexer;
 			cl = searchNode(doc, p[0], Position.create(0, 0), SymbolKind.Class);
 			if (cl && cl.length && cl[0].node.kind === SymbolKind.Class) {
-				nd = cl[0].node, dc = lexers[cl[0].uri || doc.uri];
-				if (cl[0].uri)
+				nd = cl[0].node, dc = lexers[cl[0].uri] || doc;
+				if (cl[0].uri && (<any>nd).uri === undefined)
 					(<any>nd).uri = cl[0].uri;
 				while (nd) {
 					if (p.length === 1) {
