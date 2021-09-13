@@ -58,11 +58,12 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 				let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, true);
 				let n: FuncNode | undefined;
 				for (const m of mems) {
-					if ((<any>m).def !== false && m.name.toLowerCase() === 'call') {
-						n = undefined;
-						nodes.push({ node: m, uri: '' });
-						break;
-					} else if (m.name.toLowerCase() === '__new')
+					let _ = m.name.toLowerCase();
+					if (_  === 'call') {
+						n = m as FuncNode;
+						if ((<any>m).def !== false)
+							break;
+					} else if (_ === '__new')
 						n = m as FuncNode;
 				}
 				if (n)

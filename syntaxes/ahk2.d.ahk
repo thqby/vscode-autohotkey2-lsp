@@ -476,7 +476,7 @@ Download(URL, Filename) => void
  * 弹出指定 CD/DVD 驱动器或可移动驱动器.
  * @param Drive 驱动器字母后面跟着冒号和可选的反斜杠(也可以用于 UNC 路径和映射驱动器). 如果省略, 将使用默认的 CD/DVD 驱动器. 如果未找到驱动器, 则会引发异常.
  */
-DriveEject(Drive := '', Retract := false) => void
+DriveEject(Drive := '') => void
 
 /**
  * 返回包含指定路径的驱动器的总容量, 单位为 mb(兆字节).
@@ -2466,7 +2466,7 @@ class Class extends Object {
 	/**
 	 * 构造类的新实例.
 	 */
-	static Call(Params)
+	static Call()
 
 	/**
 	 * 检索或设置类的所有实例所基于的对象.

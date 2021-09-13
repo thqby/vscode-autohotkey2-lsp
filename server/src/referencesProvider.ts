@@ -1,6 +1,6 @@
 import { DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, Lexer, FuncScope, FuncNode, searchNode } from './Lexer';
-import { Maybe, lexers } from './server';
+import { Lexer, FuncScope, FuncNode, searchNode } from './Lexer';
+import { Maybe, lexers, ahkvars } from './server';
 
 export async function referenceProvider(params: ReferenceParams): Promise<Location[]> {
 	let result: any = [], doc = lexers[params.textDocument.uri.toLowerCase()];
@@ -17,7 +17,7 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 	if (!nodes || nodes.length > 1)
 		return undefined;
 	let { node, uri } = nodes[0];
-	if (!uri)
+	if (!uri || node === ahkvars[name])
 		return undefined;
 	let scope = node === doc.declaration[name] ? undefined : doc.searchScopedNode(node.selectionRange.start);
 	switch (node.kind) {

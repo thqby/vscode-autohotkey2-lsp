@@ -105,7 +105,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			for (const node of tps) {
 				switch (node.kind) {
 					case SymbolKind.Class:
-						isclass = isobj = true;
 						let mems = getClassMembers(doc, node, isstatic);
 						mems.map((it: any) => {
 							if (expg.test(it.name)) {
@@ -120,35 +119,14 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 											items.push(props[l] = convertNodeCompletion(it));
 										else if (props[l].detail !== it.full)
 											props[l].detail = '(...) ' + it.name + '()', props[l].documentation = '';
-									} else if (it.name.toLowerCase() === '__new' && (<FuncNode>it).params.length)
-										hasparams = true;
+									}
 								}
 							}
 						});
-						if (node.name.match(/^(number|string)$/i))
-							isclass = false;
 						break;
 					case SymbolKind.Object:
 						isobj = true; break;
 				}
-			}
-			if (isobj)
-				getClassMembers(doc, ahkvars['object'], false).map((it: any) => {
-					if (expg.test(_low = it.name.toLowerCase())) {
-						if (it.kind === SymbolKind.Property) {
-							if (!props[_low])
-								items.push(props[_low] = convertNodeCompletion(it));
-						} else if (isclass && it.kind === SymbolKind.Method) {
-							if (!props[_low] && _low !== '__new')
-								items.push(props[_low] = convertNodeCompletion(it));
-						}
-					}
-				});
-			if (isclass && isstatic) {
-				if (!props['prototype'])
-					items.push(p = CompletionItem.create('Prototype')), props['prototype'] = p, p.kind = CompletionItemKind.Property, p.detail = completionitem.prototype();
-				if (!props['call'])
-					items.push(p = CompletionItem.create('Call')), props['call'] = p, p.kind = CompletionItemKind.Method, p.detail = completionitem._new(), p.insertText = `Call(${hasparams ? '$0' : ''})`, p.insertTextFormat = InsertTextFormat.Snippet;
 			}
 			if (!unknown && (triggerKind !== 1 || content.text.match(/\..{0,2}$/)))
 				return items;
