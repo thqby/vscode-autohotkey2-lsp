@@ -1262,9 +1262,9 @@ IsObject(Value) => Number
 /**
  * 如果变量 Value 已经被赋值, 则 IsSet 为 True.
  *
- * @param Var 一个直接变量引用. 例如: `IsSet(MyVar)`.
+ * @param Var 一个变量. 例如: `IsSet(MyVar)`.
  */
-IsSet(&Var) => Number
+IsSet(Var) => Number
 
 /**
  * 如果变量 Value 已经被赋值, 则 IsSet 为 True.

@@ -516,7 +516,9 @@ export class Lexer {
 								}
 								blocks++, p.push(tn);
 								i = j + 1;
-							} else
+							} else if (_low === 'isset')
+								tk.type = 'TK_WORD';
+							else
 								i++;
 							break;
 						case 'TK_END_BLOCK':
@@ -1274,6 +1276,9 @@ export class Lexer {
 							}
 						}
 						break;
+					case 'as':
+						_this.addDiagnostic(diagnostic.unexpected('as'), tk.offset, tk.length);
+						break;
 					case 'catch':
 						if (is_next('('))
 							p = get_token_ingore_comment();
@@ -1298,6 +1303,16 @@ export class Lexer {
 											break;
 									} else
 										break;
+								}
+								if (p) {
+									if (tk.content === '{') {
+										_this.addDiagnostic(diagnostic.missing('('), p.offset, 1), next = false;
+										break;
+									} else if (tk.content === ')')
+										break;
+								} else if (tk.content === '{' || tk.topofline) {
+									next = false;
+									break;
 								}
 							}
 							if (tk.content.toLowerCase() === 'as') {
@@ -1333,7 +1348,9 @@ export class Lexer {
 						break;
 					case 'super':
 						if (!(mode & 3))
-							tk.type = 'TK_WORD', next = false, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+						else tk.ignore = true;
+						tk.type = 'TK_WORD', next = false
 						break;
 					default:
 						nk = get_token_ingore_comment();
@@ -1640,11 +1657,11 @@ export class Lexer {
 								parser_pos = t;
 							} else if (tk.content.match(/^(class|super|isset)$/i)) {
 								if (tk.content.toLowerCase() === 'isset') {
-									tpexp += ' isset';
+									tk.ignore = true;
 									if (input.charAt(tk.offset + tk.length) !== '(')
 										_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
-								} else
-									next = false, tk.type = 'TK_WORD';
+								}
+								next = false, tk.type = 'TK_WORD';
 								continue;
 							}
 							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset); break;
@@ -2078,11 +2095,11 @@ export class Lexer {
 							parser_pos = t, tpexp += ' ' + tk.content;
 						} else if (tk.content.match(/^(class|super|isset)$/i)) {
 							if (tk.content.toLowerCase() === 'isset') {
-								tpexp += ' isset';
+								tk.ignore = true;
 								if (input.charAt(tk.offset + tk.length) !== '(')
 									_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
-							} else
-								next = false, tk.type = 'TK_WORD';
+							}
+							next = false, tk.type = 'TK_WORD';
 							continue;
 						}
 						_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);

@@ -1,5 +1,6 @@
 ## 1.0.2
-- 修复bug
+- 修复[#44](https://github.com/thqby/vscode-autohotkey2-lsp/issues/44)
+- 修复`catch Error {`提示为错误
 
 ## 1.0.0
 - 优化快捷帮助稳定性
