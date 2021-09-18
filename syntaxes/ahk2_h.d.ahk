@@ -1,241 +1,241 @@
 ; AutoHotkey_H https://github.com/thqby/AutoHotkey_H
 
 /**
- * 将局部变量转换为别名以表示另一个变量, 例如在另一个线程中.
+ * Convert a local variable to an alias to represent another variable, such as in another thread.
  */
 Alias(VariableOrName [, VariableOrPointer]) => void
 
 /**
- * 将值从一种数据类型转换为另一种数据类型.
+ * Convert a value from one data type to another data type.
  */
 Cast(DataType, Value, NewDataType) => Number
 
 /**
- * 从dll创建一个COM对象.
+ * Create a COM object from the dll.
  */
 ComObjDll(hModule, CLSID [, IID]) => ComObject
- 
+
 /**
- * 加密和解密数据.
+ * Encrypt and decrypt data.
  */
 CryptAES(AddOrBuf [, Size], password [, EncryptOrDecrypt := true, Algorithm := 256])
 
 /**
- * 内置函数, 类似于DllCall, 但可用于DllCall结构并使用Object语法.它通常比DllCall更快, 更易于使用, 并且节省了大量的键入和代码.
+ * Built-in functions, similar to DllCall, but can be used in the DllCall structure and use Object syntax. It is usually faster than DllCall, easier to use, and saves a lot of typing and code.
  */
 DynaCall(DllFunc, ParameterDefinition, Params*) => Number | String
 
 /**
- * 检索指向变量的低级指针.
+ * Retrieve low-level pointers to variables.
  */
-GetVar(VarName, ResolveAlias := true) => Number
+GetVar(VarName, ResolveAlias ​​ := true) => Number
 
 MemoryCallEntryPoint(hModule [, cmdLine]) => Number
 
 /**
- * 在先前加载了MemoryLoadLibrary的指定dll中找到资源.类似于FindResource和FindResourceEx.
+ * Find the resource in the specified dll loaded MemoryLoadLibrary. Similar to FindResource and FindResourceEx.
  */
 MemoryFindResource(hModule, Name, Type [, Language]) => Number
 
 /**
- * 释放指定的 dll 先前加载的 MemoryLoadLibrary.类似于 FreeLibrary.
+ * Release the previously loaded MemoryLoadLibrary of the specified dll. Similar to FreeLibrary.
  */
 MemoryFreeLibrary(hModule) => String
 
 /**
- * 在先前加载了MemoryLoadLibrary的指定dll中找到函数指针.类似于GetProcAddress.
+ * Find the function pointer in the specified dll that previously loaded MemoryLoadLibrary. Similar to GetProcAddress.
  */
 MemoryGetProcAddress(hModule, FuncName) => Number
 
 /**
- * 将指定的dll加载到进程中.与LoadLibrary类似, 但是从内存而不是从磁盘加载模块, 并允许多次加载模块.
+ * Load the specified dll into the process. Similar to LoadLibrary, but load the module from the memory instead of the disk, and allow multiple loading of the module.
  */
 MemoryLoadLibrary(PathToDll) => Number
 
 /**
- * 将资源加载到以前通过MemoryLoadLibrary加载的指定dll中.类似于LoadResource.
+ * Load resources into the specified dll previously loaded through MemoryLoadLibrary. Similar to LoadResource.
  */
 MemoryLoadResource(hModule, hResource) => Number
 
 /**
- * 在之前使用 MemoryLoadLibrary 加载的指定 dll 中加载字符串资源.类似于 LoadString.
+ * Load string resources in the specified dll previously loaded with MemoryLoadLibrary. Similar to LoadString.
  */
 MemoryLoadString(hModule, Id [, Language]) => String
 
 /*
- * 找出之前使用 MemoryLoadLibrary 加载的指定 dll 中的资源大小.类似于 SizeOfResource.
+ * Find out the resource size in the specified dll loaded with MemoryLoadLibrary. Similar to SizeOfResource.
  */
 MemorySizeOfResource(hModule, hReslnfo) => Number
 
 /**
- * 使用线程本地存储(不使用AutoHotkey.dll)在当前进程中创建一个真AutoHotkey线程.
+ * Use thread local storage (not AutoHotkey.dll) to create a real AutoHotkey thread in the current process.
  */
 NewThread(Script [, Parameters, Title]) => Number
 
 /**
- * 将对象转储到内存或保存到文件以供以后使用.
+ * Dump objects to memory or save to file for later use.
  */
 ObjDump(obj [, compress, password]) => Buffer
 
 /**
- * 从内存或文件加载转储的对象.
+ * Load dumped objects from memory or files.
  */
 ObjLoad(AddOrPath [, password]) => Array | Map | Object
- 
+
 /**
- * 从资源中将指定的dll加载到进程中.类似于MemoryLoadLibrary.
+ * Load the specified dll from the resource into the process. Similar to MemoryLoadLibrary.
  */
 ResourceLoadLibrary(ResName) => Number
 
 /**
- * 交换两个变量.
+ * Exchange two variables.
  */
 Swap(Var1, Var2) => void
 
 /**
- * 内置函数可以计算结构或类型的大小, 例如TCHAR或PTR或VOID ..., 有关用法和示例, 另请参见Struct.
+ * Built-in functions can calculate the size of structures or types, such as TCHAR or PTR or VOID..., for usage and examples, see also Struct.
  */
 sizeof(Definition [, offset]) => Number
 
 /*
- * 创建未排序的 Array(适用于属性).
+ * Create an unsorted Array (for attributes).
  */
 UArray(Values*) => Array
 
 /*
- * 创建未排序的 Map(适用于项目/属性).
+ * Create an unsorted Map (for items/attributes).
  */
 UMap([Key1, Value1, ...]) => Map
 
 /*
- * 创建未排序的 Object(适用于属性).
+ * Create an unsorted Object (applicable to attributes).
  */
 UObject([Key1, Value1, ...]) => Object
 
 /**
- * 从zip文件中提取一项或所有项到硬盘.
+ * Extract one or all items from the zip file to the hard drive.
  */
 UnZip(BufOrAddOrFile [, Size], DestinationFolder [, FileToExtract, DestinationFileName, Password]) => void
 
 /**
- * 从zip文件中提取一项.
+ * Extract one item from the zip file.
  */
 UnZipBuffer(AddOrBufOrFile [, Size], FileToExtract [, Password]) => Buffer
 
 /**
- * 此功能用于解压缩和解密原始内存, 例如从资源中解压缩.
+ * This function is used to decompress and decrypt raw memory, such as decompressing from resources.
  */
 UnZipRawMemory(AddOrBuf [, Size, Password]) => Buffer
 
 /**
- * 将内存中的文件添加到使用ZipCreateBuffer或ZipCreateFile创建的zip存档中.
+ * Add files in memory to a zip archive created using ZipCreateBuffer or ZipCreateFile.
  */
 ZipAddBuffer(ZipHandle, AddOrBuf [, Size], FileName) => Number
 
 /**
- * 将文件添加到使用ZipCreateFile或ZipCreateBuffer创建的zip存档中.
+ * Add files to a zip archive created using ZipCreateFile or ZipCreateBuffer.
  */
 ZipAddFile(ZipHandle, FileName [, ZipFileName]) => Number
 
 /**
- * 将空文件夹添加到使用ZipCreateFile或ZipCreateBuffer创建的zip存档中.
+ * Add empty folders to the zip archive created with ZipCreateFile or ZipCreateBuffer.
  */
 ZipAddFolder(ZipHandle, ZipFoldName) => Number
 
 /**
- * 关闭使用ZipCreateBuffer创建的zip存档, 将其保存到变量中.
+ * Close the zip archive created with ZipCreateBuffer and save it in a variable.
  */
 ZipCloseBuffer(ZipHandle) => Buffer
 
 /**
- * 关闭使用ZipCreateFile创建的zip存档.
+ * Close the zip archive created with ZipCreateFile.
  */
 ZipCloseFile(ZipHandle) => Number
 
 /**
- * 此函数用于在内存中创建一个新的空zip文件, 使用ZipAddBuffer或ZipAddFile将文件添加到zip存档中
+ * This function is used to create a new empty zip file in memory, use ZipAddBuffer or ZipAddFile to add the file to the zip archive
  */
 ZipCreateBuffer(MaxSize [, Password]) => Number
 
 /**
- * 此函数用于创建一个新的空zip文件, 使用ZipAddFile或ZipAddBuffer将文件添加到zip存档中.
+ * This function is used to create a new empty zip file, use ZipAddFile or ZipAddBuffer to add the file to the zip archive.
  */
 ZipCreateFile(FileName [, Password]) => Number
 
 /**
- * 返回一个对象, 其中包含有关zip归档文件中所有项目的信息.
+ * Returns an object containing information about all items in the zip archive file.
  */
 ZipInfo(AddOrBufOrFile [, Size]) => Array
 
 /**
- * 更改使用ZipCreateFile创建的zip存档的选项.
- * @param Options 支持的选项, TZIP_OPTION_GZIP = 0x80000000.
+ * Change the options for zip archives created with ZipCreateFile.
+ * @param Options supported options, TZIP_OPTION_GZIP = 0x80000000.
  */
 ZipOptions(ZipHandle, Options) => Number
 
 /**
- * 此功能用于压缩和解密原始内存, 例如用于资源.
+ * This function is used to compress and decrypt raw memory, for example for resources.
  */
-ZipRawMemory(AddOrBuf [, Size , Password]) => Buffer
+ZipRawMemory(AddOrBuf [, Size, Password]) => Buffer
 
 class JSON {
-	static parse(objtext) => Map | Array
-  
-	/**
-	 * 对象包括映射、数组、对象和带有`__enum`元函数的自定义对象
-	 * @param space 用于缩进的空格的数量或字符串
-	 */
-	static stringify(obj, space := 0) => String
+    static parse(objtext) => Map | Array
+
+    /**
+     * Objects include maps, arrays, objects and custom objects with `__enum` metafunction
+     * @param space The number of spaces or string used for indentation
+     */
+    static stringify(obj, space := 0) => String
 }
 
 class Struct {
-	/**
-	* Struct是一个内置函数, 用于创建并返回结构对象.该对象可用于使用对象语法访问定义的结构.SetCapacity方法可用于将内存分配给结构和指针.
-	*/
-	static Call(Definition [, StructMemory, InitObject]) => Struct
+    /**
+     * Struct is a built-in function used to create and return structure objects. The object can be used to access defined structures using object syntax. The SetCapacity method can be used to allocate memory to structures and pointers.
+     */
+    static Call(Definition [, StructMemory, InitObject]) => Struct
 
-	/**
-	 * 返回数组定义的大小；如果结构或字段不是数组, 则返回0.
-	 */
-	CountOf([field]) => Number
+    /**
+     * Returns the size defined by the array; if the structure or field is not an array, it returns 0.
+     */
+    CountOf([field]) => Number
 
-	/**
-	 * 返回字段的编码.
-	 */
-	Encoding([field]) => Number
+    /**
+     * Return the code of the field.
+     */
+    Encoding([field]) => Number
 
-	/**
-	 * 返回字段或结构的地址.
-	 */
-	GetAddress([field]) => Number
+    /**
+     * Return the address of the field or structure.
+     */
+    GetAddress([field]) => Number
 
-	/*
-	 * 返回先前使用.SetCapacity()或分配字符串分配的容量.
-	 */
-	GetCapacity([field]) => Number
+    /*
+     * Returns the previously allocated capacity using .SetCapacity() or allocation string.
+     */
+    GetCapacity([field]) => Number
 
-	/**
-	 * 返回保存在结构或字段中的已分配内存的指针.
-	 */
-	GetPointer([field]) => Number
+    /**
+     * Returns a pointer to the allocated memory stored in a structure or field.
+     */
+    GetPointer([field]) => Number
 
-	/**
-	 * 如果字段或结构是指针, 则返回true.
-	 */
-	IsPointer([field]) => Number
+    /**
+     * If the field or structure is a pointer, return true.
+     */
+    IsPointer([field]) => Number
 
-	/**
-	 * 返回字段的偏移量.
-	 */
-	Offset(field) => Number
+    /**
+     * Returns the offset of the field.
+     */
+    Offset(field) => Number
 
-	/**
-	 * 为一个字段分配内存, 如果分配了新的内存, 则返回分配的大小.
-	 */
-	SetCapacity([field,] newsize) => Number
+    /**
+     * Allocate memory for a field, if new memory is allocated, return the allocated size.
+     */
+    SetCapacity([field, ] newsize) => Number
 
-	/**
-	 * 返回结构或字段的大小(以字节为单位).
-	 */
-	Size([field]) => Number
+    /**
+     * Returns the size of the structure or field (in bytes).
+     */
+    Size([field]) => Number
 }

@@ -8,7 +8,7 @@ import {
 	Command, CompletionItem, CompletionItemKind, createConnection,
 	DidChangeConfigurationNotification, DocumentSymbol,
 	FoldingRange, FoldingRangeParams, Hover, InitializeParams, InitializeResult, InsertTextFormat,
-	MarkupKind, ProposedFeatures, Range, SemanticTokensDeltaParams, SemanticTokensDeltaPartialResult, SymbolInformation, SymbolKind,
+	MarkupKind, ProposedFeatures, Range, SymbolInformation, SymbolKind,
 	TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -21,7 +21,7 @@ import { executeCommandProvider } from './executeCommandProvider';
 import { documentFormatting, rangeFormatting, typeFormatting } from './formattingProvider';
 import { hoverProvider } from './hoverProvider';
 import { FuncNode, getincludetable, Lexer, parseinclude } from './Lexer';
-import { completionitem, setting } from './localize';
+import { completionitem, getlocalefilepath, setting } from './localize';
 import { referenceProvider } from './referencesProvider';
 import { prepareRename, renameProvider } from './renameProvider';
 import { runscript } from './scriptrunner';
@@ -317,14 +317,15 @@ function initahk2cache() {
 }
 
 async function loadahk2(filename = 'ahk2') {
-	const file = resolve(__dirname, `../../syntaxes/${filename}`);
-	if (existsSync(file + '.d.ahk')) {
-		let doc = new Lexer(openFile(file + '.d.ahk'));
+	let path: string | undefined;
+	const file = resolve(__dirname, `../../syntaxes/<>/${filename}`);
+	if (path = getlocalefilepath(file + '.d.ahk')) {
+		let doc = new Lexer(openFile(path));
 		doc.parseScript(true), lexers[doc.uri] = doc;
 	}
-	if (!existsSync(file + '.json'))
+	if (!(path = getlocalefilepath(file + '.json')))
 		return;
-	const ahk2 = JSON.parse(readFileSync(file + '.json', { encoding: 'utf8' }));
+	const ahk2 = JSON.parse(readFileSync(path, { encoding: 'utf8' }));
 	const cmd: Command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
 	let type: CompletionItemKind, t = '', snip: { prefix: string, body: string, description?: string }, rg = Range.create(0, 0, 0, 0);
 	for (const key in ahk2) {

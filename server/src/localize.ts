@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
+export const locale: string = JSON.parse(process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFIG || '{}').locale || 'en-us';
 let loadedCollection: { [key: string]: string };
 
 export namespace completionitem {
@@ -8,6 +9,8 @@ export namespace completionitem {
 	export const comment = localize('completionitem.generatecomment', 'Generate comment template of current function/method.');
 	export const include = localize('completionitem.include', 'Auto import from \'{0}\'');
 	export const prototype = localize("completionitem.prototype", "Retrieve or set the object on which all instances of the class are based.");
+	export const thishotkey = localize("completionitem.thishotkey", "The hidden parameter to the hotkey function.");
+	export const value = localize("completionitem.value", "Within the dynamic property 'set', 'Value' contains the value being assigned.");
 	export const _new = localize("completionitem.new", "export construct a new instance of the class.");
 	export const _this = localize("completionitem.this", "In the class, access other instance variables and methods of the class through \'this\'.");
 	export const _super = localize("completionitem.super", "In the inherited class, \'super\' can replace \'this\' to access the superclass version of the method or property that is overridden in the derived class.");
@@ -62,16 +65,8 @@ export namespace setting {
 }
 
 function load() {
-	let path = '';
-	const vscodeConfigString = process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFIG;
-	const locale = vscodeConfigString ? JSON.parse(vscodeConfigString).locale || 'en-us' : 'en-us';
-	if (!existsSync(path = resolve(__dirname, `../../package.nls.${locale}.json`)) &&
-		!(locale === 'zh-tw' && existsSync(path = resolve(__dirname, '../../package.nls.zh-cn.json'))))
-		path = resolve(__dirname, '../../package.nls.json');
-	if (existsSync(path))
-		loadedCollection = JSON.parse(readFileSync(path, { encoding: 'utf8' }));
-	else
-		loadedCollection = {};
+	let path = getlocalefilepath(resolve(__dirname, '../../package.nls.<>.json'));
+	loadedCollection = path ? JSON.parse(readFileSync(path, { encoding: 'utf8' })) : {};
 }
 
 function localize(key: string, defValue: string): Function {
@@ -96,4 +91,18 @@ function format(message: string, ...args: string[]): string {
 			return args[i];
 		return ' ';
 	});
+}
+
+export function getlocalefilepath(filepath: string): string | undefined {
+	let t = filepath.match(/<>./), s: string;
+	if (t) {
+		if (existsSync(s = filepath.replace('<>', locale)))
+			return s;
+		else if (locale.toLowerCase() === 'zh-tw' && existsSync(s = filepath.replace('<>', 'zh-cn')))
+			return s;
+		else if (existsSync(s = filepath.replace(t[0], '')))
+			return s;
+	} else if (existsSync(filepath))
+		return filepath;
+	return undefined;
 }

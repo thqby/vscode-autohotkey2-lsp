@@ -21,6 +21,8 @@
 	"completionitem.prototype": "检索或设置类的所有实例所基于的对象.",
 	"completionitem.super": "在继承类中, super 可以代替 this 来访问在派生类中被重写的方法或属性的超类版本.",
 	"completionitem.this": "在类中, 通过 this 访问该类的其他实例变量和方法.",
+	"completionitem.thishotkey": "热键函数的隐藏参数.",
+	"completionitem.value": "在动态属性 set 中, Value 包含被分配的值.",
 	"diagnostic.assignerr": "{0} '{1}'不能用作输出变量",
 	"diagnostic.classinfuncerr": "函数不能包含类",
 	"diagnostic.classuseerr": "类不能用作输出变量",

@@ -1,3 +1,6 @@
+## 1.0.3
+- 加入英文版头文件([dmtr99](https://github.com/dmtr99)提供)[#45](https://github.com/thqby/vscode-autohotkey2-lsp/issues/45)
+
 ## 1.0.2
 - 修复[#44](https://github.com/thqby/vscode-autohotkey2-lsp/issues/44)
 - 修复`catch Error {`提示为错误

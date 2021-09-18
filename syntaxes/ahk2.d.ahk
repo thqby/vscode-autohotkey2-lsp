@@ -1,2439 +1,2439 @@
 ;#region functions
 /**
- * 返回 Number 的绝对值.
+ * Returns the absolute value of Number.
  */
 Abs(Number) => Number
 
 /**
- * 返回以弧度表示的反余弦值(其余弦值为 Number).
+ * Returns the arc cosine value expressed in radians (the cosine value is Number).
  */
 ACos(Number) => Number
 
 /**
- * 返回以弧度表示的反正弦值(其正弦值为 Number).
+ * Returns the arc sine value expressed in radians (its sine value is Number).
  */
 ASin(Number) => Number
 
 /**
- * 返回以弧度表示的反正切值(其正切值为 Number).
+ * Returns the arctangent value expressed in radians (its tangent value is Number).
  */
 ATan(Number) => Number
 
 /**
- * 创建机器码地址, 当它被调用时会重定向到脚本中的函数.
- * @param Function 函数对象. 每当调用 Address 时会自动调用此函数对象. 此函数同时会接收到传递给 Address 的参数.
- * 闭包或绑定函数可以用来区分多个回调函数调用相同的脚本函数.
- * 回调函数保留对函数对象的引用, 并在脚本调用 CallbackFree 时释放它.
- * @param Options 指定零个或多个下列单词或字符串. 在选项间使用空格分隔(例如 "C Fast").
- * Fast 或 F: 避免每次调用 Function 时都启动新的线程. 尽管这样执行的更好, 但必须避免调用 Address 的线程发生变化(例如当回调函数被传入的消息触发). 这是因为 Function 能改变在它被调用时正在运行的线程的全局设置(例如 A_LastError 和上次找到的窗口). 有关详情, 请参阅备注.
- *
- * CDecl 或 C: 让 Address 遵循 "C" 调用约定. 此选项通常省略, 因为在回调函数中使用标准调用约定更为常用. 64 位版本的 AutoHotkey 会忽略这个选项, 它使用 x64 调用约定.
- *
- * &: 将参数列表的地址(单个整数) 传递给 Function, 而不是传递给各个参数. 可以使用 NumGet 检索参数值. 当使用标准的 32 位调用约定时, ParamCount 必须以 DWORDs 指定参数列表的大小(字节数除以 4).
- * @param ParamCount Address 的调用者会传递给它的参数数目. 如果省略, 则它默认为 Function.MinParams, 这通常是 Function 定义中强制参数的数目. 在这两种情况中, 必须确保调用者准确传递此数目的参数.
+ * Create a machine code address, when it is called, it will be redirected to the function in the script.
+ * @param Function function object. This function object is automatically called whenever Address is called. This function also receives the parameters passed to Address.
+ * Closure or binding function can be used to distinguish multiple callback functions from calling the same script function.
+ * The callback function retains a reference to the function object and releases it when the script calls CallbackFree.
+ * @param Options Specify zero or more of the following words or strings. Use spaces to separate the options (for example, "C Fast").
+ * Fast or F: Avoid starting a new thread every time Function is called. Although this performs better, it is necessary to avoid changes in the thread that calls Address (for example, when the callback function is triggered by an incoming message). This is because Function It is possible to change the global settings of the thread that was running when it was called (such as A_LastError and the last window found). For details, see the remarks.
+ * 
+ * CDecl or C: Let Address follow the "C" calling convention. This option is usually omitted because it is more common to use the standard calling convention in the callback function. The 64-bit version of AutoHotkey ignores this option, which uses the x64 calling convention.
+ * 
+ * &: The address of the parameter list (a single integer) is passed to the Function instead of each parameter. You can use NumGet to retrieve the parameter value. When using the standard 32-bit calling convention, ParamCount must specify the size of the parameter list in DWORDs ( Divide the number of bytes by 4).
+ * @param ParamCount Address The number of parameters that the caller will pass to it. If omitted, it defaults to Function.MinParams, which is usually the number of mandatory parameters in the Function definition. In both cases, you must ensure that the caller is accurate Pass this number of parameters.
  */
-CallbackCreate(Function [, Options, ParamCount]) => Number
+CallbackCreate(Function[, Options, ParamCount]) => Number
 
 /**
- * 释放回调对脚本函数对象的引用.
+ * Release the reference of the callback to the script function object.
  */
 CallbackFree(Address) => void
 
 /**
- * 检索插入符号的当前位置(文本插入点).
+ * Retrieve the current position of the caret (text insertion point).
  */
 CaretGetPos([&OutputVarX, &OutputVarY]) => Number
 
 /**
- * 返回 Number 向上取整后的整数(不含任何 .00 后缀).
+ * Return Number rounded up to integer (without any .00 suffix).
  */
 Ceil(Number) => Number
 
 /**
- * 返回与指定数字所表示的编码相对应的字符串(通常是单个字符).
+ * Returns the string (usually a single character) corresponding to the code represented by the specified number.
  */
 Chr(Number) => String
 
 /**
- * 指定零个或多个以下项目: Coords, WhichButton, ClickCount, DownOrUp 和/或 Relative. 每个项目之间至少用一个空格, 制表符和/或逗号隔开. 各项可以以任何顺序出现, 除了 ClickCount 必须出现在 Coords 的右边(如果存在).
- * Coords: 在点击前, 鼠标光标要移动到的 X 和 Y 坐标. 例如, Click "100 200" 在特定位置点击鼠标左键. 坐标相对于活动窗口, 除非曾使用 CoordMode 更改了这个设置. 如果省略, 则使用光标的当前位置.
- * WhichButton: Left(默认), Right, Middle(或只是这些名称的第一个字母); 或鼠标第四或第五个按钮(X1 或 X2). 例如, Click "Right" 在鼠标光标的当前位置点击鼠标右键. Left 和 Right 对应鼠标的主按钮和次按钮. 如果用户通过系统设置交换了按钮, 按钮的物理位置被替换, 但效果保持不变.
- * WhichButton 也可以是 WheelUp 或 WU 来向上转动滚轮(远离你), 或 WheelDown 或 WD 来向下转动滚轮(朝向你). 也可以指定 WheelLeft(或 WL) 或 WheelRight(或 WR). 对于 ClickCount, 指定滚轮要转动的格数. 然而, 有些程序不接受鼠标滚轮转动的格数 ClickCount 大于 1 的情况. 对于这些程序, 可以通过 Loop 等方法多次使用 Click 函数.
- * ClickCount: 鼠标要点击的次数. 例如, Click 2 在鼠标光标位置双击. 如果省略, 那么点击鼠标一次. 如果指定了 Coords, 那么 ClickCount 必须放在坐标后面. 指定零(0) 来移动鼠标而不进行点击; 例如, Click "100 200 0".
- * DownOrUp: 这部分通常省略, 此时每次点击包括按下事件和接着的弹起事件. 否则, 指定单词 Down(或字母 D) 来按下鼠标按钮不放. 之后, 使用单词 Up(或字母 U) 来释放鼠标按钮. 例如, Click "Down" 按下鼠标左键不放.
- * Relative: 单词 Rel 或 Relative 会把指定的 X 和 Y 坐标视为距离当前鼠标位置的偏移. 换句话说, 会把光标从当前位置往右移动 X 像素(负值则往左) 且往下移动 Y 像素(负值则往上).
+ * Specify zero or more of the following items: Coords, WhichButton, ClickCount, DownOrUp and/or Relative. Each item must be separated by at least one space, tab and/or comma. The items can appear in any order, Except that ClickCount must appear to the right of Coords (if it exists).
+ * Coords: The X and Y coordinates that the mouse cursor will move to before clicking. For example, Click "100 200" to click the left mouse button at a specific position. The coordinates are relative to the active window, unless you have used CoordMode to change this setting. If omitted , The current position of the cursor is used.
+ * WhichButton: Left (default), Right, Middle (or just the first letter of these names); or the fourth or fifth mouse button (X1 or X2). For example, Click "Right" at the current position of the mouse cursor Click the right mouse button. Left and Right correspond to the primary and secondary buttons of the mouse. If the user swaps the buttons through the system settings, the physical location of the buttons will be replaced, but the effect remains the same.
+ * WhichButton can also be WheelUp or WU to turn the wheel up (away from you), or WheelDown or WD to turn the wheel down (toward you). You can also specify WheelLeft (or WL) or WheelRight (or WR). For ClickCount, specify The number of grids that the scroll wheel should rotate. However, some programs do not accept the case where ClickCount is greater than 1. For these programs, the Click function can be used multiple times through Loop and other methods.
+ * ClickCount: the number of mouse clicks. For example, Click 2 double-click at the mouse cursor position. If omitted, click the mouse once. If Coords is specified, then ClickCount must be placed after the coordinates. Specify zero (0) to move the mouse without Make a click; for example, Click "100 200 0".
+ * DownOrUp: This part is usually omitted. At this time, each click includes the press event and the subsequent pop-up event. Otherwise, specify the word Down (or letter D) to hold down the mouse button. After that, use the word Up (or letter U) to release the mouse button. For example, Click "Down" to hold down the left mouse button.
+ * Relative: The word Rel or Relative will treat the specified X and Y coordinates as an offset from the current mouse position. In other words, it will move the cursor X pixels to the right from the current position (negative value is to the left) and down Move Y pixels (negative values ​​go up).
  */
 Click([Options]) => void
 
 /**
- * 等待直到剪贴板包含数据.
- * @param Timeout 如果省略, 此命令将无限期等待. 否则, 它将等待不超过这个秒数的时间(可以包含小数点).
- * @param WaitForAnyData 如果此参数省略或为 0(false), 此命令会更有选择性, 明确地等待剪贴板中出现文本或文件("文本" 包含任何当您粘贴到记事本时会产生文本的内容).
- * 如果此参数为 1(true), 该函数等待任何类型的数据出现在剪贴板上.
+ * Wait until the clipboard contains data.
+ * @param Timeout If omitted, this command will wait indefinitely. Otherwise, it will wait no more than this number of seconds (can include a decimal point).
+ * @param WaitForAnyData If this parameter is omitted or 0 (false), this command will be more selective, explicitly waiting for the text or file to appear in the clipboard ("text" includes anything that will produce text when you paste it into Notepad content).
+ * If this parameter is 1 (true), the function waits for any type of data to appear on the clipboard.
  */
 ClipWait([Timeout, WaitForAnyData]) => Number
 
 /**
- * 通过索引调用原生 COM 接口方法.
- * @param Index 虚拟函数表中方法的索引(从零开始).
- * Index 对应于方法在原始接口定义中的位置. Microsoft 文档通常按字母顺序列出方法, 这是不相关的.
- * 为了确定正确的索引, 请找到原来的接口定义. 这可能在头文件或类型库中.
- *
- * 考虑方法继承于的父接口是很重要的. 前三个方法总是 QueryInterface (0), AddRef (1) 和 Release (2). 
- * @param ComObject 目标 COM 对象; 也就是说, 一个 COM 接口指针.
- * 指针值可以直接传递, 也可以封装在带有 Ptr 属性的对象中, 如带有 VT_UNKNOWN 变量类型的 ComObj.
+ * Call native COM interface methods by index.
+ * @param Index The index of the method in the virtual function table (zero-based).
+ * Index corresponds to the position of the method in the original interface definition. Microsoft documentation usually lists methods in alphabetical order, which is irrelevant.
+ * To determine the correct index, please find the original interface definition. This may be in the header file or type library.
+ * 
+ * It is important to consider the parent interface that the method inherits from. The first three methods are always QueryInterface (0), AddRef (1) and Release (2).
+ * @param ComObject The target COM object; that is, a COM interface pointer.
+ * The pointer value can be passed directly or encapsulated in an object with Ptr attribute, such as ComObj with VT_UNKNOWN variable type.
  */
-ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Number|String
+ComCall(Index, ComObject[, Type1, Arg1, * , ReturnType]) => Number | String
 
 /**
- * 检索已使用 OLE(对象连接与嵌入) 注册的运行中的对象.
- * @param CLSID 要检索的 COM 对象的 CLSID 或可读的 Prog ID.
+ * Retrieve running objects that have been registered using OLE (Object Connection and Embedding).
+ * @param CLSID The CLSID or readable Prog ID of the COM object to be retrieved.
  */
 ComObjActive(CLSID) => Comobjct
 
 /**
- * 将对象的事件源连接到具有给定前缀的函数.
+ * Connect the event source of the object to the function with the given prefix.
  */
-ComObjConnect(ComObject [, Prefix]) => void
+ComObjConnect(ComObject[, Prefix]) => void
 
 /*
- * 包装原始IDispatch指针.
- * IDispatch或派生接口的非空接口指针. 
+ * Wrap the original IDispatch pointer.
+ * IDispatch or non-null interface pointer of derived interface.
  */
 ComObjFromPtr(DispPtr) => ComObject
 
 /**
- * 获取或改变控制 COM 包装器对象行为的标志.
- * @param ComObject COM 对象包装器.
- * @param NewFlags 由 Mask 标识的 flags 的新值, 或要添加或删除的 flags.
- * @param Mask 更改 flags 的位掩码.
- * @returns 此函数返回指定 COM 对象的当前标志(如果指定, 在应用 NewFlags 之后).
+ * Get or change the flags that control the behavior of the COM wrapper object.
+ * @param ComObject COM object wrapper.
+ * @param NewFlags The new value of flags identified by Mask, or the flags to be added or deleted.
+ * @param Mask changes the bit mask of flags.
+ * @returns This function returns the current flags of the specified COM object (if specified, after applying NewFlags).
  */
-ComObjFlags(ComObject [, NewFlags, Mask]) => Number
+ComObjFlags(ComObject[, NewFlags, Mask]) => Number
 
 /**
- * 返回对 COM 组件提供的对象的引用.
- * @param Name 要检索的对象的显示名称. 有关详情, 请参阅 MkParseDisplayName (MSDN)
+ * Returns a reference to the object provided by the COM component.
+ * @param Name The display name of the object to be retrieved. For details, please refer to MkParseDisplayName (MSDN)
  */
 ComObjGet(Name) => Comobject
 
 /**
- * 查询 COM 对象的接口或服务.
- * @param ComObject COM 包装器对象, 接口指针或一个具有 Ptr 属性的对象, 该属性返回一个接口指针.
- * @param SID 格式为 "{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}" 的接口标识符(GUID).
- * @param IID 与 IID 格式相同的服务标识符. 省略此参数时, 还要省略逗号.
- * @returns 返回一个类型为 VT_UNKNOWN(13) 的 COM 封装对象.
+ * Query the interface or service of the COM object.
+ * @param ComObject COM wrapper object, interface pointer or an object with Ptr attribute, which returns an interface pointer.
+ * @param SID format is "{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}" interface identifier (GUID).
+ * @param IID A service identifier with the same format as IID. When omitting this parameter, also omit the comma.
+ * @returns returns a COM package object of type VT_UNKNOWN(13).
  */
-ComObjQuery(ComObject [, SID], IID) => Comobject
+ComObjQuery(ComObject[, SID], IID) => Comobject
 
 /**
- * 从 COM 对象检索类型信息.
- * @param ComObject 包含 COM 对象或类型化值的包装器对象.
- * @param Type 第二个参数是指示返回的类型信息的字符串.
+ * Retrieve type information from COM objects.
+ * @param ComObject contains a COM object or a wrapper object for typed values.
+ * @param Type The second parameter is a string indicating the type information returned.
  * Name, IID, Class, CLSID
  */
-ComObjType(ComObject [, Type]) => Number|String
+ComObjType(ComObject[, Type]) => Number | String
 
 /**
- * 检索存储在 COM 包装器对象中的值或指针.
- * @param ComObject 包含 COM 对象或类型化值的包装器对象.
- * @returns 返回 64 位有符号整数.
+ * Retrieve the value or pointer stored in the COM wrapper object.
+ * @param ComObject contains a COM object or a wrapper object for typed values.
+ * @returns returns a 64-bit signed integer.
  */
 ComObjValue(ComObject) => Number
 
 /**
- * 添加指定的字符串作为 ListBox(列表框) 或 ComboBox(组合框) 底部的新条目.
+ * Add the specified string as a new entry at the bottom of the ListBox or ComboBox.
  */
-ControlAddItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlAddItem(String, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 设置列表框, 组合框或标签页控件中的选择为指定的条目或选项卡编号.
- * @param N 条目或标签页的索引, 其中 1 是第一项或选项卡, 2 是第二项, 以此类推.
- * 若要选择 ListBox 或 ComboBox 中的所有条目, 则指定 0.
+ * Set the selection in the list box, combo box or tab page control to the specified item or tab number.
+ * @param N Index of entry or tab page, where 1 is the first item or tab, 2 is the second item, and so on.
+ * To select all items in ListBox or ComboBox, specify 0.
  */
-ControlChooseIndex(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlChooseIndex(N, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 将 ListBox 或 ComboBox 中的选择设置为其前导部分与指定字符串匹配的第一个条目.
- * @param String 要选择的字符串. 搜索不区分大小写. 例如, 如果一个 ListBox/ComboBox 包含项目 "UNIX Text", 指定单词 "unix"(小写) 足以选中它.
+ * Set the selection in ListBox or ComboBox to the first entry whose leading part matches the specified string.
+ * @param String The string to select. The search is not case sensitive. For example, if a ListBox/ComboBox contains the item "UNIX Text", specifying the word "unix" (lower case) is sufficient to select it.
  */
-ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => number
+ControlChooseString(String, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => number
 
 /**
- * 发送鼠标按钮或鼠标滚轮事件到控件.
- * @param Control_or_Pos 如果省略此参数, 则目标窗口本身将被点击. 否则, 将使用以下两种模式之一.
- * 模式 1(位置): 指定相对于目标窗口客户端区域左上角的 X 和 Y 坐标. X 坐标必须在 Y 坐标之前, 并且它们之间必须至少有一个空格或制表符. 例如: X55 Y33. 如果在指定的坐标上有一个控件, 它将在这些确切的坐标上发送点击事件. 如果没有控件, 目标窗口本身将被发送事件(根据窗口的性质, 可能没有效果).
- *
- * 模式 2(控件): 指定控件的 ClassNN, 文本或 HWND, 或一个具有 Hwnd 属性的对象. 有关详情, 请参阅控件的参数.
- *
- * 默认情况下, 模式 2 优先于模式 1. 例如, 在一种不太可能发生的情况中某个控件的文本或 ClassNN 格式为 "Xnnn Ynnn", 那么此时会使用模式 2. 要覆盖此行为而无条件使用模式 1, 请在 Options中加上单词 Pos, 如下例所示: ControlClick "x255 y152", WinTitle,,,, "Pos".
- * @param WhichButton 要点击的按钮: LEFT, RIGHT, MIDDLE(或这些单词的首个字母). 如果省略或为空, 则使用 LEFT 按钮.
- * 支持 X1(XButton1, 第四个鼠标按钮) 和 X2(XButton2, 第五个鼠标按钮).
- * 支持 WheelUp(或 WU), WheelDown(或 WD), WheelLeft(或 WL) 和 WheelRight(或 WR). 此时, ClickCount 为需要转动的滚轮格数.
- * @param Options 零个或多个下列选项字母组成的系列. 例如: d x50 y25
- * NA: 也许可以提高可靠性. 请参阅后面的可靠性.
- *
- * D: 按住鼠标按钮不放(即生成按下事件). 如果 D 和 U 选项都没有, 则会发送完整的点击事件(按下事件和弹起事件).
- *
- * U: 释放鼠标按钮(即生成弹起事件). 此选项不能和 D 选项同时使用.
- *
- * Pos: 在 Options 的任意位置指定单词 Pos, 这样会无条件使用 Control-or-Pos 参数中描述的 X/Y 位置模式.
- *
- * Xn: 指定 n 为要点击的相对于控件左上角的 X 坐标. 如果未指定, 则在控件的水平中心点击.
- *
- * Yn: 指定 n 为要点击的相对于控件左上角的 Y 坐标. 如果未指定, 则在控件的垂直中心点击.
- *
- * X 和 Y 选项中使用十进制(不是十六进制数) 数字.
+ * Send mouse button or mouse wheel events to the control.
+ * @param Control_or_Pos If this parameter is omitted, the target window itself will be clicked. Otherwise, one of the following two modes will be used.
+ * Mode 1 (Position): Specify the X and Y coordinates relative to the upper left corner of the client area of ​​the target window. The X coordinate must be before the Y coordinate, and there must be at least one space or tab between them. For example: X55 Y33. If there is a control at the specified coordinates, it will send a click event at these exact coordinates. If there is no control, the target window itself will be sent an event (depending on the nature of the window, it may have no effect).
+ * 
+ * Mode 2 (Control): Specify the ClassNN, text or HWND of the control, or an object with Hwnd property. For details, please refer to the parameters of the control.
+ * 
+ * By default, Mode 2 takes precedence over Mode 1. For example, in an unlikely situation where the text or ClassNN format of a control is "Xnnn Ynnn", then Mode 2 will be used. To override this behavior To use mode 1 unconditionally, please add the word Pos to Options, as shown in the following example: ControlClick "x255 y152", WinTitle,,,, "Pos".
+ * @param WhichButton The button to click: LEFT, RIGHT, MIDDLE (or the first letter of these words). If omitted or empty, use the LEFT button.
+ * Supports X1 (XButton1, the fourth mouse button) and X2 (XButton2, the fifth mouse button).
+ * Supports WheelUp (or WU), WheelDown (or WD), WheelLeft (or WL) and WheelRight (or WR). At this time, ClickCount is the number of wheel grids that need to be turned.
+ * @param Options A series of zero or more of the following option letters. For example: d x50 y25
+ * NA: May improve reliability. Please refer to reliability below.
+ * 
+ * D: Press and hold the mouse button (that is, a press event is generated). If there are no D and U options, a complete click event (press event and pop-up event) will be sent.
+ * 
+ * U: Release the mouse button (i.e. generate a pop-up event). This option cannot be used at the same time as the D option.
+ * 
+ * Pos: Specify the word Pos at any position in Options, so that the X/Y position mode described in the Control-or-Pos parameter will be used unconditionally.
+ * 
+ * Xn: Specify n as the X coordinate to be clicked relative to the upper left corner of the control. If not specified, click at the horizontal center of the control.
+ * 
+ * Yn: Specify n as the Y coordinate to be clicked relative to the upper left corner of the control. If not specified, click at the vertical center of the control.
+ * 
+ * Decimal (not hexadecimal) numbers are used in the X and Y options.
  */
 ControlClick([Control_or_Pos, WinTitle, WinText, WhichButton, ClickCount, Options, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 从 ListBox 或 ComboBox 中删除指定的条目.
+ * Delete the specified item from ListBox or ComboBox.
  */
-ControlDeleteItem(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlDeleteItem(N, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 返回与指定字符串完全匹配的 ListBox 或 ComboBox 的条目编号.
- * @param String 要查找的字符串. 搜索不区分大小写. 与 ControlChooseString 不同, 条目的整个文本必须匹配, 而不仅仅是开头部分.
+ * Returns the entry number of the ListBox or ComboBox that exactly matches the specified string.
+ * @param String The string to find. The search is not case sensitive. Unlike ControlChooseString, the entire text of the entry must match, not just the beginning.
  */
-ControlFindItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlFindItem(String, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 设置输入焦点到窗口的指定控件上.
+ * Set the input focus to the specified control of the window.
  */
-ControlFocus(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlFocus(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 如果选中复选框或单选按钮, 则返回非零值.
+ * If the check box or radio button is selected, a non-zero value is returned.
  */
-ControlGetChecked(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetChecked(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回 ListBox 或 ComboBox 中当前选择的条目的名称.
+ * Returns the name of the currently selected item in the ListBox or ComboBox.
  */
-ControlGetChoice(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+ControlGetChoice(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 返回指定控件的 ClassNN(类名和编号).
+ * Return the ClassNN (class name and number) of the specified control.
  */
-ControlGetClassNN(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+ControlGetClassNN(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 如果指定的控件是启用的, 则返回非零值.
+ * If the specified control is enabled, it returns a non-zero value.
  */
-ControlGetEnabled(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetEnabled(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回表示指定控件样式或扩展样式的整数.
+ * Returns an integer representing the specified control style or extended style.
  */
-ControlGetExStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetExStyle(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 如果有, 则获取目标窗口中具有输入焦点的控件.
+ * If there is, get the control that has the input focus in the target window.
  */
 ControlGetFocus([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回指定控件的唯一 ID.
+ * Returns the unique ID of the specified control.
  */
-ControlGetHwnd(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetHwnd(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回 ListBox, ComboBox 或 Tab 控件中当前选中的条目或标签的索引.
+ * Returns the index of the currently selected item or label in the ListBox, ComboBox or Tab control.
  */
-ControlGetIndex(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetIndex(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 从列表框、组合框或下拉列表中返回项目/行的数组.
+ * Return an array of items/rows from a list box, combo box or drop-down list.
  */
-ControlGetItems(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
+ControlGetItems(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
 
 /**
- * 获取控件的位置和大小.
+ * Get the position and size of the control.
  */
 ControlGetPos([&X, &Y, &Width, &Height, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 返回表示指定控件样式或扩展样式的整数.
+ * Returns an integer representing the specified control style or extended style.
  */
-ControlGetStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetStyle(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 检索控件的文本.
+ * Retrieve the text of the control.
  */
-ControlGetText(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+ControlGetText(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 如果指定的控件可见, 则返回非零值.
+ * If the specified control is visible, it returns a non-zero value.
  */
-ControlGetVisible(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetVisible(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 隐藏指定控件.
+ * Hide designated controls.
  */
-ControlHide(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlHide(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 隐藏 ComboBox 控件的下拉列表.
+ * Hide the drop-down list of the ComboBox control.
  */
-ControlHideDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlHideDropDown(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 移动控件或调整其大小.
+ * Move or resize the control.
  */
 ControlMove([X, Y, Width, Height, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 发送模拟键盘输入到窗口或控件.
- * @param Keys 要发送的按键的序列(有关详情, 请参阅 Send 函数). 发送字符的速率由 SetKeyDelay 决定.
- * 与 Send 函数不同, ControlSend 不能发送鼠标点击. 请使用 ControlClick 来发送.
+ * Send simulated keyboard input to the window or control.
+ * @param Keys The sequence of keys to be sent (for details, please refer to the Send function). The rate of sending characters is determined by SetKeyDelay.
+ * Unlike the Send function, ControlSend cannot send mouse clicks. Please use ControlClick to send.
  */
-ControlSend(Keys [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSend(Keys[, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 发送文本输入到窗口或控件.
- * @param Keys ControlSendText 发送 Keys 参数中的单个字符, 不将 {Enter} 转换为 Enter, ^c 转换为 Ctrl+C, 等等.
- * 有关详情, 请参阅 Text 模式. 也可以在 ControlSend 中使用 {Raw} 或 {Text}.
+ * Send text input to a window or control.
+ * @param Keys ControlSendText sends a single character in the Keys parameter without converting (Enter) to Enter, ^c to Ctrl+C, etc.
+ * For details, see Text mode. You can also use (Raw) or (Text) in ControlSend.
  */
-ControlSendText(Keys [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSendText(Keys[, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 打开(选中) 或关闭(取消选中) 复选框或单选按钮.
- * @param Value 1 或 True 打开设置
- *
- * 0 或 False 关闭设置
- *
- * -1 将其设置为与当前状态相反的状态
+ * Turn on (check) or turn off (uncheck) check boxes or radio buttons.
+ * @param Value 1 or True to open the settings
+ * 
+ * 0 or False close the setting
+ * 
+ * -1 Set it to the opposite state of the current state
  */
-ControlSetChecked(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetChecked(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 启用或禁用指定的控件.
- * @param Value 1 或 True 打开设置
- *
- * 0 或 False 关闭设置
- *
- * -1 将其设置为与当前状态相反的状态
+ * Enable or disable the specified control.
+ * @param Value 1 or True to open the settings
+ * 
+ * 0 or False close the setting
+ * 
+ * -1 Set it to the opposite state of the current state
  */
-ControlSetEnabled(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetEnabled(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 分别更改指定控件的样式或扩展样式.
- * @param Value 传递一个正整数来完全覆盖窗口的样式; 也就是说, 设置它的值为 Value.
- * 要添加, 删除或切换样式, 请分别传递一个以加号(+), 减号(-) 或插入符号(^) 前缀的数字字符串.
- * 新样式值的计算如下所示(其中 CurrentStyle 可以通过 ControlGetStyle/ControlGetExStyle 或 WinGetStyle/WinGetExStyle 检索)
- * 如果 Value 是一个负整数, 它将被视为与对应的数字字符串相同.
- * 要在表达式中原义使用 + 或 ^ 前缀, 前缀或值必须用引号括起来.
+ * Change the style or extended style of the specified control respectively.
+ * @param Value Pass a positive integer to completely cover the style of the window; that is, set its value to Value.
+ * To add, delete or switch styles, please pass a number string prefixed with plus sign (+), minus sign (-) or caret (^) respectively.
+ * The calculation of the new style value is shown below (where CurrentStyle can be retrieved through ControlGetStyle/ControlGetExStyle or WinGetStyle/WinGetExStyle)
+ * If Value is a negative integer, it will be treated as the same as the corresponding numeric string.
+ * To use the + or ^ prefix literally in the expression, the prefix or value must be enclosed in quotation marks.
  */
-ControlSetExStyle(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetExStyle(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 分别更改指定控件的样式或扩展样式.
- * @param Value 传递一个正整数来完全覆盖窗口的样式; 也就是说, 设置它的值为 Value.
- * 要添加, 删除或切换样式, 请分别传递一个以加号(+), 减号(-) 或插入符号(^) 前缀的数字字符串.
- * 新样式值的计算如下所示(其中 CurrentStyle 可以通过 ControlGetStyle/ControlGetExStyle 或 WinGetStyle/WinGetExStyle 检索)
- * 如果 Value 是一个负整数, 它将被视为与对应的数字字符串相同.
- * 要在表达式中原义使用 + 或 ^ 前缀, 前缀或值必须用引号括起来.
+ * Change the style or extended style of the specified control respectively.
+ * @param Value Pass a positive integer to completely cover the style of the window; that is, set its value to Value.
+ * To add, delete or switch styles, please pass a number string prefixed with plus sign (+), minus sign (-) or caret (^) respectively.
+ * The calculation of the new style value is shown below (where CurrentStyle can be retrieved through ControlGetStyle/ControlGetExStyle or WinGetStyle/WinGetExStyle)
+ * If Value is a negative integer, it will be treated as the same as the corresponding numeric string.
+ * To use the + or ^ prefix literally in the expression, the prefix or value must be enclosed in quotation marks.
  */
-ControlSetStyle(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetStyle(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 更改控件的文本.
+ * Change the text of the control.
  */
-ControlSetText(NewText, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetText(NewText, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 如果指定的控件先前是隐藏的, 则显示该控件.
+ * If the specified control was previously hidden, the control will be displayed.
  */
-ControlShow(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlShow(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 显示 ComboBox 控件的下拉列表.
+ * Display the drop-down list of the ComboBox control.
  */
-ControlShowDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlShowDropDown(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 返回 Number 的余弦值.
+ * Returns the cosine value of Number.
  */
 Cos(Number) => Number
 
 /**
- * 防止当前线程被其他线程中断, 或使其能够被中断.
- * @param OnOffNumeric 
+ * Prevent the current thread from being interrupted by other threads, or enable it to be interrupted.
+ * @param OnOffNumeric
  */
 Critical(OnOffNumeric) => void
 
 /**
- * 从日期-时间值中添加或减去时间.
- * @param DateTime YYYYMMDDHH24MISS 格式的日期-时间戳.
- * @param Time 要添加的时间, 以整数或浮点数表示. 指定一个负数以执行减法.
- * @param TimeUnits Time 参数的单位. TimeUnits 可以是下列字符串之一(也可以是其第一个字母): Seconds(秒), Minutes(分), Hours(小时) 或 Days(天).
+ * Add or subtract time from the date-time value.
+ * @param DateTime YYYYMMDDHH24MISS format date-time stamp.
+ * @param Time The time to be added, expressed as an integer or floating point number. Specify a negative number to perform the subtraction.
+ * @param TimeUnits The unit of the Time parameter. TimeUnits can be one of the following strings (or the first letter): Seconds, Minutes, Hours or Days.
  */
 DateAdd(DateTime, Time, TimeUnits) => String
 
 /**
- * 比较两个日期-时间并返回它们的差异值.
- * @param TimeUnits Time 参数的单位. TimeUnits 可以是下列字符串之一(也可以是其第一个字母): Seconds(秒), Minutes(分), Hours(小时) 或 Days(天).
+ * Compare two date-times and return their difference value.
+ * @param TimeUnits The unit of the Time parameter. TimeUnits can be one of the following strings (or the first letter): Seconds, Minutes, Hours or Days.
  */
 DateDiff(DateTime1, DateTime2, TimeUnits) => Number
 
 /**
- * 复制文件夹, 及其所有子文件夹和文件(类似于 xcopy).
- * @param Overwrite 此参数决定是否覆盖已存在的文件. 如果省略, 它默认为 0(false). 指定下列值之一:
- *
- * 0(false): 不覆盖现有的文件. 如果已经存在以 Dest 为名称的文件或目录, 则操作会失败并且没有任何效果.
- *
- * 1(true): 覆盖现在的文件. 但是, 不会删除在 Dest 中没有被 Source 目录中文件覆盖的其他子目录或文件.
+ * Copy the folder, and all its subfolders and files (similar to xcopy).
+ * @param Overwrite This parameter determines whether to overwrite existing files. If omitted, it defaults to 0 (false). Specify one of the following values:
+ * 
+ * 0(false): Do not overwrite the existing file. If a file or directory named Dest already exists, the operation will fail without any effect.
+ * 
+ * 1(true): Overwrite the current file. However, other subdirectories or files in Dest that are not overwritten by the files in the Source directory will not be deleted.
  */
 DirCopy(Source, Dest, Overwrite := false) => void
 
 /**
- * 创建目录/文件夹.
+ * Create directories/folders.
  */
 DirCreate(DirName) => void
 
 /**
- * 删除文件夹.
- * @param Recurse 这个参数决定是否递归到子目录中. 如果省略, 它默认为 0(false). 指定以下值之一:
- *
- * 0(false): 不移除 DirName 中包含的文件和子目录. 此时如果 DirName 不是空的, 则不进行操作并且抛出异常.
- *
- * 1(true): 移除所有文件和子目录(类似于 Windows 命令 "rmdir /S").
+ * Delete the folder.
+ * @param Recurse This parameter determines whether to recurse to subdirectories. If omitted, it defaults to 0 (false). Specify one of the following values:
+ * 
+ * 0(false): Do not remove the files and subdirectories contained in DirName. At this time, if DirName is not empty, no operation is performed and an exception is thrown.
+ * 
+ * 1(true): Remove all files and subdirectories (similar to the Windows command "rmdir /S").
  */
 DirDelete(DirName, Recurse := false) => void
 
 /**
- * 检查文件夹是否存在并返回其属性.
- * @returns 返回第一个符合条件的文件夹的属性. 这个字符串是 ASHDOC 的一个子集, 其中每个字母的意思如下:
- *
- * A = ARCHIVE(存档)
+ * Check if the folder exists and return its attributes.
+ * @returns returns the attributes of the first folder that meets the criteria. This string is a subset of ASHDOC, where each letter means the following:
  * 
- * S = SYSTEM(系统)
+ * A = ARCHIVE
  * 
- * H = HIDDEN(隐藏)
+ * S = SYSTEM (system)
  * 
- * D = DIRECTORY(目录)
+ * H = HIDDEN (hidden)
  * 
- * O = OFFLINE(离线)
+ * D = DIRECTORY (directory)
  * 
- * C = COMPRESSED(压缩)
+ * O = OFFLINE (offline)
+ * 
+ * C = COMPRESSED (compressed)
  */
 DirExist(FilePattern) => String
 
 /**
- * 移动文件夹, 及其所有子文件夹和文件. 它也可以重命名一个文件夹.
- * @param Source 源目录的名称(不含末尾的反斜杠).
- * @param Dest 目标目录的名称(不含末尾的反斜杠).
- * @param Flag 指定下列单个字符的其中一个:
- *
- * 0(默认): 不覆盖现有的文件. 如果 Dest 作为文件或目录已经存在, 则操作失败.
- *
- * 1: 覆盖现在的文件. 但是, Dest 中的任何文件或子文件夹如果在 Source 中没有对应文件都不会被删除.
- * `已知限制:` 如果 Dest 已作为文件夹存在, 并且与 Source 在同一个卷上, 则将 Source 移入其中而不是覆盖它. 为了避免这种情况, 请参阅下一个选项.
- *
- * 2: 与上面的模式 1 相同, 只是没有限制.
- *
- * R: 重命名目录而不移动它. 尽管普通的重命名和移动具有相同的效果, 但如果您想要 "完全成功或完全失败" 的结果时它就会有用; 即您不希望由于 Source 或其中的某个文件被锁定(在使用中) 而只是部分移动成功. 
- * 尽管这种方法不能移动 Source 到另一个卷中, 但它可以移动到同一个卷中的其他任何目录. 如果 Dest 作为文件或目录已经存在, 则操作失败.
+ * Move a folder, and all its subfolders and files. It can also rename a folder.
+ * @param Source The name of the source directory (without the trailing backslash).
+ * @param Dest The name of the target directory (without the trailing backslash).
+ * @param Flag specifies one of the following single characters:
+ * 
+ * 0 (default): Do not overwrite existing files. If Dest already exists as a file or directory, the operation will fail.
+ * 
+ * 1: Overwrite the current file. However, any file or subfolder in Dest will not be deleted if there is no corresponding file in Source.
+ * `Known limitation:` If Dest already exists as a folder and is on the same volume as Source, move Source into it instead of overwriting it. To avoid this, see the next option.
+ * 
+ * 2: Same as Mode 1 above, but there are no restrictions.
+ * 
+ * R: Rename the directory without moving it. Although ordinary renaming and moving have the same effect, it will be useful if you want the result of "complete success or complete failure"; that is, you don't want it due to Source or One of the files is locked (in use) and only partially moved successfully.
+ * Although this method cannot move Source to another volume, it can be moved to any other directory in the same volume. If Dest already exists as a file or directory, the operation fails.
  */
 DirMove(Source, Dest, Flag := 0) => void
 
 /**
- * 显示可以让用户选择文件夹的标准对话框.
- * @param StartingFolder 如果为空或省略, 则对话框的初始选择为用户的我的文档文件夹(或可能是我的电脑). 可以指定 CLSID 文件夹, 如 "::{20d04fe0-3aea-1069-a2d8-08002b30309d}"(即我的电脑) 来从特定的专用文件夹开始导航.
- *
- * 否则, 此参数最常见的用法是星号后面紧跟着初始选择的驱动器或文件夹的绝对路径. 例如, "*C:\" 会初始选择 C 驱动器. 同样地, "*C:\My Folder" 会初始选择这个特殊的文件夹.
- *
- * 星号表示允许用户从起始文件夹向上导航(接近根目录). 如果没有星号, 则强制用户在 StartingFolder(或 StartingFolder 自身) 中选择文件夹. 省略星号的一个好处是最初 StartingFolder 会显示为树形展开状态, 这样可以节省用户点击前面加号的时间.
- *
- * 如果有星号, 向上导航也可以选择限制在桌面以外的文件夹中. 这是通过在星号前面加上最顶层文件夹的绝对路径, 后面正好是一个空格或制表符来实现的. 例如, "C:\My Folder *C:\My Folder\Projects" 将不允许用户导航到比 C:\My Folder 更上级的文件夹(不过初始选择可以是 C:\My Folder\Projects):
- * @param Options 下列数字的其中一个:
- *
- * 0: 禁用下面所有选项.
- *
- * 1(默认): 提供允许用户新建文件夹的按钮.
- *
- * 加 2 到上面的数字来提供允许用户输入文件夹名称的编辑区域. 例如, 此参数值为 3 表示同时提供编辑区域和 "新建文件夹" 按钮.
- *
- * 加 4 到上面的数字来忽略 BIF_NEWDIALOGSTYLE 属性. 加 4 确保了 DirSelect 即使在像 WinPE 或 BartPE 这样的预安装环境中也能正常工作. 然而, 这样阻止了 "新建文件夹" 按钮的出现.
- *
- * 如果用户在编辑区域中输入了无效的文件夹名称, 则 SelectedFolder 会被设置为在导航树中选择的文件夹而不是用户输入的内容.
- * @param Prompt 显示在窗口中用来提示用户操作的文本. 如果省略或为空, 则它默认为 "Select Folder - " A_ScriptName(即当前脚本的名称).
+ * A standard dialog box that allows the user to select a folder is displayed.
+ * @param StartingFolder If it is empty or omitted, the initial selection of the dialog box is the user's My Documents folder (or possibly My Computer). You can specify the CLSID folder, such as "::{20d04fe0-3aea-1069- a2d8-08002b30309d}" (ie My Computer) to start navigation from a specific dedicated folder.
+ * 
+ * Otherwise, the most common usage of this parameter is an asterisk followed by the absolute path of the initially selected drive or folder. For example, "*C:\" will initially select the C drive. Similarly, "*C:\My "Folder" will initially select this special folder.
+ * 
+ * The asterisk indicates that the user is allowed to navigate upwards from the starting folder (close to the root directory). If there is no asterisk, the user is forced to select a folder in StartingFolder (or StartingFolder itself). One advantage of omitting the asterisk is that the StartingFolder will initially be displayed It is a tree expanded state, which can save the user time to click the plus sign in front.
+ * 
+ * If there is an asterisk, the upward navigation can also be restricted to folders other than the desktop. This is achieved by adding the absolute path of the topmost folder in front of the asterisk, followed by a space or tab. For example, "C:\My Folder *C:\My Folder\Projects" will not allow users to navigate to a folder higher than C:\My Folder (but the initial selection can be C:\My Folder\Projects):
+ * @param Options One of the following numbers:
+ * 
+ * 0: Disable all the following options.
+ * 
+ * 1 (default): Provide a button that allows users to create a new folder.
+ * 
+ * Add 2 to the number above to provide an editing area that allows the user to enter the folder name. For example, the parameter value 3 means that the editing area and the "New Folder" button are provided at the same time.
+ * 
+ * Add 4 to the number above to ignore the BIF_NEWDIALOGSTYLE attribute. Adding 4 ensures that DirSelect will work even in a pre-installed environment like WinPE or BartPE. However, this prevents the "New Folder" button from appearing.
+ * 
+ * If the user enters an invalid folder name in the editing area, SelectedFolder will be set to the folder selected in the navigation tree instead of the content entered by the user.
+ * @param Prompt The text displayed in the window to prompt the user to operate. If omitted or empty, it defaults to "Select Folder-"A_ScriptName (namely the name of the current script).
  */
 DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
 
 /**
- * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
+ * Call functions in DLL files, such as standard Windows API functions.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number|String
+DllCall(DllFile_Function[, Type1, Arg1, * , 'Cdecl ReturnType']) => Number | String
 
 /**
- * 从互联网下载文件.
+ * Download files from the Internet.
  */
 Download(URL, Filename) => void
 
 /**
- * 弹出指定 CD/DVD 驱动器或可移动驱动器.
- * @param Drive 驱动器字母后面跟着冒号和可选的反斜杠(也可以用于 UNC 路径和映射驱动器). 如果省略, 将使用默认的 CD/DVD 驱动器. 如果未找到驱动器, 则会引发异常.
+ * Eject the designated CD/DVD drive or removable drive.
+ * @param Drive The drive letter is followed by a colon and optional backslash (can also be used for UNC paths and mapped drives). If omitted, the default CD/DVD drive will be used. If the drive is not found, an exception will be raised.
  */
 DriveEject(Drive := '') => void
 
 /**
- * 返回包含指定路径的驱动器的总容量, 单位为 mb(兆字节).
+ * Returns the total capacity of the drive containing the specified path, in mb (megabytes).
  */
 DriveGetCapacity(Path) => Number
 
 /**
- * 返回指定驱动器的文件系统的类型.
- * @param Drive 驱动器字母后跟着冒号和可选的反斜杠, 或 UNC 名称, 如 \server1\share1.
+ * Returns the type of the file system of the specified drive.
+ * @param Drive Drive letter followed by a colon and optional backslash, or UNC name, such as \server1\share1.
  */
 DriveGetFileSystem(Drive) => String
 
 /**
- * 返回指定驱动器的卷标.
+ * Return the volume label of the specified drive.
  */
 DriveGetLabel(Drive) => String
 
 /**
- * 返回一串字母, 系统中的每个驱动器字母对应一个字符.
- * @param Type 如果省略, 则检索所有类型的驱动器. 否则, 指定为下列单词的其中一个来获取该特定类型的驱动器: CDROM, REMOVABLE, FIXED, NETWORK, RAMDISK, UNKNOWN.
+ * Return a string of letters, each drive letter in the system corresponds to a character.
+ * @param Type If omitted, all types of drives are retrieved. Otherwise, specify one of the following words to obtain the specific type of drive: CDROM, REMOVABLE, FIXED, NETWORK, RAMDISK, UNKNOWN.
  */
 DriveGetList(Type := '') => String
 
 /**
- * 返回指定驱动器的卷序列号.
+ * Returns the volume serial number of the specified drive.
  */
 DriveGetSerial(Drive) => Number
 
 /**
- * 包含指定路径的驱动器的空闲磁盘空间, 单位为 mb(兆字节).
+ * The free disk space of the drive containing the specified path, in mb (megabytes).
  */
 DriveGetSpaceFree(Path) => Number
 
 /**
- * 返回包含指定路径的驱动器的状态.
+ * Returns the status of the drive containing the specified path.
  */
 DriveGetStatus(Path) => String
 
 /**
- * 返回指定 CD/DVD 驱动器的媒体状态.
- * @param Drive 驱动器字母后跟着冒号. 如果省略, 将使用默认的 CD/DVD 驱动器.
- * @returns not ready 驱动器未准备好被访问, 可能因为正忙于写入操作. 已知限制: 当驱动器里是 DVD 而不是 CD 时, 也会出现 "未准备好" 的情况. 
- *
- * open 驱动器里没有光盘, 或者托盘已弹出. 
- *
- * playing 驱动器正在播放光盘. 
- *
- * paused 之前播放的音频或视频现在已暂停. 
- *
- * seeking 驱动器正在寻道. 
- *
- * stopped 驱动器里有 CD 但当前没有进行访问. 
+ * Returns the media status of the specified CD/DVD drive.
+ * @param Drive Drive letter followed by a colon. If omitted, the default CD/DVD drive will be used.
+ * @returns not ready The drive is not ready to be accessed, possibly because it is busy writing operations. Known limitations: When the drive is a DVD instead of a CD, the "not ready" situation may also occur.
+ * 
+ * There is no disc in the open drive, or the tray has been ejected.
+ * 
+ * playing The drive is playing the disc.
+ * 
+ * paused The previously played audio or video is now paused.
+ * 
+ * seeking The drive is seeking.
+ * 
+ * There is a CD in the stopped drive but it is not currently being accessed.
  */
 DriveGetStatusCD(Drive := '') => String
 
 /**
- * 返回包含指定路径的驱动器类型.
- * @returns 返回包含指定路径的驱动器类型: Unknown, Removable, Fixed, Network, CDROM 或 RAMDisk. 如果路径无效(例如, 因为驱动器不存在), 返回值是一个空字符串.
+ * Returns the drive type containing the specified path.
+ * @returns returns the drive type that contains the specified path: Unknown, Removable, Fixed, Network, CDROM or RAMDisk. If the path is invalid (for example, because the drive does not exist), the return value is an empty string.
  */
 DriveGetType(Path) => String
 
 /**
- * 阻止指定驱动器的弹出功能正常工作.
+ * Prevent the eject function of the specified drive from working properly.
  */
 DriveLock(Drive) => void
 
 /**
- * 收回指定 CD/DVD 驱动器.
+ * Recover designated CD/DVD drives.
  */
 DriveRetract([Drive])
 
 /**
- * 更改指定驱动器的卷标签.
+ * Change the volume label of the specified drive.
  */
 DriveSetLabel(Drive, NewLabel := '') => void
 
 /**
- * 恢复指定驱动器的弹出功能.
+ * Restore the eject function of the specified drive.
  */
 DriveUnlock(Drive) => void
 
 /**
- * 返回插入符号(文本插入点) 在的 Edit 控件中的列号.
+ * Returns the column number of the caret (text insertion point) in the Edit control.
  */
-EditGetCurrentCol(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetCurrentCol(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回插入符号(插入点) 在的 Edit 控件中的行号.
+ * Returns the line number of the caret (insertion point) in the Edit control.
  */
-EditGetCurrentLine(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetCurrentLine(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回 Edit 控件中指定行的文本.
+ * Returns the text of the specified line in the Edit control.
  */
-EditGetLine(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+EditGetLine(N, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 返回 Edit 控件的行数.
+ * Returns the number of rows of the Edit control.
  */
-EditGetLineCount(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetLineCount(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回 Edit 控件中选定的文本.
+ * Return the selected text in the Edit control.
  */
-EditGetSelectedText(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+EditGetSelectedText(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 将指定的字符串粘贴到 Edit 控件中的插入符号(文本插入点) 处.
+ * Paste the specified string to the caret (text insertion point) in the Edit control.
  */
-EditPaste(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+EditPaste(String, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 检索环境变量.
+ * Retrieve environment variables.
  */
 EnvGet(EnvVarName) => String
 
 /**
- * 将值写入环境变量包含的变量中.
+ * Write the value to the variable contained in the environment variable.
  */
 EnvSet(EnvVar, Value) => void
 
 /**
- * 退出当前线程. 脚本退出时, 返回给其调用者的-2147483648和2147483647之间的整数.
+ * Exit the current thread. When the script exits, it returns an integer between -2147483648 and 2147483647 to its caller.
  */
 Exit(ExitCode := 0) => void
 
 /**
- * 退出当前线程. 脚本退出时, 返回给其调用者的-2147483648和2147483647之间的整数.
+ * Exit the current thread. When the script exits, it returns an integer between -2147483648 and 2147483647 to its caller.
  */
 ExitApp(ExitCode := 0) => void
 
 /**
- * 返回 e(近似值为 2.71828182845905) 的 N 次幂.
+ * Returns e (approximately 2.71828182845905) raised to the power of N.
  */
 Exp(N) => Number
 
 /**
- * 在文件末尾处追加(写入) 文本或二进制数据(如果有必要, 首先创建文件).
- * @param Filename 要追加内容的文件名, 如果未指定绝对路径, 则假定在 A_WorkingDir 中. 目标目录必须已经存在.
- * 标准输出(stdout): 在 Filename 指定星号(*) 可以把 Text 发送到标准输出(stdout). 
- * 在 Filename 指定两个星号(**) 可以把 Text 发送到标准错误输出(stderr).
- * @param Options 零个或多个以下字符串. 使用单个空格或制表符将每个选项与下一个选项分开. 例如: "`n UTF-8"
- *
- * Encoding: 如果文件缺少 UTF-8 或 UTF-16 字节顺序标记, 则指定 FileEncoding 接受的任何编码名称(不包括空字符串) 以使用该编码. 如果省略, 默认为 A_FileEncoding(除非 Text 是对象, 在这种情况下不写入字节顺序标记).
- *
- * RAW: 指定单词 RAW(不区分大小写) 按原样将 Text 包含的确切字节写入文件, 不进行任何转换. 此选项覆盖以前指定的任何编码, 反之亦然. 如果 Text 不是对象, 由于使用 UTF-16 字符串, 数据大小总是 2 字节的倍数.
- *
- * `n(换行符): 如果回车符不存在, 则在每个换行符(`n) 之前插入回车符(`r). 换句话说, 将转换 `n 为 `r`n. 这种转换通常不会影响性能. 如果不使用此选项, 则不会更改 Text 中的行尾.
+ * Append (write) text or binary data at the end of the file (if necessary, create the file first).
+ * @param Filename The name of the file to be appended. If the absolute path is not specified, it is assumed to be in A_WorkingDir. The target directory must already exist.
+ * Standard output (stdout): Specify an asterisk (*) in Filename to send Text to standard output (stdout).
+ * Specify two asterisks (**) in Filename to send Text to standard error output (stderr).
+ * @param Options zero or more of the following strings. Use a single space or tab to separate each option from the next. For example: "`n UTF-8"
+ * 
+ * Encoding: If the file lacks UTF-8 or UTF-16 byte order mark, specify any encoding name accepted by FileEncoding (excluding the empty string) to use that encoding. If omitted, the default is A_FileEncoding (unless Text is an object, In this case, the byte order mark is not written).
+ * 
+ * RAW: Specify the word RAW (not case sensitive) to write the exact bytes contained in Text to the file as-is, without any conversion. This option overwrites any encoding previously specified, and vice versa. If Text is not an object, due to use UTF-16 string, the data size is always a multiple of 2 bytes.
+ * 
+ * `n (newline character): If the carriage return character does not exist, insert the carriage return character (`r) before each newline character (`n). In other words, it will convert `n to `r`n. This This conversion usually does not affect performance. If this option is not used, the end of the line in the Text will not be changed.
  */
 FileAppend(Text, Filename, Options := '') => void
 
 /**
- * 复制一个或多个文件.
- * @param SourcePattern 单个文件或文件夹的名称, 或通配符模式(如 C:\Temp\*.tmp). 
- * @param DestPattern 目标的名称或模式, 如果星号存在, 则将文件名中的第一个星号(*) 替换为不包含其扩展名的源文件名,
- * 而将最后一个句号 (.) 后的第一个星号替换为源文件的扩展名. 如果有星号, 但省略了扩展名, 则使用源文件的扩展名.
- * @param Overwrite 此参数确定是否覆盖已存在的文件. 如果此参数为 1(true), 则该函数将覆盖现有文件. 如果省略或为 0(false), 则该函数不会覆盖现有文件.
+ * Copy one or more files.
+ * @param SourcePattern The name of a single file or folder, or wildcard pattern (e.g. C:\Temp\*.tmp).
+ * @param DestPattern The name or pattern of the target, if the asterisk exists, replace the first asterisk (*) in the file name with the source file name without its extension,
+ * Replace the first asterisk after the last period (.) with the extension of the source file. If there is an asterisk but the extension is omitted, the extension of the source file is used.
+ * @param Overwrite This parameter determines whether to overwrite an existing file. If this parameter is 1 (true), the function will overwrite the existing file. If it is omitted or 0 (false), the function will not overwrite the existing file .
  */
 FileCopy(SourcePattern, DestPattern, Overwrite := false) => void
 
 /**
- * 创建快捷方式(.lnk) 文件.
- * @param Target 快捷方式引用的文件的名称, 除非文件集成到了系统中(如 Notepad.exe), 否则应该包含绝对路径. 创建快捷方式时它指向的文件不一定需要存在
- * @param LinkFile 要创建的快捷方式文件名, 如果未指定绝对路径则假定在 A_WorkingDir. 必须确保扩展名为 .lnk. 目标目录必须已经存在. 如果文件已经存在, 则它会被覆盖.
- * @param WorkingDir 启动快捷方式时 Target 的当前工作目录. 如果为空或省略, 则快捷方式的 "起始位置" 字段为空, 而当快捷方式启动时系统会提供默认的工作目录.
- * @param Args 启动快捷方式时传递给 Target 的参数. 参数之间使用空格分隔. 如果某个参数包含空格, 则要把它括在双引号中.
- * @param Description 描述快捷方式的注释(由操作系统用于显示在 ToolTip(工具提示) 中, 等等.)
- * @param IconFile 显示在 LinkFile 中图标的完整路径和名称. 它必须为必须为 ico 文件或者 EXE 或 DLL 中的首个图标.
- * @param ShortcutKey 单个字母, 数字或在按键列表中的单个按键的名称(可能不支持鼠标按钮或其他非标准的按键). 不要 包含修饰符. 目前, 所有创建的快捷键都使用 Ctrl+Alt 作为修饰键. 例如, 如果在此参数中指定字母 B, 则快捷键将为 Ctrl+Alt+B.
- * @param IconNumber 要使用 IconFile 中的图标(第一个图标除外), 请在这里指定编号. 例如, 2 表示第二个图标.
- * @param RunState 要最小化或最大化运行 Target. 如果为空或省略, 则默认为 1(正常). 否则, 指定下列数字之一:
- *
- * 1 = 正常
- *
- * 3 = 最大化
- *
- * 7 = 最小化
+ * Create a shortcut (.lnk) file.
+ * @param Target The name of the file referenced by the shortcut, unless the file is integrated into the system (such as Notepad.exe), it should contain the absolute path. The file it points to does not necessarily need to exist when the shortcut is created
+ * @param LinkFile The name of the shortcut file to be created, if the absolute path is not specified, it is assumed to be in A_WorkingDir. You must ensure that the extension is .lnk. The target directory must already exist. If the file already exists, it will be overwritten.
+ * @param WorkingDir The current working directory of the Target when the shortcut is launched. If it is empty or omitted, the "Starting Position" field of the shortcut is empty, and the system will provide the default working directory when the shortcut is launched.
+ * @param Args The parameters passed to Target when the shortcut is launched. The parameters are separated by spaces. If a parameter contains spaces, enclose it in double quotes.
+ * @param Description A comment describing the shortcut (used by the operating system to be displayed in ToolTip, etc.)
+ * @param IconFile displays the full path and name of the icon in LinkFile. It must be the first icon in an ico file or an EXE or DLL.
+ * @param ShortcutKey A single letter, number or name of a single key in the key list (mouse buttons or other non-standard keys may not be supported). Do not include modifiers. Currently, all created shortcut keys use Ctrl+Alt as Modifier keys. For example, if you specify the letter B in this parameter, the shortcut key will be Ctrl+Alt+B.
+ * @param IconNumber To use the icons in IconFile (except the first icon), please specify the number here. For example, 2 means the second icon.
+ * @param RunState To minimize or maximize the run Target. If it is empty or omitted, the default is 1 (normal). Otherwise, specify one of the following numbers:
+ * 
+ * 1 = normal
+ * 
+ * 3 = maximize
+ * 
+ * 7 = minimize
  */
-FileCreateShortcut(Target, LinkFile [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]) => void
+FileCreateShortcut(Target, LinkFile[, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]) => void
 
 /**
- * 删除一个或多个文件.
- * @param FilePattern 单个文件的名称, 或通配符模式(如 "C:\Temp\*.tmp"). 如果未指定绝对路径, 则假定 FilePattern 在 A_WorkingDir 中.
- * 要删除整个文件夹及其所有子文件夹和文件, 请使用 DirDelete
+ * Delete one or more files.
+ * @param FilePattern The name of a single file, or a wildcard pattern (such as "C:\Temp\*.tmp"). If an absolute path is not specified, it is assumed that FilePattern is in A_WorkingDir.
+ * To delete the entire folder and all its subfolders and files, use DirDelete
  */
 FileDelete(FilePattern) => void
 
 /**
- * 为 FileRead, Loop Read, FileAppend 和 FileOpen 设置默认编码.
- * @param Encoding 以下值之一(如果省略, 它默认为 CP0):
- * UTF-8: Unicode UTF-8, 等同于 CP65001.
+ * Set the default encoding for FileRead, Loop Read, FileAppend and FileOpen.
+ * @param Encoding One of the following values ​​(if omitted, it defaults to CP0):
+ * UTF-8: Unicode UTF-8, equivalent to CP65001.
  * 
- * UTF-8-RAW: 像上面一样, 但创建新文件时不写入字节顺序标记.
+ * UTF-8-RAW: Same as above, but the byte order mark is not written when creating a new file.
  * 
- * UTF-16: Unicode UTF-16 带小端字节顺序标识, 等同于 CP1200.
+ * UTF-16: Unicode UTF-16 with little-endian byte order identifier, equivalent to CP1200.
  * 
- * UTF-16-RAW: 像上面一样, 但创建新文件时不写入字节顺序标记.
+ * UTF-16-RAW: Same as above, but the byte order mark is not written when creating a new file.
  * 
- * CPnnn: 带数值标识符 nnn 的代码页. 请参阅代码页标识符 ¬.
+ * CPnnn: Code page with numeric identifier nnn. Please refer to code page identifier ¬.
  * 
- * nnn: 数字代码页标识符.
+ * nnn: Number code page identifier.
  */
 FileEncoding(Encoding := 'CP0') => void
 
 /**
- * 检查文件或目录是否存在并返回它的属性.
- * @returns 返回第一个匹配文件或文件夹的属性. 这个字符串是 RASHNDOCT 的子集, 其中每个字母的意思如下:
- *
- * R = READONLY(只读)
- *
- * A = ARCHIVE(存档)
- *
- * S = SYSTEM(系统)
- *
- * H = HIDDEN(隐藏)
- *
- * N = NORMAL(普通)
- *
- * D = DIRECTORY(目录)
- *
- * O = OFFLINE(离线)
- *
- * C = COMPRESSED(压缩)
- *
- * T = TEMPORARY(临时)
+ * Check if the file or directory exists and return its attributes.
+ * @returns returns the attributes of the first matching file or folder. This string is a subset of RASHNDOCT, where each letter means the following:
+ * 
+ * R = READONLY (read only)
+ * 
+ * A = ARCHIVE
+ * 
+ * S = SYSTEM (system)
+ * 
+ * H = HIDDEN (hidden)
+ * 
+ * N = NORMAL (normal)
+ * 
+ * D = DIRECTORY (directory)
+ * 
+ * O = OFFLINE (offline)
+ * 
+ * C = COMPRESSED (compressed)
+ * 
+ * T = TEMPORARY (temporary)
  */
 FileExist(FilePattern) => String
 
 /**
- * 报告文件或文件夹是否为只读, 隐藏等.
- * @returns 返回文件或文件夹的属性. 这个字符串是 RASHNDOCT, 的子集, 其中每个字母的意思如下:
- *
- * R = READONLY(只读)
+ * Report whether the file or folder is read-only, hidden, etc.
+ * @returns returns the attributes of the file or folder. This string is a subset of RASHNDOCT, where each letter means the following:
  * 
- * A = ARCHIVE(存档)
+ * R = READONLY (read only)
  * 
- * S = SYSTEM(系统)
+ * A = ARCHIVE
  * 
- * H = HIDDEN(隐藏)
+ * S = SYSTEM (system)
  * 
- * N = NORMAL(普通)
+ * H = HIDDEN (hidden)
  * 
- * D = DIRECTORY(目录)
+ * N = NORMAL (normal)
  * 
- * O = OFFLINE(离线)
+ * D = DIRECTORY (directory)
  * 
- * C = COMPRESSED(压缩)
+ * O = OFFLINE (offline)
  * 
- * T = TEMPORARY(临时)
+ * C = COMPRESSED (compressed)
+ * 
+ * T = TEMPORARY (temporary)
  */
 FileGetAttrib([Filename]) => String
 
 /**
- * 获取快捷方式(.lnk) 文件的信息, 例如其目标文件.
+ * Get the information of the shortcut (.lnk) file, such as its target file.
  */
-FileGetShortcut(LinkFile [, &OutTarget, &OutDir, &OutArgs, &OutDescription, &OutIcon, &OutIconNum, &OutRunState]) => String
+FileGetShortcut(LinkFile[, &OutTarget, &OutDir, &OutArgs, &OutDescription, &OutIcon, &OutIconNum, &OutRunState]) => String
 
 /**
- * 获取文件的大小.
+ * Get the size of the file.
  */
 FileGetSize([Filename, Units]) => Number
 
 /**
- * 获取文件或文件夹的时间戳.
+ * Get the timestamp of a file or folder.
  */
 FileGetTime([Filename, WhichTime]) => String
 
 /**
- * 检索文件的版本.
+ * Retrieve the version of the file.
  */
 FileGetVersion([Filename]) => String
 
 /**
- * 在已编译的脚本中包含指定的文件.
+ * Include the specified file in the compiled script.
  */
 FileInstall(Source, Dest, Overwrite := false) => void
 
 /**
- * 移动或重命名一个或多个文件.
+ * Move or rename one or more files.
  */
 FileMove(SourcePattern, DestPattern, Overwrite := false) => void
 /**
- * 打开文件, 从其中读取特定内容和/或将新内容写入其中.
- * @param Flags `访问模式(互斥的)`
+ * Open the file, read specific content from it and/or write new content into it.
+ * @param Flags `Access Mode (mutually exclusive)`
  * 
- * r 0x0 读取: 当文件不存在时失败.
+ * r 0x0 Read: Fail when the file does not exist.
  * 
- * w 0x1 写入: 创建新文件, 覆盖任意已存在的文件.
+ * w 0x1 write: create a new file, overwrite any existing file.
  * 
- * a 0x2 追加: 如果文件不存在则创建新文件, 否则移动文件指针到文件末尾.
+ * a 0x2 Append: If the file does not exist, create a new file, otherwise move the file pointer to the end of the file.
  * 
- * rw 0x3 读取/写入: 当文件不存在时创建新文件.
+ * rw 0x3 Read/write: Create a new file when the file does not exist.
  * 
- * h  表示 Filename 是包装在对象中的文件句柄. 忽略共享模式标志, 并且不检查句柄表示的文件或流的字节顺序标记. 当文件对象销毁时, 当文件对象销毁时, 文件句柄 不会 自动关闭并且调用 Close 没有效果. 注意当 Filename 是非搜寻设备(例如管道或通信设备) 的句柄时, 不应该使用 Seek, Pos 和 Length.
+ * h means Filename is the file handle wrapped in the object. Ignore the sharing mode flag, and do not check the byte order mark of the file or stream represented by the handle. When the file object is destroyed, when the file object is destroyed, the file handle will not be automatically Close and calling Close has no effect. Note that when Filename is a handle to a non-search device (such as a pipe or communication device), Seek, Pos, and Length should not be used.
  * 
- * `共享模式标志`
+ * `Sharing mode flag`
  * 
- * -rwd 为读取, 写入和/或删除访问进行文件锁定. 可以使用 r, w 和 d 的任意组合. 指定 - 相当于指定 -rwd. 如果完全省略, 默认为共享所有访问.
+ * -rwd is file locking for read, write and/or delete access. Any combination of r, w and d can be used. Specifying-is equivalent to specifying -rwd. If omitted completely, all accesses are shared by default.
  * 
- * 0x0 如果 Flags 是数值的, 缺少共享模式标志会让文件被锁定.
+ * 0x0 If Flags is numeric, the lack of sharing mode flags will cause the file to be locked.
  * 
- * 0x100 共享 读取 访问.
+ * 0x100 Shared read access.
  * 
- * 0x200 共享 写入 访问.
+ * 0x200 Shared write access.
  * 
- * 0x400 共享 删除 访问.
+ * 0x400 Shared delete access.
  * 
- * `行结束符(EOL) 选项`
+ * `End of Line (EOL) option`
  * 
- * `n 0x4 读取时把 `r`n 替换为 `n 而写入时把 `n 替换为 `r`n.
+ * `n 0x4 Replace `r`n with `n when reading, and replace `n with `r`n when writing.
  * 
- * `r 0x8 读取时把单独的 `r 替换为 `n.
- * @param Encoding 如果文件没有 UTF-8 或 UTF-16 字节顺序标记, 或者使用了 h(handle) 标志, 读写文件时使用的代码页(带字节顺序标记的文件 AutoHotkey 自动识别, 指定的 Encoding 无效). 如果省略本参数, 则使用 A_FileEncoding 的当前值.
+ * `r 0x8 Replace the single `r with `n when reading.
+ * @param Encoding If the file does not have UTF-8 or UTF-16 byte order mark, or the h (handle) flag is used, the code page used when reading and writing the file (AutoHotkey automatically recognizes the file with byte order mark, specified Encoding is invalid). If this parameter is omitted, the current value of A_FileEncoding will be used.
  */
-FileOpen(Filename, Flags [, Encoding]) => File
+FileOpen(Filename, Flags[, Encoding]) => File
 
 /**
- * 检索文件的内容.
- * @param Options 以下字符串的零个或多个, 使用单个空格或制表符将每个选项与下一个选项分开. 例如: "`n m5000 UTF-8"
- *
- * Encoding: 如果文件缺少 UTF-8 或 UTF-16 字节顺序标记, 则指定 FileEncoding 接受的任何编码名称(不包括空字符串) 以使用该编码. 如果省略, 默认为 A_FileEncoding.
- *
- * RAW: 指定单词 RAW(不区分大小写) 以原始二进制数据读取文件内容, 并返回缓冲对象而不是字符串. 此选项覆盖以前指定的任何编码, 反之亦然.
- *
- * m1024: 如果省略此选项, 则读取整个文件, 不过如果内存不足, 则显示错误消息并退出线程(使用 Try 可以避免这种情况). 否则, 请把 1024 替换为十进制或十六进制表示的字节数. 如果文件大于此字节数, 那么只读取其前面部分.
- *
- * `n(换行符): 把所有的回车换行符(`r`n) 替换为换行符(`n). 不过, 这种转换会降低性能而且往往不必要. 例如, 包含 `r`n 的文本已经以正确的格式添加到 Gui Edit 控件中. 下面的解析循环将正确工作, 不管每一行的结尾是 `r`n 还是 `n: Loop Parse, MyFileContents, "`n", "`r".
+ * Retrieve the contents of the file.
+ * @param Options Zero or more of the following strings, use a single space or tab to separate each option from the next option. For example: "`n m5000 UTF-8"
+ * 
+ * Encoding: If the file lacks UTF-8 or UTF-16 byte order mark, specify any encoding name accepted by FileEncoding (excluding the empty string) to use that encoding. If omitted, the default is A_FileEncoding.
+ * 
+ * RAW: Specify the word RAW (not case sensitive) to read the contents of the file as raw binary data and return the buffer object instead of a string. This option overwrites any previously specified encoding, and vice versa.
+ * 
+ * m1024: If this option is omitted, the entire file will be read, but if the memory is insufficient, an error message will be displayed and the thread will exit (Use Try to avoid this situation). Otherwise, please replace 1024 with decimal or hexadecimal representation The number of bytes in the file. If the file is larger than this number of bytes, only the first part of it will be read.
+ * 
+ * `n (newline character): Replace all carriage return and newline characters (`r`n) with newline characters (`n). However, this conversion reduces performance and is often unnecessary. For example, include `r`n The text has been added to the Gui Edit control in the correct format. The following parsing loop will work correctly, regardless of whether the end of each line is `r`n or `n: Loop Parse, MyFileContents, "`n", "`r" .
  */
-FileRead(Filename [, Options]) => Buffer|String
+FileRead(Filename[, Options]) => Buffer | String
 
 /**
- * 如果可能, 发送文件或目录到回收站, 或永久删除该文件.
- * @param FilePattern 单个文件的名称或通配符模式(如 C:\Temp\*.tmp). 如果 FilePattern 未指定绝对路径则, 则假定在 A_WorkingDir 中.
- * 要回收整个目录, 请指定不包含末尾反斜杠的目录名.
+ * If possible, send the file or directory to the recycle bin, or delete the file permanently.
+ * @param FilePattern The name or wildcard pattern of a single file (such as C:\Temp\*.tmp). If FilePattern does not specify an absolute path, it is assumed to be in A_WorkingDir.
+ * To recycle the entire directory, please specify the directory name without the trailing backslash.
  */
 FileRecycle(FilePattern) => void
 
 /**
- * 清空回收站.
- * @param DriveLetter 如果省略, 则清空所有驱动器的回收站. 否则, 请指定驱动器字母, 例如 C:\
+ * Empty the recycle bin.
+ * @param DriveLetter If omitted, the recycle bin of all drives will be cleared. Otherwise, please specify the drive letter, such as C:\
  */
 FileRecycleEmpty(DriveLetter := '') => void
 
 /**
- * 显示可以让用户打开或保存文件的标准对话框.
- * @param Options 可以是一个数字或下面列出的字母之一, 可选择在后面加一个数字. 例如, "M", 1 和 "M1"都是有效的(但不相同).
- *
- * D: 选择文件夹(目录). 指定字母 D, 允许用户选择文件夹而不是文件. 该对话框具有与选择文件时相同的大部分功能, 但不支持过滤器(Filter 必须省略或置空).
- *
- * M: 多选. 指定字母 M 让用户可以使用 Shift+点击, Control+点击或其他方法来选择多个文件. 在这种情况下, 返回值是一个数组不是一个字符串. 要提取单个文件, 请参阅本页底部的示例.
- *
- * S: 保存对话框. 指定字母 S 让对话框显示保存按钮代替打开按钮.
- *
- * 可以使用以下数字. 要使其中多个数字生效, 请将它们相加. 例如, 要使用 1 和 2, 请指定数字 3.
- *
- * 1: 文件必须存在
- *
- * 2: 路径必须存在
- *
- * 8: 提示创建新文件
- *
- * 16: 提示覆盖文件
- *
- * 32: 选择快捷方式本身(.lnk 文件) 而不解析为它们的目标. 此选项也避免了通过文件夹快捷方式跳转到那个文件夹的情况.
- *
- *由于 "提示覆盖" 选项只有保存对话框支持, 因此在没有 "提示创建" 选项的情况下指定该选项也会使 "S" 选项生效. 同样, 当 "S" 选项存在时, "提示创建" 选项也没有效果. 指定数字 24 可以启用对话框支持的任何一种提示类型.
+ * Display a standard dialog box that allows users to open or save files.
+ * @param Options can be a number or one of the letters listed below, optionally followed by a number. For example, "M", 1 and "M1" are all valid (but not the same).
+ * 
+ * D: Select a folder (directory). Specify the letter D to allow the user to select a folder instead of a file. This dialog box has most of the same functions as when selecting a file, but does not support filters (Filter must be omitted or left blank) .
+ * 
+ * M: Multiple selection. Specifying the letter M allows users to use Shift+click, Control+click or other methods to select multiple files. In this case, the return value is an array not a string. To extract a single file, please refer to Example at the bottom of this page.
+ * 
+ * S: Save dialog box. Specify the letter S to make the dialog box display a save button instead of an open button.
+ * 
+ * The following numbers can be used. To make more than one of them effective, add them together. For example, to use 1 and 2, specify the number 3.
+ * 
+ * 1: The file must exist
+ * 
+ * 2: The path must exist
+ * 
+ * 8: Prompt to create a new file
+ * 
+ * 16: Prompt to overwrite files
+ * 
+ * 32: Select the shortcut itself (.lnk file) without being resolved as their target. This option also avoids the situation of jumping to that folder through a folder shortcut.
+ * 
+ * Because the "Prompt Overwrite" option is only supported by the save dialog, specifying this option without the "Prompt to Create" option will also make the "S" option effective. Similarly, when the "S" option exists, "Prompt to create" The option has no effect. Specify the number 24 to enable any prompt type supported by the dialog box.
  */
 FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Files (*.*)') => String
 
 /**
- * 改变一个或多个文件或文件夹的属性. 支持通配符.
- * @param Attributes 要改变的属性. 例如, +HA-R. 要方便地打开, 关闭或切换属性, 请分别在以下一个或多个属性字母前加上加号(+), 减号(-) 或脱字符(^):
- *
- * R = 只读
- *
- * A = 存档
- *
- * S = 系统
- *
- * H = 隐藏
- *
- * N = 普通(仅在单独使用此属性时才有效)
- *
- *O = 离线
- *
- * T = 临时
- * @param FilePattern 单个文件或文件夹的名称, 或通配符模式, 如 "C:\Temp\*.tmp". 如果未指定绝对路径, 则假定 FilePattern 在 A_WorkingDir 中.
- * 如果省略, 则使用最内层文件循环的当前文件.
- * @param Mode 如果为空或省略, 则默认仅对文件进行操作, 子目录不被递归. 否则, 请指定零个或更多的下列字母:
- *
- * D = 包含目录(文件夹).
- *
- * F = 包含文件. 如果同时省略 F 和 D, 则仅包含文件而不包括目录.
- *
- * R = 子文件夹被递归到其中, 这样包含在其中的文件和文件夹如果匹配 FilePattern, 则对它们进行操作. 所有子文件夹都将被递归到其中, 而不仅仅是那些名称匹配 FilePattern 的子文件夹. 如果省略 R, 则不包含子目录中的文件和目录.
+ * Change the attributes of one or more files or folders. Wildcards are supported.
+ * @param Attributes The attribute to be changed. For example, +HA-R. To conveniently open, close or switch attributes, please add plus sign (+) and minus sign (-) before one or more of the following attribute letters respectively Or caret (^):
+ * 
+ * R = read only
+ * 
+ * A = archive
+ * 
+ * S = system
+ * 
+ * H = hidden
+ * 
+ * N = Normal (only valid when this attribute is used alone)
+ * 
+ * O = offline
+ * 
+ * T = temporary
+ * @param FilePattern The name of a single file or folder, or a wildcard pattern, such as "C:\Temp\*.tmp". If the absolute path is not specified, it is assumed that FilePattern is in A_WorkingDir.
+ * If omitted, the current file in the innermost file loop will be used.
+ * @param Mode If it is empty or omitted, it will only operate on files by default, and subdirectories will not be recursive. Otherwise, please specify zero or more of the following letters:
+ * 
+ * D = Contains the directory (folder).
+ * 
+ * F = Include files. If both F and D are omitted, only files are included and not directories.
+ * 
+ * R = Subfolders are recursively into it, so if the files and folders contained in it match FilePattern, they will be operated on. All subfolders will be recursively into it, not just those whose names match FilePattern Subfolders. If R is omitted, files and directories in subdirectories are not included.
  */
 FileSetAttrib(Attributes, FilePattern := '', Mode := '') => void
 
 /**
- * 改变一个或多个文件或文件夹的时间戳. 支持通配符.
- * @param YYYYMMDDHH24MISS 如果为空或省略, 则它默认为当前时间.
- * @param FilePattern 单个文件或文件夹的名称或者通配符模式, 例如 C:\Temp\*.tmp. 如果未指定绝对路径, 则假定 FilePattern 在 A_WorkingDir 中. 如果省略, 则使用 File-Loop 最内层的当前文件.
- * @param WhichTime 如果为空或省略, 则默认为 M(修改时间). 否则, 指定以下字母之一来设置应该更改的时间戳:
- *
- * M = 修改时间
- *
- * C = 创建时间
- *
- * A = 上次访问时间
- * @param Mode 如果为空或省略, 则仅对文件进行操作, 子目录不被递归. 否则, 请指定零个或更多的下列字母:
- *
- * D = 包含目录(文件夹).
- *
- * F = 包含文件. 如果同时省略 F 和 D, 则仅包含文件而不包括目录.
- *
- * R = 子文件夹被递归到其中, 这样包含在其中的文件和文件夹如果匹配 FilePattern, 则对它们进行操作. 所有子文件夹都将被递归到其中, 而不仅仅是那些名称匹配 FilePattern 的子文件夹. 如果省略 R, 则不包含子目录中的文件和目录.
+ * Change the timestamp of one or more files or folders. Wildcards are supported.
+ * @param YYYYMMDDHH24MISS If it is blank or omitted, it will default to the current time.
+ * @param FilePattern The name or wildcard pattern of a single file or folder, such as C:\Temp\*.tmp. If the absolute path is not specified, the FilePattern is assumed to be in A_WorkingDir. If omitted, the innermost file-loop is used Current file.
+ * @param WhichTime If it is empty or omitted, the default is M (modification time). Otherwise, specify one of the following letters to set the timestamp that should be changed:
+ * 
+ * M = modification time
+ * 
+ * C = creation time
+ * 
+ * A = last access time
+ * @param Mode If it is empty or omitted, only the file will be operated, and the subdirectories will not be recursive. Otherwise, please specify zero or more of the following letters:
+ * 
+ * D = Contains the directory (folder).
+ * 
+ * F = Include files. If both F and D are omitted, only files are included and not directories.
+ * 
+ * R = Subfolders are recursively into it, so if the files and folders contained in it match FilePattern, they will be operated on. All subfolders will be recursively into it, not just those whose names match FilePattern Subfolders. If R is omitted, files and directories in subdirectories are not included.
  */
 FileSetTime(YYYYMMDDHH24MISS := '', FilePattern := '', WhichTime := 'M', Mode := '') => void
 
 /**
- * 返回 Number 向下取整后的整数(不含任何 .00 后缀).
+ * Return Number rounded down to integer (without any .00 suffix).
  */
 Floor(Number) => Number
 
 /**
- * 根据格式字符串格式化一个可变数量的输入值.
- * @param FormatStr 格式字符串由原义文本和占位符组成, 其形式为 {Index:Format}. 省略索引可以使用序列中的下一个输入值(即使先前已经被使用过).
- * 使用 {{} 和 {}} 来包含字符串中的原义括号. 任何其他无效的占位符都会被包含在结果中. * 不允许在大括号中包含空格符(除非作为标志).
- * 每个格式指定器可以按顺序包含以下几个部分(不含空格): `Flags Width .Precision ULT Type`
- * `Flags` 从下面的标志表中选择零个或多个标志来影响输出的对齐方式和前缀.
+ * Format a variable number of input values ​​according to the format string.
+ * @param FormatStr format string consists of literal text and placeholders, and its form is {Index:Format}. Omit the index to use the next input value in the sequence (even if it has been used before).
+ * Use (() and ()) to include literal brackets in the string. Any other invalid placeholders will be included in the result. * Space characters in the braces are not allowed (unless as a sign).
+ * Each format specifier can contain the following parts in order (without spaces): `Flags Width .Precision ULT Type`
+ * `Flags` Select zero or more flags from the flag table below to affect the alignment and prefix of the output.
  * 
- * - 在给定位宽下使结果左对齐(不足位宽的右侧部分补以空格). 例如, Format("{:-10}", 1) 返回 `1         `.如果省略, 结果将在给定的位宽内右对齐.
+ * -Align the result to the left under the given positioning width (padded the right part of the bit width with a space). For example, Format("{:-10}", 1) returns `1`. If omitted, the result will be given Right-justified within a fixed bit width.
  * 
- * + 如果输出值是带符号的类型, 则使用符号(+ 或 -) 作为前缀. 例如, Format("{:+d}", 1) 返回 `+1`.
+ * + If the output value is a signed type, use the sign (+ or -) as the prefix. For example, Format("{:+d}", 1) returns `+1`.
  * 
- * 0 如果 width 以 0 为前缀, 前导 0 将被添加直至最小宽度. 例如, Format("{:010}", 1) 返回 `0000000001`. 若同时使用 0 和 -, 则前者将被忽略. 如果 0 被指定为整数格式(i, u, x, X, o, d) 且同时带有精度指示 - 例如, {:04.d} - 此时的 0 会被忽略.
+ * 0 If width is prefixed with 0, leading 0 will be added up to the minimum width. For example, Format("{:010}", 1) returns `0000000001`. If both 0 and-are used, the former will be ignored. If 0 is specified as an integer format (i, u, x, X, o, d) with precision indication-for example, (:04.d)-at this time 0 will be ignored.
  * 
- * (空格) 当输出值是有符号数且为正数时, 以空格为前缀来修饰. 如果空格   和 + 同时出现时, 空格将被忽略. 例如, Format("{: 10}", 1) 返回 `         1`.
+ * (Space) When the output value is a signed number and a positive number, it is decorated with a space as a prefix. If a space and + appear at the same time, the space will be ignored. For example, Format("{: 10}", 1) Returns `1`.
  * 
- *\# 当 # 和 o, x 或 X 格式一起使用时, 此标志使用 0, 0x 或 0X 的形式分别修饰任意非零的输出值. 例如, Format("{:#x}", 1) 返回 0x1.
- * 当 # 和 e, E, f, a, A 格式一起使用时, 此标志强制使输出值包含小数点. 例如, Format("{:#.0f}", 1) 返回 1..
- * 当 # 和 g 或 G 一起使用时, 此标志强制使输出值包含小数点并保留末尾的 0.
- * 当 # 和 c, d, i, u 或 s 格式一起使用时会被忽略.
+ * \# When # is used with o, x or X format, this flag uses the form of 0, 0x or 0X to modify any non-zero output value respectively. For example, Format("{:#x}", 1) returns 0x1.
+ * When # is used with e, E, f, a, A format, this flag forces the output value to include a decimal point. For example, Format("{:#.0f}", 1) returns 1..
+ * When # is used with g or G, this flag forces the output value to include a decimal point and retain the trailing 0.
+ * When # is used with c, d, i, u or s format, it will be ignored.
  * 
- * `Width` 十进制整数, 控制格式化值的最小宽度, 以字符为单位. 默认情况下, 值是右对齐的, 使用空格进行填充. 这可以通过使用 -(左对齐) 和 0(前缀 0) 标志来覆盖.
+ * `Width` Decimal integer, controls the minimum width of the formatted value, in characters. By default, the value is right-aligned and filled with spaces. This can be done by using-(left-aligned) and 0 (prefix 0) Sign to cover.
  * 
- * `.Precision` 十进制整数, 控制要输出的字符串, 小数位数或有效数字的最大位数, 取决于输出类型.
+ * `.Precision` decimal integer, control the string to be output, the maximum number of decimal places or significant digits, depending on the output type.
  * 
- * f, e, E: Precision 指定小数点后的位数. 默认值为 6.
+ * f, e, E: Precision specifies the number of digits after the decimal point. The default value is 6.
  * 
- * g, G: Precision 指定最大的有效数字数. 默认值为 6.
+ * g, G: Precision specifies the largest number of significant digits. The default value is 6.
  * 
- * s: Precision 指定要打印的最大字符数. 超过这个数字的字符不会被打印.
+ * s: Precision specifies the maximum number of characters to be printed. Characters exceeding this number will not be printed.
  * 
- * 对于整数类型(d, i, u, x, X, o), Precision 的作用类似于前缀为 0 默认值为 1 的 Width.
+ * For integer types (d, i, u, x, X, o), Precision acts like Width with a prefix of 0 and a default value of 1.
  * 
- * `ULT` 指定应用于字符串值的大小写转换 -- U(大写), L(小写)或 T(标题). 仅对 s 类型有效. 例如 {:U} 或 {:.20Ts}. 也支持小写字母 l 和 t, 但 u 被保留给无符号整数.
+ * `ULT` specifies the case conversion applied to string values ​​- U (uppercase), L (lowercase) or T (title). Only valid for s type. For example {:U} or {:.20Ts}. Also Lowercase letters l and t are supported, but u is reserved for unsigned integers.
  * 
- * `Type` 下面类型表中一个指示输入值将被如何解析的字符. 如果省略, 默认为 s.
+ * `Type` A character in the type table below that indicates how the input value will be parsed. If omitted, the default is s.
  * 
- * d 或 i 有符号整数.
+ * d or i is a signed integer.
  * 
- * u 无符号整数.
+ * u Unsigned integer.
  * 
- * x 或 X 无符号十六进制整数; 由 x 的大小写形式决定输出值是 "abcdef" 还是 "ABCDEF" 的形式, 仅当使用了 # 标志时, 0x 前缀才会包含到输出值中
+ * x or X is an unsigned hexadecimal integer; the case of x determines whether the output value is in the form of "abcdef" or "ABCDEF". Only when the # sign is used, the 0x prefix will be included in the output value
  * 
- * o 无符号八进制整数.
+ * o Unsigned octal integer.
  * 
- * f 浮点数 小数点前的数字位数取决于整数部分的大小, 小数点后的数字位数取决于需求的精度. 例如, Format("{:.2f}", 1) 返回 1.00.
+ * f Floating point number The number of digits before the decimal point depends on the size of the integer part, and the number of digits after the decimal point depends on the required precision. For example, Format("{:.2f}", 1) returns 1.00.
  * 
- * e 浮点数 例如, Format("{:e}", 255) 返回 2.550000e+002.
+ * e Floating point number For example, Format("{:e}", 255) returns 2.550000e+002.
  * 
- * E 浮点数 等同于 e 格式, 但结果中指数部分显示的是 E 而不是 e.
+ * E floating point number is equivalent to e format, but the exponent part of the result shows E instead of e.
  * 
- * g 浮点数 以 f 或 e 格式显示带符号的值, 以给定值和精度更紧凑的为准. e 格式只在值的指数小于 -4 或大于或等于 precision 参数时使用. 尾部的零被截断, 小数点只在后面有一个或多个数字时才会出现.
+ * g floating-point numbers display signed values ​​in f or e format, subject to the given value and more compact precision. e format is only used when the exponent of the value is less than -4 or greater than or equal to the precision parameter. The trailing zero is Truncation, the decimal point only appears when there are one or more digits behind.
  * 
- * G 浮点数 等同于 g 格式, 但引入指数时的 e 将被 E 代替(在适当的地方).
+ * G floating point number is equivalent to g format, but e when introducing exponent will be replaced by E (where appropriate).
  * 
- * a 浮点数 形如 [?]0xh.hhhh p±dd 的有符号十六进制双精度浮点值, 其中 h.hhhh 的小数部分是十六进制数值(使用小写字母), 而 dd 是代表指数的一个或多个数字, 精度指定了小数点后的位数.
+ * a floating-point number is a signed hexadecimal double-precision floating-point value in the form of [?]0xh.hhhh p±dd, where the decimal part of h.hhhh is a hexadecimal value (using lowercase letters), and dd is One or more numbers representing the exponent, and the precision specifies the number of digits after the decimal point.
  * 
- * A 浮点数 等同于 a 格式, 但当引入指数时使用 P, 而不是 p.
+ * A floating point number is equivalent to a format, but when introducing exponents, use P instead of p.
  * 
- * p 整数 将参数显示为十六进制的内存地址. 例如, Format("{:p}", 255) 返回 000000FF.
+ * p integer Display the parameter as a hexadecimal memory address. For example, Format("{:p}", 255) returns 000000FF.
  * 
- * s 字符串 输出字符串. 如果输入值是数值, 该输入值会在 Width 和 Precision 生效前, 自动转换为字符串.
+ * s string Output string. If the input value is a numeric value, the input value will be automatically converted to a string before Width and Precision take effect.
  * 
- * c 字符编码 按照编码顺序输出一个单字符, 类似于 Chr(n). 如果输入值不在预期范围内将被回转. 例如, Format("{:c}", 116) 返回 t.
+ * c character encoding output a single character in encoding order, similar to Chr(n). If the input value is not within the expected range, it will be reversed. For example, Format("{:c}", 116) returns t.
  */
 Format(FormatStr, Values*) => Number | String
 
 /**
- * 将YYYYMMDDHH24MISS时间戳转换为指定的日期/时间格式.
+ * Convert YYYYMMDDHH24MISS timestamp to the specified date/time format.
  */
 FormatTime([YYYYMMDDHH24MISS, Format]) => String
 
 /**
- * 检索按键的名称.
+ * Retrieve the name of the button.
  */
 GetKeyName(KeyName) => String
 
 /**
- * 检索按键的扫描码.
+ * Retrieve the scan code of the button.
  */
 GetKeySC(KeyName) => Number
 
 /**
- * 检查键盘按键或鼠标/操纵杆按键是否按下或放开. 也可以获取操纵杆的状态.
- * @param KeyName `已知限制:` 此函数不能区分两个共享相同虚拟键代码的键, 例如 Left 和 NumpadLeft.
- * @param Mode 获取操纵杆状态时, 此参数被忽略. 如果省略, 则模式默认是获取按键的逻辑状态. 这是操作系统和活动窗口所认为的按键所处的状态, 但可能和按键的物理状态不一致.
- *
- * 或者, 可以指定这些字母的其中一个:
- *
- * P: 获取物理状态( 即用户是否实际按住了按键). 按键或鼠标按键的物理状态通常和逻辑状态一致, 除非安装了键盘和/或鼠标钩子, 在这种情况下, 它将准确反映出用户是否按下了按键或鼠标按键(只要在脚本执行时按键正被按住). 您可以通过 KeyHistory 函数或菜单项来确定脚本中是否使用了钩子. 您可以通过添加 #InstallKeybdHook 和/或 #InstallMouseHook 令到脚本中来强制安装钩子.
- *
- * T: 获取切换状态. 对于除 CapsLock, NumLock 和 ScrollLock 以外的键, 当脚本启动时, 切换状态一般为 0, 并且在进程之间不同步.
- * @returns 对于键盘键和鼠标按钮, 如果键位向下(或切换开启), 该函数返回 1(true) 如果键位向上(或切换关闭), 该函数返回 0(false).
- *
- * 当 KeyName 是操纵杆的轴, 如 JoyX, 函数返回一个 0 到 100 之间的浮点数, 用于指示操纵杆的位置为该轴运动范围的百分比.
- *
- * 当 KeyName 是 JoyPOV 时, 函数返回一个 0 到 35900 之间的整数. 许多操纵杆使用与下列近似的 POV 值:
- *
- * -1: 没有角度
- *
- * 0: 向前 POV
- *
- * 9000(即 90 度): 向右 POV
- *
- * 27000(即 270 度): 向左 POV
- *
- * 18000 (即 180 度): 向后 POV
+ * Check whether the keyboard button or mouse/joystick button is pressed or released. The state of the joystick can also be obtained.
+ * @param KeyName `Known limitation:` This function cannot distinguish two keys that share the same virtual key code, such as Left and NumpadLeft.
+ * @param Mode When obtaining the joystick state, this parameter is ignored. If omitted, the mode defaults to obtaining the logical state of the button. This is the state of the button considered by the operating system and the active window, but it may be related to the physical state of the button The status is inconsistent.
+ * 
+ * Alternatively, one of these letters can be specified:
+ * 
+ * P: Get the physical state (that is, whether the user actually pressed the button). The physical state of the button or mouse button is usually the same as the logical state, unless a keyboard and/or mouse hook is installed, in which case it will accurately reflect Check whether the user has pressed a button or mouse button (as long as the button is being held down when the script is executed). You can use the KeyHistory function or menu item to determine whether the hook is used in the script. You can add #InstallKeybdHook and/or # InstallMouseHook command to the script to force the hook to be installed.
+ * 
+ * T: Get the switching status. For keys other than CapsLock, NumLock and ScrollLock, when the script is started, the switching status is generally 0, and they are not synchronized between processes.
+ * @returns For keyboard keys and mouse buttons, if the key is down (or the switch is on), the function returns 1 (true) If the key is up (or the switch is off), the function returns 0 (false).
+ * 
+ * When KeyName is the axis of the joystick, such as JoyX, the function returns a floating point number between 0 and 100, which is used to indicate that the position of the joystick is the percentage of the axis's motion range.
+ * 
+ * When the KeyName is JoyPOV, the function returns an integer between 0 and 35900. Many joysticks use POV values ​​similar to the following:
+ * 
+ * -1: no angle
+ * 
+ * 0: Forward POV
+ * 
+ * 9000 (i.e. 90 degrees): POV to the right
+ * 
+ * 27000 (i.e. 270 degrees): POV to the left
+ * 
+ * 18000 (i.e. 180 degrees): backward POV
  */
 GetKeyState(KeyName, Mode := '') => String
 
 /**
- * 检索按键的虚拟键码.
+ * Retrieve the virtual key code of the button.
  */
 GetKeyVK(KeyName) => Number
 
 /**
- * 检索方法的实现函数.
+ * The implementation function of the retrieval method.
  */
 GetMethod(Value, Name) => Func
 
 /**
- * 激活由 GroupAdd 定义的窗口组中的下一个窗口.
- * @param Mode 如果省略, 激活组中最早的窗口. 要更改此行为, 请指定以下字母:
- *
- * R: 最新的窗口(最近激活的窗口) 被激活, 但仅当函数运行时组中没有活动的成员时才会激活. "R" 在临时切换到处理不相关任务的情况下非常有用. 当您使用 GroupActivate, GroupDeactivate 或 GroupClose 返回到目标组时, 会激活您最近工作的窗口而不是最早的窗口.
+ * Activate the next window in the window group defined by GroupAdd.
+ * @param Mode If omitted, the oldest window in the group is activated. To change this behavior, please specify the following letters:
+ * 
+ * R: The most recent window (the most recently activated window) is activated, but only when there are no active members in the group when the function is running. "R" is very useful when temporarily switching to handling irrelevant tasks. When When you use GroupActivate, GroupDeactivate or GroupClose to return to the target group, the most recently worked window will be activated instead of the oldest window.
  */
 GroupActivate(GroupName, Mode := '') => Number
 
 /**
- * 将窗口规范添加到窗口组,如有必要,创建该组.
+ * Add the window specification to the window group, if necessary, create the group.
  */
-GroupAdd(GroupName [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+GroupAdd(GroupName[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 如果活动窗口刚刚被GroupActivate或GroupDeactivate激活,则关闭该窗口.然后,它将激活系列中的下一个窗口.它还可以关闭组中的所有窗口.
- * @param Mode 如果省略, 函数关闭活动窗口并激活组中最老的窗口. 要更改此行为, 请指定以下字母之一:
- *
- * R: 最新的窗口(最近激活的窗口) 被激活, 但仅当函数运行时组中没有活动的成员时才会激活. "R" 在临时切换到处理不相关任务的情况下非常有用. 当您使用 GroupActivate, GroupDeactivate 或 GroupClose 返回组时, 会激活您最近工作的窗口而不是最老的窗口.
- *
- * A: 关闭组的所有成员. 这等同于 WinClose "ahk_group GroupName".
+ * If the active window has just been activated by GroupActivate or GroupDeactivate, close the window. Then, it will activate the next window in the series. It can also close all windows in the group.
+ * @param Mode If omitted, the function closes the active window and activates the oldest window in the group. To change this behavior, specify one of the following letters:
+ * 
+ * R: The most recent window (the most recently activated window) is activated, but only when there are no active members in the group when the function is running. "R" is very useful when temporarily switching to handling irrelevant tasks. When When you use GroupActivate, GroupDeactivate, or GroupClose to return to the group, the most recently worked window will be activated instead of the oldest window.
+ * 
+ * A: Close all members of the group. This is equivalent to WinClose "ahk_group GroupName".
  */
 GroupClose(GroupName, Mode := '') => void
 
 /**
- * 与GroupActivate相似,除了激活不在组中的下一个窗口.
- * @param Mode 如果省略, 函数将激活最老的非成员窗口. 要更改此行为, 请指定以下字母:
- *
- * R: 最新的非成员窗口(最近激活的窗口) 被激活, 但仅当函数运行时该组的成员处于活动状态时才会激活. "R" 在临时切换到处理不相关任务的情况下非常有用. 当您使用 GroupActivate, GroupDeactivate 或 GroupClose 返回组时, 会激活您最近工作的窗口而不是最老的窗口.
+ * Similar to GroupActivate, except that the next window that is not in the group is activated.
+ * @param Mode If omitted, the function will activate the oldest non-member window. To change this behavior, specify the following letters:
+ * 
+ * R: The latest non-member window (the most recently activated window) is activated, but only when the members of the group are active when the function is running. "R" is very useful when temporarily switching to handling irrelevant tasks Useful. When you use GroupActivate, GroupDeactivate or GroupClose to return to the group, the most recently worked window will be activated instead of the oldest window.
  */
 GroupDeactivate(GroupName, Mode := '') => void
 
 /**
- * 检索与指定的 HWND 关联的 GUI 控件的 GuiControl 对象.
+ * Retrieve the GuiControl object of the GUI control associated with the specified HWND.
  */
 GuiCtrlFromHwnd(Hwnd) => Gui.Control
 
 /**
- * 检索与指定的 HWND 关联的 Gui 窗口的 Gui 对象.
- * @param RecurseParent 如果该参数为 1(true), 则会自动搜索并检索与指定的 HWND 最接近的父级(即 GUI).
+ * Retrieve the Gui object of the Gui window associated with the specified HWND.
+ * @param RecurseParent If this parameter is 1 (true), it will automatically search and retrieve the parent (i.e. GUI) closest to the specified HWND.
  */
 GuiFromHwnd(Hwnd, RecurseParent := false) => Gui
 
 /**
- * 如果指定的值派生自指定的基对象, 则返回非零数字.
+ * If the specified value is derived from the specified base object, a non-zero number is returned.
  */
 HasBase(Value, BaseObj) => Number
 
 /**
- * 如果指定的值具有指定名称的方法, 则返回非零数字.
+ * If the specified value has a method with the specified name, a non-zero number is returned.
  */
 HasMethod(Value, Name) => Number
 
 /**
- * 如果指定值具有指定名称的属性, 则返回非零数字.
+ * If the specified value has an attribute with the specified name, a non-zero number is returned.
  */
 HasProp(Value, Name) => Number
 
 /**
- * 在脚本运行时创建, 修改, 启用或禁用热字串.
+ * Create, modify, enable or disable hot strings while the script is running.
  */
-Hotstring(StringorOptions [, Replacement, OnOffToggle]) => void
+Hotstring(StringorOptions[, Replacement, OnOffToggle]) => void
 
 /**
- * 在脚本运行时创建,修改,启用或禁用热键.
- * @param Callback 此参数还可以是下列特定值的其中一个:
- *
- * On: 启用热键. 如果热键已经处于启用状态, 则不进行操作.
- *
- * Off: 禁用热键. 如果热键已经处于禁用状态, 则不进行操作.
- *
- * Toggle: 设置热键到相反的状态(启用或禁用).
- *
- * AltTab(及其他): 这里描述的特殊的 Alt-Tab 热键动作.
- * @param Options 由零个或多个下列字母组成的字符串, 字母间可以用空格分隔. 例如: On B0.
- *
- * On: 如果热键当前是禁用的, 则启用它.
- *
- * Off: 如果热键当前是启用的, 则禁用它. 此选项常用来创建初始状态为禁用的热键.
- *
- * B 或 B0: 指定字母 B 将按照 #MaxThreadsBuffer 中描述的方法缓冲热键. 指定 B0(B 后跟着数字 0) 来禁用这种类型的缓冲.
- *
- *Pn: 指定字母 P 后面跟着热键的线程优先级. 如果创建热键时省略 P 选项, 则设置优先级为 0.
- *
- * Tn: 指定字母 T 后面跟着一个表示此热键允许的线程数, 如同 #MaxThreadsPerHotkey 中描述的那样. 例如: T5.
- *
- * In(InputLevel): 指定字母 I(或 i) 后跟随热键的输入级别. 例如: I1.
- */
-Hotkey(KeyName [, Callback, Options]) => void
-
-/**
- * 将图标或图片添加到指定的ImageListID并返回新图标的索引（1是第一个图标,2是第二个图标,依此类推）.
- * @param ImageListID IL_Create 创建的图像列表的 ID.
- * @param Filename 图标(.ICO), 光标(.CUR) 或动画光标(.ANI) 文件的名称(动态光标在 ListView 中显示时实际将不会动), 或位图或图标句柄 , 如 "HBITMAP:" handle. 图标的其他来源包含下列类型的文件: EXE, DLL, CPL, SCR, 以及包含图标资源的其他类型.
- * @param IconNumber 要使用文件中第一个以外的图标组, 请在 IconNumber 指定它的编号. 如果 IconNumber 为负数, 则假定其绝对值表示可执行文件中图标的资源 ID. 在下面的例子中, 将使用第二个图标组中的默认图标: IL_Add(ImageListID, "C:\My Application.exe", 2).
- * @param ResizeNonIcon 还可以加载非图标图像, 例如 BMP, GIF 和 JPG. 然而, 此时应该指定最后两个参数以确保正确执行: IconNumber 应该为屏蔽的/透明的颜色编码(对于大多数图片 0xFFFFFF[白色] 可能是最佳的); 而 ResizeNonIcon 应该为非零值来缩放图片为单个图标, 或者为零来把图像分割为多个可以匹配实际宽度的图标.
+ * Create, modify, enable or disable hotkeys while the script is running.
+ * @param Callback This parameter can also be one of the following specific values:
  * 
- * 支持的图片类型包括 ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF 和 WMF.
+ * On: Enable the hotkey. If the hotkey is already enabled, no operation will be performed.
+ * 
+ * Off: Disable the hotkey. If the hotkey is already in the disabled state, no operation is performed.
+ * 
+ * Toggle: Set the hotkey to the opposite state (enable or disable).
+ * 
+ * AltTab (and others): The special Alt-Tab hotkey action described here.
+ * @param Options A string consisting of zero or more of the following letters, which can be separated by spaces. For example: On B0.
+ * 
+ * On: If the hotkey is currently disabled, enable it.
+ * 
+ * Off: If the hotkey is currently enabled, disable it. This option is often used to create a hotkey whose initial state is disabled.
+ * 
+ * B or B0: Specifying the letter B will buffer the hotkey as described in #MaxThreadsBuffer. Specify B0 (B followed by the number 0) to disable this type of buffering.
+ * 
+ * Pn: Specify the thread priority of the hotkey followed by the letter P. If the P option is omitted when creating the hotkey, the priority will be set to 0.
+ * 
+ * Tn: Specify the letter T followed by a number indicating the number of threads allowed by this hotkey, as described in #MaxThreadsPerHotkey. For example: T5.
+ * 
+ * In(InputLevel): Specify the input level of the letter I (or i) followed by the hot key. For example: I1.
  */
-IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Number
+Hotkey(KeyName[, Callback, Options]) => void
 
 /**
- * 创建一个新的ImageList,最初为空,并返回ImageList的唯一ID（失败时返回0）.
- * @param InitialCount 你希望立即放入列表中的图标数量(如果省略, 默认为 2).
- * @param GrowCount 列表的图标数量, 每次超过当前列表的容量时, 列表的图标数量将增长(如果省略, 默认为 5).
- * @param LargeIcons 如果这个参数为 1(true), 则图像列表将包含大图标. 如果为 0(false), 则它包含小图标(这是省略时的默认情况). 会按比例对添加到列表中的图标自动进行缩放以符合系统中大图标和小图标的尺寸.
+ * Add the icon or picture to the specified ImageListID and return the index of the new icon (1 is the first icon, 2 is the second icon, and so on).
+ * @param ImageListID IL_Create The ID of the image list created.
+ * @param Filename icon (.ICO), cursor (.CUR) or animated cursor (.ANI) file name (dynamic cursor will not actually move when displayed in ListView), or bitmap or icon handle, such as "HBITMAP :" handle. Other sources of icons include the following types of files: EXE, DLL, CPL, SCR, and other types that contain icon resources.
+ * @param IconNumber To use an icon group other than the first one in the file, please specify its number in IconNumber. If IconNumber is a negative number, it is assumed that its absolute value represents the resource ID of the icon in the executable file. In the following example, The default icon in the second icon group will be used: IL_Add(ImageListID, "C:\My Application.exe", 2).
+ * @param ResizeNonIcon can also load non-icon images, such as BMP, GIF and JPG. However, the last two parameters should be specified at this time to ensure correct execution: IconNumber should be a masked/transparent color code (for most images 0xFFFFFF[ White) may be the best); and ResizeNonIcon should be a non-zero value to scale the image into a single icon, or zero to divide the image into multiple icons that can match the actual width.
+ * 
+ * Supported image types include ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF and WMF.
+ */
+IL_Add(ImageListID, Filename[, IconNumber, ResizeNonIcon]) => Number
+
+/**
+ * Create a new ImageList, initially empty, and return the unique ID of the ImageList (return 0 on failure).
+ * @param InitialCount The number of icons you want to put in the list immediately (if omitted, the default is 2).
+ * @param GrowCount The number of icons in the list, each time it exceeds the capacity of the current list, the number of icons in the list will increase (if omitted, the default is 5).
+ * @param LargeIcons If this parameter is 1 (true), the image list will contain large icons. If it is 0 (false), then it will contain small icons (this is the default when omitted). Will be added to the list proportionally The icons in are automatically scaled to fit the size of the large and small icons in the system.
  */
 IL_Create(InitialCount := 2, GrowCount := 5, LargeIcons := false) => Number
 
 /**
- * 删除指定的ImageList,如果成功则返回1,失败则返回0.
+ * Delete the specified ImageList, return 1 if it succeeds, and return 0 if it fails.
  */
 IL_Destroy(ImageListID) => Number
 
 /**
- * 在屏幕区域中搜索图像.
- * @param ImageFile 图像文件名, 如果未指定绝对路径, 则假定在 A_WorkingDir 中. 支持的图片格式包括 ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF 和 WMF(BMP 图像必须为 16 位或更高). 图标的其他来源包括以下类型的文件: EXE, DLL, CPL, SCR 和其他包含图标资源的类型.
+ * Search for images in the screen area.
+ * @param ImageFile image file name, if the absolute path is not specified, it is assumed to be in A_WorkingDir. Supported image formats include ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF and WMF (BMP images must 16-bit or higher). Other sources of icons include the following types of files: EXE, DLL, CPL, SCR and other types that contain icon resources.
  * 
- * 选项: 在文件名前面可以直接添加零个或多个下列字符串. 在选项间使用单个空格或 tab 分隔. 例如: "*2 *w100 *h-1 C:\Main Logo.bmp".
+ * Option: You can directly add zero or more of the following strings in front of the file name. Use a single space or tab to separate the options. For example: "*2 *w100 *h-1 C:\Main Logo.bmp".
  * 
- * IconN: 要使用文件中第一个图标以外的图标组, 请指定 *Icon 后紧跟着图标组编号. 例如, *Icon2 将加载第二个图标组中的默认图标.
+ * IconN: To use an icon group other than the first icon in the file, please specify *Icon followed by the icon group number. For example, *Icon2 will load the default icon in the second icon group.
  * 
- * n(渐变值): 指定 n 为介于 0 和 255(包含) 之间的数字, 用于表示每个像素颜色红/绿/蓝通道强度在任一方向上允许的渐变值. 例如, 如果指定了 *2, 并且像素的颜色是 0x444444, 那么从 0x424242 到 0x464646 的任何颜色都将被视为匹配. 此参数可用于图像的颜色轻微变化或 ImageFile 使用的格式(例如 GIF 或 JPG) 不能准确地在屏幕上表示图像. 如果指定 255 为渐变值, 则匹配所有颜色. 默认渐变值为 0.
+ * n (gradient value): Specify n as a number between 0 and 255 (inclusive), which is used to indicate the permissible gradient value of the red/green/blue channel intensity of each pixel in any direction. For example, if specified *2, and the color of the pixel is 0x444444, then any color from 0x424242 to 0x464646 will be regarded as a match. This parameter can be used for slight changes in the color of the image or the format used by ImageFile (such as GIF or JPG) cannot be accurately displayed on the screen The upper represents the image. If you specify 255 as the gradient value, all colors are matched. The default gradient value is 0.
  * 
- * TransN: 此选项通过指定图像内的某种颜色能匹配屏幕上的任何颜色, 使得更容易找到匹配. 它常用于寻找含有透明区域的 PNG, GIF 和 TIF 文件(然而, 对于图标则不需要此选项, 因为它们的透明度是自动支持的). 对于 GIF 文件, *TransWhite 很可能会有用. 对于 PNG 和 TIF 文件, *TransBlack 可能是最佳的. 否则, 指定 N 为其他颜色名称或 RGB 值(有关详情, 请参阅颜色图表, 或使用 PixelGetColor 的 RGB 模式). 例如: *TransBlack, *TransFFFFAA, *Trans0xFFFFAA.
+ * TransN: This option can match any color on the screen by specifying a certain color in the image, making it easier to find a match. It is often used to find PNG, GIF and TIF files with transparent areas (however, this is not required for icons Option, because their transparency is automatically supported). For GIF files, *TransWhite is likely to be useful. For PNG and TIF files, *TransBlack may be the best. Otherwise, specify N as other color names or RGB values ​​(related For details, please refer to the color chart, or use the RGB mode of PixelGetColor). For example: *TransBlack, *TransFFFFAA, *Trans0xFFFFAA.
  * 
- * wn 和 *hn: 用于缩放图像尺寸的宽度和高度(此宽度和高度也决定了从多图标的 .ICO 文件中加载哪个图标). 如果同时省略这两个选项, 则把从 ICO, DLL 或 EXE 文件中加载的图标调整到系统默认的小图标大小, 通常为 16X16(通过指定 *w0 *h0您可以强制使用实际/内部的大小). 图标外的其他图像以它们的实际大小加载. 要保持高宽比来缩放图像, 请在其中一个尺寸中指定 -1, 而在另一个中指定正数. 例如, 指定 *w200 *h-1 将缩放图像到 200 像素的宽度同时自动设置其高度.
+ * wn and *hn: the width and height used to scale the image size (the width and height also determine which icon is loaded from the .ICO file with multiple icons). If both options are omitted, the ICO, DLL Or the icon loaded in the EXE file is adjusted to the system default small icon size, usually 16X16 (by specifying *w0 *h0 you can force the actual/internal size). Other images outside the icon are loaded at their actual size. To scale the image while maintaining the aspect ratio, specify -1 in one of the dimensions and a positive number in the other. For example, specifying *w200 *h-1 will scale the image to a width of 200 pixels and automatically set its height.
  * 
- * 位图或图标句柄可用于替代文件名. 例如, "HBITMAP:*" handle.
+ * Bitmap or icon handles can be used to replace file names. For example, "HBITMAP:*" handle.
  */
 ImageSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ImageFile) => Number
 
 /**
- * 删除标准格式的 .ini 文件中的值.
+ * Delete the value in the standard format .ini file.
  */
-IniDelete(Filename, Section [, Key]) => void
+IniDelete(Filename, Section[, Key]) => void
 
 /**
- * 从标准格式的.ini文件中读取值,节或节名称列表.
+ * Read a list of values, sections or section names from a standard format .ini file.
  */
-IniRead(Filename [, Section, Key, Default]) => String
+IniRead(Filename[, Section, Key, Default]) => String
 
 /**
- * 将值或节写入标准格式的.ini文件.
+ * Write values ​​or sections into a standard format .ini file.
  */
-IniWrite(Value, Filename, Section [, Key]) => void
+IniWrite(Value, Filename, Section[, Key]) => void
 
 /**
- * 显示一个输入框,要求用户输入字符串.
- * @param Options 不区分大小写的字符串选项, 每个选项与最后一个选项之间用空格或制表符分隔.
+ * Display an input box, asking the user to enter a string.
+ * @param Options is a case-insensitive string option, and each option is separated from the last option with a space or tab.
  * 
- * Xn Yn: 对话框的 X 和 Y 坐标. 例如, X0 Y0 将窗口置于桌面的左上角. 如果省略任何一个坐标, 则对话框将以该维度居中. 任何一个坐标都可以是负数, 以使对话框部分或完全偏离桌面(或在多显示器设置中的辅助显示器上).
+ * Xn Yn: The X and Y coordinates of the dialog box. For example, X0 Y0 places the window in the upper left corner of the desktop. If any of the coordinates is omitted, the dialog box will be centered in that dimension. Any coordinate can be a negative number to make The dialog box is partially or completely off the desktop (or on a secondary monitor in a multi-monitor setup).
  * 
- * Wn Hn: 对话框客户端区域的宽度和高度, 不包括标题栏和边框. 例如, W200 H100.
+ * Wn Hn: The width and height of the client area of ​​the dialog box, excluding the title bar and border. For example, W200 H100.
  * 
- * T: 指定超时时间, 单位为秒. 例如, T10.0 为 10 秒. 如果这个值超过 2147483(24.8 天), 那么它会被设置为 2147483. 达到超时时间后, 输入框窗口会自动关闭同时把 Result 设置为单词 "Timeout". Value 仍将包含用户输入的内容.
+ * T: Specify the timeout time in seconds. For example, T10.0 is 10 seconds. If this value exceeds 2147483 (24.8 days), then it will be set to 2147483. After the timeout period is reached, the input box window will be closed automatically at the same time Set Result to the word "Timeout". Value will still contain what the user entered.
  * 
- * Password: 屏蔽用户的输入. 要指定使用哪个字符, 如此例所示: Password
+ * Password: shield the user's input. To specify which character to use, as shown in this example: Password
  */
 InputBox([Prompt, Title, Options, Default]) => Object
 
 /**
- * 安装鼠标钩子
+ * Install mouse hook
  */
 InstallMouseHook(Install := true, Force := false)
 
 /**
- * 安装键盘钩子
+ * Install keyboard hook
  */
 InstallKeybdHook(Install := true, Force := false)
 
 /**
- * 在一个字符串中向右或向左搜索指定内容.
- * @param CaseSense 下列值之一(如果省略, 默认为 0):
+ * Search the specified content to the right or left in a character string.
+ * @param CaseSense One of the following values ​​(if omitted, the default is 0):
  * 
- * "On" 或 1(True): 搜索区分大小写.
+ * "On" or 1(True): Search is case sensitive.
  * 
- * "Off" 或 0(False): 字母 A-Z 被视为与其小写字母相同.
+ * "Off" or 0(False): The letters A-Z are considered the same as their lowercase letters.
  * 
- * "Locale": 根据当前用户的区域设置规则, 搜索是不区分大小写的. 例如, 在大多数英语及西欧地区, 不仅将 A-Z 视为等同于它们的小写形式, 同时也将非-ASCII 字母(如 Ä 和 Ü) 视为等同的. 根据被比较字符串的性质, Locale 比 Off 慢 1 到 8 倍.
- * @param StartingPos 如果 StartingPos 是负数, 则执行相反的搜索(从右到左), 从右边的那个位置开始. 例如, -1 从最后一个字符开始. 如果 StartingPos 为 0 或超过 Haystack 的长度, 则返回 0.
+ * "Locale": According to the current user's locale rules, the search is not case sensitive. For example, in most English and Western European regions, not only treats AZ as equivalent to their lowercase form, but also treats non-ASCII letters (Such as Ä and Ü) are considered equivalent. Depending on the nature of the string being compared, Locale is 1 to 8 times slower than Off.
+ * @param StartingPos If StartingPos is a negative number, perform the opposite search (from right to left), starting from the position on the right. For example, -1 starts from the last character. If StartingPos is 0 or exceeds the length of Haystack, it returns 0.
  * 
- * 不管 StartingPos 的值是多少, 返回值总是相对于 Haystack 中的第一个字符. 例如, "abc" 在 "123abc789" 中的位置始终是 4.
- * @param Occurrence 如果省略了 Occurrence, 它默认为 1, 函数返回 Needle 在 Haystack 中的首次匹配位置. 指定 Occurrence 为 2, 返回第二次匹配的位置, 3 返回第三次匹配位置, 依此类推.
+ * Regardless of the value of StartingPos, the return value is always relative to the first character in Haystack. For example, the position of "abc" in "123abc789" is always 4.
+ * @param Occurrence If Occurrence is omitted, it defaults to 1, and the function returns the first matching position of Needle in Haystack. Specifying Occurrence as 2, returns the second matching position, 3 returns the third matching position, and so on.
  */
 InStr(Haystack, Needle, CaseSense := false, StartingPos := 1, Occurrence := 1) => Number
 
 /**
- * 除了还允许 0 到 9 的数字外, 其他与 IsAlpha 相同.
+ * Except that numbers from 0 to 9 are allowed, the others are the same as IsAlpha.
  */
 IsAlnum(Value) => Number
 
 /**
- * 如果 Value 是字符串, 可以为空字符串或仅包含字母字符. 如果字符串任意位置有任何 digit, 空格, 制表符, 标点或其他非字母的字符时, 则为 False. 例如, 如果 Value 包含一个空格后跟字母, 则 不被 视为 alpha.
- * 默认情况下, 只考虑ASCII字母. 如果要根据当前用户的区域规则来执行检查, 请使用 IsAlpha(Value, 'Locale').
+ * If Value is a string, it can be an empty string or only contain alphabetic characters. If there are any digits, spaces, tabs, punctuation or other non-letter characters anywhere in the string, it will be False. For example, if Value If it contains a space followed by a letter, it is not considered as an alpha.
+ * By default, only ASCII letters are considered. If you want to perform the check according to the current user's regional rules, please use IsAlpha(Value,'Locale').
  */
 IsAlpha(Value) => Number
 
 /**
- * 如果 Value 是有效的日期时间戳, 可以是 YYYYMMDDHH24MISS 格式的全部或开始部分, 则为 True. 例如, 类似 2004 这样的 4 位字符串被视为有效的. 使用 StrLen 确定是否存在其他时间分量.
- * 小于 1601 的年份会被视为无效的, 因为操作系统通常不支持它们. 被视为有效的最大年份为 9999.
+ * If Value is a valid date and time stamp, it can be all or the beginning of the YYYYMMDDHH24MISS format, then it is True. For example, a 4-digit string like 2004 is considered valid. Use StrLen to determine whether there are other time components.
+ * Years less than 1601 will be considered invalid because the operating system usually does not support them. The maximum year that is considered valid is 9999.
  */
 IsDate(Value) => Number
 
 /**
- * 如果 Value 是一个正整数, 一个空字符串, 或仅包含字符 0 到 9 的字符串, 则为 True. 不允许使用其他字符, 例如以下字符: 空格, 制表符, 正号, 负号, 小数点, 十六进制数字, 以及 0x 前缀.
+ * If Value is a positive integer, an empty string, or a string containing only characters 0 to 9, then it is True. Other characters are not allowed, such as the following characters: space, tab, plus, minus, Decimal point, hexadecimal number, and 0x prefix.
  */
 IsDigit(Value) => Number
 
 /**
- * 如果 Value 是浮点数或包含小数点的纯数字字符串, 则为 True. 允许前导和尾随空格和制表符. 该字符串可以以加号, 减号或小数点开头, 并且不能为空.
+ * True if Value is a floating-point number or a pure numeric string containing a decimal point. Leading and trailing spaces and tabs are allowed. The string can start with a plus sign, a minus sign or a decimal point, and it cannot be empty.
  */
 IsFloat(Value) => Number
 
 /**
- * 如果 Value 是整数或不带小数点的纯数字字符串(十进制或十六进制), 则为 True. 允许前导和尾随空格和制表符. 该字符串可以以加号或减号开头, 并且不能为空.
+ * If Value is an integer or a pure numeric string (decimal or hexadecimal) without a decimal point, it is True. Leading and trailing spaces and tabs are allowed. The string can start with a plus or minus sign, and Can not be empty.
  */
 IsInteger(Value) => Number
 
 /**
- * 如果 Value 是当前作用域中定义的标签的名称, 则 IsLabel 为 True.
+ * If Value is the name of a label defined in the current scope, IsLabel is True.
  */
 IsLabel(Value) => Number
 
 /**
- * 如果 Value 是字符串, 可以为空字符串或仅包含小写字母字符, 则为 True. 如果字符串任意位置有任何 digit, 空格, 制表符, 标点或其他非小写字母的字符时, 则为 False.
- * 默认情况下, 只考虑ASCII字母. 如果要根据当前用户的区域规则来执行检查, 请使用 IsLower(Value, 'Locale').
+ * If Value is a string, it can be an empty string or only contains lowercase alphabetic characters, then it is True. If there are any digits, spaces, tabs, punctuation or other non-lowercase alphabetic characters anywhere in the string, it is False.
+ * By default, only ASCII letters are considered. If you want to perform the check according to the current user's regional rules, please use IsLower(Value,'Locale').
  */
 IsLower(Value) => Number
 
 /**
- * 如果 IsInteger(Value) or IsFloat(Value) 为 true, 则为 True.
+ * If IsInteger(Value) or IsFloat(Value) is true, then it is True.
  */
 IsNumber(Value) => Number
 
 /**
- * 如果 Value 是一个对象. 这包括从 Object 派生的对象, 原型对象(如 0.base) 和 COM 对象, 但不包括数字或字符串.
+ * If Value is an object. This includes objects derived from Object, prototype objects (such as 0.base) and COM objects, but does not include numbers or strings.
  */
 IsObject(Value) => Number
 
 /**
- * 如果变量 Value 已经被赋值, 则 IsSet 为 True.
- *
- * @param Var 一个变量. 例如: `IsSet(MyVar)`.
+ * If the variable Value has been assigned, then IsSet is True.
+ * 
+ * @param Var A variable. For example: `IsSet(MyVar)`.
  */
 IsSet(Var) => Number
 
 /**
- * 如果变量 Value 已经被赋值, 则 IsSet 为 True.
- *
- * @param Ref 对变量的间接引用. 通常不会像在 `IsSetRef(&MyVar)` 中那样直接传递, 而是间接传递, 比如在解引用一个 包含 VarRef 的参数之前检查它.
+ * If the variable Value has been assigned, then IsSet is True.
+ * 
+ * @param Ref An indirect reference to a variable. Usually it is not passed directly as in `IsSetRef(&MyVar)`, but indirectly, such as checking a parameter containing VarRef before dereferencing it.
  */
 IsSetRef(Ref) => Number
 
 /**
- * 如果 Value 是字符串, 可以为空字符串或仅包含下列空白字符: 空格(A_Space 或 `s), 制表符(A_Tab 或 `t), 换行符(`n), 回车符(`r), 垂直制表符(`v) 和 进纸符(`f), 则为 True.
+ * If Value is a string, it can be an empty string or only contain the following blank characters: space (A_Space or `s), tab (A_Tab or `t), line feed (`n), carriage return (`r ), vertical tab character (`v) and paper feed character (`f), then True.
  */
 IsSpace(Value) => Number
 
 /**
- * 如果 Value 是有效的日期时间戳, 可以是 YYYYMMDDHH24MISS 格式的全部或开始部分, 则为 True. 例如, 类似 2004 这样的 4 位字符串被视为有效的. 使用 StrLen 确定是否存在其他时间分量.
- * 小于 1601 的年份会被视为无效的, 因为操作系统通常不支持它们. 被视为有效的最大年份为 9999.
- * 可以使用单词 DATE 代替 TIME, 效果相同.
+ * If Value is a valid date and time stamp, it can be all or the beginning of the YYYYMMDDHH24MISS format, then it is True. For example, a 4-digit string like 2004 is considered valid. Use StrLen to determine whether there are other time components.
+ * Years less than 1601 will be considered invalid because the operating system usually does not support them. The maximum year that is considered valid is 9999.
+ * You can use the word DATE instead of TIME, the effect is the same.
  */
 IsTime(Value) => Number
 
 /**
- * 如果 Value 是字符串, 可以为空字符串或仅包含大写字母字符, 则为 True. 如果字符串任意位置有任何 digit, 空格, 制表符, 标点或其他非大写字母的字符时, 则为 False.
- * 默认情况下, 只考虑ASCII字母. 如果要根据当前用户的区域规则来执行检查, 请使用 IsUpper(Value, 'Locale').
+ * If Value is a string, it can be an empty string or only contains uppercase alphabetic characters, then it is True. If there are any digits, spaces, tabs, punctuations or other non-uppercase alphabetic characters anywhere in the string, it is False.
+ * By default, only ASCII letters are considered. If you want to perform the check according to the current user's regional rules, please use IsUpper(Value,'Locale').
  */
 IsUpper(Value) => Number
 
 /**
- * 十六进制数字: 与 digit 相同, 但也允许使用字符 A 到 F(大写或小写). 如果存在前缀 0x, 则可以接受.
+ * Hexadecimal digits: Same as digit, but the characters A to F (uppercase or lowercase) are also allowed. If the prefix 0x is present, it is acceptable.
  */
 IsXDigit(Value) => Number
 
 /**
- * 显示脚本信息以及最近的击键和鼠标单击的历史记录.
- * @param MaxEvents 忽略此参数以显示脚本的主窗口, 等效于选择“查看->键历史记录”菜单项.
- * 否则, 此参数设置可以记录在窗口中显示的最大键盘和鼠标事件数（默认为40, 限制为500）. 密钥历史记录也被重置, 但是主窗口未显示或刷新. 指定0以完全禁用密钥历史记录.
+ * Display script information and the history of recent keystrokes and mouse clicks.
+ * @param MaxEvents Ignore this parameter to display the main window of the script, which is equivalent to selecting the "View -> Key History" menu item.
+ * Otherwise, this parameter setting can record the maximum number of keyboard and mouse events displayed in the window (the default is 40, the limit is 500). The key history is also reset, but the main window is not displayed or refreshed. Specify 0 to complete Disable key history.
  */
 KeyHistory(MaxEvents)
 
 /**
- * 等待按键或鼠标/操纵杆按钮被释放或按下.
- * @param Options 如果此参数为空, 则函数会无限期等待用户松开指定的按键或鼠标/操纵杆按钮. 不过, 如果没有安装键盘钩子并且 KeyName 是使用类似 Send 函数模拟释放的键盘按键, 则此按键会被视为物理松开了. 没有安装鼠标钩子时, 对鼠标按钮同样如此.
- * Options: 由一个或多个下列字母组成的字符串(可任意顺序, 字母间可以用空格分隔):
+ * Wait for the key or mouse/joystick button to be released or pressed.
+ * @param Options If this parameter is empty, the function will wait indefinitely for the user to release the specified key or mouse/joystick button. However, if the keyboard hook is not installed and the KeyName is a keyboard key similar to the Send function to simulate the release, then This button will be regarded as physically released. When the mouse hook is not installed, the same is true for the mouse button.
+ * Options: A string consisting of one or more of the following letters (in any order, the letters can be separated by spaces):
  * 
- * D: 等待按键被按下.
+ * D: Wait for the button to be pressed.
  * 
- * L: 检测按键的逻辑状态, 这是操作系统和活动窗口所认为的按键所处的状态(可能和它的物理状态不一致). 对于操纵杆按钮会忽略此选项.
+ * L: Detect the logical state of the button, which is the state of the button considered by the operating system and the active window (may be inconsistent with its physical state). This option is ignored for the joystick button.
  * 
- * T: 超时(例如 T3). 超时前等待的秒数, 超时后返回 0. 如果按键或按钮达到指定的状态, 则函数不再等待超时时间到期. 相反地, 它会立即返回 1.
+ * T: Timeout (e.g. T3). The number of seconds to wait before the timeout, and return to 0 after the timeout. If the key or button reaches the specified state, the function does not wait for the timeout period to expire. On the contrary, it will immediately return 1.
  * 
- * 此超时时间值可以为浮点数(例如 2.5), 但不能为十六进制值(例如 0x03).
+ * This timeout value can be a floating point number (e.g. 2.5), but cannot be a hexadecimal value (e.g. 0x03).
  */
 KeyWait(KeyName, Options := '') => Number
 
 /**
- * 返回列表视图中的项目/行列表.
- * @param Options 指定检索什么. 如果为空或省略, 则检索 ListView 中的所有文本. 否则, 指定零个或多个下列单词, 每个单词之间用空格或制表符分隔:
+ * Return to the list of items/rows in the list view.
+ * @param Options specify what to retrieve. If it is empty or omitted, all text in the ListView will be retrieved. Otherwise, specify zero or more of the following words, separated by spaces or tabs:
  * 
- * Selected: 只返回选中(突出显示) 的行, 而不是所有行. 如果没有, 则返回值为空.
+ * Selected: Only return selected (highlighted) rows, not all rows. If not, the return value is empty.
  * 
- * Focused: 只返回聚焦行. 如果没有, 则返回值为空.
+ * Focused: Only return the focused row. If not, the return value is empty.
  * 
- * Col4: 仅获取第四列(字段) 而不是所有列(把 4 替换为您选择的数字).
+ * Col4: Get only the fourth column (field) instead of all columns (replace 4 with the number you choose).
  * 
- * Count: 返回 ListView 中的总行数.
+ * Count: Returns the total number of rows in the ListView.
  * 
- * Count Selected: 返回选中(高亮显示) 行的数量.
+ * Count Selected: Returns the number of selected (highlighted) rows.
  * 
- * Count Focused: 返回聚焦行的行号(位置)(如果没有, 则返回 0).
+ * Count Focused: Returns the line number (position) of the focused line (if not, it returns 0).
  * 
- * Count Col: 返回控件中的列数(如果无法确定列数, 则返回 -1).
+ * Count Col: Returns the number of columns in the control (if the number of columns cannot be determined, returns -1).
  */
 ListViewGetContent([Options, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 返回Number的自然对数（以e为底）.
+ * Returns the natural logarithm of Number (base e).
  */
 Ln(Number) => Number
 
 /**
- * 载入图像文件并返回位图或图标句柄.
+ * Load the image file and return the bitmap or icon handle.
  * @param Filename
- * @param Options 以下选项中的零个或多个字符串, 每个选项之间以空格或制表符分隔::
+ * @param Options Zero or more strings in the following options, each option is separated by spaces or tabs::
  * 
- * Wn 和 Hn: 待载入图像的宽度和高度, n 为整数. 如果省略某个尺寸或指定为 -1, 该尺寸将在保持宽高比的情况下根据另一个尺寸进行计算. 如果两个尺寸都被省略, 将使用图像的原始尺寸. 如果任一尺寸被指定为 0, 则该尺寸仍会使用原始尺寸. 例如: "w80 h50", "w48 h-1" 或 "w48"(保持宽高比), "h0 w100"(使用原始高度但覆盖宽度).
+ * Wn and Hn: the width and height of the image to be loaded, n is an integer. If a certain size is omitted or specified as -1, the size will be calculated based on the other size while maintaining the aspect ratio. If two All sizes are omitted, and the original size of the image will be used. If any size is specified as 0, the original size will still be used for that size. For example: "w80 h50", "w48 h-1" or "w48" (keep the width Height ratio), "h0 w100" (use the original height but cover the width).
  * 
- * Iconn: 指代多图标文件(一般是 EXE 或 DLL 文件) 中待载入图标的序号. 例如, "Icon2" 载入文件的第二个图标. 任何支持的图像格式都可以通过指定 "Icon1" 来转换为图标. 但是, 如果省略 ImageType 参数, 图标将转换回位图.
+ * Iconn: Refers to the serial number of the icon to be loaded in a multi-icon file (usually an EXE or DLL file). For example, "Icon2" loads the second icon of the file. Any supported image format can be specified by "Icon1" To convert to an icon. However, if the ImageType parameter is omitted, the icon will be converted back to a bitmap.
  * 
- * GDI+: 尝试使用 GDI+ 的方式载入图像. 例如, "GDI+ w100".
- * @param ImageType 变量的引用, 在这个变量中存储了一个表示返回句柄类型的数字: 0(IMAGE_BITMAP), 1(IMAGE_ICON) 或 2(IMAGE_CURSOR).
- * 如果忽略该参数, 则返回值始终是位图句柄(图标/光标类型会按需转换). 这是因为可靠地使用或删除位图/图标/光标句柄需要知道它是哪种类型.
- * @returns 函数根据指定的图片或图标返回位图或图标句柄.
+ * GDI+: Try to use GDI+ to load the image. For example, "GDI+ w100".
+ * @param ImageType variable reference, in this variable is stored a number representing the type of return handle: 0 (IMAGE_BITMAP), 1 (IMAGE_ICON) or 2 (IMAGE_CURSOR).
+ * If this parameter is omitted, the return value is always a bitmap handle (icon/cursor type will be converted as needed). This is because reliable use or deletion of bitmap/icon/cursor handle requires knowing which type it is.
+ * The @returns function returns the bitmap or icon handle according to the specified image or icon.
  */
-LoadPicture(Filename [, Options, &ImageType]) => Number
+LoadPicture(Filename[, Options, &ImageType]) => Number
 
 /**
- * 返回Number的对数（以10为底）.
+ * Returns the logarithm of Number (base 10).
  */
 Log(Number) => Number
 
 /**
- * 从字符串的开头修剪字符.
+ * Trim characters from the beginning of the string.
  */
-LTrim(String, OmitChars := ' `t') => String
+LTrim(String, OmitChars := '`t') => String
 
 /**
- * 返回一个或多个数字的最大值.
+ * Returns the maximum value of one or more numbers.
  */
 Max(Numbers*) => Number
 
 /**
- * 检索对应于 Win32 菜单句柄的菜单或菜单栏对象.
+ * Retrieve the menu or menu bar object corresponding to the Win32 menu handle.
  */
 MenuFromHandle(Handle) => Menu
 
 /**
- * 从指定窗口的菜单栏中调用菜单项.
- * @param Menu 顶级菜单项的名称(或名称前缀), 例如 File, Edit, View. 此参数也可以使用期望的菜单项的位置, 通过使用 1& 表示首个菜单, 2& 表示第二个, 以此类推.
+ * Call the menu item from the menu bar of the specified window.
+ * @param Menu The name (or name prefix) of the top-level menu item, such as File, Edit, View. This parameter can also use the position of the desired menu item, by using 1& to indicate the first menu, 2& to indicate the second, and so on analogy.
  * 
- * 根据当前用户区域设置的规则, 搜索是不区分大小写的, 并在第一个匹配项处停止. 使用和符号(&) 来表示菜单项中带下划线的字母, 通常 是不必要的(例如 &File 等同于 File).
+ * According to the rules of the current user locale, the search is case-insensitive and stops at the first match. The ampersand (&) is used to represent the underlined letter in the menu item, which is usually unnecessary (e.g. &File is equivalent to File).
  * 
- * `已知限制:` 如果参数包含一个和符号(&), 那么它必须与项目名称完全匹配, 包括所有非原义的和符号(隐藏或显示为下划线). 如果参数不包含和符号, 则忽略所有和符号, 包括原义的. 例如, 显示为 "a & b" 的项可能匹配的参数值为 a && b 或 a  b.
+ * `Known limitations:` If the parameter contains an ampersand (&), then it must exactly match the item name, including all non-literal ampersands (hidden or displayed as underscores). If the parameter does not contain ampersands, then Ignore all ampersands, including literal ones. For example, items shown as "a & b" may match the parameter value a && b or a b.
  * 
- * 指定 0& 使用窗口的系统菜单.
+ * Specify 0& to use the system menu of the window.
  */
-MenuSelect(WinTitle, WinText, Menu [, SubMenu1, SubMenu2, SubMenu3, SubMenu4, SubMenu5, SubMenu6, ExcludeTitle, ExcludeText]) => void
+MenuSelect(WinTitle, WinText, Menu[, SubMenu1, SubMenu2, SubMenu3, SubMenu4, SubMenu5, SubMenu6, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 返回一个或多个数字的最小值.
+ * Returns the minimum value of one or more numbers.
  */
 Min(Numbers*) => Number
 
 /**
- * 返回 Dividend 除以 Divisor 的余数.
+ * Returns the remainder of Dividend divided by Divisor.
  */
 Mod(Dividend, Divisor) => Number
 
 /**
- * 检查指定的监视器是否存在, 并可选地检索其边界坐标.
+ * Check whether the specified monitor exists, and optionally retrieve its boundary coordinates.
  */
 MonitorGet([N, &Left, &Top, &Right, &Bottom]) => Number
 
 /**
- * 返回监视器的数量.
+ * Returns the number of monitors.
  */
 MonitorGetCount() => Number
 
 /**
- * 返回指定监视器的操作系统名称.
+ * Returns the operating system name of the specified monitor.
  */
 MonitorGetName([N]) => String
 
 /**
- * 返回主监视器的编号.
+ * Returns the number of the main monitor.
  */
 MonitorGetPrimary() => Number
 
 /**
- * 检查指定的监视器是否存在, 并可选地检索其工作区域的边界坐标.
+ * Check whether the specified monitor exists, and optionally retrieve the boundary coordinates of its working area.
  */
 MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Number
 
 /**
- * 单击或按住鼠标按钮,或转动鼠标滚轮.注意：单击功能通常更灵活且更易于使用.
- * @param WhichButton 要点击的按钮: Left(默认), Right, Middle(或仅使用这些名称的首字母); 或鼠标的第四或第五个按钮(X1 或 X2). 例如: MouseClick "X1". 此参数可以省略, 此时它默认为 Left.
+ * Click or hold the mouse button, or turn the mouse wheel. Note: The click function is usually more flexible and easier to use.
+ * @param WhichButton The button to click: Left (default), Right, Middle (or just the first letter of these names); or the fourth or fifth button of the mouse (X1 or X2). For example: MouseClick "X1" . This parameter can be omitted, at this time it defaults to Left.
  * 
- * Left 和 Right 对应于主按钮和次按钮. 如果用户通过系统设置调换了按钮, 按钮的物理位置被调换, 但效果不变.
+ * Left and Right correspond to the main button and the secondary button. If the user changes the button through the system settings, the physical position of the button is changed, but the effect remains unchanged.
  * 
- * 要转动的鼠标滚轮: 指定 WheelUp 或 WU 来向上转动滚轮(远离您的方向); 指定 WheelDown 或 WD 来向下转动滚轮(靠近您的方向). 指定 WheelLeft(或 WL) 或 WheelRight(或 WR) 分别向左或向右滚动滚轮. ClickCount 为需要转动的滚轮格数.
- * @param Speed 移动鼠标的速度, 介于 0(最快) 和 100(最慢) 之间.
- * 如果省略, 则使用默认速度(由 SetDefaultMouseSpeed 设置, 否则为 2).
+ * Mouse wheel to rotate: Specify WheelUp or WU to rotate the wheel upward (away from you); Specify WheelDown or WD to rotate the wheel downward (close to you). Specify WheelLeft (or WL) or WheelRight (or WR) Scroll the wheel to the left or right respectively. ClickCount is the number of grids of the wheel to be turned.
+ * @param Speed ​​The speed of moving the mouse, between 0 (fastest) and 100 (slowest).
+ * If omitted, the default speed is used (set by SetDefaultMouseSpeed, otherwise it is 2).
  * 
- * 对于 SendInput/Play 模式会忽略 Speed; 它们会瞬时移动鼠标到目标位置(不过 SetMouseDelay 有适用于 SendPlay 的模式). 要显示鼠标移动轨迹(例如使用脚本向观众进行演示时) -- 请使用 SendEvent "{Click 100 200}" 或 SendMode "Event"(可以和 BlockInput 联合使用).
- * @param DownOrUp 如果省略, 则每次点击会由 "按下" 事件后接着 "弹起" 事件组成. 要更改此行为, 请指定以下字母之一:
+ * Speed ​​is ignored for SendInput/Play mode; they will move the mouse to the target position instantaneously (but SetMouseDelay has a mode suitable for SendPlay). To display the mouse movement track (for example, when using a script to demonstrate to the audience) - please use SendEvent " {Click 100 200}" or SendMode "Event" (can be used in conjunction with BlockInput).
+ * @param DownOrUp If omitted, each click will consist of a "press" event followed by a "up" event. To change this behavior, please specify one of the following letters:
  * 
- * D: 按下鼠标按钮, 但不释放(即生成按下事件).
+ * D: Press the mouse button, but don't release it (i.e. generate a press event).
  * 
- * U: 释放鼠标按钮(即生成弹起事件).
- * @param Relative 如果省略, 则将 X 和 Y 坐标视为绝对值. 要更改此行为, 请指定下面的字母:
+ * U: Release the mouse button (i.e. generate a pop-up event).
+ * @param Relative If omitted, X and Y coordinates will be treated as absolute values. To change this behavior, specify the following letters:
  * 
- * R: 将 X 和 Y 坐标视为距离当前鼠标位置的偏移. 换句话说, 会把光标从当前位置往右移动 X 像素(负值则往左) 且往下移动 Y 像素(负值则往上).
+ * R: The X and Y coordinates are regarded as the offset from the current mouse position. In other words, the cursor will be moved X pixels to the right from the current position (a negative value will move to the left) and Y pixels will be moved down (a negative value will be Up).
  */
 MouseClick([WhichButton, X, Y, ClickCount, Speed, DownOrUp, Relative]) => void
 
 /**
- * 点击并按住指定的鼠标按钮, 接着移动鼠标到目标坐标, 然后松开该按钮.
- * @param WhichButton 要点击的按钮: Left, Right, Middle(或这些单词的首个字母). 对于第四个按钮使用 X1, 对第五个则用 X2. 例如: MouseClickDrag "X1", ....
+ * Click and hold the designated mouse button, then move the mouse to the target coordinates, and then release the button.
+ * @param WhichButton Button to click: Left, Right, Middle (or the first letter of these words). For the fourth button, use X1, for the fifth button, use X2. For example: MouseClickDrag "X1", ... .
  * 
- * Left 和 Right 分别对应主按钮和次按钮. 如果用户通过系统设置调换了按钮, 按钮的物理位置会被调换, 但效果不变.
- * @param Relative 如果省略, 则将 X 和 Y 坐标视为绝对值. 要更改此行为, 请指定下面的字母:
+ * Left and Right correspond to the main button and the secondary button respectively. If the user changes the button through the system settings, the physical position of the button will be changed, but the effect will not change.
+ * @param Relative If omitted, X and Y coordinates will be treated as absolute values. To change this behavior, specify the following letters:
  * 
- * R: 将 X1 和 Y1 坐标视为距离当前鼠标位置的偏移. 换句话说, 会把光标从当前位置往右移动 X1 像素(负值则往左) 且往下移动 Y1 像素(负值则往上). 同样地, 会把 X2 和 Y2 坐标视为距离 X1 和 Y1 坐标的偏移. 例如, 后面的例子中会首先把鼠标从起始位置往下和往右移动 5 个像素, 然后从这个位置往下和往右拖动 10 个像素: MouseClickDrag "Left", 5, 5, 10, 10, , "R".
+ * R: The X1 and Y1 coordinates are regarded as the offset from the current mouse position. In other words, the cursor will be moved X1 pixels to the right from the current position (negative value to the left) and down Y1 pixels (negative value is to the left) Up). Similarly, the X2 and Y2 coordinates will be regarded as the offset from the X1 and Y1 coordinates. For example, in the following example, the mouse will first move 5 pixels down and to the right from the starting position, and then from Drag 10 pixels down and to the right from this position: MouseClickDrag "Left", 5, 5, 10, 10,, "R".
  */
-MouseClickDrag(WhichButton, X1, Y1, X2, Y2 [, Speed, Relative]) => void
+MouseClickDrag(WhichButton, X1, Y1, X2, Y2[, Speed, Relative]) => void
 
 /**
- * 获取鼠标光标的当前位置, 以及它悬停在哪个窗口和控件上.
- * @param Flag 如果省略或为 0, 函数使用默认方法来确定 OutputVarControl 并存储控件的 ClassNN. 要更改此行为, 加上以下一个或两个数字:
+ * Get the current position of the mouse cursor and which window and control it is hovering over.
+ * @param Flag If omitted or 0, the function uses the default method to determine OutputVarControl and stores the ClassNN of the control. To change this behavior, add one or two of the following numbers:
  * 
- * 1: 使用更简单的方法来获取 OutputVarControl. 这种方法可以正确获取多文档界面(MDI) 应用程序(例如 SysEdit 或 TextPad) 的活动/顶级子窗口的信息. 不过, 对于其他的情况(例如获取 GroupBox 控件中的控件) 就没有那么准确了.
+ * 1: Use a simpler method to obtain OutputVarControl. This method can correctly obtain the information of the active/top-level child window of a multi-document interface (MDI) application (such as SysEdit or TextPad). However, for other cases (such as obtaining The control in the GroupBox control) is not so accurate.
  * 
- * 2: 把控件的 HWND 保存到 OutputVarControl 而不是控件的 ClassNN.
+ * 2: Save the HWND of the control to OutputVarControl instead of the ClassNN of the control.
  * 
- * 例如, 要使上面两个选项都生效, Flag 参数必须设置为 3(1+2).
+ * For example, to make the above two options effective, the Flag parameter must be set to 3 (1+2).
  */
 MouseGetPos([&OutputVarX, &OutputVarY, &OutputVarWin, &OutputVarControl, Flag]) => void
 
 /**
- * 移动鼠标光标.
+ * Move the mouse cursor.
  */
-MouseMove(X, Y [, Speed, Relative]) => void
+MouseMove(X, Y[, Speed, Relative]) => void
 
 /**
- * 在含有一个或多个按钮(例如'是'和'否') 的小窗口中显示指定的文本.
- * @param Options 表示消息框的类型和可能的按钮组合. 如果为空或省略, 则默认为 0. 请参阅下面的表格来了解允许的值. 此外, 还可以指定以下零个或多个选项:
+ * Display the specified text in a small window containing one or more buttons (such as'Yes' and'No').
+ * @param Options indicates the type of message box and possible button combinations. If it is empty or omitted, the default is 0. Please refer to the table below for the allowed values. In addition, you can specify zero or more of the following options:
  * 
- * Owner: 要为消息框指定所有者窗口, 请使用单词 Owner 后接 HWND(窗口 ID).
+ * Owner: To specify the owner window for the message box, use the word Owner followed by HWND (window ID).
  * 
- * T: 超时. 如果用户在指定的时间内没有关闭消息框, 要让消息框自动关闭, 请使用字母 T 后接超时秒数, 可以包含小数点. 如果这个值超过 2147483(24.8 天), 将被设置为 2147483. 如果消息框超时, 返回值为单词 Timeout.
+ * T: Timeout. If the user does not close the message box within the specified time, to make the message box close automatically, please use the letter T followed by the timeout seconds, which can include a decimal point. If the value exceeds 2147483 (24.8 days), it will be Set to 2147483. If the message box times out, the return value is the word Timeout.
  * 
- * 0x0 确认
+ * 0x0 confirm
  * 
- * 0x1 确认/取消
+ * 0x1 Confirm/Cancel
  * 
- * 0x2 中止/重试/忽略
+ * 0x2 abort/retry/ignore
  * 
- * 0x3 是/否/取消
+ * 0x3 Yes/No/Cancel
  * 
- * 0x4 是/否
+ * 0x4 yes/no
  * 
- * 0x5 重试/取消
+ * 0x5 Retry/Cancel
  * 
- * 0x6 取消/重试/继续
+ * 0x6 cancel/retry/continue
  * 
- * 0x10 停止/错误图标.
+ * 0x10 Stop/error icon.
  * 
- * 0x20 问号图标.
+ * 0x20 question mark icon.
  * 
- * 0x30 惊叹号图标.
+ * 0x30 exclamation point icon.
  * 
- * 0x40 星号图标(信息).
+ * 0x40 star icon (information).
  * 
- * 0x100 使第二个按钮成为默认按钮.
+ * 0x100 makes the second button the default button.
  * 
- * 0x200 使第三个按钮成为默认按钮.
+ * 0x200 makes the third button the default button.
  * 
- * 0x300 使第四个按钮为默认的. 需要存在 Help(帮助) 按钮
+ * 0x300 Make the fourth button the default. A Help button is required
  * 
- * 0x1000 系统模式(始终置顶)
+ * 0x1000 system mode (always on top)
  * 
- * 0x2000 任务模式
+ * 0x2000 mission mode
  * 
- * 0x40000 置顶(WS_EX_TOPMOST 样式)(和系统模式类似, 但省略了标题栏图标)
+ * 0x40000 to the top (WS_EX_TOPMOST style) (similar to the system mode, but the title bar icon is omitted)
  * 
- * 0x4000 添加帮助按钮(请参阅下面的备注)
+ * 0x4000 Add a help button (please refer to the remarks below)
  * 
- * 0x80000 让文本右对齐显示.
+ * 0x80000 Let the text be displayed right-aligned.
  * 
- * 0x100000 用于希伯来语/阿拉伯语的从右向左的阅读顺序.
- * @returns 当从一个表达式中调用时, MsgBox 返回以下字符串中的一个来表示用户按下了哪个按钮:
+ * 0x100000 is used for Hebrew/Arabic right-to-left reading order.
+ * @returns When called from an expression, MsgBox returns one of the following strings to indicate which button the user pressed:
  * OK, Cancel, Yes, No, Abort, Retry, Ignore, TryAgain, Continue, Timeout
  */
 MsgBox([Text, Title, Options]) => String
 
 /**
- * 返回存储在指定地址+偏移量处的二进制数.
+ * Returns the binary number stored at the specified address + offset.
  */
-NumGet(Source [, Offset], Type) => Number
+NumGet(Source[, Offset], Type) => Number
 
 /**
- * 将一个或多个数字以二进制格式存储到指定地址+偏移的位置.
+ * Store one or more numbers in binary format to the specified address + offset location.
  */
-NumPut(Type1, Number1, *, Target [, Offset]) => Number
+NumPut(Type1, Number1, * , Target[, Offset]) => Number
 
 /**
- * 增加对象的引用计数.
+ * Increase the reference count of the object.
  */
 ObjAddRef(Ptr) => Number
 
 /**
- * 创建一个绑定函数对象, 它能调用指定对象的方法.
+ * Create a binding function object, which can call methods of the specified object.
  */
 ObjBindMethod(Obj, Method, Params) => Func
 
 /**
- * 将地址转换为一个合适的引用.
+ * Convert the address to a suitable reference.
  */
 ObjFromPtr(Address) => Object
 
 /**
- * 将地址转换为一个合适的引用并增加引用计数.
+ * Convert the address to a suitable reference and increase the reference count.
  */
 ObjFromPtrAddRef(Address) => Object
 
 /**
- * 返回值的Base对象.
+ * The Base object of the return value.
  */
 ObjGetBase(Value) => Object
 
 /**
- * 对象内部属性数组的当前容量.
+ * The current capacity of the internal attribute array of the object.
  */
 ObjGetCapacity(Obj) => Number
 
 /**
- * 如果对象拥有此名称的属性,则返回true,否则返回false.
+ * If the object has the attribute of this name, it returns true, otherwise it returns false.
  */
 ObjHasOwnProp(Obj, Name) => Number
 
 /**
- * 返回对象拥有的属性数.
+ * Returns the number of attributes owned by the object.
  */
 ObjOwnPropCount(Obj) => Number
 
 /**
- * 返回对象拥有的属性.
+ * Return the attributes owned by the object.
  */
 ObjOwnProps(Obj) => Enumerator
 
 /**
- * 检索对象的地址.
+ * Retrieve the address of the object.
  */
 ObjPtr(Obj) => Number
 
 /**
- * 检索对象的地址并增加引用计数.
+ * Retrieve the address of the object and increase the reference count.
  */
 ObjPtrAddRef(Obj) => Number
 
 /**
- * 减少对象的引用计数.
+ * Reduce the reference count of the object.
  */
 ObjRelease(Ptr) => Number
 
 /**
- * 设置对象的Base对象.
+ * Set the Base object of the object.
  */
 ObjSetBase(Obj, BaseObj) => void
 
 /**
- * 设置对象自身属性内部数组的当前容量.
- * @param MaxProps 新的容量. 如果小于自有属性的当前数量, 则使用该数量, 并释放所有未使用的空间.
+ * Set the current capacity of the internal array of the object's own properties.
+ * @param MaxProps new capacity. If it is less than the current number of own properties, use that number and release all unused space.
  */
 ObjSetCapacity(Obj, MaxProps) => void
 
 /**
- * 注册一个每当剪贴板内容发生改变时都会运行的函数或函数对象.
- * @param AddRemove 如果为空或省略, 则默认为 1(在任何先前的注册函数之后调用该函数). 否则, 指定下列数字之一:
+ * Register a function or function object that will run whenever the contents of the clipboard are changed.
+ * @param AddRemove If empty or omitted, it defaults to 1 (call this function after any previous registered function). Otherwise, specify one of the following numbers:
  * 
- * 1 = 在任何先前的注册函数之后调用该函数.
+ * 1 = This function is called after any previous registered function.
  * 
- * -1 = 在任何先前的注册函数之前调用该函数.
+ * -1 = Call this function before any previous registered function.
  * 
- * 0 = 不调用该函数.
+ * 0 = Do not call this function.
  */
 OnClipboardChange(Func, AddRemove := 1) => void
 
 /**
- * 指定在未处理错误发生时自动运行的函数.
+ * Specify a function to run automatically when an unhandled error occurs.
  */
 OnError(Func, AddRemove := 1) => void
 
 /**
- * 指定一个在脚本退出时自动运行的函数.
+ * Specify a function to run automatically when the script exits.
  */
 OnExit(Func, AddRemove := 1) => void
 
 /**
- * 指定当脚本接收到指定消息时自动调用的函数或函数对象.
- * @param MsgNumber 需要监听或查询的消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间. 如果你不想监听系统消息(即编号小于 0x0400 的那些), 那么最好选择一个大于 4096(0x1000) 的数字. 这降低了可能对当前及将来版本的 AutoHotkey 内部所使用的消息的干扰.
- * @param Function 函数或函数对象的名称. 要传递原义的函数名称, 必须用引号("") 括起来. 该函数必须能够接受四个参数, 如下所述.
- * @param MaxThreads 这个整数通常被省略, 在这种情况下, 监控函数一次只能处理一个线程. 这通常是最好的, 因为否则每当监控函数中断时, 脚本就会按时间顺序处理消息. 因此, 作为 MaxThreads 的替代方案, 可以考虑使用 Critical, 如下所示.
+ * Specify the function or function object to be automatically called when the script receives the specified message.
+ * @param MsgNumber The number of the message that needs to be monitored or queried. It should be between 0 and 4294967295 (0xFFFFFFFF). If you don't want to monitor system messages (that is, those with a number less than 0x0400), then it is best to choose one greater than 4096 (0x1000) Number. This reduces possible interference with messages used internally by current and future versions of AutoHotkey.
+ * @param Function The name of the function or function object. To pass the literal function name, it must be enclosed in quotation marks (""). The function must be able to accept four parameters, as described below.
+ * @param MaxThreads This integer is usually omitted. In this case, the monitoring function can only process one thread at a time. This is usually the best, because otherwise whenever the monitoring function is interrupted, the script will process the messages in chronological order. Therefore, as an alternative to MaxThreads, Critical can be considered, as shown below.
  * 
- * 指定 0 来取消注册之前由 Function 标识的函数.
+ * Specify 0 to unregister the function previously identified by Function.
  * 
- * 默认情况下, 当为一个 MsgNumber 注册了多个函数时, 会按照注册的顺序调用它们. 要在之前注册的函数之前注册一个函数, 请为 MaxThreads 指定一个负值. 例如, OnMessage Msg, Fn, -2 将 Fn 注册为在之前为 Msg 注册的任何其他函数之前被调用, 并且允许 Fn 最多有 2 个线程. 但是, 如果函数已经被注册了, 除非取消注册然后重新注册, 否则顺序不会改变.
+ * By default, when multiple functions are registered for a MsgNumber, they will be called in the order of registration. To register a function before the previously registered function, specify a negative value for MaxThreads. For example, OnMessage Msg, Fn, -2 Register Fn to be called before any other functions registered for Msg, and allow Fn to have up to 2 threads. However, if the function has already been registered, the order will not change unless the registration is cancelled and then re-registered.
  */
 OnMessage(MsgNumber, Function, MaxThreads := 1) => void
 
 /**
- * 返回指定字符串中首个字符的序号值(数字字符编码).
+ * Returns the serial number value (digital character code) of the first character in the specified string.
  */
 Ord(String) => Number
 
 /**
- * 发送字符串到调试器(如果有) 显示出来.
+ * Send the string to the debugger (if available) to display it.
  */
 OutputDebug(Text) => void
 
 /**
- * 阻止脚本在其最后一个线程完成时自动退出, 从而使其保持在空闲状态下运行. 
- * @param Persist 如果为true或忽略, 则即使退出脚本的其他条件均不满足, 在所有线程退出后脚本仍将保持运行. 
- * 如果为false, 将恢复默认行为. 
+ * Prevent the script from automatically exiting when its last thread finishes, thereby keeping it running in an idle state.
+ * @param Persist If true or omitted, even if the other conditions of the exit script are not met, the script will continue to run after all threads exit.
+ * If false, the default behavior will be restored.
  */
 Persistent(Persist := true) => void
 
 /**
- * 检索指定x,y坐标处像素的颜色.
- * @param Mode 此参数可以包含零个或多个下列单词. 如果含有多个单词, 则它们之间使用空格分隔(例如 "Alt Slow").
+ * Retrieve the color of the pixel at the specified x and y coordinates.
+ * @param Mode This parameter can contain zero or more of the following words. If it contains more than one word, use spaces to separate them (eg "Alt Slow").
  * 
- * Alt: 使用另一种方法获取颜色, 当在特殊类型的窗口中正常的方法获取到无效或错误的颜色时, 应考虑使用这种方法. 此方法比正常方法大约慢 10%.
+ * Alt: Use another method to obtain colors. When the normal method obtains invalid or wrong colors in a special type of window, this method should be considered. This method is about 10% slower than the normal method.
  * 
- * Slow: 使用一种更精细复杂的方法获取颜色, 在某些全屏应用程序中其他方法失败时, 此方法可能有效. 此方法比正常方法大约慢三倍. 注: Slow 方法优先于 Alt, 所以此时不需要指定 Alt.
+ * Slow: Use a more sophisticated method to get the color. This method may be effective when other methods fail in some full-screen applications. This method is about three times slower than the normal method. Note: The Slow method takes precedence over Alt, so There is no need to specify Alt at this time.
  */
 PixelGetColor(X, Y, Mode := '') => String
 
 /**
- * 在屏幕区域中搜索指定颜色的像素.
- * @param ColorID 要搜索的颜色 ID. 通常用红绿蓝(RGB) 格式的十六进制数表示. 例如: 0x9d6346. 颜色 ID 可以通过 Window Spy(可从托盘菜单访问) 或 PixelGetColor 来确定.
- * @param Variation 介于 0 和 255(包含) 之间的数字, 用于表示每个像素颜色红/绿/蓝通道强度在任一方向上允许的渐变值. 如果所查找的颜色并不总是完全相同的色度, 这个参数很有用. 如果指定 255 为渐变值, 则匹配所有颜色. 默认渐变值为 0.
+ * Search for pixels of the specified color in the screen area.
+ * @param ColorID The color ID to be searched. It is usually represented by a hexadecimal number in red, green and blue (RGB) format. For example: 0x9d6346. The color ID can be determined by Window Spy (accessible from the tray menu) or PixelGetColor.
+ * @param Variation is a number between 0 and 255 (inclusive), used to indicate the permissible gradient value of the red/green/blue channel intensity of each pixel color in any direction. If the color you are looking for is not always exactly the same This parameter is very useful. If you specify 255 as the gradient value, all colors will be matched. The default gradient value is 0.
  */
 PixelSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ColorID, Variation := 0) => Number
 
 /**
- * 将消息放置在窗口或控件的消息队列中.
+ * Place the message in the message queue of the window or control.
  */
-PostMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+PostMessage(Msg, wParam := 0, lParam := 0[, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 强制关闭第一个匹配的进程.
- * @param PIDOrName 指定数字(PID) 或进程名:
+ * Forcibly close the first matching process.
+ * @param PIDOrName specifies the number (PID) or process name:
  * 
- * PID: 进程 ID, 唯一标识一个特定进程的数字(只有在此进程的生存期这个数字才有意义). 新运行的进程的 PID 可以通过 Run 函数获取. 同样的, 窗口的 PID 可以通过 WinGetPID 获取. ProcessExist 也可以用来获取 PID.
+ * PID: Process ID, a number that uniquely identifies a specific process (this number is meaningful only during the lifetime of the process). The PID of the newly running process can be obtained through the Run function. Similarly, the PID of the window can be obtained through WinGetPID . ProcessExist can also be used to obtain PID.
  * 
- * Name: 进程的名称, 通常和它的可执行文件名相同(不带路径), 例如 notepad.exe 或 winword.exe. 由于一个名称可能与多个正在运行的进程匹配, 因此将仅对第一个进程进行操作. 名称不区分大小写.
+ * Name: The name of the process, usually the same as its executable file name (without path), such as notepad.exe or winword.exe. Since a name may match multiple running processes, it will only be the first The operation is performed by each process. The name is not case sensitive.
  */
 ProcessClose(PIDOrName) => Number
 
 /**
- * 检查指定的进程是否存在.
- * @param PIDOrName 如果为空或省略, 使用脚本自身的进程. 否则, 指定一个数字(PID) 或进程名:
+ * Check if the specified process exists.
+ * @param PIDOrName If empty or omitted, use the script's own process. Otherwise, specify a number (PID) or process name:
  * 
- * PID: 进程的 ID, 它是唯一标识一个特定进程的数字(此数字仅在该进程的存在周期内有效). 新启动进程的 PID 可以通过 Run 函数来确定. 同样, 窗口的 PID 也可以用 WinGetPID 来确定.
+ * PID: Process ID, it is a number that uniquely identifies a specific process (this number is only valid during the existence period of the process). The PID of the newly started process can be determined by the Run function. Similarly, the PID of the window can also be used WinGetPID to determine.
  * 
- * Name: 进程的名称通常与其可执行文件相同(没有路径), 例如 notepad.exe 或 winword.exe. 由于名称可能匹配多个正在运行的进程, 因此只对第一个匹配的进程进行操作. 该名称不区分大小写.
+ * Name: The name of the process is usually the same as its executable file (no path), such as notepad.exe or winword.exe. Since the name may match multiple running processes, only the first matching process is operated on. The name is not case sensitive.
  */
 ProcessExist(PIDOrName := '') => Number
 
 /**
- * 更改第一个匹配进程的优先级.
+ * Change the priority of the first matching process.
  */
 ProcessSetPriority(Level, PIDOrName := '') => Number
 
 /**
- * 等待指定的进程存在.
+ * Wait for the specified process to exist.
  */
-ProcessWait(PIDOrName [, Timeout]) => Number
+ProcessWait(PIDOrName[, Timeout]) => Number
 
 /**
- * 等待匹配进程关闭.
+ * Wait for the matching process to close.
  */
-ProcessWaitClose(PIDOrName [, Timeout]) => Number
+ProcessWaitClose(PIDOrName[, Timeout]) => Number
 
 /**
- * 生成一个伪随机数字.
- *
- * 要生成的最小和/或最大数量, 以任一顺序指定.  如果只指定了一个参数, 则另一个参数默认为0. 如果两者都省略, 则默认为0.0到1.0.
- *
- * 对于整数, 最小值和最大值都包含在可能返回的可能数字集合中.  支持全范围的 64 位整数.
- *
- * 对于浮点数, 通常不包括最大值. 
+ * Generate a pseudo-random number.
+ * 
+ * The minimum and/or maximum quantities to be generated are specified in either order. If only one parameter is specified, the other parameter defaults to 0. If both are omitted, the default is 0.0 to 1.0.
+ * 
+ * For integers, the minimum and maximum values ​​are included in the set of possible numbers that may be returned. The full range of 64-bit integers is supported.
+ * 
+ * For floating point numbers, the maximum value is usually not included.
  */
 Random([A, B]) => Number
 
 /**
- * 从注册表中删除值.
+ * Delete the value from the registry.
  */
 RegDelete([KeyName, ValueName]) => void
 
 /**
- * 从注册表中删除子键.
+ * Delete subkeys from the registry.
  */
 RegDeleteKey([KeyName]) => void
 
 /**
- * 确定字符串是否包含某个匹配模式（正则表达式）.
+ * Determine whether the string contains a certain matching pattern (regular expression).
  */
 RegExMatch(Haystack, NeedleRegEx, &OutputVar := '', StartingPosition := 1) => Number
 
 /**
- * 替换字符串中匹配模式(正则表达式) 出现的地方.
+ * Replace the place where the matching pattern (regular expression) appears in the string.
  */
 RegExReplace(Haystack, NeedleRegEx, Replacement := '', &OutputVarCount := '', Limit := -1, StartingPosition := 1) => String
 
 /**
- * 从注册表读取值.
+ * Read the value from the registry.
  */
 RegRead([KeyName, ValueName]) => String
 
 /**
- * 将值写入注册表.
+ * Write the value to the registry.
  */
-RegWrite(Value, ValueType, KeyName [, ValueName]) => void
+RegWrite(Value, ValueType, KeyName[, ValueName]) => void
 
 /**
- * 返回数字,四舍五入到小数点后N位
+ * Return the number, rounded to N digits after the decimal point
  */
 Round(Number, N := 0) => Number | String
 
 /**
- * 从字符串的结尾修剪字符.
+ * Trim characters from the end of the string.
  */
-RTrim(String, OmitChars := ' `t') => String
+RTrim(String, OmitChars := '`t') => String
 
 /**
- * 运行外部程序.
- * @param Options 如果省略, 函数将正常启动 Target. 要改变此行为, 请指定以下一个或多个单词:
+ * Run external programs.
+ * @param Options If omitted, the function will start Target normally. To change this behavior, please specify one or more of the following words:
  * 
- * Max: 最大化运行
+ * Max: Maximum operation
  * 
- * Min: 最小化运行
+ * Min: Minimize operation
  * 
- * Hide: 隐藏运行(不能和上面任意一个选项组合使用)
+ * Hide: hide operation (cannot be used in combination with any of the above options)
  */
-Run(Target [, WorkingDir, Options, &OutputVarPID]) => void
+Run(Target[, WorkingDir, Options, &OutputVarPID]) => void
 
 /**
- * 指定在后续所有的 Run 和 RunWait 中使用的一组用户凭据.
+ * Specify a set of user credentials to be used in all subsequent Runs and RunWait.
  */
 RunAs([User, Password, Domain]) => void
 
 /**
- * 运行外部程序并等待程序结束才继续往后执行.
+ * Run the external program and wait for the end of the program to continue execution.
  */
-RunWait(Target [, WorkingDir, Options, &OutputVarPID]) => Number
+RunWait(Target[, WorkingDir, Options, &OutputVarPID]) => Number
 
 /**
- * 将模拟的击键和鼠标单击发送到活动窗口.默认情况下, Send 等同于 SendInput.
+ * Send simulated keystrokes and mouse clicks to the active window. By default, Send is equivalent to SendInput.
  */
 Send(Keys) => void
 
 /**
- * SendEvent 使用 Windows keybd_event 函数发送键击.发送击键的速率由SetKeyDelay确定.
+ * SendEvent uses the Windows keybd_event function to send keystrokes. The rate of sending keystrokes is determined by SetKeyDelay.
  */
 SendEvent(Keys) => void
 
 /**
- * SendInput和SendPlay使用与Send相同的语法,但通常更快,更可靠.此外,它们在发送过程中缓冲了任何物理键盘或鼠标活动,从而防止了用户的击键被散布在发送中.
+ * SendInput and SendPlay use the same syntax as Send, but are generally faster and more reliable. In addition, they buffer any physical keyboard or mouse activity during the sending process, thus preventing the user's keystrokes from being scattered in the sending.
  */
 SendInput(Keys) => void
 
 /**
- * 将消息发送到窗口或控件,然后等待确认.
+ * Send the message to the window or control, and then wait for confirmation.
  */
-SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout]) => Number
+SendMessage(Msg, wParam := 0, lParam := 0[, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout]) => Number
 
 /**
- * SendInput和SendPlay使用与Send相同的语法,但通常更快,更可靠.此外,它们在发送过程中缓冲了任何物理键盘或鼠标活动,从而防止了用户的击键被散布在发送中.
+ * SendInput and SendPlay use the same syntax as Send, but are generally faster and more reliable. In addition, they buffer any physical keyboard or mouse activity during the sending process, thus preventing the user's keystrokes from being scattered in the sending.
  */
 SendPlay(Keys) => void
 
 /**
- * 与“发送”相似,不同之处在于“键”中的所有字符均按字面意义进行解释和发送.有关详细信息,请参见原始模式.
+ * Similar to "send", the difference is that all characters in the "key" are interpreted and sent literally. For details, please refer to the original mode.
  */
 SendRaw(Keys) => void
 
 /**
- * 类似于 Send, 除了 Keys 中的所有字符都按原义解释.
+ * Similar to Send, except that all characters in Keys are interpreted literally.
  */
 SendText(Keys) => void
 
 /**
- * 在指定的时间间隔自动重复调用函数.
- * @param Callback 如果省略 Callback, 如果有的话, SetTimer 将在启动当前线程的定时器上运行. 例如, SetTimer , 0 可以在一个定时器函数中用于标记要删除的定时器, 而 SetTimer , 1000 将更新当前定时器的 Period.
- * @param Period Period 的绝对值不能大于 4294967295 ms(49.7 天).
- *
- * 如果 Period 大于 0, 定时器将自动重复, 直到脚本明确禁用.
- *
- * 如果 Period 小于 0, 定时器将只运行一次. 例如, 指定 -100 将在 100 ms 后调用 回调, 然后删除定时器, 就像使用 SetTimer Callback, 0 一样.
- *
- * 如果 Period 为 0, 定时器被标记为删除. 如果由这个定时器启动的线程还在运行, 那么在线程结束后, 定时器就会被删除(除非它被重新启用); 否则, 它会被立即删除. 在任何情况下, 定时器之前的 Period 和 Priority 都不会被保留.
- * @param Priority 这个可选参数是一个介于 -2147483648 和 2147483647 之间的整数(或为表达式) 来表示计时器的优先级.
+ * Automatically call the function repeatedly at the specified time interval.
+ * @param Callback If Callback is omitted, if any, SetTimer will run on the timer that started the current thread. For example, SetTimer, 0 can be used in a timer function to mark the timer to be deleted, while SetTimer, 1000 The Period of the current timer will be updated.
+ * The absolute value of @param Period Period cannot be greater than 4294967295 ms (49.7 days).
+ * 
+ * If Period is greater than 0, the timer will automatically repeat until the script is explicitly disabled.
+ * 
+ * If Period is less than 0, the timer will only run once. For example, specifying -100 will call the callback after 100 ms, and then delete the timer, just like using SetTimer Callback, 0.
+ * 
+ * If Period is 0, the timer is marked as deleted. If the thread started by this timer is still running, then after the thread ends, the timer will be deleted (unless it is re-enabled); otherwise, it will be Delete immediately. In any case, the Period and Priority before the timer will not be retained.
+ * @param Priority This optional parameter is an integer (or an expression) between -2147483648 and 2147483647 to indicate the priority of the timer.
  */
 SetTimer([Callback, Period := 250, Priority := 0]) => void
 
 /*
- * 返回 Number 的正弦.
+ * Returns the sine of Number.
  */
 Sin(Number) => Number
 
 /**
- * 在继续前等待指定的时间量.
- * @param Delay 要暂停的时间量(单位为毫秒), 介于 0 和 2147483647(24 天) 之间.
+ * Wait the specified amount of time before continuing.
+ * @param Delay The amount of time to pause (in milliseconds), between 0 and 2147483647 (24 days).
  */
 Sleep(Delay) => void
 
 /**
- * 以字母, 数字或随机顺序排列变量的内容(可以选择是否移除重复项).
- * @param Options 由零个或多个下列字母组成的字符串(可任意顺序, 字母间可以用空格分隔):
+ * Arrange the contents of the variables in alphabetical, numeric or random order (you can choose whether to remove duplicates).
+ * @param Options A string consisting of zero or more of the following letters (in any order, the letters can be separated by spaces):
  * 
- * C: 区分大小写的排序(如果存在 N 选项, 则此选项被忽略). 如果同时省略 C 和 CL, 则在排序中大写字母 A-Z 被视为等同于它们相应的小写形式.
+ * C: Case-sensitive sorting (if there is an N option, this option is ignored). If both C and CL are omitted, the uppercase letters A-Z are considered equivalent to their corresponding lowercase forms in the sorting.
  * 
- * CL: 基于当前用户区域设置的不区分大小写的排序. 例如, 大多数英语和西欧地区把字母 A-Z 和 ANSI 字母(如 Ä 和 Ü) 等同于它们的小写形式. 这种方法还使用了 "单词排序", 它以这样的方式(像 "coop" 和 "co-op" 这样的单词保持在一起) 处理连字符和撇号. 根据被排序项目的内容, 它的执行性能比默认的不区分方法差了 1 到 8 倍.
+ * CL: Case-insensitive sorting based on the current user locale. For example, most English and Western European regions equate the letters AZ and ANSI letters (such as Ä and Ü) to their lowercase forms. This method also uses " Word sorting", it handles hyphens and apostrophes in this way (words like "coop" and "co-op" are kept together). According to the content of the sorted item, its execution performance is indistinguishable than the default The method is 1 to 8 times worse.
  * 
- * Dx: 指定 x 作为分隔符, 它决定了每个项目的开始和结束位置. 如果此选项不存在, 则 x 默认为换行符(`n), 这样当字符串的行以 LF(`n) 或 CR+LF(`r`n) 结尾时都可以正确排序.
+ * Dx: Specify x as the delimiter, which determines the start and end position of each item. If this option does not exist, x defaults to a newline character (`n), so when the string is lined with LF (`n) Or CR+LF(`r`n) can be sorted correctly at the end.
  * 
- * N: 数字排序: 每个项目都被假定为数字而不是字符串进行排序(例如, 如果此选项不存在, 则根据字母顺序字符串 233 被认为小于字符串 40). 十进制和十六进制字符串(例如 0xF1) 都被认为是数字. 不是以数字开头的字符串在排序中被看成是零. 把数字作为 64 位浮点值进行处理, 这样可以考虑到小数部分的每位数字(如果有).
+ * N: Number sorting: each item is assumed to be sorted as a number instead of a string (for example, if this option does not exist, the string 233 is considered to be less than the string 40 according to the alphabetical order). Decimal and hexadecimal Strings (such as 0xF1) are considered to be numbers. Strings that do not start with a number are treated as zeros in sorting. The number is treated as a 64-bit floating point value, so that each digit in the fractional part ( If there is).
  * 
- * Pn: 根据字符位置 n(不使用十六进制的 n) 对项目进行排序(每个项目从第 n 个字符开始进行比较). 如果不使用该选项, n 默认为 1, 即第一个字符的位置. 排序会从第 n 个字符开始将每个字符串与其他字符串进行比较. 如果 n 大于任何字符串的长度, 则在排序时, 该字符串将被视为空白. 当与选项 N(数字排序) 一起使用时, 将使用字符串的字符位置, 这不一定与数字的数字位置相同.
+ * Pn: Sort items according to character position n (not using hexadecimal n) (each item is compared from the nth character). If this option is not used, n defaults to 1, which is the first The position of the character. Sorting will start from the nth character to compare each string with other strings. If n is greater than the length of any string, the string will be treated as blank when sorting. When with the option When N (number sort) is used together, the character position of the string will be used, which is not necessarily the same as the number position of the number.
  * 
- * R: 逆向排序(根据其他选项进行字母或数字排序).
+ * R: Reverse sorting (alphabetical or numerical sorting according to other options).
  * 
- * Random: 随机排序. 此选项会使得除 D, Z 和 U 外的其他选项被忽略(尽管如此, 但 N, C 和 CL 仍会影响对于重复项的检测).
+ * Random: Random sorting. This option will cause other options except D, Z and U to be ignored (Nevertheless, N, C and CL will still affect the detection of duplicates).
  * 
- * U: 移除列表中的重复项目使得每个项目都是唯一的. 如果 C 选项有效, 则项目的大小写必须匹配才会被认为是等同的. 如果 N 选项有效, 那么像 2 这样的项目将被认为是 2.0 的重复. 如果 Pn 或 \(反斜杠) 选项有效, 则整个项目必须相同才看成是重复项, 而不仅是用于排序的子字符串. 如果 Random 选项或自定义排序生效, 只有当排序结果中出现相邻的重复项时, 重复项才会被删除. 例如, 当 "A|B|A" 被随机排序时, 结果可能包含一个或两个 A.
+ * U: Remove duplicate items in the list so that each item is unique. If the C option is valid, the case of the items must match to be considered equivalent. If the N option is valid, then items like 2 Will be considered as a duplicate of 2.0. If the Pn or \(backslash) option is valid, the entire item must be the same to be regarded as a duplicate, not just a substring used for sorting. If the Random option or custom sorting Effective, the duplicates will be deleted only when there are adjacent duplicates in the sorting result. For example, when "A|B|A" is sorted randomly, the result may contain one or two A's.
  * 
- * Z: 要理解此选项, 请考虑内容为 RED`nGREEN`nBLUE`n 的变量. 如果不存在 Z 选项, 则最后的换行符(`n) 会被认为是最后那个项目的一部分, 因此变量中只有三个项目. 但如果指定了选项 Z, 则最后的 `n(如果存在) 将被认为分隔了列表最后的一个空项目, 因此变量中有四个项目(最后一个是空的).
+ * Z: To understand this option, please consider the variable whose content is RED`nGREEN`nBLUE`n. If the Z option does not exist, the last newline character (`n) will be considered as part of the last item, so the variable There are only three items. But if option Z is specified, the last `n (if it exists) will be considered to separate the last empty item in the list, so there are four items in the variable (the last one is empty).
  * 
- * \: 根据每个项目中最后的反斜杠后面的子字符串进行排序. 如果项目中不含有反斜杠, 则使用整个项目作为排序的子字符串. 此选项可用于排序单独的文件名称(即不包含路径)
- * @param Callback 该函数必须接受两个或三个参数: `MyFunction(first, second [, offset])`
+ * \: Sort according to the substring after the last backslash in each item. If the item does not contain a backslash, the entire item is used as the sorted substring. This option can be used to sort individual file names (I.e. does not include the path)
+ * @param Callback The function must accept two or three parameters: `MyFunction(first, second [, offset])`
  * 
- * 当函数认为第一个参数大于第二个参数时, 它应该返回正整数; 当判断出两个参数相等时, 应该返回 0, "", 或空; 否则, 它应该返回负整数. 如果返回值中存在小数部分, 则忽略该部分(即 0.8 等同于 0).
+ * When the function thinks that the first parameter is greater than the second parameter, it should return a positive integer; when the two parameters are judged to be equal, it should return 0, "", or empty; otherwise, it should return a negative integer. If it returns If there is a decimal part in the value, the part is ignored (i.e. 0.8 is equivalent to 0).
  * 
- * 如果存在, 第三个参数接收第二项与第一项的偏移量(以字符为单位), 就像在原始/未排序列表中看到的那样(见示例).
+ * If present, the third parameter receives the offset (in characters) of the second item from the first item, as seen in the original/unsorted list (see example).
  * 
- * 该函数使用与调用它的排序函数相同的全局(或线程特定) 设置.
+ * This function uses the same global (or thread-specific) settings as the sorting function that called it.
  * 
- * `注意:` 当存在 Callback(回调) 时, 除了 D, Z 和 U 之外的所有选项都会被忽略(尽管 N, C 和 CL 仍然会影响重复项的检测).
+ * `Note:` When there is a Callback, all options except D, Z and U will be ignored (although N, C and CL will still affect the detection of duplicates).
  */
 Sort(String, Options := '' [, Callback]) => String
 
 /**
- * 从 PC 扬声器发出声音.
- * @param Frequency 声音的频率. 它应该是介于 37 和 32767 之间的数字.
- * @param Duration 声音的持续时间, 单位为毫秒.
+ * Sound is emitted from the PC speaker.
+ * @param Frequency The frequency of the sound. It should be a number between 37 and 32767.
+ * @param Duration The duration of the sound, in milliseconds.
  */
-SoundBeep(Frequency:= 523, Duration := 150) => void
+SoundBeep(Frequency := 523, Duration := 150) => void
 
 /**
- * 检索声音设备或组件的原生 COM 接口.
- * @param Component 组件的显示名称和/或索引. 例如, 1, "Line in" 或 "Line in:2". 如果省略或留空, 则检索由设备本身实现的接口.
- * @param Device 设备的显示名称和/或索引. 例如, 1, "Speakers", "Speakers:2" 或 "Speakers (Example HD Audio)".
- * 如果省略该参数, 则它默认为系统的默认回放设备(不一定是设备 1).
+ * Retrieve the native COM interface of a sound device or component.
+ * @param Component The display name and/or index of the component. For example, 1, "Line in" or "Line in: 2". If omitted or left blank, the interface implemented by the device itself will be retrieved.
+ * @param Device The display name and/or index of the device. For example, 1, "Speakers", "Speakers:2" or "Speakers (Example HD Audio)".
+ * If this parameter is omitted, it will default to the system's default playback device (not necessarily device 1).
  */
-SoundGetInterface(IID [, Component, Device]) => Comobject
+SoundGetInterface(IID[, Component, Device]) => Comobject
 
 /**
- * 从声音设备检索静音设置.
+ * Retrieve the mute setting from the sound device.
  */
 SoundGetMute([Component, Device]) => Number
 
 /**
- * 检索声音设备或组件的名称.
+ * Retrieve the name of the sound device or component.
  */
 SoundGetName([Component, Device]) => String
 
 /**
- * 从声音设备检索音量设置.
+ * Retrieve the volume setting from the sound device.
  */
 SoundGetVolume([Component, Device]) => Number
 
 /**
- * 播放音频, 视频或其他支持的文件类型.
- * @param Filename 要播放的文件的名称, 如果未指定绝对路径, 则假定在 A_WorkingDir 中.
- * 要发出标准的系统声音, 请指定星号后跟着数字, 如下所示. 注意: 在此模式中 Wait 参数没有效果.
+ * Play audio, video or other supported file types.
+ * @param Filename The name of the file to be played, if the absolute path is not specified, it is assumed to be in A_WorkingDir.
+ * To make a standard system sound, please specify an asterisk followed by a number, as shown below. Note: In this mode, the Wait parameter has no effect.
  * 
- * •*-1 = 简单的哔音. 如果声卡不可用, 则使用扬声器生成这个声音.
+ * •*-1 = Simple beep. If the sound card is not available, the speaker will be used to generate this sound.
  * 
- * •*16 = 手型(停止/错误声)
+ * •*16 = hand type (stop/error sound)
  * 
- * •*32 = 问号声
+ * •*32 = Question mark sound
  * 
- * •*48 = 感叹声
+ * •*48 = exclamation
  * 
- * •*64 = 星号(消息声)
+ * •*64 = Asterisk (message sound)
  * 
- * `已知限制:` 由于 Windows 系统的限制, 路径超过 127 个字符的 WAV 文件将不会被播放. 要解决这个问题, 可以使用其他文件类型如 MP3(路径长度最多可以有 255 个字符) 或使用 8.3 短路径(如何检索这些路径, 请参阅 A_LoopFileShortPath).
+ * `Known limitations:` Due to Windows system limitations, WAV files with a path exceeding 127 characters will not be played. To solve this problem, you can use other file types such as MP3 (the path length can be up to 255 characters) or Use 8.3 short paths (see A_LoopFileShortPath for how to retrieve these paths).
  */
 SoundPlay(Filename, Wait := false) => void
 
 /**
- * 更改声音设备的静音设置.
+ * Change the mute setting of the sound device.
  */
-SoundSetMute(NewSetting [, Component, Device]) => void
+SoundSetMute(NewSetting[, Component, Device]) => void
 
 /**
- * 更改声音设备的音量设置.
+ * Change the volume setting of the sound device.
  */
-SoundSetVolume(NewSetting [, Component, Device]) => void
+SoundSetVolume(NewSetting[, Component, Device]) => void
 
 /**
- * 将文件名(路径) 或 URL 分解成它的名称, 目录, 扩展名和驱动器.
+ * Break the file name (path) or URL into its name, directory, extension and drive.
  */
-SplitPath(Path [, &OutFileName, &OutDir, &OutExtension, &OutNameNoExt, &OutDrive]) => void
+SplitPath(Path[, &OutFileName, &OutDir, &OutExtension, &OutNameNoExt, &OutDrive]) => void
 
 /**
- * 返回Number的平方根.
+ * Returns the square root of Number.
  */
 Sqrt(Number) => Number
 
 /**
- * 获取标准状态栏控件的文本.
+ * Get the text of the standard status bar control.
  */
-StatusBarGetText(Part := 1 [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+StatusBarGetText(Part := 1[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 等待, 直到窗口的状态栏包含指定的字符串.
+ * Wait until the status bar of the window contains the specified string.
  */
 StatusBarWait([BarText, Timeout, Part, WinTitle, WinText, Interval, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 按字母顺序比较两个字符串.
- * @param CaseSense 下列值之一(如果省略, 默认为 0):
+ * Compare two strings in alphabetical order.
+ * @param CaseSense One of the following values ​​(if omitted, the default is 0):
  * 
- * "On" 或 1(True): 比较是区分大小写的.
+ * "On" or 1(True): The comparison is case sensitive.
  * 
- * "Off" 或 0(False): 字母 A-Z 被视为与其小写字母相同.
+ * "Off" or 0(False): The letters A-Z are considered the same as their lowercase letters.
  * 
- * "Locale": 根据当前用户的区域设置规则, 比较是不区分大小写的. 例如, 在大多数英语及西欧地区, 不仅将 A-Z 视为等同于它们的小写形式, 同时也将非-ASCII 字母(如 Ä 和 Ü) 视为等同的. 根据被比较字符串的性质, Locale 比 Off 慢 1 到 8 倍.
+ * "Locale": According to the current user's locale rules, the comparison is case-insensitive. For example, in most English and Western European regions, not only AZ is considered equivalent to their lowercase form, but also non-ASCII letters (Such as Ä and Ü) are considered equivalent. Depending on the nature of the string being compared, Locale is 1 to 8 times slower than Off.
  * 
- * "Logical": 类似 Locale, 但字符串中的数字被视为数字内容, 而不是文本. 例如, "A2" 被认为小于 "A10". 然而, 如果两个数字仅因前导零的存在而不同, 则前导零的字符串可能被视为 小于 另一个字符串. 确切的行为可能会在不同的操作系统版本中有所不同.
+ * "Logical": Similar to Locale, but the numbers in the string are treated as digital content, not text. For example, "A2" is considered smaller than "A10". However, if the two numbers differ only by the presence of leading zeros , Then a string with leading zeros may be considered smaller than another string. The exact behavior may vary in different operating system versions.
  */
 StrCompare(String1, String2, CaseSense := false) => Number
 
 /**
- * 从内存地址或缓冲中复制字符串, 可选地从给定的代码页进行转换.
+ * Copy a string from a memory address or buffer, optionally convert it from a given code page.
  * 
- * `StrGet(Source, Encoding := '')`或省略Length
- * @param Source 包含字符串的类缓冲对象, 或字符串的内存地址. 如果提供了类缓冲对象, 或者指定了 Length 参数, 则字符串不需要以空终止符结尾.
- * @param Length 需读取的最大字符数. 如果字符串以空终止符结尾, 则可以省略.
- * 默认情况下, 只复制到第一个二进制零. 如果 Length 为负数, 则它的绝对值指示要转换的确切字符数, 包括字符串可能包含的任何二进制零 - 换句话说, 结果始终是具有该长度的字符串.
- * @param Encoding "UTF-8", "UTF-16" 或 "CP936". 对于数字标识符, 只有在指定 Length 时, 才可以省略前缀 "CP". 指定空字符串或 "CP0" 则使用系统默认 ANSI 代码页.
+ * `StrGet(Source, Encoding :='')` or omit Length
+ * @param Source contains the buffer-like object of the string, or the memory address of the string. If the buffer-like object is provided, or the Length parameter is specified, the string does not need to end with a null terminator.
+ * @param Length The maximum number of characters to be read. If the string ends with a null terminator, it can be omitted.
+ * By default, only the first binary zero is copied. If Length is negative, its absolute value indicates the exact number of characters to be converted, including any binary zeros that the string may contain-in other words, the result is always with String of that length.
+ * @param Encoding "UTF-8", "UTF-16" or "CP936". For numeric identifiers, the prefix "CP" can be omitted only when Length is specified. Specify an empty string or "CP0" to use the system The default ANSI code page.
  */
 StrGet(Source, Length, Encoding := '') => String
 
 /**
- * 检索字符串中的字符数.
+ * Retrieve the number of characters in a string.
  */
 StrLen(String) => Number
 
 /**
- * 将字符串转换为小写.
+ * Convert the string to lowercase.
  */
 StrLower(String) => String
 
 /**
- * 返回字符串的当前内存地址.
+ * Returns the current memory address of the string.
  */
 StrPtr(Value) => Number
 
 /**
- * 将字符串复制到内存地址,可以选择将其转换为给定的代码页.或省略Target, Length, `StrPut(String, Encoding := '')`
- * @param Target 类缓冲对象或内存地址, 字符串将写入其中.
- * @param Length 要写入的最大字符数, 需要时包含空终止符.
+ * Copy the string to the memory address, you can choose to convert it to the given code page. Or omit Target, Length, `StrPut(String, Encoding :='')`
+ * @param Target class buffer object or memory address, the string will be written into it.
+ * @param Length The maximum number of characters to be written, including the null terminator when necessary.
  * 
- * 如果 Length 为 0 或小于转换后的计划长度(或不需要转换时, 源字符串的长度), 则抛出异常.
+ * If Length is 0 or less than the planned length after conversion (or the length of the source string when conversion is not required), an exception is thrown.
  * 
- * 除非已知缓冲大小足够大, 否则不能省略 Length, 例如, 如果缓冲是基于先前使用相同的 Source 和 Encoding 调用的 StrPut 而分配的.
- * @param Encoding "UTF-8", "UTF-16" 或 "CP936". 对于数字标识符, 只有在指定 Length 时, 才可以省略前缀 "CP". 指定空字符串或 "CP0" 则使用系统默认 ANSI 代码.
- * @returns 返回写入的字节数. 如果没有指定 Target, 则返回以字节数表示的必须的缓冲大小. 如果 Length 准确等于源字符串的长度, 那么字符串不包含空终止符; 否则返回的大小包含空终止符.
+ * Unless the buffer size is known to be large enough, Length cannot be omitted, for example, if the buffer is allocated based on StrPut that was previously called with the same Source and Encoding.
+ * @param Encoding "UTF-8", "UTF-16" or "CP936". For numeric identifiers, the prefix "CP" can be omitted only when Length is specified. Specify an empty string or "CP0" to use the system The default ANSI code.
+ * @returns returns the number of bytes written. If Target is not specified, it returns the necessary buffer size in bytes. If Length is exactly equal to the length of the source string, then the string does not contain the null terminator; otherwise it returns The size includes the null terminator.
  */
-StrPut(String, Target [, Length], Encoding := '') => Number
+StrPut(String, Target[, Length], Encoding := '') => Number
 
 /**
- * 用新字符串替换指定的子字符串.
- * @param CaseSense 下列值之一(如果省略, 默认为 0):
+ * Replace the specified substring with a new string.
+ * @param CaseSense One of the following values ​​​​(if omitted, the default is 0):
  * 
- * "On" 或 1 (True): 搜索区分大小写.
+ * "On" or 1 (True): Search is case sensitive.
  * 
- * "Off" 或 0 (False): 字母 A-Z 被视为与其小写字母相同.
+ * "Off" or 0 (False): The letters A-Z are considered the same as their lowercase letters.
  * 
- * "Locale": 根据当前用户的区域设置规则, 搜索是不区分大小写的. 例如, 在大多数英语及西欧地区, 不仅将 A-Z 视为等同于它们的小写形式, 同时也将非-ASCII 字母(如 Ä 和 Ü) 视为等同的. 根据被比较字符串的性质, Locale 比 Off 慢 1 到 8 倍.
+ * "Locale": According to the current user's locale rules, the search is not case sensitive. For example, in most English and Western European regions, not only treats AZ as equivalent to their lowercase form, but also treats non-ASCII letters ( Such as Ä and Ü) are considered equivalent. Depending on the nature of the string being compared, Locale is 1 to 8 times slower than Off.
  */
 StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputVarCount := '', Limit := -1) => String
 
 /**
- * 使用指定的分隔符将字符串分成子字符串数组.
- * @param Delimiters 如果此参数为空或省略, 那么将把输入字符串中的每个字符解析为单独的子字符串.
- * Delimiters 可以是单个字符串, 也可以是字符串数组, 每个分隔符用于确定子字符串之间的边界出现的位置.
- *
- * 使用 `[A_Tab, A_Space]` 作为分隔符将在输入字符串中每次遇到空格或制表符时创建一个新的数组元素.
- * @param OmitChars 可选的字符列表(区分大小写), 用来从每个数组元素的开始和结尾部分移除这些字符.
+ * Use the specified delimiter to divide the string into an array of substrings.
+ * @param Delimiters If this parameter is empty or omitted, each character in the input string will be parsed as a separate substring.
+ * Delimiters can be a single string or an array of strings, and each delimiter is used to determine where the boundary between substrings appears.
+ * 
+ * Using `[A_Tab, A_Space]` as a separator will create a new array element every time a space or tab is encountered in the input string.
+ * @param OmitChars Optional list of characters (case sensitive), used to remove these characters from the beginning and end of each array element.
  */
 StrSplit(String, Delimiters := '', OmitChars := '', MaxParts := -1) => Array
 
 /**
- * 将字符串转换为大写.
+ * Convert the string to uppercase.
  */
 StrUpper(String) => String
 
 /**
- * 从字符串中的指定位置检索一个或多个字符.
+ * Retrieve one or more characters from the specified position in the string.
  * @param String
- * @param StartingPos 指定 1 从首个字符开始, 2 从第二个开始, 依此类推(如果 StartingPos 为 0 或超过了 String 的长度, 则返回空字符串).
+ * @param StartingPos specifies that 1 starts from the first character, 2 starts from the second, and so on (if StartingPos is 0 or exceeds the length of the String, an empty string is returned).
  * 
- * 指定一个负的 StartingPos 以从右边的那个位置开始. 例如, -1 提取最后一个字符, 而 -2 提取最后两个字符(但是, 如果 StartingPos 试图超出字符串的左端, 提取将从第一个字符开始).
- * @param Length 如果省略这个参数, 则默认为 "全部字符". 其他情况下, 为需提取字符的最大数目(当字符串剩余部分太短时提取的数目会比最大值少). 您还可以指定负的 Length 从而在返回字符串的末尾省略这个数目的字符(如果省略了全部或过多字符, 则返回空字符串).
+ * Specify a negative StartingPos to start from the right position. For example, -1 extracts the last character, and -2 extracts the last two characters (however, if StartingPos tries to exceed the left end of the string, the extraction will start from the first character Start).
+ * @param Length If this parameter is omitted, the default is "all characters". In other cases, it is the maximum number of characters to be extracted (when the remaining part of the string is too short, the number of extracted characters will be less than the maximum). You can still Specify a negative Length to omit this number of characters at the end of the returned string (if all or too many characters are omitted, an empty string is returned).
  */
-SubStr(String, StartingPos [, Length]) => String
+SubStr(String, StartingPos[, Length]) => String
 
 /**
- * 将字符串转换为标题大小写.
+ * Convert string to title case.
  */
 StrTitle(String) => String
 
 /**
- * 获取系统对象的尺寸和其他系统属性.
+ * Get the size and other system properties of the system object.
  */
 SysGet(Property) => Number
 
 /**
- * 返回系统的 IPv4 地址数组.
+ * Return the system's IPv4 address array.
  */
 SysGetIPAddresses() => Array
 
 /*
- * 返回 Number 的正切值.
+ * Returns the tangent of Number.
  */
 Tan(Number) => Number
 
 /**
- * 在屏幕的任意位置创建置顶的窗口.
+ * Create a top window anywhere on the screen.
  */
 ToolTip([Text, X, Y, WhichToolTip]) => void
 
 /**
- * 更改脚本的托盘图标.
- * @param FileName 图标或图片的路径. 有关支持格式的列表, 请参阅图片控件.
+ * Change the tray icon of the script.
+ * @param FileName The path of the icon or picture. For a list of supported formats, see Picture Control.
  * 
- * 指定星号(*) 将脚本恢复到其默认图标.
- * @param IconNumber 要使用文件中除第一组图标之外的图标组, 请在 IconNumber 指定它的编号(如果省略, 则它默认为 1). 例如, 2 将加载第二组图标中的默认图标. 如果 IconNumber 为负数, 则假定其绝对值表示可执行文件中图标的资源 ID.
- * @param Freeze 指定 1(true) 来冻结图标, 或 0(false) 来解冻它(或留空来保持冻结/解冻状态不变). 当图标已经冻结时, Pause 和 Suspend 不会改变它. 注意: 要冻结或解冻 当前 图标, 请使用 1(true) 或 0(false), 如下例所示: TraySetIcon(,, 1).
+ * Specify an asterisk (*) to restore the script to its default icon.
+ * @param IconNumber To use an icon group other than the first group of icons in the file, please specify its number in IconNumber (if omitted, it defaults to 1). For example, 2 will load the default icon in the second group of icons . If IconNumber is negative, it is assumed that its absolute value represents the resource ID of the icon in the executable file.
+ * @param Freeze Specify 1 (true) to freeze the icon, or 0 (false) to unfreeze it (or leave it blank to keep the frozen/thawed state unchanged). When the icon is frozen, Pause and Suspend will not change it. Note : To freeze or unfreeze the current icon, please use 1 (true) or 0 (false), as shown in the following example: TraySetIcon(,, 1).
  */
 TraySetIcon(FileName, IconNumber := 1, Freeze := false) => void
 
 /**
- * 在托盘图标附近创建气球提示窗口. 在 Windows 10 中, 可能会显示 toast 通知来代替.
- * @param Text 要显示的消息. 仅显示前 265 个字符. 可以使用回车(`r) 或换行(`n) 来创建多行文本. 例如: Line1`nLine2.
- * @param Title 窗口的标题. 仅显示前 73 个字符.
- * @param Options 信息图标 0x1
+ * Create a balloon prompt window near the tray icon. In Windows 10, a toast notification may be displayed instead.
+ * @param Text The message to be displayed. Only the first 265 characters are displayed. You can use carriage return (`r) or line feed (`n) to create multiple lines of text. For example: Line1`nLine2.
+ * @param Title The title of the window. Only the first 73 characters are displayed.
+ * @param Options information icon 0x1
  * 
- * 警告图标 0x2
+ * Warning icon 0x2
  * 
- * 错误图标 0x3
+ * Error icon 0x3
  * 
- * 托盘图标 0x4
+ * Tray icon 0x4
  * 
- * 不播放通知音. 0x10
+ * Do not play notification sound. 0x10
  * 
- * 使用大图标. 0x20
+ * Use large icons. 0x20
  */
 TrayTip(Text := '', Title := '', Options := 0) => void
 
 /**
- * 从字符串的开头和结尾修剪字符.
+ * Trim characters from the beginning and end of the string.
  */
-Trim(String, OmitChars := ' `t') => String
+Trim(String, OmitChars := '`t') => String
 
 /**
- * 返回值的确切类型.
+ * The exact type of the return value.
  */
 Type(Value) => String
 
 /**
- * 增加变量的容量或释放其内存. 一般情况下不需要, 但可以与 DllCall 或 SendMessage 一起使用, 或者优化重复连接.
+ * Increase the capacity of the variable or release its memory. Generally not needed, but it can be used with DllCall or SendMessage, or to optimize repeated connections.
  */
-VarSetStrCapacity(&TargetVar [, RequestedCapacity]) => Number
+VarSetStrCapacity(&TargetVar[, RequestedCapacity]) => Number
 
 /**
- * 比较两个版本字符串.
+ * Compare two version strings.
  */
 VerCompare(VersionA, VersionB)
 
 /**
- * 激活指定的窗口.
+ * Activate the specified window.
  */
 WinActivate([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 与 WinActivate 相同, 只是此函数激活最下面的匹配窗口而不是最上面的.
+ * Same as WinActivate, except that this function activates the bottom matching window instead of the top.
  */
 WinActivateBottom([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 检查指定的窗口是否存在且当前是否活动(在最前面).
+ * Check if the specified window exists and is currently active (at the forefront).
  */
 WinActive([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 关闭指定的窗口.
+ * Close the specified window.
  */
 WinClose([WinTitle, WinText, SecondsToWait, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 检查指定的窗口是否存在.
+ * Check if the specified window exists.
  */
 WinExist([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 获取指定窗口的类名.
+ * Get the class name of the specified window.
  */
 WinGetClass([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 检索指定窗口的工作区的位置和大小.
+ * Retrieve the location and size of the workspace of the specified window.
  */
 WinGetClientPos([&X, &Y, &Width, &Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 返回指定窗口中所有控件的名称.
+ * Return the names of all controls in the specified window.
  */
 WinGetControls([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
 
 /**
- * 返回指定窗口中所有控件的唯一 ID 号.
+ * Return the unique ID numbers of all controls in the specified window.
  */
 WinGetControlsHwnd([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
 
 /**
- * 返回符合指定条件的现有窗口的数目.
+ * Returns the number of existing windows that meet the specified conditions.
  */
 WinGetCount([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 分别返回指定窗口的样式或扩展样式.
+ * Return the style or extended style of the specified window respectively.
  */
 WinGetExStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回指定窗口的唯一 ID 号.
+ * Return the unique ID number of the specified window.
  */
 WinGetID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 如果找到多个匹配窗口, 则返回最后的/最底部的窗口的唯一 ID 号.
+ * If multiple matching windows are found, the unique ID number of the last/bottom window will be returned.
  */
 WinGetIDLast([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回与指定条件匹配的所有现有窗口的唯一 ID 号.
+ * Return the unique ID numbers of all existing windows that match the specified conditions.
  */
 WinGetList([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
 
 /**
- * 返回指定窗口是最大化还是最小化的状态.
+ * Returns whether the specified window is maximized or minimized.
  */
 WinGetMinMax([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 返回指定窗口的进程 ID.
+ * Returns the process ID of the specified window.
  */
 WinGetPID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 获取指定窗口的位置和大小.
+ * Get the position and size of the specified window.
  */
 WinGetPos([&X, &Y, &Width, &Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 返回指定窗口的进程的名称.
+ * Returns the name of the process of the specified window.
  */
 WinGetProcessName([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 返回拥有指定窗口的进程的完整路径和名称.
+ * Returns the full path and name of the process that owns the specified window.
  */
 WinGetProcessPath([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 分别返回指定窗口的样式或扩展样式.
+ * Return the style or extended style of the specified window respectively.
  */
 WinGetStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 从指定窗口检索文本.
+ * Retrieve text from the specified window.
  */
 WinGetText([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 检索指定窗口的标题.
+ * Retrieve the title of the specified window.
  */
 WinGetTitle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 返回指定窗口中标记为透明的颜色.
+ * Returns the color marked as transparent in the specified window.
  */
 WinGetTransColor([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
- * 返回指定窗口的透明度的等级.
+ * Returns the transparency level of the specified window.
  */
 WinGetTransparent([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 隐藏指定的窗口.
+ * Hide the specified window.
  */
 WinHide([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 强制关闭指定的窗口.
+ * Forcibly close the specified window.
  */
 WinKill([WinTitle, WinText, SecondsToWait, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 将指定的窗口放大到最大尺寸(最大化指定的窗口).
+ * Enlarge the specified window to the maximum size (maximize the specified window).
  */
 WinMaximize([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 将指定的窗口最小化为任务栏上的按钮(最小化指定的窗口).
+ * Minimize the specified window to a button on the taskbar (minimize the specified window).
  */
 WinMinimize([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 更改指定窗口的位置和/或大小.
+ * Change the position and/or size of the specified window.
  */
-WinMove(X, Y [, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinMove(X, Y[, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 发送指定的窗口到堆栈的底部; 也就是说, 在所有其他窗口下方.
+ * Send the specified window to the bottom of the stack; that is, below all other windows.
  */
 WinMoveBottom([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 将指定的窗口移到堆栈顶部, 而无需显式激活它.
+ * Move the specified window to the top of the stack without explicitly activating it.
  */
 WinMoveTop([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 重绘指定窗口.
+ * Redraw the specified window.
  */
 WinRedraw([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 如果指定的窗口处于最小化或最大化状态, 则还原它.
+ * If the specified window is minimized or maximized, restore it.
  */
 WinRestore([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 使指定的窗口停留在所有其他窗口的顶部(除了其他始终在顶部(置顶) 的窗口).
+ * Make the specified window stay on top of all other windows (except for other windows that are always on top (top)).
  */
 WinSetAlwaysOnTop([Value, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 启用或禁用指定的窗口.
+ * Enable or disable the specified window.
  */
-WinSetEnabled(Value [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetEnabled(Value[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 分别改变指定窗口的样式和扩展样式.
+ * Change the style and extended style of the specified window respectively.
  */
-WinSetExStyle(Value [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetExStyle(Value[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 将指定窗口的形状更改为指定的矩形,椭圆或多边形.
+ * Change the shape of the specified window to the specified rectangle, ellipse or polygon.
  */
 WinSetRegion([Options, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 分别改变指定窗口的样式和扩展样式.
+ * Change the style and extended style of the specified window respectively.
  */
-WinSetStyle(Value [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetStyle(Value[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 更改指定窗口的标题.
+ * Change the title of the specified window.
  */
-WinSetTitle(NewTitle [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetTitle(NewTitle[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 使选定颜色的所有像素在指定窗口内不可见.
+ * Make all pixels of the selected color invisible in the specified window.
  */
-WinSetTransColor(Color [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetTransColor(Color[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 使指定的窗口半透明.
+ * Make the specified window semi-transparent.
  */
 WinSetTransparent([N, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 显示指定的窗口.
+ * Display the specified window.
  */
 WinShow([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
- * 等待直到指定的窗口存在.
+ * Wait until the specified window exists.
  */
 WinWait([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 等待直到指定的窗口处于活动状态.
+ * Wait until the specified window is active.
  */
-WinWaitActive([ WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
+WinWaitActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 等待直到找不到匹配的窗口.
+ * Wait until no matching window is found.
  */
 WinWaitClose([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Number
 
 /**
- * 等待直到指定的窗口不活动.
+ * Wait until the specified window is inactive.
  */
-WinWaitNotActive([ WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
+WinWaitNotActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
 ;#endregion
 
 ;#region class
 
 class Any {
 	/**
-	 * 检索方法的实现函数.
+	 * The implementation function of the retrieval method.
 	 */
 	GetMethod(Name) => Object
 
 	/**
-	 * 如果 BaseObj 在 Value 的基对象链中, 则返回 true, 否则返回 false.
+	 * If BaseObj is in Value's base object chain, it returns true, otherwise it returns false.
 	 */
 	HasBase(BaseObj) => Number
 
 	/**
-	 * 如果该值具有使用此名称的方法, 则返回 true, 否则返回 false.
+	 * If the value has a method using this name, it returns true, otherwise it returns false.
 	 */
 	HasMethod(Name) => Number
 
 	/**
-	 * 如果值具有使用此名称的属性, 则返回 true, 否则返回 false.
+	 * If the value has an attribute with this name, it returns true, otherwise it returns false.
 	 */
 	HasProp(Name) => Number
 
 	/**
-	 * 检索值的基对象.
+	 * The base object to retrieve the value.
 	 */
 	Base => Object
 }
 
 class Array extends Object {
 	/**
-	 * 数组对象包含值的列表或序列.
+	 * An array object contains a list or sequence of values.
 	 */
 	__New(Values*) => Array
 	/**
-	 * 返回对象的一个浅拷贝.
+	 * Return a shallow copy of the object.
 	 */
 	Clone() => Array
 
 	/**
-	 * 删除数组元素的值, 使索引不包含值.
+	 * Delete the value of the array element so that the index does not contain a value.
 	 */
 	Delete(Index) => Any
 
 	/**
-	 * 如果 Index 有效且在该位置有一个值, 则返回 true, 否则返回 false.
+	 * If Index is valid and there is a value at that position, it returns true, otherwise it returns false.
 	 */
 	Has(Index) => Number
 
 	/**
-	 * 插入一个或多个值到给定位置.
+	 * Insert one or more values ​​to the given position.
 	 */
 	InsertAt(Index, Values*) => void
 
 	/**
-	 * 删除并返回最后的数组元素.
+	 * Delete and return the last array element.
 	 */
 	Pop() => Any
 
 	/**
-	 * 追加值到数组的末尾.
+	 * Append the value to the end of the array.
 	 */
 	Push(Values*) => void
 
 	/**
-	 * 追加值到数组的末尾.
+	 * Append the value to the end of the array.
 	 */
 	RemoveAt(Index, Length := 1) => Any
 
 	/**
-	 * 检索或设置数组的长度.
+	 * Retrieve or set the length of the array.
 	 */
 	Length => Number
 
 	/**
-	 * 检索或设置数组的当前容量.
+	 * Retrieve or set the current capacity of the array.
 	 */
 	Capacity => Number
 }
@@ -2443,40 +2443,40 @@ class BoundFunc extends Func {
 
 class Buffer extends Object {
 	/**
-	 * 分配一个内存块,并将其返回到缓冲区对象中.
-	 * @param ByteCount 要分配的字节数. 对应于 Buffer.Size.
-	 * @param FillByte 指定一个介于 0 到 255 之间的数字, 以将缓冲中的每个字节设置为该数字.
-	 * 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
-	 * 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
+	 * Allocate a memory block and return it to the buffer object.
+	 * @param ByteCount The number of bytes to be allocated. Corresponds to Buffer.Size.
+	 * @param FillByte specifies a number between 0 and 255 to set each byte in the buffer to that number.
+	 * In the case of direct writing without first reading the buffer, it should usually be omitted, because its time overhead is proportional to the number of bytes.
+	 * If omitted, the buffered memory is not initialized; the value of each byte is arbitrary.
 	 */
-	__New(ByteCount [, FillByte]) => Buffer
+	__New(ByteCount[, FillByte]) => Buffer
 
 	/**
-	 * 检索缓冲区的当前内存地址.
+	 * Retrieve the current memory address of the buffer.
 	 */
 	Ptr => Number
 
 	/**
-	 * 检索或设置缓冲区的大小, 以字节为单位.
+	 * Retrieve or set the size of the buffer, in bytes.
 	 */
 	Size => Number
 }
 
 class Class extends Object {
 	/**
-	 * 构造类的新实例.
+	 * Construct a new instance of the class.
 	 */
 	static Call()
 
 	/**
-	 * 检索或设置类的所有实例所基于的对象.
+	 * Retrieve or set the object on which all instances of the class are based.
 	 */
 	static Prototype => Object
 }
 
 class ClipboardAll extends Buffer {
 	/**
-	 * 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
+	 * Create an object (such as pictures and formats) that contains all the content on the clipboard.
 	 */
 	__New([Data, Size]) => Buffer
 }
@@ -2486,10 +2486,10 @@ class Closure extends Func {
 
 class ComObjArray extends ComValue {
 	/**
-	 * 创建用于 COM 的安全数组.
-	 * @param VarType 数组的基类型(数组中每个元素的 VARTYPE). VARTYPE 被限制为变体类型的子集.
-	 * 不能设置为 VT_ARRAY 或 VT_BYREF 标志. VT_EMPTY 和 VT_NULL 不是数组的有效基类型. 其他所有类型是合法的. 
-	 * @param Counts* 每个维度的大小. 支持最多 8 维的数组.
+	 * Create a safe array for COM.
+	 * @param VarType The base type of the array (the VARTYPE of each element in the array). VARTYPE is restricted to a subset of the variant type.
+	 * Cannot be set to VT_ARRAY or VT_BYREF flags. VT_EMPTY and VT_NULL are not valid base types for arrays. All other types are legal.
+	 * @param Counts* The size of each dimension. Supports arrays of up to 8 dimensions.
 	 */
 	__New(VarType, Counts*) => ComObjArray
 
@@ -2502,21 +2502,21 @@ class ComObjArray extends ComValue {
 
 class ComObject extends ComValue {
 	/**
-	 * 创建 COM 对象.
-	 * @param CLSID 要创建的 COM 对象的 CLSID 或可读的 Prog ID.
-	 * @param IID 要返回的接口的标识符. 在大多数情况下, 它是省略的; 如果省略, 它默认为IID_IDispatch
+	 * Create a COM object.
+	 * @param CLSID The CLSID or readable Prog ID of the COM object to be created.
+	 * @param IID The identifier of the interface to be returned. In most cases, it is omitted; if omitted, it defaults to IID_IDispatch
 	 */
 	__New(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => ComObject | ComValue
 }
 
 class ComValue extends Any {
 	/**
-	 * 包装一个值, 安全数组或 COM 对象, 以供脚本使用或传递给 COM 方法.
-	 * @param VarType 表示值类型的整数. 类型列表见 ComObjType.
-	 * @param Value 要包装的值. 当前仅支持整数和指针值.
-	 * @param Flags 影响包装器对象行为的标志; 有关详情, 请参阅 ComObjFlags.
+	 * Wrap a value, safe array or COM object for use by scripts or pass to COM methods.
+	 * @param VarType represents an integer of value type. See ComObjType for the list of types.
+	 * @param Value The value to be wrapped. Currently only integer and pointer values ​​are supported.
+	 * @param Flags Flags that affect the behavior of the wrapper object; for details, see ComObjFlags.
 	 */
-	__New(VarType, Value [, Flags]) => Comobject
+	__New(VarType, Value[, Flags]) => Comobject
 }
 
 class ComValueRef extends ComValue {
@@ -2527,498 +2527,564 @@ class Enumerator extends Func {
 
 class Error extends Object {
 	/**
-	 * 错误消息.
+	 * wrong information.
 	 */
 	Message => String
 
 	/**
-	 * 引起异常的原因. 这通常是一个函数的名称, 但对于因表达式错误而引发的异常(例如对非数字值使用数学运算符),则为空白.
+	 * The reason for the exception. This is usually the name of a function, but for exceptions caused by expression errors (such as using mathematical operators for non-numeric values), it is blank.
 	 */
 	What => String
 
 	/**
-	 * 如果找到, 错误的额外信息.
+	 * If found, wrong additional information.
 	 */
 	Extra => String
 
 	/**
-	 * 自动设置为包含发生错误的语句的脚本文件的完整路径.
+	 * Automatically set to the full path of the script file containing the statement where the error occurred.
 	 */
 	File => String
 
 	/**
-	 * 自动设置为发生错误的语句行号.
+	 * Automatically set to the line number of the statement where the error occurred.
 	 */
 	Line => Number
 
 	/**
-	 * 创建 Error 对象.
+	 * Create an Error object.
 	 */
-	__New(Message [, What, Extra]) => Error
+	__New(Message[, What, Extra]) => Error
 }
 
 class File extends Object {
 	/**
-	 * 检索或设置文件指针的位置.
+	 * Retrieve or set the position of the file pointer.
 	 */
 	Pos => Number
 
 	/**
-	 * 检索或设置文件的大小.
+	 * Retrieve or set the size of the file.
 	 */
 	Length => Number
 
 	/**
-	 * 检索一个非零值, 如果文件指针已到达文件末尾.
+	 * Retrieve a non-zero value if the file pointer has reached the end of the file.
 	 */
 	AtEOF => Number
 
 	/**
-	 * 检索或设置此文件对象使用的文本编码.
+	 * Retrieve or set the text encoding used by this file object.
 	 */
 	Encoding => String
 
 	/**
-	 * 检索旨在与 DllCall 一起使用的系统文件句柄.
+	 * Retrieve system file handles intended for use with DllCall.
 	 */
 	Handle => Number
 
 	/**
-	 * 从文件读取字符串并向前移动文件指针.
+	 * Read the string from the file and move the file pointer forward.
 	 */
 	Read([Characters]) => String
 
 	/**
-	 * 写入字符串到文件并向前移动文件指针.
+	 * Write a string to the file and move the file pointer forward.
 	 */
 	Write(String) => Number
 
 	/**
-	 * 从文件读取原始的二进制数据到内存并向前移动文件指针.
+	 * Read the original binary data from the file to the memory and move the file pointer forward.
 	 */
 	RawRead(VarOrAddress, Bytes) => Number
 
 	/**
-	 * 写入原始的二进制数据到文件并向前移动文件指针.
+	 * Write the original binary data to the file and move the file pointer forward.
 	 */
 	RawWrite(VarOrAddress, Bytes) => Number
 
 	/**
-	 * 从文件中读取一行文本并使文件指针向前移动.
+	 * Read a line of text from the file and move the file pointer forward.
 	 */
 	ReadLine() => String
 
 	/**
-	 * 根据打开文件时使用的标志, 写入后面跟着 `n 或 `r`n 的字符串. 向前移动文件指针.
+	 * According to the flag used when opening the file, write the string followed by `n or `r`n. Move the file pointer forward.
 	 */
 	WriteLine([String]) => Number
 
 	/**
-	 * 从文件中读取指定类型的数据并向前移动文件指针.
+	 * Read the specified type of data from the file and move the file pointer forward.
 	 */
 	ReadChar() => Number
 
 	/**
-	 * 从文件中读取Double类型的数据并向前移动文件指针.
+	 * Read Double type data from the file and move the file pointer forward.
 	 */
 	ReadDouble() => Number
 
 	/**
-	 * 从文件中读取Float类型的数据并向前移动文件指针.
+	 * Read Float type data from the file and move the file pointer forward.
 	 */
 	ReadFloat() => Number
 
 	/**
-	 * 从文件中读取Int类型的数据并向前移动文件指针.
+	 * Read Int type data from the file and move the file pointer forward.
 	 */
 	ReadInt() => Number
 
 	/**
-	 * 从文件中读取Int64类型的数据并向前移动文件指针.
+	 * Read Int64 type data from the file and move the file pointer forward.
 	 */
 	ReadInt64() => Number
 
 	/**
-	 * 从文件中读取Short类型的数据并向前移动文件指针.
+	 * Read Short type data from the file and move the file pointer forward.
 	 */
 	ReadShort() => Number
 
 	/**
-	 * 从文件中读取UChar类型的数据并向前移动文件指针.
+	 * Read UChar type data from the file and move the file pointer forward.
 	 */
 	ReadUChar() => Number
 
 	/**
-	 * 从文件中读取UInt类型的数据并向前移动文件指针.
+	 * Read UInt type data from the file and move the file pointer forward.
 	 */
 	ReadUInt() => Number
 
 	/**
-	 * 从文件中读取UShort类型的数据并向前移动文件指针.
+	 * Read UShort type data from the file and move the file pointer forward.
 	 */
 	ReadUShort() => Number
 
 	/**
-	 * 写入Char类型的数据到文件并向前移动文件指针.
+	 * Write Char type data to the file and move the file pointer forward.
 	 */
 	WriteChar(Num) => Number
 
 	/**
-	 * 写入Double类型的数据到文件并向前移动文件指针.
+	 * Write Double type data to the file and move the file pointer forward.
 	 */
 	WriteDouble(Num) => Number
 
 	/**
-	 * 写入Float类型的数据到文件并向前移动文件指针.
+	 * Write Float type data to the file and move the file pointer forward.
 	 */
 	WriteFloat(Num) => Number
 
 	/**
-	 * 写入Int类型的数据到文件并向前移动文件指针.
+	 * Write Int type data to the file and move the file pointer forward.
 	 */
 	WriteInt(Num) => Number
 
 	/**
-	 * 写入Int64类型的数据到文件并向前移动文件指针.
+	 * Write Int64 type data to the file and move the file pointer forward.
 	 */
 	WriteInt64(Num) => Number
 
 	/**
-	 * 写入Short类型的数据到文件并向前移动文件指针.
+	 * Write Short type data to the file and move the file pointer forward.
 	 */
 	WriteShort(Num) => Number
 
 	/**
-	 * 写入UChar类型的数据到文件并向前移动文件指针.
+	 * Write UChar type data to the file and move the file pointer forward.
 	 */
 	WriteUChar(Num) => Number
 
 	/**
-	 * 写入UInt类型的数据到文件并向前移动文件指针.
+	 * Write UInt type data to the file and move the file pointer forward.
 	 */
 	WriteUInt(Num) => Number
 
 	/**
-	 * 写入UShort类型的数据到文件并向前移动文件指针.
+	 * Write UShort type data to the file and move the file pointer forward.
 	 */
 	WriteUShort(Num) => Number
 
 	/**
-	 * 移动文件指针. 如果第二个参数被省略, 等同于 File.Pos := Distance.
+	 * Move the file pointer. If the second parameter is omitted, it is equivalent to File.Pos := Distance.
 	 */
 	Seek(Distance, Origin := 0) => Number
 
 	/**
-	 * 关闭文件, 将缓存中的所有数据写入磁盘并释放共享锁定.
+	 * Close the file, write all the data in the cache to disk and release the shared lock.
 	 */
 	Close() => void
 }
 
 class Float extends Number {
 	/**
-	 * 将数字字符串或整数值转换为浮点数.
+	 * Convert a numeric string or integer value to a floating point number.
 	 */
 	__New(Value) => Number
 }
 
 class Func extends Object {
 	/**
-	 * 返回函数的名称.
+	 * Returns the name of the function.
 	 */
 	Name => String
 
 	/**
-	 * 内置函数返回 true, 否则返回 false.
+	 * The built-in function returns true, otherwise it returns false.
 	 */
 	IsBuiltIn => Number
 
 	/**
-	 * 当函数为可变参数时返回 true, 否则返回 false.
+	 * When the function is a variable parameter, it returns true, otherwise it returns false.
 	 */
 	IsVariadic => Number
 
 	/**
-	 * 返回所需参数的数量.
+	 * Return the number of required parameters.
 	 */
 	MinParams => Number
 
 	/**
-	 * 对于用户定义函数返回正式声明的参数数目, 对于内置函数返回最大的参数数目.
+	 * For user-defined functions, return the number of officially declared parameters, for built-in functions, return the maximum number of parameters.
 	 */
 	MaxParams => Number
 
 	/**
-	 * 调用函数.
+	 * call function.
 	 */
 	Call(Params*)
 
 	/**
-	 * 绑定参数到函数并返回绑定函数对象.
+	 * Bind parameters to the function and return the bound function object.
 	 */
 	Bind(Params*)
 
 	/**
-	 * 确定参数是否为 ByRef 类型(如果省略参数, 表示此函数是否含有 ByRef 参数).
+	 * Determine whether the parameter is of the ByRef type (if the parameter is omitted, it means whether the function contains a ByRef parameter).
 	 */
 	IsByRef(ParameterVar) => Number
 
 	/**
-	 * 确定参数是否是可选的(如果省略参数, 表示此函数是否含有可选参数).
+	 * Determine whether the parameter is optional (if the parameter is omitted, it means whether the function contains optional parameters).
 	 */
 	IsOptional([ParamIndex]) => Number
 }
 
 class Gui extends Object {
 	/**
-	 * 检索或设置窗口的背景色.
+	 * Retrieve or set the background color of the window.
 	 */
 	BackColor => String
 
 	/**
-	 * 检索 GUI 的焦点控件的 GuiControl 对象.
+	 * Retrieve the GuiControl object of the focus control of the GUI.
 	 */
 	FocusedCtrl => String
 
 	/**
-	 * 检索 GUI 窗口的窗口句柄(HWND).
+	 * Retrieve the window handle (HWND) of the GUI window.
 	 */
 	Hwnd => Number
 
 	/**
-	 * 检索或设置两侧与随后创建控件之间的水平边距的大小.
+	 * Retrieve or set the size of the horizontal margin between the two sides and the subsequently created control.
 	 */
 	MarginX => Number
 
 	/**
-	 * 检索或设置两侧与随后创建控件之间的垂直边距的大小.
+	 * Retrieve or set the size of the vertical margin between the two sides and the subsequently created control.
 	 */
 	MarginY => Number
 
 	/**
-	 * 检索或设置窗口的菜单栏.
+	 * Retrieve or set the menu bar of the window.
 	 */
 	MenuBar => Menubar
 
 	/**
-	 * 检索或设置 GUI 窗口的自定义名称.
+	 * Retrieve or set the custom name of the GUI window.
 	 */
 	Name => String
 
 	/**
-	 * 检索或设置 GUI 的标题.
+	 * Retrieve or set the title of the GUI.
 	 */
 	Title => String
 
 	/**
-	 * 创建一个新的Gui对象.
+	 * Create a new Gui object.
+	 * @param Options AlwaysOnTop Border Caption Disabled -DPIScale LastFound
+	 * MaximizeBox MinimizeBox MinSize600x600 MaxSize800x800 Resize
+	 * OwnDialogs '+Owner' OtherGui.hwnd +Parent
+	 * SysMenu Theme ToolWindow
+	 * @param Title The window title. If omitted, it defaults to the current value of A_ScriptName.
+	 * @param EventObj OnEvent, OnNotify and OnCommand can be used to register methods of EventObj to be called when an event is raised
 	 */
 	__New([Options, Title := A_ScriptName, EventObj]) => Gui
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create controls such as text, buttons or checkboxes, and return a GuiControl object.
+	 * @param Options V:    Sets the control's Name.
+	 *   Pos:  xn yn wn hn rn Right Left Center Section
+	 *         VScroll HScroll -Tabstop -Wrap
+	 *         BackgroundColor Border Theme Disabled Hidden
 	 */
-	Add(ControlType [, Options, Text])
+	Add(ControlType[, Options, Text])
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create a text control that the user cannot edit. Often used to label other controls.
+	 * @param Options V:    Sets the control's Name.
+	 *   Pos:  xn yn wn hn rn  Right Left Center Section
+	 *         VScroll  HScroll -Tabstop -Wrap
+	 *         BackgroundColor  BackgroundTrans
+	 *         Border  Theme  Disabled  Hidden
+	 * @param Text The text  
 	 */
 	AddText([Options, Text]) => Gui.Text
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create controls such as text, buttons or checkboxes, and return a GuiControl object.
+	 * @param Options Limit Lowercase Multi Number Password ReadOnly
+	 *        Tn Uppercase WantCtrlA WantReturn WantTab
+	 *  V:    Sets the control's Name.
+	 *  Pos:  xn yn wn hn rn Right Left Center Section
+	 *        VScroll HScroll -Tabstop -Wrap
+	 *        BackgroundColor Border Theme Disabled Hidden
+	 * @param Text The text in the Edit  
 	 */
 	AddEdit([Options, Text]) => Gui.Edit
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create UpDown control and return a GuiControl object.
 	 */
 	AddUpDown([Options, Text]) => Gui.UpDown
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Picture control and return a GuiControl object.
 	 */
 	AddPicture([Options, Text]) => Gui.Pic
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Adds a Button control and returns a GuiControl object.
+	 * @param Options Positioning and Sizing of Controls
+	 *   V:  Sets the control's Name.
+	 *   Positioning:  xn yn wn hn rn Right Left Center Section -Tabstop -Wrap
+	 *   BackgroundColor Border Theme Disabled Hidden
+	 * @param Text The text of the button  
 	 */
 	AddButton([Options, Text]) => Gui.Button
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Checkbox and return a GuiControl object.
+	 * GuiCtrl.Value returns the number 1 for checked, 0 for unchecked, and -1 for gray/indeterminate.
+	 * @param Options  V:           Sets the control's Name.
+	 *  Checked:     Start off checked
+	 *  Check3:      Enable a third "indeterminate" state that displays a gray checkmark
+	 *  CheckedGray: Start off checked or indeterminate
+	 *  CheckedN:    Set state: 0, 1 or -1
+	 *  Pos:         xn yn wn Right Left Center Section
+	 *               VScroll  HScroll -Tabstop -Wrap
+	 *               BackgroundColor  BackgroundTrans
+	 *               Border  Theme  Disabled  Hidden
+	 * @param Text The text of the Checkbox  
 	 */
 	AddCheckbox([Options, Text]) => Gui.Checkbox
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Radio control and return a GuiControl object.
+	 * GuiCtrl.Value returns the number 1 for checked, 0 for unchecked, and -1 for gray/indeterminate.
+	 * Events:       DoubleClick, Focus & LoseFocus
+	 * @param Options  V:           Sets the control's Name.
+	 *  Checked:     Start off checked
+	 *  CheckedN:    Set state: 0 or 1
+	 *  Group:       Start a new group
+	 *  Pos:         xn yn wn Right Left Center Section
+	 *               VScroll  HScroll -Tabstop -Wrap
+	 *               BackgroundColor  BackgroundTrans
+	 *               Border  Theme  Disabled  Hidden
+	 * @param Text The text of the Checkbox  
 	 */
 	AddRadio([Options, Text]) => Gui.Radio
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create DropDownList control and return a GuiControl object.
 	 */
 	AddDropDownList([Options, Text]) => Gui.DDL
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create ComboBox control and return a GuiControl object.
 	 */
 	AddComboBox([Options, Text]) => Gui.ComboBox
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create ListBox control and return a GuiControl object.
 	 */
 	AddListBox([Options, Text]) => Gui.ListBox
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create ListView control and return a GuiControl object.
 	 */
 	AddListView([Options, Text]) => Gui.ListView
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create TreeView control and return a GuiControl object.
 	 */
 	AddTreeView([Options, Text]) => Gui.TreeView
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Link control and return a GuiControl object.
 	 */
 	AddLink([Options, Text]) => Gui.Link
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Hotkey control and return a GuiControl object.
 	 */
 	AddHotkey([Options, Text]) => Gui.Hotkey
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create DateTime control and return a GuiControl object.
 	 */
 	AddDateTime([Options, Text]) => Gui.DateTime
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create MonthCal control and return a GuiControl object.
 	 */
 	AddMonthCal([Options, Text]) => Gui.MonthCal
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Slider control and return a GuiControl object.
 	 */
 	AddSlider([Options, Text]) => Gui.Slider
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Progress control and return a GuiControl object.
 	 */
 	AddProgress([Options, Text]) => Gui.Progress
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create GroupBox control and return a GuiControl object.
 	 */
 	AddGroupBox([Options, Text]) => Gui.GroupBox
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Tab control and return a GuiControl object.
 	 */
 	AddTab([Options, Text]) => Gui.Tab
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Tab2 control and return a GuiControl object.
 	 */
 	AddTab2([Options, Text]) => Gui.Tab
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Tab3 control and return a GuiControl object.
 	 */
 	AddTab3([Options, Text]) => Gui.Tab
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create StatusBar control and return a GuiControl object.
 	 */
 	AddStatusBar([Options, Text]) => Gui.StatusBar
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create ActiveX control and return a GuiControl object.
 	 */
 	AddActiveX([Options, Text]) => Gui.ActiveX
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * Create Custom controls and return a GuiControl object.
 	 */
 	AddCustom([Options, Text]) => Gui.Custom
 
 	/**
-	 * 删除窗口.
+	 * Delete window.
 	 */
 	Destroy() => void
 
 	/**
-	 * 闪烁窗口及其任务栏按钮.
+	 * Flashing windows and their taskbar buttons.
 	 */
 	Flash(false) => void
 
 	/**
-	 * 检索窗口工作区的位置和大小.
+	 * Retrieve the position and size of the working area of ​​the window.
 	 */
 	GetClientPos([X, Y, Width, Height]) => void
 
 	/**
-	 * 检索窗口的位置和大小.
+	 * Retrieve the position and size of the window.
 	 */
 	GetPos([X, Y, Width, Height]) => void
 
 	/**
-	 * 隐藏窗口.
+	 * Hide window.
 	 */
 	Hide() => void
 
 	/**
-	 * 隐藏窗口.
+	 * Hide window.
 	 */
 	Cancel() => void
 
 	/**
-	 * 打开并最大化窗口.
+	 * Open and maximize the window.
 	 */
 	Maximize() => void
 
 	/**
-	 * 打开并最小化窗口.
+	 * Open and minimize the window.
 	 */
 	Minimize() => void
 
 	/**
-	 * 移动/调整GUI窗口的大小.
+	 * Move/resize the GUI window.
 	 */
 	Move([X, Y, Width, Height]) => void
 
 	/**
-	 * 注册一个函数或方法, 当给定的事件被触发时调用.
+	 * Register a function or method to be called when a given event is triggered.
 	 */
 	OnEvent(EventName, Callback, AddRemove := 1) => void
 
 	/**
-	 * 为窗口的外观和行为设置各种选项和样式.
+	 * Set various options and styles for the appearance and behavior of the window.
+	 * @param Options AlwaysOnTop Border Caption Disabled -DPIScale LastFound
+	 * MaximizeBox MinimizeBox MinSize600x600 MaxSize800x800 Resize
+	 * OwnDialogs '+Owner' OtherGui.hwnd   '+Parent' OtherGui.hwnd
+	 * SysMenu Theme ToolWindow
 	 */
 	Opt(Options) => void
 
 	/**
-	 * 如果窗口事先最小化或最大化, 则打开并还原窗口.
+	 * Unhides the window (if necessary) and restores it, if it was minimized or maximized beforehand.
 	 */
 	Restore() => void
 
 	/**
-	 * 设置随后创建的控件的字体, 大小, 样式, 和文本颜色.
+	 * Set the font, size, style, and text color of the subsequently created control.
+	 * @param Options Bold italic strike underlin norm
+	 * cColor : Color name or RBG, color names are also accepted
+	 * Sn     : Wize in points
+	 * Wn     : Weight (boldness)
+	 * Qn     : Rendering quality
+	 * @param FontName MS sans serif
+	 * Arial     Calibri    Courier
+	 * Verdana   Consolas   Terminal
+	 * Times New Roman
+	 * ...
 	 */
 	SetFont([Options, FontName]) => void
 
 	/**
-	 * 显示窗口. 它还可以最小化, 最大化或移动窗口.
+	 * Display window. It can also minimize, maximize or move the window.
+	 * @param Options Positioning: Xn Yn Wn Hn  Center xCenter yCenter AutoSize
+	 * Minimize Maximize Restore NoActivate NA Hide
 	 */
 	Show([Options]) => void
 
 	/**
-	 * 从命名控件中收集值并将其组合到一个对象中, 可选择性地隐藏窗口.
+	 * Collect values ​​from named controls and combine them into an object, optionally hiding the window.
 	 */
 	Submit(false) => void
-	
+
 	class ActiveX extends Gui.Control {
 	}
 
@@ -3027,313 +3093,313 @@ class Gui extends Object {
 
 	class CheckBox extends Gui.Control {
 	}
-	
+
 	class ComboBox extends Gui.List {
 	}
-	
+
 	class Control extends Object {
 		/**
-		 * 检索控件的 ClassNN.
+		 * Retrieve the ClassNN of the control.
 		 */
 		ClassNN => String
 
 		/**
-		 * 检索控件当前交互状态, 或启用或禁用(灰色)控件.
+		 * Retrieve the current interactive state of the control, or enable or disable (gray) the control.
 		 */
 		Enabled => Number
 
 		/**
-		 * 检索控件当前焦点状态.
+		 * Retrieve the current focus state of the control.
 		 */
 		Focused => Number
 
 		/**
-		 * 检索控件的 Gui 父控件.
+		 * Retrieve the Gui parent control of the control.
 		 */
 		Gui => Gui
 
 		/**
-		 * 检索控件的 HWND.
+		 * Retrieve the HWND of the control.
 		 */
 		Hwnd => Number
 
 		/**
-		 * 检索或设置控件的显式名称.
+		 * Retrieve or set the explicit name of the control.
 		 */
 		Name => String
 
 		/**
-		 * 检索或设置控件的文本/标题.
+		 * Retrieve or set the text/title of the control.
 		 */
 		Text => String
 
 		/**
-		 * 检索控件的类型.
+		 * Retrieve the type of control.
 		 */
 		Type => String
 
 		/**
-		 * 检索新内容或将其设置为具有价值的控件.
+		 * Retrieve new content or set it as a valuable control.
 		 */
-		Value => Number|String
+		Value => Number | String
 
 		/**
-		 * 检索控件的当前可见状态, 或显示或隐藏它.
+		 * Retrieve the current visible state of the control, or show or hide it.
 		 */
 		Visible => Number
 
 		/**
-		 * 将键盘焦点设置为控件.
+		 * Set the keyboard focus to the control.
 		 */
 		Focus() => void
 
 		/**
-		 * 检索控件的位置和大小.
+		 * Retrieve the position and size of the control.
 		 */
 		GetPos([X, Y, Width, Height]) => void
 
 		/**
-		 * 移动/调整控件大小.
+		 * Move/resize controls.
 		 */
 		Move([X, Y, Width, Height]) => void
 
 		/**
-		 * 注册引发给定事件时要调用的函数或方法.
+		 * Register the function or method to be called when a given event is raised.
 		 */
 		OnEvent(EventName, Callback, AddRemove := 1) => void
 
 		/**
-		 * 注册通过WM_NOTIFY消息接收到控制通知时要调用的函数或方法.
+		 * Register the function or method to be called when the control notification is received through the WM_NOTIFY message.
 		 */
 		OnNotify(NotifyCode, Callback, AddRemove := 1) => void
 
 		/**
-		 * 为控件的外观和行为设置各种选项和样式.
+		 * Set various options and styles for the appearance and behavior of the control.
 		 */
 		Opt(Options) => void
 
 		/**
-		 * 重绘该控件占用的GUI窗口区域.
+		 * Redraw the GUI window area occupied by the control.
 		 */
 		Redraw() => void
 
 		/**
-		 * 设置控件的字体字体, 大小, 样式和/或颜色.
+		 * Set the font, size, style and/or color of the control.
 		 */
 		SetFont([Options, FontName]) => void
 
 		/**
-		 * 设置 DateTime 控件的显示格式.
+		 * Set the display format of the DateTime control.
 		 */
 		SetFormat([TimeFormat]) => void
 	}
-	
+
 	class Custom extends Gui.Control {
 	}
-	
+
 	class DateTime extends Gui.Control {
 	}
-	
+
 	class DDL extends Gui.List {
 	}
-	
+
 	class Edit extends Gui.Control {
 	}
-	
+
 	class GroupBox extends Gui.Control {
 	}
-	
+
 	class Hotkey extends Gui.Control {
 	}
-	
+
 	class Link extends Gui.Control {
 	}
-	
+
 	class List extends Gui.Control {
 		/**
-		 * 在列表框, 下拉列表, 组合框或选项卡控件的当前列表中追加指定的项.
+		 * Add the specified item to the current list of the list box, drop-down list, combo box or tab control.
 		 */
 		Add(Items*) => void
 
 		/**
-		 * 将ListBox, DropDownList, ComboBox或Tab控件中的选择设置为指定值.
+		 * Set the selection in the ListBox, DropDownList, ComboBox or Tab control to the specified value.
 		 */
 		Choose(Value) => void
 
 		/**
-		 * 删除ListBox, DropDownList, ComboBox或Tab控件的指定条目或所有条目.
+		 * Delete the specified item or all items of ListBox, DropDownList, ComboBox or Tab control.
 		 */
 		Delete([Index]) => void
 	}
-	
+
 	class ListBox extends Gui.List {
 	}
-	
+
 	class ListView extends Gui.Control {
 		/**
-		 * 将新行添加到列表的底部, 并返回新行号, 如果ListView具有Sort或SortDesc样式, 则不一定是最后一行.
+		 * Add a new row to the bottom of the list and return the new row number. If the ListView has a Sort or SortDesc style, it may not be the last row.
 		 */
 		Add([Options, Cols*]) => void
 
 		/**
-		 * 删除指定的行, 成功则返回1, 失败则返回0.
+		 * Delete the specified row, return 1 on success, and return 0 on failure.
 		 */
 		Delete([RowNumber]) => Number
 
 		/**
-		 * 删除指定的列及其下的所有内容, 并在成功时返回1, 在失败时返回0.
+		 * Delete the specified column and all the content under it, and return 1 on success and 0 on failure.
 		 */
 		DeleteCol(ColumnNumber) => Number
 
 		/**
-		 * 返回控件中的行数或列数.
+		 * Returns the number of rows or columns in the control.
 		 */
 		GetCount([Mode]) => Number
 
 		/**
-		 * 返回下一个选定, 选中或关注的行的行号, 否则返回零.
+		 * Return the line number of the next selected, selected or focused line, otherwise it returns zero.
 		 */
 		GetNext([StartingRowNumber, RowType]) => Number
 
 		/**
-		 * 检索指定行号和列号的文本.
+		 * Retrieve the text of the specified row number and column number.
 		 */
-		GetText(RowNumber [, ColumnNumber]) => String
+		GetText(RowNumber[, ColumnNumber]) => String
 
 		/**
-		 * 在指定的行号处插入新行, 并返回新的行号.
+		 * Insert a new line at the specified line number, and return the new line number.
 		 */
-		Insert(RowNumber [, Options, Cols*]) => Number
+		Insert(RowNumber[, Options, Cols*]) => Number
 
 		/**
-		 * 在指定的列号处插入新列, 并返回新列的位置号.
+		 * Insert a new column at the specified column number, and return the position number of the new column.
 		 */
-		InsertCol(ColumnNumber [, Options, ColumnTitle]) => Number
+		InsertCol(ColumnNumber[, Options, ColumnTitle]) => Number
 
 		/**
-		 * 修改行的属性/文本, 并在成功时返回1, 在失败时返回0.
+		 * Modify the attributes/text of the row and return 1 on success and 0 on failure.
 		 */
-		Modify(RowNumber [, Options, NewCols*]) => Number
+		Modify(RowNumber[, Options, NewCols*]) => Number
 
 		/**
-		 * 修改指定列及其标题的属性/文本, 并在成功时返回1, 在失败时返回0.
+		 * Modify the attribute/text of the specified column and its title, and return 1 on success and 0 on failure.
 		 */
 		ModifyCol([ColumnNumber, Options, ColumnTitle]) => Number
 
 		/**
-		 * 设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).
+		 * Set or replace ImageList, and return the ImageListID previously associated with this control (if not, return 0).
 		 */
-		SetImageList(ImageListID [, IconType]) => Number
+		SetImageList(ImageListID[, IconType]) => Number
 	}
-	
+
 	class MonthCal extends Gui.Control {
 	}
-	
+
 	class Pic extends Gui.Control {
 	}
-	
+
 	class Progress extends Gui.Control {
 	}
-	
+
 	class Radio extends Gui.Control {
 	}
-	
+
 	class Slider extends Gui.Control {
 	}
-	
+
 	class StatusBar extends Gui.Control {
 		/**
-		 * 在指定部分的文本左侧显示一个小图标, 并返回图标的句柄.
+		 * Display a small icon on the left side of the text in the specified part, and return the handle of the icon.
 		 */
 		SetIcon(Filename, IconNumber := 1, PartNumber := 1) => Number
 
 		/**
-		 * 根据指定的宽度(以像素为单位)将条形划分为多个部分, 并返回非零值(状态条的HWND).
+		 * Divide the bar into multiple parts according to the specified width (in pixels), and return a non-zero value (HWND of the status bar).
 		 */
 		SetParts(Widths*) => Number
 
 		/**
-		 * 在状态栏的指定部分显示NewText, 成功则返回1, 失败则返回0.
+		 * Display NewText in the specified part of the status bar, return 1 if successful, and return 0 if failed.
 		 */
 		SetText(NewText, PartNumber := 1, Style := 0) => Number
 	}
-	
+
 	class Tab extends Gui.List {
 		/**
-		 * 导致随后添加的控件属于选项卡控件的指定选项卡.
-		 * @param Value 参数为 1 表示第一个条目, 2 表示第二个, 等等. 如果 Value 不是一个整数, 前面部分与 Value 匹配的标签将被使用. 搜索不区分大小写. 例如, 如果一个控件包含 "UNIX Text" 标签, 指定单词 unix(小写) 就可以使用它. 如果 Value 为 0, 是一个空白字符串或被省略, 随后的控件将被添加到 Tab 控件之外.
-		 * @param ExactMatch 如果该参数为 true, Value 必须完全匹配, 但不区分大小写.
+		 * Causes the subsequently added control to belong to the specified tab of the tab control.
+		 * The @param Value parameter is 1 for the first entry, 2 for the second, and so on. If Value is not an integer, the previous part of the tag that matches Value will be used. The search is not case sensitive. For example, if a control Contains the "UNIX Text" tag, specify the word unix (lowercase) to use it. If Value is 0, it is a blank string or is omitted, the subsequent controls will be added to the Tab control.
+		 * @param ExactMatch If this parameter is true, Value must match exactly, but it is not case sensitive.
 		 */
 		UseTab(Value := 0, ExactMatch := false) => void
 	}
-	
+
 	class Text extends Gui.Control {
 	}
-	
+
 	class TreeView extends Gui.Control {
 		/**
-		 * 将新项目添加到TreeView, 并返回其唯一的项目ID号.
+		 * Add a new item to the TreeView, and return its unique item ID number.
 		 */
-		Add(Name [, ParentItemID, Options]) => Number
+		Add(Name[, ParentItemID, Options]) => Number
 
 		/**
-		 * 删除指定的项目, 成功则返回1, 失败则返回0.
+		 * Delete the specified item, return 1 if successful, and return 0 if failed.
 		 */
 		Delete([ItemID]) => Number
 
 		/**
-		 * 如果指定的项目具有指定的属性, 则返回非零值(项目ID).
-		 * @param ItemID 选中项目.
-		 * @param Attribute 指定 "E", "Expand" 或 "Expanded" 来判断此项当前是否是展开的(即它的子项目是显示的); 指定 "C", "Check" 或 "Checked" 来判断此项是否含有复选标记; 或指定 "B" 或 "Bold" 来判断此项当前是否为粗体.
+		 * If the specified item has the specified attribute, a non-zero value (item ID) is returned.
+		 * @param ItemID selected item.
+		 * @param Attribute specify "E", "Expand" or "Expanded" to determine whether this item is currently expanded (that is, its sub-items are displayed); specify "C", "Check" or "Checked" to determine Whether this item contains a check mark; or specify "B" or "Bold" to determine whether this item is currently bold.
 		 */
 		Get(ItemID, Attribute) => Number
 
 		/**
-		 * 返回指定项目的第一个/顶部子项的ID号(如果没有, 则返回0).
+		 * Return the ID number of the first/top child item of the specified item (if there is none, return 0).
 		 */
 		GetChild(ParentItemID) => Number
 
 		/**
-		 * 返回控件中的项目总数.
+		 * Returns the total number of items in the control.
 		 */
 		GetCount() => Number
 
 		/**
-		 * 返回指定项目下方的下一个项目的ID号(如果没有, 则返回0).
+		 * Return the ID number of the next item below the specified item (if there is none, return 0).
 		 */
 		GetNext([ItemID, ItemType]) => Number
 
 		/**
-		 * 返回指定项目的父项作为项目ID.
+		 * Return the parent item of the specified item as the item ID.
 		 */
 		GetParent(ItemID) => Number
 
 		/**
-		 * 返回指定项目上方的前一个项目的ID号(如果没有, 则返回0).
+		 * Return the ID number of the previous item above the specified item (if there is none, return 0).
 		 */
 		GetPrev(ItemID) => Number
 
 		/**
-		 * 返回所选项目的ID号.
+		 * Return the ID number of the selected item.
 		 */
 		GetSelection() => Number
 
 		/**
-		 * 检索指定项目的文本/名称.
+		 * Retrieve the text/name of the specified item.
 		 */
 		GetText(ItemID) => String
 
 		/**
-		 * 修改项目的属性/名称, 并返回项目自己的ID.
+		 * Modify the project's attributes/name, and return the project's own ID.
 		 */
-		Modify(ItemID [, Options, NewName]) => Number
+		Modify(ItemID[, Options, NewName]) => Number
 
 		/**
-		 * 设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).
+		 * Set or replace ImageList, and return the ImageListID previously associated with this control (if not, return 0).
 		 */
-		SetImageList(ImageListID [, IconType]) => Number
+		SetImageList(ImageListID[, IconType]) => Number
 	}
-	
+
 	class UpDown extends Gui.Control {
 	}
 }
@@ -3343,177 +3409,177 @@ class IndexError extends Error {
 
 class InputHook extends Object {
 	/**
-	 * 返回终止 Input 而按下的结束建的名称.
+	 * Returns the name of the end construction that was pressed when the Input was terminated.
 	 */
 	EndKey => String
 
 	/**
-	 * 返回在 Input 终止时逻辑上是按下的修饰符键的字符串.
+	 * Returns the string that is logically the modifier key that was pressed when Input was terminated.
 	 */
 	EndMods => String
 
 	/**
-	 * 返回 EndReason 字符串, 该字符串表明了 Input 是如何终止的.
+	 * Returns the EndReason string, which indicates how the Input is terminated.
 	 */
 	EndReason => String
 
 	/**
-	 * 如果输入正在进行, 则返回 true, 否则返回 false.
+	 * If the input is in progress, it returns true, otherwise it returns false.
 	 */
 	InProgress => Number
 
 	/**
-	 * 返回自上次 Input 启动以来收集的任何文本.
+	 * Returns any text collected since the last time Input was started.
 	 */
 	Input => String
 
 	/**
-	 * 返回导致 Input 终止的 MatchList 项目.
+	 * Return the MatchList item that caused the Input to terminate.
 	 */
 	Match => String
 
 	/**
-	 * 检索或设置在 Input 终止时调用的函数对象.
+	 * Retrieve or set the function object called when Input is terminated.
 	 */
 	OnEnd => Func
 
 	/**
-	 * 检索或设置函数对象, 该函数对象将在字符添加到输入缓冲后调用.
+	 * Retrieve or set a function object, which will be called after characters are added to the input buffer.
 	 */
 	OnChar => Func
 
 	/**
-	 * 检索或设置函数对象, 该函数对象将在按下启用通知的按键时调用.
+	 * Retrieve or set the function object, which will be called when the button that enables notification is pressed.
 	 */
 	OnKeyDown => Func
 
 	/**
-	 * 检索或设置函数对象, 该函数对象将在释放启用通知按键时被调用.
+	 * Retrieve or set the function object, which will be called when the enable notification button is released.
 	 */
 	OnKeyUp => Func
 
 	/**
-	 * 控制 Backspace 是否从输入缓冲的末尾删除最近按下的字符.
+	 * Control whether Backspace deletes the most recently pressed character from the end of the input buffer.
 	 */
 	BackspaceIsUndo => Number
 
 	/**
-	 * 控制 MatchList 是否区分大小写.
+	 * Control whether MatchList is case sensitive.
 	 */
 	CaseSensitive => Number
 
 	/**
-	 * 控制每个匹配项是否可以是输入文本的子字符串.
+	 * Control whether each match can be a substring of the input text.
 	 */
 	FindAnywhere => Number
 
 	/**
-	 * 检索或设置要收集的输入的最小发送级别.
+	 * Retrieve or set the minimum sending level of the input to be collected.
 	 */
 	MinSendLevel => Number
 
 	/**
-	 * 控制当按下非文本键时是否调用 OnKeyDown 和 OnKeyUp 回调.
+	 * Control whether the OnKeyDown and OnKeyUp callbacks are called when a non-text key is pressed.
 	 */
 	NotifyNonText => Number
 
 	/**
-	 * 检索或设置超时值(以秒为单位).
+	 * Retrieve or set the timeout value (in seconds).
 	 */
 	Timeout => Number
 
 	/**
-	 * 控制不产生文本的键或键组合是否可见(不阻止).
+	 * Control whether keys or key combinations that do not produce text are visible (not blocked).
 	 */
 	VisibleNonText => Number
 
 	/**
-	 * 控制产生文本的键或键组合是否可见(不阻止).
+	 * Control whether the key or key combination that generates the text is visible (not blocked).
 	 */
 	VisibleText => Number
 
 	/**
-	 * 创建一个对象, 该对象可用于收集或拦截键盘输入.
-	 * @param Options 由零个或多个下列字母组成的字符串(可任意顺序, 中间可选空格):
+	 * Create an object that can be used to collect or intercept keyboard input.
+	 * @param Options A string consisting of zero or more of the following letters (in any order, with optional spaces in between):
 	 * 
-	 * B: 设置 BackspaceIsUndo 为 false, 这会导致 Backspace 被忽略.
+	 * B: Set BackspaceIsUndo to false, which will cause Backspace to be ignored.
 	 * 
-	 * C: 设置 CaseSensitive 为 true, 使 MatchList 区分大小写.
+	 * C: Set CaseSensitive to true to make MatchList case sensitive.
 	 * 
-	 * I: 设置 MinSendLevel 为 1 或给定值, 使任何输入级别低于该值的输入被忽略. 例如, I2 将忽略级别为 0(默认值) 或 1 的任何输入, 但将捕获级别为 2 的输入.
+	 * I: Set MinSendLevel to 1 or a given value, so that any input with an input level lower than this value is ignored. For example, I2 will ignore any input with level 0 (default) or 1, but will capture any input with level 2 enter.
 	 * 
-	 * L: 长度限制(例如 L5). 输入的最大允许长度. 当文本达到这个长度时, 输入被终止, EndReason 被设置为单词 Max(除非文本匹配 MatchList 中的一个短语, 在这种情况下 EndReason 被设置为单词 Match). 如果未指定, 则长度限制为 1023.
+	 * L: Length limit (such as L5). The maximum allowable length of the input. When the text reaches this length, the input is terminated and EndReason is set to the word Max (unless the text matches a phrase in the MatchList, in which case EndReason is Set to the word Match). If not specified, the length is limited to 1023.
 	 * 
-	 * 指定 L0 禁用文本的收集和长度限制, 但并不影响按键生成的文本的统计(请参阅 VisibleText). 这可以与 OnChar, OnKeyDown, KeyOpt 或 EndKeys 组合使用.
+	 * Specify L0 to disable the collection of text and the length limit, but it does not affect the statistics of the text generated by the key (see VisibleText). This can be used in combination with OnChar, OnKeyDown, KeyOpt or EndKeys.
 	 * 
-	 * M: 将修饰键击对应于真正的 ASCII 字符, 识别并转录修饰键击(如 Ctrl+A 到 Ctrl+Z). 参考这个例子, 它识别 Ctrl+C:
+	 * M: Recognize and transcribe modifier keystrokes corresponding to real ASCII characters (such as Ctrl+A to Ctrl+Z). Refer to this example, it recognizes Ctrl+C:
 	 * 
-	 * T: 设置 Timeout (例如 T3 或 T2.5).
+	 * T: Set Timeout (e.g. T3 or T2.5).
 	 * 
-	 * V: 设置 VisibleText 和 VisibleNonText 为 true. 通常, 用户的输入被阻止(对系统隐藏). 使用此选项可将用户的击键发送到活动窗口.
+	 * V: Set VisibleText and VisibleNonText to true. Normally, user input is blocked (hidden from the system). Use this option to send the user's keystrokes to the active window.
 	 * 
-	 *·*: 通配符. 设置 FindAnywhere 为 true, 允许在用户键入的任何位置找到匹配项.
+	 * ·*: Wildcard. Set FindAnywhere to true to allow matches to be found anywhere the user types.
 	 * 
-	 * E: 按字符代码而不是键码处理单字符结束键. 如果活动窗口的键盘布局与脚本的键盘布局不同, 则可以提供更一致的结果. 它还可以防止实际上不会产生给定结束字符的键组合结束 Input(输入); 例如, 如果 @ 是结束键, 则在美式键盘中 Shift+2 将触发它, 但 Ctrl+Shift+2 不会触发(在使用 E 选项时). 如果还使用 C 选项, 则结束字符区分大小写.
-	 * @param EndKeys 一个由零个或多个按键组成的列表, 其中任何一个键在按下时终止输入(结束键本身不会写入输入缓冲). 当 Input 以这种方式终止时, EndReason 设置为单词 EndKey, EndKey 属性设置为键的名称.
+	 * E: Handling single-character end keys by character code instead of key code. If the keyboard layout of the active window is different from that of the script, it can provide more consistent results. It also prevents the given end character from actually being generated The key combination to end Input; for example, if @ is the end key, Shift+2 will trigger it on the American keyboard, but Ctrl+Shift+2 will not trigger (when using the E option). If you also use C Option, the ending character is case sensitive.
+	 * @param EndKeys A list of zero or more keys, where any key terminates input when pressed (the end key itself will not be written into the input buffer). When Input is terminated in this way, EndReason is set to The word EndKey, EndKey properties are set to the name of the key.
 	 * 
-	 * EndKeys 列表使用类似于 Send 函数的格式. 例如, 指定 {Enter}.{Esc} 将使 Enter, . 或 Esc 任一一个都能终止 Input. 使用大括号本身作为结束键, 指定 {{} 和/或 {}}.
+	 * The EndKeys list uses a format similar to the Send function. For example, specifying {Enter}.{Esc} will cause either Enter,. Or Esc to terminate the Input. Using the brace itself as the end key, specify {{} and /or{}}.
 	 * 
-	 * 要使用 Ctrl, Alt 或 Shift 作为结束键, 请指定键的左和/或右的版本, 而不是中性版本. 例如, 指定 {LControl}{RControl} 而不是 {Control}.
+	 * To use Ctrl, Alt or Shift as the end key, please specify the left and/or right version of the key instead of the neutral version. For example, specify {LControl}{RControl} instead of (Control).
 	 * 
-	 * 尽管不支持诸如 Alt+C(!c) 这样的修饰键, 而非-字母数字字符(如 ?!:@&{}) 默认情况下需要 Shift 按键按下与否, 取决于字符的正常输入方式. 如果有 E 选项, 则将单个字符键名解释为字符, 在这种情况下, 修饰符键必须处于正确的状态才能生成该字符. 当同时使用 E 和 M 选项时, 通过在 EndKeys 中包括相应的 ASCII 控制字符来支持 Ctrl+A 到 Ctrl+Z.
+	 * Although modifier keys such as Alt+C(!c) are not supported, instead of alphanumeric characters (such as?!:@&()) by default, the Shift key is required to be pressed or not, depending on the normal input of characters Method. If there is an E option, a single character key name is interpreted as a character. In this case, the modifier key must be in the correct state to generate the character. When the E and M options are used at the same time, by including in EndKeys Corresponding ASCII control characters to support Ctrl+A to Ctrl+Z.
 	 * 
-	 * 还可以指定明确的虚拟按键代码, 例如 {vkFF} 或 {sc001}. 这在键没有名称且按下时不产生可见字符的罕见情况下非常有用. 它的虚拟键码可以通过按键列表页面底部的步骤来确定.
-	 * @param MatchList 以逗号分隔的关键词列表, 其中任何一个都将导致终止输入(在这种情况下, EndReason 将被设置为单词 Match). 用户输入的内容必须完全匹配匹配列表中的某个词组(除非有 * 选项). 此外, 分隔符逗号周围的任何空格或制表符都是有意义的, 这意味着它们是匹配字符串的一部分. 例如, 如果 MatchList 为 ABC , XYZ, 则用户必须在 ABC 之后或 XYZ 之前键入空格以形成匹配.
+	 * You can also specify a clear virtual key code, such as {vkFF} or {sc001}. This is very useful in rare cases where the key has no name and does not produce visible characters when pressed. Its virtual key code can be found at the bottom of the key list page The steps to determine.
+	 * @param MatchList is a comma-separated list of keywords, any of which will cause the input to be terminated (in this case, EndReason will be set to the word Match). The content entered by the user must exactly match a certain phrase in the match list (Unless there is an * option). In addition, any spaces or tabs around the delimiter comma are meaningful, which means they are part of the matching string. For example, if MatchList is ABC, XYZ, then the user must Type a space after ABC or before XYZ to form a match.
 	 * 
-	 * 两个连续的逗号产生单个原义逗号. 例如, 后面的匹配列表会在 string1 的末尾产生单个原义逗号: string1,,,string2. 类似的, 后面的匹配列表仅包含其中有一个原义逗号的单个项目: single,,item.
+	 * Two consecutive commas produce a single literal comma. For example, the following match list will produce a single literal comma at the end of string1: string1,,,string2. Similarly, the following match list contains only one literal comma Single item: single,,item.
 	 * 
-	 * 因为 MatchList 中的项目不被视为单独的参数, 所以列表可以完全包含在一个变量中. 事实上, 如果此列表的长度超过 16383, 那么列表的全部或部分必须包含在变量中, 因为这个长度是任何脚本行的最大长度. 例如, MatchList 可能由 List1 "," List2 "," List3 组成 -- 其中每个变量都包含匹配词组的子列表.
+	 * Because the items in MatchList are not treated as separate parameters, the list can be completely contained in a variable. In fact, if the length of this list exceeds 16383, then all or part of the list must be contained in the variable because of this length Is the maximum length of any script line. For example, MatchList may consist of List1 "," List2 "," List3 - each of these variables contains a sublist of matching phrases.
 	 */
 	__New(Options := '', EndKeys := '', MatchList := '') => Inputhook
 
 	/**
-	 * 设置按键或按键列表的选项.
-	 * @param Keys 按键列表. 大括号用于括起按键名称, 虚拟键码或扫描码, 类似于 Send 函数. 例如, {Enter}.{{} 将应用于 Enter, . 和 {. 按名称, 按 {vkNN} 或按 {scNNN} 指定按键可能会产生三种不同的结果; 有关详情, 请参阅下文.
+	 * Set the options of the key or key list.
+	 * @param Keys key list. Braces are used to enclose key names, virtual key codes or scan codes, similar to the Send function. For example, {Enter}.{{} will be applied to Enter,. and {. By name, press {vkNN} or pressing the designated key of {scNNN} may produce three different results; for details, see below.
 	 * 
-	 * 单独指定字符串 {All}(不区分大小写) 以便将 KeyOptions 应用于所有 VK 和所有 SC. 然后可以再次调用 KeyOpt 从特定按键中删除选项.
-	 * @param KeyOptions 下列单字符选项中的一个或多个(空格和制表符).
+	 * Separately specify the string (All) (not case sensitive) to apply KeyOptions to all VKs and all SCs. Then you can call KeyOpt again to delete options from a specific key.
+	 * @param KeyOptions One or more of the following single-character options (spaces and tabs).
 	 * 
-	 * -(减号): 移除 - 后面的任何选项, 直到下一个 +.
+	 * -(Minus sign): Remove any options after-until the next +.
 	 * 
-	 * +(加号): 取消任何先前的 -, 否则无效.
+	 * + (Plus sign): cancel any previous -, otherwise invalid.
 	 * 
-	 * E: 结束键. 如果启用, 则按下键终止 Input, 将 EndReason 设置为单词 EndKey, 将 EndKey 属性设置为键的标准名称. 与 EndKeys 参数不同, Shift 键的状态将被忽略. 例如, @ 和 2 在美式键盘布局中都相当于 {vk32}.
+	 * E: End key. If enabled, press the key to terminate Input, set EndReason to the word EndKey, and set the EndKey property to the standard name of the key. Unlike the EndKeys parameter, the state of the Shift key will be ignored. For example, @ and 2 Both are equivalent to {vk32} in the American keyboard layout.
 	 * 
-	 * I: 忽略文本. 通常由该键生成的任何文本都将被忽略, 并且该键被视为非文本键(请参阅 VisibleNonText). 如果键通常不产生文本, 则没有效果.
+	 * I: Ignore text. Normally any text generated by the key will be ignored, and the key will be treated as a non-text key (see VisibleNonText). If the key normally does not produce text, it has no effect.
 	 * 
-	 * N: 通知. 在每次按下键时调用 OnKeyDown 和 OnKeyUp 回调.
+	 * N: Notification. OnKeyDown and OnKeyUp callbacks are called every time a key is pressed.
 	 * 
-	 * S: 处理它后抑制(阻止) 按键. 这将覆盖 VisibleText 或 VisibleNonText 直到使用 -S. +S 意味着 -V.
+	 * S: Suppress (block) the key press after processing it. This will overwrite VisibleText or VisibleNonText until -S is used. +S means -V.
 	 * 
-	 * V: 可见. 防止键按被抑制(阻止). 这将覆盖 VisibleText 或 VisibleNonText 直到使用 -V. +V 意味着 -S.
+	 * V: Visible. Prevents key presses from being suppressed (blocked). This will override VisibleText or VisibleNonText until -V is used. +V means -S.
 	 */
 	KeyOpt(Keys, KeyOptions) => void
 
 	/**
-	 * 启动收集输入.
+	 * Start collecting input.
 	 */
 	Start() => void
 
 	/**
-	 * 终止 Input 并将 EndReason 设置为单词 Stopped.
+	 * Terminate Input and set EndReason to the word Stopped.
 	 */
 	Stop() => void
 
 	/**
-	 * 等待, 直到 Input 终止(InProgress 为 false).
+	 * Wait until Input terminates (InProgress is false).
 	 */
 	Wait([MaxTime]) => Number
 }
 
 class Integer extends Number {
 	/**
-	 * 将数字字符串或浮点值转换为整数.
+	 * Convert a numeric string or floating point value to an integer.
 	 */
 	__New(Value) => Number
 }
@@ -3523,57 +3589,57 @@ class KeyError extends IndexError {
 
 class Map extends Object {
 	/**
-	 * Map对象将一组称为键的值关联或映射到另一组值.
+	 * The Map object associates or maps a set of values ​​called keys to another set of values.
 	 */
-	__New([Key1, Value1, *]) => Map
+	__New([Key1, Value1, * ]) => Map
 
 	/**
-	 * 从映射中删除所有键-值对.
+	 * Remove all key-value pairs from the map.
 	 */
 	Clear() => void
 
 	/**
-	 * 返回对象的一个浅拷贝.
+	 * Return a shallow copy of the object.
 	 */
 	Clone() => Map
 
 	/**
-	 * 从映射中删除键-值对.
+	 * Remove key-value pairs from the map.
 	 */
 	Delete(Key) => Any
 
 	/**
-	 * 返回与键关联的值或默认值.
+	 * Returns the value or default value associated with the key.
 	 */
-	Get(Key [, Default]) => Any
+	Get(Key[, Default]) => Any
 
 	/**
-	 * 如果 Key 在映射中有关联的值, 则返回 true, 否则返回 false.
+	 * If Key has an associated value in the map, it returns true, otherwise it returns false.
 	 */
 	Has(Key) => Number
 
 	/**
-	 * 设置零个或多个项目.
+	 * Set zero or more items.
 	 */
-	Set(Key1, Value1, *) => void
+	Set(Key1, Value1, * ) => void
 
 	/**
-	 * 检索映射中存在的键-值对的数量.
+	 * Retrieve the number of key-value pairs present in the map.
 	 */
 	Count => Number
 
 	/**
-	 * 检索或设置映射的当前容量.
+	 * Retrieve or set the current capacity of the mapping.
 	 */
 	Capacity => Number
 
 	/**
-	 * 检索或设置映射的大小写敏感性设置.
+	 * Retrieve or set the case sensitivity setting of the mapping.
 	 */
 	CaseSense => Number
 
 	/**
-	 * 定义找不到键时返回的默认值.
+	 * Define the default value returned when the key is not found.
 	 */
 	Default => Any
 }
@@ -3586,92 +3652,92 @@ class MemoryError extends Error {
 
 class Menu extends Object {
 	/**
-	 * 检索或设置激活托盘菜单的默认项所需的单击次数.
+	 * Retrieve or set the number of clicks required to activate the default item of the tray menu.
 	 */
 	ClickCount => Number
 
 	/**
-	 * 检索或设置默认菜单项.
+	 * Retrieve or set the default menu item.
 	 */
 	Default => String
 
 	/**
-	 * 检索菜单的 Win32 句柄.
+	 * Retrieve the Win32 handle of the menu.
 	 */
 	Handle => Number
 
 	/**
-	 * 创建一个新的Menu或MenuBar对象.
+	 * Create a new Menu or MenuBar object.
 	 */
 	__New() => Menu
 
 	/**
-	 * 添加或修改菜单项.
+	 * Add or modify menu items.
 	 */
 	Add([MenuItemName, Callback_or_Submenu, Options]) => void
 
 	/**
-	 * 在菜单项旁边添加一个可见的选中标记.
+	 * Add a visible check mark next to the menu item.
 	 */
 	Check(MenuItemName) => void
 
 	/**
-	 * 删除一个或所有菜单项.
+	 * Delete one or all menu items.
 	 */
 	Delete([MenuItemName]) => void
 
 	/**
-	 * 将菜单项更改为灰色, 表示用户无法选择它.
+	 * Change the menu item to gray, indicating that the user cannot select it.
 	 */
 	Disable(MenuItemName) => void
 
 	/**
-	 * 如果先前被禁用(灰色),则允许用户再次选择菜单项.
+	 * If it was previously disabled (grey), the user is allowed to select the menu item again.
 	 */
 	Enable(MenuItemName) => void
 
 	/**
-	 * 在指定的项之前插入一个新项.
+	 * Insert a new item before the specified item.
 	 */
 	Insert([ItemToInsertBefore, NewItemName, Callback_or_Submenu, Options]) => void
 
 	/**
-	 * 重命名菜单项(如果NewName为空或省略, 则MenuItemName将转换为分隔线).
+	 * Rename the menu item (if NewName is empty or omitted, the MenuItemName will be converted to a divider).
 	 */
-	Rename(MenuItemName [, NewName]) => void
+	Rename(MenuItemName[, NewName]) => void
 
 	/**
-	 * 更改菜单的背景色.
+	 * Change the background color of the menu.
 	 */
 	SetColor([ColorValue, Submenus := true]) => void
 
 	/**
-	 * 设置要在菜单项旁边显示的图标.
+	 * Set the icon to be displayed next to the menu item.
 	 */
-	SetIcon(MenuItemName, FileName [, IconNumber, IconWidth]) => void
+	SetIcon(MenuItemName, FileName[, IconNumber, IconWidth]) => void
 
 	/**
-	 * 显示菜单.
+	 * Display the menu.
 	 */
 	Show([X, Y]) => void
 
 	/**
-	 * 切换菜单项旁边的复选标记.
+	 * Toggle the check mark next to the menu item.
 	 */
 	ToggleCheck(MenuItemName) => void
 
 	/**
-	 * 启用或禁用菜单项.
+	 * Enable or disable menu items.
 	 */
 	ToggleEnable(MenuItemName) => void
 
 	/**
-	 * 从菜单项中删除选中标记(如果有).
+	 * Remove the check mark (if any) from the menu item.
 	 */
 	Uncheck(MenuItemName) => void
 
 	/**
-	 * 添加标准托盘菜单项.
+	 * Added standard tray menu items.
 	 */
 	AddStandard() => void
 }
@@ -3687,37 +3753,37 @@ class Number extends Primitive {
 
 class Object extends Any {
 	/**
-	 * Object是从AutoHotkey对象类派生的基本类.
+	 * Object is the basic class derived from the AutoHotkey object class.
 	 */
 	__New() => Object
 
 	/**
-	 * 返回对象的一个浅拷贝.
+	 * Return a shallow copy of the object.
 	 */
 	Clone() => Object
 
 	/**
-	 * 定义一个新的自有属性.
+	 * Define a new own attribute.
 	 */
 	DefineProp(Name, Desc) => void
 
 	/**
-	 * 删除对象拥有的属性.
+	 * Delete the attributes owned by the object.
 	 */
 	DeleteProp(Name) => Object
 
 	/**
-	 * 返回给定自有属性的描述符, 兼容于 DefineProp.
+	 * Returns the descriptor of a given own property, compatible with DefineProp.
 	 */
 	GetOwnPropDesc(Name) => Object
 
 	/**
-	 * 如果对象拥有该名称的属性, 则返回 true, 否则返回 false.
+	 * If the object has the attribute of the name, it returns true, otherwise it returns false.
 	 */
 	HasOwnProp(Name) => Number
 
 	/**
-	 * 枚举对象自有的属性.
+	 * Enumerate the properties of the object.
 	 */
 	OwnProps() => Enumerator
 }
@@ -3734,34 +3800,34 @@ class PropertyError extends MemberError {
 
 class RegExMatchInfo extends Object {
 	/**
-	 * 返回整体匹配或捕获的子模式的位置.
+	 * Returns the position of the overall matched or captured sub-pattern.
 	 */
 	Pos(N) => Number
 
 	/**
-	 * 返回整体匹配或捕获的子模式的长度.
+	 * Returns the length of the overall matched or captured sub-pattern.
 	 */
 	Len(N) => Number
 
 	/**
-	 * 返回给定子模式的名称(如果有的话).
+	 * Return the name of the given submode (if any).
 	 */
 	Name(N) => String
 
 	/**
-	 * 返回子模式的总数.
+	 * Returns the total number of sub-patterns.
 	 */
 	Count => Number
 
 	/**
-	 * 如果适用, 返回最后遇到的名称(*MARK：NAME).
+	 * If applicable, return the last name encountered (*MARK: NAME).
 	 */
 	Mark => String
 }
 
 class String extends Primitive {
 	/**
-	 * 将值转换为字符串.
+	 * Convert the value to a string.
 	 */
 	__New(Value) => String
 }

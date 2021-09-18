@@ -1,15 +1,194 @@
-# AutoHotkey2语言支持
+# AutoHotkey2 Language Support
 
 [![installs](https://vsmarketplacebadge.apphb.com/installs/thqby.vscode-autohotkey2-lsp.svg?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
 [![version](https://vsmarketplacebadge.apphb.com/version/thqby.vscode-autohotkey2-lsp.svg?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
 
-Turn down the pages of the [English](#autohotkey2-language-support) version of README
+[中文版 README](#AutoHotkey2语言支持)往下翻页
 
 ## repositories:
 
 [Github](https://github.com/thqby/vscode-autohotkey2-lsp)
 
 [Gitee](https://gitee.com/orz707/vscode-autohotkey2-lsp)
+
+AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis
+
+- [Language Features](#language-features)
+  - [Rename Symbol](#rename-symbol)
+  - [Diagnostics](#diagnostics)
+  - [IntelliSense](#intellisense)
+  - [Signature](#signature)
+  - [Document Symbol](#document-symbol)
+  - [Semantic Highlight](#semantic-highlight)
+  - [Blocks](#blocks)
+  - [Document Color](#document-color)
+  - [Hover](#hover)
+  - [Goto Definition](#goto-definition)
+  - [Find All References](#find-all-references)
+  - [CodeFormat](#codeformat)
+  - [Custom folding](#custom-folding)
+- [Context Menu](#context-menu)
+  - [Quick Help](#quick-Help)
+  - [Run Script](#run-script)
+  - [Run Selected Script](#run-selected-script)
+  - [Compile Script](#compile-script)
+  - [Debug Script](#debug-script)
+  - [Generate Comment](#generate-comment)
+- [Use in other editors](#use-in-other-editors)
+  - [(n)vim](#vim-and-neovim)
+
+## Language Features
+
+### Rename Symbol
+
+Rename variables and function names in the scope in batches.
+
+![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/rename.gif)
+
+### Diagnostics
+
+Simple syntax error diagnosis.
+
+![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/diagnostics2.png)
+
+### IntelliSense
+
+Supports intelligent completion of variables, functions, parameters, class names, and method names within the scope (by simple type deduction), and supports the completion of include files and function libraries.
+
+![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.png)
+
+![snippet2](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.gif)
+
+### Signature
+
+Support for intelligent prompts for function parameters.
+
+![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/signature.gif)
+
+### Document Symbol
+
+1. Displays class, method, function, variable, label, hotkey, hot string, block information in the left outline column.  
+2. press Ctrl + P, Input @symbol_name to retrieve and jump  
+3. You can comment a method with a semicolon or /* */ on the top line of a function, variable.  
+
+### Semantic Highlight
+Semantic highlighting is an addition to syntax highlighting, resolves symbols in the context of a project. The editor applies the highlighting from semantic tokens on top of the highlighting from grammars.
+
+![semanticTokens](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/semanticTokens.png)
+
+### Blocks
+
+usage: Add `;;` or `; TODO ` to the comment code block.  
+
+![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeSymbol.png)
+
+### Document Color
+
+Compute and resolve colors inside a document to provide color picker in editor.
+
+![documentcolor](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/documentcolor.png)
+
+### Hover  
+
+Supports hover prompts and comments for scoped variables, functions, global classes, and labels.  
+usage: Move the mouse over the symbol.  
+
+![hover](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/hover.png)
+
+### Goto Definition
+
+1. Support for jumping to the declaration location of scoped variables, functions, global classes, and labels.  
+2. usage: Press ctrl Then move the mouse over to the code and click.  
+
+![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/gotoDefinition.png)
+
+### Find All References
+
+See all the source code locations where a certain variable/function is being used.
+
+### CodeFormat
+
+usage:  
+
+- Right-click the popup menu and click "Format document".  
+- Press `Shift+Alt+F`.  
+- Support automatic formatting when pasting or typing `}` of a function or class. (`editor.formatOnPaste` or `editor.formatOnType` needs to be enabled)
+
+![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeFormat.gif)
+
+### Custom folding
+
+Fold the part between `;#region` and `;#endregion`, `;{` and `;}`
+```
+;#region
+code
+;#endregion
+```
+
+## Context Menu
+
+### Quick Help
+
+Open the help file and navigate to the keyword at the current cursor.
+
+### Run Script
+
+Run the currently open script.
+
+### Run Selected Script
+
+Run the code snippet at the cursor selection.
+
+### Compile Script
+
+Compile the script to generate executable EXE files.
+
+### Debug Script
+
+No additional configuration is required to start the installed Debug extensions, and support debugging with parameters.
+
+### Generate Comment
+
+Generate JSDOC-style comments for a function or method.
+
+## Use in other editors
+
+### Vim and Neovim
+
+Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim)
+```bat
+cd $VIMRUNTIME\plugin
+git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
+```
+
+Download and unpack [thqby.vscode-autohotkey2-LSP plugin](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
+
+Extract the following files into the coc.nvim\plugin
+- server/*
+- syntaxes/*
+- package.nls.json
+- package.nls.zh-cn.json
+
+Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
+```json
+{
+	"languageserver": {
+		"autohotkey": {
+			"module": "plugin/coc.nvim/plugin/ahk2-lsp folder/server/dist/server.js",
+			"filetypes": [
+				"autohotkey",
+				"autohotkey2"
+			],
+			"args": ["--node-ipc"],
+			"env": {
+				"AHK2_LS_CONFIG": "{\"locale\":\"en-us\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":false}"
+			}
+		}
+	}
+}
+```
+
+# AutoHotkey2语言支持
 
 AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
 
@@ -179,182 +358,6 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 			"args": ["--node-ipc"],
 			"env": {
 				"AHK2_LS_CONFIG": "{\"locale\":\"zh-cn\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":false}"
-			}
-		}
-	}
-}
-```
-
-# AutoHotkey2 Language Support
-
-AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis
-
-- [Language Features](#language-features)
-  - [Rename Symbol](#rename-symbol)
-  - [Diagnostics](#diagnostics)
-  - [IntelliSense](#intellisense)
-  - [Signature](#signature)
-  - [Document Symbol](#document-symbol)
-  - [Semantic Highlight](#semantic-highlight)
-  - [Blocks](#blocks)
-  - [Document Color](#document-color)
-  - [Hover](#hover)
-  - [Goto Definition](#goto-definition)
-  - [Find All References](#find-all-references)
-  - [CodeFormat](#codeformat)
-  - [Custom folding](#custom-folding)
-- [Context Menu](#context-menu)
-  - [Quick Help](#quick-Help)
-  - [Run Script](#run-script)
-  - [Run Selected Script](#run-selected-script)
-  - [Compile Script](#compile-script)
-  - [Debug Script](#debug-script)
-  - [Generate Comment](#generate-comment)
-- [Use in other editors](#use-in-other-editors)
-  - [(n)vim](#vim-and-neovim)
-
-## Language Features
-
-### Rename Symbol
-
-Rename variables and function names in the scope in batches.
-
-![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/rename.gif)
-
-### Diagnostics
-
-Simple syntax error diagnosis.
-
-![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/diagnostics2.png)
-
-### IntelliSense
-
-Supports intelligent completion of variables, functions, parameters, class names, and method names within the scope (by simple type deduction), and supports the completion of include files and function libraries.
-
-![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.png)
-
-![snippet2](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.gif)
-
-### Signature
-
-Support for intelligent prompts for function parameters.
-
-![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/signature.gif)
-
-### Document Symbol
-
-1. Displays class, method, function, variable, label, hotkey, hot string, block information in the left outline column.  
-2. press Ctrl + P, Input @symbol_name to retrieve and jump  
-3. You can comment a method with a semicolon or /* */ on the top line of a function, variable.  
-
-### Semantic Highlight
-Semantic highlighting is an addition to syntax highlighting, resolves symbols in the context of a project. The editor applies the highlighting from semantic tokens on top of the highlighting from grammars.
-![semanticTokens](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/semanticTokens.png)
-
-### Blocks
-
-usage: Add `;;` or `; TODO ` to the comment code block.  
-![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeSymbol.png)
-
-### Document Color
-
-Compute and resolve colors inside a document to provide color picker in editor.
-
-![documentcolor](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/documentcolor.png)
-
-### Hover  
-
-Supports hover prompts and comments for scoped variables, functions, global classes, and labels.  
-usage: Move the mouse over the symbol.  
-![hover](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/hover.png)
-
-### Goto Definition
-
-1. Support for jumping to the declaration location of scoped variables, functions, global classes, and labels.  
-2. usage: Press ctrl Then move the mouse over to the code and click.  
-
-![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/gotoDefinition.png)
-
-### Find All References
-
-See all the source code locations where a certain variable/function is being used.
-
-### CodeFormat
-
-usage:  
-
-- Right-click the popup menu and click "Format document".  
-- Press `Shift+Alt+F`.  
-- Support automatic formatting when pasting or typing `}` of a function or class. (`editor.formatOnPaste` or `editor.formatOnType` needs to be enabled)
-
-![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeFormat.gif)
-
-### Custom folding
-
-Fold the part between `;#region` and `;#endregion`, `;{` and `;}`
-```
-;#region
-code
-;#endregion
-```
-
-## Context Menu
-
-### Quick Help
-
-Open the help file and navigate to the keyword at the current cursor.
-
-### Run Script
-
-Run the currently open script.
-
-### Run Selected Script
-
-Run the code snippet at the cursor selection.
-
-### Compile Script
-
-Compile the script to generate executable EXE files.
-
-### Debug Script
-
-No additional configuration is required to start the installed Debug extensions, and support debugging with parameters.
-
-### Generate Comment
-
-Generate JSDOC-style comments for a function or method.
-
-## Use in other editors
-
-### Vim and Neovim
-
-Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim)
-```bat
-cd $VIMRUNTIME\plugin
-git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
-```
-
-Download and unpack [thqby.vscode-autohotkey2-LSP plugin](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
-
-Extract the following files into the coc.nvim\plugin
-- server/*
-- syntaxes/*
-- package.nls.json
-- package.nls.zh-cn.json
-
-Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
-```json
-{
-	"languageserver": {
-		"autohotkey": {
-			"module": "plugin/coc.nvim/plugin/ahk2-lsp folder/server/dist/server.js",
-			"filetypes": [
-				"autohotkey",
-				"autohotkey2"
-			],
-			"args": ["--node-ipc"],
-			"env": {
-				"AHK2_LS_CONFIG": "{\"locale\":\"en-us\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":false}"
 			}
 		}
 	}

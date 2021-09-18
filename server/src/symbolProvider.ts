@@ -32,6 +32,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 
 	function flatTree(tree: DocumentSymbol[], vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
 		const result: DocumentSymbol[] = [], t: DocumentSymbol[] = [], p: { [name: string]: DocumentSymbol } = {};
+		let tk: Token;
 		tree.map(info => {
 			if (info.children)
 				t.push(info);
@@ -48,8 +49,11 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						converttype(info, ahkvars[_l] && gvar[_l] === ahkvars[_l], gvar[_l]?.kind);
 					}
 				} else if (info.kind === SymbolKind.Variable) {
-					if (info !== vars[_l] && (vars[_l].kind !== SymbolKind.TypeParameter || vars[_l].selectionRange.start.character !== vars[_l].selectionRange.end.character))
-						converttype(info, vars[_l] === ahkvars[_l], vars[_l].kind);
+					if (info !== vars[_l])
+						if (vars[_l].kind !== SymbolKind.TypeParameter || vars[_l].selectionRange.start.character !== vars[_l].selectionRange.end.character)
+							converttype(info, vars[_l] === ahkvars[_l], vars[_l].kind);
+						else if ((tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]).semantic)
+							delete tk.semantic;
 				} else if (info !== vars[_l])
 					result.push(info), vars[_l] = info, converttype(info, info === ahkvars[_l]);
 				else if (info === gvar[_l])

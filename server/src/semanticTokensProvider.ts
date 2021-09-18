@@ -4,10 +4,11 @@ import { lexers } from './server';
 import { globalsymbolcache, symbolProvider } from './symbolProvider';
 
 let curclass: ClassNode | undefined;
+let memscache = new Map<ClassNode, DocumentSymbol[]>();
 
 export async function semanticTokensOnFull(params: SemanticTokensParams): Promise<SemanticTokens> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], sem = doc.STB;
-	sem.previousResult(''), curclass = undefined;
+	sem.previousResult(''), curclass = undefined, memscache.clear();
 	await symbolProvider({ textDocument: params.textDocument });
 	for (let tk of Object.values(doc.tokens)) {
 		if (tk.semantic) {
@@ -18,12 +19,13 @@ export async function semanticTokensOnFull(params: SemanticTokensParams): Promis
 		} else if (curclass && tk.type !== 'TK_DOT' && tk.type.endsWith('COMMENT'))
 			curclass = undefined;
 	}
+	memscache.clear();
 	return sem.build();
 }
 
 export async function semanticTokensOnDelta(params: SemanticTokensDeltaParams): Promise<SemanticTokensDelta | SemanticTokens> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], sem = doc.STB;
-	sem.previousResult(params.previousResultId), curclass = undefined;
+	sem.previousResult(params.previousResultId), curclass = undefined, memscache.clear();
 	await symbolProvider({ textDocument: params.textDocument });
 	for (let tk of Object.values(doc.tokens)) {
 		if (tk.semantic) {
@@ -34,14 +36,14 @@ export async function semanticTokensOnDelta(params: SemanticTokensDeltaParams): 
 		} else if (curclass && tk.type !== 'TK_DOT' && tk.type.endsWith('COMMENT'))
 			curclass = undefined;
 	}
+	memscache.clear();
 	return sem.buildEdits();
 }
 
 export async function semanticTokensOnRange(params: SemanticTokensRangeParams): Promise<SemanticTokens> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], sem = doc.STB;
-	let start = doc.document.offsetAt(params.range.start);
-	let end = doc.document.offsetAt(params.range.end);
-	sem.previousResult(''), curclass = undefined;
+	let start = doc.document.offsetAt(params.range.start), end = doc.document.offsetAt(params.range.end);
+	sem.previousResult(''), curclass = undefined, memscache.clear();
 	await symbolProvider({ textDocument: params.textDocument });
 	for (let tk of Object.values(doc.tokens)) {
 		if (tk.offset < start)
@@ -56,6 +58,7 @@ export async function semanticTokensOnRange(params: SemanticTokensRangeParams): 
 		} else if (curclass && tk.type !== 'TK_DOT' && tk.type.endsWith('COMMENT'))
 			curclass = undefined;
 	}
+	memscache.clear();
 	return sem.build();
 }
 
@@ -69,9 +72,9 @@ function resolveSemanticType(name: string, sem: SemanticToken, doc: Lexer) {
 		case SemanticTokenTypes.method:
 		case SemanticTokenTypes.property:
 			if (curclass) {
-				let n = curclass.staticdeclaration[name], kind = n?.kind;
+				let n = curclass.staticdeclaration[name], kind = n?.kind, temp: DocumentSymbol[];
 				if (!n) {
-					for (let t of getClassMembers(doc, curclass, true))
+					for (let t of (memscache.get(curclass) || (memscache.set(curclass, temp = getClassMembers(doc, curclass, true)), temp)))
 						if (t.name.toLowerCase() === name) {
 							n = t, kind = t.kind; break;
 						}

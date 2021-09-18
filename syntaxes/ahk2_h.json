@@ -1,85 +1,85 @@
 {
-	"keywords": [
-		{
-			"body": "#CriticalObjectSleepTime ",
-			"description": "访问CriticalObject时, TryEnterCriticalObject调用之间的睡眠时间. 这会影响CPU负载. 此设置仅影响创建CriticalObject的线程.",
-			"prefix": "#CriticalObjectSleepTime"
-		},
-		{
-			"body": "#CriticalObjectTimeOut ",
-			"description": "当访问CriticalObject超时时, 将显示错误消息, 并且当前线程将退出.",
-			"prefix": "#CriticalObjectTimeOut"
-		},
-		{
-			"body": "#DefineDefault${1|Array,Map,Object|}Value ",
-			"description": "定义在object/array/map中找不到属性或项目时将使用的默认值.",
-			"prefix": "#DefineDefault"
-		},
-		{
-			"body": "#DllImport ${1:Function_Name}, ${2:DllFile\\Function}${3:[, Type1, Arg1, Type2, Arg2, Cdecl ReturnType]}",
-			"description": "为dll或exe函数创建脚本函数.",
-			"prefix": "#DllImport"
-		},
-		{
-			"body": "#WarnContinuableException",
-			"description": "对于连续的异常, 不显示EXCEPTION_ACCESS_VIOLATION警告消息.",
-			"prefix": "#WarnContinuableException"
-		},
-		{
-			"body": "#WindowClassGui ",
-			"description": "将Gui窗口类名称从AutoHotkey GUI更改为其他名称.",
-			"prefix": "#WindowClassGui"
-		},
-		{
-			"body": "#WindowClassMain ",
-			"description": "将主窗口类名称从AutoHotkey更改为其他名称.",
-			"prefix": "#WindowClassMain"
-		}
-	],
-	"variables": [
-		{
-			"body": "A_AhkDir",
-			"prefix": "A_AhkDir"
-		},
-		{
-			"body": "A_DllDir",
-			"prefix": "A_DllDir"
-		},
-		{
-			"body": "A_DllPath",
-			"prefix": "A_DllPath"
-		},
-		{
-			"body": "A_GlobalStruct",
-			"prefix": "A_GlobalStruct"
-		},
-		{
-			"body": "A_IsDll",
-			"prefix": "A_IsDll"
-		},
-		{
-			"body": "A_MainThreadID",
-			"prefix": "A_MainThreadID"
-		},
-		{
-			"body": "A_MemoryModule",
-			"prefix": "A_MemoryModule"
-		},
-		{
-			"body": "A_ModuleHandle",
-			"prefix": "A_ModuleHandle"
-		},
-		{
-			"body": "A_ScriptStruct",
-			"prefix": "A_ScriptStruct"
-		},
-		{
-			"body": "A_ThreadID",
-			"prefix": "A_ThreadID"
-		},
-		{
-			"body": "A_ZipCompressionLevel",
-			"prefix": "A_ZipCompressionLevel"
-		}
-	]
+    "keywords": [
+        {
+            "body": "#CriticalObjectSleepTime ",
+            "description": "When accessing a CriticalObject, the sleep time between TryEnterCriticalObject calls. This will affect the CPU load. This setting only affects the thread that created the CriticalObject.",
+            "prefix": "#CriticalObjectSleepTime"
+        },
+        {
+            "body": "#CriticalObjectTimeOut ",
+            "description": "When access to CriticalObject times out, an error message will be displayed, and the current thread will exit.",
+            "prefix": "#CriticalObjectTimeOut"
+        },
+        {
+            "body": "#DefineDefault${1|Array,Map,Object|}Value ",
+            "description": "Defines the default value that will be used when an attribute or item is not found in object/array/map.",
+            "prefix": "#DefineDefault"
+        },
+        {
+            "body": "#DllImport ${1:Function_Name}, ${2:DllFile\\Function}${3:[, Type1, Arg1, Type2, Arg2, Cdecl ReturnType]}",
+            "description": "Create script functions for dll or exe functions.",
+            "prefix": "#DllImport"
+        },
+        {
+            "body": "#WarnContinuableException",
+            "description": "For continuous exceptions, the EXCEPTION_ACCESS_VIOLATION warning message is not displayed.",
+            "prefix": "#WarnContinuableException"
+        },
+        {
+            "body": "#WindowClassGui ",
+            "description": "Change the name of the Gui window class from AutoHotkey GUI to another name.",
+            "prefix": "#WindowClassGui"
+        },
+        {
+            "body": "#WindowClassMain ",
+            "description": "Change the name of the main window class from AutoHotkey to another name.",
+            "prefix": "#WindowClassMain"
+        }
+    ],
+    "variables": [
+        {
+            "body": "A_AhkDir",
+            "prefix": "A_AhkDir"
+        },
+        {
+            "body": "A_DllDir",
+            "prefix": "A_DllDir"
+        },
+        {
+            "body": "A_DllPath",
+            "prefix": "A_DllPath"
+        },
+        {
+            "body": "A_GlobalStruct",
+            "prefix": "A_GlobalStruct"
+        },
+        {
+            "body": "A_IsDll",
+            "prefix": "A_IsDll"
+        },
+        {
+            "body": "A_MainThreadID",
+            "prefix": "A_MainThreadID"
+        },
+        {
+            "body": "A_MemoryModule",
+            "prefix": "A_MemoryModule"
+        },
+        {
+            "body": "A_ModuleHandle",
+            "prefix": "A_ModuleHandle"
+        },
+        {
+            "body": "A_ScriptStruct",
+            "prefix": "A_ScriptStruct"
+        },
+        {
+            "body": "A_ThreadID",
+            "prefix": "A_ThreadID"
+        },
+        {
+            "body": "A_ZipCompressionLevel",
+            "prefix": "A_ZipCompressionLevel"
+        }
+    ]
 }
