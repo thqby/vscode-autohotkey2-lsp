@@ -26,9 +26,9 @@ ATan(Number) => Number
  * 回调函数保留对函数对象的引用, 并在脚本调用 CallbackFree 时释放它.
  * @param Options 指定零个或多个下列单词或字符串. 在选项间使用空格分隔(例如 "C Fast").
  * Fast 或 F: 避免每次调用 Function 时都启动新的线程. 尽管这样执行的更好, 但必须避免调用 Address 的线程发生变化(例如当回调函数被传入的消息触发). 这是因为 Function 能改变在它被调用时正在运行的线程的全局设置(例如 A_LastError 和上次找到的窗口). 有关详情, 请参阅备注.
- *
+ * 
  * CDecl 或 C: 让 Address 遵循 "C" 调用约定. 此选项通常省略, 因为在回调函数中使用标准调用约定更为常用. 64 位版本的 AutoHotkey 会忽略这个选项, 它使用 x64 调用约定.
- *
+ * 
  * &: 将参数列表的地址(单个整数) 传递给 Function, 而不是传递给各个参数. 可以使用 NumGet 检索参数值. 当使用标准的 32 位调用约定时, ParamCount 必须以 DWORDs 指定参数列表的大小(字节数除以 4).
  * @param ParamCount Address 的调用者会传递给它的参数数目. 如果省略, 则它默认为 Function.MinParams, 这通常是 Function 定义中强制参数的数目. 在这两种情况中, 必须确保调用者准确传递此数目的参数.
  */
@@ -78,12 +78,12 @@ ClipWait([Timeout, WaitForAnyData]) => Number
  * @param Index 虚拟函数表中方法的索引(从零开始).
  * Index 对应于方法在原始接口定义中的位置. Microsoft 文档通常按字母顺序列出方法, 这是不相关的.
  * 为了确定正确的索引, 请找到原来的接口定义. 这可能在头文件或类型库中.
- *
- * 考虑方法继承于的父接口是很重要的. 前三个方法总是 QueryInterface (0), AddRef (1) 和 Release (2). 
+ * 
+ * 考虑方法继承于的父接口是很重要的. 前三个方法总是 QueryInterface (0), AddRef (1) 和 Release (2).
  * @param ComObject 目标 COM 对象; 也就是说, 一个 COM 接口指针.
  * 指针值可以直接传递, 也可以封装在带有 Ptr 属性的对象中, 如带有 VT_UNKNOWN 变量类型的 ComObj.
  */
-ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Number|String
+ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Number | String
 
 /**
  * 检索已使用 OLE(对象连接与嵌入) 注册的运行中的对象.
@@ -98,7 +98,7 @@ ComObjConnect(ComObject [, Prefix]) => void
 
 /*
  * 包装原始IDispatch指针.
- * IDispatch或派生接口的非空接口指针. 
+ * IDispatch或派生接口的非空接口指针.
  */
 ComObjFromPtr(DispPtr) => ComObject
 
@@ -132,7 +132,7 @@ ComObjQuery(ComObject [, SID], IID) => Comobject
  * @param Type 第二个参数是指示返回的类型信息的字符串.
  * Name, IID, Class, CLSID
  */
-ComObjType(ComObject [, Type]) => Number|String
+ComObjType(ComObject [, Type]) => Number | String
 
 /**
  * 检索存储在 COM 包装器对象中的值或指针.
@@ -163,26 +163,26 @@ ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeT
  * 发送鼠标按钮或鼠标滚轮事件到控件.
  * @param Control_or_Pos 如果省略此参数, 则目标窗口本身将被点击. 否则, 将使用以下两种模式之一.
  * 模式 1(位置): 指定相对于目标窗口客户端区域左上角的 X 和 Y 坐标. X 坐标必须在 Y 坐标之前, 并且它们之间必须至少有一个空格或制表符. 例如: X55 Y33. 如果在指定的坐标上有一个控件, 它将在这些确切的坐标上发送点击事件. 如果没有控件, 目标窗口本身将被发送事件(根据窗口的性质, 可能没有效果).
- *
+ * 
  * 模式 2(控件): 指定控件的 ClassNN, 文本或 HWND, 或一个具有 Hwnd 属性的对象. 有关详情, 请参阅控件的参数.
- *
+ * 
  * 默认情况下, 模式 2 优先于模式 1. 例如, 在一种不太可能发生的情况中某个控件的文本或 ClassNN 格式为 "Xnnn Ynnn", 那么此时会使用模式 2. 要覆盖此行为而无条件使用模式 1, 请在 Options中加上单词 Pos, 如下例所示: ControlClick "x255 y152", WinTitle,,,, "Pos".
  * @param WhichButton 要点击的按钮: LEFT, RIGHT, MIDDLE(或这些单词的首个字母). 如果省略或为空, 则使用 LEFT 按钮.
  * 支持 X1(XButton1, 第四个鼠标按钮) 和 X2(XButton2, 第五个鼠标按钮).
  * 支持 WheelUp(或 WU), WheelDown(或 WD), WheelLeft(或 WL) 和 WheelRight(或 WR). 此时, ClickCount 为需要转动的滚轮格数.
  * @param Options 零个或多个下列选项字母组成的系列. 例如: d x50 y25
  * NA: 也许可以提高可靠性. 请参阅后面的可靠性.
- *
+ * 
  * D: 按住鼠标按钮不放(即生成按下事件). 如果 D 和 U 选项都没有, 则会发送完整的点击事件(按下事件和弹起事件).
- *
+ * 
  * U: 释放鼠标按钮(即生成弹起事件). 此选项不能和 D 选项同时使用.
- *
+ * 
  * Pos: 在 Options 的任意位置指定单词 Pos, 这样会无条件使用 Control-or-Pos 参数中描述的 X/Y 位置模式.
- *
+ * 
  * Xn: 指定 n 为要点击的相对于控件左上角的 X 坐标. 如果未指定, 则在控件的水平中心点击.
- *
+ * 
  * Yn: 指定 n 为要点击的相对于控件左上角的 Y 坐标. 如果未指定, 则在控件的垂直中心点击.
- *
+ * 
  * X 和 Y 选项中使用十进制(不是十六进制数) 数字.
  */
 ControlClick([Control_or_Pos, WinTitle, WinText, WhichButton, ClickCount, Options, ExcludeTitle, ExcludeText]) => void
@@ -300,9 +300,9 @@ ControlSendText(Keys [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) 
 /**
  * 打开(选中) 或关闭(取消选中) 复选框或单选按钮.
  * @param Value 1 或 True 打开设置
- *
+ * 
  * 0 或 False 关闭设置
- *
+ * 
  * -1 将其设置为与当前状态相反的状态
  */
 ControlSetChecked(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
@@ -310,9 +310,9 @@ ControlSetChecked(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText
 /**
  * 启用或禁用指定的控件.
  * @param Value 1 或 True 打开设置
- *
+ * 
  * 0 或 False 关闭设置
- *
+ * 
  * -1 将其设置为与当前状态相反的状态
  */
 ControlSetEnabled(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
@@ -359,7 +359,7 @@ Cos(Number) => Number
 
 /**
  * 防止当前线程被其他线程中断, 或使其能够被中断.
- * @param OnOffNumeric 
+ * @param OnOffNumeric
  */
 Critical(OnOffNumeric) => void
 
@@ -380,9 +380,9 @@ DateDiff(DateTime1, DateTime2, TimeUnits) => Number
 /**
  * 复制文件夹, 及其所有子文件夹和文件(类似于 xcopy).
  * @param Overwrite 此参数决定是否覆盖已存在的文件. 如果省略, 它默认为 0(false). 指定下列值之一:
- *
+ * 
  * 0(false): 不覆盖现有的文件. 如果已经存在以 Dest 为名称的文件或目录, 则操作会失败并且没有任何效果.
- *
+ * 
  * 1(true): 覆盖现在的文件. 但是, 不会删除在 Dest 中没有被 Source 目录中文件覆盖的其他子目录或文件.
  */
 DirCopy(Source, Dest, Overwrite := false) => void
@@ -395,9 +395,9 @@ DirCreate(DirName) => void
 /**
  * 删除文件夹.
  * @param Recurse 这个参数决定是否递归到子目录中. 如果省略, 它默认为 0(false). 指定以下值之一:
- *
+ * 
  * 0(false): 不移除 DirName 中包含的文件和子目录. 此时如果 DirName 不是空的, 则不进行操作并且抛出异常.
- *
+ * 
  * 1(true): 移除所有文件和子目录(类似于 Windows 命令 "rmdir /S").
  */
 DirDelete(DirName, Recurse := false) => void
@@ -405,7 +405,7 @@ DirDelete(DirName, Recurse := false) => void
 /**
  * 检查文件夹是否存在并返回其属性.
  * @returns 返回第一个符合条件的文件夹的属性. 这个字符串是 ASHDOC 的一个子集, 其中每个字母的意思如下:
- *
+ * 
  * A = ARCHIVE(存档)
  * 
  * S = SYSTEM(系统)
@@ -425,15 +425,15 @@ DirExist(FilePattern) => String
  * @param Source 源目录的名称(不含末尾的反斜杠).
  * @param Dest 目标目录的名称(不含末尾的反斜杠).
  * @param Flag 指定下列单个字符的其中一个:
- *
+ * 
  * 0(默认): 不覆盖现有的文件. 如果 Dest 作为文件或目录已经存在, 则操作失败.
- *
+ * 
  * 1: 覆盖现在的文件. 但是, Dest 中的任何文件或子文件夹如果在 Source 中没有对应文件都不会被删除.
  * `已知限制:` 如果 Dest 已作为文件夹存在, 并且与 Source 在同一个卷上, 则将 Source 移入其中而不是覆盖它. 为了避免这种情况, 请参阅下一个选项.
- *
+ * 
  * 2: 与上面的模式 1 相同, 只是没有限制.
- *
- * R: 重命名目录而不移动它. 尽管普通的重命名和移动具有相同的效果, 但如果您想要 "完全成功或完全失败" 的结果时它就会有用; 即您不希望由于 Source 或其中的某个文件被锁定(在使用中) 而只是部分移动成功. 
+ * 
+ * R: 重命名目录而不移动它. 尽管普通的重命名和移动具有相同的效果, 但如果您想要 "完全成功或完全失败" 的结果时它就会有用; 即您不希望由于 Source 或其中的某个文件被锁定(在使用中) 而只是部分移动成功.
  * 尽管这种方法不能移动 Source 到另一个卷中, 但它可以移动到同一个卷中的其他任何目录. 如果 Dest 作为文件或目录已经存在, 则操作失败.
  */
 DirMove(Source, Dest, Flag := 0) => void
@@ -441,22 +441,22 @@ DirMove(Source, Dest, Flag := 0) => void
 /**
  * 显示可以让用户选择文件夹的标准对话框.
  * @param StartingFolder 如果为空或省略, 则对话框的初始选择为用户的我的文档文件夹(或可能是我的电脑). 可以指定 CLSID 文件夹, 如 "::{20d04fe0-3aea-1069-a2d8-08002b30309d}"(即我的电脑) 来从特定的专用文件夹开始导航.
- *
+ * 
  * 否则, 此参数最常见的用法是星号后面紧跟着初始选择的驱动器或文件夹的绝对路径. 例如, "*C:\" 会初始选择 C 驱动器. 同样地, "*C:\My Folder" 会初始选择这个特殊的文件夹.
- *
+ * 
  * 星号表示允许用户从起始文件夹向上导航(接近根目录). 如果没有星号, 则强制用户在 StartingFolder(或 StartingFolder 自身) 中选择文件夹. 省略星号的一个好处是最初 StartingFolder 会显示为树形展开状态, 这样可以节省用户点击前面加号的时间.
- *
+ * 
  * 如果有星号, 向上导航也可以选择限制在桌面以外的文件夹中. 这是通过在星号前面加上最顶层文件夹的绝对路径, 后面正好是一个空格或制表符来实现的. 例如, "C:\My Folder *C:\My Folder\Projects" 将不允许用户导航到比 C:\My Folder 更上级的文件夹(不过初始选择可以是 C:\My Folder\Projects):
  * @param Options 下列数字的其中一个:
- *
+ * 
  * 0: 禁用下面所有选项.
- *
+ * 
  * 1(默认): 提供允许用户新建文件夹的按钮.
- *
+ * 
  * 加 2 到上面的数字来提供允许用户输入文件夹名称的编辑区域. 例如, 此参数值为 3 表示同时提供编辑区域和 "新建文件夹" 按钮.
- *
+ * 
  * 加 4 到上面的数字来忽略 BIF_NEWDIALOGSTYLE 属性. 加 4 确保了 DirSelect 即使在像 WinPE 或 BartPE 这样的预安装环境中也能正常工作. 然而, 这样阻止了 "新建文件夹" 按钮的出现.
- *
+ * 
  * 如果用户在编辑区域中输入了无效的文件夹名称, 则 SelectedFolder 会被设置为在导航树中选择的文件夹而不是用户输入的内容.
  * @param Prompt 显示在窗口中用来提示用户操作的文本. 如果省略或为空, 则它默认为 "Select Folder - " A_ScriptName(即当前脚本的名称).
  */
@@ -465,7 +465,7 @@ DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
 /**
  * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number|String
+DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number | String
 
 /**
  * 从互联网下载文件.
@@ -518,17 +518,17 @@ DriveGetStatus(Path) => String
 /**
  * 返回指定 CD/DVD 驱动器的媒体状态.
  * @param Drive 驱动器字母后跟着冒号. 如果省略, 将使用默认的 CD/DVD 驱动器.
- * @returns not ready 驱动器未准备好被访问, 可能因为正忙于写入操作. 已知限制: 当驱动器里是 DVD 而不是 CD 时, 也会出现 "未准备好" 的情况. 
- *
- * open 驱动器里没有光盘, 或者托盘已弹出. 
- *
- * playing 驱动器正在播放光盘. 
- *
- * paused 之前播放的音频或视频现在已暂停. 
- *
- * seeking 驱动器正在寻道. 
- *
- * stopped 驱动器里有 CD 但当前没有进行访问. 
+ * @returns not ready 驱动器未准备好被访问, 可能因为正忙于写入操作. 已知限制: 当驱动器里是 DVD 而不是 CD 时, 也会出现 "未准备好" 的情况.
+ * 
+ * open 驱动器里没有光盘, 或者托盘已弹出.
+ * 
+ * playing 驱动器正在播放光盘.
+ * 
+ * paused 之前播放的音频或视频现在已暂停.
+ * 
+ * seeking 驱动器正在寻道.
+ * 
+ * stopped 驱动器里有 CD 但当前没有进行访问.
  */
 DriveGetStatusCD(Drive := '') => String
 
@@ -616,21 +616,21 @@ Exp(N) => Number
 /**
  * 在文件末尾处追加(写入) 文本或二进制数据(如果有必要, 首先创建文件).
  * @param Filename 要追加内容的文件名, 如果未指定绝对路径, 则假定在 A_WorkingDir 中. 目标目录必须已经存在.
- * 标准输出(stdout): 在 Filename 指定星号(*) 可以把 Text 发送到标准输出(stdout). 
+ * 标准输出(stdout): 在 Filename 指定星号(*) 可以把 Text 发送到标准输出(stdout).
  * 在 Filename 指定两个星号(**) 可以把 Text 发送到标准错误输出(stderr).
  * @param Options 零个或多个以下字符串. 使用单个空格或制表符将每个选项与下一个选项分开. 例如: "`n UTF-8"
- *
+ * 
  * Encoding: 如果文件缺少 UTF-8 或 UTF-16 字节顺序标记, 则指定 FileEncoding 接受的任何编码名称(不包括空字符串) 以使用该编码. 如果省略, 默认为 A_FileEncoding(除非 Text 是对象, 在这种情况下不写入字节顺序标记).
- *
+ * 
  * RAW: 指定单词 RAW(不区分大小写) 按原样将 Text 包含的确切字节写入文件, 不进行任何转换. 此选项覆盖以前指定的任何编码, 反之亦然. 如果 Text 不是对象, 由于使用 UTF-16 字符串, 数据大小总是 2 字节的倍数.
- *
+ * 
  * `n(换行符): 如果回车符不存在, 则在每个换行符(`n) 之前插入回车符(`r). 换句话说, 将转换 `n 为 `r`n. 这种转换通常不会影响性能. 如果不使用此选项, 则不会更改 Text 中的行尾.
  */
 FileAppend(Text, Filename, Options := '') => void
 
 /**
  * 复制一个或多个文件.
- * @param SourcePattern 单个文件或文件夹的名称, 或通配符模式(如 C:\Temp\*.tmp). 
+ * @param SourcePattern 单个文件或文件夹的名称, 或通配符模式(如 C:\Temp\*.tmp).
  * @param DestPattern 目标的名称或模式, 如果星号存在, 则将文件名中的第一个星号(*) 替换为不包含其扩展名的源文件名,
  * 而将最后一个句号 (.) 后的第一个星号替换为源文件的扩展名. 如果有星号, 但省略了扩展名, 则使用源文件的扩展名.
  * @param Overwrite 此参数确定是否覆盖已存在的文件. 如果此参数为 1(true), 则该函数将覆盖现有文件. 如果省略或为 0(false), 则该函数不会覆盖现有文件.
@@ -648,11 +648,11 @@ FileCopy(SourcePattern, DestPattern, Overwrite := false) => void
  * @param ShortcutKey 单个字母, 数字或在按键列表中的单个按键的名称(可能不支持鼠标按钮或其他非标准的按键). 不要 包含修饰符. 目前, 所有创建的快捷键都使用 Ctrl+Alt 作为修饰键. 例如, 如果在此参数中指定字母 B, 则快捷键将为 Ctrl+Alt+B.
  * @param IconNumber 要使用 IconFile 中的图标(第一个图标除外), 请在这里指定编号. 例如, 2 表示第二个图标.
  * @param RunState 要最小化或最大化运行 Target. 如果为空或省略, 则默认为 1(正常). 否则, 指定下列数字之一:
- *
+ * 
  * 1 = 正常
- *
+ * 
  * 3 = 最大化
- *
+ * 
  * 7 = 最小化
  */
 FileCreateShortcut(Target, LinkFile [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]) => void
@@ -684,23 +684,23 @@ FileEncoding(Encoding := 'CP0') => void
 /**
  * 检查文件或目录是否存在并返回它的属性.
  * @returns 返回第一个匹配文件或文件夹的属性. 这个字符串是 RASHNDOCT 的子集, 其中每个字母的意思如下:
- *
+ * 
  * R = READONLY(只读)
- *
+ * 
  * A = ARCHIVE(存档)
- *
+ * 
  * S = SYSTEM(系统)
- *
+ * 
  * H = HIDDEN(隐藏)
- *
+ * 
  * N = NORMAL(普通)
- *
+ * 
  * D = DIRECTORY(目录)
- *
+ * 
  * O = OFFLINE(离线)
- *
+ * 
  * C = COMPRESSED(压缩)
- *
+ * 
  * T = TEMPORARY(临时)
  */
 FileExist(FilePattern) => String
@@ -708,7 +708,7 @@ FileExist(FilePattern) => String
 /**
  * 报告文件或文件夹是否为只读, 隐藏等.
  * @returns 返回文件或文件夹的属性. 这个字符串是 RASHNDOCT, 的子集, 其中每个字母的意思如下:
- *
+ * 
  * R = READONLY(只读)
  * 
  * A = ARCHIVE(存档)
@@ -796,16 +796,16 @@ FileOpen(Filename, Flags [, Encoding]) => File
 /**
  * 检索文件的内容.
  * @param Options 以下字符串的零个或多个, 使用单个空格或制表符将每个选项与下一个选项分开. 例如: "`n m5000 UTF-8"
- *
+ * 
  * Encoding: 如果文件缺少 UTF-8 或 UTF-16 字节顺序标记, 则指定 FileEncoding 接受的任何编码名称(不包括空字符串) 以使用该编码. 如果省略, 默认为 A_FileEncoding.
- *
+ * 
  * RAW: 指定单词 RAW(不区分大小写) 以原始二进制数据读取文件内容, 并返回缓冲对象而不是字符串. 此选项覆盖以前指定的任何编码, 反之亦然.
- *
+ * 
  * m1024: 如果省略此选项, 则读取整个文件, 不过如果内存不足, 则显示错误消息并退出线程(使用 Try 可以避免这种情况). 否则, 请把 1024 替换为十进制或十六进制表示的字节数. 如果文件大于此字节数, 那么只读取其前面部分.
- *
+ * 
  * `n(换行符): 把所有的回车换行符(`r`n) 替换为换行符(`n). 不过, 这种转换会降低性能而且往往不必要. 例如, 包含 `r`n 的文本已经以正确的格式添加到 Gui Edit 控件中. 下面的解析循环将正确工作, 不管每一行的结尾是 `r`n 还是 `n: Loop Parse, MyFileContents, "`n", "`r".
  */
-FileRead(Filename [, Options]) => Buffer|String
+FileRead(Filename [, Options]) => Buffer | String
 
 /**
  * 如果可能, 发送文件或目录到回收站, 或永久删除该文件.
@@ -823,54 +823,54 @@ FileRecycleEmpty(DriveLetter := '') => void
 /**
  * 显示可以让用户打开或保存文件的标准对话框.
  * @param Options 可以是一个数字或下面列出的字母之一, 可选择在后面加一个数字. 例如, "M", 1 和 "M1"都是有效的(但不相同).
- *
+ * 
  * D: 选择文件夹(目录). 指定字母 D, 允许用户选择文件夹而不是文件. 该对话框具有与选择文件时相同的大部分功能, 但不支持过滤器(Filter 必须省略或置空).
- *
+ * 
  * M: 多选. 指定字母 M 让用户可以使用 Shift+点击, Control+点击或其他方法来选择多个文件. 在这种情况下, 返回值是一个数组不是一个字符串. 要提取单个文件, 请参阅本页底部的示例.
- *
+ * 
  * S: 保存对话框. 指定字母 S 让对话框显示保存按钮代替打开按钮.
- *
+ * 
  * 可以使用以下数字. 要使其中多个数字生效, 请将它们相加. 例如, 要使用 1 和 2, 请指定数字 3.
- *
+ * 
  * 1: 文件必须存在
- *
+ * 
  * 2: 路径必须存在
- *
+ * 
  * 8: 提示创建新文件
- *
+ * 
  * 16: 提示覆盖文件
- *
+ * 
  * 32: 选择快捷方式本身(.lnk 文件) 而不解析为它们的目标. 此选项也避免了通过文件夹快捷方式跳转到那个文件夹的情况.
- *
- *由于 "提示覆盖" 选项只有保存对话框支持, 因此在没有 "提示创建" 选项的情况下指定该选项也会使 "S" 选项生效. 同样, 当 "S" 选项存在时, "提示创建" 选项也没有效果. 指定数字 24 可以启用对话框支持的任何一种提示类型.
+ * 
+ * 由于 "提示覆盖" 选项只有保存对话框支持, 因此在没有 "提示创建" 选项的情况下指定该选项也会使 "S" 选项生效. 同样, 当 "S" 选项存在时, "提示创建" 选项也没有效果. 指定数字 24 可以启用对话框支持的任何一种提示类型.
  */
 FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Files (*.*)') => String
 
 /**
  * 改变一个或多个文件或文件夹的属性. 支持通配符.
  * @param Attributes 要改变的属性. 例如, +HA-R. 要方便地打开, 关闭或切换属性, 请分别在以下一个或多个属性字母前加上加号(+), 减号(-) 或脱字符(^):
- *
+ * 
  * R = 只读
- *
+ * 
  * A = 存档
- *
+ * 
  * S = 系统
- *
+ * 
  * H = 隐藏
- *
+ * 
  * N = 普通(仅在单独使用此属性时才有效)
- *
- *O = 离线
- *
+ * 
+ * O = 离线
+ * 
  * T = 临时
  * @param FilePattern 单个文件或文件夹的名称, 或通配符模式, 如 "C:\Temp\*.tmp". 如果未指定绝对路径, 则假定 FilePattern 在 A_WorkingDir 中.
  * 如果省略, 则使用最内层文件循环的当前文件.
  * @param Mode 如果为空或省略, 则默认仅对文件进行操作, 子目录不被递归. 否则, 请指定零个或更多的下列字母:
- *
+ * 
  * D = 包含目录(文件夹).
- *
+ * 
  * F = 包含文件. 如果同时省略 F 和 D, 则仅包含文件而不包括目录.
- *
+ * 
  * R = 子文件夹被递归到其中, 这样包含在其中的文件和文件夹如果匹配 FilePattern, 则对它们进行操作. 所有子文件夹都将被递归到其中, 而不仅仅是那些名称匹配 FilePattern 的子文件夹. 如果省略 R, 则不包含子目录中的文件和目录.
  */
 FileSetAttrib(Attributes, FilePattern := '', Mode := '') => void
@@ -880,18 +880,18 @@ FileSetAttrib(Attributes, FilePattern := '', Mode := '') => void
  * @param YYYYMMDDHH24MISS 如果为空或省略, 则它默认为当前时间.
  * @param FilePattern 单个文件或文件夹的名称或者通配符模式, 例如 C:\Temp\*.tmp. 如果未指定绝对路径, 则假定 FilePattern 在 A_WorkingDir 中. 如果省略, 则使用 File-Loop 最内层的当前文件.
  * @param WhichTime 如果为空或省略, 则默认为 M(修改时间). 否则, 指定以下字母之一来设置应该更改的时间戳:
- *
+ * 
  * M = 修改时间
- *
+ * 
  * C = 创建时间
- *
+ * 
  * A = 上次访问时间
  * @param Mode 如果为空或省略, 则仅对文件进行操作, 子目录不被递归. 否则, 请指定零个或更多的下列字母:
- *
+ * 
  * D = 包含目录(文件夹).
- *
+ * 
  * F = 包含文件. 如果同时省略 F 和 D, 则仅包含文件而不包括目录.
- *
+ * 
  * R = 子文件夹被递归到其中, 这样包含在其中的文件和文件夹如果匹配 FilePattern, 则对它们进行操作. 所有子文件夹都将被递归到其中, 而不仅仅是那些名称匹配 FilePattern 的子文件夹. 如果省略 R, 则不包含子目录中的文件和目录.
  */
 FileSetTime(YYYYMMDDHH24MISS := '', FilePattern := '', WhichTime := 'M', Mode := '') => void
@@ -916,7 +916,7 @@ Floor(Number) => Number
  * 
  * (空格) 当输出值是有符号数且为正数时, 以空格为前缀来修饰. 如果空格   和 + 同时出现时, 空格将被忽略. 例如, Format("{: 10}", 1) 返回 `         1`.
  * 
- *\# 当 # 和 o, x 或 X 格式一起使用时, 此标志使用 0, 0x 或 0X 的形式分别修饰任意非零的输出值. 例如, Format("{:#x}", 1) 返回 0x1.
+ * \# 当 # 和 o, x 或 X 格式一起使用时, 此标志使用 0, 0x 或 0X 的形式分别修饰任意非零的输出值. 例如, Format("{:#x}", 1) 返回 0x1.
  * 当 # 和 e, E, f, a, A 格式一起使用时, 此标志强制使输出值包含小数点. 例如, Format("{:#.0f}", 1) 返回 1..
  * 当 # 和 g 或 G 一起使用时, 此标志强制使输出值包含小数点并保留末尾的 0.
  * 当 # 和 c, d, i, u 或 s 格式一起使用时会被忽略.
@@ -986,26 +986,26 @@ GetKeySC(KeyName) => Number
  * 检查键盘按键或鼠标/操纵杆按键是否按下或放开. 也可以获取操纵杆的状态.
  * @param KeyName `已知限制:` 此函数不能区分两个共享相同虚拟键代码的键, 例如 Left 和 NumpadLeft.
  * @param Mode 获取操纵杆状态时, 此参数被忽略. 如果省略, 则模式默认是获取按键的逻辑状态. 这是操作系统和活动窗口所认为的按键所处的状态, 但可能和按键的物理状态不一致.
- *
+ * 
  * 或者, 可以指定这些字母的其中一个:
- *
+ * 
  * P: 获取物理状态( 即用户是否实际按住了按键). 按键或鼠标按键的物理状态通常和逻辑状态一致, 除非安装了键盘和/或鼠标钩子, 在这种情况下, 它将准确反映出用户是否按下了按键或鼠标按键(只要在脚本执行时按键正被按住). 您可以通过 KeyHistory 函数或菜单项来确定脚本中是否使用了钩子. 您可以通过添加 #InstallKeybdHook 和/或 #InstallMouseHook 令到脚本中来强制安装钩子.
- *
+ * 
  * T: 获取切换状态. 对于除 CapsLock, NumLock 和 ScrollLock 以外的键, 当脚本启动时, 切换状态一般为 0, 并且在进程之间不同步.
  * @returns 对于键盘键和鼠标按钮, 如果键位向下(或切换开启), 该函数返回 1(true) 如果键位向上(或切换关闭), 该函数返回 0(false).
- *
+ * 
  * 当 KeyName 是操纵杆的轴, 如 JoyX, 函数返回一个 0 到 100 之间的浮点数, 用于指示操纵杆的位置为该轴运动范围的百分比.
- *
+ * 
  * 当 KeyName 是 JoyPOV 时, 函数返回一个 0 到 35900 之间的整数. 许多操纵杆使用与下列近似的 POV 值:
- *
+ * 
  * -1: 没有角度
- *
+ * 
  * 0: 向前 POV
- *
+ * 
  * 9000(即 90 度): 向右 POV
- *
+ * 
  * 27000(即 270 度): 向左 POV
- *
+ * 
  * 18000 (即 180 度): 向后 POV
  */
 GetKeyState(KeyName, Mode := '') => String
@@ -1023,7 +1023,7 @@ GetMethod(Value, Name) => Func
 /**
  * 激活由 GroupAdd 定义的窗口组中的下一个窗口.
  * @param Mode 如果省略, 激活组中最早的窗口. 要更改此行为, 请指定以下字母:
- *
+ * 
  * R: 最新的窗口(最近激活的窗口) 被激活, 但仅当函数运行时组中没有活动的成员时才会激活. "R" 在临时切换到处理不相关任务的情况下非常有用. 当您使用 GroupActivate, GroupDeactivate 或 GroupClose 返回到目标组时, 会激活您最近工作的窗口而不是最早的窗口.
  */
 GroupActivate(GroupName, Mode := '') => Number
@@ -1036,9 +1036,9 @@ GroupAdd(GroupName [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * 如果活动窗口刚刚被GroupActivate或GroupDeactivate激活,则关闭该窗口.然后,它将激活系列中的下一个窗口.它还可以关闭组中的所有窗口.
  * @param Mode 如果省略, 函数关闭活动窗口并激活组中最老的窗口. 要更改此行为, 请指定以下字母之一:
- *
+ * 
  * R: 最新的窗口(最近激活的窗口) 被激活, 但仅当函数运行时组中没有活动的成员时才会激活. "R" 在临时切换到处理不相关任务的情况下非常有用. 当您使用 GroupActivate, GroupDeactivate 或 GroupClose 返回组时, 会激活您最近工作的窗口而不是最老的窗口.
- *
+ * 
  * A: 关闭组的所有成员. 这等同于 WinClose "ahk_group GroupName".
  */
 GroupClose(GroupName, Mode := '') => void
@@ -1046,7 +1046,7 @@ GroupClose(GroupName, Mode := '') => void
 /**
  * 与GroupActivate相似,除了激活不在组中的下一个窗口.
  * @param Mode 如果省略, 函数将激活最老的非成员窗口. 要更改此行为, 请指定以下字母:
- *
+ * 
  * R: 最新的非成员窗口(最近激活的窗口) 被激活, 但仅当函数运行时该组的成员处于活动状态时才会激活. "R" 在临时切换到处理不相关任务的情况下非常有用. 当您使用 GroupActivate, GroupDeactivate 或 GroupClose 返回组时, 会激活您最近工作的窗口而不是最老的窗口.
  */
 GroupDeactivate(GroupName, Mode := '') => void
@@ -1085,26 +1085,26 @@ Hotstring(StringorOptions [, Replacement, OnOffToggle]) => void
 /**
  * 在脚本运行时创建,修改,启用或禁用热键.
  * @param Callback 此参数还可以是下列特定值的其中一个:
- *
+ * 
  * On: 启用热键. 如果热键已经处于启用状态, 则不进行操作.
- *
+ * 
  * Off: 禁用热键. 如果热键已经处于禁用状态, 则不进行操作.
- *
+ * 
  * Toggle: 设置热键到相反的状态(启用或禁用).
- *
+ * 
  * AltTab(及其他): 这里描述的特殊的 Alt-Tab 热键动作.
  * @param Options 由零个或多个下列字母组成的字符串, 字母间可以用空格分隔. 例如: On B0.
- *
+ * 
  * On: 如果热键当前是禁用的, 则启用它.
- *
+ * 
  * Off: 如果热键当前是启用的, 则禁用它. 此选项常用来创建初始状态为禁用的热键.
- *
+ * 
  * B 或 B0: 指定字母 B 将按照 #MaxThreadsBuffer 中描述的方法缓冲热键. 指定 B0(B 后跟着数字 0) 来禁用这种类型的缓冲.
- *
- *Pn: 指定字母 P 后面跟着热键的线程优先级. 如果创建热键时省略 P 选项, 则设置优先级为 0.
- *
+ * 
+ * Pn: 指定字母 P 后面跟着热键的线程优先级. 如果创建热键时省略 P 选项, 则设置优先级为 0.
+ * 
  * Tn: 指定字母 T 后面跟着一个表示此热键允许的线程数, 如同 #MaxThreadsPerHotkey 中描述的那样. 例如: T5.
- *
+ * 
  * In(InputLevel): 指定字母 I(或 i) 后跟随热键的输入级别. 例如: I1.
  */
 Hotkey(KeyName [, Callback, Options]) => void
@@ -1114,7 +1114,7 @@ Hotkey(KeyName [, Callback, Options]) => void
  * @param ImageListID IL_Create 创建的图像列表的 ID.
  * @param Filename 图标(.ICO), 光标(.CUR) 或动画光标(.ANI) 文件的名称(动态光标在 ListView 中显示时实际将不会动), 或位图或图标句柄 , 如 "HBITMAP:" handle. 图标的其他来源包含下列类型的文件: EXE, DLL, CPL, SCR, 以及包含图标资源的其他类型.
  * @param IconNumber 要使用文件中第一个以外的图标组, 请在 IconNumber 指定它的编号. 如果 IconNumber 为负数, 则假定其绝对值表示可执行文件中图标的资源 ID. 在下面的例子中, 将使用第二个图标组中的默认图标: IL_Add(ImageListID, "C:\My Application.exe", 2).
- * @param ResizeNonIcon 还可以加载非图标图像, 例如 BMP, GIF 和 JPG. 然而, 此时应该指定最后两个参数以确保正确执行: IconNumber 应该为屏蔽的/透明的颜色编码(对于大多数图片 0xFFFFFF[白色] 可能是最佳的); 而 ResizeNonIcon 应该为非零值来缩放图片为单个图标, 或者为零来把图像分割为多个可以匹配实际宽度的图标.
+ * @param ResizeNonIcon 还可以加载非图标图像, 例如 BMP, GIF 和 JPG. 然而, 此时应该指定最后两个参数以确保正确执行: IconNumber 应该为屏蔽的/透明的颜色编码(对于大多数图片 0xFFFFFF [白色] 可能是最佳的); 而 ResizeNonIcon 应该为非零值来缩放图片为单个图标, 或者为零来把图像分割为多个可以匹配实际宽度的图标.
  * 
  * 支持的图片类型包括 ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF 和 WMF.
  */
@@ -1261,14 +1261,14 @@ IsObject(Value) => Number
 
 /**
  * 如果变量 Value 已经被赋值, 则 IsSet 为 True.
- *
+ * 
  * @param Var 一个变量. 例如: `IsSet(MyVar)`.
  */
 IsSet(Var) => Number
 
 /**
  * 如果变量 Value 已经被赋值, 则 IsSet 为 True.
- *
+ * 
  * @param Ref 对变量的间接引用. 通常不会像在 `IsSetRef(&MyVar)` 中那样直接传递, 而是间接传递, 比如在解引用一个 包含 VarRef 的参数之前检查它.
  */
 IsSetRef(Ref) => Number
@@ -1654,9 +1654,9 @@ Ord(String) => Number
 OutputDebug(Text) => void
 
 /**
- * 阻止脚本在其最后一个线程完成时自动退出, 从而使其保持在空闲状态下运行. 
- * @param Persist 如果为true或忽略, 则即使退出脚本的其他条件均不满足, 在所有线程退出后脚本仍将保持运行. 
- * 如果为false, 将恢复默认行为. 
+ * 阻止脚本在其最后一个线程完成时自动退出, 从而使其保持在空闲状态下运行.
+ * @param Persist 如果为true或忽略, 则即使退出脚本的其他条件均不满足, 在所有线程退出后脚本仍将保持运行.
+ * 如果为false, 将恢复默认行为.
  */
 Persistent(Persist := true) => void
 
@@ -1719,12 +1719,12 @@ ProcessWaitClose(PIDOrName [, Timeout]) => Number
 
 /**
  * 生成一个伪随机数字.
- *
+ * 
  * 要生成的最小和/或最大数量, 以任一顺序指定.  如果只指定了一个参数, 则另一个参数默认为0. 如果两者都省略, 则默认为0.0到1.0.
- *
+ * 
  * 对于整数, 最小值和最大值都包含在可能返回的可能数字集合中.  支持全范围的 64 位整数.
- *
- * 对于浮点数, 通常不包括最大值. 
+ * 
+ * 对于浮点数, 通常不包括最大值.
  */
 Random([A, B]) => Number
 
@@ -1829,11 +1829,11 @@ SendText(Keys) => void
  * 在指定的时间间隔自动重复调用函数.
  * @param Callback 如果省略 Callback, 如果有的话, SetTimer 将在启动当前线程的定时器上运行. 例如, SetTimer , 0 可以在一个定时器函数中用于标记要删除的定时器, 而 SetTimer , 1000 将更新当前定时器的 Period.
  * @param Period Period 的绝对值不能大于 4294967295 ms(49.7 天).
- *
+ * 
  * 如果 Period 大于 0, 定时器将自动重复, 直到脚本明确禁用.
- *
+ * 
  * 如果 Period 小于 0, 定时器将只运行一次. 例如, 指定 -100 将在 100 ms 后调用 回调, 然后删除定时器, 就像使用 SetTimer Callback, 0 一样.
- *
+ * 
  * 如果 Period 为 0, 定时器被标记为删除. 如果由这个定时器启动的线程还在运行, 那么在线程结束后, 定时器就会被删除(除非它被重新启用); 否则, 它会被立即删除. 在任何情况下, 定时器之前的 Period 和 Priority 都不会被保留.
  * @param Priority 这个可选参数是一个介于 -2147483648 和 2147483647 之间的整数(或为表达式) 来表示计时器的优先级.
  */
@@ -1890,7 +1890,7 @@ Sort(String, Options := '' [, Callback]) => String
  * @param Frequency 声音的频率. 它应该是介于 37 和 32767 之间的数字.
  * @param Duration 声音的持续时间, 单位为毫秒.
  */
-SoundBeep(Frequency:= 523, Duration := 150) => void
+SoundBeep(Frequency := 523, Duration := 150) => void
 
 /**
  * 检索声音设备或组件的原生 COM 接口.
@@ -2033,7 +2033,7 @@ StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputV
  * 使用指定的分隔符将字符串分成子字符串数组.
  * @param Delimiters 如果此参数为空或省略, 那么将把输入字符串中的每个字符解析为单独的子字符串.
  * Delimiters 可以是单个字符串, 也可以是字符串数组, 每个分隔符用于确定子字符串之间的边界出现的位置.
- *
+ * 
  * 使用 `[A_Tab, A_Space]` 作为分隔符将在输入字符串中每次遇到空格或制表符时创建一个新的数组元素.
  * @param OmitChars 可选的字符列表(区分大小写), 用来从每个数组元素的开始和结尾部分移除这些字符.
  */
@@ -2345,7 +2345,7 @@ WinWait([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Number
 /**
  * 等待直到指定的窗口处于活动状态.
  */
-WinWaitActive([ WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
+WinWaitActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * 等待直到找不到匹配的窗口.
@@ -2355,7 +2355,7 @@ WinWaitClose([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Number
 /**
  * 等待直到指定的窗口不活动.
  */
-WinWaitNotActive([ WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
+WinWaitNotActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
 ;#endregion
 
 ;#region class
@@ -2488,10 +2488,10 @@ class ComObjArray extends ComValue {
 	/**
 	 * 创建用于 COM 的安全数组.
 	 * @param VarType 数组的基类型(数组中每个元素的 VARTYPE). VARTYPE 被限制为变体类型的子集.
-	 * 不能设置为 VT_ARRAY 或 VT_BYREF 标志. VT_EMPTY 和 VT_NULL 不是数组的有效基类型. 其他所有类型是合法的. 
+	 * 不能设置为 VT_ARRAY 或 VT_BYREF 标志. VT_EMPTY 和 VT_NULL 不是数组的有效基类型. 其他所有类型是合法的.
 	 * @param Counts* 每个维度的大小. 支持最多 8 维的数组.
 	 */
-	__New(VarType, Counts*) => ComObjArray
+	static Call(VarType, Counts*) => ComObjArray
 
 	MaxIndex(n) => Number
 
@@ -2506,7 +2506,7 @@ class ComObject extends ComValue {
 	 * @param CLSID 要创建的 COM 对象的 CLSID 或可读的 Prog ID.
 	 * @param IID 要返回的接口的标识符. 在大多数情况下, 它是省略的; 如果省略, 它默认为IID_IDispatch
 	 */
-	__New(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => ComObject | ComValue
+	static Call(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => ComObject | ComValue
 }
 
 class ComValue extends Any {
@@ -2516,7 +2516,7 @@ class ComValue extends Any {
 	 * @param Value 要包装的值. 当前仅支持整数和指针值.
 	 * @param Flags 影响包装器对象行为的标志; 有关详情, 请参阅 ComObjFlags.
 	 */
-	__New(VarType, Value [, Flags]) => Comobject
+	static Call(VarType, Value [, Flags]) => Comobject
 }
 
 class ComValueRef extends ComValue {
@@ -2718,7 +2718,7 @@ class Float extends Number {
 	/**
 	 * 将数字字符串或整数值转换为浮点数.
 	 */
-	__New(Value) => Number
+	static Call(Value) => Number
 }
 
 class Func extends Object {
@@ -3018,7 +3018,7 @@ class Gui extends Object {
 	 * 从命名控件中收集值并将其组合到一个对象中, 可选择性地隐藏窗口.
 	 */
 	Submit(false) => void
-	
+
 	class ActiveX extends Gui.Control {
 	}
 
@@ -3027,10 +3027,10 @@ class Gui extends Object {
 
 	class CheckBox extends Gui.Control {
 	}
-	
+
 	class ComboBox extends Gui.List {
 	}
-	
+
 	class Control extends Object {
 		/**
 		 * 检索控件的 ClassNN.
@@ -3075,7 +3075,7 @@ class Gui extends Object {
 		/**
 		 * 检索新内容或将其设置为具有价值的控件.
 		 */
-		Value => Number|String
+		Value => Number | String
 
 		/**
 		 * 检索控件的当前可见状态, 或显示或隐藏它.
@@ -3127,28 +3127,28 @@ class Gui extends Object {
 		 */
 		SetFormat([TimeFormat]) => void
 	}
-	
+
 	class Custom extends Gui.Control {
 	}
-	
+
 	class DateTime extends Gui.Control {
 	}
-	
+
 	class DDL extends Gui.List {
 	}
-	
+
 	class Edit extends Gui.Control {
 	}
-	
+
 	class GroupBox extends Gui.Control {
 	}
-	
+
 	class Hotkey extends Gui.Control {
 	}
-	
+
 	class Link extends Gui.Control {
 	}
-	
+
 	class List extends Gui.Control {
 		/**
 		 * 在列表框, 下拉列表, 组合框或选项卡控件的当前列表中追加指定的项.
@@ -3165,10 +3165,10 @@ class Gui extends Object {
 		 */
 		Delete([Index]) => void
 	}
-	
+
 	class ListBox extends Gui.List {
 	}
-	
+
 	class ListView extends Gui.Control {
 		/**
 		 * 将新行添加到列表的底部, 并返回新行号, 如果ListView具有Sort或SortDesc样式, 则不一定是最后一行.
@@ -3225,22 +3225,22 @@ class Gui extends Object {
 		 */
 		SetImageList(ImageListID [, IconType]) => Number
 	}
-	
+
 	class MonthCal extends Gui.Control {
 	}
-	
+
 	class Pic extends Gui.Control {
 	}
-	
+
 	class Progress extends Gui.Control {
 	}
-	
+
 	class Radio extends Gui.Control {
 	}
-	
+
 	class Slider extends Gui.Control {
 	}
-	
+
 	class StatusBar extends Gui.Control {
 		/**
 		 * 在指定部分的文本左侧显示一个小图标, 并返回图标的句柄.
@@ -3257,7 +3257,7 @@ class Gui extends Object {
 		 */
 		SetText(NewText, PartNumber := 1, Style := 0) => Number
 	}
-	
+
 	class Tab extends Gui.List {
 		/**
 		 * 导致随后添加的控件属于选项卡控件的指定选项卡.
@@ -3266,10 +3266,10 @@ class Gui extends Object {
 		 */
 		UseTab(Value := 0, ExactMatch := false) => void
 	}
-	
+
 	class Text extends Gui.Control {
 	}
-	
+
 	class TreeView extends Gui.Control {
 		/**
 		 * 将新项目添加到TreeView, 并返回其唯一的项目ID号.
@@ -3333,7 +3333,7 @@ class Gui extends Object {
 		 */
 		SetImageList(ImageListID [, IconType]) => Number
 	}
-	
+
 	class UpDown extends Gui.Control {
 	}
 }
@@ -3452,7 +3452,7 @@ class InputHook extends Object {
 	 * 
 	 * V: 设置 VisibleText 和 VisibleNonText 为 true. 通常, 用户的输入被阻止(对系统隐藏). 使用此选项可将用户的击键发送到活动窗口.
 	 * 
-	 *·*: 通配符. 设置 FindAnywhere 为 true, 允许在用户键入的任何位置找到匹配项.
+	 * ·*: 通配符. 设置 FindAnywhere 为 true, 允许在用户键入的任何位置找到匹配项.
 	 * 
 	 * E: 按字符代码而不是键码处理单字符结束键. 如果活动窗口的键盘布局与脚本的键盘布局不同, 则可以提供更一致的结果. 它还可以防止实际上不会产生给定结束字符的键组合结束 Input(输入); 例如, 如果 @ 是结束键, 则在美式键盘中 Shift+2 将触发它, 但 Ctrl+Shift+2 不会触发(在使用 E 选项时). 如果还使用 C 选项, 则结束字符区分大小写.
 	 * @param EndKeys 一个由零个或多个按键组成的列表, 其中任何一个键在按下时终止输入(结束键本身不会写入输入缓冲). 当 Input 以这种方式终止时, EndReason 设置为单词 EndKey, EndKey 属性设置为键的名称.
@@ -3515,7 +3515,7 @@ class Integer extends Number {
 	/**
 	 * 将数字字符串或浮点值转换为整数.
 	 */
-	__New(Value) => Number
+	static Call(Value) => Number
 }
 
 class KeyError extends IndexError {
@@ -3525,7 +3525,7 @@ class Map extends Object {
 	/**
 	 * Map对象将一组称为键的值关联或映射到另一组值.
 	 */
-	__New([Key1, Value1, *]) => Map
+	__New([Key1, Value1, * ]) => Map
 
 	/**
 	 * 从映射中删除所有键-值对.
@@ -3555,7 +3555,7 @@ class Map extends Object {
 	/**
 	 * 设置零个或多个项目.
 	 */
-	Set(Key1, Value1, *) => void
+	Set(Key1, Value1, * ) => void
 
 	/**
 	 * 检索映射中存在的键-值对的数量.
@@ -3763,7 +3763,7 @@ class String extends Primitive {
 	/**
 	 * 将值转换为字符串.
 	 */
-	__New(Value) => String
+	static Call(Value) => String
 }
 
 class TargetError extends Error {

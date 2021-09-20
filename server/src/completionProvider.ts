@@ -83,7 +83,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			let ts: any = {};
 			p = content.pre.toLowerCase();
 			detectExpType(doc, p, position, ts);
-			if (ts['#any'] === undefined)
+			if (ts['#any'] === undefined) {
 				for (const tp in ts) {
 					unknown = false, isstatic = !tp.match(/[@#][^.]+$/);
 					if (ts[tp]) {
@@ -102,6 +102,18 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						tps.push(it.node);
 					});
 				}
+				if (ts['#object'] !== undefined) {
+					let n = searchNode(doc, p, position, SymbolKind.Variable), t: string[];
+					if (n && (t = (<any>n[0].node).property)) {
+						t.map(s => {
+							if (!props[l = s.toLowerCase()]) {
+								items.push(props[l] = CompletionItem.create(s));
+								props[l].kind = CompletionItemKind.Property;
+							}
+						})
+					}
+				}
+			}
 			for (const node of tps) {
 				switch (node.kind) {
 					case SymbolKind.Class:

@@ -840,6 +840,8 @@ export class Lexer {
 														}
 														if (tk.type === 'TK_STRING' || tk.type === 'TK_NUMBER' || ['unset', 'true', 'false'].includes(tk.content.toLowerCase())) {
 															(<Variable>tn).defaultVal = tk.content;
+															if (tk.content.toLowerCase() === 'unset')
+																tk.semantic = { type: SemanticTokenTypes.variable, modifier: 1 << SemanticTokenModifiers.readonly };
 															lasthasval = true, tk = nk, nk = get_token_ingore_comment();
 															if (nk.content === ']')
 																next = false;
@@ -1038,6 +1040,8 @@ export class Lexer {
 									if (vr) {
 										vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
+										if (equ === ':=' && typeof o[' #object'] === 'object')
+											(<any>vr).property = Object.values(o[' #object']);
 										if (!pr)
 											vr.def = true;
 										let tt = vr.returntypes;
@@ -1429,8 +1433,9 @@ export class Lexer {
 								result.push(...parseexp(false, o));
 								if (vr) {
 									vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
-									vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
-									vr.def = true;
+									vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) }, vr.def = true;
+									if (equ === ':=' && typeof o[' #object'] === 'object')
+										(<any>vr).property = Object.values(o[' #object']);
 									let tt = vr.returntypes;
 									for (const t in tt)
 										tt[t] = vr.range.end;
@@ -1481,7 +1486,7 @@ export class Lexer {
 			}
 
 			function parseexp(inpair = false, types: any = {}, mustexp = false): DocumentSymbol[] {
-				let pres = result.length, tpexp = '', byref = false, t: any;
+				let pres = result.length, tpexp = '', byref = false, t: any, objk: any;
 				while (nexttoken()) {
 					if (tk.topofline && !inpair && !linecontinue(lk, tk)) {
 						if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) === '.')
@@ -1550,6 +1555,8 @@ export class Lexer {
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 										vr.returntypes = { [o = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: vr.range.end };
 										tpexp += o, vr.def = true;
+										if (equ === ':=' && typeof o[' #object'] === 'object')
+											(<any>vr).property = Object.values(o[' #object']);
 									} else
 										tpexp += ' ' + lk.content, next = false;
 								} else
@@ -1636,7 +1643,7 @@ export class Lexer {
 							break;
 						case 'TK_START_BLOCK':
 							if (lk.type === 'TK_EQUALS') {
-								parseobj(true, t = {});
+								parseobj(true, t = {}, objk = {});
 								tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
 							} else {
 								let l = _this.diagnostics.length;
@@ -1652,6 +1659,8 @@ export class Lexer {
 									tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
 								} else {
 									types[tpexp] = true, _this.diagnostics.splice(l);
+									if (tpexp === ' #object' && objk)
+										types[tpexp] = objk;
 									next = false; return result.splice(pres);
 								}
 							}
@@ -1659,7 +1668,11 @@ export class Lexer {
 						case 'TK_STRING': tpexp += ' #string'; break;
 						case 'TK_END_BLOCK':
 						case 'TK_END_EXPR':
-						case 'TK_COMMA': next = false, types[tpexp] = true; return result.splice(pres);
+						case 'TK_COMMA':
+							next = false, types[tpexp] = true;
+							if (tpexp === ' #object' && objk)
+								types[tpexp] = objk;
+							return result.splice(pres);
 						case 'TK_UNKNOWN': _this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length); break;
 						case 'TK_RESERVED':
 							if (tk.content.match(/\b(and|or|not)\b/i)) {
@@ -1710,6 +1723,8 @@ export class Lexer {
 					byref = false;
 				}
 				types[tpexp] = true;
+				if (tpexp === ' #object' && objk)
+					types[tpexp] = objk;
 				return result.splice(pres);
 			}
 
@@ -1758,6 +1773,7 @@ export class Lexer {
 											(<Variable>tn).returntypes = { '#string': true }, tpexp = '#string';
 										else if (tk.content.toLowerCase() !== 'unset')
 											(<Variable>tn).returntypes = { '#number': true }, tpexp = '#number';
+										else tk.semantic = { type: SemanticTokenTypes.variable, modifier: 1 << SemanticTokenModifiers.readonly };
 										lk = tk, tk = get_token_ingore_comment(cmm);
 										if (tk.type === 'TK_COMMA') continue; else if (tk.content === ')') break; else { paramsdef = false; break; }
 									} else { paramsdef = false; break; }
@@ -1805,7 +1821,7 @@ export class Lexer {
 				return cache;
 			}
 
-			function parseobj(must: boolean = false, tp: any = {}): boolean {
+			function parseobj(must: boolean = false, tp: any = {}, ks: any = {}): boolean {
 				let l = lk, b = tk, rl = result.length, isobj = true, ts: any = {}, k: Token | undefined, nk: Token;
 				if (!next && tk.type === 'TK_START_BLOCK')
 					next = true;
@@ -1839,7 +1855,7 @@ export class Lexer {
 									break;
 								nk = get_token_ingore_comment();
 								if (nk.content === ':') {
-									tk.semantic = { type: SemanticTokenTypes.property };
+									tk.semantic = { type: SemanticTokenTypes.property }, ks[tk.content.toLowerCase()] = tk.content;
 									lk = tk, tk = nk, k = lk;
 									return true;
 								}
@@ -1877,7 +1893,9 @@ export class Lexer {
 								return isobj = false;
 							case 'TK_LABEL':
 								if (tk.content.match(/^(\w|[^\x00-\x7f])+:$/)) {
-									addtext({ content: tk.content.replace(':', ''), type: '', offset: 0, length: 0 });
+									let t: string;
+									addtext({ content: t = tk.content.replace(':', ''), type: '', offset: 0, length: 0 });
+									ks[t.toLowerCase()] = t;
 									return true;
 								}
 								return isobj = false;
@@ -1890,10 +1908,10 @@ export class Lexer {
 								if (lk.type === 'TK_START_BLOCK' || lk.type === 'TK_COMMA')
 									return false;
 							case 'TK_NUMBER':
-								if (tk.content.match(/^\d+$/)) {
+								if (tk.content.match(/^\d+$|^0[xX]/)) {
 									nk = get_token_ingore_comment();
 									if (nk.content === ':') {
-										tk.semantic = { type: SemanticTokenTypes.property };
+										tk.semantic = { type: SemanticTokenTypes.property }, ks[tk.content.toLowerCase()] = tk.content;
 										lk = tk, tk = nk;
 										return true;
 									}
@@ -2017,6 +2035,8 @@ export class Lexer {
 											vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 											vr.returntypes = { [o = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: vr.range.end };
 											tpexp += o, vr.def = true;
+											if (equ === ':=' && typeof o[' #object'] === 'object')
+												(<any>vr).property = Object.values(o[' #object']);
 										} else
 											tpexp += ' ' + lk.content;
 									} else

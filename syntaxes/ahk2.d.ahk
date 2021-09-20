@@ -2491,7 +2491,7 @@ class ComObjArray extends ComValue {
 	 * Cannot be set to VT_ARRAY or VT_BYREF flags. VT_EMPTY and VT_NULL are not valid base types for arrays. All other types are legal.
 	 * @param Counts* The size of each dimension. Supports arrays of up to 8 dimensions.
 	 */
-	__New(VarType, Counts*) => ComObjArray
+	static Call(VarType, Counts*) => ComObjArray
 
 	MaxIndex(n) => Number
 
@@ -2506,7 +2506,7 @@ class ComObject extends ComValue {
 	 * @param CLSID The CLSID or readable Prog ID of the COM object to be created.
 	 * @param IID The identifier of the interface to be returned. In most cases, it is omitted; if omitted, it defaults to IID_IDispatch
 	 */
-	__New(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => ComObject | ComValue
+	static Call(CLSID, IID := '{00020400-0000-0000-C000-000000000046}') => ComObject | ComValue
 }
 
 class ComValue extends Any {
@@ -2516,7 +2516,7 @@ class ComValue extends Any {
 	 * @param Value The value to be wrapped. Currently only integer and pointer values ​​are supported.
 	 * @param Flags Flags that affect the behavior of the wrapper object; for details, see ComObjFlags.
 	 */
-	__New(VarType, Value[, Flags]) => Comobject
+	static Call(VarType, Value[, Flags]) => Comobject
 }
 
 class ComValueRef extends ComValue {
@@ -2718,7 +2718,7 @@ class Float extends Number {
 	/**
 	 * Convert a numeric string or integer value to a floating point number.
 	 */
-	__New(Value) => Number
+	static Call(Value) => Number
 }
 
 class Func extends Object {
@@ -3581,7 +3581,7 @@ class Integer extends Number {
 	/**
 	 * Convert a numeric string or floating point value to an integer.
 	 */
-	__New(Value) => Number
+	 static Call(Value) => Number
 }
 
 class KeyError extends IndexError {
@@ -3829,7 +3829,7 @@ class String extends Primitive {
 	/**
 	 * Convert the value to a string.
 	 */
-	__New(Value) => String
+	static Call(Value) => String
 }
 
 class TargetError extends Error {
