@@ -58,7 +58,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					result.push(info), vars[_l] = info, converttype(info, info === ahkvars[_l]);
 				else if (info === gvar[_l])
 					result.push(info), converttype(info, info === ahkvars[_l]);
-			} else
+			} else if (info.kind !== SymbolKind.TypeParameter)
 				result.push(info);
 		});
 		t.map(info => {

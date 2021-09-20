@@ -965,16 +965,15 @@ export class Lexer {
 									prop.range.end = document.positionAt(parser_pos - 1), mode = mmm;
 									_this.addFoldingRangePos(prop.range.start, prop.range.end, 'block');
 								} else if (tk.content === '=>') {
-									mode = 3;
 									let off = parser_pos, o: any = {}, tn: FuncNode, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
-									mode = 2, tn = FuncNode.create('get', SymbolKind.Function, makerange(off, parser_pos - off), Object.assign({}, rg), <Variable[]>par), (<FuncNode>tn).returntypes = o;
-									(<FuncNode>tn).parent = _parent, tn.children = [], sub = parseline(o), (<FuncNode>tn).funccall?.push(..._parent.funccall.splice(fcs));
+									mode = 3, tn = FuncNode.create('get', SymbolKind.Function, makerange(off, parser_pos - off), Object.assign({}, rg), <Variable[]>par), (<FuncNode>tn).returntypes = o;
+									(<FuncNode>tn).parent = _parent, tn.children = parseline(o), (<FuncNode>tn).funccall?.push(..._parent.funccall.splice(fcs)), mode = 2;
 									if (lk.content === '=>')
 										_this.diagnostics.push({ message: diagnostic.invaliddefinition('function'), range: tn.selectionRange, severity: DiagnosticSeverity.Error });
 									for (const t in o)
 										o[t] = tn.range.end;
 									tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-									adddeclaration(tn as FuncNode), _parent.children.push(...sub), prop.children.push(tn);
+									adddeclaration(tn as FuncNode), prop.children.push(tn);
 								}
 								if (prop.children.length === 1 && prop.children[0].name === 'get')
 									(fc.semantic as SemanticToken).modifier = ((fc.semantic as SemanticToken).modifier || 0) | 1 << SemanticTokenModifiers.readonly;

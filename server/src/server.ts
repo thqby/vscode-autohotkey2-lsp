@@ -237,8 +237,8 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 documents.onWillSaveWaitUntil((e) => {
 	let doc = lexers[e.document.uri.toLowerCase()];
 	if (doc.version !== e.document.version) {
-		let tk = doc.get_tokon(0);
-		if (tk.type === 'TK_BLOCK_COMMENT') {
+		let tk = doc.tokens[0];
+		if (tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') {
 			let t: string = updateFileInfo(tk.content);
 			if (t !== tk.content) {
 				setTimeout(() => {
