@@ -1,3 +1,7 @@
+## 1.0.4
+- 修复语法高亮的错误
+- 增加对`{prop:val}`对象定义处的属性补全支持
+
 ## 1.0.3
 - 加入英文版头文件([dmtr99](https://github.com/dmtr99)提供)[#45](https://github.com/thqby/vscode-autohotkey2-lsp/issues/45)
 

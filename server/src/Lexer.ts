@@ -3479,7 +3479,8 @@ export class Lexer {
 						opt.keep_array_indentation = true;
 					} else if (input_wanted_newline || !(flags.mode === MODE.ObjectLiteral && keep_Object_line)) {
 						print_newline();
-					}
+					} else
+						print_token(' ');
 				}
 			}
 			restore_mode();
@@ -3772,7 +3773,7 @@ export class Lexer {
 					}
 					if (keep_Object_line && output_lines.length > 1) {
 						let t = output_lines.pop();
-						output_lines[output_lines.length - 1].text.push(t?.text.join('').trim());
+						output_lines[output_lines.length - 1].text.push(' ', t?.text.join('').trim());
 					}
 				}
 			}
