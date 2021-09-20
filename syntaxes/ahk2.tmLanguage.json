@@ -509,12 +509,7 @@
                           "name": "storage.type.setter.ahk2"
                         }
                       },
-                      "end": "(?<=^\\s*)(})|(?=^\\s*\\w)",
-                      "endCaptures": {
-                        "1": {
-                          "name": "punctuation.definition.block.property.setter.end.ahk2"
-                        }
-                      },
+                      "end": "(?=\\n)",
                       "patterns": [
                         {
                           "include": "#comments"
@@ -527,7 +522,12 @@
                             }
                           },
                           "name": "meta.block.property.setter.body.ahk2",
-                          "end": "(?=})",
+                          "end": "}",
+                          "endCaptures": {
+                            "0": {
+                              "name": "punctuation.definition.block.property.setter.end.ahk2"
+                            }
+                          },
                           "patterns": [
                             {
                               "include": "#variable_value"
@@ -567,12 +567,7 @@
                           "name": "storage.type.getter.ahk2"
                         }
                       },
-                      "end": "(?<=^\\s*)(})|(?=^\\s*\\w)",
-                      "endCaptures": {
-                        "1": {
-                          "name": "punctuation.definition.block.property.getter.end.ahk2"
-                        }
-                      },
+                      "end": "(?=\\n)",
                       "patterns": [
                         {
                           "include": "#comments"
@@ -585,7 +580,12 @@
                             }
                           },
                           "name": "meta.block.property.getter.body.ahk2",
-                          "end": "(?=})",
+                          "end": "}",
+                          "endCaptures": {
+                            "0": {
+                              "name": "punctuation.definition.block.property.getter.end.ahk2"
+                            }
+                          },
                           "patterns": [
                             {
                               "include": "#variable_this"

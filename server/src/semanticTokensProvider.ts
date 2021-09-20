@@ -16,7 +16,7 @@ export async function semanticTokensOnFull(params: SemanticTokensParams): Promis
 			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) || type === SemanticTokenTypes.class)
 				type = resolveSemanticType(tk.content.toLowerCase(), tk.semantic, doc);
 			sem.push(pos.line, pos.character, tk.length, type, tk.semantic.modifier || 0);
-		} else if (curclass && tk.type !== 'TK_DOT' && tk.type.endsWith('COMMENT'))
+		} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 			curclass = undefined;
 	}
 	memscache.clear();
@@ -33,7 +33,7 @@ export async function semanticTokensOnDelta(params: SemanticTokensDeltaParams): 
 			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) || type === SemanticTokenTypes.class)
 				type = resolveSemanticType(tk.content.toLowerCase(), tk.semantic, doc);
 			sem.push(pos.line, pos.character, tk.length, type, tk.semantic.modifier || 0);
-		} else if (curclass && tk.type !== 'TK_DOT' && tk.type.endsWith('COMMENT'))
+		} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 			curclass = undefined;
 	}
 	memscache.clear();
@@ -55,7 +55,7 @@ export async function semanticTokensOnRange(params: SemanticTokensRangeParams): 
 			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) || type === SemanticTokenTypes.class)
 				type = resolveSemanticType(tk.content.toLowerCase(), tk.semantic, doc);
 			sem.push(pos.line, pos.character, tk.length, type, tk.semantic.modifier || 0);
-		} else if (curclass && tk.type !== 'TK_DOT' && tk.type.endsWith('COMMENT'))
+		} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 			curclass = undefined;
 	}
 	memscache.clear();
