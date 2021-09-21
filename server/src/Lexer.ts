@@ -171,6 +171,7 @@ export namespace acorn {
 const colorregexp = new RegExp(/(?<=['"\s])(c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
 let searchcache: { [name: string]: any } = {};
+let hasdetectcache: { [exp: string]: any } = {};
 
 export class Lexer {
 	public actived: boolean = false;
@@ -584,7 +585,7 @@ export class Lexer {
 							if (m === '') {
 								_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
 							} else {
-								if (m.startsWith('*') ) {
+								if (m.startsWith('*')) {
 									_this.addDiagnostic(diagnostic.unsupportresinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
 								} else if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir)) || !fs.existsSync(m.path)) {
 									if (!o)
@@ -2912,7 +2913,10 @@ export class Lexer {
 				}
 				let line = input.substring(last_LF + 1, next_LF).trim();
 				if (line.indexOf('::') === -1) {
-
+					if (m = line.match(/^(\S+):\s*(\s;.*)?$/)) {
+						parser_pos += m[1].length + 1;
+						return lst = createToken(m[1] + ':', 'TK_LABEL', offset, m[1].length + 1, true);
+					}
 				} else if (m = line.match(/^(:(\s|\*|\?0?|c[01]?|[pk]\d+|s[ipe]|[brto]0?|x|z)*:[\x09\x20-\x7E]+?::)(.*)$/i)) {
 					if ((m[2] && m[2].match(/[xX]/)) || (m[3] && m[3].trim().match(/^\{\s*(\s;.*)?$/))) {
 						parser_pos += m[1].length - 1;
@@ -4542,6 +4546,10 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 	}
 }
 
+export function cleardetectcache() {
+	hasdetectcache = {};
+}
+
 export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [type: string]: DocumentSymbol | boolean }) {
 	let nd = new Lexer(TextDocument.create('', 'ahk2', -10, '$ := ' + exp));
 	searchcache = {}, nd.parseScript();
@@ -4652,7 +4660,9 @@ export function detectVariableType(doc: Lexer, name: string, pos?: Position) {
 }
 
 export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: string): string[] {
-	let functable: { [func: string]: any } = {};
+	if (hasdetectcache[exp])
+		return [];
+	hasdetectcache[exp] = true;
 	return detect(exp, pos, 0, fullexp);
 	function detect(exp: string, pos: Position, deep: number = 0, fullexp?: string): string[] {
 		let t: string | RegExpMatchArray | null, tps: string[] = [];

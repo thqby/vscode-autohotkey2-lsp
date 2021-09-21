@@ -1,5 +1,5 @@
 import { DefinitionParams, Definition, LocationLink, DocumentSymbol, Location, SymbolKind, Range } from 'vscode-languageserver';
-import { detectExpType, searchNode } from './Lexer';
+import { cleardetectcache, detectExpType, searchNode } from './Lexer';
 import { lexers, restorePath } from './server';
 import { URI } from 'vscode-uri';
 
@@ -25,7 +25,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 			return undefined;
 		else if (undefined === (nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
 			let ts: any = {};
-			nodes = <any>[], detectExpType(doc, word.replace(/\.[^.]+$/, m => {
+			nodes = <any>[], cleardetectcache(), detectExpType(doc, word.replace(/\.[^.]+$/, m => {
 				word = m.match(/^\.[^.]+$/) ? m : '';
 				return '';
 			}), params.position, ts);

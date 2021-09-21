@@ -1,6 +1,6 @@
 import { basename, extname, relative, resolve } from 'path';
 import { ExecuteCommandParams, Position, Range, SymbolKind, TextEdit } from 'vscode-languageserver';
-import { detectExp, FuncNode } from './Lexer';
+import { cleardetectcache, detectExp, FuncNode } from './Lexer';
 import { connection, lexers, pathenv, restorePath, setInterpreter } from './server';
 
 export var noparammoveright: boolean = false;
@@ -54,7 +54,7 @@ async function fixinclude(libpath: string, docuri: string) {
 			} else if (!curdir && libpath.startsWith(resolve(l[1], '..') + '\\'))
 				line = l[0] + 1, curdir = l[1];
 		}
-		curdir = curdir || doc.scriptdir;
+		curdir = curdir || doc.scriptpath;
 		if (curdir.charAt(0) !== libpath.charAt(0))
 			text = `#Include '${restorePath(libpath)}'`;
 		else
@@ -149,8 +149,10 @@ async function generateComment(args: string[]) {
 				} else {
 					let rets: string[] = [], o: any = {}, p: Position;
 					for (const ret in n.returntypes)
-						detectExp(doc, ret, Position.is(p = n.returntypes[ret]) ? p : pos).map(tp => o[tp.replace(/^\s*[@#]/, '')] = true);
+						cleardetectcache(), detectExp(doc, ret, Position.is(p = n.returntypes[ret]) ? p : pos).map(tp => o[tp.replace(/^\s*[@#]/, '')] = true);
 					rets = Object.keys(o);
+					if (o['any'] && rets.length > 1)
+						delete o['any'], rets = Object.keys(o);
 					ss.push(` * @returns $\{${(++i).toString() + ':' + (rets.length ? rets.join(', ') : '')}\}`);
 				}
 			}

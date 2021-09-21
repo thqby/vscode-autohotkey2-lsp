@@ -2,7 +2,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
+import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
 import { ahkvars, completionItemCache, dllcalltpe, extsettings, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
 
@@ -82,7 +82,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			let props: any = {}, l = '', isstatic = true, tps: any = [], isclass = false, isfunc = false, isobj = false, hasparams = false;
 			let ts: any = {};
 			p = content.pre.toLowerCase();
-			detectExpType(doc, p, position, ts);
+			cleardetectcache(), detectExpType(doc, p, position, ts);
 			if (ts['#any'] === undefined) {
 				for (const tp in ts) {
 					unknown = false, isstatic = !tp.match(/[@#][^.]+$/);
@@ -315,7 +315,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
 								if (temp = content.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,/i)) {
 									let ts: any = {};
-									detectExpType(doc, temp[1], position, ts);
+									cleardetectcache(), detectExpType(doc, temp[1], position, ts);
 									if (ts['#any'] === undefined) {
 										for (const tp in ts) {
 											if (ts[tp] === false) {

@@ -1,5 +1,5 @@
 import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, detectExpType, formatMarkdowndetail, FuncNode, searchNode } from './Lexer';
+import { ClassNode, cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, searchNode } from './Lexer';
 import { lexers, hoverCache, Maybe, ahkvars } from './server';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
@@ -19,7 +19,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			return undefined;
 		else if (undefined === (nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
 			let ts: any = {};
-			nodes = <any>[], detectExpType(doc, word.replace(/\.[^.]+$/, m => {
+			nodes = <any>[], cleardetectcache(), detectExpType(doc, word.replace(/\.[^.]+$/, m => {
 				word = m.match(/^\.[^.]+$/) ? m : '';
 				return '';
 			}), params.position, ts);

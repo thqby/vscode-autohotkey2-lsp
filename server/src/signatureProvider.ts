@@ -1,5 +1,5 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, detectExp, detectExpType, detectVariableType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
+import { ClassNode, cleardetectcache, detectExp, detectExpType, detectVariableType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
 import { ahkvars, lexers, Maybe } from './server';
 
 export async function signatureProvider(params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> {
@@ -20,7 +20,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 			nodes = searchNode(doc, t, pos, SymbolKind.Method);
 			if (!nodes) {
 				let word: string = t, ts: any = {};
-				nodes = [];
+				nodes = [], cleardetectcache();
 				detectExpType(doc, word.replace(/\.[^.]+$/, m => {
 					word = m.match(/^\.[^.]+$/) ? m : '';
 					return '';
@@ -37,7 +37,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		} else {
 			let ts: any = {};
 			t = t.replace(/\.(\w|[^\x00-\xff])+$/, '');
-			nodes = [], detectExpType(doc, t, params.position, ts);
+			nodes = [], cleardetectcache(), detectExpType(doc, t, params.position, ts);
 			if (ts['#any'] === undefined)
 				for (const tp in ts)
 					searchNode(doc, tp + '.' + name, params.position, SymbolKind.Method)?.map(it => {
@@ -74,7 +74,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 				if (kind === SymbolKind.Property) {
 					let s = Object.keys(nn.returntypes || {}).pop() || '';
 					if (s) {
-						detectExp(lexers[it.uri], s, Position.is(nn.returntypes[s]) ? nn.returntypes[s] : pos).map(tp => {
+						cleardetectcache(), detectExp(lexers[it.uri], s, Position.is(nn.returntypes[s]) ? nn.returntypes[s] : pos).map(tp => {
 							searchNode(doc, tp, pos, SymbolKind.Function)?.map(it => {
 								if (it.node.kind === SymbolKind.Function || it.node.kind === SymbolKind.Method || (it.node.kind === SymbolKind.Class && (<ClassNode>it.node).extends !== 'Primitive'))
 									nodes.push(it);
@@ -82,7 +82,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 						});
 					}
 				} else if (kind === SymbolKind.Variable)
-					detectVariableType(lexers[it.uri], it.node.name.toLowerCase(), it.uri === doc.uri ? pos : undefined).map(tp => {
+					cleardetectcache(), detectVariableType(lexers[it.uri], it.node.name.toLowerCase(), it.uri === doc.uri ? pos : undefined).map(tp => {
 						searchNode(doc, tp, pos, SymbolKind.Function)?.map(it => {
 							if (it.node.kind === SymbolKind.Function || it.node.kind === SymbolKind.Method || (it.node.kind === SymbolKind.Class && (<ClassNode>it.node).extends !== 'Primitive'))
 								nodes.push(it);
