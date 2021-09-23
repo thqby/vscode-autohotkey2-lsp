@@ -952,7 +952,7 @@
         },
         {
             "body": "A_Programs",
-            "description": "The full path and name of the program folder in the start menu of the current user. For example:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\ \Programs",
+            "description": "The full path and name of the program folder in the start menu of the current user. For example:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs",
             "prefix": "A_Programs"
         },
         {
@@ -1037,7 +1037,7 @@
         },
         {
             "body": "A_Startup",
-            "description": "The full path and name of the startup folder in the start menu of the current user. For example:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\ \Programs\\Startup",
+            "description": "The full path and name of the startup folder in the start menu of the current user. For example:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
             "prefix": "A_Startup"
         },
         {
@@ -1062,7 +1062,7 @@
         },
         {
             "body": "A_Temp",
-            "description": "The full path and name of the folder where temporary files are stored. Its value is retrieved from one of the following locations (in order): 1) Environment variable TMP, TEMP or USERPROFILE; 2) Windows directory. For example: \ nC:\\Users\\<UserName>\\AppData\\Local\\Temp",
+            "description": "The full path and name of the folder where temporary files are stored. Its value is retrieved from one of the following locations (in order): 1) Environment variable TMP, TEMP or USERPROFILE; 2) Windows directory. For example: \nC:\\Users\\<UserName>\\AppData\\Local\\Temp",
             "prefix": "A_Temp"
         },
         {
@@ -1152,7 +1152,7 @@
         },
         {
             "body": "A_WorkingDir",
-            "description": "Can be used to get or set the current working directory of the script, which is the default path for accessing files. Unless it is the root directory, the path does not contain a backslash at the end. Two examples: C:\\ and C:\ \My Documents. Use SetWorkingDir or assign a path to A_WorkingDir to change the current working directory.\nNo matter how the script is started, the script�s working directory defaults to A_ScriptDir.",
+            "description": "Can be used to get or set the current working directory of the script, which is the default path for accessing files. Unless it is the root directory, the path does not contain a backslash at the end. Two examples: C:\\ and C:\\My Documents. Use SetWorkingDir or assign a path to A_WorkingDir to change the current working directory.\nNo matter how the script is started, the script�s working directory defaults to A_ScriptDir.",
             "prefix": "A_WorkingDir"
         },
         {

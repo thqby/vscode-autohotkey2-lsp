@@ -1618,7 +1618,8 @@ export class Lexer {
 									tpexp += ' #func', types[tpexp] = true;
 									return sub;
 								} else {
-									next = false, lk = n_newlines === 1 && cmm.type ? Object.assign({}, cmm) : tk, tk = nk;
+									if (n_newlines > 1) cmm.type = '';
+									next = false, lk = tk, tk = nk;
 									if (fc) {
 										if (input.charAt(fc.offset - 1) !== '%')
 											tpexp += ' ' + fc.content + '()', addvariable(fc), fc.semantic = { type: SemanticTokenTypes.function }, _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
@@ -4474,10 +4475,10 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 			for (l in cl.staticdeclaration)
 				if (!v[l]) mems.push(v[l] = cl.staticdeclaration[l]), v[l].uri = (<any>cl).uri;
 		}
-		if (cl = ahkvars['object'] as ClassNode) {
-			for (l in cl.declaration)
-				if (!v[l]) mems.push(v[l] = cl.declaration[l]), v[l].uri = (<any>cl).uri;
-		}
+	}
+	if (cl = ahkvars['object'] as ClassNode) {
+		for (l in cl.declaration)
+			if (!v[l]) mems.push(v[l] = cl.declaration[l]), v[l].uri = (<any>cl).uri;
 	}
 	return mems;
 
@@ -4660,10 +4661,10 @@ export function detectVariableType(doc: Lexer, name: string, pos?: Position) {
 }
 
 export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: string): string[] {
-	if (hasdetectcache[exp])
-		return [];
-	hasdetectcache[exp] = true;
-	return detect(exp, pos, 0, fullexp);
+	if (hasdetectcache[exp] !== undefined)
+		return hasdetectcache[exp] || [];
+	hasdetectcache[exp] = false;
+	return hasdetectcache[exp] = detect(exp, pos, 0, fullexp);
 	function detect(exp: string, pos: Position, deep: number = 0, fullexp?: string): string[] {
 		let t: string | RegExpMatchArray | null, tps: string[] = [];
 		exp = exp.replace(/#any(\(\)|\.(\w|[^\x00-\x7f])+)+/g, '#any').replace(/\b(true|false)\b/gi, '#number');

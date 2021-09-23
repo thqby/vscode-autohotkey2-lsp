@@ -25,7 +25,7 @@ export async function semanticTokensOnFull(params: SemanticTokensParams): Promis
 
 export async function semanticTokensOnDelta(params: SemanticTokensDeltaParams): Promise<SemanticTokensDelta | SemanticTokens> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], sem = doc.STB;
-	sem.previousResult(params.previousResultId), curclass = undefined, memscache.clear();
+	sem.previousResult(''), curclass = undefined, memscache.clear();
 	await symbolProvider({ textDocument: params.textDocument });
 	for (let tk of Object.values(doc.tokens)) {
 		if (tk.semantic) {
