@@ -755,9 +755,9 @@ export class Lexer {
 									_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 								if (lk.content === '=>')
 									_this.addDiagnostic(diagnostic.invaliddefinition('function'), fc.offset, fc.length);
-								tn.range.end = document.positionAt(lk.offset + lk.length), tn.closure = true, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
+								tn.range.end = document.positionAt(lk.offset + lk.length), tn.closure = !!(mode & 1), _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 								tn.funccall?.push(..._parent.funccall.splice(fcs));
-								tn.returntypes = o, tn.static = isstatic, tn.children = [], adddeclaration(tn);
+								tn.returntypes = o, tn.static = isstatic, tn.children = [...sub], adddeclaration(tn);
 								for (const t in o)
 									o[t] = tn.range.end;
 								if (mode === 2) {
@@ -768,7 +768,6 @@ export class Lexer {
 										_this.object.method[_low] = [];
 									_this.object.method[_low].push(tn);
 								}
-								tn.children.push(...sub);
 							} else if (nk.content === '{' && fc.topofline) {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
 								_this.diagnostics.push(...tds);
@@ -777,7 +776,7 @@ export class Lexer {
 								if (mode !== 0)
 									tn.parent = _parent;
 								vars.set('#parent', tn), tn.funccall = [], tn.detail = comm || tn.detail, result.push(tn), tn.children = [], tn.children.push(...parseblock(mode | 1, vars, classfullname));
-								adddeclaration(tn), tn.closure = !!(mode & 1), se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
+								tn.closure = !!(mode & 1), adddeclaration(tn), se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
 								if (fc.content.charAt(0).match(/[\d$]/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 								tn.range.end = document.positionAt(parser_pos), tn.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
@@ -924,7 +923,7 @@ export class Lexer {
 												for (const t in o)
 													o[t] = tn.range.end;
 												if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(v = Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0))), v.detail = completionitem.value();
-												adddeclaration(tn as FuncNode), tn.children.push(...sub);
+												tn.children.push(...sub), adddeclaration(tn as FuncNode);
 											} else if (sk.content === '{') {
 												tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), [...par]), _this.addFoldingRangePos(tn.range.start, tn.range.end);
 												let vars = new Map<string, any>([['#parent', tn]]);
@@ -1607,8 +1606,8 @@ export class Lexer {
 										if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 										fc.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 										result.push(tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, cds));
-										(<FuncNode>tn).returntypes = o, (<FuncNode>tn).closure = mode === 0, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-										adddeclaration(tn as FuncNode), (<FuncNode>tn).closure = !!(mode & 1);
+										(<FuncNode>tn).returntypes = o, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
+										(<FuncNode>tn).closure = !!(mode & 1), adddeclaration(tn as FuncNode);
 										for (const t in o)
 											o[t] = tn.range.end;
 										if (mode !== 0)
