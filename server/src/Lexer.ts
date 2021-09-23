@@ -2981,7 +2981,8 @@ export class Lexer {
 					if (in_array(c.toLowerCase(), reserved_words)) {
 						if (c.match(/^(and|or|not|in|is|contains)$/i)) // hack for 'in' operator
 							return lst = createToken(c, 'TK_OPERATOR', offset, c.length, bg);
-						return lst = createToken(c, 'TK_RESERVED', offset, c.length, bg);
+						if (bg || c.toLowerCase() !== 'class')
+							return lst = createToken(c, 'TK_RESERVED', offset, c.length, bg);
 					}
 				}
 				return lst = createToken(c, 'TK_WORD', offset, c.length, bg);
