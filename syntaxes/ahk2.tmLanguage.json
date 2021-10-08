@@ -1735,6 +1735,14 @@
         },
         {
           "include": "#numbers"
+        },
+        {
+          "match": ",",
+          "name": "punctuation.separator.comma.ahk2"
+        },
+        {
+          "match": "(?!<\\.)\\b(?i:(true|false))\\b",
+          "name": "constant.language.true.ahk2"
         }
       ]
     },

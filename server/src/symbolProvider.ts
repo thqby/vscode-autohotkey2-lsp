@@ -19,7 +19,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 				gvar[key] = gg[key];
 	}
 	for (const key in glo) {
-		if (!gvar[key] || gvar[key].kind === SymbolKind.Variable)
+		if (!gvar[key] || gvar[key].kind === SymbolKind.Variable || (gvar[key] === ahkvars[key] && gvar[key].kind === SymbolKind.Function && glo[key].kind !== SymbolKind.Variable))
 			gvar[key] = glo[key];
 	}
 	doc.reflat = false, globalsymbolcache = gvar;
@@ -82,9 +82,9 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						if (kk) {
 							if (kk.kind === SymbolKind.Class) {
 								let rg = Range.create(0, 0, 0, 0);
-								inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.Variable, rg, rg);
+								inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg);
 								if ((<ClassNode>kk).extends)
-									inherit['super'] = DocumentSymbol.create('super', undefined, SymbolKind.Variable, rg, rg);
+									inherit['super'] = DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg);
 							} else if (kk.kind === SymbolKind.Function || kk.kind === SymbolKind.Method || kk.kind === SymbolKind.Event)
 								for (const k in vars)
 									if (!inherit[k])
@@ -158,6 +158,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		function err_not_exist(doc: Lexer, it: ClassNode) {
 			let o = doc.document.offsetAt(it.selectionRange.end) + 1, tk: Token;
 			tk = doc.get_tokon(o);
+			if (tk.content.toLowerCase() === 'extends')
+				tk = doc.get_tokon(o = tk.offset + tk.length);
 			while (tk.type !== 'TK_WORD')
 				tk = doc.get_tokon(o = tk.offset + tk.length);
 			o = tk.offset;

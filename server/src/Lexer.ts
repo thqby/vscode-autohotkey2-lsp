@@ -252,7 +252,7 @@ export class Lexer {
 		this.beautify = function (options: any) {
 			/*jshint onevar:true */
 			let i: number, keep_whitespace: boolean, sweet_code: string, top: boolean = false;
-			options = options ? options : {}, opt = {}, this.tokens = {};
+			options = options ? options : {}, opt = {}, this.tokens = {}, lst = { type: '', content: '', offset: 0, length: 0 };
 			if (options.braces_on_own_line !== undefined) { //graceful handling of deprecated option
 				opt.brace_style = options.braces_on_own_line ? "expand" : "collapse";
 			}
@@ -397,7 +397,7 @@ export class Lexer {
 			this.d = 1;
 			this.parseScript = function (islib = false): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, tks.length = 0;
-				whitespace_before_token = [], beginpos = 0;
+				whitespace_before_token = [], beginpos = 0, lst = { type: '', content: '', offset: 0, length: 0 };
 				following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
 				this.tokens = {}, this.children.length = this.foldingranges.length = this.diagnostics.length = 0;
@@ -560,7 +560,7 @@ export class Lexer {
 				this.foldingranges.length = this.children.length = 0, this.labels = {};
 				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map();
 				this.blocks = [], this.texts = {}, this.reflat = true, this.declaration = {}, this.strcommpos = {};
-				this.include = includetable = {}, this.tokens = {};
+				this.include = includetable = {}, this.tokens = {}, lst = { type: '', content: '', offset: 0, length: 0 };
 				this.children.push(...parseblock()), this.children.push(...this.blocks), this.blocks = undefined;
 				checksamenameerr(this.declaration, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length;
@@ -1035,7 +1035,7 @@ export class Lexer {
 									addprop(lk), pr = vr = maybeclassprop(lk);
 								if (tk.type === 'TK_EQUALS') {
 									next = true;
-									let o: any = {}, equ = tk.content, ep = parseexp(false, o);
+									let o: any = {}, equ = tk.content, ep = parseexp(undefined, o);
 									result.push(...ep);
 									if (vr) {
 										vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
@@ -1230,7 +1230,7 @@ export class Lexer {
 									break;
 								case 'TK_OPERATOR':
 									if (tk.content.toLowerCase() === 'in') {
-										result.push(...parseexp(false, undefined));
+										result.push(...parseexp(undefined, undefined));
 										if (nk) {
 											if (tk.content !== ')') {
 												_this.addDiagnostic(diagnostic.missing(')'), nk.offset, nk.length);
@@ -1393,7 +1393,7 @@ export class Lexer {
 				let res: DocumentSymbol[] = [], hascomma = false, b = next ? parser_pos : tk.offset;
 				while (true) {
 					let o: any = {};
-					res.push(...parseexp(false, o));
+					res.push(...parseexp(undefined, o));
 					if (tk.type === 'TK_COMMA')
 						hascomma = next = true;
 					else {
@@ -1430,7 +1430,7 @@ export class Lexer {
 									else last_comm = '';
 								} else if (local)
 									_this.addDiagnostic(diagnostic.conflictserr(local, 'built-in variable', lk.content), lk.offset, lk.length);
-								result.push(...parseexp(false, o));
+								result.push(...parseexp(undefined, o));
 								if (vr) {
 									vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
 									vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) }, vr.def = true;
@@ -1485,7 +1485,7 @@ export class Lexer {
 				return sta;
 			}
 
-			function parseexp(inpair = false, types: any = {}, mustexp = false): DocumentSymbol[] {
+			function parseexp(inpair?: string, types: any = {}, mustexp = false): DocumentSymbol[] {
 				let pres = result.length, tpexp = '', byref = false, t: any, objk: any;
 				while (nexttoken()) {
 					if (tk.topofline && !inpair && !linecontinue(lk, tk)) {
@@ -1696,6 +1696,12 @@ export class Lexer {
 									tpexp = tpexp.replace(/\S+$/, '#any');
 								else
 									tpexp += (lk.type === 'TK_DOT' ? '.' : ' ') + '#any';
+								if (inpair === '%') {
+									next = false, types[tpexp] = true;
+									if (tpexp === ' #object' && objk)
+										types[tpexp] = objk;
+									return result.splice(pres);
+								}
 								parsepair('%', '%');
 							} else if (tk.content === '=>' && lk.type === 'TK_WORD') {
 								let p = lk.content.toLowerCase();
@@ -1925,7 +1931,7 @@ export class Lexer {
 				}
 
 				function objval(): boolean {
-					let exp = parseexp(true, ts = {}, true);
+					let exp = parseexp(',', ts = {}, true);
 					result.push(...exp);
 					if (k) {
 						if (k.content.toLowerCase() === 'base') {
@@ -2005,7 +2011,7 @@ export class Lexer {
 							_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2);
 							continue;
 						}
-						let sub = parseexp(true, undefined, true), pars: { [key: string]: boolean } = {}, lasthasval = false;
+						let sub = parseexp(e, undefined, true), pars: { [key: string]: boolean } = {}, lasthasval = false;
 						for (const it of par) {
 							pars[it.name.toLowerCase()] = true;
 							if ((<Variable>it).defaultVal || (<Variable>it).arr)
@@ -2032,7 +2038,7 @@ export class Lexer {
 										if (tk.type === 'TK_EQUALS') {
 											let o: any = {}, equ = tk.content;
 											next = true;
-											result.push(...parseexp(true, o, true));
+											result.push(...parseexp(e, o, true));
 											vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 											vr.returntypes = { [o = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: vr.range.end };
 											tpexp += o, vr.def = true;
@@ -2048,7 +2054,7 @@ export class Lexer {
 								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_token_ingore_comment();
 								if (nk.content === '=>') {
 									_this.diagnostics.push(...tds);
-									let o: any = {}, sub = parseexp(true, o, true), pars: any = {};
+									let o: any = {}, sub = parseexp(e, o, true), pars: any = {};
 									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par, sub);
 									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).closure = !!(mode & 1);
@@ -2183,8 +2189,6 @@ export class Lexer {
 			function is_builtinvar(name: string): boolean {
 				if (mode === 2)
 					return false;
-				if (classfullname && (name === 'this' || name === 'super'))
-					return true;
 				if (builtin_variable.includes(name) || (h && builtin_variable_h.includes(name)))
 					return true;
 				return false;
@@ -2913,7 +2917,7 @@ export class Lexer {
 				}
 				let line = input.substring(last_LF + 1, next_LF).trim();
 				if (line.indexOf('::') === -1) {
-					if (m = line.match(/^(\S+):\s*(\s;.*)?$/)) {
+					if ((m = line.match(/^(([^\x00-\x7f]|\w)+):\s*(\s;.*)?$/)) && (!lst.type.match(/(TK_OPERATOR|TK_COMMA|TK_START_EXPR)/) || lst.content.match(/^(\+\+|--)$/))) {
 						parser_pos += m[1].length + 1;
 						return lst = createToken(m[1] + ':', 'TK_LABEL', offset, m[1].length + 1, true);
 					}

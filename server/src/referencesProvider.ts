@@ -17,7 +17,7 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 	if (!nodes || nodes.length > 1)
 		return undefined;
 	let { node, uri } = nodes[0];
-	if (!uri || node === ahkvars[name])
+	if (!uri || node === ahkvars[name] || node.name.toLowerCase() !== name)
 		return undefined;
 	let scope = node === doc.declaration[name] ? undefined : doc.searchScopedNode(node.selectionRange.start);
 	switch (node.kind) {

@@ -1,3 +1,7 @@
+## 1.0.6
+- 修复未能准确识别非类变量this
+- 修复[#46](https://github.com/thqby/vscode-autohotkey2-lsp/issues/46)
+
 ## 1.0.5
 - 修复类型推导存在的递归死循环
 - 修复英文版`ahk2.json`文件存在的错误
