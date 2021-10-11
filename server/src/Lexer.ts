@@ -720,11 +720,17 @@ export class Lexer {
 						if (input.charAt(parser_pos) === '%')
 							break;
 						let comm = '', pr: Variable | undefined, vr: Variable | undefined, predot = (input.charAt(tk.offset - 1) === '.'), isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
-						if (h && tk.topofline && tk.content.toLowerCase() === 'macro') {
-							let t = input.indexOf('\n', parser_pos);
-							t = t === -1 ? input_length : t;
-							if (input.substring(parser_pos, t).match(/^\s*(\w|[^\x00-\x7f])+\(/))
-								t = n_newlines, tk.semantic = { type: SemanticTokenTypes.keyword, modifier: 1 << SemanticTokenModifiers.static }, tk = get_next_token(), n_newlines = t, tk.topofline = true;
+						if (tk.topofline) {
+							if (inswitch > -1 && input.charAt(parser_pos) === ':' && tk.content.toLowerCase() === 'default') {
+								tk.content += ':', tk.length++, tk.type = 'TK_LABEL', parser_pos++;
+								break;
+							}
+							if (h && tk.content.toLowerCase() === 'macro') {
+								let t = input.indexOf('\n', parser_pos);
+								t = t === -1 ? input_length : t;
+								if (input.substring(parser_pos, t).match(/^\s*(\w|[^\x00-\x7f])+\(/))
+									t = n_newlines, tk.semantic = { type: SemanticTokenTypes.keyword, modifier: 1 << SemanticTokenModifiers.static }, tk = get_next_token(), n_newlines = t, tk.topofline = true;
+							}
 						}
 						topcontinue = predot ? topcontinue : tk.topofline || false;
 						if (!predot && input.charAt(parser_pos) === '(') {
@@ -1449,15 +1455,17 @@ export class Lexer {
 										continue;
 									} else _this.addDiagnostic(diagnostic.propnotinit(), lk.offset, lk.length);
 								}
-								if (tk.type === 'TK_COMMA') {
-									if (!addvariable(lk, mode, sta) && local)
+								if (tk.type === 'TK_COMMA' || (tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i)))) {
+									if (addvariable(lk, mode, sta)) {
+										let vr = sta[sta.length - 1];
+										if (cmm.type) vr.detail = last_comm = trimcomment(cmm.content), cmm.type = '';
+										else if (last_comm && bak.content === ',' && !cmm.type)
+											vr.detail = last_comm;
+										else last_comm = '';
+									} else if (local)
 										_this.addDiagnostic(diagnostic.conflictserr(local, 'built-in variable', lk.content), lk.offset, lk.length);
-									continue;
-								}
-								else if (tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
-									if (!addvariable(lk, mode, sta) && local)
-										_this.addDiagnostic(diagnostic.conflictserr(local, 'built-in variable', lk.content), lk.offset, lk.length);
-									break loop;
+									if (tk.type !== 'TK_COMMA')
+										break loop;
 								}
 							}
 							break;
@@ -3989,7 +3997,7 @@ export class Lexer {
 					deindent();
 					flags.case_body = false;
 				}
-				token_text_low = 'default', token_text = token_text.substr(0, token_text.length - 1), token_type = 'TK_WORD', parser_pos--;
+				token_text_low = 'default', token_text = token_text.substr(0, token_text.length - 1), token_type = 'TK_WORD', parser_pos = ck.offset + 7;
 				print_newline();
 				print_token();
 				flags.in_case = true;
@@ -4576,7 +4584,7 @@ export function detectVariableType(doc: Lexer, name: string, pos?: Position) {
 	else if (name.substr(0, 2) === 'a_')
 		return ['#string'];
 	let scope = pos ? doc.searchScopedNode(pos) : undefined, types: any = {}, ite: Variable | undefined;
-	let uri = doc.uri, dec: any, tt: DocumentSymbol | undefined, list = doc.relevance;
+	let uri = doc.uri, dec: any, tt: DocumentSymbol | undefined, list = doc.relevance, ts: string[] | undefined;
 	while (scope) {
 		if (scope.kind === SymbolKind.Class) {
 			scope = (<ClassNode>scope).parent;
@@ -4607,8 +4615,10 @@ export function detectVariableType(doc: Lexer, name: string, pos?: Position) {
 					tt = dec[name], ss = uri;
 			}
 		}
-		if (tt)
+		if (tt) {
 			if (tt.kind === SymbolKind.Variable) {
+				if ((ts = tt.detail?.match(/^\s*@types?:?\s*(.*)/mi)?.[1].split(/[,|]/).map(s => s.trim().toLowerCase().replace(/([^.]+)$/, '@$1')))?.length)
+					return ts;
 				if (ss !== doc.uri)
 					return ['#any'];
 				else {
@@ -4620,7 +4630,7 @@ export function detectVariableType(doc: Lexer, name: string, pos?: Position) {
 				searchcache[tt.name.toLowerCase()] = tt;
 				return [tt.name.toLowerCase()];
 			}
-		else if (ahkvars[name])
+		} else if (ahkvars[name])
 			return [name];
 		else
 			return [];
@@ -4631,6 +4641,8 @@ export function detectVariableType(doc: Lexer, name: string, pos?: Position) {
 				if (it.kind === SymbolKind.Variable || it.kind === SymbolKind.Property) {
 					if (pos && (it.selectionRange.end.line > pos.line || (it.selectionRange.end.line === pos.line && it.selectionRange.start.character > pos.character)))
 						break;
+					if ((ts = it.detail?.match(/^\s*@types?:?\s*(.*)/mi)?.[1].split(/[,|]/).map(s => s.trim().toLowerCase().replace(/([^.]+)$/, '@$1')))?.length)
+						return ts;
 					if ((<Variable>it).ref || (<Variable>it).returntypes)
 						ite = it;
 				} else
@@ -5033,6 +5045,7 @@ export function getFuncCallInfo(doc: Lexer, position: Position) {
 				}
 			}
 			if (w === 0 && e === 0 && q <= 0 && position.character < t[1].length + i + (q === 0 ? 2 : 1)) {
+				pos.line = position.line, pos.character = offset;
 				text = t[2] + '(' + t[4].substr(0, i) + (q === 0 ? ')' : ''), name = full = t[2].toLowerCase();
 				len = text.length - name.length, offset += name.length, name = name.split('.').pop() || '';
 				if (name === full)

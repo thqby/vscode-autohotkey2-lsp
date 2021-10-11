@@ -42,8 +42,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					if (info.kind === SymbolKind.Variable && !(<Variable>info).def && gvar[_l]) {
 						vars[_l] = gvar[_l];
 						if (info === gvar[_l])
-							result.push(info), converttype(info);
-						else converttype(info, gvar[_l] === ahkvars[_l], gvar[_l].kind);
+							result.push(info);
+						converttype(info, gvar[_l] === ahkvars[_l], gvar[_l].kind);
 					} else {
 						vars[_l] = info, result.push(info);
 						converttype(info, ahkvars[_l] && gvar[_l] === ahkvars[_l], gvar[_l]?.kind);

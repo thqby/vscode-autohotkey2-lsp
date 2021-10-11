@@ -27,7 +27,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 				}), params.position, ts);
 				if (word && ts['#any'] === undefined)
 					for (const tp in ts)
-						searchNode(doc, tp + word, context.range.end, kind)?.map(it => {
+						searchNode(doc, tp + word, t ? res.pos : context.range.end, kind)?.map(it => {
 							if (!nodes?.map((i: any) => i.node).includes(it.node))
 								nodes?.push(it);
 						});
