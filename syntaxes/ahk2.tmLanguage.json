@@ -2176,7 +2176,7 @@
         },
         {
           "name": "meta.parens.continuation_section.class_innards.ahk2",
-          "begin": "^\\s*(\\()([^)]*)$",
+          "begin": "^\\s*(\\()([^()]*)$",
           "beginCaptures": {
             "1": {
               "name": "punctuation.section.parens.begin.ahk2"

@@ -4495,7 +4495,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 	return mems;
 
 	function getmems(doc: Lexer, node: DocumentSymbol, staticmem: boolean) {
-		let members: DocumentSymbol[] = [], u = (<any>node).uri;
+		let members: DocumentSymbol[] = [], u = (<any>node).uri, l2 = '';
 		if (staticmem) {
 			node.children?.map(it => {
 				switch (it.kind) {
@@ -4514,7 +4514,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 							v[l] = it, (<any>it).uri = u, members.push(it);
 						break;
 					case SymbolKind.Class:
-						v[l] = it, (<any>it).uri = u, members.push(it);
+						v[it.name.toLowerCase()] = it, (<any>it).uri = u, members.push(it);
 						break;
 				}
 			});
@@ -4532,9 +4532,18 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 				}
 			});
 		}
-		if ((l = (<ClassNode>node).extends?.toLowerCase()) && l !== (<ClassNode>node).full.toLowerCase()) {
-			let p = l.split('.'), cl: any, mems: DocumentSymbol[], nd: DocumentSymbol | undefined, dc: Lexer;
-			cl = searchNode(doc, p[0], Position.create(0, 0), SymbolKind.Class);
+		if ((l = (<ClassNode>node).extends?.toLowerCase()) && l !== (l2 = (<ClassNode>node).full.toLowerCase())) {
+			let cl: any, mems: DocumentSymbol[], nd: DocumentSymbol | undefined, dc: Lexer;
+			let p = l.split('.'), p2 = l2.split('.'), len = Math.min(p.length, p2.length), i = -1;
+			while (p[i + 1] === p2[i + 1])
+				i++;
+			if (i > -1) {
+				if (i + 1 < p.length && v[p[++i]]) {
+					cl = [{ node: v[p[i]], uri: v[p[i]].uri }];
+					p.splice(0, i);
+				}
+			} else
+				cl = searchNode(doc, p[0], Position.create(0, 0), SymbolKind.Class);
 			if (cl && cl.length && cl[0].node.kind === SymbolKind.Class) {
 				nd = cl[0].node, dc = lexers[cl[0].uri] || doc;
 				if (cl[0].uri && (<any>nd).uri === undefined)
