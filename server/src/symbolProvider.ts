@@ -16,11 +16,11 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		const gg = lexers[uri]?.declaration;
 		for (let key in gg)
 			if (!gvar[key] || gg[key].kind !== SymbolKind.Variable)
-				gvar[key] = gg[key];
+				gvar[key] = gg[key], (<any>gg[key]).uri = uri;
 	}
 	for (const key in glo) {
 		if (!gvar[key] || gvar[key].kind === SymbolKind.Variable || (gvar[key] === ahkvars[key] && gvar[key].kind === SymbolKind.Function && glo[key].kind !== SymbolKind.Variable))
-			gvar[key] = glo[key];
+			gvar[key] = glo[key], (<any>glo[key]).uri = uri;
 	}
 	doc.reflat = false, globalsymbolcache = gvar;
 	symbolcache[uri] = flatTree(tree).map(info => {
@@ -80,12 +80,15 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						gg = false;
 						let kk = (<FuncNode>info).parent, tt = p.declaration;
 						if (kk) {
+							if (kk.kind === SymbolKind.Property && kk.children?.length && (<FuncNode>kk).parent?.kind === SymbolKind.Class)
+								kk = (<FuncNode>kk).parent as DocumentSymbol;
 							if (kk.kind === SymbolKind.Class) {
 								let rg = Range.create(0, 0, 0, 0);
 								inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg);
 								if ((<ClassNode>kk).extends)
 									inherit['super'] = DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg);
-							} else if (kk.kind === SymbolKind.Function || kk.kind === SymbolKind.Method || kk.kind === SymbolKind.Event)
+							}
+							if (kk.kind === SymbolKind.Function || kk.kind === SymbolKind.Method || kk.kind === SymbolKind.Event)
 								for (const k in vars)
 									if (!inherit[k])
 										inherit[k] = vars[k];
@@ -134,19 +137,27 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
 		}
 		t.map(it => {
-			if (it.kind === SymbolKind.Class && !checkextendsclassexist((<ClassNode>it).extends))
-				err_not_exist(doc, <ClassNode>it);
+			if (it.kind === SymbolKind.Class) {
+				let l = (<ClassNode>it).extends?.toLowerCase();
+				if (l === it.name.toLowerCase())
+					err_extends(doc, <ClassNode>it, false);
+				else if (l && !checkextendsclassexist(l))
+					err_extends(doc, <ClassNode>it);
+			}
 		});
 		for (const uri in doc.relevance) {
 			if (dd = lexers[uri])
 				for (const it of Object.values(dd.declaration))
-					if (it.kind === SymbolKind.Class && !checkextendsclassexist((<ClassNode>it).extends))
-						err_not_exist(dd, <ClassNode>it);
+					if (it.kind === SymbolKind.Class) {
+						let l = (<ClassNode>it).extends?.toLowerCase();
+						if (l === it.name.toLowerCase())
+							err_extends(dd, <ClassNode>it, false);
+						else if (l && !checkextendsclassexist(l))
+							err_extends(dd, <ClassNode>it);
+					}
 		}
 
 		function checkextendsclassexist(name: string) {
-			if (!name)
-				return true;
 			let n = name.toLowerCase().split('.'), l = n.length, c: ClassNode | undefined;
 			for (let i = 0; i < l; i++) {
 				c = c ? c.staticdeclaration[n[i]] : dec[n[i]];
@@ -155,7 +166,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			}
 			return true;
 		}
-		function err_not_exist(doc: Lexer, it: ClassNode) {
+		function err_extends(doc: Lexer, it: ClassNode, not_exist = true) {
 			let o = doc.document.offsetAt(it.selectionRange.end) + 1, tk: Token;
 			tk = doc.get_tokon(o);
 			if (tk.content.toLowerCase() === 'extends')
@@ -164,7 +175,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 				tk = doc.get_tokon(o = tk.offset + tk.length);
 			o = tk.offset;
 			let rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
-			doc.diagnostics.push({ message: diagnostic.unknown("class '" + it.extends) + "'", range: rg, severity: DiagnosticSeverity.Error });
+			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Error });
 		}
 	}
 	function converttype(it: DocumentSymbol, islib: boolean = false, kind?: number) {

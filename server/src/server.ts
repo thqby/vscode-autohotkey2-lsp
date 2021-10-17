@@ -283,9 +283,11 @@ loadahk2();
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	let uri = textDocument.uri, doc: Lexer;
-	(doc = lexers[uri = uri.toLowerCase()]).initlibdirs();
-	if (doc.diagnostics.length)
-		doc.parseScript();
+	if (doc = lexers[uri = uri.toLowerCase()]) {
+		doc.initlibdirs();
+		if (doc.diagnostics.length)
+			doc.parseScript();
+	}
 	parseproject(uri);
 	if (libfuncs[uri]) {
 		libfuncs[uri].length = 0;
