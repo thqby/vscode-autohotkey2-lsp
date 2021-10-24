@@ -34,6 +34,22 @@
 			"body": "#WindowClassMain ",
 			"description": "将主窗口类名称从AutoHotkey更改为其他名称.",
 			"prefix": "#WindowClassMain"
+		},
+		{
+			"body": "#UseStdLib",
+			"prefix": "#UseStdLib"
+		},
+		{
+			"body": "#MapCaseSense",
+			"prefix": "#MapCaseSense"
+		},
+		{
+			"body": "#TargetWindowError",
+			"prefix": "#TargetWindowError"
+		},
+		{
+			"body": "macro",
+			"prefix": "macro"
 		}
 	],
 	"variables": [

@@ -1,3 +1,7 @@
+## 1.0.8
+- 修复[#47](https://github.com/thqby/vscode-autohotkey2-lsp/issues/47)`/**\n...\n*/`将按照JSDoc格式化
+- 修复[#48](https://github.com/thqby/vscode-autohotkey2-lsp/issues/48)
+
 ## 1.0.7
 - 优化代码格式化
 - 修复类动态属性未能准确识别this

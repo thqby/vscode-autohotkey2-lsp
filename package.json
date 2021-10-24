@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -29,6 +29,7 @@
 		"onLanguage:ahk2"
 	],
 	"main": "./client/dist/extension",
+	"browser": "./client/dist/browserClient",
 	"contributes": {
 		"breakpoints": [
 			{
@@ -248,18 +249,17 @@
 		"package": "vsce package"
 	},
 	"devDependencies": {
-		"@types/mocha": "^7.0.2",
-		"@types/node": "^12.12.0",
-		"@typescript-eslint/parser": "^2.3.0",
+		"@types/mocha": "^8.2.2",
 		"@types/vscode": "^1.59.0",
-		"eslint": "^6.4.0",
-		"mocha": "^8.0.1",
-		"typescript": "^4.4.2",
-		"ts-loader": "^8.0.14",
-		"webpack": "^5.14.0",
-		"webpack-cli": "^4.3.1"
+		"@typescript-eslint/parser": "^4.23.0",
+		"mocha": "^8.3.2",
+		"ts-loader": "^9.2.3",
+		"typescript": "^4.4.3",
+		"webpack": "^5.44.0",
+		"webpack-cli": "^4.7.2"
 	},
 	"dependencies": {
+		"acorn": "^8.5.0",
 		"cfv": "^1.2.0",
 		"vsce": "^1.91.0",
 		"vscode-languageclient": "^7.0.0",

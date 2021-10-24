@@ -1,85 +1,96 @@
 {
-    "keywords": [
-        {
-            "body": "#CriticalObjectSleepTime ",
-            "description": "When accessing a CriticalObject, the sleep time between TryEnterCriticalObject calls. This will affect the CPU load. This setting only affects the thread that created the CriticalObject.",
-            "prefix": "#CriticalObjectSleepTime"
-        },
-        {
-            "body": "#CriticalObjectTimeOut ",
-            "description": "When access to CriticalObject times out, an error message will be displayed, and the current thread will exit.",
-            "prefix": "#CriticalObjectTimeOut"
-        },
-        {
-            "body": "#DefineDefault${1|Array,Map,Object|}Value ",
-            "description": "Defines the default value that will be used when an attribute or item is not found in object/array/map.",
-            "prefix": "#DefineDefault"
-        },
-        {
-            "body": "#DllImport ${1:Function_Name}, ${2:DllFile\\Function}${3:[, Type1, Arg1, Type2, Arg2, Cdecl ReturnType]}",
-            "description": "Create script functions for dll or exe functions.",
-            "prefix": "#DllImport"
-        },
-        {
-            "body": "#WarnContinuableException",
-            "description": "For continuous exceptions, the EXCEPTION_ACCESS_VIOLATION warning message is not displayed.",
-            "prefix": "#WarnContinuableException"
-        },
-        {
-            "body": "#WindowClassGui ",
-            "description": "Change the name of the Gui window class from AutoHotkey GUI to another name.",
-            "prefix": "#WindowClassGui"
-        },
-        {
-            "body": "#WindowClassMain ",
-            "description": "Change the name of the main window class from AutoHotkey to another name.",
-            "prefix": "#WindowClassMain"
-        }
-    ],
-    "variables": [
-        {
-            "body": "A_AhkDir",
-            "prefix": "A_AhkDir"
-        },
-        {
-            "body": "A_DllDir",
-            "prefix": "A_DllDir"
-        },
-        {
-            "body": "A_DllPath",
-            "prefix": "A_DllPath"
-        },
-        {
-            "body": "A_GlobalStruct",
-            "prefix": "A_GlobalStruct"
-        },
-        {
-            "body": "A_IsDll",
-            "prefix": "A_IsDll"
-        },
-        {
-            "body": "A_MainThreadID",
-            "prefix": "A_MainThreadID"
-        },
-        {
-            "body": "A_MemoryModule",
-            "prefix": "A_MemoryModule"
-        },
-        {
-            "body": "A_ModuleHandle",
-            "prefix": "A_ModuleHandle"
-        },
-        {
-            "body": "A_ScriptStruct",
-            "prefix": "A_ScriptStruct"
-        },
-        {
-            "body": "A_ThreadID",
-            "prefix": "A_ThreadID"
-        },
-        {
-            "body": "A_ZipCompressionLevel",
-            "prefix": "A_ZipCompressionLevel"
-        }
-    ]
+	"keywords": [
+		{
+			"body": "#CriticalObjectSleepTime ",
+			"description": "When accessing a CriticalObject, the sleep time between TryEnterCriticalObject calls. This will affect the CPU load. This setting only affects the thread that created the CriticalObject.",
+			"prefix": "#CriticalObjectSleepTime"
+		},
+		{
+			"body": "#CriticalObjectTimeOut ",
+			"description": "When access to CriticalObject times out, an error message will be displayed, and the current thread will exit.",
+			"prefix": "#CriticalObjectTimeOut"
+		},
+		{
+			"body": "#DefineDefault${1|Array,Map,Object|}Value ",
+			"description": "Defines the default value that will be used when an attribute or item is not found in object/array/map.",
+			"prefix": "#DefineDefault"
+		},
+		{
+			"body": "#DllImport ${1:Function_Name}, ${2:DllFile\\Function}, ${3:DynaCallParameterDefinition [, DefaultArg1, ...]}",
+			"description": "Create script functions for dll or exe functions.",
+			"prefix": "#DllImport"
+		},
+		{
+			"body": "#WindowClassGui ",
+			"description": "Change the name of the Gui window class from AutoHotkey GUI to another name.",
+			"prefix": "#WindowClassGui"
+		},
+		{
+			"body": "#WindowClassMain ",
+			"description": "Change the name of the main window class from AutoHotkey to another name.",
+			"prefix": "#WindowClassMain"
+		},
+		{
+			"body": "#UseStdLib",
+			"prefix": "#UseStdLib"
+		},
+		{
+			"body": "#MapCaseSense",
+			"prefix": "#MapCaseSense"
+		},
+		{
+			"body": "#TargetWindowError",
+			"prefix": "#TargetWindowError"
+		},
+		{
+			"body": "macro",
+			"prefix": "macro"
+		}
+	],
+	"variables": [
+		{
+			"body": "A_AhkDir",
+			"prefix": "A_AhkDir"
+		},
+		{
+			"body": "A_DllDir",
+			"prefix": "A_DllDir"
+		},
+		{
+			"body": "A_DllPath",
+			"prefix": "A_DllPath"
+		},
+		{
+			"body": "A_GlobalStruct",
+			"prefix": "A_GlobalStruct"
+		},
+		{
+			"body": "A_IsDll",
+			"prefix": "A_IsDll"
+		},
+		{
+			"body": "A_MainThreadID",
+			"prefix": "A_MainThreadID"
+		},
+		{
+			"body": "A_MemoryModule",
+			"prefix": "A_MemoryModule"
+		},
+		{
+			"body": "A_ModuleHandle",
+			"prefix": "A_ModuleHandle"
+		},
+		{
+			"body": "A_ScriptStruct",
+			"prefix": "A_ScriptStruct"
+		},
+		{
+			"body": "A_ThreadID",
+			"prefix": "A_ThreadID"
+		},
+		{
+			"body": "A_ZipCompressionLevel",
+			"prefix": "A_ZipCompressionLevel"
+		}
+	]
 }

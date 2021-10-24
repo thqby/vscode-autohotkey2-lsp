@@ -155,18 +155,16 @@ export namespace ReferenceInfomation {
 	}
 }
 
-export namespace acorn {
-	export function isIdentifierChar(code: number) {
-		if (code < 48) return code === 36;
-		if (code < 58) return true;
-		if (code < 65) return false;
-		if (code < 91) return true;
-		if (code < 97) return code === 95;
-		if (code < 123) return true;
-		return code > 127;
-	}
-	export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e\x60\x7b-\x7f]+$');
+export function isIdentifierChar(code: number) {
+	if (code < 48) return code === 36;
+	if (code < 58) return true;
+	if (code < 65) return false;
+	if (code < 91) return true;
+	if (code < 97) return code === 95;
+	if (code < 123) return true;
+	return code > 127;
 }
+export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e\x60\x7b-\x7f]+$');
 
 const colorregexp = new RegExp(/(?<=['"\s])(c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
@@ -602,16 +600,18 @@ export class Lexer {
 							let tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', i6: 'int64' };
 							let n = m[2], args: Variable[] = [], u = '', i = 0;
 							h = true, m = tk.content.substring(m[0].length).match(/^\s*,[^,]+,([^,]*)/);
-							m = m[1].replace(/\s/g, '').replace(/^\w*=+/, '').toLowerCase();
-							(<string>m).split('').map(c => {
-								if (c === 'u')
-									u = 'u';
-								else {
-									if (tps[c])
-										args.push(Variable.create((++i).toString() + '_' + u + tps[c], SymbolKind.Variable, rg2, rg2));
-									u = '';
-								}
-							});
+							if (m) {
+								m = m[1].replace(/\s/g, '').replace(/^\w*=+/, '').toLowerCase();
+								(<string>m).split('').map(c => {
+									if (c === 'u')
+										u = 'u';
+									else {
+										if (tps[c])
+											args.push(Variable.create((++i).toString() + '_' + u + tps[c], SymbolKind.Variable, rg2, rg2));
+										u = '';
+									}
+								});
+							}
 							result.push(FuncNode.create(n, SymbolKind.Function, rg, rg, args));
 						} else {
 							let t = input.indexOf('\n', parser_pos);
@@ -1293,7 +1293,7 @@ export class Lexer {
 						if (is_next('('))
 							p = get_token_ingore_comment();
 						lk = nk = tk, tk = get_token_ingore_comment();
-						if (tk.topofline || (tk.type !== 'TK_WORD' && !acorn.allIdentifierChar.test(tk.content))) {
+						if (tk.topofline || (tk.type !== 'TK_WORD' && !allIdentifierChar.test(tk.content))) {
 							if (p) {
 								parser_pos = p.offset - 1;
 								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
@@ -1309,7 +1309,7 @@ export class Lexer {
 									lk = tk, tk = get_token_ingore_comment();
 									if (tk.content === ',') {
 										lk = tk, tk = get_token_ingore_comment();
-										if (!acorn.allIdentifierChar.test(tk.content))
+										if (!allIdentifierChar.test(tk.content))
 											break;
 									} else
 										break;
@@ -1328,7 +1328,7 @@ export class Lexer {
 							if (tk.content.toLowerCase() === 'as') {
 								lk = tk, tk = get_token_ingore_comment();
 								next = false;
-								if (tk.type !== 'TK_WORD' && !acorn.allIdentifierChar.test(tk.content)) {
+								if (tk.type !== 'TK_WORD' && !allIdentifierChar.test(tk.content)) {
 									_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length);
 								} else if (tk.type !== 'TK_WORD')
 									_this.addDiagnostic(diagnostic.reservedworderr(nk.content), nk.offset), tk.type = 'TK_WORD';
@@ -1726,7 +1726,8 @@ export class Lexer {
 								tpexp = tpexp.replace(/\S+$/, '#func');
 							} else {
 								tpexp += ' ' + tk.content;
-								if (lk.type === 'TK_OPERATOR' && lk.content !== '%' && !tk.content.match(/[+\-%!]/)) _this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset);
+								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^[:?%]$/) && !tk.content.match(/[+\-%!]/))
+									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset);
 								if (tk.content === '&' && (['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lk.type))) {
 									byref = true;
 									continue;
@@ -1888,7 +1889,7 @@ export class Lexer {
 							case 'TK_OPERATOR':
 								if (tk.content === '%') {
 									parsepair('%', '%');
-									if (acorn.isIdentifierChar(input.charCodeAt(parser_pos)))
+									if (isIdentifierChar(input.charCodeAt(parser_pos)))
 										break;
 									else {
 										nk = get_token_ingore_comment();
@@ -1897,7 +1898,7 @@ export class Lexer {
 											return true;
 										}
 									}
-								} else if (acorn.allIdentifierChar.test(tk.content)) {
+								} else if (allIdentifierChar.test(tk.content)) {
 									nk = get_token_ingore_comment();
 									if (nk.content === ':') {
 										tk.semantic = { type: SemanticTokenTypes.property };
@@ -2952,10 +2953,10 @@ export class Lexer {
 				}
 			}
 
-			// NOTE: because beautifier doesn't fully parse, it doesn't use acorn.isIdentifierStart.
+			// NOTE: because beautifier doesn't fully parse, it doesn't use isIdentifierStart.
 			// It just treats all identifiers and numbers and such the same.
-			if (acorn.isIdentifierChar(input.charCodeAt(parser_pos - 1))) {
-				while (parser_pos < input_length && acorn.isIdentifierChar(input.charCodeAt(parser_pos)))
+			if (isIdentifierChar(input.charCodeAt(parser_pos - 1))) {
+				while (parser_pos < input_length && isIdentifierChar(input.charCodeAt(parser_pos)))
 					c += input.charAt(parser_pos), parser_pos += 1;
 
 				// small and surprisingly unugly hack for 1E-10 representation
@@ -2966,14 +2967,14 @@ export class Lexer {
 						if (m[4]) {
 							if (parser_pos < input_length && input.charAt(parser_pos) === '.') {
 								let cc = '', t = '', p = parser_pos + 1;
-								while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
+								while (p < input_length && isIdentifierChar(input.charCodeAt(p)))
 									cc += input.charAt(p), p += 1;
 								if (cc.match(/^\d*([Ee]\d+)?$/)) {
 									c += '.' + cc, parser_pos = p;
 									return lst = createToken(c, 'TK_NUMBER', offset, c.length, bg), lst.semantic = { type: SemanticTokenTypes.number }, lst;
 								} else if (cc.match(/^\d*[Ee]$/) && p < input_length && input.charAt(p).match(/[+\-]/)) {
 									cc += input.charAt(p), p += 1;
-									while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
+									while (p < input_length && isIdentifierChar(input.charCodeAt(p)))
 										t += input.charAt(p), p += 1;
 									if (t.match(/^\d+$/))
 										c += '.' + cc + t, parser_pos = p;
@@ -3208,18 +3209,18 @@ export class Lexer {
 				if (nextc === '=') {
 					parser_pos++
 					return lst = createToken('.=', 'TK_EQUALS', offset, 2, bg);
-				} else if (in_array(nextc, whitespace)) {
+				} else if (in_array(input.charAt(parser_pos - 2), whitespace) && in_array(nextc, whitespace)) {
 					return lst = createToken(c, 'TK_OPERATOR', offset, 1, bg);
 				} else if (nextc.match(/\d/) && (lst.type === 'TK_EQUALS' || lst.type === 'TK_OPERATOR')) {
 					let p = parser_pos + 1, t = '';
-					while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
+					while (p < input_length && isIdentifierChar(input.charCodeAt(p)))
 						nextc += input.charAt(p), p += 1;
 					if (nextc.match(/^\d+([Ee]\d+)?$/)) {
 						parser_pos = p, c += nextc;
 						return lst = createToken('0' + c, 'TK_NUMBER', offset, c.length, bg), lst.semantic = { type: SemanticTokenTypes.number }, lst;
 					} else if (p < input_length && nextc.match(/^\d+[Ee]$/) && input.charAt(p).match(/[+\-]/)) {
 						nextc += input.charAt(p), p += 1;
-						while (p < input_length && acorn.isIdentifierChar(input.charCodeAt(p)))
+						while (p < input_length && isIdentifierChar(input.charCodeAt(p)))
 							t += input.charAt(p), p += 1;
 						if (t.match(/^\d+$/)) {
 							parser_pos = p, c += nextc + t;
@@ -3234,10 +3235,16 @@ export class Lexer {
 				// peek for comment /* ... */
 				if (input.charAt(parser_pos) === '*') {
 					parser_pos += 1;
-					let LF = input.indexOf('\n', parser_pos), b = parser_pos, ln = 0, tp = 'TK_COMMENT';
-					while (LF !== -1 && !input.substring(parser_pos, LF).match(/\*\/\s*$/))
+					let LF = input.indexOf('\n', parser_pos), b = parser_pos, ln = 0, tp = 'TK_COMMENT', t: RegExpMatchArray | null = null;
+					while (LF !== -1 && !(t = input.substring(parser_pos, LF).match(/(^\s*\*\/)|(\*\/\s*$)/)))
 						last_LF = LF, LF = input.indexOf('\n', parser_pos = LF + 1), ln++;
-					if (ln) tp = 'TK_BLOCK_COMMENT';
+					if (ln) {
+						tp = 'TK_BLOCK_COMMENT';
+						if (t && t[1]) {
+							parser_pos = input.indexOf('*/', last_LF) + 2;
+							return createToken(input.substring(offset, parser_pos), tp, offset, parser_pos - offset, bg);
+						}
+					}
 					if (LF === -1) {
 						parser_pos = input_length;
 						_this.strcommpos[offset] = { end: input_length, type: 1 };
@@ -3924,7 +3931,7 @@ export class Lexer {
 			} else if (token_text === '*') {
 				if (flags.last_text === '(' || (last_type === 'TK_WORD' && (is_next(')') || is_next(']'))))
 					space_before = space_after = false;
-			} else if (flags.last_text === '{' && acorn.allIdentifierChar.test(token_text))
+			} else if (flags.last_text === '{' && allIdentifierChar.test(token_text))
 				space_before = false;
 			else if (last_top && flags.mode === MODE.Statement && last_type === 'TK_WORD' && (token_text === '-' || token_text === '+'))
 				space_after = false;
@@ -3941,8 +3948,10 @@ export class Lexer {
 
 		function handle_block_comment() {
 			let lines = split_newlines(token_text);
-			let j: number; // iterator for this case
-			let javadoc = lines[0].match(/^\/\*@ahk2exe-keep/i) ? false : true;
+			let javadoc = lines[0].match(/^\/\*(@ahk2exe-keep|[^*]|$)/i) ? false : true;
+			let remove: RegExp | string = '', t: RegExpMatchArray | null, j: number;
+			if (!javadoc && (t = lines[lines.length - 1].match(/^(\s)\1*/)) && t[0] !== ' ')
+				remove = new RegExp(`^${t[1]}{1,${t[0].length}}`);
 
 			// block comment starts with a new line
 			print_newline();
@@ -3954,7 +3963,7 @@ export class Lexer {
 				if (javadoc) {
 					print_token(' * ' + lines[j].replace(/^[\s\*]+|\s+$/g, ''));
 				} else {
-					print_token(lines[j].trim());
+					print_token(lines[j].trimRight().replace(remove, ''));
 				}
 			}
 			if (lines.length > 1) {
@@ -4044,7 +4053,7 @@ export class Lexer {
 		let start = position.character, l = position.line;
 		let line = this.document.getText(Range.create(Position.create(l, 0), Position.create(l + 1, 0)));
 		let len = line.length, end = start, c: number, dot = false;
-		while (end < len && acorn.isIdentifierChar(line.charCodeAt(end)))
+		while (end < len && isIdentifierChar(line.charCodeAt(end)))
 			end++;
 		for (start = position.character - 1; start >= 0; start--) {
 			c = line.charCodeAt(start);
@@ -4060,7 +4069,7 @@ export class Lexer {
 					else
 						dot = false;
 				}
-				if (!acorn.isIdentifierChar(c))
+				if (!isIdentifierChar(c))
 					break;
 			}
 		}
@@ -4192,7 +4201,7 @@ export class Lexer {
 							parsepair(91);
 						else if (c === 125)
 							parsepair(123);
-						else if (!acorn.isIdentifierChar(c)) {
+						else if (!isIdentifierChar(c)) {
 							i++;
 							break;
 						}
