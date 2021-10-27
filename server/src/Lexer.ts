@@ -2915,6 +2915,7 @@ export class Lexer {
 			let m: RegExpMatchArray | null;
 			if (_tk) {
 				parser_pos = offset + _tk.length;
+				begin_line = false;
 				return _tk;
 			}
 			beginpos = offset;
