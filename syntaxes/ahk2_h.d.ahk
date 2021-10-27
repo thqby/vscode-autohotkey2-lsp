@@ -68,11 +68,6 @@ MemoryLoadString(hModule, Id [, Language]) => String
 MemorySizeOfResource(hModule, hReslnfo) => Number
 
 /**
- * Use thread local storage (not AutoHotkey.dll) to create a real AutoHotkey thread in the current process.
- */
-NewThread(Script [, Parameters, Title]) => Number
-
-/**
  * Dump objects to memory or save to file for later use.
  */
 ObjDump(obj [, compress, password]) => Buffer

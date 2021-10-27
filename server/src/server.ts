@@ -406,15 +406,11 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 	}
 	let script = `
 	#NoTrayIcon
+	#Warn All, Off
 	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 3) = "2.0" ? "FileAppend" : "FileAppend2"
 	for _, p in [A_MyDocuments,A_Desktop,A_AhkPath,A_ProgramFiles,A_Programs,A_AhkVersion]
 		s .= p "|"
-	try
-		_H := Func("NewThread").IsBuiltIn
-	catch {
-		FRD := "FileRead"
-		try _H := !!RegExMatch(%FRD%(A_AhkPath, "utf-16"), "NewThread\\0")
-	}
+	try _H := !!A_ThreadID
 	%Append%(s _H "\`n", "*", "UTF-8")
 	FileAppend2(text, file) {
 		encode := "UTF-8"

@@ -14,7 +14,7 @@ Cast(DataType, Value, NewDataType) => Number
  * 从dll创建一个COM对象.
  */
 ComObjDll(hModule, CLSID [, IID]) => ComObject
- 
+
 /**
  * 加密和解密数据.
  */
@@ -66,11 +66,6 @@ MemoryLoadString(hModule, Id [, Language]) => String
  * 找出之前使用 MemoryLoadLibrary 加载的指定 dll 中的资源大小.类似于 SizeOfResource.
  */
 MemorySizeOfResource(hModule, hReslnfo) => Number
-
-/**
- * 使用线程本地存储(不使用AutoHotkey.dll)在当前进程中创建一个真AutoHotkey线程.
- */
-NewThread(Script [, Parameters, Title]) => Number
 
 /**
  * 将对象转储到内存或保存到文件以供以后使用.
