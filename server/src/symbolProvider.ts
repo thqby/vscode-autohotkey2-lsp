@@ -102,6 +102,11 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 								else converttype(tt[k], false, inherit[k].kind);
 							} else if (!ps[k]) converttype(tt[k]);
 					}
+				} else if (info.kind === SymbolKind.Class) {
+					let rg = Range.create(0, 0, 0, 0);
+					inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg);
+					if ((<ClassNode>info).extends)
+						inherit['super'] = DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg);
 				}
 				result.push(...flatTree(info.children, inherit, gg));
 			}

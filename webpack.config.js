@@ -10,45 +10,45 @@
 const path = require('path');
 
 /**@type {import('webpack').Configuration}*/
-const config = {
-	target: 'node', // vscode extensions run in a Node.js-context 📖 -> https://webpack.js.org/configuration/node/
 
+const NodeClientConfig = /** @type WebpackConfig */ {
+	context: path.join(__dirname, 'client'),
+	mode: 'none',
+	target: 'node',
 	entry: {
-		'client/dist/extension': './client/src/extension.ts',
-		'server/dist/server': './server/src/server.ts'
-	}, // the entry point of this extension, 📖 -> https://webpack.js.org/configuration/entry-context/
-	output: { // the bundle is stored in the 'dist' folder (check package.json), 📖 -> https://webpack.js.org/configuration/output/
-		path: __dirname,
+		extension: './src/extension.ts',
+	},
+	output: {
 		filename: '[name].js',
-		libraryTarget: "commonjs",
-		devtoolModuleFilenameTemplate: "../[resource-path]",
+		path: path.join(__dirname, 'client', 'dist'),
+		libraryTarget: 'commonjs',
 	},
-	devtool: 'source-map',
-	externals: {
-		vscode: "commonjs vscode" // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
-	},
-	resolve: { // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
-		extensions: ['.ts', '.js'],
-		fallback: {
-			http: false
-		}
+	resolve: {
+		mainFields: ['module', 'main'],
+		extensions: ['.ts', '.js'], // support ts-files and js-files
+		alias: {}
 	},
 	module: {
-		rules: [{
-			test: /\.ts$/,
-			exclude: /node_modules/,
-			use: [{
-				loader: 'ts-loader',
-				options: {
-					compilerOptions: {
-						"module": "es6" // override `tsconfig.json` so that TypeScript emits native JavaScript modules.
-					}
-				}
-			}]
-		}]
+		rules: [
+			{
+				test: /\.ts$/,
+				exclude: /node_modules/,
+				use: [
+					{
+						loader: 'ts-loader',
+					},
+				],
+			},
+		],
 	},
-}
-
+	externals: {
+		vscode: 'commonjs vscode', // ignored because it doesn't exist
+	},
+	performance: {
+		hints: false,
+	},
+	devtool: 'source-map',
+};
 
 const browserClientConfig = /** @type WebpackConfig */ {
 	context: path.join(__dirname, 'client'),
@@ -92,12 +92,12 @@ const browserClientConfig = /** @type WebpackConfig */ {
 	devtool: 'source-map',
 };
 
-const browserServerConfig = /** @type WebpackConfig */ {
+const ServerConfig = /** @type WebpackConfig */ {
 	context: path.join(__dirname, 'server'),
 	mode: 'none',
 	target: 'webworker', // web extensions run in a webworker context
 	entry: {
-		browserServerMain: './src/browserServerMain.ts',
+		server: './src/server.ts'
 	},
 	output: {
 		filename: '[name].js',
@@ -111,6 +111,7 @@ const browserServerConfig = /** @type WebpackConfig */ {
 		alias: {},
 		fallback: {
 			fs: false,
+			child_process: false,
 			path: require.resolve("path-browserify"),
 			process: false
 		},
@@ -137,4 +138,4 @@ const browserServerConfig = /** @type WebpackConfig */ {
 	devtool: 'source-map'
 };
 
-module.exports = [config, browserClientConfig, browserServerConfig];
+module.exports = [NodeClientConfig, browserClientConfig, ServerConfig];

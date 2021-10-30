@@ -3,15 +3,17 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import {
-	AHKLSSettings, clearLibfuns, extsettings, getallahkfiles, getwebfile, initahk2cache, isahk2_h, lexers, libdirs, libfuncs,
-	loadahk2, openFile, pathenv, sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Settings, set_Workfolder, sleep, updateFileInfo, workfolder
+	AHKLSSettings, clearLibfuns, extsettings, getallahkfiles, initahk2cache, isahk2_h, lexers, libdirs,
+	libfuncs, loadahk2, openFile, pathenv, sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale,
+	set_Settings, set_Workfolder, sleep, updateFileInfo, workfolder
 } from './global';
 import { existsSync } from 'fs';
 import { basename, resolve } from 'path';
 import {
-	createConnection, DidChangeConfigurationNotification, ExecuteCommandParams, FoldingRange, FoldingRangeParams, InitializeParams,
+	createConnection, Connection, DidChangeConfigurationNotification, ExecuteCommandParams, FoldingRange, FoldingRangeParams, InitializeParams,
 	InitializeResult, ProposedFeatures, Range, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit
 } from 'vscode-languageserver/node';
+import { BrowserMessageReader, BrowserMessageWriter } from 'vscode-languageserver/browser';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { codeActionProvider } from './codeActionProvider';
@@ -31,245 +33,276 @@ import { symbolProvider } from './symbolProvider';
 import { semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange } from './semanticTokensProvider';
 
 export let ahkpath_cur = '';
-const languageServer = 'ahk2-language-server', connection = createConnection(ProposedFeatures.all);
-let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false;
+const languageServer = 'ahk2-language-server';
+let isWeb = true;
+let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false, connection: Connection;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
-set_Connection(connection, false);
-set_dirname(__dirname);
-set_locale(JSON.parse(process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFIG || '{}').locale);
 
-connection.onInitialize((params: InitializeParams) => {
-	let capabilities = params.capabilities;
-	if (params.locale)
-		set_locale(params.locale);
-	set_Workfolder(URI.parse(params.workspaceFolders?.pop()?.uri || '').fsPath.toLowerCase());
-	hasConfigurationCapability = !!(
-		capabilities.workspace && !!capabilities.workspace.configuration
-	);
-	hasWorkspaceFolderCapability = !!(
-		capabilities.workspace && !!capabilities.workspace.workspaceFolders
-	);
-	hasDiagnosticRelatedInformationCapability = !!(
-		capabilities.textDocument &&
-		capabilities.textDocument.publishDiagnostics &&
-		capabilities.textDocument.publishDiagnostics.relatedInformation
-	);
+try {
+	isWeb = process === undefined;
+	connection = createConnection(ProposedFeatures.all);
+	set_Connection(connection, false);
+	set_dirname(__dirname);
+	set_locale(JSON.parse(process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFIG || '{}').locale);
+	connection.onCodeAction(codeActionProvider);
+	Listen();
+	loadlocalize();
+	initahk2cache();
+	loadahk2();
+} catch (e) {
+	isWeb = (self !== undefined);
+	const messageReader = new BrowserMessageReader(self);
+	const messageWriter = new BrowserMessageWriter(self);
 
-	const result: InitializeResult = {
-		serverInfo: {
-			name: languageServer,
-		},
-		capabilities: {
-			textDocumentSync: {
-				openClose: true,
-				willSave: true,
-				willSaveWaitUntil: true,
-				change: TextDocumentSyncKind.Incremental
+	connection = createConnection(messageReader, messageWriter);
+	set_Connection(connection, true);
+	set_ahk_h(true);
+	Listen();
+}
+
+function Listen() {
+	connection.onInitialize((params: InitializeParams) => {
+		let capabilities = params.capabilities;
+		if (params.locale)
+			set_locale(params.locale);
+		set_Workfolder(URI.parse(params.workspaceFolders?.pop()?.uri || '').fsPath.toLowerCase());
+		hasConfigurationCapability = !!(
+			capabilities.workspace && !!capabilities.workspace.configuration
+		);
+		hasWorkspaceFolderCapability = !!(
+			capabilities.workspace && !!capabilities.workspace.workspaceFolders
+		);
+		hasDiagnosticRelatedInformationCapability = !!(
+			capabilities.textDocument &&
+			capabilities.textDocument.publishDiagnostics &&
+			capabilities.textDocument.publishDiagnostics.relatedInformation
+		);
+
+		const result: InitializeResult = {
+			serverInfo: {
+				name: languageServer,
 			},
-			// Tell the client that this server supports code completion.
-			completionProvider: {
-				resolveProvider: false,
-				triggerCharacters: ['.', '#']
-			},
-			signatureHelpProvider: {
-				triggerCharacters: ['(', ',']
-			},
-			documentSymbolProvider: true,
-			definitionProvider: true,
-			documentFormattingProvider: true,
-			documentRangeFormattingProvider: true,
-			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['{'] },
-			executeCommandProvider: {
-				commands: [
-					'ahk2.fix.include',
-					'ahk2.generate.comment',
-					'ahk2.generate.author',
-					'ahk2.resetinterpreterpath'
-				]
-			},
-			hoverProvider: true,
-			foldingRangeProvider: true,
-			colorProvider: true,
-			codeActionProvider: true,
-			renameProvider: { prepareProvider: true },
-			referencesProvider: { workDoneProgress: true },
-			semanticTokensProvider: {
-				legend: {
-					tokenTypes: [
-						'class',
-						'function',
-						'method',
-						'parameter',
-						'variable',
-						'property',
-						'keyword',
-						'string',
-						'number',
-						'event',
-						'modifier'
-					],
-					tokenModifiers: [
-						'definition',
-						'readonly',
-						'static',
-						'deprecated',
-						'modification',
-						'documentation',
-						'defaultLibrary'
+			capabilities: {
+				textDocumentSync: {
+					openClose: true,
+					willSave: true,
+					willSaveWaitUntil: true,
+					change: TextDocumentSyncKind.Incremental
+				},
+				completionProvider: {
+					resolveProvider: false,
+					triggerCharacters: ['.', '#']
+				},
+				signatureHelpProvider: {
+					triggerCharacters: ['(', ',']
+				},
+				documentSymbolProvider: true,
+				definitionProvider: true,
+				documentFormattingProvider: true,
+				documentRangeFormattingProvider: true,
+				documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['{'] },
+				executeCommandProvider: {
+					commands: [
+						'ahk2.fix.include',
+						'ahk2.generate.comment',
+						'ahk2.generate.author',
+						'ahk2.resetinterpreterpath'
 					]
 				},
-				full: { delta: true },
-				range: true
-			}
-		}
-	};
-	if (hasWorkspaceFolderCapability) {
-		result.capabilities.workspace = {
-			workspaceFolders: {
-				supported: true
+				hoverProvider: true,
+				foldingRangeProvider: true,
+				colorProvider: true,
+				codeActionProvider: true,
+				renameProvider: { prepareProvider: true },
+				referencesProvider: { workDoneProgress: true },
+				semanticTokensProvider: {
+					legend: {
+						tokenTypes: [
+							'class',
+							'function',
+							'method',
+							'parameter',
+							'variable',
+							'property',
+							'keyword',
+							'string',
+							'number',
+							'event',
+							'modifier'
+						],
+						tokenModifiers: [
+							'definition',
+							'readonly',
+							'static',
+							'deprecated',
+							'modification',
+							'documentation',
+							'defaultLibrary'
+						]
+					},
+					full: { delta: true },
+					range: true
+				}
 			}
 		};
-	}
-	return result;
-});
-
-connection.onInitialized(async () => {
-	if (hasConfigurationCapability) {
-		// Register for all configuration changes.
-		connection.client.register(DidChangeConfigurationNotification.type, undefined);
-	}
-	if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			// console.log('Workspace folder change event received.');
-		});
-	}
-	await initpathenv();
-});
-
-connection.onDidChangeConfiguration(async change => {
-	if (hasConfigurationCapability) {
-		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
-		for (let k in extsettings)
-			if ((<any>extsettings)[k] !== (<any>newset)[k])
-				changes[k] = true;
-		Object.assign(extsettings, newset);
-		if (changes['InterpreterPath'] && !ahkpath_cur) {
-			changeInterpreter(oldpath, extsettings.InterpreterPath);
-		} else if (changes['AutoLibInclude'] && extsettings.AutoLibInclude)
-			parseuserlibs();
-	}
-});
-
-documents.onDidOpen(async e => {
-	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
-	lexers[uri] = doc, doc.actived = true, doc.d = lexers[uri]?.d || doc.d;
-	parseproject(uri);
-});
-
-// Only keep settings for open documents
-documents.onDidClose(async e => {
-	let uri = e.document.uri.toLowerCase();
-	if (lexers[uri].d)
-		return;
-	lexers[uri].actived = false;
-	for (let u in lexers)
-		if (lexers[u].actived)
-			for (let f in lexers[u].relevance)
-				if (f === uri) return;
-	delete lexers[uri];
-	connection.sendDiagnostics({ uri, diagnostics: [] });
-	let deldocs: string[] = [];
-	for (let u in lexers)
-		if (!lexers[u].actived) {
-			let del = true;
-			for (let f in lexers[u].relevance)
-				if (lexers[f] && lexers[f].actived) {
-					del = false; break;
-				}
-			if (del)
-				deldocs.push(u);
+		if (isWeb) {
+			result.capabilities.executeCommandProvider = {
+				commands: ['ahk2.generate.comment', 'ahk2.generate.author', 'ahk2.set.extensionUri']
+			};
+			result.capabilities.codeActionProvider = false;
+		} else {
+			result.capabilities.executeCommandProvider = {
+				commands: ['ahk2.fix.include', 'ahk2.generate.comment', 'ahk2.generate.author', 'ahk2.resetinterpreterpath']
+			};
 		}
-	for (let u of deldocs) {
-		delete lexers[u];
-		connection.sendDiagnostics({ uri: u, diagnostics: [] });
-	}
-});
+		if (hasWorkspaceFolderCapability) {
+			result.capabilities.workspace = {
+				workspaceFolders: {
+					supported: true
+				}
+			};
+		}
+		return result;
+	});
 
-documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
-	let uri = change.document.uri.toLowerCase(), doc = lexers[uri];
-	let initial = doc.include, cg = false;
-	doc.parseScript();
-	if (libfuncs[uri]) {
-		libfuncs[uri].length = 0;
-		libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
-	}
-	for (const t in doc.include)
-		if (!initial[t])
-			initial[t] = doc.include[t], cg = true;
-	if (!cg && Object.keys(initial).length === Object.keys(doc.include).length) {
-		if (!doc.relevance)
-			doc.relevance = getincludetable(uri).list;
-		sendDiagnostics();
-		return;
-	}
-	parseinclude(doc.include);
-	doc.relevance = getincludetable(uri).list, resetrelevance();
-	sendDiagnostics();
-	function resetrelevance() {
-		for (const u in initial)
-			if (lexers[u])
-				lexers[u].relevance = getincludetable(u).list;
-	}
-});
+	connection.onInitialized(async () => {
+		if (hasConfigurationCapability) {
+			// Register for all configuration changes.
+			connection.client.register(DidChangeConfigurationNotification.type, undefined);
+		}
+		if (hasWorkspaceFolderCapability) {
+			connection.workspace.onDidChangeWorkspaceFolders((event: any) => {
+				// console.log('Workspace folder change event received.');
+			});
+		}
+		if (!isWeb)
+			await initpathenv();
+	});
 
-documents.onWillSaveWaitUntil((e) => {
-	let doc = lexers[e.document.uri.toLowerCase()];
-	if (doc.version !== e.document.version) {
-		let tk = doc.tokens[0];
-		if (tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') {
-			let t: string = updateFileInfo(tk.content);
-			if (t !== tk.content) {
-				setTimeout(() => {
-					doc.version = doc.document.version;
-				}, 200);
-				return [TextEdit.replace(Range.create(doc.document.positionAt(tk.offset), doc.document.positionAt(tk.offset + tk.length)), t)];
+	connection.onDidChangeConfiguration(async (change) => {
+		if (hasConfigurationCapability) {
+			let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
+			let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
+			for (let k in extsettings)
+				if ((<any>extsettings)[k] !== (<any>newset)[k])
+					changes[k] = true;
+			Object.assign(extsettings, newset);
+			if (!isWeb) {
+				if (changes['InterpreterPath'] && !ahkpath_cur) {
+					changeInterpreter(oldpath, extsettings.InterpreterPath);
+				} else if (changes['AutoLibInclude'] && extsettings.AutoLibInclude)
+					parseuserlibs();
 			}
 		}
-		doc.version = doc.document.version;
-	}
-	return [];
-});
+	});
 
-connection.onDidChangeWatchedFiles(_change => {
-	// Monitored files have change in VSCode
-	// console.log('We received an file change event');
-});
+	documents.onDidOpen(async e => {
+		let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
+		lexers[uri] = doc, doc.actived = true, doc.d = lexers[uri]?.d || doc.d;
+		if (!isWeb)
+			parseproject(uri);
+	});
 
-connection.onCodeAction(codeActionProvider);
-connection.onCompletion(completionProvider);
-connection.onColorPresentation(colorPresentation);
-connection.onDocumentColor(colorProvider);
-connection.onDefinition(defintionProvider);
-connection.onDocumentFormatting(documentFormatting);
-connection.onDocumentRangeFormatting(rangeFormatting);
-connection.onDocumentOnTypeFormatting(typeFormatting);
-connection.onDocumentSymbol(symbolProvider);
-connection.onFoldingRanges(async (params: FoldingRangeParams): Promise<FoldingRange[]> => lexers[params.textDocument.uri.toLowerCase()].foldingranges);
-connection.onHover(hoverProvider);
-connection.onPrepareRename(prepareRename);
-connection.onReferences(referenceProvider);
-connection.onRenameRequest(renameProvider);
-connection.onSignatureHelp(signatureProvider);
-connection.onExecuteCommand(executeCommandProvider);
-connection.languages.semanticTokens.on(semanticTokensOnFull);
-connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
-connection.languages.semanticTokens.onRange(semanticTokensOnRange);
-documents.listen(connection);
-connection.listen();
-loadlocalize();
-initahk2cache();
-loadahk2();
+	// Only keep settings for open documents
+	documents.onDidClose(async e => {
+		let uri = e.document.uri.toLowerCase();
+		if (lexers[uri].d)
+			return;
+		lexers[uri].actived = false;
+		for (let u in lexers)
+			if (lexers[u].actived)
+				for (let f in lexers[u].relevance)
+					if (f === uri) return;
+		delete lexers[uri];
+		connection.sendDiagnostics({ uri, diagnostics: [] });
+		let deldocs: string[] = [];
+		for (let u in lexers)
+			if (!lexers[u].actived) {
+				let del = true;
+				for (let f in lexers[u].relevance)
+					if (lexers[f] && lexers[f].actived) {
+						del = false; break;
+					}
+				if (del)
+					deldocs.push(u);
+			}
+		for (let u of deldocs) {
+			delete lexers[u];
+			connection.sendDiagnostics({ uri: u, diagnostics: [] });
+		}
+	});
+
+	documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
+		let uri = change.document.uri.toLowerCase(), doc = lexers[uri];
+		let initial = doc.include, cg = false;
+		doc.parseScript();
+		if (libfuncs[uri]) {
+			libfuncs[uri].length = 0;
+			libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
+		}
+		for (const t in doc.include)
+			if (!initial[t])
+				initial[t] = doc.include[t], cg = true;
+		if (!cg && Object.keys(initial).length === Object.keys(doc.include).length) {
+			if (!doc.relevance)
+				doc.relevance = getincludetable(uri).list;
+			sendDiagnostics();
+			return;
+		}
+		parseinclude(doc.include);
+		doc.relevance = getincludetable(uri).list, resetrelevance();
+		sendDiagnostics();
+		function resetrelevance() {
+			for (const u in initial)
+				if (lexers[u])
+					lexers[u].relevance = getincludetable(u).list;
+		}
+	});
+
+	documents.onWillSaveWaitUntil((e) => {
+		let doc = lexers[e.document.uri.toLowerCase()];
+		if (doc.version !== e.document.version) {
+			let tk = doc.tokens[0];
+			if (tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') {
+				let t: string = updateFileInfo(tk.content);
+				if (t !== tk.content) {
+					setTimeout(() => {
+						doc.version = doc.document.version;
+					}, 200);
+					return [TextEdit.replace(Range.create(doc.document.positionAt(tk.offset), doc.document.positionAt(tk.offset + tk.length)), t)];
+				}
+			}
+			doc.version = doc.document.version;
+		}
+		return [];
+	});
+
+	connection.onDidChangeWatchedFiles((change) => {
+		// Monitored files have change in VSCode
+		// console.log('We received an file change event');
+	});
+
+	connection.onCompletion(completionProvider);
+	connection.onColorPresentation(colorPresentation);
+	connection.onDocumentColor(colorProvider);
+	connection.onDefinition(defintionProvider);
+	connection.onDocumentFormatting(documentFormatting);
+	connection.onDocumentRangeFormatting(rangeFormatting);
+	connection.onDocumentOnTypeFormatting(typeFormatting);
+	connection.onDocumentSymbol(symbolProvider);
+	connection.onFoldingRanges(async (params: FoldingRangeParams): Promise<FoldingRange[]> => lexers[params.textDocument.uri.toLowerCase()].foldingranges);
+	connection.onHover(hoverProvider);
+	connection.onPrepareRename(prepareRename);
+	connection.onReferences(referenceProvider);
+	connection.onRenameRequest(renameProvider);
+	connection.onSignatureHelp(signatureProvider);
+	connection.onExecuteCommand(executeCommandProvider);
+	connection.languages.semanticTokens.on(semanticTokensOnFull);
+	connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
+	connection.languages.semanticTokens.onRange(semanticTokensOnRange);
+	documents.listen(connection);
+	connection.listen();
+}
 
 async function executeCommandProvider(params: ExecuteCommandParams) {
 	let args = params.arguments || [];
@@ -286,6 +319,17 @@ async function executeCommandProvider(params: ExecuteCommandParams) {
 		case 'ahk2.resetinterpreterpath':
 			setInterpreter(args[0]);
 			break;
+		case 'ahk2.set.extensionUri':
+			set_dirname(args[0]);
+			loadres();
+			break;
+	}
+
+	async function loadres() {
+		loadlocalize();
+		initahk2cache();
+		loadahk2();
+		loadahk2('ahk2_h');
 	}
 }
 
@@ -425,7 +469,7 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 		documents.all().forEach(validateTextDocument);
 }
 
-export async function setInterpreter(path: string) {
+async function setInterpreter(path: string) {
 	let old = ahkpath_cur || extsettings.InterpreterPath;
 	if (path.toLowerCase() === old.toLowerCase())
 		return;

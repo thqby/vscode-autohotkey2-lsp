@@ -158,7 +158,7 @@ export async function loadahk2(filename = 'ahk2') {
 		}
 		let data = getwebfile(file + '.json');
 		if (data)
-			JSON.parse(data.text);
+			build(JSON.parse(data.text));
 	} else {
 		const file = resolve(__dirname, `../../syntaxes/<>/${filename}`);
 		if (path = getlocalefilepath(file + '.d.ahk')) {
@@ -223,7 +223,7 @@ export async function loadahk2(filename = 'ahk2') {
 		if (!n) {
 			let it = FuncNode.create(snip.prefix, SymbolKind.Function, rg, rg,
 				snip.body.replace(/^\w+[(\s]?|\)/g, '').split(',').map(param => {
-					return DocumentSymbol.create(param.trim(), undefined, SymbolKind.Variable, rg, rg);
+					return DocumentSymbol.create(param.replace(/[\[\]\s]/, ''), undefined, SymbolKind.Variable, rg, rg);
 				}));
 			it.full = it.full.replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, (...m) => {
 				snip.body = snip.body.replace(m[0], m[1] + '|...');

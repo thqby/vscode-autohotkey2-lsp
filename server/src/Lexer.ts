@@ -4256,10 +4256,15 @@ export class Lexer {
 						let fc: FuncNode | Variable, nm = word.text.toLowerCase();
 						if (((fc = (<ClassNode>scope).declaration[nm]) && fc.selectionRange.start.line === position.line && fc.selectionRange.end.character >= position.character && fc.selectionRange.start.character <= position.character)
 							|| ((fc = (<ClassNode>scope).staticdeclaration[nm]) && fc.selectionRange.start.line === position.line && fc.selectionRange.end.character >= position.character && fc.selectionRange.start.character <= position.character)) {
-							kind = SymbolKind.Property;
-							let cc = fc.full?.match(/^\(([^)]+)\)/);
-							if (cc && word.text === fc.name)
-								word.text = (fc.static ? cc[1] : cc[1].replace(/([^.]+)$/, '@$1')) + '.' + word.text;
+							if (fc.kind === SymbolKind.Class) {
+								kind = SymbolKind.Class;
+								word.text = fc.full as string;
+							} else {
+								kind = SymbolKind.Property;
+								let cc = fc.full?.match(/^\(([^)]+)\)/);
+								if (cc && word.text === fc.name)
+									word.text = (fc.static ? cc[1] : cc[1].replace(/([^.]+)$/, '@$1')) + '.' + word.text;
+							}
 						}
 					}
 				}

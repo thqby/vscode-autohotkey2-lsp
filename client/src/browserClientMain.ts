@@ -8,21 +8,13 @@ import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient/bro
 
 // this method is called when vs code is activated
 export function activate(context: ExtensionContext) {
-	/* 
-	 * all except the code to create the language client in not browser specific
-	 * and couuld be shared with a regular (Node) extension
-	 */
-	const documentSelector = [{ language: 'ahk2' }];
-
-	// Options to control the language client
-	const clientOptions: LanguageClientOptions = {
-		documentSelector,
+	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/server.js');
+	const worker = new Worker(serverMain.toString());
+	const client = new LanguageClient('ahk2', 'Autohotkey2 Server', {
+		documentSelector: [{ language: 'ahk2' }],
 		synchronize: {},
 		initializationOptions: {}
-	};
-	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
-	const worker = new Worker(serverMain.toString());
-	const client = new LanguageClient('ahk2', 'Autohotkey2 Server', clientOptions, worker);
+	}, worker);
 
 	const disposable = client.start();
 	context.subscriptions.push(disposable);

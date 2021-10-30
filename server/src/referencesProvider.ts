@@ -11,38 +11,16 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 }
 
 export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string]: Range[] }> {
-	let cls = '', name = context.text.toLowerCase(), references: { [uri: string]: Range[] } = {};
+	let name: string = context.text.toLowerCase(), references: { [uri: string]: Range[] } = {};
 	if (!context.text) return undefined;
 	let nodes = searchNode(doc, name, context.range.end, context.kind);
 	if (!nodes || nodes.length > 1)
 		return undefined;
 	let { node, uri } = nodes[0];
-	if (!uri || node === ahkvars[name] || node.name.toLowerCase() !== name)
+	if (!uri || node === ahkvars[name] || (name.match(/^(this|super)$/) && node.kind === SymbolKind.Class && !node.name.match(/^(this|super)$/i)))
 		return undefined;
 	let scope = node === doc.declaration[name] ? undefined : doc.searchScopedNode(node.selectionRange.start);
 	switch (node.kind) {
-		case SymbolKind.Function:
-		case SymbolKind.Variable:
-		case SymbolKind.TypeParameter:
-		case SymbolKind.Class:
-			if (scope) {
-				if (scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Event) {
-					if ((<FuncNode>scope).global && (<FuncNode>scope).global[name])
-						scope = undefined;
-				}
-			}
-			doc = lexers[uri];
-			let rgs = findAllFromDoc(doc, name, SymbolKind.Variable, scope);
-			if (rgs.length)
-				references[uri] = rgs;
-			if (!scope) {
-				for (const uri in doc.relevance) {
-					let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, undefined);
-					if (rgs.length)
-						references[uri] = rgs;
-				}
-			}
-			break;
 		case SymbolKind.Field:
 			if (scope) {
 				let lbs = (<FuncNode>scope).labels;
@@ -59,11 +37,44 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 				}
 			}
 			break;
+		case SymbolKind.Function:
+		case SymbolKind.Variable:
+		case SymbolKind.TypeParameter:
+		case SymbolKind.Class:
+			if (node.kind !== SymbolKind.Class || !(<any>node).full.includes('.')) {
+				if (scope) {
+					if (scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Event) {
+						if ((<FuncNode>scope).global && (<FuncNode>scope).global[name])
+							scope = undefined;
+					}
+				}
+				doc = lexers[uri];
+				let rgs = findAllFromDoc(doc, name, SymbolKind.Variable, scope);
+				if (rgs.length)
+					references[uri] = rgs;
+				if (!scope) {
+					for (const uri in doc.relevance) {
+						let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, undefined);
+						if (rgs.length)
+							references[uri] = rgs;
+					}
+				}
+				break;
+			}
 		default:
+			if (node.kind === SymbolKind.Class || (<FuncNode>node).static) {
+				let c = name.split('.');
+				let ss = findAllFromDoc(doc, c[0], SymbolKind.Variable);
+				
+			}
 			return undefined;
 	}
 	if (Object.keys(references).length)
 		return references;
+	
+	function searchStatic(name: string) {
+
+	}
 }
 
 export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: DocumentSymbol) {
