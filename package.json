@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -240,10 +240,9 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "webpack --mode production",
-		"webpack": "webpack --mode development",
-		"compile": "tsc -b",
-		"watch": "tsc -b -w",
+		"vscode:prepublish": "webpack --mode production --devtool hidden-source-map",
+		"compile": "webpack",
+		"watch": "webpack --watch",
 		"patch": "npm version patch",
 		"publish": "vsce publish",
 		"package": "vsce package",

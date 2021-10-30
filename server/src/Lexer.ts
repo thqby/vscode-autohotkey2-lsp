@@ -196,7 +196,7 @@ export class Lexer {
 	public scriptpath: string;
 	public tokens: { [pos: number]: Token } = {};
 	public STB: SemanticTokensBuilder = new SemanticTokensBuilder;
-	public strcommpos: { [begin: number]: { end: number, type: 1 | 2 | 3 } } = {};
+	public strcommpos: { start: number, end: number, type: 1 | 2 | 3 }[] = [];
 	public texts: { [key: string]: string } = {};
 	public uri: string;
 	public version: number = 0;
@@ -397,7 +397,7 @@ export class Lexer {
 				following_bracket = false, begin_line = true, bracketnum = 0, parser_pos = 0, last_LF = -1;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
 				this.tokens = {}, this.children.length = this.foldingranges.length = this.diagnostics.length = 0;
-				this.declaration = {}, this.blocks = [], this.strcommpos = {}, customblocks = { region: [], bracket: [] };
+				this.declaration = {}, this.blocks = [], this.strcommpos.length = 0, customblocks = { region: [], bracket: [] };
 				let blocks = 0, rg: Range, tokens: Token[] = [], cls: string[] = [];
 				let p: DocumentSymbol[] = [DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg = makerange(0, 0), rg, this.children)];
 				(<FuncNode>p[0]).declaration = this.declaration;
@@ -555,7 +555,7 @@ export class Lexer {
 				this.label.length = this.funccall.length = this.diagnostics.length = this.hotkey.length = 0;
 				this.foldingranges.length = this.children.length = 0, this.labels = {};
 				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map();
-				this.blocks = [], this.texts = {}, this.reflat = true, this.declaration = {}, this.strcommpos = {};
+				this.blocks = [], this.texts = {}, this.reflat = true, this.declaration = {}, this.strcommpos.length = 0;
 				this.include = includetable = {}, this.tokens = {}, lst = { type: '', content: '', offset: 0, length: 0 };
 				this.children.push(...parseblock()), this.children.push(...this.blocks), this.blocks = undefined;
 				checksamenameerr(this.declaration, this.children, this.diagnostics);
@@ -3075,7 +3075,7 @@ export class Lexer {
 					} else if (t = comment.match(/^;(\s*~?\s*)todo(:?\s*)(.*)/i))
 						_this.blocks.push(DocumentSymbol.create('TODO: ' + t[3].trim(), undefined, SymbolKind.Module, rg = makerange(offset, comment.length), rg));
 				}
-				_this.strcommpos[offset] = { end: parser_pos, type: 1 };
+				_this.strcommpos.push({ start: offset, end: parser_pos, type: 1 });
 				return createToken(comment, comment_type, offset, comment.length, bg);
 			}
 
@@ -3104,7 +3104,7 @@ export class Lexer {
 								pos = parser_pos + 1, parser_pos = input.indexOf('\n', pos);
 								if (parser_pos === -1) {
 									resulting_string += input.substring(pos, parser_pos = input_length);
-									_this.strcommpos[offset] = { end: end, type: 2 };
+									_this.strcommpos.push({ start: offset, end: end, type: 2 });
 									len = resulting_string.trimRight().length;
 									if (_this.blocks)
 										_this.addDiagnostic(diagnostic.missing(sep), offset, len);
@@ -3117,7 +3117,7 @@ export class Lexer {
 								parser_pos = - 1, len = resulting_string.trimRight().length;
 								if (_this.blocks)
 									_this.addDiagnostic(diagnostic.missing(sep), offset, len);
-								_this.strcommpos[offset] = { end: end === -1 ? input_length : end - 1, type: 2 };
+								_this.strcommpos.push({ start: offset, end: end === -1 ? input_length : end - 1, type: 2 });
 								parser_pos = offset + len;
 								return lst = createToken(resulting_string = resulting_string.trimRight(), 'TK_STRING', offset, len, bg);
 							}
@@ -3134,7 +3134,7 @@ export class Lexer {
 										if (_this.blocks)
 											_this.addDiagnostic(diagnostic.missing(sep), offset, 1);
 									}
-									_this.strcommpos[offset] = { end: parser_pos - 1, type: 3 };
+									_this.strcommpos.push({ start: offset, end: parser_pos - 1, type: 3 });
 									return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
 								}
 								last_LF = parser_pos, LF = input.substring(pos, parser_pos + 1);
@@ -3148,7 +3148,7 @@ export class Lexer {
 									_this.addDiagnostic(diagnostic.missing(sep), offset, 1);
 							}
 							resulting_string += whitespace + input.substring(pos, parser_pos).trim();
-							_this.strcommpos[offset] = { end: parser_pos - 1, type: 3 };
+							_this.strcommpos.push({ start: offset, end: parser_pos - 1, type: 3 });
 							return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
 						} else if (c === ';' && (lc === ' ' || lc === '\t')) {
 							parser_pos += 1;
@@ -3161,7 +3161,7 @@ export class Lexer {
 						if (parser_pos >= input_length) {
 							if (_this.blocks)
 								_this.addDiagnostic(diagnostic.missing(sep), offset, 1);
-							_this.strcommpos[offset] = { end: input_length, type: 2 };
+							_this.strcommpos.push({ start: offset, end: input_length, type: 2 });
 							return lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
 						}
 					}
@@ -3170,7 +3170,7 @@ export class Lexer {
 
 				parser_pos += 1;
 				resulting_string += sep;
-				_this.strcommpos[offset] = { end: parser_pos - 1, type: 2 };
+				_this.strcommpos.push({ start: offset, end: parser_pos - 1, type: 2 });
 				if (closed_cycle && _this.blocks) {
 					let i = 0, j = 0;
 					while ((j = resulting_string.substring(i).search(/(?<=^[ \t]*)\)/m)) !== -1)
@@ -3247,11 +3247,11 @@ export class Lexer {
 					}
 					if (LF === -1) {
 						parser_pos = input_length;
-						_this.strcommpos[offset] = { end: input_length, type: 1 };
+						_this.strcommpos.push({ start: offset, end: input_length, type: 1 });
 						return createToken(input.substring(offset, input_length), tp, offset, input_length - offset, bg);
 					} else {
 						parser_pos = LF;
-						_this.strcommpos[offset] = { end: LF - 1, type: 1 };
+						_this.strcommpos.push({ start: offset, end: LF - 1, type: 1 });
 						return createToken(input.substring(offset, LF).trimRight(), tp, offset, LF - offset, bg);
 					}
 				}
@@ -4417,13 +4417,8 @@ export class Lexer {
 	}
 
 	public instrorcomm(pos: Position): number | undefined {
-		let offset = this.document.offsetAt(pos), t = this.strcommpos;
-		for (let o in t) {
-			if (parseInt(o) > offset)
-				break;
-			if (t[o].end >= offset)
-				return t[o].type;
-		}
+		let offset = this.document.offsetAt(pos);
+		return this.strcommpos.find(it => offset >= it.start && it.end >= offset)?.type;
 	}
 
 	public colors() {

@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, ExtensionContext, Range, SnippetString, Uri, window } from 'vscode';
-import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient/browser';
+import { LanguageClient } from 'vscode-languageclient/browser';
 
 // this method is called when vs code is activated
 export function activate(context: ExtensionContext) {
-	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/server.js');
+	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
 	const worker = new Worker(serverMain.toString());
 	const client = new LanguageClient('ahk2', 'Autohotkey2 Server', {
 		documentSelector: [{ language: 'ahk2' }],

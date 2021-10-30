@@ -11,7 +11,7 @@ const path = require('path');
 
 /**@type {import('webpack').Configuration}*/
 
-const NodeClientConfig = /** @type WebpackConfig */ {
+const nodeClientConfig = /** @type WebpackConfig */ {
 	context: path.join(__dirname, 'client'),
 	mode: 'none',
 	target: 'node',
@@ -21,6 +21,45 @@ const NodeClientConfig = /** @type WebpackConfig */ {
 	output: {
 		filename: '[name].js',
 		path: path.join(__dirname, 'client', 'dist'),
+		libraryTarget: 'commonjs',
+	},
+	resolve: {
+		mainFields: ['module', 'main'],
+		extensions: ['.ts', '.js'], // support ts-files and js-files
+		alias: {}
+	},
+	module: {
+		rules: [
+			{
+				test: /\.ts$/,
+				exclude: /node_modules/,
+				use: [
+					{
+						loader: 'ts-loader',
+					},
+				],
+			},
+		],
+	},
+	externals: {
+		vscode: 'commonjs vscode', // ignored because it doesn't exist
+	},
+	performance: {
+		hints: false,
+	},
+	devtool: 'source-map',
+};
+
+const nodeServerConfig = /** @type WebpackConfig */ {
+	context: path.join(__dirname, 'server'),
+	mode: 'none',
+	target: 'node',
+	entry: {
+		server: './src/server.ts',
+	},
+	output: {
+		filename: '[name].js',
+		path: path.join(__dirname, 'server', 'dist'),
 		libraryTarget: 'commonjs',
 	},
 	resolve: {
@@ -92,12 +131,12 @@ const browserClientConfig = /** @type WebpackConfig */ {
 	devtool: 'source-map',
 };
 
-const ServerConfig = /** @type WebpackConfig */ {
+const browserServerConfig = /** @type WebpackConfig */ {
 	context: path.join(__dirname, 'server'),
 	mode: 'none',
 	target: 'webworker', // web extensions run in a webworker context
 	entry: {
-		server: './src/server.ts'
+		browserServerMain: './src/browserServerMain.ts'
 	},
 	output: {
 		filename: '[name].js',
@@ -138,4 +177,4 @@ const ServerConfig = /** @type WebpackConfig */ {
 	devtool: 'source-map'
 };
 
-module.exports = [NodeClientConfig, browserClientConfig, ServerConfig];
+module.exports = [nodeClientConfig, nodeServerConfig, browserClientConfig, browserServerConfig];

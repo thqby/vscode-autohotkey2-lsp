@@ -13,7 +13,8 @@
 			],
 			"outFiles": [
 				"${workspaceFolder}/client/dist/**/*.js"
-			]
+			],
+			"preLaunchTask": "npm: watch"
 		},
 		{
 			"type": "extensionHost",
@@ -24,15 +25,12 @@
 				"--extensionDevelopmentPath=${workspaceRoot}"
 			],
 			"env": {
-				"VSCODE_AHK_SERVER_PATH": "out"
+				// "VSCODE_AHK_SERVER_PATH": "out"
 			},
 			"outFiles": [
 				"${workspaceRoot}/client/dist/**/*.js"
 			],
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
-			}
+			"preLaunchTask": "npm: watch"
 		},
 		{
 			"type": "node",
