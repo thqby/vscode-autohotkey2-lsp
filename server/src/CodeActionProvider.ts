@@ -1,7 +1,7 @@
 import { readdirSync } from 'fs';
 import { CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
 import { codeaction, diagnostic } from './localize';
-import { Maybe, lexers } from './server';
+import { Maybe, lexers } from './global';
 
 export async function codeActionProvider(params: CodeActionParams): Promise<Maybe<CodeAction[]>> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], diagnostics = doc.diagnostics;

@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, dllcalltpe, extsettings, lexers, libfuncs, Maybe, pathenv, workfolder } from './server';
+import { ahkvars, completionItemCache, dllcalltpe, extsettings, inBrowser, lexers, libfuncs, Maybe, pathenv, workfolder } from './global';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
@@ -189,6 +189,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			return items;
 		default:
 			if (lt.match(/^\s*#include/i)) {
+				if (inBrowser)
+					return;
 				let tt = lt.replace(/^\s*#include(again)?\s+/i, '').replace(/\s*\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
 				let pre = lt.substring(lt.length - tt.length, position.character), xg = '\\', m: any, a_ = '';
 				if (percent) {

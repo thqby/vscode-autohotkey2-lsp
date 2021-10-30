@@ -1,7 +1,7 @@
 import { basename, extname, relative, resolve } from 'path';
-import { ExecuteCommandParams, Position, Range, SymbolKind, TextEdit } from 'vscode-languageserver';
+import { Position, Range, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { cleardetectcache, detectExp, FuncNode } from './Lexer';
-import { connection, lexers, pathenv, restorePath, setInterpreter } from './server';
+import { connection, lexers, pathenv, restorePath } from './global';
 
 export var noparammoveright: boolean = false;
 
@@ -13,25 +13,7 @@ export function insertSnippet(value: string, range?: Range) {
 	connection.sendRequest('ahk2.insertSnippet', [value, range]);
 }
 
-export async function executeCommandProvider(params: ExecuteCommandParams) {
-	let args = params.arguments || [];
-	switch (params.command) {
-		case 'ahk2.fix.include':
-			fixinclude(args[0], args[1]);
-			break;
-		case 'ahk2.generate.comment':
-			generateComment(args);
-			break;
-		case 'ahk2.generate.author':
-			generateAuthor();
-			break;
-		case 'ahk2.resetinterpreterpath':
-			setInterpreter(args[0]);
-			break;
-	}
-}
-
-async function fixinclude(libpath: string, docuri: string) {
+export async function fixinclude(libpath: string, docuri: string) {
 	let doc = lexers[docuri], text = '', line = -1, curdir = '';
 	for (const p of doc.libdirs.slice(1)) {
 		if (libpath.startsWith(p + '\\')) {
@@ -82,7 +64,7 @@ async function fixinclude(libpath: string, docuri: string) {
 	return;
 }
 
-async function generateComment(args: string[]) {
+export async function generateComment(args: string[]) {
 	if (args.length === 0)
 		await executeCommands([{ command: 'undo', wait: true }, { command: 'undo', wait: true }]);
 	let { uri, pos } = await connection.sendRequest('ahk2.getpos');
@@ -166,7 +148,7 @@ async function generateComment(args: string[]) {
 	}
 }
 
-async function generateAuthor() {
+export async function generateAuthor() {
 	let info: string[] = [
 		"/************************************************************************",
 		" * @description ${1:}",

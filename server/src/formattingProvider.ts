@@ -1,7 +1,7 @@
 import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, Range, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Lexer } from './Lexer';
-import { lexers } from './server';
+import { lexers } from './global';
 
 const default_format_options = {
 	indent_size: "1",

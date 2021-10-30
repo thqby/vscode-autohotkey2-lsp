@@ -1,8 +1,7 @@
-import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
+import { dirname, getlocalefile, getwebfile, inBrowser } from './global';
 
-export const locale: string = JSON.parse(process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFIG || '{}').locale || 'en-us';
-let loadedCollection: { [key: string]: string };
+let loadedCollection: { [key: string]: string } = {};
 
 export namespace completionitem {
 	export const author = localize('completionitem.author', 'Add file infos about author, description, date, version.');
@@ -64,9 +63,15 @@ export namespace setting {
 	export const versionerr = localize('setting.versionerr', 'The current AutoHotkey.exe is not the v2 version, and cannot get the correct syntax analysis, completion and other functions');
 }
 
-function load() {
-	let path = getlocalefilepath(resolve(__dirname, '../../package.nls.<>.json'));
-	loadedCollection = path ? JSON.parse(readFileSync(path, { encoding: 'utf8' })) : {};
+export function loadlocalize() {
+	if (inBrowser) {
+		let data = getwebfile(dirname + '/package.nls.<>.json');
+		if (data)
+			loadedCollection = JSON.parse(data.text);
+	} else {
+		let s = getlocalefile(resolve(__dirname, '../../package.nls.<>.json'), 'utf8') as string;
+		loadedCollection = s ? JSON.parse(s) : {};
+	}
 }
 
 function localize(key: string, defValue: string): Function {
@@ -79,8 +84,6 @@ function localize(key: string, defValue: string): Function {
 }
 
 function getString(key: string, defValue: string): string {
-	if (!loadedCollection)
-		load();
 	return loadedCollection[key] || defValue;
 }
 
@@ -91,18 +94,4 @@ function format(message: string, ...args: string[]): string {
 			return args[i];
 		return ' ';
 	});
-}
-
-export function getlocalefilepath(filepath: string): string | undefined {
-	let t = filepath.match(/<>./), s: string;
-	if (t) {
-		if (existsSync(s = filepath.replace('<>', locale)))
-			return s;
-		else if (locale.toLowerCase() === 'zh-tw' && existsSync(s = filepath.replace('<>', 'zh-cn')))
-			return s;
-		else if (existsSync(s = filepath.replace(t[0], '')))
-			return s;
-	} else if (existsSync(filepath))
-		return filepath;
-	return undefined;
 }

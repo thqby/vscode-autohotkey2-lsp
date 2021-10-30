@@ -29,7 +29,7 @@
 		"onLanguage:ahk2"
 	],
 	"main": "./client/dist/extension",
-	"browser": "./client/dist/browserClient",
+	"browser": "./client/dist/browserClientMain",
 	"contributes": {
 		"breakpoints": [
 			{
@@ -160,27 +160,27 @@
 		"menus": {
 			"editor/context": [
 				{
-					"when": "editorLangId == ahk2 && !inDebugMode",
+					"when": "editorLangId == ahk2 && !isWeb && !inDebugMode",
 					"command": "ahk2.debug",
 					"group": "navigation@1"
 				},
 				{
-					"when": "editorLangId == ahk2 && !inDebugMode",
+					"when": "editorLangId == ahk2 && !isWeb && !inDebugMode",
 					"command": "ahk2.debug.params",
 					"group": "navigation@2"
 				},
 				{
-					"when": "editorLangId == ahk2 && editorHasSelection",
+					"when": "editorLangId == ahk2 && !isWeb && editorHasSelection",
 					"command": "ahk2.selection.run",
 					"group": "navigation@0"
 				},
 				{
-					"when": "editorLangId == ahk2 && !editorHasSelection",
+					"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection",
 					"command": "ahk2.run",
 					"group": "navigation@0"
 				},
 				{
-					"when": "editorLangId == ahk2",
+					"when": "editorLangId == ahk2 && !isWeb",
 					"command": "ahk2.compile",
 					"group": "navigation@2"
 				},
@@ -190,7 +190,7 @@
 					"group": "navigation@1"
 				},
 				{
-					"when": "editorLangId == ahk2 && ahk2:isRunning",
+					"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning",
 					"command": "ahk2.stop",
 					"group": "navigation@0"
 				},
@@ -205,27 +205,27 @@
 			{
 				"command": "ahk2.run",
 				"key": "ctrl+f5",
-				"when": "editorLangId == ahk2 && !editorHasSelection"
+				"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection"
 			},
 			{
 				"command": "ahk2.selection.run",
 				"key": "ctrl+f5",
-				"when": "editorLangId == ahk2 && editorHasSelection"
+				"when": "editorLangId == ahk2 && !isWeb && editorHasSelection"
 			},
 			{
 				"command": "ahk2.compile",
 				"key": "ctrl+shift+f5",
-				"when": "editorLangId == ahk2"
+				"when": "editorLangId == ahk2 && !isWeb"
 			},
 			{
 				"command": "ahk2.debug",
 				"key": "f5",
-				"when": "editorLangId == ahk2 && !inDebugMode"
+				"when": "editorLangId == ahk2 && !isWeb && !inDebugMode"
 			},
 			{
 				"command": "ahk2.debug.params",
 				"key": "shift+f5",
-				"when": "editorLangId == ahk2 && !inDebugMode"
+				"when": "editorLangId == ahk2 && !isWeb && !inDebugMode"
 			},
 			{
 				"command": "ahk2.help",
@@ -235,7 +235,7 @@
 			{
 				"command": "ahk2.stop",
 				"key": "ctrl+f6",
-				"when": "editorLangId == ahk2 && ahk2:isRunning"
+				"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning"
 			}
 		]
 	},
@@ -246,22 +246,25 @@
 		"watch": "tsc -b -w",
 		"patch": "npm version patch",
 		"publish": "vsce publish",
-		"package": "vsce package"
+		"package": "vsce package",
+		"chrome": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ./test-data"
 	},
 	"devDependencies": {
 		"@types/mocha": "^8.2.2",
 		"@types/vscode": "^1.59.0",
 		"@typescript-eslint/parser": "^4.23.0",
+		"@vscode/test-web": "^0.0.12",
+		"path-browserify": "^1.0.1",
 		"mocha": "^8.3.2",
 		"ts-loader": "^9.2.3",
 		"typescript": "^4.4.3",
 		"webpack": "^5.44.0",
-		"webpack-cli": "^4.7.2"
+		"webpack-cli": "^4.7.2",
+		"vsce": "^1.91.0"
 	},
 	"dependencies": {
 		"acorn": "^8.5.0",
 		"cfv": "^1.2.0",
-		"vsce": "^1.91.0",
 		"vscode-languageclient": "^7.0.0",
 		"vscode-languageserver": "^7.0.0",
 		"vscode-languageserver-textdocument": "^1.0.1",

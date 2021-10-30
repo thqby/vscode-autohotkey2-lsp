@@ -102,7 +102,7 @@ export async function activate(context: ExtensionContext) {
 		ahkStatusBarItem.show();
 		server_is_ready = true;
 	});
-	client.start();
+	const disposable = client.start();
 
 	let extlist: string[] = [], debugexts: { [type: string]: string } = {};
 	for (const ext of extensions.all) {
@@ -117,6 +117,7 @@ export async function activate(context: ExtensionContext) {
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 	ahkStatusBarItem.command = 'ahk2.setinterpreter';
 	context.subscriptions.push(
+		disposable,
 		commands.registerCommand('ahk2.run', () => runCurrentScriptFile()),
 		commands.registerCommand('ahk2.selection.run', () => runCurrentScriptFile(true)),
 		commands.registerCommand('ahk2.stop', () => stopRunningScript()),

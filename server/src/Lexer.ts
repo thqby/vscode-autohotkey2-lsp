@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import { existsSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { argv0 } from 'process';
 import {
@@ -13,13 +13,11 @@ import {
 	SemanticTokensBuilder
 } from 'vscode-languageserver';
 
-import {
-	TextDocument
-} from 'vscode-languageserver-textdocument';
+import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { ahkvars, isahk2_h, lexers, libdirs, openFile, pathenv } from './server';
+import { ahkvars, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv } from './global';
 
 export interface AhkDoc {
 	include: string[]
@@ -582,13 +580,13 @@ export class Lexer {
 							_this.includedir.set(document.positionAt(tk.offset).line, includedir);
 							if (m === '') {
 								_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
-							} else {
+							} else if (!inBrowser) {
 								if (m.startsWith('*')) {
 									_this.addDiagnostic(diagnostic.unsupportresinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-								} else if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir)) || !fs.existsSync(m.path)) {
+								} else if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir)) || !existsSync(m.path)) {
 									if (!o)
 										_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length);
-								} else if (fs.statSync(m.path).isDirectory())
+								} else if (statSync(m.path).isDirectory())
 									includedir = m.path;
 								else if (m.path.match(/\.(ahk2?|ah2)$/i))
 									includetable[m.uri] = { path: m.path, raw };
@@ -4407,6 +4405,8 @@ export class Lexer {
 	}
 
 	public initlibdirs() {
+		if (inBrowser)
+			return;
 		const workfolder = resolve().toLowerCase();
 		if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder)) {
 			this.scriptdir = workfolder.replace(/\\lib$/, '');
@@ -4470,7 +4470,7 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 		if (m = path.match(/^((\w|[^\x00-\x7f])+)_.*/)) search.push(m[1] + '.ahk');
 		for (const dir of libdirs) {
 			for (const file of search)
-				if (fs.existsSync(path = dir + '\\' + file)) {
+				if (existsSync(path = dir + '\\' + file)) {
 					uri = URI.file(path).toString().toLowerCase();
 					return { uri, path };
 				}
@@ -4491,7 +4491,7 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 export function parseinclude(include: { [uri: string]: { path: string, raw: string } }) {
 	for (const uri in include) {
 		let path = include[uri].path;
-		if (!(lexers[uri]) && fs.existsSync(path)) {
+		if (!(lexers[uri]) && existsSync(path)) {
 			let doc = new Lexer(openFile(path));
 			lexers[uri] = doc, doc.parseScript();
 			parseinclude(doc.include);
@@ -5028,7 +5028,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 			let d = lexers[uri];
 			if (!d) {
 				let path = URI.parse(uri).fsPath;
-				if (fs.existsSync(path)) {
+				if (existsSync(path)) {
 					d = lexers[uri] = new Lexer(openFile(path));
 					d.parseScript();
 				} else

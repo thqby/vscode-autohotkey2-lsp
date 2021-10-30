@@ -1,6 +1,6 @@
 import { DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
 import { Lexer, FuncScope, FuncNode, searchNode } from './Lexer';
-import { Maybe, lexers, ahkvars } from './server';
+import { Maybe, lexers, ahkvars } from './global';
 
 export async function referenceProvider(params: ReferenceParams): Promise<Location[]> {
 	let result: any = [], doc = lexers[params.textDocument.uri.toLowerCase()];

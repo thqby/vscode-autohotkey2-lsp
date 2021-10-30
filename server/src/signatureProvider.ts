@@ -1,6 +1,6 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, cleardetectcache, detectExp, detectExpType, detectVariableType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
-import { ahkvars, lexers, Maybe } from './server';
+import { ahkvars, lexers, Maybe } from './global';
 
 export async function signatureProvider(params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (cancellation.isCancellationRequested) return undefined;
