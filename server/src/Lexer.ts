@@ -986,7 +986,7 @@ export class Lexer {
 							} else {
 								if (!lk.topofline && (bak.type === 'TK_HOT' || (bak.topofline && bak.content === '{') || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i))))
 									lk.topofline = restore = topcontinue = true;
-								if (!predot && (!lk.topofline || tk.type === 'TK_EQUALS' || ['=', '?'].includes(tk.content) || input.charAt(lk.offset + lk.length).match(/[^\s,]/))) {
+								if (!predot && (!lk.topofline || tk.type === 'TK_EQUALS' || tk.type === 'TK_DOT' || ['=', '?'].includes(tk.content) || input.charAt(lk.offset + lk.length).match(/[^\s,]/))) {
 									if (addvariable(lk, mode)) {
 										vr = result[result.length - 1];
 										if (comm) vr.detail = last_comm = comm;
@@ -1003,6 +1003,8 @@ export class Lexer {
 								} else if (mode === 2) {
 									if (input.charAt(lk.offset + lk.length) !== '.')
 										_this.addDiagnostic(diagnostic.propnotinit(), lk.offset);
+								} else if (predot && tk.type === 'TK_DOT') {
+										addprop(lk), pr = vr = maybeclassprop(lk);
 								} else if ((m = input.charAt(lk.offset + lk.length)).match(/^(\(|\s|,|)$/)) {
 									if (lk.topofline) {
 										if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
@@ -1785,9 +1787,10 @@ export class Lexer {
 										(<Variable>tn).defaultVal = tk.content, cache.push(tn);
 										if (tk.type === 'TK_STRING')
 											(<Variable>tn).returntypes = { '#string': true }, tpexp = '#string';
-										else if (tk.content.toLowerCase() !== 'unset')
+										else if (tk.content.toLowerCase() === 'unset')
+											tk.semantic = { type: SemanticTokenTypes.variable, modifier: 1 << SemanticTokenModifiers.readonly };
+										else
 											(<Variable>tn).returntypes = { '#number': true }, tpexp = '#number';
-										else tk.semantic = { type: SemanticTokenTypes.variable, modifier: 1 << SemanticTokenModifiers.readonly };
 										lk = tk, tk = get_token_ingore_comment(cmm);
 										if (tk.type === 'TK_COMMA') continue; else if (tk.content === ')') break; else { paramsdef = false; break; }
 									} else { paramsdef = false; break; }
@@ -2204,9 +2207,7 @@ export class Lexer {
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
 				let _low = token.content.toLowerCase();
 				if (token.ignore || is_builtinvar(_low)) {
-					if (_low === 'true' || _low === 'false')
-						token.semantic = { type: SemanticTokenTypes.variable, modifier: 1 << SemanticTokenModifiers.readonly };
-					else if (token.semantic)
+					if (token.semantic)
 						delete token.semantic;
 					return false;
 				}
@@ -4082,11 +4083,6 @@ export class Lexer {
 		let node: DocumentSymbol | undefined, uri = this.uri;
 		if (kind === SymbolKind.Variable || kind === SymbolKind.Class || kind === SymbolKind.Function) {
 			let scope: DocumentSymbol | undefined, bak: DocumentSymbol | undefined, ref = true;
-			if (position) {
-				let tk = this.tokens[this.document.offsetAt(position) - name.length];
-				if (tk && tk.semantic && tk.semantic.type === SemanticTokenTypes.property)
-					return false;
-			}
 			name = name.toLowerCase();
 			if (position) {
 				scope = this.searchScopedNode(position);

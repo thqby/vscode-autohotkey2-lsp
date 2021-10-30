@@ -7,7 +7,7 @@ let renameranges: { [uri: string]: Range[] } | undefined;
 export async function prepareRename(params: PrepareRenameParams): Promise<Maybe<{ range: Range, placeholder: string }>> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], context = doc.buildContext(params.position);
 	if (renameranges = getAllReferences(doc, context))
-		return { range: context.range, placeholder: context.text }
+		return { range: context.range, placeholder: context.text.split('.').pop() || '' };
 }
 
 export async function renameProvider(params: RenameParams): Promise<Maybe<WorkspaceEdit>> {

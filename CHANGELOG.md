@@ -1,3 +1,9 @@
+## 1.1.0
+- 修复[#49](https://github.com/thqby/vscode-autohotkey2-lsp/issues/49)
+- 修复[#50](https://github.com/thqby/vscode-autohotkey2-lsp/issues/50)
+- 支持类静态属性符号重命名, 查找所有引用
+- 插件适配web端编辑器 https://vscode.dev 和 https://github.dev
+
 ## 1.0.8
 - 修复[#47](https://github.com/thqby/vscode-autohotkey2-lsp/issues/47)`/**\n...\n*/`将按照JSDoc格式化
 - 修复[#48](https://github.com/thqby/vscode-autohotkey2-lsp/issues/48)

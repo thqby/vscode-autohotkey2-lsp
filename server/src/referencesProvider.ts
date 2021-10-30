@@ -1,5 +1,5 @@
 import { DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
-import { Lexer, FuncScope, FuncNode, searchNode } from './Lexer';
+import { Lexer, FuncScope, FuncNode, searchNode, Token } from './Lexer';
 import { Maybe, lexers, ahkvars } from './global';
 
 export async function referenceProvider(params: ReferenceParams): Promise<Location[]> {
@@ -63,18 +63,48 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 			}
 		default:
 			if (node.kind === SymbolKind.Class || (<FuncNode>node).static) {
-				let c = name.split('.');
-				let ss = findAllFromDoc(doc, c[0], SymbolKind.Variable);
-				
+				let c = name.split('.'), rgs = findAllFromDoc(doc, c[0], SymbolKind.Variable);
+				let refs: { [uri: string]: Range[] } = {};
+				c.splice(0, 1);
+				if (rgs.length)
+					refs[uri] = rgs;
+				for (const uri in doc.relevance) {
+					let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, undefined);
+					if (rgs.length)
+					refs[uri] = rgs;
+				}
+				for (const uri in refs) {
+					let rgs = refs[uri], doc = lexers[uri], tt: Range[] = [];
+					for (let rg of rgs) {
+						let i = 0, offset = doc.document.offsetAt(rg.end), tk: Token | undefined;
+						while (i < c.length) {
+							tk = doc.get_tokon(offset);
+							while (tk && tk.type.endsWith('COMMENT'))
+								tk = doc.get_tokon(tk.offset + tk.length);
+							if (tk && tk.content === '.') {
+								if ((tk = doc.get_tokon(tk.offset + tk.length)) && tk.type === 'TK_WORD' && tk.content.toLowerCase() === c[i]) {
+									offset = tk.offset + tk.length, i++;
+									continue;
+								}
+							}
+							break;
+						}
+						if (i === c.length && tk)
+							tt.push({ start: doc.document.positionAt(tk.offset), end: doc.document.positionAt(tk.offset + tk.length) });
+					}
+					if (tt.length)
+						references[uri] = tt;
+				}
+				if (references[uri])
+					references[uri].unshift(node.selectionRange);
+				else references[uri] = [node.selectionRange];
+				break;
 			}
 			return undefined;
 	}
 	if (Object.keys(references).length)
 		return references;
-	
-	function searchStatic(name: string) {
-
-	}
+	return undefined
 }
 
 export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: DocumentSymbol) {

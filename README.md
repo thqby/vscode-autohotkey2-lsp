@@ -11,7 +11,8 @@
 
 [Gitee](https://gitee.com/orz707/vscode-autohotkey2-lsp)
 
-AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis
+AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis.
+Supports running on the Web, such as `Chrome/Edge`.
 
 - [Language Features](#language-features)
   - [Rename Symbol](#rename-symbol)
@@ -34,6 +35,7 @@ AutoHotKey V2 Language support for VS Code, Function realization based on v2 syn
   - [Compile Script](#compile-script)
   - [Debug Script](#debug-script)
   - [Generate Comment](#generate-comment)
+- [Use in Web browser](#use-in-web-browser)
 - [Use in other editors](#use-in-other-editors)
   - [(n)vim](#vim-and-neovim)
 
@@ -151,6 +153,10 @@ No additional configuration is required to start the installed Debug extensions,
 
 Generate JSDOC-style comments for a function or method.
 
+## Use in Web Browser
+
+visit https://github.dev or https://vscode.dev in `Chrome/Edge`, and install `thqby.vscode-autohotkey2-lsp`
+
 ## Use in other editors
 
 ### Vim and Neovim
@@ -190,7 +196,8 @@ Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configura
 
 # AutoHotkey2语言支持
 
-AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
+AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
+支持在`Chrome/Edge`等浏览器中使用 http://vscode.dev
 
 - [语言特性](#语言特性)
   - [重命名符号](#重命名符号)
@@ -213,6 +220,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析
   - [编译脚本](#编译脚本)
   - [调试脚本](#调试脚本)
   - [生成注释](#生成注释)
+- [在Web浏览器中使用](#在web浏览器中使用)
 - [在其他编辑器中使用](#在其他编辑器中使用)
   - [(n)vim](#nvim)
 
@@ -326,6 +334,10 @@ code
 ### 生成注释
 
 为函数或方法生成 JSDOC 样式的注释文档.
+
+## 在Web浏览器中使用
+
+在`Chrome/Edge`中打开 https://github.dev 或 https://vscode.dev, 然后安装`thqby.vscode-autohotkey2-lsp`
 
 ## 在其他编辑器中使用
 

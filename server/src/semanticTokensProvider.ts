@@ -82,16 +82,16 @@ function resolveSemanticType(name: string, sem: SemanticToken, doc: Lexer) {
 				switch (kind) {
 					case SymbolKind.Method:
 						sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly | 1 << SemanticTokenModifiers.static;
-						return SemanticTokenTypes.method;
+						return sem.type = SemanticTokenTypes.method;
 					case SymbolKind.Class:
 						sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly;
 						curclass = curclass.staticdeclaration[name] as ClassNode;
-						return SemanticTokenTypes.class;
+						return sem.type = SemanticTokenTypes.class;
 					case SymbolKind.Property:
 						let t = n.children;
 						if (t?.length === 1 && t[0].name === 'get')
 							sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly | 1 << SemanticTokenModifiers.static;
-						return SemanticTokenTypes.property;
+						return sem.type = SemanticTokenTypes.property;
 				}
 			}
 		default:
