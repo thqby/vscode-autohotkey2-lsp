@@ -3246,6 +3246,7 @@ export class Lexer {
 						tp = 'TK_BLOCK_COMMENT';
 						if (t && t[1]) {
 							parser_pos = input.indexOf('*/', last_LF) + 2;
+							_this.strcommpos.push({ start: offset, end: parser_pos, type: 1 });
 							return createToken(input.substring(offset, parser_pos), tp, offset, parser_pos - offset, bg);
 						}
 					}

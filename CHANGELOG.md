@@ -1,5 +1,9 @@
+## 1.1.3
+- 修复关键字着色错误
+
 ## 1.1.2
 - 修复Node版服务器启动失败
+- 增加`给函数补全添加括号`设置项
 
 ## 1.1.0
 - 修复[#49](https://github.com/thqby/vscode-autohotkey2-lsp/issues/49)

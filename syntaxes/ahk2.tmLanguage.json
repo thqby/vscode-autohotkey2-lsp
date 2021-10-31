@@ -18,17 +18,6 @@
       "include": "#object_property"
     },
     {
-      "match": "(?<!\\.)((?i:break|continue|goto))\\s+([^;]\\S*)",
-      "captures": {
-        "1": {
-          "name": "keyword.control.ahk2"
-        },
-        "2": {
-          "name": "entity.name.label.ahk2"
-        }
-      }
-    },
-    {
       "match": "(?<!\\.)((?i:catch))(\\s+\\(?\\s*([^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+(\\s*,\\s*[^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+)*)?(\\s+((?i:as))\\s+([^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+))?)?\\s*\\)?",
       "captures": {
         "1": {
@@ -62,16 +51,7 @@
       }
     },
     {
-      "match": "(?<!\\.)\\b(?i:break|continue|until|else|for|goto|if|throw|try|finally|return|while)\\b(?!\\s*:)",
-      "name": "keyword.control.ahk2"
-    },
-    {
-      "match": "(?<!\\.)\\b(?i:loop)(\\s+(?i:files|parse|read|reg))?\\b",
-      "name": "keyword.control.ahk2"
-    },
-    {
-      "match": "(?<!\\.)\\b(?i:global|local|static)\\b",
-      "name": "storage.modifier.ahk2"
+      "include": "#reserved"
     },
     {
       "match": "(?<=^\\s*)(?i:macro)(?=\\s+(\\w|[^\\x00-\\x7f])+\\()",
@@ -97,9 +77,6 @@
     },
     {
       "include": "#function_defaultLibrary"
-    },
-    {
-      "include": "#object_property"
     },
     {
       "include": "#variables"
@@ -408,9 +385,6 @@
                   "name": "meta.block.method.body.ahk2",
                   "patterns": [
                     {
-                      "include": "#variables"
-                    },
-                    {
                       "include": "$base"
                     }
                   ]
@@ -425,9 +399,6 @@
                   "end": "(?=\\n)",
                   "name": "meta.block.method.body.ahk2",
                   "patterns": [
-                    {
-                      "include": "#variables"
-                    },
                     {
                       "include": "#line_continue"
                     },
@@ -527,9 +498,6 @@
                           },
                           "patterns": [
                             {
-                              "include": "#variables"
-                            },
-                            {
                               "include": "$base"
                             }
                           ]
@@ -544,9 +512,6 @@
                           "name": "meta.block.property.setter.body.ahk2",
                           "end": "(?=\\n)",
                           "patterns": [
-                            {
-                              "include": "#variables"
-                            },
                             {
                               "include": "#line_continue"
                             },
@@ -585,9 +550,6 @@
                           },
                           "patterns": [
                             {
-                              "include": "#variables"
-                            },
-                            {
                               "include": "$base"
                             }
                           ]
@@ -602,9 +564,6 @@
                           "name": "meta.block.property.getter.body.ahk2",
                           "end": "(?=\\n)",
                           "patterns": [
-                            {
-                              "include": "#variables"
-                            },
                             {
                               "include": "#line_continue"
                             },
@@ -631,9 +590,6 @@
                   "end": "(?=\\n)",
                   "patterns": [
                     {
-                      "include": "#variables"
-                    },
-                    {
                       "include": "#line_continue"
                     },
                     {
@@ -645,9 +601,6 @@
                   "include": "#variables"
                 }
               ]
-            },
-            {
-              "include": "#variables"
             },
             {
               "include": "#class_block"
@@ -805,9 +758,6 @@
               "include": "#string_escaped_char"
             }
           ]
-        },
-        {
-          "include": "#object_property"
         },
         {
           "include": "#variables"
@@ -1328,9 +1278,6 @@
               "end": "(?=})",
               "patterns": [
                 {
-                  "include": "#variables"
-                },
-                {
                   "include": "$base"
                 }
               ]
@@ -1339,9 +1286,6 @@
               "begin": "(?<=::\\s*)",
               "end": "(?=\\n)",
               "patterns": [
-                {
-                  "include": "#variables"
-                },
                 {
                   "include": "#line_continue"
                 },
@@ -1411,9 +1355,6 @@
               "end": "(?=})",
               "patterns": [
                 {
-                  "include": "#variables"
-                },
-                {
                   "include": "$base"
                 }
               ]
@@ -1429,9 +1370,6 @@
               "begin": "(?<=\\G\\s*)(?=\\S)",
               "end": "(?=\\n)",
               "patterns": [
-                {
-                  "include": "#variables"
-                },
                 {
                   "include": "#line_continue"
                 },
@@ -1585,9 +1523,6 @@
           "captures": {
             "0": {
               "patterns": [
-                {
-                  "include": "#object_property"
-                },
                 {
                   "include": "#variables"
                 }
@@ -1915,6 +1850,33 @@
         }
       ]
     },
+    "reserved": {
+      "patterns": [
+        {
+          "match": "(?<!\\.)((?i:break|continue|goto))\\s+([^;]\\S*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.ahk2"
+            },
+            "2": {
+              "name": "entity.name.label.ahk2"
+            }
+          }
+        },
+        {
+          "match": "(?<!\\.)\\b(?i:break|continue|until|else|for|goto|if|throw|try|finally|return|while)\\b(?!\\s*:)",
+          "name": "keyword.control.ahk2"
+        },
+        {
+          "match": "(?<!\\.)\\b(?i:loop)(\\s+(?i:files|parse|read|reg))?\\b",
+          "name": "keyword.control.ahk2"
+        },
+        {
+          "match": "(?<!\\.)\\b(?i:global|local|static)\\b",
+          "name": "storage.modifier.ahk2"
+        }
+      ]
+    },
     "string_escaped_char": {
       "patterns": [
         {
@@ -2175,6 +2137,9 @@
             },
             {
               "include": "#function_defaultLibrary"
+            },
+            {
+              "include": "#reserved"
             }
           ]
         }
