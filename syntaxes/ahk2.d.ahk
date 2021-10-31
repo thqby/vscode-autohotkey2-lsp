@@ -20,6 +20,11 @@ ASin(Number) => Number
 ATan(Number) => Number
 
 /**
+ * Disable or enable the user's ability to interact with the computer through the keyboard and mouse.
+ */
+BlockInput(Option)
+
+/**
  * Create a machine code address, when it is called, it will be redirected to the function in the script.
  * @param Function function object. This function object is automatically called whenever Address is called. This function also receives the parameters passed to Address.
  * Closure or binding function can be used to distinguish multiple callback functions from calling the same script function.
@@ -29,10 +34,10 @@ ATan(Number) => Number
  * 
  * CDecl or C: Let Address follow the "C" calling convention. This option is usually omitted because it is more common to use the standard calling convention in the callback function. The 64-bit version of AutoHotkey ignores this option, which uses the x64 calling convention.
  * 
- * &: The address of the parameter list (a single integer) is passed to the Function instead of each parameter. You can use NumGet to retrieve the parameter value. When using the standard 32-bit calling convention, ParamCount must specify the size of the parameter list in DWORDs ( Divide the number of bytes by 4).
+ * &: The address of the parameter list (a single integer) is passed to the Function instead of each parameter. You can use Numget to retrieve the parameter value. When using the standard 32-bit calling convention, ParamCount must specify the size of the parameter list in DWORDs ( Divide the number of bytes by 4).
  * @param ParamCount Address The number of parameters that the caller will pass to it. If omitted, it defaults to Function.MinParams, which is usually the number of mandatory parameters in the Function definition. In both cases, you must ensure that the caller is accurate Pass this number of parameters.
  */
-CallbackCreate(Function[, Options, ParamCount]) => Number
+CallbackCreate(Function [, Options, ParamCount]) => Number
 
 /**
  * Release the reference of the callback to the script function object.
@@ -55,23 +60,23 @@ Ceil(Number) => Number
 Chr(Number) => String
 
 /**
- * Specify zero or more of the following items: Coords, WhichButton, ClickCount, DownOrUp and/or Relative. Each item must be separated by at least one space, tab and/or comma. The items can appear in any order, Except that ClickCount must appear to the right of Coords (if it exists).
- * Coords: The X and Y coordinates that the mouse cursor will move to before clicking. For example, Click "100 200" to click the left mouse button at a specific position. The coordinates are relative to the active window, unless you have used CoordMode to change this setting. If omitted , The current position of the cursor is used.
- * WhichButton: Left (default), Right, Middle (or just the first letter of these names); or the fourth or fifth mouse button (X1 or X2). For example, Click "Right" at the current position of the mouse cursor Click the right mouse button. Left and Right correspond to the primary and secondary buttons of the mouse. If the user swaps the buttons through the system settings, the physical location of the buttons will be replaced, but the effect remains the same.
- * WhichButton can also be WheelUp or WU to turn the wheel up (away from you), or WheelDown or WD to turn the wheel down (toward you). You can also specify WheelLeft (or WL) or WheelRight (or WR). For ClickCount, specify The number of grids that the scroll wheel should rotate. However, some programs do not accept the case where ClickCount is greater than 1. For these programs, the Click function can be used multiple times through Loop and other methods.
- * ClickCount: the number of mouse clicks. For example, Click 2 double-click at the mouse cursor position. If omitted, click the mouse once. If Coords is specified, then ClickCount must be placed after the coordinates. Specify zero (0) to move the mouse without Make a click; for example, Click "100 200 0".
- * DownOrUp: This part is usually omitted. At this time, each click includes the press event and the subsequent pop-up event. Otherwise, specify the word Down (or letter D) to hold down the mouse button. After that, use the word Up (or letter U) to release the mouse button. For example, Click "Down" to hold down the left mouse button.
- * Relative: The word Rel or Relative will treat the specified X and Y coordinates as an offset from the current mouse position. In other words, it will move the cursor X pixels to the right from the current position (negative value is to the left) and down Move Y pixels (negative values ​​go up).
+ * Specify zero or more of the following items: Coords, WhichButton, Clickount, DownOrUp and/or Relative. Each item must be separated by at least one space, tab and/or comma. The items can appear in any order, Except that Clickcount must appear to the right of coords (if it exists).
+ * Coords: The X and Y coordinates that the mouse cursor will move to before clicking. For example, click "100 200" to click the left mouse button at a specific position. The coordinates are relative to the active window, unless you have used coordMode to change this setting. If omitted , The current position of the cursor is used.
+ * WhichButton: Left (default), Right, Middle (or just the first letter of these names); or the fourth or fifth mouse button (X1 or X2). For example, click "Right" at the current position of the mouse cursor click the right mouse button. Left and Right correspond to the primary and secondary buttons of the mouse. If the user swaps the buttons through the system settings, the physical location of the buttons will be replaced, but the effect remains the same.
+ * WhichButton can also be WheelUp or WU to turn the wheel up (away from you), or WheelDown or WD to turn the wheel down (toward you). You can also specify WheelLeft (or WL) or WheelRight (or WR). For clickcount, specify The number of grids that the scroll wheel should rotate. However, some programs do not accept the case where clickcount is greater than 1. For these programs, the click function can be used multiple times through Loop and other methods.
+ * ClickCount: the number of mouse clicks. For example, Click 2 double-click at the mouse cursor position. If omitted, click the mouse once. If coords is specified, then clickcount must be placed after the coordinates. specify zero (0) to move the mouse without Make a click; for example, click "100 200 0".
+ * DownOrUp: This part is usually omitted. At this time, each click includes the press event and the subsequent pop-up event. Otherwise, specify the word Down (or letter D) to hold down the mouse button. after that, use the word Up (or letter U) to release the mouse button. For example, click "Down" to hold down the left mouse button.
+ * Relative: The word Rel or Relative will treat the specified X and Y coordinates as an offset from the current mouse position. In other words, it will move the cursor X pixels to the right from the current position (negative value is to the left) and down Move Y pixels (negative values go up).
  */
 Click([Options]) => void
 
 /**
  * Wait until the clipboard contains data.
  * @param Timeout If omitted, this command will wait indefinitely. Otherwise, it will wait no more than this number of seconds (can include a decimal point).
- * @param WaitForAnyData If this parameter is omitted or 0 (false), this command will be more selective, explicitly waiting for the text or file to appear in the clipboard ("text" includes anything that will produce text when you paste it into Notepad content).
+ * @param WaitForanyData If this parameter is omitted or 0 (false), this command will be more selective, explicitly waiting for the text or file to appear in the clipboard ("text" includes anything that will produce text when you paste it into Notepad content).
  * If this parameter is 1 (true), the function waits for any type of data to appear on the clipboard.
  */
-ClipWait([Timeout, WaitForAnyData]) => Number
+ClipWait([Timeout, WaitForanyData]) => Number
 
 /**
  * Call native COM interface methods by index.
@@ -83,18 +88,18 @@ ClipWait([Timeout, WaitForAnyData]) => Number
  * @param ComObject The target COM object; that is, a COM interface pointer.
  * The pointer value can be passed directly or encapsulated in an object with Ptr attribute, such as ComObj with VT_UNKNOWN variable type.
  */
-ComCall(Index, ComObject[, Type1, Arg1, * , ReturnType]) => Number | String
+ComCall(Index, ComObject [, Type1, arg1, * , ReturnType]) => Number | string
 
 /**
  * Retrieve running objects that have been registered using OLE (Object Connection and Embedding).
  * @param CLSID The CLSID or readable Prog ID of the COM object to be retrieved.
  */
-ComObjActive(CLSID) => Comobjct
+ComObjActive(CLSID) => ComObjct
 
 /**
  * Connect the event source of the object to the function with the given prefix.
  */
-ComObjConnect(ComObject[, Prefix]) => void
+ComObjConnect(ComObject [, Prefix]) => void
 
 /*
  * Wrap the original IDispatch pointer.
@@ -109,13 +114,13 @@ ComObjFromPtr(DispPtr) => ComObject
  * @param Mask changes the bit mask of flags.
  * @returns This function returns the current flags of the specified COM object (if specified, after applying NewFlags).
  */
-ComObjFlags(ComObject[, NewFlags, Mask]) => Number
+ComObjFlags(ComObject [, NewFlags, Mask]) => Number
 
 /**
  * Returns a reference to the object provided by the COM component.
  * @param Name The display name of the object to be retrieved. For details, please refer to MkParseDisplayName (MSDN)
  */
-ComObjGet(Name) => Comobject
+ComObjGet(Name) => ComObject
 
 /**
  * Query the interface or service of the COM object.
@@ -124,7 +129,7 @@ ComObjGet(Name) => Comobject
  * @param IID A service identifier with the same format as IID. When omitting this parameter, also omit the comma.
  * @returns returns a COM package object of type VT_UNKNOWN(13).
  */
-ComObjQuery(ComObject[, SID], IID) => Comobject
+ComObjQuery(ComObject [, SID], IID) => ComObject
 
 /**
  * Retrieve type information from COM objects.
@@ -132,7 +137,7 @@ ComObjQuery(ComObject[, SID], IID) => Comobject
  * @param Type The second parameter is a string indicating the type information returned.
  * Name, IID, Class, CLSID
  */
-ComObjType(ComObject[, Type]) => Number | String
+ComObjType(ComObject [, Type]) => Number | String
 
 /**
  * Retrieve the value or pointer stored in the COM wrapper object.
@@ -144,25 +149,25 @@ ComObjValue(ComObject) => Number
 /**
  * Add the specified string as a new entry at the bottom of the ListBox or ComboBox.
  */
-ControlAddItem(String, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlAddItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Set the selection in the list box, combo box or tab page control to the specified item or tab number.
  * @param N Index of entry or tab page, where 1 is the first item or tab, 2 is the second item, and so on.
  * To select all items in ListBox or ComboBox, specify 0.
  */
-ControlChooseIndex(N, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlChooseIndex(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Set the selection in ListBox or ComboBox to the first entry whose leading part matches the specified string.
  * @param String The string to select. The search is not case sensitive. For example, if a ListBox/ComboBox contains the item "UNIX Text", specifying the word "unix" (lower case) is sufficient to select it.
  */
-ControlChooseString(String, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => number
+ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => number
 
 /**
  * Send mouse button or mouse wheel events to the control.
  * @param Control_or_Pos If this parameter is omitted, the target window itself will be clicked. Otherwise, one of the following two modes will be used.
- * Mode 1 (Position): Specify the X and Y coordinates relative to the upper left corner of the client area of ​​the target window. The X coordinate must be before the Y coordinate, and there must be at least one space or tab between them. For example: X55 Y33. If there is a control at the specified coordinates, it will send a click event at these exact coordinates. If there is no control, the target window itself will be sent an event (depending on the nature of the window, it may have no effect).
+ * Mode 1 (Position): Specify the X and Y coordinates relative to the upper left corner of the client area of the target window. The X coordinate must be before the Y coordinate, and there must be at least one space or tab between them. For example: X55 Y33. If there is a control at the specified coordinates, it will send a click event at these exact coordinates. If there is no control, the target window itself will be sent an event (depending on the nature of the window, it may have no effect).
  * 
  * Mode 2 (Control): Specify the ClassNN, text or HWND of the control, or an object with Hwnd property. For details, please refer to the parameters of the control.
  * 
@@ -190,43 +195,43 @@ ControlClick([Control_or_Pos, WinTitle, WinText, WhichButton, ClickCount, Option
 /**
  * Delete the specified item from ListBox or ComboBox.
  */
-ControlDeleteItem(N, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlDeleteItem(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Returns the entry number of the ListBox or ComboBox that exactly matches the specified string.
  * @param String The string to find. The search is not case sensitive. Unlike ControlChooseString, the entire text of the entry must match, not just the beginning.
  */
-ControlFindItem(String, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlFindItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Set the input focus to the specified control of the window.
  */
-ControlFocus(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlFocus(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * If the check box or radio button is selected, a non-zero value is returned.
  */
-ControlGetChecked(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetChecked(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Returns the name of the currently selected item in the ListBox or ComboBox.
  */
-ControlGetChoice(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+ControlGetChoice(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
  * Return the ClassNN (class name and number) of the specified control.
  */
-ControlGetClassNN(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+ControlGetClassNN(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
  * If the specified control is enabled, it returns a non-zero value.
  */
-ControlGetEnabled(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetEnabled(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Returns an integer representing the specified control style or extended style.
  */
-ControlGetExStyle(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetExStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * If there is, get the control that has the input focus in the target window.
@@ -236,17 +241,17 @@ ControlGetFocus([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 /**
  * Returns the unique ID of the specified control.
  */
-ControlGetHwnd(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetHwnd(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Returns the index of the currently selected item or label in the ListBox, ComboBox or Tab control.
  */
-ControlGetIndex(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetIndex(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Return an array of items/rows from a list box, combo box or drop-down list.
  */
-ControlGetItems(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
+ControlGetItems(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
 
 /**
  * Get the position and size of the control.
@@ -256,27 +261,27 @@ ControlGetPos([&X, &Y, &Width, &Height, Control, WinTitle, WinText, ExcludeTitle
 /**
  * Returns an integer representing the specified control style or extended style.
  */
-ControlGetStyle(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Retrieve the text of the control.
  */
-ControlGetText(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+ControlGetText(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
  * If the specified control is visible, it returns a non-zero value.
  */
-ControlGetVisible(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetVisible(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Hide designated controls.
  */
-ControlHide(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlHide(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Hide the drop-down list of the ComboBox control.
  */
-ControlHideDropDown(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlHideDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Move or resize the control.
@@ -288,14 +293,14 @@ ControlMove([X, Y, Width, Height, Control, WinTitle, WinText, ExcludeTitle, Excl
  * @param Keys The sequence of keys to be sent (for details, please refer to the Send function). The rate of sending characters is determined by SetKeyDelay.
  * Unlike the Send function, ControlSend cannot send mouse clicks. Please use ControlClick to send.
  */
-ControlSend(Keys[, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSend(Keys [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Send text input to a window or control.
  * @param Keys ControlSendText sends a single character in the Keys parameter without converting (Enter) to Enter, ^c to Ctrl+C, etc.
  * For details, see Text mode. You can also use (Raw) or (Text) in ControlSend.
  */
-ControlSendText(Keys[, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSendText(Keys [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Turn on (check) or turn off (uncheck) check boxes or radio buttons.
@@ -305,7 +310,7 @@ ControlSendText(Keys[, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) =
  * 
  * -1 Set it to the opposite state of the current state
  */
-ControlSetChecked(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetChecked(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Enable or disable the specified control.
@@ -315,7 +320,7 @@ ControlSetChecked(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]
  * 
  * -1 Set it to the opposite state of the current state
  */
-ControlSetEnabled(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetEnabled(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Change the style or extended style of the specified control respectively.
@@ -325,7 +330,7 @@ ControlSetEnabled(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]
  * If Value is a negative integer, it will be treated as the same as the corresponding numeric string.
  * To use the + or ^ prefix literally in the expression, the prefix or value must be enclosed in quotation marks.
  */
-ControlSetExStyle(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetExStyle(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Change the style or extended style of the specified control respectively.
@@ -335,22 +340,27 @@ ControlSetExStyle(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]
  * If Value is a negative integer, it will be treated as the same as the corresponding numeric string.
  * To use the + or ^ prefix literally in the expression, the prefix or value must be enclosed in quotation marks.
  */
-ControlSetStyle(Value, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetStyle(Value, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Change the text of the control.
  */
-ControlSetText(NewText, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlSetText(NewText, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * If the specified control was previously hidden, the control will be displayed.
  */
-ControlShow(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlShow(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Display the drop-down list of the ComboBox control.
  */
-ControlShowDropDown(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlShowDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+
+/**
+ * Set the coordinate mode for multiple built-in functions, relative to the active window or the screen.
+ */
+CoordMode(TargetType, RelativeTo := 'Screen')
 
 /**
  * Returns the cosine value of Number.
@@ -376,6 +386,16 @@ DateAdd(DateTime, Time, TimeUnits) => String
  * @param TimeUnits The unit of the Time parameter. TimeUnits can be one of the following strings (or the first letter): Seconds, Minutes, Hours or Days.
  */
 DateDiff(DateTime1, DateTime2, TimeUnits) => Number
+
+/**
+ * Set whether to'see' hidden text when searching for windows. This will affect built-in functions such as WinExist and Winactivate.
+ */
+DetectHiddenText(Mode)
+
+/**
+ * Set whether the script can'see' the hidden window.
+ */
+DetectHiddenWindows(Mode)
 
 /**
  * Copy the folder, and all its subfolders and files (similar to xcopy).
@@ -465,7 +485,7 @@ DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
 /**
  * Call functions in DLL files, such as standard Windows API functions.
  */
-DllCall(DllFile_Function[, Type1, Arg1, * , 'Cdecl ReturnType']) => Number | String
+DllCall(DllFile_Function [, Type1, Arg1, * , 'Cdecl ReturnType']) => Number | String
 
 /**
  * Download files from the Internet.
@@ -561,32 +581,32 @@ DriveUnlock(Drive) => void
 /**
  * Returns the column number of the caret (text insertion point) in the Edit control.
  */
-EditGetCurrentCol(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetCurrentCol(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Returns the line number of the caret (insertion point) in the Edit control.
  */
-EditGetCurrentLine(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetCurrentLine(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Returns the text of the specified line in the Edit control.
  */
-EditGetLine(N, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+EditGetLine(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
  * Returns the number of rows of the Edit control.
  */
-EditGetLineCount(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetLineCount(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Return the selected text in the Edit control.
  */
-EditGetSelectedText(Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+EditGetSelectedText(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
  * Paste the specified string to the caret (text insertion point) in the Edit control.
  */
-EditPaste(String, Control[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+EditPaste(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Retrieve environment variables.
@@ -655,7 +675,7 @@ FileCopy(SourcePattern, DestPattern, Overwrite := false) => void
  * 
  * 7 = minimize
  */
-FileCreateShortcut(Target, LinkFile[, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]) => void
+FileCreateShortcut(Target, LinkFile [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]) => void
 
 /**
  * Delete one or more files.
@@ -666,7 +686,7 @@ FileDelete(FilePattern) => void
 
 /**
  * Set the default encoding for FileRead, Loop Read, FileAppend and FileOpen.
- * @param Encoding One of the following values ​​(if omitted, it defaults to CP0):
+ * @param Encoding One of the following values (if omitted, it defaults to CP0):
  * UTF-8: Unicode UTF-8, equivalent to CP65001.
  * 
  * UTF-8-RAW: Same as above, but the byte order mark is not written when creating a new file.
@@ -732,7 +752,7 @@ FileGetAttrib([Filename]) => String
 /**
  * Get the information of the shortcut (.lnk) file, such as its target file.
  */
-FileGetShortcut(LinkFile[, &OutTarget, &OutDir, &OutArgs, &OutDescription, &OutIcon, &OutIconNum, &OutRunState]) => String
+FileGetShortcut(LinkFile [, &OutTarget, &OutDir, &OutArgs, &OutDescription, &OutIcon, &OutIconNum, &OutRunState]) => String
 
 /**
  * Get the size of the file.
@@ -791,7 +811,7 @@ FileMove(SourcePattern, DestPattern, Overwrite := false) => void
  * `r 0x8 Replace the single `r with `n when reading.
  * @param Encoding If the file does not have UTF-8 or UTF-16 byte order mark, or the h (handle) flag is used, the code page used when reading and writing the file (AutoHotkey automatically recognizes the file with byte order mark, specified Encoding is invalid). If this parameter is omitted, the current value of A_FileEncoding will be used.
  */
-FileOpen(Filename, Flags[, Encoding]) => File
+FileOpen(Filename, Flags [, Encoding]) => File
 
 /**
  * Retrieve the contents of the file.
@@ -805,7 +825,7 @@ FileOpen(Filename, Flags[, Encoding]) => File
  * 
  * `n (newline character): Replace all carriage return and newline characters (`r`n) with newline characters (`n). However, this conversion reduces performance and is often unnecessary. For example, include `r`n The text has been added to the Gui Edit control in the correct format. The following parsing loop will work correctly, regardless of whether the end of each line is `r`n or `n: Loop Parse, MyFileContents, "`n", "`r" .
  */
-FileRead(Filename[, Options]) => Buffer | String
+FileRead(Filename [, Options]) => Buffer | String
 
 /**
  * If possible, send the file or directory to the recycle bin, or delete the file permanently.
@@ -902,7 +922,7 @@ FileSetTime(YYYYMMDDHH24MISS := '', FilePattern := '', WhichTime := 'M', Mode :=
 Floor(Number) => Number
 
 /**
- * Format a variable number of input values ​​according to the format string.
+ * Format a variable number of input values according to the format string.
  * @param FormatStr format string consists of literal text and placeholders, and its form is {Index:Format}. Omit the index to use the next input value in the sequence (even if it has been used before).
  * Use (() and ()) to include literal brackets in the string. Any other invalid placeholders will be included in the result. * Space characters in the braces are not allowed (unless as a sign).
  * Each format specifier can contain the following parts in order (without spaces): `Flags Width .Precision ULT Type`
@@ -933,7 +953,7 @@ Floor(Number) => Number
  * 
  * For integer types (d, i, u, x, X, o), Precision acts like Width with a prefix of 0 and a default value of 1.
  * 
- * `ULT` specifies the case conversion applied to string values ​​- U (uppercase), L (lowercase) or T (title). Only valid for s type. For example {:U} or {:.20Ts}. Also Lowercase letters l and t are supported, but u is reserved for unsigned integers.
+ * `ULT` specifies the case conversion applied to string values - U (uppercase), L (lowercase) or T (title). Only valid for s type. For example {:U} or {:.20Ts}. Also Lowercase letters l and t are supported, but u is reserved for unsigned integers.
  * 
  * `Type` A character in the type table below that indicates how the input value will be parsed. If omitted, the default is s.
  * 
@@ -951,7 +971,7 @@ Floor(Number) => Number
  * 
  * E floating point number is equivalent to e format, but the exponent part of the result shows E instead of e.
  * 
- * g floating-point numbers display signed values ​​in f or e format, subject to the given value and more compact precision. e format is only used when the exponent of the value is less than -4 or greater than or equal to the precision parameter. The trailing zero is Truncation, the decimal point only appears when there are one or more digits behind.
+ * g floating-point numbers display signed values in f or e format, subject to the given value and more compact precision. e format is only used when the exponent of the value is less than -4 or greater than or equal to the precision parameter. The trailing zero is Truncation, the decimal point only appears when there are one or more digits behind.
  * 
  * G floating point number is equivalent to g format, but e when introducing exponent will be replaced by E (where appropriate).
  * 
@@ -996,7 +1016,7 @@ GetKeySC(KeyName) => Number
  * 
  * When KeyName is the axis of the joystick, such as JoyX, the function returns a floating point number between 0 and 100, which is used to indicate that the position of the joystick is the percentage of the axis's motion range.
  * 
- * When the KeyName is JoyPOV, the function returns an integer between 0 and 35900. Many joysticks use POV values ​​similar to the following:
+ * When the KeyName is JoyPOV, the function returns an integer between 0 and 35900. Many joysticks use POV values similar to the following:
  * 
  * -1: no angle
  * 
@@ -1031,7 +1051,7 @@ GroupActivate(GroupName, Mode := '') => Number
 /**
  * Add the window specification to the window group, if necessary, create the group.
  */
-GroupAdd(GroupName[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+GroupAdd(GroupName [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * If the active window has just been activated by GroupActivate or GroupDeactivate, close the window. Then, it will activate the next window in the series. It can also close all windows in the group.
@@ -1078,9 +1098,29 @@ HasMethod(Value, Name) => Number
 HasProp(Value, Name) => Number
 
 /**
- * Create, modify, enable or disable hot strings while the script is running.
+ * Specify the conditions for subsequent creation or modification of hotkey variants.
  */
-Hotstring(StringorOptions[, Replacement, OnOffToggle]) => void
+HotIf(FuncOrExpr)
+
+/**
+ * Specify the conditions for the hotkey variants to be subsequently created or modified.
+ */
+HotIfWinactive([WinTitle, WinText])
+
+/**
+ * Specify the conditions for the hotkey variants to be subsequently created or modified.
+ */
+HotIfWinExist([WinTitle, WinText])
+
+/**
+ * Specify the conditions for the hotkey variants to be subsequently created or modified.
+ */
+HotIfWinNotactive([WinTitle, WinText])
+
+/**
+ * Specify the conditions for the hotkey variants to be subsequently created or modified.
+ */
+HotIfWinNotExist([WinTitle, WinText])
 
 /**
  * Create, modify, enable or disable hotkeys while the script is running.
@@ -1107,18 +1147,23 @@ Hotstring(StringorOptions[, Replacement, OnOffToggle]) => void
  * 
  * In(InputLevel): Specify the input level of the letter I (or i) followed by the hot key. For example: I1.
  */
-Hotkey(KeyName[, Callback, Options]) => void
+Hotkey(KeyName [, Callback, Options]) => void
+
+/**
+ * Create, modify, enable or disable hot strings while the script is running.
+ */
+Hotstring(StringorOptions [, Replacement, OnOffToggle]) => void
 
 /**
  * Add the icon or picture to the specified ImageListID and return the index of the new icon (1 is the first icon, 2 is the second icon, and so on).
  * @param ImageListID IL_Create The ID of the image list created.
  * @param Filename icon (.ICO), cursor (.CUR) or animated cursor (.ANI) file name (dynamic cursor will not actually move when displayed in ListView), or bitmap or icon handle, such as "HBITMAP :" handle. Other sources of icons include the following types of files: EXE, DLL, CPL, SCR, and other types that contain icon resources.
  * @param IconNumber To use an icon group other than the first one in the file, please specify its number in IconNumber. If IconNumber is a negative number, it is assumed that its absolute value represents the resource ID of the icon in the executable file. In the following example, The default icon in the second icon group will be used: IL_Add(ImageListID, "C:\My Application.exe", 2).
- * @param ResizeNonIcon can also load non-icon images, such as BMP, GIF and JPG. However, the last two parameters should be specified at this time to ensure correct execution: IconNumber should be a masked/transparent color code (for most images 0xFFFFFF[ White) may be the best); and ResizeNonIcon should be a non-zero value to scale the image into a single icon, or zero to divide the image into multiple icons that can match the actual width.
+ * @param ResizeNonIcon can also load non-icon images, such as BMP, GIF and JPG. However, the last two parameters should be specified at this time to ensure correct execution: IconNumber should be a masked/transparent color code (for most images 0xFFFFFF [ White) may be the best); and ResizeNonIcon should be a non-zero value to scale the image into a single icon, or zero to divide the image into multiple icons that can match the actual width.
  * 
  * Supported image types include ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF and WMF.
  */
-IL_Add(ImageListID, Filename[, IconNumber, ResizeNonIcon]) => Number
+IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Number
 
 /**
  * Create a new ImageList, initially empty, and return the unique ID of the ImageList (return 0 on failure).
@@ -1143,7 +1188,7 @@ IL_Destroy(ImageListID) => Number
  * 
  * n (gradient value): Specify n as a number between 0 and 255 (inclusive), which is used to indicate the permissible gradient value of the red/green/blue channel intensity of each pixel in any direction. For example, if specified *2, and the color of the pixel is 0x444444, then any color from 0x424242 to 0x464646 will be regarded as a match. This parameter can be used for slight changes in the color of the image or the format used by ImageFile (such as GIF or JPG) cannot be accurately displayed on the screen The upper represents the image. If you specify 255 as the gradient value, all colors are matched. The default gradient value is 0.
  * 
- * TransN: This option can match any color on the screen by specifying a certain color in the image, making it easier to find a match. It is often used to find PNG, GIF and TIF files with transparent areas (however, this is not required for icons Option, because their transparency is automatically supported). For GIF files, *TransWhite is likely to be useful. For PNG and TIF files, *TransBlack may be the best. Otherwise, specify N as other color names or RGB values ​​(related For details, please refer to the color chart, or use the RGB mode of PixelGetColor). For example: *TransBlack, *TransFFFFAA, *Trans0xFFFFAA.
+ * TransN: This option can match any color on the screen by specifying a certain color in the image, making it easier to find a match. It is often used to find PNG, GIF and TIF files with transparent areas (however, this is not required for icons Option, because their transparency is automatically supported). For GIF files, *TransWhite is likely to be useful. For PNG and TIF files, *TransBlack may be the best. Otherwise, specify N as other color names or RGB values (related For details, please refer to the color chart, or use the RGB mode of PixelGetColor). For example: *TransBlack, *TransFFFFAA, *Trans0xFFFFAA.
  * 
  * wn and *hn: the width and height used to scale the image size (the width and height also determine which icon is loaded from the .ICO file with multiple icons). If both options are omitted, the ICO, DLL Or the icon loaded in the EXE file is adjusted to the system default small icon size, usually 16X16 (by specifying *w0 *h0 you can force the actual/internal size). Other images outside the icon are loaded at their actual size. To scale the image while maintaining the aspect ratio, specify -1 in one of the dimensions and a positive number in the other. For example, specifying *w200 *h-1 will scale the image to a width of 200 pixels and automatically set its height.
  * 
@@ -1154,17 +1199,17 @@ ImageSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ImageFile) => Number
 /**
  * Delete the value in the standard format .ini file.
  */
-IniDelete(Filename, Section[, Key]) => void
+IniDelete(Filename, Section [, Key]) => void
 
 /**
  * Read a list of values, sections or section names from a standard format .ini file.
  */
-IniRead(Filename[, Section, Key, Default]) => String
+IniRead(Filename [, Section, Key, Default]) => String
 
 /**
- * Write values ​​or sections into a standard format .ini file.
+ * Write values or sections into a standard format .ini file.
  */
-IniWrite(Value, Filename, Section[, Key]) => void
+IniWrite(Value, Filename, Section [, Key]) => void
 
 /**
  * Display an input box, asking the user to enter a string.
@@ -1172,7 +1217,7 @@ IniWrite(Value, Filename, Section[, Key]) => void
  * 
  * Xn Yn: The X and Y coordinates of the dialog box. For example, X0 Y0 places the window in the upper left corner of the desktop. If any of the coordinates is omitted, the dialog box will be centered in that dimension. Any coordinate can be a negative number to make The dialog box is partially or completely off the desktop (or on a secondary monitor in a multi-monitor setup).
  * 
- * Wn Hn: The width and height of the client area of ​​the dialog box, excluding the title bar and border. For example, W200 H100.
+ * Wn Hn: The width and height of the client area of the dialog box, excluding the title bar and border. For example, W200 H100.
  * 
  * T: Specify the timeout time in seconds. For example, T10.0 is 10 seconds. If this value exceeds 2147483 (24.8 days), then it will be set to 2147483. After the timeout period is reached, the input box window will be closed automatically at the same time Set Result to the word "Timeout". Value will still contain what the user entered.
  * 
@@ -1192,7 +1237,7 @@ InstallKeybdHook(Install := true, Force := false)
 
 /**
  * Search the specified content to the right or left in a character string.
- * @param CaseSense One of the following values ​​(if omitted, the default is 0):
+ * @param CaseSense One of the following values (if omitted, the default is 0):
  * 
  * "On" or 1(True): Search is case sensitive.
  * 
@@ -1319,6 +1364,11 @@ KeyHistory(MaxEvents)
 KeyWait(KeyName, Options := '') => Number
 
 /**
+ * Enable or disable line logging or display the most recently executed script line.
+ */
+ListLines(Mode)
+
+/**
  * Return to the list of items/rows in the list view.
  * @param Options specify what to retrieve. If it is empty or omitted, all text in the ListView will be retrieved. Otherwise, specify zero or more of the following words, separated by spaces or tabs:
  * 
@@ -1357,7 +1407,7 @@ Ln(Number) => Number
  * If this parameter is omitted, the return value is always a bitmap handle (icon/cursor type will be converted as needed). This is because reliable use or deletion of bitmap/icon/cursor handle requires knowing which type it is.
  * The @returns function returns the bitmap or icon handle according to the specified image or icon.
  */
-LoadPicture(Filename[, Options, &ImageType]) => Number
+LoadPicture(Filename [, Options, &ImageType]) => Number
 
 /**
  * Returns the logarithm of Number (base 10).
@@ -1389,7 +1439,7 @@ MenuFromHandle(Handle) => Menu
  * 
  * Specify 0& to use the system menu of the window.
  */
-MenuSelect(WinTitle, WinText, Menu[, SubMenu1, SubMenu2, SubMenu3, SubMenu4, SubMenu5, SubMenu6, ExcludeTitle, ExcludeText]) => void
+MenuSelect(WinTitle, WinText, Menu [, SubMenu1, SubMenu2, SubMenu3, SubMenu4, SubMenu5, SubMenu6, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Returns the minimum value of one or more numbers.
@@ -1433,10 +1483,10 @@ MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Number
  * Left and Right correspond to the main button and the secondary button. If the user changes the button through the system settings, the physical position of the button is changed, but the effect remains unchanged.
  * 
  * Mouse wheel to rotate: Specify WheelUp or WU to rotate the wheel upward (away from you); Specify WheelDown or WD to rotate the wheel downward (close to you). Specify WheelLeft (or WL) or WheelRight (or WR) Scroll the wheel to the left or right respectively. ClickCount is the number of grids of the wheel to be turned.
- * @param Speed ​​The speed of moving the mouse, between 0 (fastest) and 100 (slowest).
+ * @param Speed The speed of moving the mouse, between 0 (fastest) and 100 (slowest).
  * If omitted, the default speed is used (set by SetDefaultMouseSpeed, otherwise it is 2).
  * 
- * Speed ​​is ignored for SendInput/Play mode; they will move the mouse to the target position instantaneously (but SetMouseDelay has a mode suitable for SendPlay). To display the mouse movement track (for example, when using a script to demonstrate to the audience) - please use SendEvent " {Click 100 200}" or SendMode "Event" (can be used in conjunction with BlockInput).
+ * Speed is ignored for SendInput/Play mode; they will move the mouse to the target position instantaneously (but SetMouseDelay has a mode suitable for SendPlay). To display the mouse movement track (for example, when using a script to demonstrate to the audience) - please use SendEvent " {Click 100 200}" or SendMode "Event" (can be used in conjunction with BlockInput).
  * @param DownOrUp If omitted, each click will consist of a "press" event followed by a "up" event. To change this behavior, please specify one of the following letters:
  * 
  * D: Press the mouse button, but don't release it (i.e. generate a press event).
@@ -1457,7 +1507,7 @@ MouseClick([WhichButton, X, Y, ClickCount, Speed, DownOrUp, Relative]) => void
  * 
  * R: The X1 and Y1 coordinates are regarded as the offset from the current mouse position. In other words, the cursor will be moved X1 pixels to the right from the current position (negative value to the left) and down Y1 pixels (negative value is to the left) Up). Similarly, the X2 and Y2 coordinates will be regarded as the offset from the X1 and Y1 coordinates. For example, in the following example, the mouse will first move 5 pixels down and to the right from the starting position, and then from Drag 10 pixels down and to the right from this position: MouseClickDrag "Left", 5, 5, 10, 10,, "R".
  */
-MouseClickDrag(WhichButton, X1, Y1, X2, Y2[, Speed, Relative]) => void
+MouseClickDrag(WhichButton, X1, Y1, X2, Y2 [, Speed, Relative]) => void
 
 /**
  * Get the current position of the mouse cursor and which window and control it is hovering over.
@@ -1474,7 +1524,7 @@ MouseGetPos([&OutputVarX, &OutputVarY, &OutputVarWin, &OutputVarControl, Flag]) 
 /**
  * Move the mouse cursor.
  */
-MouseMove(X, Y[, Speed, Relative]) => void
+MouseMove(X, Y [, Speed, Relative]) => void
 
 /**
  * Display the specified text in a small window containing one or more buttons (such as'Yes' and'No').
@@ -1531,12 +1581,12 @@ MsgBox([Text, Title, Options]) => String
 /**
  * Returns the binary number stored at the specified address + offset.
  */
-NumGet(Source[, Offset], Type) => Number
+NumGet(Source [, Offset], Type) => Number
 
 /**
  * Store one or more numbers in binary format to the specified address + offset location.
  */
-NumPut(Type1, Number1, * , Target[, Offset]) => Number
+NumPut(Type1, Number1, * , Target [, Offset]) => Number
 
 /**
  * Increase the reference count of the object.
@@ -1654,6 +1704,11 @@ Ord(String) => Number
 OutputDebug(Text) => void
 
 /**
+ * Pause the current thread of the script.
+ */
+Pause([Newstate])
+
+/**
  * Prevent the script from automatically exiting when its last thread finishes, thereby keeping it running in an idle state.
  * @param Persist If true or omitted, even if the other conditions of the exit script are not met, the script will continue to run after all threads exit.
  * If false, the default behavior will be restored.
@@ -1680,7 +1735,7 @@ PixelSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ColorID, Variation := 0) =
 /**
  * Place the message in the message queue of the window or control.
  */
-PostMessage(Msg, wParam := 0, lParam := 0[, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+PostMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Forcibly close the first matching process.
@@ -1710,19 +1765,19 @@ ProcessSetPriority(Level, PIDOrName := '') => Number
 /**
  * Wait for the specified process to exist.
  */
-ProcessWait(PIDOrName[, Timeout]) => Number
+ProcessWait(PIDOrName [, Timeout]) => Number
 
 /**
  * Wait for the matching process to close.
  */
-ProcessWaitClose(PIDOrName[, Timeout]) => Number
+ProcessWaitClose(PIDOrName [, Timeout]) => Number
 
 /**
  * Generate a pseudo-random number.
  * 
  * The minimum and/or maximum quantities to be generated are specified in either order. If only one parameter is specified, the other parameter defaults to 0. If both are omitted, the default is 0.0 to 1.0.
  * 
- * For integers, the minimum and maximum values ​​are included in the set of possible numbers that may be returned. The full range of 64-bit integers is supported.
+ * For integers, the minimum and maximum values are included in the set of possible numbers that may be returned. The full range of 64-bit integers is supported.
  * 
  * For floating point numbers, the maximum value is usually not included.
  */
@@ -1756,7 +1811,7 @@ RegRead([KeyName, ValueName]) => String
 /**
  * Write the value to the registry.
  */
-RegWrite(Value, ValueType, KeyName[, ValueName]) => void
+RegWrite(Value, ValueType, KeyName [, ValueName]) => void
 
 /**
  * Return the number, rounded to N digits after the decimal point
@@ -1778,7 +1833,7 @@ RTrim(String, OmitChars := '`t') => String
  * 
  * Hide: hide operation (cannot be used in combination with any of the above options)
  */
-Run(Target[, WorkingDir, Options, &OutputVarPID]) => void
+Run(Target [, WorkingDir, Options, &OutputVarPID]) => void
 
 /**
  * Specify a set of user credentials to be used in all subsequent Runs and RunWait.
@@ -1788,7 +1843,7 @@ RunAs([User, Password, Domain]) => void
 /**
  * Run the external program and wait for the end of the program to continue execution.
  */
-RunWait(Target[, WorkingDir, Options, &OutputVarPID]) => Number
+RunWait(Target [, WorkingDir, Options, &OutputVarPID]) => Number
 
 /**
  * Send simulated keystrokes and mouse clicks to the active window. By default, Send is equivalent to SendInput.
@@ -1806,9 +1861,19 @@ SendEvent(Keys) => void
 SendInput(Keys) => void
 
 /**
+ * Controls whether hotkeys and hotstrings ignore simulated keyboard and mouse events.
+ */
+SendLevel(Level)
+
+/**
  * Send the message to the window or control, and then wait for confirmation.
  */
-SendMessage(Msg, wParam := 0, lParam := 0[, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout]) => Number
+SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout]) => Number
+
+/**
+ * Make Send equal to SendEvent or SendPlay, instead of the default (SendInput). Also make Click and MouseMove/Click/Drag use specified methods.
+ */
+SendMode(Mode)
 
 /**
  * SendInput and SendPlay use the same syntax as Send, but are generally faster and more reliable. In addition, they buffer any physical keyboard or mouse activity during the sending process, thus preventing the user's keystrokes from being scattered in the sending.
@@ -1826,6 +1891,51 @@ SendRaw(Keys) => void
 SendText(Keys) => void
 
 /**
+ * Set the delay that will occur after each control changes the function.
+ */
+SetControlDelay(Delay)
+
+/**
+ * Set the speed used when the mouse speed is not specified in click and MouseMove/click/Drag.
+ */
+SetDefaultMousespeed(Speed)
+
+/**
+ * Set the delay that will occur after each keystroke sent by send and controlsend.
+ */
+SetKeyDelay([Delay, PressDuration, 'Play'])
+
+/**
+ * Set the delay that occurs after each mouse move or click.
+ */
+SetMouseDelay(Delay [, 'Play'])
+
+/**
+ * Set the state of the caps Lock key. You can also force the key to stay on or off.
+ */
+SetCapsLockState(State)
+
+/**
+ * Set the state of the NumLock key. You can also force the key to remain open or closed.
+ */
+SetNumLockState(State)
+
+/**
+ * Set the state of the scroll lock key. You can also force the key to stay on or off.
+ */
+SetScrollLockState(State)
+
+/**
+ * Whether to restore the capsLock state after send.
+ */
+SetStoreCapsLockMode(State)
+
+/**
+ * Set RegRead, RegWrite, RegDelete, RegDeleteKey and the registry view used by the registry cycle.
+ */
+SetRegView(RegView)
+
+/**
  * Automatically call the function repeatedly at the specified time interval.
  * @param Callback If Callback is omitted, if any, SetTimer will run on the timer that started the current thread. For example, SetTimer, 0 can be used in a timer function to mark the timer to be deleted, while SetTimer, 1000 The Period of the current timer will be updated.
  * The absolute value of @param Period Period cannot be greater than 4294967295 ms (49.7 days).
@@ -1838,6 +1948,26 @@ SendText(Keys) => void
  * @param Priority This optional parameter is an integer (or an expression) between -2147483648 and 2147483647 to indicate the priority of the timer.
  */
 SetTimer([Callback, Period := 250, Priority := 0]) => void
+
+/**
+ * Set the matching behavior of WinTitle parameters in commands such as WinWait.
+ */
+SetTitleMatchMode(MatchModeOrspeed)
+
+/**
+ * Set the delay after each execution of a window function (such as Winactivate).
+ */
+SetWinDelay(Delay)
+
+/**
+ * change the current working directory of the script.
+ */
+SetWorkingDir(DirName)
+
+/**
+ * shut down, restart or log off the system.
+ */
+Shutdown(Code)
 
 /*
  * Returns the sine of Number.
@@ -1898,7 +2028,7 @@ SoundBeep(Frequency := 523, Duration := 150) => void
  * @param Device The display name and/or index of the device. For example, 1, "Speakers", "Speakers:2" or "Speakers (Example HD Audio)".
  * If this parameter is omitted, it will default to the system's default playback device (not necessarily device 1).
  */
-SoundGetInterface(IID[, Component, Device]) => Comobject
+SoundGetInterface(IID [, Component, Device]) => Comobject
 
 /**
  * Retrieve the mute setting from the sound device.
@@ -1937,17 +2067,17 @@ SoundPlay(Filename, Wait := false) => void
 /**
  * Change the mute setting of the sound device.
  */
-SoundSetMute(NewSetting[, Component, Device]) => void
+SoundSetMute(NewSetting [, Component, Device]) => void
 
 /**
  * Change the volume setting of the sound device.
  */
-SoundSetVolume(NewSetting[, Component, Device]) => void
+SoundSetVolume(NewSetting [, Component, Device]) => void
 
 /**
  * Break the file name (path) or URL into its name, directory, extension and drive.
  */
-SplitPath(Path[, &OutFileName, &OutDir, &OutExtension, &OutNameNoExt, &OutDrive]) => void
+SplitPath(Path [, &OutFileName, &OutDir, &OutExtension, &OutNameNoExt, &OutDrive]) => void
 
 /**
  * Returns the square root of Number.
@@ -1957,7 +2087,7 @@ Sqrt(Number) => Number
 /**
  * Get the text of the standard status bar control.
  */
-StatusBarGetText(Part := 1[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
+StatusBarGetText(Part := 1 [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 
 /**
  * Wait until the status bar of the window contains the specified string.
@@ -1966,7 +2096,7 @@ StatusBarWait([BarText, Timeout, Part, WinTitle, WinText, Interval, ExcludeTitle
 
 /**
  * Compare two strings in alphabetical order.
- * @param CaseSense One of the following values ​​(if omitted, the default is 0):
+ * @param CaseSense One of the following values (if omitted, the default is 0):
  * 
  * "On" or 1(True): The comparison is case sensitive.
  * 
@@ -2015,11 +2145,11 @@ StrPtr(Value) => Number
  * @param Encoding "UTF-8", "UTF-16" or "CP936". For numeric identifiers, the prefix "CP" can be omitted only when Length is specified. Specify an empty string or "CP0" to use the system The default ANSI code.
  * @returns returns the number of bytes written. If Target is not specified, it returns the necessary buffer size in bytes. If Length is exactly equal to the length of the source string, then the string does not contain the null terminator; otherwise it returns The size includes the null terminator.
  */
-StrPut(String, Target[, Length], Encoding := '') => Number
+StrPut(String, Target [, Length], Encoding := '') => Number
 
 /**
  * Replace the specified substring with a new string.
- * @param CaseSense One of the following values ​​​​(if omitted, the default is 0):
+ * @param CaseSense One of the following values (if omitted, the default is 0):
  * 
  * "On" or 1 (True): Search is case sensitive.
  * 
@@ -2052,7 +2182,12 @@ StrUpper(String) => String
  * Specify a negative StartingPos to start from the right position. For example, -1 extracts the last character, and -2 extracts the last two characters (however, if StartingPos tries to exceed the left end of the string, the extraction will start from the first character Start).
  * @param Length If this parameter is omitted, the default is "all characters". In other cases, it is the maximum number of characters to be extracted (when the remaining part of the string is too short, the number of extracted characters will be less than the maximum). You can still Specify a negative Length to omit this number of characters at the end of the returned string (if all or too many characters are omitted, an empty string is returned).
  */
-SubStr(String, StartingPos[, Length]) => String
+SubStr(String, StartingPos [, Length]) => String
+
+/**
+ * Disable or enable all or selected hotkeys and hotstrings.
+ */
+Suspend(Mode)
 
 /**
  * Convert string to title case.
@@ -2073,6 +2208,11 @@ SysGetIPAddresses() => Array
  * Returns the tangent of Number.
  */
 Tan(Number) => Number
+
+/**
+ * Set the thread priority or whether it can be interrupted. It can also temporarily disable all timers.\n\nThread'NoTimers', TrueOrFalse\n\nThread'Priority', Level\n\nThread'Interrupt' [, Duration, Linecount ]
+ */
+Thread(SubFunction [, Value1, Value2])
 
 /**
  * Create a top window anywhere on the screen.
@@ -2120,7 +2260,7 @@ Type(Value) => String
 /**
  * Increase the capacity of the variable or release its memory. Generally not needed, but it can be used with DllCall or SendMessage, or to optimize repeated connections.
  */
-VarSetStrCapacity(&TargetVar[, RequestedCapacity]) => Number
+VarSetStrCapacity(&TargetVar [, RequestedCapacity]) => Number
 
 /**
  * Compare two version strings.
@@ -2270,7 +2410,7 @@ WinMinimize([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * Change the position and/or size of the specified window.
  */
-WinMove(X, Y[, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinMove(X, Y [, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Send the specified window to the bottom of the stack; that is, below all other windows.
@@ -2300,12 +2440,12 @@ WinSetAlwaysOnTop([Value, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * Enable or disable the specified window.
  */
-WinSetEnabled(Value[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetEnabled(Value [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Change the style and extended style of the specified window respectively.
  */
-WinSetExStyle(Value[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetExStyle(Value [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Change the shape of the specified window to the specified rectangle, ellipse or polygon.
@@ -2315,17 +2455,17 @@ WinSetRegion([Options, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * Change the style and extended style of the specified window respectively.
  */
-WinSetStyle(Value[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetStyle(Value [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Change the title of the specified window.
  */
-WinSetTitle(NewTitle[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetTitle(NewTitle [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Make all pixels of the selected color invisible in the specified window.
  */
-WinSetTransColor(Color[, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinSetTransColor(Color [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Make the specified window semi-transparent.
@@ -2408,7 +2548,7 @@ class Array extends Object {
 	Has(Index) => Number
 
 	/**
-	 * Insert one or more values ​​to the given position.
+	 * Insert one or more values to the given position.
 	 */
 	InsertAt(Index, Values*) => void
 
@@ -2449,7 +2589,7 @@ class Buffer extends Object {
 	 * In the case of direct writing without first reading the buffer, it should usually be omitted, because its time overhead is proportional to the number of bytes.
 	 * If omitted, the buffered memory is not initialized; the value of each byte is arbitrary.
 	 */
-	__New(ByteCount[, FillByte]) => Buffer
+	__New(ByteCount [, FillByte]) => Buffer
 
 	/**
 	 * Retrieve the current memory address of the buffer.
@@ -2513,10 +2653,10 @@ class ComValue extends Any {
 	/**
 	 * Wrap a value, safe array or COM object for use by scripts or pass to COM methods.
 	 * @param VarType represents an integer of value type. See ComObjType for the list of types.
-	 * @param Value The value to be wrapped. Currently only integer and pointer values ​​are supported.
+	 * @param Value The value to be wrapped. Currently only integer and pointer values are supported.
 	 * @param Flags Flags that affect the behavior of the wrapper object; for details, see ComObjFlags.
 	 */
-	static Call(VarType, Value[, Flags]) => Comobject
+	static Call(VarType, Value [, Flags]) => Comobject
 }
 
 class ComValueRef extends ComValue {
@@ -2554,7 +2694,7 @@ class Error extends Object {
 	/**
 	 * Create an Error object.
 	 */
-	__New(Message[, What, Extra]) => Error
+	__New(Message [, What, Extra]) => Error
 }
 
 class File extends Object {
@@ -2827,7 +2967,7 @@ class Gui extends Object {
 	 *         VScroll HScroll -Tabstop -Wrap
 	 *         BackgroundColor Border Theme Disabled Hidden
 	 */
-	Add(ControlType[, Options, Text])
+	Add(ControlType [, Options, Text])
 
 	/**
 	 * Create a text control that the user cannot edit. Often used to label other controls.
@@ -3005,7 +3145,7 @@ class Gui extends Object {
 	Flash(false) => void
 
 	/**
-	 * Retrieve the position and size of the working area of ​​the window.
+	 * Retrieve the position and size of the working area of the window.
 	 */
 	GetClientPos([X, Y, Width, Height]) => void
 
@@ -3081,7 +3221,7 @@ class Gui extends Object {
 	Show([Options]) => void
 
 	/**
-	 * Collect values ​​from named controls and combine them into an object, optionally hiding the window.
+	 * Collect values from named controls and combine them into an object, optionally hiding the window.
 	 */
 	Submit(false) => void
 
@@ -3264,22 +3404,22 @@ class Gui extends Object {
 		/**
 		 * Retrieve the text of the specified row number and column number.
 		 */
-		GetText(RowNumber[, ColumnNumber]) => String
+		GetText(RowNumber [, ColumnNumber]) => String
 
 		/**
 		 * Insert a new line at the specified line number, and return the new line number.
 		 */
-		Insert(RowNumber[, Options, Cols*]) => Number
+		Insert(RowNumber [, Options, Cols*]) => Number
 
 		/**
 		 * Insert a new column at the specified column number, and return the position number of the new column.
 		 */
-		InsertCol(ColumnNumber[, Options, ColumnTitle]) => Number
+		InsertCol(ColumnNumber [, Options, ColumnTitle]) => Number
 
 		/**
 		 * Modify the attributes/text of the row and return 1 on success and 0 on failure.
 		 */
-		Modify(RowNumber[, Options, NewCols*]) => Number
+		Modify(RowNumber [, Options, NewCols*]) => Number
 
 		/**
 		 * Modify the attribute/text of the specified column and its title, and return 1 on success and 0 on failure.
@@ -3289,7 +3429,7 @@ class Gui extends Object {
 		/**
 		 * Set or replace ImageList, and return the ImageListID previously associated with this control (if not, return 0).
 		 */
-		SetImageList(ImageListID[, IconType]) => Number
+		SetImageList(ImageListID [, IconType]) => Number
 	}
 
 	class MonthCal extends Gui.Control {
@@ -3340,7 +3480,7 @@ class Gui extends Object {
 		/**
 		 * Add a new item to the TreeView, and return its unique item ID number.
 		 */
-		Add(Name[, ParentItemID, Options]) => Number
+		Add(Name [, ParentItemID, Options]) => Number
 
 		/**
 		 * Delete the specified item, return 1 if successful, and return 0 if failed.
@@ -3392,12 +3532,12 @@ class Gui extends Object {
 		/**
 		 * Modify the project's attributes/name, and return the project's own ID.
 		 */
-		Modify(ItemID[, Options, NewName]) => Number
+		Modify(ItemID [, Options, NewName]) => Number
 
 		/**
 		 * Set or replace ImageList, and return the ImageListID previously associated with this control (if not, return 0).
 		 */
-		SetImageList(ImageListID[, IconType]) => Number
+		SetImageList(ImageListID [, IconType]) => Number
 	}
 
 	class UpDown extends Gui.Control {
@@ -3589,7 +3729,7 @@ class KeyError extends IndexError {
 
 class Map extends Object {
 	/**
-	 * The Map object associates or maps a set of values ​​called keys to another set of values.
+	 * The Map object associates or maps a set of values called keys to another set of values.
 	 */
 	__New([Key1, Value1, * ]) => Map
 
@@ -3611,7 +3751,7 @@ class Map extends Object {
 	/**
 	 * Returns the value or default value associated with the key.
 	 */
-	Get(Key[, Default]) => Any
+	Get(Key [, Default]) => Any
 
 	/**
 	 * If Key has an associated value in the map, it returns true, otherwise it returns false.
@@ -3704,7 +3844,7 @@ class Menu extends Object {
 	/**
 	 * Rename the menu item (if NewName is empty or omitted, the MenuItemName will be converted to a divider).
 	 */
-	Rename(MenuItemName[, NewName]) => void
+	Rename(MenuItemName [, NewName]) => void
 
 	/**
 	 * Change the background color of the menu.
@@ -3714,7 +3854,7 @@ class Menu extends Object {
 	/**
 	 * Set the icon to be displayed next to the menu item.
 	 */
-	SetIcon(MenuItemName, FileName[, IconNumber, IconWidth]) => void
+	SetIcon(MenuItemName, FileName [, IconNumber, IconWidth]) => void
 
 	/**
 	 * Display the menu.

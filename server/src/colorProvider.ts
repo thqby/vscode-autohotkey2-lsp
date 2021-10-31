@@ -1,5 +1,5 @@
 import { ColorInformation, ColorPresentation, ColorPresentationParams, DocumentColorParams, TextEdit } from 'vscode-languageserver';
-import { Maybe, lexers } from './global';
+import { Maybe, lexers } from './common';
 
 export async function colorPresentation(params: ColorPresentationParams): Promise<Maybe<ColorPresentation[]>> {
 	let label = 'RGB: ', textEdit: TextEdit = { range: params.range, newText: '' }, color = params.color, m: any;

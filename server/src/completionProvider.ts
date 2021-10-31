@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, dllcalltpe, extsettings, inBrowser, lexers, libfuncs, Maybe, pathenv, workfolder } from './global';
+import { ahkvars, completionItemCache, dllcalltpe, extsettings, inBrowser, lexers, libfuncs, Maybe, pathenv, workfolder } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
@@ -274,10 +274,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							if (res.index === 0 && lt.charAt(res.pos.character - 1) === '.') {
 								let c = doc.buildContext(res.pos, true), n = searchNode(doc, c.text, res.pos, SymbolKind.Method);
 								if (n && (<FuncNode>n[0].node).full?.match(/\(gui\)\s+add\(/i)) {
-									return ['Text', 'Edit', 'UpDown', 'Picture', 'Button', 'Checkbox', 'Radio', 'DropDownList', 'ComboBox', 'ListBox', 'ListView', 'TreeView', 'Link', 'Hotkey', 'DateTime', 'MonthCal', 'Slider', 'Progress', 'GroupBox', 'Tab', 'Tab2', 'Tab3', 'StatusBar', 'ActiveX', 'Custom'].map(name => {
-										cpitem = CompletionItem.create(name), cpitem.kind = CompletionItemKind.Text, cpitem.command = { title: 'cursorRight', command: 'cursorRight' };
-										return cpitem;
-									});
+									return ['Text', 'Edit', 'UpDown', 'Picture', 'Button', 'Checkbox', 'Radio', 'DropDownList',
+										'ComboBox', 'ListBox', 'ListView', 'TreeView', 'Link', 'Hotkey', 'DateTime', 'MonthCal',
+										'Slider', 'Progress', 'GroupBox', 'Tab', 'Tab2', 'Tab3', 'StatusBar', 'ActiveX', 'Custom'].map(maptextitem);
 								}
 							}
 							break;
@@ -348,12 +347,36 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							}
 							break;
 						case 'processsetpriority':
-							if (res.index === 0) {
-								return ['Low', 'BelowNormal', 'Normal', 'AboveNormal', 'High', 'Realtime'].map(name => {
-									cpitem = CompletionItem.create(name), cpitem.kind = CompletionItemKind.Text, cpitem.command = { title: 'cursorRight', command: 'cursorRight' };
-									return cpitem;
-								});
-							}
+							if (res.index === 0)
+								return ['Low', 'BelowNormal', 'Normal', 'AboveNormal', 'High', 'Realtime'].map(maptextitem);
+							break;
+						case 'thread':
+							if (res.index === 0)
+								return ['NoTimers', 'Priority', 'Interrupt'].map(maptextitem);
+							break;
+						case 'settitlematchmode':
+							if (res.index === 0)
+								return ['Fast', 'Slow', 'RegEx'].map(maptextitem);
+							break;
+						case 'setnumlockstate':
+						case 'setcapslockstate':
+						case 'setscrolllockstate':
+							if (res.index === 0)
+								return ['On', 'Off', 'AlwaysOn', 'AlwaysOff'].map(maptextitem);
+							break;
+						case 'sendmode':
+							if (res.index === 0)
+								return ['Event', 'Input', 'InputThenPlay', 'Play'].map(maptextitem);
+							break;
+						case 'blockinput':
+							if (res.index === 0)
+								return ['On', 'Off', 'Send', 'Mouse', 'SendAndMouse', 'Default', 'MouseMove', 'MouseMoveOff'].map(maptextitem);
+							break;
+						case 'coordmode':
+							if (res.index === 0)
+								return ['ToolTip', 'Pixel', 'Mouse', 'Caret', 'Menu'].map(maptextitem);
+							else if (res.index === 1)
+								return ['Screen', 'Window', 'Client'].map(maptextitem);
 							break;
 					}
 				}
@@ -467,6 +490,11 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	function ateditpos(it: DocumentSymbol) {
 		return it.range.end.line === line && it.range.start.character <= character && character <= it.range.end.character;
 	}
+	function maptextitem(name: string) {
+		const cpitem = CompletionItem.create(name);
+		cpitem.kind = CompletionItemKind.Text, cpitem.command = { title: 'cursorRight', command: 'cursorRight' };
+		return cpitem
+	}
 }
 
 function convertNodeCompletion(info: any): CompletionItem {
@@ -475,13 +503,16 @@ function convertNodeCompletion(info: any): CompletionItem {
 		case SymbolKind.Function:
 		case SymbolKind.Method:
 			ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
-			if ((<FuncNode>info).params.length) {
-				ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
-				if ((<FuncNode>info).params[0].name.includes('|')) {
-					ci.insertText = ci.label + '(${1|' + (<FuncNode>info).params[0].name.replace(/\|/g, ',') + '|})';
-					ci.insertTextFormat = InsertTextFormat.Snippet;
-				} else ci.insertText = ci.label + '($0)', ci.insertTextFormat = InsertTextFormat.Snippet;
-			} else ci.insertText = ci.label + '()';
+			if (extsettings.completeFunctionParens) {
+				if ((<FuncNode>info).params.length) {
+					ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
+					if ((<FuncNode>info).params[0].name.includes('|')) {
+						ci.insertText = ci.label + '(${1|' + (<FuncNode>info).params[0].name.replace(/\|/g, ',') + '|})';
+						ci.insertTextFormat = InsertTextFormat.Snippet;
+					} else ci.insertText = ci.label + '($0)', ci.insertTextFormat = InsertTextFormat.Snippet;
+				} else ci.insertText = ci.label + '()';
+			} else
+				ci.commitCharacters = ['\t', '('];
 			ci.detail = info.full, ci.documentation = info.detail; break;
 		case SymbolKind.Variable:
 		case SymbolKind.TypeParameter:

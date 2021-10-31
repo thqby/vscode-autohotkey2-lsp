@@ -1,7 +1,7 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver';
 import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable } from './Lexer';
 import { diagnostic } from './localize';
-import { ahkvars, lexers, sendDiagnostics, symbolcache } from './global';
+import { ahkvars, lexers, sendDiagnostics, symbolcache } from './common';
 
 export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
 

@@ -2,36 +2,23 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import {
-	AHKLSSettings, clearLibfuns, extsettings, getallahkfiles, initahk2cache, isahk2_h, lexers, libdirs,
-	libfuncs, loadahk2, openFile, pathenv, sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale,
-	set_Settings, set_Workfolder, sleep, updateFileInfo, workfolder
-} from './global';
 import { existsSync } from 'fs';
+import { URI } from 'vscode-uri';
 import { basename, resolve } from 'path';
+import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, Connection, DidChangeConfigurationNotification, ExecuteCommandParams, FoldingRange, FoldingRangeParams, InitializeParams,
 	InitializeResult, ProposedFeatures, Range, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit
 } from 'vscode-languageserver/node';
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { URI } from 'vscode-uri';
-import { codeActionProvider } from './codeActionProvider';
-import { colorPresentation, colorProvider } from './colorProvider';
-import { completionProvider } from './completionProvider';
-import { defintionProvider } from './definitionProvider';
-import { fixinclude, generateAuthor, generateComment } from './commandProvider';
-import { documentFormatting, rangeFormatting, typeFormatting } from './formattingProvider';
-import { hoverProvider } from './hoverProvider';
-import { getincludetable, Lexer, parseinclude } from './Lexer';
-import { loadlocalize, setting } from './localize';
-import { referenceProvider } from './referencesProvider';
-import { prepareRename, renameProvider } from './renameProvider';
-import { runscript } from './scriptrunner';
-import { signatureProvider } from './signatureProvider';
-import { symbolProvider } from './symbolProvider';
-import { semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange } from './semanticTokensProvider';
+import {
+	AHKLSSettings, clearLibfuns, codeActionProvider, colorPresentation, colorProvider, completionProvider, defintionProvider,
+	documentFormatting, extsettings, fixinclude, generateAuthor, generateComment, getallahkfiles, getincludetable, hoverProvider,
+	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
+	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
+	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Settings, set_Workfolder, setting, signatureProvider, sleep,
+	symbolProvider, typeFormatting, updateFileInfo, workfolder, ahkpath_cur, set_ahkpath
+} from './common';
 
-export let ahkpath_cur = '';
 const languageServer = 'ahk2-language-server';
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false, connection: Connection;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
@@ -431,7 +418,7 @@ async function setInterpreter(path: string) {
 	let old = ahkpath_cur || extsettings.InterpreterPath;
 	if (path.toLowerCase() === old.toLowerCase())
 		return;
-	ahkpath_cur = path;
+	set_ahkpath(path);
 	changeInterpreter(old, path || extsettings.InterpreterPath);
 }
 

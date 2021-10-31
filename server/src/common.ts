@@ -1,22 +1,37 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Command, CompletionItem, CompletionItemKind, DocumentSymbol, Hover, InsertTextFormat, MarkupKind, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver-types';
 import { URI } from 'vscode-uri';
-// import * as http from 'http';
 import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { FuncNode, Lexer } from './Lexer';
 import { completionitem } from './localize';
+export * from './Lexer';
+export * from './codeActionProvider';
+export * from './colorProvider';
+export * from './commandProvider';
+export * from './completionProvider';
+export * from './definitionProvider';
+export * from './formattingProvider';
+export * from './hoverProvider';
+export * from './localize';
+export * from './referencesProvider';
+export * from './renameProvider';
+export * from './scriptrunner';
+export * from './semanticTokensProvider';
+export * from './signatureProvider';
+export * from './symbolProvider';
 
-export let connection: any;
-export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
+export let connection: any, ahkpath_cur = '', workfolder = '', dirname = '', isahk2_h = false, inBrowser = false;
+export let ahkvars: { [key: string]: DocumentSymbol } = {};
+export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
-export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
-export let libfuncs: { [uri: string]: DocumentSymbol[] } = {}, workfolder = '', dirname = '', isahk2_h = false;
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], libdirs: string[] = [];
-export let ahkvars: { [key: string]: DocumentSymbol } = {}, inBrowser = false;
+export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
+export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
 export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
-	AutoLibInclude: false
+	AutoLibInclude: false,
+	completeFunctionParens: false
 };
 
 export let locale = 'en-us';
@@ -25,6 +40,7 @@ export type Maybe<T> = T | undefined;
 export interface AHKLSSettings {
 	InterpreterPath: string
 	AutoLibInclude: boolean
+	completeFunctionParens: boolean
 }
 
 export function set_Connection(conn: any, browser: boolean) {
@@ -223,7 +239,7 @@ export async function loadahk2(filename = 'ahk2') {
 		if (!n) {
 			let it = FuncNode.create(snip.prefix, SymbolKind.Function, rg, rg,
 				snip.body.replace(/^\w+[(\s]?|\)/g, '').split(',').map(param => {
-					return DocumentSymbol.create(param.replace(/[\[\]\s]/, ''), undefined, SymbolKind.Variable, rg, rg);
+					return DocumentSymbol.create(param.replace(/[\[\]\s]/g, ''), undefined, SymbolKind.Variable, rg, rg);
 				}));
 			it.full = it.full.replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, (...m) => {
 				snip.body = snip.body.replace(m[0], m[1] + '|...');
@@ -272,6 +288,7 @@ export function getallahkfiles(dirpath: string, maxdeep = 3): string[] {
 
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
+export function set_ahkpath(path: string) { ahkpath_cur = path; }
 export function set_dirname(dir: string) { dirname = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str; }
 export function set_Workfolder(str: string) { workfolder = str; }

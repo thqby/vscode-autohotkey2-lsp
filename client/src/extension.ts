@@ -274,6 +274,7 @@ async function quickHelp() {
 		let ahkpro = child_process.exec(`\"${executePath}\" /ErrorStdOut *`, { cwd: `${resolve(editor.document.fileName, '..')}` });
 		ahkpro.stdin?.write(`
 		DllCall("LoadLibrary", "Str", "oleacc", "Ptr")
+		DetectHiddenWindows(true)
 		if !(WinGetExStyle(top := WinExist("A")) && 8)
 			top := 0
 		if !WinExist("AutoHotkey ahk_class HH Parent ahk_pid ${ahkhelp.pid}")

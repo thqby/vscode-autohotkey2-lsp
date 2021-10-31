@@ -2,6 +2,7 @@
 	"ahk2.autolibinclude": "Provide completion and automatic include from User and Standard library",
 	"ahk2.compile": "Compile Script",
 	"ahk2.compilercmd": "Compiler command line options",
+	"ahk2.completefunctionparens": "Add parentheses to function completions",
 	"ahk2.debug": "Debug Script",
 	"ahk2.debug.params": "Debug Script with Params",
 	"ahk2.defaultdebugger": "Set the default debugger when there are multiple debuggers",

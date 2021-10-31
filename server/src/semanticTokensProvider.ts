@@ -1,6 +1,6 @@
 import { DocumentSymbol, SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaParams, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, getClassMembers, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes } from './Lexer';
-import { lexers } from './global';
+import { lexers } from './common';
 import { globalsymbolcache, symbolProvider } from './symbolProvider';
 
 let curclass: ClassNode | undefined;

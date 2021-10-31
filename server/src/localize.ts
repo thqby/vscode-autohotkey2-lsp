@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { dirname, getlocalefile, getwebfile, inBrowser } from './global';
+import { dirname, getlocalefile, getwebfile, inBrowser } from './common';
 
 let loadedCollection: { [key: string]: string } = {};
 

@@ -1,7 +1,7 @@
 import { basename, extname, relative, resolve } from 'path';
 import { Position, Range, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { cleardetectcache, detectExp, FuncNode } from './Lexer';
-import { connection, lexers, pathenv, restorePath } from './global';
+import { connection, lexers, pathenv, restorePath } from './common';
 
 export var noparammoveright: boolean = false;
 

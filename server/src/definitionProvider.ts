@@ -1,6 +1,6 @@
 import { DefinitionParams, Definition, LocationLink, DocumentSymbol, Location, SymbolKind, Range } from 'vscode-languageserver';
 import { cleardetectcache, detectExpType, searchNode } from './Lexer';
-import { inBrowser, lexers, restorePath } from './global';
+import { inBrowser, lexers, restorePath } from './common';
 import { URI } from 'vscode-uri';
 
 export async function defintionProvider(params: DefinitionParams): Promise<Definition | LocationLink[] | undefined> {

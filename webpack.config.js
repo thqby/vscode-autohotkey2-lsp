@@ -55,7 +55,7 @@ const nodeServerConfig = /** @type WebpackConfig */ {
 	mode: 'none',
 	target: 'node',
 	entry: {
-		server: './src/server.ts',
+		server: './src/server.ts'
 	},
 	output: {
 		filename: '[name].js',

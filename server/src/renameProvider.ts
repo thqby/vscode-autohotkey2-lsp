@@ -1,6 +1,6 @@
 import { PrepareRenameParams, Range, RenameParams, WorkspaceEdit } from 'vscode-languageserver';
 import { getAllReferences } from './referencesProvider';
-import { Maybe, lexers } from './global';
+import { Maybe, lexers } from './common';
 
 let renameranges: { [uri: string]: Range[] } | undefined;
 

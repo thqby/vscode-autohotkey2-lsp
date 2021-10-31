@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, searchNode } from './Lexer';
-import { lexers, hoverCache, Maybe, ahkvars } from './global';
+import { lexers, hoverCache, Maybe, ahkvars } from './common';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return undefined;

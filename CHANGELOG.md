@@ -1,3 +1,6 @@
+## 1.1.2
+- 修复Node版服务器启动失败
+
 ## 1.1.0
 - 修复[#49](https://github.com/thqby/vscode-autohotkey2-lsp/issues/49)
 - 修复[#50](https://github.com/thqby/vscode-autohotkey2-lsp/issues/50)

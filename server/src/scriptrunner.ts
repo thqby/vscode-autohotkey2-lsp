@@ -1,7 +1,6 @@
 import { spawnSync } from 'child_process';
-import { extsettings } from './global';
+import { ahkpath_cur, extsettings } from './common';
 import { existsSync } from 'fs';
-import { ahkpath_cur } from './server';
 
 export function runscript(script: string, out?: Function): boolean {
 	let executePath = ahkpath_cur || extsettings.InterpreterPath;

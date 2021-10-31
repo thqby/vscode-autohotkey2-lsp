@@ -2,10 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import {
-	AHKLSSettings, extsettings, initahk2cache, lexers, libfuncs, loadahk2, sendDiagnostics,
-	set_ahk_h, set_Connection, set_dirname, set_locale, set_Workfolder, updateFileInfo
-} from './global';
 import { URI } from 'vscode-uri';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
@@ -13,19 +9,13 @@ import {
 	FoldingRange, FoldingRangeParams, InitializeParams, InitializeResult, ExecuteCommandParams,
 	Range, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit
 } from 'vscode-languageserver/browser';
-import { colorPresentation, colorProvider } from './colorProvider';
-import { completionProvider } from './completionProvider';
-import { defintionProvider } from './definitionProvider';
-import { documentFormatting, rangeFormatting, typeFormatting } from './formattingProvider';
-import { hoverProvider } from './hoverProvider';
-import { getincludetable, Lexer, parseinclude } from './Lexer';
-import { loadlocalize } from './localize';
-import { referenceProvider } from './referencesProvider';
-import { prepareRename, renameProvider } from './renameProvider';
-import { signatureProvider } from './signatureProvider';
-import { symbolProvider } from './symbolProvider';
-import { semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange } from './semanticTokensProvider';
-import { generateAuthor, generateComment } from './commandProvider';
+import {
+	AHKLSSettings, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
+	extsettings, generateAuthor, generateComment, getincludetable, hoverProvider, initahk2cache, Lexer, lexers,
+	libfuncs, loadahk2, loadlocalize, parseinclude, prepareRename, rangeFormatting, referenceProvider, renameProvider,
+	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, sendDiagnostics, set_ahk_h, set_Connection,
+	set_dirname, set_locale, set_Workfolder, signatureProvider,	symbolProvider, typeFormatting, updateFileInfo
+} from './common';
 
 export const languageServer = 'ahk2-language-server';
 const messageReader = new BrowserMessageReader(self);

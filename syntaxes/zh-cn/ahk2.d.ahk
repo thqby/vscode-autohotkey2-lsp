@@ -20,6 +20,11 @@ ASin(Number) => Number
 ATan(Number) => Number
 
 /**
+ * 禁用或启用用户通过键盘和鼠标与计算机交互的能力.
+ */
+BlockInput(Option)
+
+/**
  * 创建机器码地址, 当它被调用时会重定向到脚本中的函数.
  * @param Function 函数对象. 每当调用 Address 时会自动调用此函数对象. 此函数同时会接收到传递给 Address 的参数.
  * 闭包或绑定函数可以用来区分多个回调函数调用相同的脚本函数.
@@ -83,7 +88,7 @@ ClipWait([Timeout, WaitForAnyData]) => Number
  * @param ComObject 目标 COM 对象; 也就是说, 一个 COM 接口指针.
  * 指针值可以直接传递, 也可以封装在带有 Ptr 属性的对象中, 如带有 VT_UNKNOWN 变量类型的 ComObj.
  */
-ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Number | String
+ComCall(Index, ComObject [, Type1, Arg1, * , ReturnType]) => Number | String
 
 /**
  * 检索已使用 OLE(对象连接与嵌入) 注册的运行中的对象.
@@ -353,6 +358,11 @@ ControlShow(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 ControlShowDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
+ * 为多个内置函数设置坐标模式, 相对于活动窗口还是屏幕.
+ */
+CoordMode(TargetType, RelativeTo := 'Screen')
+
+/**
  * 返回 Number 的余弦值.
  */
 Cos(Number) => Number
@@ -376,6 +386,16 @@ DateAdd(DateTime, Time, TimeUnits) => String
  * @param TimeUnits Time 参数的单位. TimeUnits 可以是下列字符串之一(也可以是其第一个字母): Seconds(秒), Minutes(分), Hours(小时) 或 Days(天).
  */
 DateDiff(DateTime1, DateTime2, TimeUnits) => Number
+
+/**
+ * 设置在查找窗口时是否 '看见' 隐藏的文本. 这将影响 WinExist 和 WinActivate 等内置函数.
+ */
+DetectHiddenText(Mode)
+
+/**
+ * 设置脚本是否可以'看见'隐藏的窗口.
+ */
+DetectHiddenWindows(Mode)
 
 /**
  * 复制文件夹, 及其所有子文件夹和文件(类似于 xcopy).
@@ -465,7 +485,7 @@ DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
 /**
  * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number | String
+DllCall(DllFile_Function [, Type1, Arg1, * , 'Cdecl ReturnType']) => Number | String
 
 /**
  * 从互联网下载文件.
@@ -1078,9 +1098,29 @@ HasMethod(Value, Name) => Number
 HasProp(Value, Name) => Number
 
 /**
- * 在脚本运行时创建, 修改, 启用或禁用热字串.
+ * 指定后续创建或修改热键变体的条件.
  */
-Hotstring(StringorOptions [, Replacement, OnOffToggle]) => void
+HotIf(FuncOrExpr)
+
+/**
+ * 指定随后创建或修改的热键变体的条件.
+ */
+HotIfWinActive([WinTitle, WinText])
+
+/**
+ * 指定随后创建或修改的热键变体的条件.
+ */
+HotIfWinExist([WinTitle, WinText])
+
+/**
+ * 指定随后创建或修改的热键变体的条件.
+ */
+HotIfWinNotActive([WinTitle, WinText])
+
+/**
+ * 指定随后创建或修改的热键变体的条件.
+ */
+HotIfWinNotExist([WinTitle, WinText])
 
 /**
  * 在脚本运行时创建,修改,启用或禁用热键.
@@ -1108,6 +1148,11 @@ Hotstring(StringorOptions [, Replacement, OnOffToggle]) => void
  * In(InputLevel): 指定字母 I(或 i) 后跟随热键的输入级别. 例如: I1.
  */
 Hotkey(KeyName [, Callback, Options]) => void
+
+/**
+ * 在脚本运行时创建, 修改, 启用或禁用热字串.
+ */
+Hotstring(StringorOptions [, Replacement, OnOffToggle]) => void
 
 /**
  * 将图标或图片添加到指定的ImageListID并返回新图标的索引（1是第一个图标,2是第二个图标,依此类推）.
@@ -1317,6 +1362,11 @@ KeyHistory(MaxEvents)
  * 此超时时间值可以为浮点数(例如 2.5), 但不能为十六进制值(例如 0x03).
  */
 KeyWait(KeyName, Options := '') => Number
+
+/**
+ * 启用或禁用行日志记录或显示最近执行的脚本行.
+ */
+ListLines(Mode)
 
 /**
  * 返回列表视图中的项目/行列表.
@@ -1536,7 +1586,7 @@ NumGet(Source [, Offset], Type) => Number
 /**
  * 将一个或多个数字以二进制格式存储到指定地址+偏移的位置.
  */
-NumPut(Type1, Number1, *, Target [, Offset]) => Number
+NumPut(Type1, Number1, * , Target [, Offset]) => Number
 
 /**
  * 增加对象的引用计数.
@@ -1652,6 +1702,11 @@ Ord(String) => Number
  * 发送字符串到调试器(如果有) 显示出来.
  */
 OutputDebug(Text) => void
+
+/**
+ * 暂停脚本的当前线程.
+ */
+Pause([NewState])
 
 /**
  * 阻止脚本在其最后一个线程完成时自动退出, 从而使其保持在空闲状态下运行.
@@ -1806,9 +1861,19 @@ SendEvent(Keys) => void
 SendInput(Keys) => void
 
 /**
+ * 控制热键和热字串是否忽略模拟的键盘和鼠标事件.
+ */
+SendLevel(Level)
+
+/**
  * 将消息发送到窗口或控件,然后等待确认.
  */
 SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout]) => Number
+
+/**
+ * 使 Send 等同于 SendEvent 或 SendPlay, 而不是默认的(SendInput). 也使 Click 和 MouseMove/Click/Drag 使用指定的方法.
+ */
+SendMode(Mode)
 
 /**
  * SendInput和SendPlay使用与Send相同的语法,但通常更快,更可靠.此外,它们在发送过程中缓冲了任何物理键盘或鼠标活动,从而防止了用户的击键被散布在发送中.
@@ -1826,6 +1891,51 @@ SendRaw(Keys) => void
 SendText(Keys) => void
 
 /**
+ * 设置每个控件改动函数后将发生的延迟.
+ */
+SetControlDelay(Delay)
+
+/**
+ * 设置在 Click 和 MouseMove/Click/Drag 中没有指定鼠标速度时使用的速度.
+ */
+SetDefaultMouseSpeed(Speed)
+
+/**
+ * 设置由Send和ControlSend发送的每次击键之后将发生的延迟.
+ */
+SetKeyDelay([Delay, PressDuration, 'Play'])
+
+/**
+ * 设置每次鼠标移动或单击后发生的延迟.
+ */
+SetMouseDelay(Delay [, 'Play'])
+
+/**
+ * 设置Caps Lock键的状态.还可以强制按键保持打开或关闭状态.
+ */
+SetCapsLockState(State)
+
+/**
+ * 设置NumLock键的状态. 也可以强制按键保持打开或关闭状态.
+ */
+SetNumLockState(State)
+
+/**
+ * 设置滚动锁定键的状态. 也可以强制按键保持打开或关闭状态.
+ */
+SetScrollLockState(State)
+
+/**
+ * 在 Send 之后是否恢复 CapsLock 的状态.
+ */
+SetStoreCapsLockMode(State)
+
+/**
+ * 设置RegRead,RegWrite,RegDelete,RegDeleteKey和注册表循环使用的注册表视图.
+ */
+SetRegView(RegView)
+
+/**
  * 在指定的时间间隔自动重复调用函数.
  * @param Callback 如果省略 Callback, 如果有的话, SetTimer 将在启动当前线程的定时器上运行. 例如, SetTimer , 0 可以在一个定时器函数中用于标记要删除的定时器, 而 SetTimer , 1000 将更新当前定时器的 Period.
  * @param Period Period 的绝对值不能大于 4294967295 ms(49.7 天).
@@ -1838,6 +1948,26 @@ SendText(Keys) => void
  * @param Priority 这个可选参数是一个介于 -2147483648 和 2147483647 之间的整数(或为表达式) 来表示计时器的优先级.
  */
 SetTimer([Callback, Period := 250, Priority := 0]) => void
+
+/**
+ * 在诸如WinWait之类的命令中设置WinTitle参数的匹配行为.
+ */
+SetTitleMatchMode(MatchModeOrSpeed)
+
+/**
+ * 设置在每次执行窗口函数(例如 WinActivate) 后的延时.
+ */
+SetWinDelay(Delay)
+
+/**
+ * 更改脚本当前的工作目录.
+ */
+SetWorkingDir(DirName)
+
+/**
+ * 关机, 重启或注销系统.
+ */
+Shutdown(Code)
 
 /*
  * 返回 Number 的正弦.
@@ -2055,6 +2185,11 @@ StrUpper(String) => String
 SubStr(String, StartingPos [, Length]) => String
 
 /**
+ * 禁用或启用所有的或选择的热键和热字串.
+ */
+Suspend(Mode)
+
+/**
  * 将字符串转换为标题大小写.
  */
 StrTitle(String) => String
@@ -2073,6 +2208,11 @@ SysGetIPAddresses() => Array
  * 返回 Number 的正切值.
  */
 Tan(Number) => Number
+
+/**
+ * 设置线程的优先级或是否可以被中断. 它也可以临时禁用所有的计时器.\n\nThread 'NoTimers' , TrueOrFalse\n\nThread 'Priority', Level\n\nThread 'Interrupt' [, Duration, LineCount]
+ */
+Thread(SubFunction [, Value1, Value2])
 
 /**
  * 在屏幕的任意位置创建置顶的窗口.

@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { ahkvars, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv } from './global';
+import { ahkvars, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv } from './common';
 
 export interface AhkDoc {
 	include: string[]
@@ -1004,7 +1004,7 @@ export class Lexer {
 									if (input.charAt(lk.offset + lk.length) !== '.')
 										_this.addDiagnostic(diagnostic.propnotinit(), lk.offset);
 								} else if (predot && tk.type === 'TK_DOT') {
-										addprop(lk), pr = vr = maybeclassprop(lk);
+									addprop(lk), pr = vr = maybeclassprop(lk);
 								} else if ((m = input.charAt(lk.offset + lk.length)).match(/^(\(|\s|,|)$/)) {
 									if (lk.topofline) {
 										if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
@@ -1015,7 +1015,9 @@ export class Lexer {
 											fc.semantic = { type: SemanticTokenTypes.function };
 											if (addvariable(fc)) {
 												_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
-												if (tk.content === ')')
+												if (lk === fc)
+													tn.range.end = document.positionAt(tk.type === 'TK_EOF' ? input_length : document.offsetAt({ line: document.positionAt(tk.offset).line, character: 0 }) - 1);
+												else if (tk.content === ')')
 													tn.range.end = document.positionAt(tk.offset + tk.length);
 											}
 										}
@@ -1030,7 +1032,9 @@ export class Lexer {
 											if (input.charAt(fc.offset - 1) !== '%') {
 												fc.semantic = { type: SemanticTokenTypes.method };
 												_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
-												if (tk.content === ')')
+												if (lk === fc)
+													tn.range.end = document.positionAt(tk.type === 'TK_EOF' ? input_length : document.offsetAt({ line: document.positionAt(tk.offset).line, character: 0 }) - 1);
+												else if (tk.content === ')')
 													tn.range.end = document.positionAt(tk.offset + tk.length);
 											}
 											break;
@@ -4456,7 +4460,6 @@ export class Lexer {
 	}
 }
 
-
 export function pathanalyze(path: string, libdirs: string[], workdir: string = '') {
 	let m: RegExpMatchArray | null, uri = '';
 
@@ -5040,7 +5043,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 export function getFuncCallInfo(doc: Lexer, position: Position) {
 	let func: DocumentSymbol | undefined, offset = doc.document.offsetAt(position), off = { start: 0, end: 0 }, pos: Position = { line: 0, character: 0 };
 	let scope = doc.searchScopedNode(position), funccall: DocumentSymbol[], full = '', tt: any;
-	let text = '', name = '', index = -1, len = 0, o = offset;
+	let text = '', name = '', index = -1, len = 0, o = offset, fcoffset = 0;
 	if (scope) {
 		while (scope && !(<FuncNode>scope).funccall)
 			scope = (<FuncNode>scope).parent;
@@ -5088,10 +5091,16 @@ export function getFuncCallInfo(doc: Lexer, position: Position) {
 	} else if (func) {
 		text = doc.document.getText(func.range), name = func.name.toLowerCase(), full = '';
 		offset = o - off.start, index = -1, len = off.end - off.start - name.length;
+		fcoffset = doc.document.offsetAt(func.range.start);
 	} else
 		return undefined;
-	while (tt = text.match(/('|").*?(?<!`)\1/))
-		text = text.replace(tt[0], '_'.repeat(tt[0].length));
+	while ((tt = text.search(/['"]/)) !== -1) {
+		let tk: Token;
+		if ((tk = doc.tokens[fcoffset + tt]) && tk.type === 'TK_STRING') {
+			text = text.substring(0, tt) + '_'.repeat(tk.length) + text.substring(tt + tk.length);
+		} else
+			break;
+	}
 	for (const pair of [['\\{', '\\}'], ['\\[', '\\]'], ['\\(', '\\)']]) {
 		const rg = new RegExp(pair[0] + '[^' + pair[0] + ']*?' + pair[1]);
 		while (tt = rg.exec(text)) {
