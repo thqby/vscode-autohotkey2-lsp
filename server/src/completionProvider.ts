@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
-import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
@@ -34,7 +34,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 		triggerchar = '';
 	}
 	if (!percent && triggerchar === '.' && content.pre.match(/^\s*#include/i))
-		triggerchar = '';
+		triggerchar = '###';
 	if (temp = lt.match(/^\s*((class\s+(\w|[^\x00-\xff])+\s+)?(extends)|class)\s/i)) {
 		if (triggerchar === '.') {
 			if (temp[3]) {
@@ -227,20 +227,34 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					else return;
 				if (pre.charAt(pre.length - 1) === '/')
 					xg = '/';
-				let extreg = inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i);
+				let extreg = inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i), ts = tt.replace(/['"]/g, '').replace(/^.*[\\/]/, '');
+				let expg = new RegExp((ts.match(/[^\w]/) ? ts.replace(/(.)/g, '$1.*') : '(' + ts.replace(/(.)/g, '$1.*') + '|[^\\w])').replace(/\.\./, '\\..'), 'i');
+				let textedit: TextEdit | undefined;
+				if (ts.includes('.'))
+					textedit = TextEdit.replace({ start: { line: position.line, character: position.character - ts.length }, end: position }, '');
 				for (let path of paths) {
 					if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory())
 						continue;
 					for (let it of readdirSync(path)) {
 						try {
 							if (statSync(path + it).isDirectory()) {
-								if (expg.test(it))
-									cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + xg,
-										cpitem.command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' },
-										cpitem.kind = CompletionItemKind.Folder, items.push(cpitem);
-							} else if (extreg.test(it) && expg.test(inlib ? it = it.replace(extreg, '') : it.replace(extreg, '')))
-								cpitem = CompletionItem.create(it), cpitem.insertText = cpitem.label + lchar,
-									cpitem.kind = CompletionItemKind.File, items.push(cpitem);
+								if (expg.test(it)) {
+									cpitem = CompletionItem.create(it), cpitem.kind = CompletionItemKind.Folder;
+									cpitem.command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
+									if (textedit)
+										cpitem.textEdit = Object.assign({}, textedit, { newText: cpitem.label + xg });
+									else
+										cpitem.insertText = cpitem.label + xg;
+									items.push(cpitem);
+								}
+							} else if (extreg.test(it) && expg.test(inlib ? it = it.replace(extreg, '') : it)) {
+								cpitem = CompletionItem.create(it), cpitem.kind = CompletionItemKind.File;
+								if (textedit)
+									cpitem.textEdit = Object.assign({}, textedit, { newText: cpitem.label + lchar });
+								else
+									cpitem.insertText = cpitem.label + lchar;
+								items.push(cpitem);
+							}
 						} catch (err) { };
 					}
 				}
