@@ -976,9 +976,9 @@ export class Lexer {
 									(<FuncNode>tn).parent = prop, tn.children = parseline(o), (<FuncNode>tn).funccall?.push(..._parent.funccall.splice(fcs)), mode = 2;
 									if (lk.content === '=>')
 										_this.diagnostics.push({ message: diagnostic.invaliddefinition('function'), range: tn.selectionRange, severity: DiagnosticSeverity.Error });
+									tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 									for (const t in o)
 										o[t] = tn.range.end;
-									tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 									adddeclaration(tn as FuncNode), prop.children.push(tn);
 								}
 								if (prop.children.length === 1 && prop.children[0].name === 'get')
@@ -1539,20 +1539,24 @@ export class Lexer {
 										tpexp += ' ' + lk.content;
 									}
 									types[tpexp] = true;
-								} else {
+								} else if (input.charAt(lk.offset - 1) !== '%') {
 									addprop(lk), maybeclassprop(lk);
 									types[tpexp + '.' + lk.content] = true;
-								}
+								} else
+									types['#any'] = true;
 								return result.splice(pres);
 							} else if (tk.type === 'TK_OPERATOR') {
-								if (predot) {
-									tpexp += '.' + lk.content;
-									addprop(lk), maybeclassprop(lk);
-								} else if (input.charAt(lk.offset - 1) !== '%' && input.charAt(lk.offset + lk.length) !== '%') {
-									if (addvariable(lk))
-										(<Variable>result[result.length - 1]).returntypes = { '#number': true };
-									tpexp += ' ' + lk.content;
-								}
+								if (input.charAt(lk.offset - 1) !== '%' && input.charAt(lk.offset + lk.length) !== '%') {
+									if (predot) {
+										tpexp += '.' + lk.content;
+										addprop(lk), maybeclassprop(lk);
+									} else {
+										if (addvariable(lk))
+											(<Variable>result[result.length - 1]).returntypes = { '#number': true };
+										tpexp += ' ' + lk.content;
+									}
+								} else
+									tpexp = '#any';
 								next = false;
 								continue;
 							}
@@ -4718,12 +4722,12 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 	if (hasdetectcache[exp] !== undefined)
 		return hasdetectcache[exp] || [];
 	hasdetectcache[exp] = false;
-	return hasdetectcache[exp] = detect(exp, pos, 0, fullexp);
-	function detect(exp: string, pos: Position, deep: number = 0, fullexp?: string): string[] {
+	return hasdetectcache[exp] = detect(doc, exp, pos, 0, fullexp);
+	function detect(doc: Lexer, exp: string, pos: Position, deep: number = 0, fullexp?: string): string[] {
 		let t: string | RegExpMatchArray | null, tps: string[] = [];
 		exp = exp.replace(/#any(\(\)|\.(\w|[^\x00-\x7f])+)+/g, '#any').replace(/\b(true|false)\b/gi, '#number');
 		while ((t = exp.replace(/\(((\(\)|[^\(\)])+)\)/g, (...m) => {
-			let ts = detect(m[1], pos, deep + 1);
+			let ts = detect(doc, m[1], pos, deep + 1);
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#any');
 		})) !== exp)
 			exp = t;
@@ -4800,7 +4804,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 											n = searchcache[tp].node;
 											if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
 												for (const e in n.returntypes)
-													detect(e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
+													detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
 										}
 									});
 								break;
@@ -4815,7 +4819,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 											n = searchcache[tp].node;
 											if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
 												for (const e in n.returntypes)
-													detect(e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
+													detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
 										} else
 											return '#any';
 								}
@@ -4826,7 +4830,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 										if ((<any>i).def !== false && i.name.toLowerCase() === 'call') {
 											let n = i as FuncNode;
 											for (const e in n.returntypes)
-												detect(e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
+												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
 											if (n.returntypes)
 												break swlb;
 											break;
@@ -4869,13 +4873,13 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 							if ((<Variable>n.node).returntypes) {
 								let s = Object.keys((<Variable>n.node).returntypes || {}).pop();
 								if (s)
-									detect(s, n.node.range.end).map(tp => ts[tp] = true);
+									detect(lexers[n.uri] || doc, s, n.node.range.end).map(tp => ts[tp] = true);
 							} else if (n.node.children) {
 								for (const it of n.node.children) {
 									let rets = (<FuncNode>it).returntypes;
 									if (it.name.toLowerCase() === 'get' && it.kind === SymbolKind.Function) {
 										for (const ret in rets)
-											detect(ret.toLowerCase(), Position.is(rets[ret]) ? rets[ret] : pos).map(tp => ts[tp] = true);
+											detect(lexers[n.uri] || doc, ret.toLowerCase(), Position.is(rets[ret]) ? rets[ret] : pos).map(tp => ts[tp] = true);
 										break;
 									}
 								}

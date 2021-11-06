@@ -227,7 +227,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					else return;
 				if (pre.charAt(pre.length - 1) === '/')
 					xg = '/';
-				let extreg = inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i), ts = tt.replace(/['"]/g, '').replace(/^.*[\\/]/, '');
+				let extreg = inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i), ts = tt.replace(/['"<>]/g, '').replace(/^.*[\\/]/, '');
 				let expg = new RegExp((ts.match(/[^\w]/) ? ts.replace(/(.)/g, '$1.*') : '(' + ts.replace(/(.)/g, '$1.*') + '|[^\\w])').replace(/\.\./, '\\..'), 'i');
 				let textedit: TextEdit | undefined;
 				if (ts.includes('.'))

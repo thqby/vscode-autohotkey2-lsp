@@ -1,3 +1,9 @@
+## 1.1.4
+- 修复[#54](https://github.com/thqby/vscode-autohotkey2-lsp/issues/54)
+- 修复[#55](https://github.com/thqby/vscode-autohotkey2-lsp/issues/55)
+- 修复[#56](https://github.com/thqby/vscode-autohotkey2-lsp/issues/56)
+- 修复[#57](https://github.com/thqby/vscode-autohotkey2-lsp/issues/57)
+
 ## 1.1.3
 - 修复关键字着色错误
 
