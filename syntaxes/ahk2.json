@@ -216,7 +216,7 @@
 			"prefix": "finally"
 		},
 		{
-			"body": "for ${1:Value...} in $0",
+			"body": "for $1 in $0",
 			"description": "Repeat a series of functions for each key-value pair in the object.",
 			"prefix": "for"
 		},

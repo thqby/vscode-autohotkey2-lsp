@@ -1023,6 +1023,7 @@ export class Lexer {
 										}
 										break;
 									} else if (predot && !(tk.type === 'TK_EQUALS' || tk.content === '=')) {
+										addprop(lk), pr = vr = maybeclassprop(lk);
 										if (tk.content === '(' || topcontinue) {
 											if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
 											let sub: DocumentSymbol[], fc = lk;
@@ -3968,7 +3969,13 @@ export class Lexer {
 				if (javadoc) {
 					print_token(' * ' + lines[j].replace(/^[\s\*]+|\s+$/g, ''));
 				} else {
-					print_token(lines[j].trimRight().replace(remove, ''));
+					let l = lines[j].trimRight().replace(remove, '');
+					if (l)
+						print_token(l);
+					else {
+						print_token_line_indentation();
+						output_lines[output_lines.length - 1].text.push('');
+					}
 				}
 			}
 			if (lines.length > 1) {
@@ -4428,12 +4435,11 @@ export class Lexer {
 
 	public colors() {
 		let t = this.strcommpos, document = this.document, text = document.getText(), colors: ColorInformation[] = [];
-		for (let o in t) {
-			if (t[o].type === 2) {
-				let a = t[o], b = parseInt(o);
-				let m = colorregexp.exec(text.substring(b, a.end)), range: Range, v = '';
-				if (!m || (!m[1] && a.end - b + 1 !== m[2].length + 2)) continue;
-				range = Range.create(document.positionAt(b += m.index + (m[1] ? m[1].length : 0)), document.positionAt(b + m[2].length));
+		for (let a of t) {
+			if (a.type === 2) {
+				let s = a.start, e = a.end, m = colorregexp.exec(text.substring(s, e)), range: Range, v = '';
+				if (!m || (!m[1] && e - s + 1 !== m[2].length + 2)) continue;
+				range = Range.create(document.positionAt(s += m.index + (m[1] ? m[1].length : 0)), document.positionAt(s + m[2].length));
 				v = m[5] ? colortable[m[5].toLowerCase()] : m[3] === undefined ? m[2] : m[2].substring(2);
 				let color: any = { red: 0, green: 0, blue: 0, alpha: 1 }, cls: string[] = ['red', 'green', 'blue'];
 				if (m[4] !== undefined) cls.unshift('alpha');

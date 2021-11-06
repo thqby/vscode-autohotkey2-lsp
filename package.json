@@ -248,7 +248,8 @@
 	"scripts": {
 		"vscode:prepublish": "webpack --mode production --devtool hidden-source-map",
 		"compile": "webpack",
-		"watch": "webpack --watch",
+		"watch": "tsc -b -w",
+		"watch-web": "webpack --watch",
 		"patch": "npm version patch",
 		"publish": "vsce publish",
 		"package": "vsce package",

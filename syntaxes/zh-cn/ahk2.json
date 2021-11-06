@@ -216,7 +216,7 @@
 			"prefix": "finally"
 		},
 		{
-			"body": "for ${1:Value...} in $0",
+			"body": "for $1 in $0",
 			"description": "对对象中的每个键值对重复一系列功能.",
 			"prefix": "for"
 		},
