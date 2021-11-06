@@ -2748,7 +2748,7 @@ export class Lexer {
 			if ((last_type === 'TK_RESERVED' && !input_wanted_newline && in_array(flags.last_text.toLowerCase(), ['local', 'static', 'global']) && token_type === 'TK_WORD') ||
 				(last_type === 'TK_RESERVED' && flags.last_text.match(/^loop|try|catch|finally$/i)) ||
 				(last_type === 'TK_RESERVED' && flags.last_text.match(/^return$/i) && !input_wanted_newline) ||
-				(last_type === 'TK_RESERVED' && flags.last_text.match(/^else$/i) && !(token_type === 'TK_RESERVED' && token_text_low === 'if')) ||
+				(last_type === 'TK_RESERVED' && flags.last_text.match(/^(else|until)$/i) && !(token_type === 'TK_RESERVED' && token_text_low === 'if')) ||
 				(last_type === 'TK_END_EXPR' && (previous_flags.mode === MODE.ForInitializer || previous_flags.mode === MODE.Conditional)) ||
 				(last_type === 'TK_WORD' && flags.mode === MODE.BlockStatement
 					&& !flags.in_case && !in_array(token_type, ['TK_WORD', 'TK_RESERVED', 'TK_START_EXPR'])
@@ -3690,9 +3690,6 @@ export class Lexer {
 						break;
 					case 'else':
 						output_space_before_token = true;
-						break;
-					case 'until':
-						indent();
 						break;
 				}
 			}
