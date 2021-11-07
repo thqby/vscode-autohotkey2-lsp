@@ -1,3 +1,9 @@
+## 1.1.5
+- 修复[#59](https://github.com/thqby/vscode-autohotkey2-lsp/issues/59)
+- 调整`AutoHotkey2.AutoLibInclude`设置项值为`'Disabled','Local','User and Standard','All'` [#58](https://github.com/thqby/vscode-autohotkey2-lsp/issues/58)
+- 取消补全自动导入被`.`和`(`触发
+- 修复在无标题文件`Untitled`中，部分功能异常
+
 ## 1.1.4
 - 修复[#54](https://github.com/thqby/vscode-autohotkey2-lsp/issues/54)
 - 修复[#55](https://github.com/thqby/vscode-autohotkey2-lsp/issues/55)

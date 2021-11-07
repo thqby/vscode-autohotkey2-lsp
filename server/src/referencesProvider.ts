@@ -25,15 +25,15 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 			if (scope) {
 				let lbs = (<FuncNode>scope).labels;
 				if (lbs && lbs[name])
-					references[uri] = lbs[name].map(it => it.selectionRange);
+					references[lexers[uri].document.uri] = lbs[name].map(it => it.selectionRange);
 			} else {
 				let lbs = doc.labels;
 				if (lbs[name])
-					references[uri] = lbs[name].map(it => it.selectionRange);
+					references[doc.document.uri] = lbs[name].map(it => it.selectionRange);
 				for (const uri in doc.relevance) {
 					lbs = lexers[uri].labels;
 					if (lbs[name])
-						references[uri] = lbs[name].map(it => it.selectionRange);
+						references[lexers[uri].document.uri] = lbs[name].map(it => it.selectionRange);
 				}
 			}
 			break;
@@ -51,12 +51,12 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 				doc = lexers[uri];
 				let rgs = findAllFromDoc(doc, name, SymbolKind.Variable, scope);
 				if (rgs.length)
-					references[uri] = rgs;
+					references[doc.document.uri] = rgs;
 				if (!scope) {
 					for (const uri in doc.relevance) {
 						let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, undefined);
 						if (rgs.length)
-							references[uri] = rgs;
+							references[lexers[uri].document.uri] = rgs;
 					}
 				}
 				break;
@@ -67,11 +67,11 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 				let refs: { [uri: string]: Range[] } = {};
 				c.splice(0, 1);
 				if (rgs.length)
-					refs[uri] = rgs;
+					refs[doc.document.uri] = rgs;
 				for (const uri in doc.relevance) {
 					let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, undefined);
 					if (rgs.length)
-					refs[uri] = rgs;
+					refs[lexers[uri].document.uri] = rgs;
 				}
 				for (const uri in refs) {
 					let rgs = refs[uri], doc = lexers[uri], tt: Range[] = [];
@@ -93,11 +93,12 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 							tt.push({ start: doc.document.positionAt(tk.offset), end: doc.document.positionAt(tk.offset + tk.length) });
 					}
 					if (tt.length)
-						references[uri] = tt;
+						references[doc.document.uri] = tt;
 				}
-				if (references[uri])
-					references[uri].unshift(node.selectionRange);
-				else references[uri] = [node.selectionRange];
+				let u = lexers[uri].document.uri;
+				if (references[u])
+					references[u].unshift(node.selectionRange);
+				else references[u] = [node.selectionRange];
 				break;
 			}
 			return undefined;

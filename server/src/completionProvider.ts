@@ -467,23 +467,25 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				}
 			});
 			let dir = (workfolder && doc.scriptpath.startsWith(workfolder + '\\') ? workfolder : doc.scriptdir), exportnum = 0;
-			for (const u in libfuncs) {
-				if (!list || !list[u]) {
-					path = URI.parse(u).fsPath;
-					if ((extsettings.AutoLibInclude && (<any>libfuncs[u]).islib) || path.startsWith(dir + '\\')) {
-						libfuncs[u].map(it => {
-							if (!vars[_low = it.name.toLowerCase()] && expg.test(_low)) {
-								cpitem = convertNodeCompletion(it);
-								cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
-								cpitem.command = { title: 'ahk2.fix.include', command: 'ahk2.fix.include', arguments: [path, uri] };
-								vars[_low] = cpitem, exportnum++;
-							}
-						});
-						if (exportnum > 300)
-							break;
+			if (extsettings.AutoLibInclude)
+				for (const u in libfuncs) {
+					if (!list || !list[u]) {
+						path = URI.parse(u).fsPath;
+						if ((extsettings.AutoLibInclude > 1 && (<any>libfuncs[u]).islib) || ((extsettings.AutoLibInclude & 1) && path.startsWith(dir + '\\'))) {
+							libfuncs[u].map(it => {
+								if (!vars[_low = it.name.toLowerCase()] && expg.test(_low)) {
+									cpitem = convertNodeCompletion(it);
+									cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
+									cpitem.command = { title: 'ahk2.fix.include', command: 'ahk2.fix.include', arguments: [path, uri] };
+									delete cpitem.commitCharacters;
+									vars[_low] = cpitem, exportnum++;
+								}
+							});
+							if (exportnum > 300)
+								break;
+						}
 					}
 				}
-			}
 			scopenode?.children?.map(it => {
 				if (!vars[_low = it.name.toLowerCase()] && expg.test(_low) && !ateditpos(it))
 					vars[_low] = convertNodeCompletion(it);

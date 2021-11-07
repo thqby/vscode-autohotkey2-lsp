@@ -747,12 +747,12 @@ export class Lexer {
 							if (nk.content === '=>') {
 								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
 								_this.diagnostics.push(...tds);
-								let storemode = mode, fcs = _parent.funccall?.length;
+								let storemode = mode, pp = _parent;
 								mode |= 1;
 								tn = FuncNode.create(fc.content, storemode === 2 ? (se.type = SemanticTokenTypes.method, SymbolKind.Method) : SymbolKind.Function, Range.create(fc.pos = document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par, undefined, isstatic);
-								tn.detail = comm || tn.detail, lk = tk, tk = nk;
+								_parent = tn, tn.detail = comm || tn.detail, lk = tk, tk = nk;
 								let o: any = {}, sub = parseline(o), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
-								result.push(tn), mode = storemode, se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
+								result.push(tn), _parent = pp, mode = storemode, se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
 								if (mode !== 0)
 									tn.parent = _parent;
 								if (fc.content.charAt(0).match(/[\d$]/))
@@ -760,7 +760,6 @@ export class Lexer {
 								if (lk.content === '=>')
 									_this.addDiagnostic(diagnostic.invaliddefinition('function'), fc.offset, fc.length);
 								tn.range.end = document.positionAt(lk.offset + lk.length), tn.closure = !!(mode & 1), _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-								tn.funccall?.push(..._parent.funccall.splice(fcs));
 								tn.returntypes = o, tn.static = isstatic, tn.children = [...sub], adddeclaration(tn);
 								for (const t in o)
 									o[t] = tn.range.end;
@@ -817,7 +816,7 @@ export class Lexer {
 								next = true, lk.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
 								if (tk.content === '[') {
 									if (tk.topofline)
-										_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset);
+										_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 									let err = false, lasthasval = false, b: number;
 									loop:
 									while (nexttoken()) {
@@ -861,7 +860,7 @@ export class Lexer {
 														if (nk.content === '*') {
 															if (is_next(']'))
 																(<Variable>tn).arr = true;
-															else _this.addDiagnostic(diagnostic.unexpected('*'), nk.offset);
+															else _this.addDiagnostic(diagnostic.unexpected('*'), nk.offset, 1);
 														}
 														if (lasthasval && !(<Variable>tn).arr)
 															_this.addDiagnostic(diagnostic.defaultvalmissing(tn.name), b, tn.name.length);
@@ -937,7 +936,7 @@ export class Lexer {
 												_this.addFoldingRangePos(tn.range.start, tn.range.end);
 												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
 											} else {
-												_this.addDiagnostic(diagnostic.invalidprop(), sk.offset);
+												_this.addDiagnostic(diagnostic.invalidprop(), sk.offset, sk.length);
 												if (sk.content === '}') { next = false; break; } else {
 													tn = undefined;
 													let b = 0;
@@ -955,7 +954,7 @@ export class Lexer {
 											if (tn)
 												prop.children.push(tn);
 										} else {
-											_this.addDiagnostic(diagnostic.invalidprop(), tk.offset);
+											_this.addDiagnostic(diagnostic.invalidprop(), tk.offset, tk.length);
 											let b = 0;
 											while (tk.type !== 'TK_EOF') {
 												if (tk.content === '{')
@@ -999,10 +998,10 @@ export class Lexer {
 										}
 									}
 									if (mode === 2 && tk.type !== 'TK_EQUALS' && input.charAt(lk.offset + lk.length) !== '.')
-										_this.addDiagnostic(diagnostic.propnotinit(), lk.offset);
+										_this.addDiagnostic(diagnostic.propnotinit(), lk.offset, lk.length);
 								} else if (mode === 2) {
 									if (input.charAt(lk.offset + lk.length) !== '.')
-										_this.addDiagnostic(diagnostic.propnotinit(), lk.offset);
+										_this.addDiagnostic(diagnostic.propnotinit(), lk.offset, lk.length);
 								} else if (predot && tk.type === 'TK_DOT') {
 									addprop(lk), pr = vr = maybeclassprop(lk);
 								} else if ((m = input.charAt(lk.offset + lk.length)).match(/^(\(|\s|,|)$/)) {
@@ -1094,7 +1093,7 @@ export class Lexer {
 					} else if (nk.content !== ':=' && (_low === 'class' || _low === 'static')) {
 						nk = undefined, next = true, tk.type = 'TK_RESERVED';
 					} else {
-						_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset);
+						_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
 						return;
 					}
 				}
@@ -1109,7 +1108,7 @@ export class Lexer {
 						else cmm.type = '';
 						nexttoken();
 						if (tk.type === 'TK_WORD') {
-							if (mode & 1) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset);
+							if (mode & 1) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset, tk.length);
 							cl = tk, lk = tk, tk = get_token_ingore_comment();
 							if (tk.content.toLowerCase() === 'extends') {
 								tk = get_next_token();
@@ -1157,7 +1156,7 @@ export class Lexer {
 							tk.type = 'TK_WORD';
 						if (tk.topofline) {
 							if (mode === 2 && _low !== 'static')
-								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset);
+								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
 							else if (_low === 'global' && _parent.assume !== undefined)
 								_parent.assume = FuncScope.GLOBAL;
 							else if (_low === 'local')
@@ -1166,10 +1165,10 @@ export class Lexer {
 							if (mode === 0) {
 								next = false;
 								if (_low !== 'global')
-									_this.addDiagnostic(diagnostic.declarationerr(), lk.offset);
+									_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
 								break;
 							} else if (mode === 2 && _low !== 'static') {
-								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset);
+								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
 								next = false;
 								break;
 							}
@@ -1201,7 +1200,7 @@ export class Lexer {
 							}
 						} else if (tk.type === 'TK_EQUALS') {
 							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak;
-							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						}
 						next = false;
 						break;
@@ -1210,15 +1209,15 @@ export class Lexer {
 							nk = get_token_ingore_comment();
 							next = false, parser_pos = tk.offset + tk.length, tk.type = 'TK_WORD';
 							if (nk.content !== ':=')
-								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset);
+								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
 							break;
 						}
 						lk = tk, tk = get_next_token();
 						if (tk.type === 'TK_EQUALS') {
 							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
-							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						} else if (mode === 2)
-							_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset);
+							_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
 						else if (next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(tk.content.toLowerCase())))
 							tk.type = 'TK_RESERVED';
 						break;
@@ -1270,7 +1269,7 @@ export class Lexer {
 							nk = get_token_ingore_comment();
 							next = false, parser_pos = tk.offset + tk.length, tk.type = 'TK_WORD';
 							if (nk.content !== ':=')
-								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset);
+								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
 							break;
 						}
 						lk = tk, tk = get_next_token(), next = false;
@@ -1280,7 +1279,7 @@ export class Lexer {
 							} else if (tk.type.endsWith('COMMENT')) {
 							} else if (tk.content !== '(' || input.charAt(lk.offset + lk.length) !== '(') {
 								parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
-								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 							} else {
 								let s: Token[] = [];
 								next = true, parsepair('(', ')', undefined, {}, s);
@@ -1309,7 +1308,7 @@ export class Lexer {
 							if (tk.content.toLowerCase() !== 'as') {
 								while (true) {
 									if (tk.type !== 'TK_WORD')
-										_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+										_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 									else addvariable(tk);
 									lk = tk, tk = get_token_ingore_comment();
 									if (tk.content === ',') {
@@ -1336,7 +1335,7 @@ export class Lexer {
 								if (tk.type !== 'TK_WORD' && !allIdentifierChar.test(tk.content)) {
 									_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length);
 								} else if (tk.type !== 'TK_WORD')
-									_this.addDiagnostic(diagnostic.reservedworderr(nk.content), nk.offset), tk.type = 'TK_WORD';
+									_this.addDiagnostic(diagnostic.reservedworderr(nk.content), nk.offset, nk.length), tk.type = 'TK_WORD';
 								else {
 									let t = get_token_ingore_comment();
 									parser_pos = tk.offset + tk.length;
@@ -1357,20 +1356,20 @@ export class Lexer {
 								if (p && tk.content === ')')
 									lk = tk, tk = get_token_ingore_comment();
 								if (!tk.topofline)
-									_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset);
+									_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 							}
 						}
 						break;
 					case 'super':
 						if (!(mode & 3))
-							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						else tk.ignore = true;
 						tk.type = 'TK_WORD', next = false
 						break;
 					default:
 						nk = get_token_ingore_comment();
 						if (nk.type === 'TK_EQUALS' || nk.content.match(/^([<>]=?|~=|&&|\|\||[.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/))
-							tk.type = 'TK_WORD', parser_pos = t, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+							tk.type = 'TK_WORD', parser_pos = t, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						else {
 							lk = tk, tk = nk, next = false;
 							if (_low === 'switch') inswitch = blocks;
@@ -1487,7 +1486,7 @@ export class Lexer {
 									if (nk.type !== 'TK_EQUALS' && !nk.content.match(/^([<>]=?|~=|&&|\|\||[,.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/)) { lk = tk, tk = nk, next = false; break; }
 									parser_pos = t;
 								}
-								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 							}
 							next = false, tk.type = 'TK_WORD'; break;
 						case 'TK_END_BLOCK':
@@ -1611,7 +1610,7 @@ export class Lexer {
 								else nk = tk;
 								if (nk.content === '=>' && par) {
 									_this.diagnostics.push(...tds);
-									let o: any = {}, sub = parseexp(inpair, o), pars: { [key: string]: boolean } = {}, cds: DocumentSymbol[] = [];
+									let o: any = {}, pres = _parent.funccall.length, sub = parseexp(inpair, o), pars: { [key: string]: boolean } = {}, cds: DocumentSymbol[] = [];
 									for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (let i = sub.length - 1; i >= 0; i--) {
 										if (pars[sub[i].name.toLowerCase()])
@@ -1624,15 +1623,14 @@ export class Lexer {
 										fc.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 										result.push(tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), par, cds));
 										(<FuncNode>tn).returntypes = o, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-										(<FuncNode>tn).closure = !!(mode & 1), adddeclaration(tn as FuncNode);
+										(<FuncNode>tn).closure = !!(mode & 1), adddeclaration(tn as FuncNode), (<FuncNode>tn).funccall?.push(..._parent.funccall.splice(pres));
 										for (const t in o)
 											o[t] = tn.range.end;
 										if (mode !== 0)
 											(<FuncNode>tn).parent = _parent;
 									}
-									_parent.children.push(...sub);
 									tpexp += ' #func', types[tpexp] = true;
-									return sub;
+									return result.splice(pres).concat(sub);
 								} else {
 									if (n_newlines > 1) cmm.type = '';
 									next = false, lk = tk, tk = nk;
@@ -1706,7 +1704,7 @@ export class Lexer {
 								next = false, tk.type = 'TK_WORD';
 								continue;
 							}
-							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset); break;
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length); break;
 						case 'TK_OPERATOR':
 							if (tk.content === '%') {
 								if (input.charAt(tk.offset - 1).match(/\w|[^\x00-\x7f]/))
@@ -1736,7 +1734,7 @@ export class Lexer {
 							} else {
 								tpexp += ' ' + tk.content;
 								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^[:?%]$/) && !tk.content.match(/[+\-%!]/))
-									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset);
+									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, tk.length);
 								if (tk.content === '&' && (['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lk.type))) {
 									byref = true;
 									continue;
@@ -2073,10 +2071,12 @@ export class Lexer {
 								let fc = lk, par = parsequt(), quoteend = parser_pos, nk = get_token_ingore_comment();
 								if (nk.content === '=>') {
 									_this.diagnostics.push(...tds);
-									let o: any = {}, sub = parseexp(e, o, true), pars: any = {};
+									let o: any = {}, pp = _parent, pars: any = {};
+									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par || []);
 									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par, sub);
-									tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).closure = !!(mode & 1);
+									_parent = tn;
+									let sub = tn.children = parseexp(e, o, true);
+									_parent = pp, tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).closure = !!(mode & 1);
 									(<FuncNode>tn).returntypes = o, adddeclaration(tn as FuncNode), (fc.semantic as SemanticToken).modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly;
 									if (par) for (const it of par) pars[it.name.toLowerCase()] = true;
 									for (const t in o)
@@ -2159,7 +2159,7 @@ export class Lexer {
 							next = false, tk.type = 'TK_WORD';
 							continue;
 						}
-						_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+						_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 					} else if (tk.type === 'TK_END_BLOCK' || tk.type === 'TK_END_EXPR')
 						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1);
 					else if (tk.type === 'TK_COMMA')
@@ -4451,7 +4451,7 @@ export class Lexer {
 		return colors;
 	}
 
-	private addDiagnostic(message: string, offset: number, length?: number, severity: DiagnosticSeverity = DiagnosticSeverity.Error, arr?: Diagnostic[]) {
+	private addDiagnostic(message: string, offset: number, length: number, severity: DiagnosticSeverity = DiagnosticSeverity.Error, arr?: Diagnostic[]) {
 		let beg = this.document.positionAt(offset), end = beg;
 		if (length !== undefined) end = this.document.positionAt(offset + length);
 		(arr || this.diagnostics).push({ range: Range.create(beg, end), message, severity });

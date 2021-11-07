@@ -187,7 +187,7 @@ Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configura
 			],
 			"args": ["--node-ipc"],
 			"env": {
-				"AHK2_LS_CONFIG": "{\"locale\":\"en-us\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":false}"
+				"AHK2_LS_CONFIG": "{\"locale\":\"en-us\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":0}"
 			}
 		}
 	}
@@ -369,7 +369,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 			],
 			"args": ["--node-ipc"],
 			"env": {
-				"AHK2_LS_CONFIG": "{\"locale\":\"zh-cn\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":false}"
+				"AHK2_LS_CONFIG": "{\"locale\":\"zh-cn\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":0}"
 			}
 		}
 	}

@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.1.4",
+	"version": "1.1.5",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -76,8 +76,14 @@
 			"properties": {
 				"AutoHotkey2.AutoLibInclude": {
 					"scope": "window",
-					"type": "boolean",
-					"default": false,
+					"type": "string",
+					"enum": [
+						"Disabled",
+						"Local",
+						"User and Standard",
+						"All"
+					],
+					"default": "Disabled",
 					"description": "%ahk2.autolibinclude%"
 				},
 				"AutoHotkey2.CompilerCMD": {

@@ -51,7 +51,7 @@ export async function fixinclude(libpath: string, docuri: string) {
 			text += '\n';
 	}
 	let { pos } = await connection.sendRequest('ahk2.getpos'), char = doc.document.getText(Range.create(pos.line, pos.character - 1, pos.line, pos.character));
-	await connection.workspace.applyEdit({ changes: { [docuri]: [TextEdit.insert({ line, character: 0 }, text)] } });
+	await connection.workspace.applyEdit({ changes: { [doc.document.uri]: [TextEdit.insert({ line, character: 0 }, text)] } });
 	if (char === '(')
 		executeCommands([{ command: 'editor.action.triggerParameterHints' }]);
 	else {

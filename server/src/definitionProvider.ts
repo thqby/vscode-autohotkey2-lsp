@@ -16,7 +16,8 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 						let rg = Range.create(0, 0, 0, 0);
 						if (lexers[t])
 							rg = Range.create(0, 0, lexers[t].document.lineCount, 0);
-						return [LocationLink.create(inBrowser || !t.match(/^file:/) ? t : URI.file(restorePath(URI.parse(t).fsPath)).toString(), rg, rg, Range.create(line, m[1].length, line, m[1].length + m[3].length))];
+						uri = lexers[t]?.document.uri || (inBrowser || !t.match(/^file:/) ? t : URI.file(restorePath(URI.parse(t).fsPath)).toString());
+						return [LocationLink.create(uri, rg, rg, Range.create(line, m[1].length, line, m[1].length + m[3].length))];
 					}
 			}
 			return undefined;
@@ -55,9 +56,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 			let uri = '';
 			nodes.map(it => {
 				if (uri = (<any>it.node).uri || it.uri)
-					locas.push(Location.create(
-						inBrowser || !uri.match(/^file:/) ? uri : URI.file(restorePath(URI.parse(uri).fsPath)).toString(),
-						it.node.selectionRange));
+					locas.push(Location.create(lexers[uri].document.uri, it.node.selectionRange));
 			});
 			if (locas.length)
 				return locas;

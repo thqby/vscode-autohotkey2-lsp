@@ -16,7 +16,7 @@ import {
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Settings, set_Workfolder, setting, signatureProvider, sleep,
-	symbolProvider, typeFormatting, updateFileInfo, workfolder, ahkpath_cur, set_ahkpath
+	symbolProvider, typeFormatting, updateFileInfo, workfolder, ahkpath_cur, set_ahkpath, LibIncludeType
 } from './common';
 
 const languageServer = 'ahk2-language-server';
@@ -139,21 +139,30 @@ connection.onDidChangeConfiguration(async (change) => {
 	if (hasConfigurationCapability) {
 		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
 		let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
+		if (typeof newset.AutoLibInclude === 'string')
+			newset.AutoLibInclude = LibIncludeType[newset.AutoLibInclude] as unknown as LibIncludeType;
+		else if (typeof newset.AutoLibInclude === 'boolean')
+			newset.AutoLibInclude = newset.AutoLibInclude ? 3 : 0;
 		for (let k in extsettings)
 			if ((<any>extsettings)[k] !== (<any>newset)[k])
 				changes[k] = true;
 		Object.assign(extsettings, newset);
 		if (changes['InterpreterPath'] && !ahkpath_cur) {
 			changeInterpreter(oldpath, extsettings.InterpreterPath);
-		} else if (changes['AutoLibInclude'] && extsettings.AutoLibInclude)
-			parseuserlibs();
+		} else if (changes['AutoLibInclude']) {
+			if (extsettings.AutoLibInclude > 1)
+				parseuserlibs();
+			if (extsettings.AutoLibInclude & 1)
+				documents.all().forEach(async (e) => parseproject(e.uri.toLowerCase()));
+		}
 	}
 });
 
 documents.onDidOpen(async e => {
 	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
 	lexers[uri] = doc, doc.actived = true, doc.d = lexers[uri]?.d || doc.d;
-	parseproject(uri);
+	if (extsettings.AutoLibInclude & 1)
+		parseproject(uri);
 });
 
 // Only keep settings for open documents
@@ -180,8 +189,8 @@ documents.onDidClose(async e => {
 				deldocs.push(u);
 		}
 	for (let u of deldocs) {
+		connection.sendDiagnostics({ uri: lexers[u].document.uri, diagnostics: [] });
 		delete lexers[u];
-		connection.sendDiagnostics({ uri: u, diagnostics: [] });
 	}
 });
 
@@ -299,6 +308,10 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 		if (!t && process.env.AHK2_LS_CONFIG)
 			t = JSON.parse(process.env.AHK2_LS_CONFIG);
 		if (!(set_Settings(t || extsettings)).InterpreterPath && !ahkpath_cur) return false;
+		if (typeof extsettings.AutoLibInclude === 'string')
+			extsettings.AutoLibInclude = LibIncludeType[extsettings.AutoLibInclude] as unknown as LibIncludeType;
+		else if (typeof extsettings.AutoLibInclude === 'boolean')
+			extsettings.AutoLibInclude = extsettings.AutoLibInclude ? 3 : 0;
 	}
 	let script = `
 	#NoTrayIcon
@@ -364,7 +377,7 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 		}
 		sendDiagnostics();
 		clearLibfuns();
-		if (extsettings.AutoLibInclude)
+		if (extsettings.AutoLibInclude > 1)
 			parseuserlibs();
 	});
 	if (!ret) connection.window.showErrorMessage(setting.ahkpatherr());

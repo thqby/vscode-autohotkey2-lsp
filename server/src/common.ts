@@ -30,16 +30,23 @@ export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: stri
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
 export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
-	AutoLibInclude: false,
+	AutoLibInclude: 0,
 	completeFunctionParens: false
 };
 
 export let locale = 'en-us';
 export type Maybe<T> = T | undefined;
 
+export enum LibIncludeType {
+	'Disabled',
+	'Local',
+	'User and Standard',
+	'All'
+}
+
 export interface AHKLSSettings {
 	InterpreterPath: string
-	AutoLibInclude: boolean
+	AutoLibInclude: LibIncludeType
 	completeFunctionParens: boolean
 }
 
@@ -132,7 +139,7 @@ export function sendDiagnostics() {
 	for (const uri in lexers) {
 		doc = lexers[uri];
 		connection.sendDiagnostics({
-			uri: uri,
+			uri: doc.document.uri,
 			diagnostics: (!doc.actived && (!doc.relevance || !Object.keys(doc.relevance).length) ? [] : doc.diagnostics)
 		});
 	}

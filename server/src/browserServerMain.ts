@@ -172,8 +172,8 @@ documents.onDidClose(async e => {
 				deldocs.push(u);
 		}
 	for (let u of deldocs) {
+		connection.sendDiagnostics({ uri: lexers[u].document.uri, diagnostics: [] });
 		delete lexers[u];
-		connection.sendDiagnostics({ uri: u, diagnostics: [] });
 	}
 });
 

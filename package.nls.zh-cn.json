@@ -1,5 +1,5 @@
 {
-	"ahk2.autolibinclude": "对用户库和标准库提供补全和自动include",
+	"ahk2.autolibinclude": "对用户库和标准库, 本地库提供补全和自动include",
 	"ahk2.compile": "编译脚本",
 	"ahk2.compilercmd": "编译器命令行选项",
 	"ahk2.completefunctionparens": "给函数补全添加括号",
