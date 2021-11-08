@@ -25,7 +25,7 @@ import {
 import * as child_process from 'child_process';
 import { resolve } from 'path';
 import { existsSync, readdirSync, statSync, unlinkSync } from 'fs';
-import { getFileProperties } from 'cfv';
+import { PEFile, RESOURCE_TYPE } from './PEFile';
 
 let client: LanguageClient;
 let outputchannel = window.createOutputChannel('AutoHotkey2');
@@ -124,6 +124,7 @@ export async function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.compile', () => compileScript()),
 		commands.registerCommand('ahk2.help', () => quickHelp()),
 		commands.registerCommand('ahk2.debug', async () => begindebug(extlist, debugexts)),
+		commands.registerCommand('ahk2.debug.attach', async () => begindebug(extlist, debugexts, false, true)),
 		commands.registerCommand('ahk2.debug.params', async () => begindebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk2.setinterpreter', () => setInterpreter()),
 		ahkStatusBarItem
@@ -307,11 +308,11 @@ async function quickHelp() {
 	}
 }
 
-async function begindebug(extlist: string[], debugexts: any, params = false) {
+async function begindebug(extlist: string[], debugexts: any, params = false, attach = false) {
 	const editor = window.activeTextEditor, executePath = ahkpath_cur || getConfig('InterpreterPath');
 	if (!editor) return;
 	let extname: string | undefined;
-	if (params) {
+	if (params || attach) {
 		if (!extlist.includes(extname = 'zero-plusplus.vscode-autohotkey-debug')) {
 			window.showErrorMessage('zero-plusplus.vscode-autohotkey-debug was not found!');
 			return;
@@ -340,19 +341,21 @@ async function begindebug(extlist: string[], debugexts: any, params = false) {
 		for (const t in debugexts)
 			if (debugexts[t] === extname) {
 				config.type = t;
-				if (extname === 'zero-plusplus.vscode-autohotkey-debug' && params) {
-					let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
-					if (input === undefined)
-						return;
-					if (input = input.trim()) {
-						let args: string[] = [];
-						input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
-							args.push(m[4] || m[2]);
-							return '';
-						});
-						config.args = args;
-					}
-				}
+				if (extname === 'zero-plusplus.vscode-autohotkey-debug')
+					if (params) {
+						let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
+						if (input === undefined)
+							return;
+						if (input = input.trim()) {
+							let args: string[] = [];
+							input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
+								args.push(m[4] || m[2]);
+								return '';
+							});
+							config.args = args;
+						}
+					} else if (attach)
+						config.request = 'attach';
 				break;
 			}
 		debug.startDebugging(workspace.getWorkspaceFolder(editor.document.uri), config);
@@ -442,12 +445,12 @@ async function setInterpreter() {
 	}
 }
 
-async function getAHKversion(path: string) {
+function getAHKversion(path: string) {
 	try {
-		let props = await getFileProperties(path);
+		let props = new PEFile(path).getResource(RESOURCE_TYPE.VERSION)[0].StringTable[0];
 		if (props.ProductName?.toLowerCase().startsWith('autohotkey'))
 			return (props.ProductName + ' ') + (props.ProductVersion || '') + (props.FileDescription?.replace(/^.*?(\d+-bit).*$/i, ' $1') || '');
-	} catch (e) {}
+	} catch (e) { }
 	return '';
 }
 
@@ -467,7 +470,7 @@ async function onDidChangeActiveTextEditor(e?: TextEditor) {
 	if (path.match(/\.exe$/i) && existsSync(path)) {
 		if (path !== ahkStatusBarItem.tooltip) {
 			ahkStatusBarItem.tooltip = path;
-			ahkStatusBarItem.text = await getAHKversion(path) || (zhcn ? '未知版本' : 'Unknown version');
+			ahkStatusBarItem.text = getAHKversion(path) || (zhcn ? '未知版本' : 'Unknown version');
 		}
 	} else {
 		ahkStatusBarItem.text = (zhcn ? '选择AutoHotkey2解释器' : 'Select AutoHotkey2 Interpreter');

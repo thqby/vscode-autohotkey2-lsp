@@ -129,6 +129,11 @@
 				"category": "ahk2"
 			},
 			{
+				"command": "ahk2.debug.attach",
+				"title": "%ahk2.debug.attach%",
+				"category": "ahk2"
+			},
+			{
 				"command": "ahk2.debug.params",
 				"title": "%ahk2.debug.params%",
 				"category": "ahk2"
@@ -175,6 +180,11 @@
 					"when": "editorLangId == ahk2 && !isWeb && !inDebugMode",
 					"command": "ahk2.debug",
 					"group": "navigation@1"
+				},
+				{
+					"when": "editorLangId == ahk2 && !isWeb && !inDebugMode",
+					"command": "ahk2.debug.attach",
+					"group": "navigation@2"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb && !inDebugMode",
@@ -276,7 +286,6 @@
 	},
 	"dependencies": {
 		"acorn": "^8.5.0",
-		"cfv": "^1.2.0",
 		"vscode-languageclient": "^7.0.0",
 		"vscode-languageserver": "^7.0.0",
 		"vscode-languageserver-textdocument": "^1.0.1",

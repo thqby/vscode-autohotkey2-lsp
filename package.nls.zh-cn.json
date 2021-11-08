@@ -4,6 +4,7 @@
 	"ahk2.compilercmd": "编译器命令行选项",
 	"ahk2.completefunctionparens": "给函数补全添加括号",
 	"ahk2.debug": "调试脚本",
+	"ahk2.debug.attach": "附加到运行中的脚本",
 	"ahk2.debug.params": "带参调试",
 	"ahk2.defaultdebugger": "设置默认调试器",
 	"ahk2.interpreterpath": "AutoHotkey.exe可执行文件的路径. 如果没有为工作区选择解释器, 则使用此默认设置. 扩展也不会设置或更改此设置的值, 它只会从中读取.",
