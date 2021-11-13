@@ -25,7 +25,7 @@ import {
 import * as child_process from 'child_process';
 import { resolve } from 'path';
 import { existsSync, readdirSync, statSync, unlinkSync } from 'fs';
-import { PEFile, RESOURCE_TYPE } from './PEFile';
+import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
 let client: LanguageClient;
 let outputchannel = window.createOutputChannel('AutoHotkey2');
@@ -99,6 +99,7 @@ export async function activate(context: ExtensionContext) {
 			} else
 				editor.insertSnippet(new SnippetString(params[0]));
 		});
+		client.onRequest('ahk2.getDllExport', (params: string[]) => getDllExport(params[0] ? new RegExp(params[0], 'i') : undefined, ...params.slice(1)));
 		ahkStatusBarItem.show();
 		server_is_ready = true;
 	});
@@ -481,4 +482,14 @@ async function onDidChangeActiveTextEditor(e?: TextEditor) {
 			commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur = path);
 		else
 			ahkpath_cur = path;
+}
+
+function getDllExport(filter?: RegExp, ...paths: string[]) {
+	let funcs: any = {};
+	for (let path of paths)
+		searchAndOpenPEFile(path)?.getExport()?.Functions.map((it) => funcs[it.Name] = true);
+	delete funcs[''];
+	if (filter)
+		return Object.keys(funcs).filter(it => filter.test(it));
+	return Object.keys(funcs);
 }

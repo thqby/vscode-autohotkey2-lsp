@@ -1,4 +1,4 @@
-import { openSync, readSync, closeSync } from 'fs';
+import { openSync, readSync, closeSync, existsSync } from 'fs';
 
 export enum DIRECTORY_ENTRY {
 	IMAGE_DIRECTORY_ENTRY_EXPORT = 0, IMAGE_DIRECTORY_ENTRY_IMPORT = 1, IMAGE_DIRECTORY_ENTRY_RESOURCE = 2, IMAGE_DIRECTORY_ENTRY_EXCEPTION = 3, IMAGE_DIRECTORY_ENTRY_SECURITY = 4, IMAGE_DIRECTORY_ENTRY_BASERELOC = 5, IMAGE_DIRECTORY_ENTRY_DEBUG = 6, IMAGE_DIRECTORY_ENTRY_COPYRIGHT = 7, IMAGE_DIRECTORY_ENTRY_GLOBALPTR = 8, IMAGE_DIRECTORY_ENTRY_TLS = 9, IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG = 10, IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT = 11, IMAGE_DIRECTORY_ENTRY_IAT = 12, IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT = 13, IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR = 14, IMAGE_DIRECTORY_ENTRY_RESERVED = 15
@@ -52,7 +52,7 @@ export class PEFile {
 	private getAscii(offset: number): string {
 		return this.imageData.slice(offset, this.imageData.indexOf(Buffer.alloc(1), offset)).toString('ascii');
 	}
-	getExport() {
+	getExport(): { Module: string, Functions: { Name: string, EntryPoint: string, Ordinal: number }[], OrdinalBase: number } | undefined {
 		const imageData = this.imageData, resinfo = this.directoryEntry[DIRECTORY_ENTRY.IMAGE_DIRECTORY_ENTRY_EXPORT];
 		if (!resinfo?.addr)
 			return;
@@ -66,12 +66,18 @@ export class PEFile {
 		let funcTblPtr = imageData.readUInt32LE(baseRva + 0x1c);
 		let nameTblPtr = imageData.readUInt32LE(baseRva + 0x20);
 		let ordTblPtr = imageData.readUInt32LE(baseRva + 0x24);
-		const Exports = { Module: this.getAscii(modNamePtr), Functions: [] as any[] };
-		for (let i = 0; i < Math.max(funcCount, nameCount); i++) {
+		const Exports = { Module: this.getAscii(modNamePtr), Functions: [] as any[], OrdinalBase }, ordinalList: { [ord: number]: boolean } = {};
+		for (let i = 0; i < nameCount; i++) {
 			let nameOffset = imageData.readUInt32LE(nameTblPtr), ordinal = imageData.readUInt16LE(ordTblPtr), fnOffset = imageData.readUInt32LE(funcTblPtr + ordinal * 4);
-			nameTblPtr += 4, ordTblPtr += 2;
+			nameTblPtr += 4, ordTblPtr += 2, ordinalList[ordinal] = true;
 			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? this.getAscii(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substr(1);
 			Exports.Functions.push({ Name: this.getAscii(nameOffset), EntryPoint, Ordinal: OrdinalBase + ordinal });
+		}
+		for (let ordinal = 0; nameCount < funcCount; ordinal++, nameCount++) {
+			while (ordinalList[ordinal]) ordinal++;
+			let fnOffset = imageData.readUInt32LE(funcTblPtr + ordinal * 4);
+			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? this.getAscii(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substr(1);
+			ordinalList[ordinal] = true, Exports.Functions.splice(ordinal, 0, { Name: '', EntryPoint, Ordinal: OrdinalBase + ordinal });
 		}
 		return resinfo.data = Exports;
 	}
@@ -82,31 +88,21 @@ export class PEFile {
 		if (resinfo.data)
 			return resinfo.data;
 		const baseRva = resinfo.addr;
-		let nameOffset = imageData.readInt32LE(baseRva + 0x0c);
-		let firstThunk = imageData.readInt32LE(baseRva + 0x10);
-		let ptrsize = 4, offset = baseRva, readPtr = imageData.readUInt32LE.bind(imageData);
+		let nameOffset = imageData.readInt32LE(baseRva + 0x0c), firstThunk = imageData.readInt32LE(baseRva + 0x10);
+		let ptrsize = 4, offset = baseRva, readPtr, ffff: any, IMAGE_ORDINAL_FLAG: any;
 		if (this.isBit64)
-			ptrsize = 8, readPtr = readPtr64;
+			ptrsize = 8, ffff = BigInt(0xffff), IMAGE_ORDINAL_FLAG = BigInt('0x8000000000000000'), readPtr = imageData.readBigUInt64LE.bind(imageData);
+		else ffff = 0xffff, IMAGE_ORDINAL_FLAG = 0x80000000, readPtr = imageData.readUInt32LE.bind(imageData);
 		const Imports: { [dll: string]: string[] } = {};
 		while (firstThunk) {
-			let dllname = this.getAscii(nameOffset), ordinal: number;
-			let arr = Imports[dllname] = [] as string[];
-			for (let i = 0; ordinal = readPtr(firstThunk + i * ptrsize); i++) {
-				if (ordinal > imageData.length - 3)
-					break;
-				else if (ordinal < 0)
-					continue;
-				arr.push(this.getAscii(ordinal + 2));
-			}
+			let dllname = this.getAscii(nameOffset), arr = Imports[dllname] = [] as string[], ordinal: any;
+			for (let i = 0; ordinal = readPtr(firstThunk + i * ptrsize); i++)
+				arr.push(ordinal & IMAGE_ORDINAL_FLAG ? `Ordinal#${ordinal & ffff}` : this.getAscii(Number(ordinal) + 2));
 			offset += 20;
 			nameOffset = imageData.readUInt32LE(offset + 0x0c);
 			firstThunk = imageData.readUInt32LE(offset + 0x10);
 		}
-		return Imports;
-		
-		function readPtr64(offset: number) {
-			return parseInt(imageData.readBigUInt64LE(offset).toString());
-		}
+		return resinfo.data = Imports;
 	}
 	getResource(...types: RESOURCE_TYPE[]): any {
 		const imageData = this.imageData, resinfo = this.directoryEntry[DIRECTORY_ENTRY.IMAGE_DIRECTORY_ENTRY_RESOURCE];
@@ -235,4 +231,36 @@ export class PEFile {
 
 export function getFileVersion(path: string) {
 	return new PEFile(path).getResource(RESOURCE_TYPE.VERSION);
+}
+
+export function searchAndOpenPEFile(path: string, isBit64?: boolean): PEFile | undefined {
+	let pe: PEFile, file = '', dirs: string[] | undefined, exts: string[] = [''];
+	while (true)
+		try {
+			pe = new PEFile(path);
+			if (file && (typeof isBit64 === 'boolean') && pe.isBit64 !== isBit64)
+				throw Error();
+			return pe;
+		} catch (e) {
+			if (e instanceof Error || (e as any).errno === -4058) {
+				if (!dirs) {
+					if (path.includes(':') || !(dirs = process.env.Path?.split(';')))
+						return undefined;
+					if (isBit64 === false)
+						dirs.unshift('C:\\Windows\\SysWOW64\\');
+					file = path;
+					if (!file.toLowerCase().endsWith('.dll'))
+						exts.push('.dll');
+				}
+				let t: string | undefined;
+				outloop:
+				while (undefined !== (t = dirs.pop())) {
+					for (let ext of exts)
+						if (t && (existsSync(path = (t.endsWith('/') || t.endsWith('\\') ? t : t + '\\') + file + ext)))
+							break outloop;
+				}
+				if (!t)
+					return undefined;
+			}
+		}
 }

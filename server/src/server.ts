@@ -16,7 +16,7 @@ import {
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Settings, set_Workfolder, setting, signatureProvider, sleep,
-	symbolProvider, typeFormatting, updateFileInfo, workfolder, ahkpath_cur, set_ahkpath, LibIncludeType
+	symbolProvider, typeFormatting, updateFileInfo, workfolder, ahkpath_cur, set_ahkpath, LibIncludeType, loadWinApi
 } from './common';
 
 const languageServer = 'ahk2-language-server';
@@ -132,6 +132,7 @@ connection.onInitialized(async () => {
 			// console.log('Workspace folder change event received.');
 		});
 	}
+	loadWinApi();
 	await initpathenv();
 });
 

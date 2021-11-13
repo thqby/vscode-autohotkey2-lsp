@@ -33,6 +33,7 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	AutoLibInclude: 0,
 	completeFunctionParens: false
 };
+export let winapis: string[] = [];
 
 export let locale = 'en-us';
 export type Maybe<T> = T | undefined;
@@ -127,7 +128,7 @@ export function getwebfile(filepath: string) {
 		req.open('GET', url, false);
 		req.send();
 		if (req.status === 200) {
-			return { url, text: req.responseText};
+			return { url, text: req.responseText };
 		} else if (s = ff.pop())
 			return get(s);
 		return undefined;
@@ -258,6 +259,11 @@ export async function loadahk2(filename = 'ahk2') {
 			hoverCache[n][_low].push(hover);
 	}
 	function bodytostring(body: any) { return (typeof body === 'object' ? body.join('\n') : body) };
+}
+
+export async function loadWinApi() {
+	let result = await connection.sendRequest('ahk2.getDllExport', ['', ...['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)]);
+	if (result) winapis = result;
 }
 
 export function updateFileInfo(info: string, revised: boolean = true): string {

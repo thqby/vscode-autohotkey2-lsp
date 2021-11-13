@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, dllcalltpe, extsettings, inBrowser, lexers, libfuncs, Maybe, pathenv, workfolder } from './common';
+import { ahkvars, completionItemCache, connection, dllcalltpe, extsettings, inBrowser, lexers, libfuncs, Maybe, pathenv, winapis, workfolder } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
@@ -281,7 +281,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				else for (let it of items)
 					it.insertText = `'${it.insertText}'`;
 			} else if (quote) {
-				let res = getFuncCallInfo(doc, position);
+				let res = getFuncCallInfo(doc, position), t: any;
 				if (res) {
 					switch (res.name) {
 						case 'add':
@@ -294,9 +294,37 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								}
 							}
 							break;
+						case 'dynacall':
+							if (res.index !== 0)
+								break;
 						case 'dllcall':
 							if (res.index === 0) {
-
+								if (inBrowser) break;
+								let offset = doc.document.offsetAt(res.pos), tks = Object.values(doc.tokens), index = tks.findIndex(it => it.offset === offset);
+								if (index > -1) {
+									index++;
+									while (tks[index] && (tks[index].type.endsWith('COMMENT') || tks[index].content === '(')) index++;
+									if (tks[index] && tks[index].type === 'TK_STRING') {
+										let offset = doc.document.offsetAt(position);
+										if (offset > tks[index].offset && offset <= tks[index].offset + tks[index].length) {
+											let pre = tks[index].content.substring(1, offset - tks[index].offset);
+											if (!pre.match(/[\\/]/)) {
+												readdirSync('C:\\Windows\\System32').map(file => {
+													if (file.toLowerCase().endsWith('.dll') && expg.test(file = file.slice(0, -4)))
+														items.push(cpitem = CompletionItem.create(file)), cpitem.kind = CompletionItemKind.File;
+												});
+												winapis.map(f => {
+													if (expg.test(f))
+														items.push(cpitem = CompletionItem.create(f)), cpitem.kind = CompletionItemKind.Function;
+												});
+												return items;
+											} else {
+												let result = await connection.sendRequest('ahk2.getDllExport', [expg.source, pre.replace(/[\\/]\w*$/, '')]);
+												if (result) return result.map((f: string) => (cpitem = CompletionItem.create(f), cpitem.kind = CompletionItemKind.Function, cpitem));
+											}
+										}
+									}
+								}
 							} else if (res.index > 0 && res.index % 2 === 1) {
 								for (const name of ['cdecl'].concat(dllcalltpe))
 									cpitem = CompletionItem.create(name), cpitem.commitCharacters = ['*'], cpitem.kind = CompletionItemKind.TypeParameter, items.push(cpitem);
