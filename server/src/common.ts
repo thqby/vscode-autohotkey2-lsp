@@ -5,6 +5,7 @@ import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { FuncNode, Lexer } from './Lexer';
 import { completionitem } from './localize';
+import { Connection } from 'vscode-languageserver';
 export * from './Lexer';
 export * from './codeActionProvider';
 export * from './colorProvider';
@@ -21,7 +22,7 @@ export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
 
-export let connection: any, ahkpath_cur = '', workfolder = '', dirname = '', isahk2_h = false, inBrowser = false;
+export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false, inBrowser = false;
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
@@ -262,8 +263,9 @@ export async function loadahk2(filename = 'ahk2') {
 }
 
 export async function loadWinApi() {
-	let result = await connection.sendRequest('ahk2.getDllExport', ['', ...['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)]);
-	if (result) winapis = result;
+	connection.sendRequest('ahk2.getDllExport', ['', ...['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)]).then(value => {
+		if (value) winapis = value as string[];
+	});
 }
 
 export function updateFileInfo(info: string, revised: boolean = true): string {
@@ -299,12 +301,48 @@ export function getallahkfiles(dirpath: string, maxdeep = 3): string[] {
 	}
 }
 
+export function inWorkspaceFolders(uri: string) {
+	uri = uri.toLowerCase();
+	for (let f of workspaceFolders)
+		if (uri.startsWith(f))
+			return f;
+	return '';
+}
+
+export async function parseWorkspaceFolders() {
+	let l: string;
+	if (inBrowser) {
+		let uris = (await connection.sendRequest('ahk2.getWorkspaceFiles', []) || []) as string[];
+		for (let uri of uris)
+			if (!lexers[l = uri.toLowerCase()]) {
+				let v = await connection.sendRequest('ahk2.getWorkspaceFileContent', [uri]) as string;
+				if (v) {
+					let d = new Lexer(TextDocument.create(uri, 'ahk2', -10, v));
+					d.parseScript(), lexers[l] = d;
+					await sleep(100);
+				}
+			}
+	} else {
+		for (let uri of workspaceFolders) {
+			let dir = URI.parse(uri).fsPath;
+			for (let file of getallahkfiles(dir)) {
+				l = URI.file(file).toString().toLowerCase();
+				if (!lexers[l]) {
+					let d = new Lexer(openFile(file));
+					d.parseScript(), lexers[l] = d;
+					await sleep(100);
+				}
+			}
+		}
+	}
+}
+
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
 export function set_ahkpath(path: string) { ahkpath_cur = path; }
 export function set_dirname(dir: string) { dirname = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str; }
-export function set_Workfolder(str: string) { workfolder = str; }
+export function set_Workfolder(folders?: string[]) { workspaceFolders = folders || []; }
 export function set_Settings(sets: AHKLSSettings) { return extsettings = sets; }
 
 export async function sleep(ms: number) {

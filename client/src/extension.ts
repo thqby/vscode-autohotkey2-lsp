@@ -14,7 +14,9 @@ import {
 	Range,
 	SnippetString,
 	StatusBarAlignment,
-	TextEditor
+	TextEditor,
+	RelativePattern,
+	Uri
 } from 'vscode';
 import {
 	LanguageClient,
@@ -100,6 +102,21 @@ export async function activate(context: ExtensionContext) {
 				editor.insertSnippet(new SnippetString(params[0]));
 		});
 		client.onRequest('ahk2.getDllExport', (params: string[]) => getDllExport(params[0] ? new RegExp(params[0], 'i') : undefined, ...params.slice(1)));
+		client.onRequest('ahk2.getWorkspaceFiles', async (params: string[]) => {
+			let all = !params.length;
+			if (workspace.workspaceFolders) {
+				if (all)
+					return (await workspace.findFiles('**/*.{ahk,ah2,ahk2}')).map(it => it.toString());
+				else {
+					let files: string[] = [];
+					for (let folder of workspace.workspaceFolders)
+						if (params.includes(folder.uri.toString().toLowerCase()))
+							files.push(...(await workspace.findFiles(new RelativePattern(folder, '*.{ahk,ah2,ahk2}'))).map(it => it.toString()));
+					return files;
+				}
+			}
+		});
+		client.onRequest('ahk2.getWorkspaceFileContent', async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText());
 		ahkStatusBarItem.show();
 		server_is_ready = true;
 	});

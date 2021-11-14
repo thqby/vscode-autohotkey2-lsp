@@ -1,7 +1,9 @@
-import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver';
+import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable } from './Lexer';
 import { diagnostic } from './localize';
-import { ahkvars, lexers, sendDiagnostics, symbolcache } from './common';
+import { ahkvars, connection, getallahkfiles, inBrowser, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
+import { URI } from 'vscode-uri';
+import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
 
@@ -27,7 +29,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		return SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, uri,
 			info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
 	});
-	checksamename(doc), sendDiagnostics();
+	if (doc.actived)
+		checksamename(doc), setTimeout(sendDiagnostics, 200);
 	return symbolcache[uri];
 
 	function flatTree(tree: DocumentSymbol[], vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
@@ -205,5 +208,50 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			if (st < 3)
 				stk.modifier = (stk.modifier || 0) | (1 << SemanticTokenModifiers.readonly) | (islib ? 1 << SemanticTokenModifiers.defaultLibrary : 0);
 		}
+	}
+}
+
+export async function workspaceSymbolProvider(params: WorkspaceSymbolParams): Promise<SymbolInformation[]> {
+	let symbols: SymbolInformation[] = [], n = 0, query = params.query;
+	if (!query || !query.match(/^(\w|[^\x00-\x7f])+$/))
+		return symbols;
+	let reg = new RegExp(query.replace(/(?<=[^A-Z])([A-Z])/g, '.*$1'), 'i');
+	for (let uri in lexers)
+		if (await filterSymbols(uri)) return symbols;
+	if (!inBrowser) {
+		let uri: string, d: Lexer;
+		for (let dir of workspaceFolders) {
+			dir = URI.parse(dir).fsPath;
+			for (let path of getallahkfiles(dir)) {
+				uri = URI.file(path).toString().toLowerCase();
+				if (!lexers[uri]) {
+					d = new Lexer(openFile(path));
+					d.parseScript(), lexers[uri] = d;
+					if (await filterSymbols(uri)) return symbols;
+				}
+			}
+		}
+	} else {
+		let uris = (await connection.sendRequest('ahk2.getWorkspaceFiles', []) || []) as string[];
+		for (let uri_ of uris) {
+			let uri = uri_.toLowerCase(), d: Lexer;
+			if (!lexers[uri]) {
+				let content = (await connection.sendRequest('ahk2.getWorkspaceFileContent', [uri_])) as string;
+				d = new Lexer(TextDocument.create(uri_, 'ahk2', -10, content));
+				d.parseScript(), lexers[uri] = d;
+				if (await filterSymbols(uri)) return symbols;
+			}
+		}
+	}
+	return symbols;
+	async function filterSymbols(uri: string) {
+		for (let it of await symbolProvider({ textDocument: { uri } })) {
+			if (reg.test(it.name)) {
+				symbols.push(it);
+				if (++n >= 1000)
+					return true;
+			}
+		}
+		return false;
 	}
 }

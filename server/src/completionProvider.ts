@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, connection, dllcalltpe, extsettings, inBrowser, lexers, libfuncs, Maybe, pathenv, winapis, workfolder } from './common';
+import { ahkvars, completionItemCache, connection, dllcalltpe, extsettings, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
@@ -320,7 +320,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 												return items;
 											} else {
 												let result = await connection.sendRequest('ahk2.getDllExport', [expg.source, pre.replace(/[\\/]\w*$/, '')]);
-												if (result) return result.map((f: string) => (cpitem = CompletionItem.create(f), cpitem.kind = CompletionItemKind.Function, cpitem));
+												if (result) return (result as string[]).map(f => (cpitem = CompletionItem.create(f), cpitem.kind = CompletionItemKind.Function, cpitem));
 											}
 										}
 									}
@@ -494,12 +494,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						items.push(it);
 				}
 			});
-			let dir = (workfolder && doc.scriptpath.startsWith(workfolder + '\\') ? workfolder : doc.scriptdir), exportnum = 0;
+			let dir = inWorkspaceFolders(doc.document.uri) || doc.document.uri.toLowerCase(), exportnum = 0;
 			if (extsettings.AutoLibInclude)
 				for (const u in libfuncs) {
 					if (!list || !list[u]) {
 						path = URI.parse(u).fsPath;
-						if ((extsettings.AutoLibInclude > 1 && (<any>libfuncs[u]).islib) || ((extsettings.AutoLibInclude & 1) && path.startsWith(dir + '\\'))) {
+						if ((extsettings.AutoLibInclude > 1 && (<any>libfuncs[u]).islib) || ((extsettings.AutoLibInclude & 1) && u.startsWith(dir))) {
 							libfuncs[u].map(it => {
 								if (!vars[_low = it.name.toLowerCase()] && expg.test(_low)) {
 									cpitem = convertNodeCompletion(it);

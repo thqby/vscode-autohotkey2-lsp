@@ -8,7 +8,7 @@ import { basename, resolve } from 'path';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, Connection, DidChangeConfigurationNotification, ExecuteCommandParams, FoldingRange, FoldingRangeParams, InitializeParams,
-	InitializeResult, ProposedFeatures, Range, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit
+	InitializeResult, ProposedFeatures, Range, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit, WorkspaceFoldersChangeEvent
 } from 'vscode-languageserver/node';
 import {
 	AHKLSSettings, clearLibfuns, codeActionProvider, colorPresentation, colorProvider, completionProvider, defintionProvider,
@@ -16,7 +16,7 @@ import {
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Settings, set_Workfolder, setting, signatureProvider, sleep,
-	symbolProvider, typeFormatting, updateFileInfo, workfolder, ahkpath_cur, set_ahkpath, LibIncludeType, loadWinApi
+	symbolProvider, typeFormatting, updateFileInfo, workspaceFolders, ahkpath_cur, set_ahkpath, LibIncludeType, loadWinApi, workspaceSymbolProvider, inWorkspaceFolders, parseWorkspaceFolders
 } from './common';
 
 const languageServer = 'ahk2-language-server';
@@ -32,7 +32,7 @@ connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
 	if (params.locale)
 		set_locale(params.locale);
-	set_Workfolder(URI.parse(params.workspaceFolders?.pop()?.uri || '').fsPath.toLowerCase());
+	set_Workfolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
 	);
@@ -44,7 +44,6 @@ connection.onInitialize((params: InitializeParams) => {
 		capabilities.textDocument.publishDiagnostics &&
 		capabilities.textDocument.publishDiagnostics.relatedInformation
 	);
-
 	const result: InitializeResult = {
 		serverInfo: {
 			name: languageServer,
@@ -109,7 +108,8 @@ connection.onInitialize((params: InitializeParams) => {
 				},
 				full: { delta: true },
 				range: true
-			}
+			},
+			workspaceSymbolProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -128,12 +128,16 @@ connection.onInitialized(async () => {
 		connection.client.register(DidChangeConfigurationNotification.type, undefined);
 	}
 	if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders((event: any) => {
-			// console.log('Workspace folder change event received.');
+		connection.workspace.onDidChangeWorkspaceFolders((event: WorkspaceFoldersChangeEvent) => {
+			let del = event.removed.map(it => it.uri.toLowerCase() + '/') || [];
+			set_Workfolder(workspaceFolders.filter(it => !del.includes(it)));
+			event.added.map(it => workspaceFolders.push(it.uri.toLowerCase() + '/'));
+			parseWorkspaceFolders();
 		});
 	}
 	loadWinApi();
 	await initpathenv();
+	parseWorkspaceFolders();
 });
 
 connection.onDidChangeConfiguration(async (change) => {
@@ -169,7 +173,7 @@ documents.onDidOpen(async e => {
 // Only keep settings for open documents
 documents.onDidClose(async e => {
 	let uri = e.document.uri.toLowerCase();
-	if (lexers[uri].d)
+	if (lexers[uri]?.d)
 		return;
 	lexers[uri].actived = false;
 	for (let u in lexers)
@@ -261,6 +265,7 @@ connection.onReferences(referenceProvider);
 connection.onRenameRequest(renameProvider);
 connection.onSignatureHelp(signatureProvider);
 connection.onExecuteCommand(executeCommandProvider);
+connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
@@ -386,18 +391,17 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 }
 
 async function parseuserlibs() {
-	libdirs.map(dir => {
-		getallahkfiles(dir).map(async (path) => {
+	for (let dir of libdirs)
+		for (let path of getallahkfiles(dir)) {
 			let uri = URI.file(path).toString().toLowerCase(), d: Lexer;
 			if (!libfuncs[uri]) {
 				if (!(d = lexers[uri]))
 					d = new Lexer(openFile(path)), d.parseScript();
 				libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
 				Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
-				await sleep(40);
+				await sleep(50);
 			}
-		});
-	});
+		}
 }
 
 function inlibdirs(path: string, ...dirs: string[]) {
@@ -440,13 +444,13 @@ async function parseproject(uri: string) {
 	let doc: Lexer = lexers[uri];
 	if (!libfuncs[uri])
 		libfuncs[uri] = [], Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(URI.parse(uri).toString(), ...libdirs), enumerable: false });
-	setTimeout(() => {
+	setTimeout(async () => {
 		let searchdir = '', workspace = false;
-		if (workfolder && (doc.scriptdir === workfolder || doc.scriptdir.startsWith(workfolder + '\\')))
-			searchdir = workfolder, workspace = true;
+		if (searchdir = inWorkspaceFolders(doc.document.uri))
+			searchdir = URI.parse(searchdir).fsPath, workspace = true;
 		else
 			searchdir = doc.scriptdir + '\\lib';
-		getallahkfiles(searchdir).map(async (path) => {
+		for (let path of getallahkfiles(searchdir)) {
 			let u = URI.file(path).toString().toLowerCase(), d: Lexer;
 			if (u !== uri && !libfuncs[u]) {
 				libfuncs[u] = [], Object.defineProperty(libfuncs[u], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
@@ -456,8 +460,8 @@ async function parseproject(uri: string) {
 						lexers[u] = d;
 				}
 				libfuncs[u].push(...Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
-				await sleep(20);
+				await sleep(50);
 			}
-		});
-	}, 100);
+		}
+	}, 500);
 }

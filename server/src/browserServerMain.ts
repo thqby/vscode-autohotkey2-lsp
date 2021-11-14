@@ -7,14 +7,14 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, BrowserMessageReader, BrowserMessageWriter, DidChangeConfigurationNotification,
 	FoldingRange, FoldingRangeParams, InitializeParams, InitializeResult, ExecuteCommandParams,
-	Range, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit
+	Range, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit, WorkspaceFoldersChangeEvent
 } from 'vscode-languageserver/browser';
 import {
 	AHKLSSettings, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
 	extsettings, generateAuthor, generateComment, getincludetable, hoverProvider, initahk2cache, Lexer, lexers,
 	libfuncs, loadahk2, loadlocalize, parseinclude, prepareRename, rangeFormatting, referenceProvider, renameProvider,
 	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, sendDiagnostics, set_ahk_h, set_Connection,
-	set_dirname, set_locale, set_Workfolder, signatureProvider,	symbolProvider, typeFormatting, updateFileInfo
+	set_dirname, set_locale, set_Workfolder, signatureProvider,	symbolProvider, typeFormatting, updateFileInfo, workspaceFolders, workspaceSymbolProvider
 } from './common';
 
 export const languageServer = 'ahk2-language-server';
@@ -32,7 +32,7 @@ connection.onInitialize((params: InitializeParams) => {
 	if (params.locale)
 		set_locale(params.locale);
 	let capabilities = params.capabilities;
-	set_Workfolder(URI.parse(params.workspaceFolders?.pop()?.uri || '').fsPath.toLowerCase());
+	set_Workfolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
 	);
@@ -107,7 +107,8 @@ connection.onInitialize((params: InitializeParams) => {
 				},
 				full: { delta: true },
 				range: true
-			}
+			},
+			workspaceSymbolProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -126,8 +127,10 @@ connection.onInitialized(async () => {
 		connection.client.register(DidChangeConfigurationNotification.type, undefined);
 	}
 	if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			// console.log('Workspace folder change event received.');
+		connection.workspace.onDidChangeWorkspaceFolders((event: WorkspaceFoldersChangeEvent) => {
+			let del = event.removed.map(it => it.uri.toLowerCase() + '/') || [];
+			set_Workfolder(workspaceFolders.filter(it => !del.includes(it)));
+			event.added.map(it => workspaceFolders.push(it.uri.toLowerCase() + '/'));
 		});
 	}
 });
@@ -151,7 +154,7 @@ documents.onDidOpen(async e => {
 // Only keep settings for open documents
 documents.onDidClose(async e => {
 	let uri = e.document.uri.toLowerCase();
-	if (lexers[uri].d)
+	if (lexers[uri]?.d)
 		return;
 	lexers[uri].actived = false;
 	for (let u in lexers)
@@ -242,6 +245,7 @@ connection.onReferences(referenceProvider);
 connection.onRenameRequest(renameProvider);
 connection.onSignatureHelp(signatureProvider);
 connection.onExecuteCommand(executeCommandProvider);
+connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);

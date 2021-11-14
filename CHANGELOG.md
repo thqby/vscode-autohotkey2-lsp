@@ -1,3 +1,7 @@
+## 1.1.6
+- 增加`DllCall`补全支持
+- 增加`WorkspaceSymbolProvider` [#60](https://github.com/thqby/vscode-autohotkey2-lsp/issues/60)
+
 ## 1.1.5
 - 修复[#59](https://github.com/thqby/vscode-autohotkey2-lsp/issues/59)
 - 调整`AutoHotkey2.AutoLibInclude`设置项值为`'Disabled','Local','User and Standard','All'` [#58](https://github.com/thqby/vscode-autohotkey2-lsp/issues/58)
