@@ -174,63 +174,134 @@ ZipOptions(ZipHandle, Options) => Number
 ZipRawMemory(AddOrBuf [, Size, Password]) => Buffer
 
 class JSON {
-    static parse(objtext) => Map | Array
+	static null => ComValue
+	static true => ComValue
+	static false => ComValue
 
-    /**
-     * Objects include maps, arrays, objects and custom objects with `__enum` metafunction
-     * @param space The number of spaces or string used for indentation
-     */
-    static stringify(obj, space := 0) => String
+	/**
+	 * Convert JSON strings to AutoHotkey objects.
+	 */
+	static parse(JSONstring) => Map | Array
+
+	/**
+	 * Objects include maps, arrays, objects and Com objects.
+	 * @param Space The number of spaces or string used for indentation.
+	 */
+	static stringify(Obj, Space := 0) => String
 }
 
 class Struct {
-    /**
-     * Struct is a built-in function used to create and return structure objects. The object can be used to access defined structures using object syntax. The SetCapacity method can be used to allocate memory to structures and pointers.
-     */
-    static Call(Definition [, StructMemory, InitObject]) => Struct
+	/**
+	 * Struct is a built-in function used to create and return structure objects. The object can be used to access defined structures using object syntax. The SetCapacity method can be used to allocate memory to structures and pointers.
+	 */
+	static Call(Definition [, StructMemory, InitObject]) => Struct
 
-    /**
-     * Returns the size defined by the array; if the structure or field is not an array, it returns 0.
-     */
-    CountOf([field]) => Number
+	/**
+	 * Returns the size defined by the array; if the structure or field is not an array, it returns 0.
+	 */
+	CountOf([field]) => Number
 
-    /**
-     * Return the code of the field.
-     */
-    Encoding([field]) => Number
+	/**
+	 * Return the code of the field.
+	 */
+	Encoding([field]) => Number
 
-    /**
-     * Return the address of the field or structure.
-     */
-    GetAddress([field]) => Number
+	/**
+	 * Return the address of the field or structure.
+	 */
+	GetAddress([field]) => Number
 
-    /*
-     * Returns the previously allocated capacity using .SetCapacity() or allocation string.
-     */
-    GetCapacity([field]) => Number
+	/*
+	 * Returns the previously allocated capacity using .SetCapacity() or allocation string.
+	 */
+	GetCapacity([field]) => Number
 
-    /**
-     * Returns a pointer to the allocated memory stored in a structure or field.
-     */
-    GetPointer([field]) => Number
+	/**
+	 * Returns a pointer to the allocated memory stored in a structure or field.
+	 */
+	GetPointer([field]) => Number
 
-    /**
-     * If the field or structure is a pointer, return true.
-     */
-    IsPointer([field]) => Number
+	/**
+	 * If the field or structure is a pointer, return true.
+	 */
+	IsPointer([field]) => Number
 
-    /**
-     * Returns the offset of the field.
-     */
-    Offset(field) => Number
+	/**
+	 * Returns the offset of the field.
+	 */
+	Offset(field) => Number
 
-    /**
-     * Allocate memory for a field, if new memory is allocated, return the allocated size.
-     */
-    SetCapacity([field, ] newsize) => Number
+	/**
+	 * Allocate memory for a field, if new memory is allocated, return the allocated size.
+	 */
+	SetCapacity([field, ] newsize) => Number
 
-    /**
-     * Returns the size of the structure or field (in bytes).
-     */
-    Size([field]) => Number
+	/**
+	 * Returns the size of the structure or field (in bytes).
+	 */
+	Size([field]) => Number
+}
+
+class Worker {
+	/**
+	 * Creates a real AutoHotkey thread or associates an existing AutoHotkey thread in the current process and returns an object that communicates with it.
+	 * @param ScriptOrThreadID When ScriptOrThreadID is a script, create an AutoHotkey thread;
+	 * When ScriptOrThreadID is a threadid of created thread, it is associated with it;
+	 * When ScriptOrThreadID = 0, associate the main thread.
+	 */
+	__New(ScriptOrThreadID, Cmd := '', Title := 'AutoHotkey') => Worker
+
+	/**
+	 * Gets/sets the thread global variable. Objects of other threads will be converted to thread-safe Com object access and will not be accessible after the thread exits.
+	 * @param VarName Global variable name.
+	 */
+	__Item[VarName] {
+		get => Any
+		set => void
+	}
+
+	/**
+	 * Call thread functions asynchronously. When the return value of another thread is an object, it is converted to a thread-safe Com object.
+	 * @param VarName The name of a global variable, or an object when it is associated with the current thread.
+	 * @param Params Parameters needed when called. The object type is converted to thread-safe Com object when passed to another thread.
+	 */
+	AsyncCall(VarName, Params*) => Worker.Promise
+
+	/**
+	 * Terminate the thread asynchronously.
+	 */
+	ExitApp() => void
+
+	/**
+	 * Thread ready.
+	 */
+	Ready => Number
+
+	/**
+	 * Reload the thread asynchronously.
+	 */
+	Reload() => void
+
+	/**
+	 * Returns the thread ID.
+	 */
+	ThreadID => Number
+
+	/**
+	 * Wait for the thread to exit, return 0 for timeout, or 1 otherwise.
+	 * @param Timeout The number of milliseconds, waitting until the thread exits when Timeout is 0.
+	 */
+	Wait(Timeout := 0) => Number
+
+	class Promise {
+		/**
+		 * Execute the callback after the asynchronous call completes.
+		 */
+		Then(Callback) => Worker.Promise
+
+		/**
+		 * An asynchronous call throws an exception and executes the callback.
+		 */
+		Catch(Callback) => Worker.Promise
+	}
 }

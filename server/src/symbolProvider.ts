@@ -25,8 +25,9 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			gvar[key] = glo[key], (<any>glo[key]).uri = uri;
 	}
 	doc.reflat = false, globalsymbolcache = gvar;
+	let rawuri = doc.document.uri;
 	symbolcache[uri] = flatTree(tree).map(info => {
-		return SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, uri,
+		return SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri,
 			info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
 	});
 	if (doc.actived)
@@ -39,6 +40,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		tree.map(info => {
 			if (info.children)
 				t.push(info);
+			if (!info.name)
+				return;
 			if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Variable || info.kind === SymbolKind.Class) {
 				let _l = info.name.toLowerCase();
 				if (!vars[_l]) {
@@ -61,8 +64,12 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					result.push(info), vars[_l] = info, converttype(info, info === ahkvars[_l]);
 				else if (info === gvar[_l])
 					result.push(info), converttype(info, info === ahkvars[_l]);
-			} else if (info.kind !== SymbolKind.TypeParameter)
+			} else if (info.kind !== SymbolKind.TypeParameter) {
 				result.push(info);
+				if ((info.kind === SymbolKind.Method || info.kind === SymbolKind.Property) && info.name.match(/^__\w+$/))
+					if ((tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]).semantic)
+						delete tk.semantic;
+			}
 		});
 		t.map(info => {
 			if (info.children) {
@@ -75,7 +82,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true, converttype(it, false, SymbolKind.TypeParameter);
 					});
 					for (const k in p.local)
-						if (!ps[k])
+						if (k && !ps[k])
 							inherit[k] = p.local[k], result.push(inherit[k]), converttype(inherit[k]);
 					if (p.assume === FuncScope.GLOBAL || global) {
 						gg = true;
@@ -96,7 +103,9 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 									if (!inherit[k])
 										inherit[k] = vars[k];
 						}
-						for (const k in tt)
+						for (const k in tt) {
+							if (!k)
+								continue;
 							if (!inherit[k]) {
 								inherit[k] = tt[k], result.push(inherit[k]), converttype(tt[k]);
 							} else if (tt[k] !== inherit[k]) {
@@ -104,6 +113,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 									inherit[k] = tt[k], result.push(tt[k]), converttype(tt[k]);
 								else converttype(tt[k], false, inherit[k].kind);
 							} else if (!ps[k]) converttype(tt[k]);
+						}
 					}
 				} else if (info.kind === SymbolKind.Class) {
 					let rg = Range.create(0, 0, 0, 0);

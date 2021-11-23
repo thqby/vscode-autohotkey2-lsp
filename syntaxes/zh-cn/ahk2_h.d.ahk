@@ -76,7 +76,7 @@ ObjDump(obj [, compress, password]) => Buffer
  * 从内存或文件加载转储的对象.
  */
 ObjLoad(AddOrPath [, password]) => Array | Map | Object
- 
+
 /**
  * 从资源中将指定的dll加载到进程中.类似于MemoryLoadLibrary.
  */
@@ -174,23 +174,30 @@ ZipOptions(ZipHandle, Options) => Number
 ZipRawMemory(AddOrBuf [, Size , Password]) => Buffer
 
 class JSON {
-	static parse(objtext) => Map | Array
-  
+	static null => ComValue
+	static true => ComValue
+	static false => ComValue
+
 	/**
-	 * 对象包括映射、数组、对象和带有`__enum`元函数的自定义对象
-	 * @param space 用于缩进的空格的数量或字符串
+	 * 将JSON字符串转换为AutoHotkey对象.
 	 */
-	static stringify(obj, space := 0) => String
+	static parse(JSONstring) => Map | Array
+
+	/**
+	 * 对象包括映射、数组、对象和Com对象.
+	 * @param Space 用于缩进的空格的数量或字符串.
+	 */
+	static stringify(Obj, Space := 0) => String
 }
 
 class Struct {
 	/**
-	* Struct是一个内置函数, 用于创建并返回结构对象.该对象可用于使用对象语法访问定义的结构.SetCapacity方法可用于将内存分配给结构和指针.
+	* Struct是一个内置函数, 用于创建并返回结构对象. 该对象可用于使用对象语法访问定义的结构. SetCapacity方法可用于将内存分配给结构和指针.
 	*/
 	static Call(Definition [, StructMemory, InitObject]) => Struct
 
 	/**
-	 * 返回数组定义的大小；如果结构或字段不是数组, 则返回0.
+	 * 返回数组定义的大小; 如果结构或字段不是数组, 则返回0.
 	 */
 	CountOf([field]) => Number
 
@@ -205,7 +212,7 @@ class Struct {
 	GetAddress([field]) => Number
 
 	/*
-	 * 返回先前使用.SetCapacity()或分配字符串分配的容量.
+	 * 返回先前使用. SetCapacity()或分配字符串分配的容量.
 	 */
 	GetCapacity([field]) => Number
 
@@ -233,4 +240,68 @@ class Struct {
 	 * 返回结构或字段的大小(以字节为单位).
 	 */
 	Size([field]) => Number
+}
+
+class Worker {
+	/**
+	 * 在当前进程中创建一个真AutoHotkey线程或关联一个已有AutoHotkey线程, 并返回一个与之交流的对象.
+	 * @param ScriptOrThreadID 当ScriptOrThreadID为脚本时, 创建一个AutoHotkey线程;
+	 * 当ScriptOrThreadID为已创建的线程ID时, 则与之关联;
+	 * 当ScriptOrThreadID = 0时, 关联主线程.
+	 */
+	__New(ScriptOrThreadID, Cmd := '', Title := 'AutoHotkey') => Worker
+
+	/**
+	 * 获取/设置线程全局变量. 其他线程的对象将转换为线程Com对象安全访问, 线程退出后将无法访问.
+	 * @param VarName 全局变量名.
+	 */
+	__Item[VarName] {
+		get => Any
+		set => void
+	}
+
+	/**
+	 * 异步调用线程函数. 其他线程的返回值为对象时, 将转换为线程Com对象.
+	 * @param VarName 全局变量名, 当前线程时可以为对象.
+	 * @param Params 调用时需要的参数, 传递给其他线程时对象类型将转换为线程Com对象.
+	 */
+	AsyncCall(VarName, Params*) => Worker.Promise
+
+	/**
+	 * 异步方法结束线程.
+	 */
+	ExitApp() => void
+
+	/**
+	 * 线程准备就绪.
+	 */
+	Ready => Number
+
+	/**
+	 * 异步方法重启线程.
+	 */
+	Reload() => void
+
+	/**
+	 * 返回线程ID.
+	 */
+	ThreadID => Number
+
+	/**
+	 * 等待线程退出, 超时返回0, 否则为1.
+	 * @param Timeout 等待的毫秒数, Timeout为0时一直等待至线程退出.
+	 */
+	Wait(Timeout := 0) => Number
+
+	class Promise {
+		/**
+		 * 异步调用完成后执行.
+		 */
+		Then(Callback) => Worker.Promise
+
+		/**
+		 * 异步调用抛出异常后执行.
+		 */
+		Catch(Callback) => Worker.Promise
+	}
 }

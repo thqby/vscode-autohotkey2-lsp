@@ -1,3 +1,6 @@
+## 1.1.8
+- 修复一些问题
+
 ## 1.1.6
 - 增加`DllCall`补全支持
 - 增加`WorkspaceSymbolProvider` [#60](https://github.com/thqby/vscode-autohotkey2-lsp/issues/60)

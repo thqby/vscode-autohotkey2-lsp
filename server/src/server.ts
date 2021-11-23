@@ -173,15 +173,15 @@ documents.onDidOpen(async e => {
 // Only keep settings for open documents
 documents.onDidClose(async e => {
 	let uri = e.document.uri.toLowerCase();
-	if (lexers[uri]?.d)
+	if (!lexers[uri] || (lexers[uri].d && !uri.includes('?')))
 		return;
 	lexers[uri].actived = false;
 	for (let u in lexers)
 		if (lexers[u].actived)
 			for (let f in lexers[u].relevance)
 				if (f === uri) return;
+	connection.sendDiagnostics({ uri: lexers[uri].document.uri, diagnostics: [] });
 	delete lexers[uri];
-	connection.sendDiagnostics({ uri, diagnostics: [] });
 	let deldocs: string[] = [];
 	for (let u in lexers)
 		if (!lexers[u].actived) {
@@ -358,6 +358,7 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 			if (existsSync(path = (ahkpath_cur || pathenv.ahkpath).replace(/[^\\/]+$/, 'lib')))
 				libdirs.push(path.toLowerCase());
 		}
+		pathenv.h = (pathenv.h ?? '0').slice(0, 1);
 		if (pathenv.h === '1') {
 			if (!isahk2_h)
 				set_ahk_h(true), samefolder = false;
