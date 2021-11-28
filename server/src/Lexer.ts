@@ -2270,7 +2270,9 @@ export class Lexer {
 					if ((<FuncNode>node).assume === FuncScope.GLOBAL) {
 						node.children?.map(it => {
 							if (it.kind === SymbolKind.Function) {
-								if (!dec[_low = it.name.toLowerCase()]) {
+								if (!(_low = it.name.toLowerCase()))
+									return;
+								if (!dec[_low]) {
 									dec[_low] = it;
 								} else
 									_diags.push({ message: samenameerr(dec[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
@@ -2324,7 +2326,9 @@ export class Lexer {
 					} else {
 						node.children?.map(it => {
 							if (it.kind === SymbolKind.Function || (<Variable>it).def) {
-								if (!dec[_low = it.name.toLowerCase()]) {
+								if (!(_low = it.name.toLowerCase()))
+									return;
+								if (!dec[_low]) {
 									dec[_low] = it;
 								} else if (!(it.kind === SymbolKind.Variable && dec[_low].kind === SymbolKind.Variable)) {
 									if (dec[_low].kind === SymbolKind.Variable) {
