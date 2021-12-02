@@ -589,11 +589,11 @@ export class Lexer {
 		}
 
 		function parseblock(mode = 0, scopevar = new Map<string, any>(), classfullname: string = ''): DocumentSymbol[] {
-			const result: DocumentSymbol[] = [], document = _this.document;
+			const result: DocumentSymbol[] = [], document = _this.document, cmm: Token = { content: '', offset: 0, type: '', length: 0 };
 			let _parent = scopevar.get('#parent') || _this, tk: Token = { content: '', type: '', offset: 0, length: 0 };
 			let lk: Token = tk, next: boolean = true, LF: number = 0, topcontinue = false, _low = '', m: any;
 			let blocks = 0, inswitch = -1, blockpos: number[] = [], tn: DocumentSymbol | FuncNode | Variable | undefined;
-			let raw = '', o: any = '', last_comm = '', tds: Diagnostic[] = [], cmm: Token = { content: '', offset: 0, type: '', length: 0 };
+			let raw = '', o: any = '', last_comm = '', tds: Diagnostic[] = [];
 			if (mode !== 0)
 				blockpos.push(parser_pos - 1);
 			while (nexttoken()) {
@@ -1197,7 +1197,7 @@ export class Lexer {
 								break;
 							}
 							// while (parser_pos < input_length && input.charAt(parser_pos).match(/( |\t)/)) parser_pos++;
-							if (nk) cmm = nk;
+							if (nk) Object.assign(cmm, nk);
 							nk = get_token_ingore_comment(), parser_pos = tk.offset + tk.length;
 							if (nk.content.match(/^(\(|\[|\{|=>)/)) {
 								tk.topofline = true;
@@ -2392,7 +2392,7 @@ export class Lexer {
 						case 'TK_BLOCK_COMMENT':
 							_this.addFoldingRange(tk.offset, tk.offset + tk.length, 'comment');
 						case 'TK_COMMENT':
-							cmm = tk;
+							Object.assign(cmm, tk);
 						case 'TK_INLINE_COMMENT':
 							tk = get_next_token();
 							break;
@@ -2893,7 +2893,7 @@ export class Lexer {
 			let resulting_string: string, bg = (parser_pos === 0);
 			n_newlines = 0;
 			if (parser_pos >= input_length)
-				return { content: '', type: 'TK_EOF', offset: input_length, length: 0 };
+				return { content: '', type: 'TK_EOF', offset: input_length, length: 0, topofline: true };
 			let c = input.charAt(parser_pos);
 			input_wanted_newline = false, whitespace_before_token = [], parser_pos += 1;
 
