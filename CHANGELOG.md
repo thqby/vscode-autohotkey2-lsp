@@ -1,3 +1,7 @@
+## 1.1.9
+- 修复[#61](https://github.com/thqby/vscode-autohotkey2-lsp/issues/61)
+- 修复格式化时丢失部分行
+
 ## 1.1.8
 - 修复一些问题
 
