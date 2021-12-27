@@ -554,7 +554,7 @@ export class Lexer {
 							break;
 					}
 				}
-				if (islib || (this.d & 2)) {
+				if ((this.d & 2) || (islib && !this.uri.includes('?'))) {
 					this.d = 3;
 					this.children.map(it => {
 						switch (it.kind) {
@@ -1090,7 +1090,7 @@ export class Lexer {
 										for (const t in tt)
 											tt[t] = vr.range.end;
 										if (tk.content.match(/^(\+\+|--)$/))
-											vr.def = true, tk.content = '';
+											vr.def = true, tk = Object.assign({}, tk), tk.content = '';
 									}
 								} else {
 									if (tk.type === 'TK_UNKNOWN')
@@ -4922,7 +4922,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 			if (tps.length === 0) {
 
 			} else for (const tp of tps) {
-				searchNode(lexers[uri], name.replace(new RegExp('^' + p[0]), tp), pos, kind)?.map(it => {
+				searchNode(lexers[uri], name.replace(new RegExp('^' + p[0]), tp), tp.match(/^[#@]/) ? undefined : pos, kind)?.map(it => {
 					if (!rs.map((i: any) => i.node).includes(it.node))
 						rs.push(it);
 				});
