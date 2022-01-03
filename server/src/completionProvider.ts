@@ -17,21 +17,22 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	let istr = doc.instrorcomm(position);
 	if (istr === 1)
 		return;
-	for (let i = 0; i < position.character; i++) {
-		char = lt.charAt(i);
-		if (quote === char) {
-			if (lt.charAt(i - 1) === '`')
-				continue;
-			else quote = '', percent = false;
-		} else if (char === '%') {
-			percent = !percent;
-		} else if (quote === '' && (char === '"' || char === "'") && (i === 0 || lt.charAt(i - 1).match(/[([%,\s]/)))
-			quote = char;
-	}
-	if (quote || istr) {
+	if (istr) {
 		if (triggerKind === 2)
 			return;
 		triggerchar = '';
+	} else {
+		for (let i = 0; i < position.character; i++) {
+			char = lt.charAt(i);
+			if (quote === char) {
+				if (lt.charAt(i - 1) === '`')
+					continue;
+				else quote = '', percent = false;
+			} else if (char === '%') {
+				percent = !percent;
+			} else if (quote === '' && (char === '"' || char === "'") && (i === 0 || lt.charAt(i - 1).match(/[([%,\s]/)))
+				quote = char;
+		}
 	}
 	if (!percent && triggerchar === '.' && content.pre.match(/^\s*#include/i))
 		triggerchar = '###';

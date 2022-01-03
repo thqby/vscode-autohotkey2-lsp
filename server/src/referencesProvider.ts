@@ -74,7 +74,7 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 					refs[lexers[uri].document.uri] = rgs;
 				}
 				for (const uri in refs) {
-					let rgs = refs[uri], doc = lexers[uri], tt: Range[] = [];
+					let rgs = refs[uri], doc = lexers[uri.toLowerCase()], tt: Range[] = [];
 					for (let rg of rgs) {
 						let i = 0, offset = doc.document.offsetAt(rg.end), tk: Token | undefined;
 						while (i < c.length) {

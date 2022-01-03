@@ -52,7 +52,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 						converttype(info, gvar[_l] === ahkvars[_l], gvar[_l].kind);
 					} else {
 						vars[_l] = info, result.push(info);
-						converttype(info, ahkvars[_l] && gvar[_l] === ahkvars[_l], gvar[_l]?.kind || info.kind);
+						if (info.kind !== SymbolKind.Class || !(<any>info).parent)
+							converttype(info, ahkvars[_l] && gvar[_l] === ahkvars[_l], gvar[_l]?.kind || info.kind);
 					}
 				} else if (info.kind === SymbolKind.Variable) {
 					if (info !== vars[_l])

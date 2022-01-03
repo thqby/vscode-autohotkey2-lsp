@@ -10,6 +10,11 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 	if (context) {
 		let word = context.text.toLowerCase(), kind: SymbolKind = SymbolKind.Variable;
 		let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, node: DocumentSymbol | undefined, uri: string = '';
+		if (context.kind === SymbolKind.Null) {
+			if ((t = hoverCache[1]) && t[word])
+				return t[word][0];
+			return undefined;
+		}
 		if (context.pre === '#') {
 			if ((t = hoverCache[1]) && (t = t[word = '#' + word]))
 				return t[0];

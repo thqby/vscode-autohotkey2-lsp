@@ -4175,7 +4175,7 @@ export class Lexer {
 	public buildContext(position: Position, full: boolean = true) {
 		let word = this.getWordAtPosition(position, full), linetext = '', t = '', pre = '', suf = '', dot = false;
 		let kind: SymbolKind = SymbolKind.Variable, i = 0, j = 0, c = 0, l = 0, text = '', document = this.document;
-		linetext = this.document.getText(Range.create(word.range.start.line, 0, word.range.end.line + 1, 0)).replace(/\r?\n/, '');
+		linetext = document.getText(Range.create(word.range.start.line, 0, word.range.end.line + 1, 0)).replace(/\r?\n/, '');
 		if (full && (linetext.match(/^\./) || word.text.match(/^\./))) {
 			i = word.range.start.character;
 			l = word.range.start.line, text = word.text;
@@ -4226,7 +4226,10 @@ export class Lexer {
 		if (word.range.start.character > 0)
 			pre = this.document.getText(Range.create(word.range.start.line, 0, word.range.start.line, word.range.start.character)).trim();
 		suf = this.document.getText(Range.create(word.range.end.line, word.range.end.character, word.range.end.line + 1, 0));
-		if (word.text.indexOf('.') === -1) {
+		let tk = this.tokens[document.offsetAt(word.range.start)];
+		if (tk && tk.type === 'TK_RESERVED') {
+			kind = SymbolKind.Null;
+		} else if (word.text.indexOf('.') === -1) {
 			if (suf.match(/^\(/) || (pre.match(/^(try|else|finally|)$/i) && suf.match(/^\s*(([\w,]|[^\x00-\x7f])|$)/)))
 				kind = SymbolKind.Function;
 		} else if (suf.match(/^\(/) || (pre.match(/^(try|else|finally|)$/i) && suf.match(/^\s*(([\w,]|[^\x00-\x7f])|$)/)))
@@ -4234,7 +4237,7 @@ export class Lexer {
 		else
 			kind = SymbolKind.Property;
 		suf = suf.trimRight();
-		if (word.text) {
+		if (word.text && kind !== SymbolKind.Null) {
 			if (kind === SymbolKind.Function && pre.match(/^(static|)$/i)) {
 				let scope = this.searchScopedNode(position);
 				if (scope && scope.kind === SymbolKind.Class) {
@@ -4356,7 +4359,10 @@ export class Lexer {
 			if (item.kind !== SymbolKind.Variable && (its = item.children))
 				if (it = this.searchScopedNode(position, its))
 					return it;
-				else return item;
+				else {
+					if (position.line > item.selectionRange.start.line || position.character > item.selectionRange.end.character)
+						return item;
+				}
 			return undefined;
 		}
 		return undefined;

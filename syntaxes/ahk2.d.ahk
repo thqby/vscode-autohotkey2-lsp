@@ -1814,6 +1814,11 @@ RegRead([KeyName, ValueName]) => String
 RegWrite(Value, ValueType, KeyName [, ValueName]) => void
 
 /**
+ * Replaces the currently running instance of the script with a new one.
+ */
+Reload() => void
+
+/**
  * Return the number, rounded to N digits after the decimal point
  */
 Round(Number, N := 0) => Number | String

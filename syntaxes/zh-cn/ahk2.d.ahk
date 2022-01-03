@@ -1814,6 +1814,11 @@ RegRead([KeyName, ValueName]) => String
 RegWrite(Value, ValueType, KeyName [, ValueName]) => void
 
 /**
+ * 使用新的脚本实例替换当前正在运行的.
+ */
+Reload() => void
+
+/**
  * 返回数字,四舍五入到小数点后N位
  */
 Round(Number, N := 0) => Number | String
