@@ -1,10 +1,10 @@
 {
 	"name": "vscode-autohotkey2-lsp",
-	"displayName": "AutoHotKey2 Language Support",
+	"displayName": "AutoHotkey2 Language Support",
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",

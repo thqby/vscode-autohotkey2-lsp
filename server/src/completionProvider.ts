@@ -281,7 +281,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					return items;
 				else for (let it of items)
 					it.insertText = `'${it.insertText}'`;
-			} else if (quote) {
+			} else if (istr) {
 				let res = getFuncCallInfo(doc, position), t: any;
 				if (res) {
 					switch (res.name) {

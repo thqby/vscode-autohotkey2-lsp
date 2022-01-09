@@ -50,7 +50,7 @@ export namespace diagnostic {
 	export const returnmultival = localize('diagnostic.returnmultival', '\'Return\' accepts at most 1 parameter.');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');
 	export const unknown = localize('diagnostic.unknown', 'Unknown {0}');
-	export const unknowninclude = localize('diagnostic.unknowninclude', '\'{0}\' invalid include file format');
+	export const invalidencoding = localize('diagnostic.invalidencoding', '\'{0}\' invalid file encoding');
 	export const unknownoperatoruse = localize('diagnostic.unknownoperatoruse', 'Unknown operator use');
 	export const unknowntoken = localize('diagnostic.unknowntoken', 'Unknown token \'{0}\'');
 	export const unsupportinclude = localize('diagnostic.unsupportinclude', '#Include in functions and classes cannot correctly deduce scope and code completion');

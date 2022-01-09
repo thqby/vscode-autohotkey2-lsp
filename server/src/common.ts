@@ -21,6 +21,7 @@ export * from './scriptrunner';
 export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
+import { diagnostic } from './localize';
 
 export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false, inBrowser = false;
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
@@ -64,13 +65,32 @@ export function openFile(path: string): TextDocument {
 			return TextDocument.create(data.url, 'ahk2', -10, data.text);
 		return undefined as unknown as TextDocument;
 	} else {
-		let buf: any;
+		let buf: Buffer | string;
 		buf = readFileSync(path);
 		if (buf[0] === 0xff && buf[1] === 0xfe)
 			buf = buf.toString('utf16le');
 		else if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
 			buf = buf.toString('utf8').substring(1);
-		else buf = buf.toString('utf8');
+		else {
+			let len = Math.min(buf.byteLength, 256), i = 0, c = 0, l = 0;
+			while (i < len) {
+				c = buf[i];
+				if (c < 0x80) { i++; continue; }
+				else if (c >= 0xc0 && c < 0xff) {
+					l = c < 0xe0 ? 1 : c < 0xf0 ? 2 : c < 0xf8 ? 3 : c < 0xfc ? 4 : c < 0xfe ? 5 : 6;
+					if (i + l >= len) break;
+					for (++i; l; --l)
+						if ((buf[i++] & 0xc0) !== 0x80) {
+							connection.window.showErrorMessage(diagnostic.invalidencoding(path));
+							return undefined as unknown as TextDocument;
+						}
+				} else {
+					connection.window.showErrorMessage(diagnostic.invalidencoding(path));
+					return undefined as unknown as TextDocument;
+				}
+			}
+			buf = buf.toString('utf8');
+		}
 		return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, buf);
 	}
 }
@@ -324,11 +344,11 @@ export async function parseWorkspaceFolders() {
 			}
 	} else {
 		for (let uri of workspaceFolders) {
-			let dir = URI.parse(uri).fsPath;
+			let dir = URI.parse(uri).fsPath, t;
 			for (let file of getallahkfiles(dir)) {
 				l = URI.file(file).toString().toLowerCase();
-				if (!lexers[l]) {
-					let d = new Lexer(openFile(file));
+				if (!lexers[l] && (t = openFile(file))) {
+					let d = new Lexer(t);
 					d.parseScript(), lexers[l] = d;
 					await sleep(100);
 				}

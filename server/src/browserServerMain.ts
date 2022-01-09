@@ -154,7 +154,7 @@ documents.onDidOpen(async e => {
 // Only keep settings for open documents
 documents.onDidClose(async e => {
 	let uri = e.document.uri.toLowerCase();
-	if (lexers[uri]?.d)
+	if (!lexers[uri] || lexers[uri].d)
 		return;
 	lexers[uri].actived = false;
 	for (let u in lexers)
@@ -165,7 +165,7 @@ documents.onDidClose(async e => {
 	connection.sendDiagnostics({ uri, diagnostics: [] });
 	let deldocs: string[] = [];
 	for (let u in lexers)
-		if (!lexers[u].actived) {
+		if (!lexers[u].actived && !lexers[u].d) {
 			let del = true;
 			for (let f in lexers[u].relevance)
 				if (lexers[f] && lexers[f].actived) {

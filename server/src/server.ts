@@ -184,7 +184,7 @@ documents.onDidClose(async e => {
 	delete lexers[uri];
 	let deldocs: string[] = [];
 	for (let u in lexers)
-		if (!lexers[u].actived) {
+		if (!lexers[u].actived && !(lexers[u].d && !u.includes('?'))) {
 			let del = true;
 			for (let f in lexers[u].relevance)
 				if (lexers[f] && lexers[f].actived) {
@@ -394,10 +394,12 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 async function parseuserlibs() {
 	for (let dir of libdirs)
 		for (let path of getallahkfiles(dir)) {
-			let uri = URI.file(path).toString().toLowerCase(), d: Lexer;
+			let uri = URI.file(path).toString().toLowerCase(), d: Lexer, t: TextDocument;
 			if (!libfuncs[uri]) {
-				if (!(d = lexers[uri]))
-					d = new Lexer(openFile(path)), d.parseScript();
+				if (!(d = lexers[uri])) {
+					if (!(t = openFile(path))) continue;
+					d = new Lexer(t), d.parseScript();
+				}
 				libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
 				Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
 				await sleep(50);
@@ -452,11 +454,12 @@ async function parseproject(uri: string) {
 		else
 			searchdir = doc.scriptdir + '\\lib';
 		for (let path of getallahkfiles(searchdir)) {
-			let u = URI.file(path).toString().toLowerCase(), d: Lexer;
+			let u = URI.file(path).toString().toLowerCase(), d: Lexer, t: TextDocument;
 			if (u !== uri && !libfuncs[u]) {
 				libfuncs[u] = [], Object.defineProperty(libfuncs[u], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
 				if (!(d = lexers[u])) {
-					d = new Lexer(openFile(path)), d.parseScript();
+					if (!(t = openFile(path))) continue;
+					d = new Lexer(t), d.parseScript();
 					if (workspace)
 						lexers[u] = d;
 				}

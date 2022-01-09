@@ -1,3 +1,6 @@
+## 1.2.1
+- 修复[#63](https://github.com/thqby/vscode-autohotkey2-lsp/issues/63)
+
 ## 1.2.0
 - 修复一些bug
 

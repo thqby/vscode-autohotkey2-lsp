@@ -230,13 +230,13 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams): Pr
 	for (let uri in lexers)
 		if (await filterSymbols(uri)) return symbols;
 	if (!inBrowser) {
-		let uri: string, d: Lexer;
+		let uri: string, d: Lexer, t: TextDocument;
 		for (let dir of workspaceFolders) {
 			dir = URI.parse(dir).fsPath;
 			for (let path of getallahkfiles(dir)) {
 				uri = URI.file(path).toString().toLowerCase();
-				if (!lexers[uri]) {
-					d = new Lexer(openFile(path));
+				if (!lexers[uri] && (t = openFile(path))) {
+					d = new Lexer(t);
 					d.parseScript(), lexers[uri] = d;
 					if (await filterSymbols(uri)) return symbols;
 				}

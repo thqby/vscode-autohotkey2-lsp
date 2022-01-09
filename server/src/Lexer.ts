@@ -612,9 +612,8 @@ export class Lexer {
 										_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length);
 								} else if (statSync(m.path).isDirectory())
 									includedir = m.path;
-								else if (m.path.match(/\.(ahk2?|ah2)$/i))
+								else
 									includetable[m.uri] = { path: m.path, raw };
-								else _this.addDiagnostic(diagnostic.unknowninclude(m.path), tk.offset, tk.length);
 								if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
 							}
 						} else if (m = tk.content.match(/^(\s*#dllimport\s+)((\w|[^\x00-\x7f])+)/i)) {
@@ -2049,6 +2048,8 @@ export class Lexer {
 						let prec = _parent.funccall.length, sub = parseexp(e, undefined, true);
 						result.push(tn = FuncNode.create('', SymbolKind.Function, makerange(b, lk.offset + lk.length - b), makerange(b, 0), par, sub));
 						adddeclaration(tn as FuncNode), (<FuncNode>tn).funccall = _parent.funccall.splice(prec);
+						if (_parent.kind === SymbolKind.Function || _parent.kind === SymbolKind.Method)
+							(<FuncNode>tn).parent = _parent;
 						tpexp = tpexp.replace(/\([^()]*\)$/, '') + ' #func';
 					} else if (tk.type === 'TK_WORD') {
 						if (input.charAt(tk.offset - 1) !== '.') {
@@ -3741,6 +3742,7 @@ export class Lexer {
 				print_token();
 				output_space_before_token = true;
 				keep_comma_space = false;
+				deindent();
 				return;
 			}
 
@@ -3936,9 +3938,11 @@ export class Lexer {
 			} else if (token_text === '*') {
 				if (flags.last_text === '(' || (last_type === 'TK_WORD' && (is_next(')') || is_next(']'))))
 					space_before = space_after = false;
+				else if (flags.last_text === ',')
+					space_after = false;
 			} else if (flags.last_text === '{' && allIdentifierChar.test(token_text))
 				space_before = false;
-			else if (last_top && flags.mode === MODE.Statement && last_type === 'TK_WORD' && (token_text === '-' || token_text === '+'))
+			else if (token_text === '~' || (last_top && flags.mode === MODE.Statement && last_type === 'TK_WORD' && (token_text === '-' || token_text === '+')))
 				space_after = false;
 			if (input_wanted_newline) {
 				output_space_before_token = false;
@@ -4502,7 +4506,10 @@ export function parseinclude(include: { [uri: string]: { path: string, raw: stri
 	for (const uri in include) {
 		let path = include[uri].path;
 		if (!(lexers[uri]) && existsSync(path)) {
-			let doc = new Lexer(openFile(path));
+			let t = openFile(path);
+			if (!t)
+				continue;
+			let doc = new Lexer(t);
 			lexers[uri] = doc, doc.parseScript();
 			parseinclude(doc.include);
 			doc.relevance = getincludetable(uri).list;
@@ -5039,7 +5046,10 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 			if (!d) {
 				let path = URI.parse(uri).fsPath;
 				if (existsSync(path)) {
-					d = lexers[uri] = new Lexer(openFile(path));
+					let t = openFile(path);
+					if (!t)
+						continue;
+					d = lexers[uri] = new Lexer(t);
 					d.parseScript();
 				} else
 					continue;
