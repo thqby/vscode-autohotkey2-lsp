@@ -372,8 +372,10 @@ async function begindebug(extlist: string[], debugexts: any, params = false, att
 							});
 							config.args = args;
 						}
-					} else if (attach)
+					} else if (attach) {
 						config.request = 'attach';
+						delete config.program;
+					}
 				break;
 			}
 		debug.startDebugging(workspace.getWorkspaceFolder(editor.document.uri), config);

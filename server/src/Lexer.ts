@@ -377,7 +377,7 @@ export class Lexer {
 					else {
 						last_last_text = flags.last_text;
 						last_type = token_type;
-						flags.last_text = token_text;
+						flags.last_text = token_text.toLowerCase();
 					}
 					flags.had_comment = false;
 					last_text = token_text_low;
@@ -2598,12 +2598,16 @@ export class Lexer {
 		}
 
 		function print_newline(force_newline = false, preserve_statement_flags = false): void {
+			let n = 0;
 			output_space_before_token = false;
 
 			if (!preserve_statement_flags) {
 				if (flags.last_text !== ',' && flags.last_text !== '=' && (last_type !== 'TK_OPERATOR' || in_array(flags.last_text, ['++', '--', '%']))) {
 					while (flags.mode === MODE.Statement && !flags.if_block && !flags.do_block) {
+						if (n && flags.last_text === 'try')
+							break;
 						restore_mode();
+						++n;
 					}
 				}
 			}
@@ -2754,7 +2758,7 @@ export class Lexer {
 		}
 
 		function start_of_statement(): boolean {
-			if ((last_type === 'TK_RESERVED' && !input_wanted_newline && in_array(flags.last_text.toLowerCase(), ['local', 'static', 'global']) && token_type === 'TK_WORD') ||
+			if ((last_type === 'TK_RESERVED' && !input_wanted_newline && in_array(flags.last_text, ['local', 'static', 'global']) && token_type === 'TK_WORD') ||
 				(last_type === 'TK_RESERVED' && flags.last_text.match(/^loop|try|catch|finally$/i)) ||
 				(last_type === 'TK_RESERVED' && flags.last_text.match(/^return$/i) && !input_wanted_newline) ||
 				(last_type === 'TK_RESERVED' && flags.last_text.match(/^(else|until)$/i) && !(token_type === 'TK_RESERVED' && token_text_low === 'if')) ||
@@ -2767,14 +2771,14 @@ export class Lexer {
 				set_mode(MODE.Statement);
 				indent();
 
-				if (last_type === 'TK_RESERVED' && in_array(flags.last_text.toLowerCase(), ['local', 'static', 'global']) && token_type === 'TK_WORD') {
+				if (last_type === 'TK_RESERVED' && in_array(flags.last_text, ['local', 'static', 'global']) && token_type === 'TK_WORD') {
 					flags.declaration_statement = true;
 				}
 				// Issue #276:
 				// If starting a new statement with [if, for, while, do], push to a new line.
 				// if (a) if (b) if(c) d(); else e(); else f();
 				if (!start_of_object_property()) {
-					allow_wrap_or_preserved_newline(token_type === 'TK_RESERVED' && flags.last_text.toLowerCase() !== 'try' && in_array(token_text_low, ['loop', 'for', 'if', 'while']));
+					allow_wrap_or_preserved_newline(token_type === 'TK_RESERVED' && flags.last_text !== 'try' && in_array(token_text_low, ['loop', 'for', 'if', 'while']));
 				}
 
 				return true;
@@ -3295,7 +3299,7 @@ export class Lexer {
 		function handle_start_expr(): void {
 			if (start_of_statement()) {
 				// The conditional starts the statement if appropriate.
-				switch (flags.last_word.toLowerCase()) {
+				switch (flags.last_word) {
 					case 'try':
 						if (!input_wanted_newline && in_array(token_text_low, ['if', 'while', 'loop', 'for']))
 							restore_mode();
@@ -3317,7 +3321,7 @@ export class Lexer {
 				if (last_type === 'TK_WORD' || flags.last_text === ')') {
 					// this is array index specifier, break immediately
 					// a[x], fn()[x]
-					if (last_type === 'TK_RESERVED' && in_array(flags.last_text.toLowerCase(), line_starters)) {
+					if (last_type === 'TK_RESERVED' && in_array(flags.last_text, line_starters)) {
 						output_space_before_token = true;
 					}
 					set_mode(next_mode);
@@ -3342,9 +3346,9 @@ export class Lexer {
 				}
 
 			} else {
-				if (last_type === 'TK_RESERVED' && in_array(flags.last_text.toLowerCase(), ['for', 'loop'])) {
+				if (last_type === 'TK_RESERVED' && in_array(flags.last_text, ['for', 'loop'])) {
 					next_mode = MODE.ForInitializer;
-				} else if (last_type === 'TK_RESERVED' && in_array(flags.last_text.toLowerCase(), ['if', 'while'])) {
+				} else if (last_type === 'TK_RESERVED' && in_array(flags.last_text, ['if', 'while'])) {
 					next_mode = MODE.Conditional;
 				} else {
 					// next_mode = MODE.Expression;
@@ -3359,7 +3363,7 @@ export class Lexer {
 				// do nothing on (( and )( and ][ and ]( and .(
 			} else if (!(last_type === 'TK_RESERVED' && token_text === '(') && (last_type !== 'TK_WORD' || flags.last_text.match(/^#[a-z]+/i)) && last_type !== 'TK_OPERATOR') {
 				output_space_before_token = true;
-			} else if (last_type === 'TK_RESERVED' && (in_array(flags.last_text.toLowerCase(), line_starters) || flags.last_text.match(/^catch$/i))) {
+			} else if (last_type === 'TK_RESERVED' && (in_array(flags.last_text, line_starters) || flags.last_text.match(/^catch$/i))) {
 				if (opt.space_before_conditional) {
 					output_space_before_token = true;
 				}
@@ -3382,7 +3386,7 @@ export class Lexer {
 						output_space_before_token = true;
 					}
 				}
-				else if (flags.last_text.toLowerCase() === 'until') {
+				else if (flags.last_text === 'until') {
 					output_space_before_token = true;
 				}
 				else if (last_type === 'TK_RESERVED' && flags.last_text.match(/^(break|continue)$/i))
@@ -3451,7 +3455,7 @@ export class Lexer {
 			if (opt.brace_style === "expand") {
 				if (last_type !== 'TK_OPERATOR' &&
 					(last_type === 'TK_EQUALS' ||
-						(last_type === 'TK_RESERVED' && is_special_word(flags.last_text) && flags.last_text.toLowerCase() !== 'else'))) {
+						(last_type === 'TK_RESERVED' && is_special_word(flags.last_text) && flags.last_text !== 'else'))) {
 					output_space_before_token = true;
 				} else {
 					print_newline(false, true);
@@ -3526,7 +3530,7 @@ export class Lexer {
 			let not_add_line = true;
 			if (start_of_statement()) {
 				// The conditional starts the statement if appropriate.
-				switch (flags.last_word.toLowerCase()) {
+				switch (flags.last_word) {
 					case 'try':
 						if (!input_wanted_newline && in_array(token_text_low, ['if', 'while', 'loop', 'for']))
 							restore_mode();
@@ -3542,7 +3546,7 @@ export class Lexer {
 				}
 			} else if (input_wanted_newline && !is_expression(flags.mode) &&
 				(last_type !== 'TK_OPERATOR' || in_array(flags.last_text, ['--', '++', '%'])) && last_type !== 'TK_EQUALS' &&
-				(opt.preserve_newlines || !(last_type === 'TK_RESERVED' && in_array(flags.last_text.toLowerCase(), ['local', 'static', 'global', 'set', 'get'])))) {
+				(opt.preserve_newlines || !(last_type === 'TK_RESERVED' && in_array(flags.last_text, ['local', 'static', 'global', 'set', 'get'])))) {
 				print_newline();
 				not_add_line = false;
 			}
@@ -3577,7 +3581,7 @@ export class Lexer {
 					flags.else_block = false;
 				}
 			}
-			if (flags.in_case_statement || (flags.mode === 'BlockStatement' && flags.last_word.toLowerCase() === 'switch')) {
+			if (flags.in_case_statement || (flags.mode === 'BlockStatement' && flags.last_word === 'switch')) {
 				if ((token_text_low === 'case' && token_type === 'TK_RESERVED') || token_text_low === 'default') {
 					print_newline();
 					if (flags.case_body) {
@@ -3624,9 +3628,11 @@ export class Lexer {
 				prefix = 'NEWLINE';
 
 			if (token_type === 'TK_RESERVED' && in_array(token_text_low, line_starters) && flags.last_text !== ')') {
+				if (token_text_low === 'if' && last_text === 'else' && just_added_newline())
+					output_lines.pop();
 				if (flags.last_text.match(/^else$/i)) {
 					prefix = 'SPACE';
-				} else if (flags.last_text.toLowerCase() === 'try' && in_array(token_text_low, ['if', 'while', 'loop', 'for', 'return'])) {
+				} else if (flags.last_text === 'try' && in_array(token_text_low, ['if', 'while', 'loop', 'for', 'return'])) {
 					prefix = 'SPACE';
 				} else if (n_newlines && flags.last_text !== '::') {
 					prefix = 'NEWLINE';
@@ -3637,16 +3643,17 @@ export class Lexer {
 				if (end_of_object || last_type !== 'TK_END_BLOCK' || opt.brace_style === "expand" || opt.brace_style === "end-expand") {
 					if (not_add_line)
 						print_newline();
-				} else if ((token_text_low === 'else' && flags.last_word.toLowerCase() === 'if')
-					|| (token_text_low === 'until' && flags.last_word.toLowerCase() === 'loop')
-					|| (token_text_low === 'catch' && flags.last_word.toLowerCase() === 'try')
+				} else if ((token_text_low === 'else' && flags.last_word === 'if')
+					|| (token_text_low === 'until' && flags.last_word === 'loop')
+					|| (token_text_low === 'catch' && flags.last_word === 'try')
 					|| (token_text_low === 'finally' && flags.last_word.match(/^(catch|try)$/i))) {
-					trim_output(true);
-					let line = output_lines[output_lines.length - 1];
-					// If we trimmed and there's something other than a close block before us
-					// put a newline back in.  Handles '} // comment' scenario.
-					if (line.text[line.text.length - 1] !== '}') {
-						print_newline();
+					if (just_added_newline()) {
+						if (flags.last_text === '}')
+							trim_output(true);
+					} else {
+						let line = output_lines[output_lines.length - 1];
+						if (line.text[line.text.length - 1] !== '}')
+							print_newline();
 					}
 					output_space_before_token = true;
 				} else
@@ -3681,7 +3688,7 @@ export class Lexer {
 				print_newline();
 			}
 			print_token();
-			flags.last_word = token_text;
+			flags.last_word = token_text.toLowerCase();
 
 			if (token_type === 'TK_RESERVED') {
 				switch (token_text_low) {
@@ -3819,7 +3826,7 @@ export class Lexer {
 
 			if (start_of_statement() && token_text === '%') {
 				// The conditional starts the statement if appropriate.
-				switch (flags.last_word.toLowerCase()) {
+				switch (flags.last_word) {
 					case 'try':
 						if (!input_wanted_newline && in_array(token_text_low, ['if', 'while', 'loop', 'for']))
 							restore_mode();
@@ -3879,7 +3886,7 @@ export class Lexer {
 				allow_wrap_or_preserved_newline();
 			}
 
-			if (in_array(token_text, ['--', '++', '!', '%']) || (in_array(token_text, ['-', '+']) && (in_array(last_type, ['TK_START_BLOCK', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR']) || in_array(flags.last_text.toLowerCase(), line_starters) || flags.last_text === ','))) {
+			if (in_array(token_text, ['--', '++', '!', '%']) || (in_array(token_text, ['-', '+']) && (in_array(last_type, ['TK_START_BLOCK', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR']) || in_array(flags.last_text, line_starters) || flags.last_text === ','))) {
 				// unary operators (and binary +/- pretending to be unary) special cases
 				space_before = token_text === '!' && in_array(last_type, ['TK_WORD', 'TK_RESERVED']);
 				space_after = false;
@@ -4032,7 +4039,7 @@ export class Lexer {
 		}
 
 		function handle_label() {
-			if (token_text_low === 'default:' && (flags.in_case_statement || (flags.mode === 'BlockStatement' && flags.last_word.toLowerCase() === 'switch'))) {
+			if (token_text_low === 'default:' && (flags.in_case_statement || (flags.mode === 'BlockStatement' && flags.last_word === 'switch'))) {
 				if (flags.case_body) {
 					deindent();
 					flags.case_body = false;
