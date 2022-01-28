@@ -16,7 +16,7 @@ import {
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Settings, set_Workfolder, setting, signatureProvider, sleep,
-	symbolProvider, typeFormatting, updateFileInfo, workspaceFolders, ahkpath_cur, set_ahkpath, LibIncludeType, loadWinApi, workspaceSymbolProvider, inWorkspaceFolders, parseWorkspaceFolders
+	symbolProvider, typeFormatting, updateFileInfo, workspaceFolders, ahkpath_cur, set_ahkpath, LibIncludeType, loadWinApi, workspaceSymbolProvider, inWorkspaceFolders, parseWorkspaceFolders, getAHKversion
 } from './common';
 
 const languageServer = 'ahk2-language-server';
@@ -269,6 +269,7 @@ connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
+connection.onRequest('ahk2.getAHKversion', getAHKversion)
 documents.listen(connection);
 connection.listen();
 loadlocalize();

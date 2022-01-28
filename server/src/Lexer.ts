@@ -3612,6 +3612,8 @@ export class Lexer {
 					} else {
 						prefix = 'SPACE';
 						output_space_before_token = true;
+						if (token_text_low === 'else' && flags.last_word === 'switch' && !just_added_newline())
+							print_newline();
 					}
 				}
 			} else if (last_type === 'TK_STRING') {

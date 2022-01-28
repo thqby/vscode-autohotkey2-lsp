@@ -27,7 +27,6 @@ import {
 import * as child_process from 'child_process';
 import { resolve } from 'path';
 import { existsSync, readdirSync, statSync, unlinkSync } from 'fs';
-import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
 let client: LanguageClient;
 let outputchannel = window.createOutputChannel('AutoHotkey2');
@@ -101,7 +100,6 @@ export async function activate(context: ExtensionContext) {
 			} else
 				editor.insertSnippet(new SnippetString(params[0]));
 		});
-		client.onRequest('ahk2.getDllExport', (params: string[]) => getDllExport(params[0] ? new RegExp(params[0], 'i') : undefined, ...params.slice(1)));
 		client.onRequest('ahk2.getWorkspaceFiles', async (params: string[]) => {
 			let all = !params.length;
 			if (workspace.workspaceFolders) {
@@ -117,6 +115,8 @@ export async function activate(context: ExtensionContext) {
 			}
 		});
 		client.onRequest('ahk2.getWorkspaceFileContent', async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText());
+		window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor);
+		onDidChangeActiveTextEditor(window.activeTextEditor);
 		ahkStatusBarItem.show();
 		server_is_ready = true;
 	});
@@ -147,8 +147,6 @@ export async function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.setinterpreter', () => setInterpreter()),
 		ahkStatusBarItem
 	);
-	window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor);
-	onDidChangeActiveTextEditor(window.activeTextEditor);
 }
 
 export function deactivate(): Thenable<void> | undefined {
@@ -433,7 +431,7 @@ async function setInterpreter() {
 		pick.dispose();
 		if (sel.detail) {
 			if (!sel.label)
-				sel.label = await getAHKversion(sel.detail);
+				sel.label = (await getAHKversion([sel.detail]))[0];
 			ahkStatusBarItem.text = sel.label;
 			ahkStatusBarItem.tooltip = sel.detail;
 			ahkpath_cur = sel.detail;
@@ -445,33 +443,27 @@ async function setInterpreter() {
 	pick.onDidHide(e => pick.dispose());
 
 	async function addpath(dirpath: string) {
+		let paths: string[] = [];
 		for (let file of readdirSync(dirpath)) {
 			let path = resolve(dirpath, file);
 			if (statSync(path).isDirectory()) {
 				for (file of readdirSync(path)) {
 					let path2 = resolve(path, file);
-					if (file.toLowerCase().endsWith('.exe') && !statSync(path2).isDirectory()) {
-						let info = await getAHKversion(path2);
-						if (info.match(/\bautohotkey.*?2\./i))
-							list.push({ label: info, detail: path2 });
-					}
+					if (file.toLowerCase().endsWith('.exe') && !statSync(path2).isDirectory())
+						paths.push(path2);
 				}
-			} else if (file.toLowerCase().endsWith('.exe')) {
-				let info = await getAHKversion(path);
-				if (info.match(/\bautohotkey.*?2\./i))
-					list.push({ label: info, detail: path });
-			}
+			} else if (file.toLowerCase().endsWith('.exe'))
+				paths.push(path);
 		}
+		(await getAHKversion(paths)).map((label, i) => {
+			if (label.match(/\bautohotkey.*?2\./i))
+				list.push({ label, detail: paths[i] });
+		});
 	}
 }
 
-function getAHKversion(path: string) {
-	try {
-		let props = new PEFile(path).getResource(RESOURCE_TYPE.VERSION)[0].StringTable[0];
-		if (props.ProductName?.toLowerCase().startsWith('autohotkey'))
-			return (props.ProductName + ' ') + (props.ProductVersion || '') + (props.FileDescription?.replace(/^.*?(\d+-bit).*$/i, ' $1') || '');
-	} catch (e) { }
-	return '';
+async function getAHKversion(paths: string[]) {
+	return await client.sendRequest('ahk2.getAHKversion', paths) as string[];
 }
 
 function getConfig(key: string, defaultVal = '') {
@@ -490,7 +482,7 @@ async function onDidChangeActiveTextEditor(e?: TextEditor) {
 	if (path.match(/\.exe$/i) && existsSync(path)) {
 		if (path !== ahkStatusBarItem.tooltip) {
 			ahkStatusBarItem.tooltip = path;
-			ahkStatusBarItem.text = getAHKversion(path) || (zhcn ? '未知版本' : 'Unknown version');
+			ahkStatusBarItem.text = (await getAHKversion([path]))[0] || (zhcn ? '未知版本' : 'Unknown version');
 		}
 	} else {
 		ahkStatusBarItem.text = (zhcn ? '选择AutoHotkey2解释器' : 'Select AutoHotkey2 Interpreter');
@@ -501,14 +493,4 @@ async function onDidChangeActiveTextEditor(e?: TextEditor) {
 			commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur = path);
 		else
 			ahkpath_cur = path;
-}
-
-function getDllExport(filter?: RegExp, ...paths: string[]) {
-	let funcs: any = {};
-	for (let path of paths)
-		searchAndOpenPEFile(path)?.getExport()?.Functions.map((it) => funcs[it.Name] = true);
-	delete funcs[''];
-	if (filter)
-		return Object.keys(funcs).filter(it => filter.test(it));
-	return Object.keys(funcs);
 }

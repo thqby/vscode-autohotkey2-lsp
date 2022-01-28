@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, connection, dllcalltpe, extsettings, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
+import { ahkvars, completionItemCache, connection, dllcalltpe, extsettings, getDllExport, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
@@ -320,8 +320,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 												});
 												return items;
 											} else {
-												let result = await connection.sendRequest('ahk2.getDllExport', [expg.source, pre.replace(/[\\/]\w*$/, '')]);
-												if (result) return (result as string[]).map(f => (cpitem = CompletionItem.create(f), cpitem.kind = CompletionItemKind.Function, cpitem));
+												items.splice(0);
+												getDllExport([pre.replace(/[\\/]\w*$/, '')]).map(it => { items.push(cpitem = CompletionItem.create(it)), cpitem.kind = CompletionItemKind.Function; });
+												return items;
 											}
 										}
 									}

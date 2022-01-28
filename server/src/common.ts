@@ -22,6 +22,7 @@ export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
 import { diagnostic } from './localize';
+import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
 export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false, inBrowser = false;
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
@@ -283,9 +284,7 @@ export async function loadahk2(filename = 'ahk2') {
 }
 
 export async function loadWinApi() {
-	connection.sendRequest('ahk2.getDllExport', ['', ...['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)]).then(value => {
-		if (value) winapis = value as string[];
-	});
+	winapis = getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`));
 }
 
 export function updateFileInfo(info: string, revised: boolean = true): string {
@@ -355,6 +354,25 @@ export async function parseWorkspaceFolders() {
 			}
 		}
 	}
+}
+
+export function getAHKversion(params: string[]) {
+	return params.map(path => {
+		try {
+			let props = new PEFile(path).getResource(RESOURCE_TYPE.VERSION)[0].StringTable[0];
+			if (props.ProductName?.toLowerCase().startsWith('autohotkey'))
+				return (props.ProductName + ' ') + (props.ProductVersion || '') + (props.FileDescription?.replace(/^.*?(\d+-bit).*$/i, ' $1') || '');
+		} catch (e) { }
+		return '';
+	});
+}
+
+export function getDllExport(paths: string[]) {
+	let funcs: any = {};
+	for (let path of paths)
+		searchAndOpenPEFile(path)?.getExport()?.Functions.map((it) => funcs[it.Name] = true);
+	delete funcs[''];
+	return Object.keys(funcs);
 }
 
 export function clearLibfuns() { libfuncs = {}; }
