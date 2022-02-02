@@ -16,15 +16,16 @@ import {
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Settings, set_Workfolder, setting, signatureProvider, sleep,
-	symbolProvider, typeFormatting, updateFileInfo, workspaceFolders, ahkpath_cur, set_ahkpath, LibIncludeType, loadWinApi, workspaceSymbolProvider, inWorkspaceFolders, parseWorkspaceFolders, getAHKversion
+	symbolProvider, typeFormatting, updateFileInfo, workspaceFolders, ahkpath_cur, set_ahkpath, LibIncludeType, workspaceSymbolProvider, inWorkspaceFolders, parseWorkspaceFolders, winapis
 } from './common';
+import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
 const languageServer = 'ahk2-language-server';
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false, connection: Connection;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
 
 connection = createConnection(ProposedFeatures.all);
-set_Connection(connection, false);
+set_Connection(connection, false, getDllExport);
 set_dirname(__dirname);
 set_locale(JSON.parse(process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFIG || '{}').locale);
 
@@ -135,7 +136,7 @@ connection.onInitialized(async () => {
 			parseWorkspaceFolders();
 		});
 	}
-	loadWinApi();
+	winapis.push(...getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)));
 	await initpathenv();
 	parseWorkspaceFolders();
 });
@@ -469,4 +470,23 @@ async function parseproject(uri: string) {
 			}
 		}
 	}, 500);
+}
+
+function getAHKversion(params: string[]) {
+	return params.map(path => {
+		try {
+			let props = new PEFile(path).getResource(RESOURCE_TYPE.VERSION)[0].StringTable[0];
+			if (props.ProductName?.toLowerCase().startsWith('autohotkey'))
+				return (props.ProductName + ' ') + (props.ProductVersion || '') + (props.FileDescription?.replace(/^.*?(\d+-bit).*$/i, ' $1') || '');
+		} catch (e) { }
+		return '';
+	});
+}
+
+function getDllExport(paths: string[]) {
+	let funcs: any = {};
+	for (let path of paths)
+		searchAndOpenPEFile(path)?.getExport()?.Functions.map((it) => funcs[it.Name] = true);
+	delete funcs[''];
+	return Object.keys(funcs);
 }

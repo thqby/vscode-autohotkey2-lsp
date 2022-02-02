@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, connection, dllcalltpe, extsettings, getDllExport, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
+import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
@@ -453,12 +453,16 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								t.insertText = t.insertText?.replace('$0', '$1') + ' {\n\t$0\n}';
 								its.push(t);
 							}
-						})
+						});
 						if (position.line === scopenode.range.end.line && position.character > scopenode.range.end.character)
 							return undefined;
 						return its;
 					} else if (t.match(/^(static\s+)?(\w|[^\x00-\xff])+(\(|$)/i))
-						return undefined;
+						return completionItemCache.other.filter(it => it.label.match(/^__\w+/)).map(it => {
+							let t = Object.assign({}, it);
+							t.insertText = t.insertText?.replace('$0', '$1') + ' {\n\t$0\n}';
+							return t;
+						});
 				} else if (scopenode.kind === SymbolKind.Property && scopenode.children)
 					return [{ label: 'get', kind: CompletionItemKind.Function }, { label: 'set', kind: CompletionItemKind.Function }]
 			}

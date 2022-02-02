@@ -22,7 +22,6 @@ export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
 import { diagnostic } from './localize';
-import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
 export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false, inBrowser = false;
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
@@ -37,6 +36,7 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	completeFunctionParens: false
 };
 export let winapis: string[] = [];
+export let getDllExport = (paths: string[]) => [] as string[];
 
 export let locale = 'en-us';
 export type Maybe<T> = T | undefined;
@@ -54,9 +54,10 @@ export interface AHKLSSettings {
 	completeFunctionParens: boolean
 }
 
-export function set_Connection(conn: any, browser: boolean) {
+export function set_Connection(conn: any, browser: boolean, getDll?:  (paths: string[]) => string[]) {
 	connection = conn;
 	inBrowser = browser;
+	if (getDll) getDllExport = getDll;
 }
 
 export function openFile(path: string): TextDocument {
@@ -283,10 +284,6 @@ export async function loadahk2(filename = 'ahk2') {
 	function bodytostring(body: any) { return (typeof body === 'object' ? body.join('\n') : body) };
 }
 
-export async function loadWinApi() {
-	winapis = getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`));
-}
-
 export function updateFileInfo(info: string, revised: boolean = true): string {
 	let d: Date = new Date;
 	info = info.replace(/(?<=@?(date|日期)[:\s]\s*)(\d+\/\d+\/\d+)/i, d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2));
@@ -354,25 +351,6 @@ export async function parseWorkspaceFolders() {
 			}
 		}
 	}
-}
-
-export function getAHKversion(params: string[]) {
-	return params.map(path => {
-		try {
-			let props = new PEFile(path).getResource(RESOURCE_TYPE.VERSION)[0].StringTable[0];
-			if (props.ProductName?.toLowerCase().startsWith('autohotkey'))
-				return (props.ProductName + ' ') + (props.ProductVersion || '') + (props.FileDescription?.replace(/^.*?(\d+-bit).*$/i, ' $1') || '');
-		} catch (e) { }
-		return '';
-	});
-}
-
-export function getDllExport(paths: string[]) {
-	let funcs: any = {};
-	for (let path of paths)
-		searchAndOpenPEFile(path)?.getExport()?.Functions.map((it) => funcs[it.Name] = true);
-	delete funcs[''];
-	return Object.keys(funcs);
 }
 
 export function clearLibfuns() { libfuncs = {}; }

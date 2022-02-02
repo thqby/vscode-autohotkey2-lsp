@@ -166,6 +166,10 @@ export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e
 
 const colorregexp = new RegExp(/(?<=['"\s])(c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
+const whitespace = "\n\r\t ".split(''), digits = '0123456789'.split(''), wordchar = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$'.split('');
+const punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , : ? ^ ^= |= :: =>'.split(' ');
+const line_starters = 'try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
+const reserved_words = line_starters.concat(['class', 'in', 'is', 'isset', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not', 'as', 'unset', 'super']);
 let searchcache: { [name: string]: any } = {};
 let hasdetectcache: { [exp: string]: any } = {};
 
@@ -203,16 +207,13 @@ export class Lexer {
 	constructor(document: TextDocument) {
 		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this, h = isahk2_h;
-		let whitespace: string[], wordchar: string[], punct: string[], parser_pos: number, line_starters: any[], reserved_words: any[], digits: string[], filepath: string, customblocks: { region: number[], bracket: number[] };
+		let parser_pos: number, filepath: string, customblocks: { region: number[], bracket: number[] };
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, closed_cycle: number, tks: Token[] = [], ck: Token;
 		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space = false, last_top = false, lst: Token;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
 		this.document = document, this.scriptpath = (filepath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath).replace(/\\[^\\]+$/, ''), this.initlibdirs();
-		whitespace = "\n\r\t ".split(''), digits = '0123456789'.split(''), wordchar = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$'.split('');
-		punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , : ? ^ ^= |= :: =>'.split(' ');
-		line_starters = 'try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
-		reserved_words = line_starters.concat(['class', 'in', 'is', 'isset', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not', 'as', 'unset', 'super']);
+		
 		MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', ForInitializer: 'ForInitializer', Conditional: 'Conditional', Expression: 'Expression' };
 		handlers = {
 			'TK_START_EXPR': handle_start_expr,
@@ -596,217 +597,201 @@ export class Lexer {
 			let raw = '', o: any = '', last_comm = '', tds: Diagnostic[] = [];
 			if (mode !== 0)
 				blockpos.push(parser_pos - 1);
-			while (nexttoken()) {
-				switch (tk.type) {
-					case 'TK_SHARP':
-						if (m = tk.content.match(/^\s*#include((again)?)\s+((\*i\s+)?<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
-							raw = (m[3] || '').trim(), o = m[4] || m[6], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir).replace(/%a_linefile%/i, filepath).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
-							_this.includedir.set(document.positionAt(tk.offset).line, includedir);
-							if (m === '') {
-								_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
-							} else if (!inBrowser) {
-								if (m.startsWith('*')) {
-									_this.addDiagnostic(diagnostic.unsupportresinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-								} else if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir)) || !existsSync(m.path)) {
-									if (!o)
-										_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length);
-								} else if (statSync(m.path).isDirectory())
-									includedir = m.path;
-								else
-									includetable[m.uri] = { path: m.path, raw };
-								if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-							}
-						} else if (m = tk.content.match(/^(\s*#dllimport\s+)((\w|[^\x00-\x7f])+)/i)) {
-							let rg = makerange(tk.offset + m[1].length, m[2].length), rg2 = Range.create(0, 0, 0, 0);
-							let tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', i6: 'int64' };
-							let n = m[2], args: Variable[] = [], u = '', i = 0;
-							h = true, m = tk.content.substring(m[0].length).match(/^\s*,[^,]+,([^,]*)/);
-							if (m) {
-								m = m[1].replace(/\s/g, '').replace(/^\w*=+/, '').toLowerCase();
-								(<string>m).split('').map(c => {
-									if (c === 'u')
-										u = 'u';
-									else {
-										if (tps[c])
-											args.push(Variable.create((++i).toString() + '_' + u + tps[c], SymbolKind.Variable, rg2, rg2));
-										u = '';
-									}
-								});
-							}
-							result.push(FuncNode.create(n, SymbolKind.Function, rg, rg, args));
-						} else {
-							let t = input.indexOf('\n', parser_pos);
-							parser_pos = t === -1 ? input_length : t;
-						}
-						break;
-					case 'TK_LABEL':
-						if (inswitch > -1 && tk.content.toLowerCase() === 'default:') break;
-						if (mode === 2) {
-							_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
-							break;
-						}
-						tn = SymbolNode.create(tk.content, SymbolKind.Field, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 1)), result.push(tn);
-						if (_parent.labels) {
-							_low = tk.content.toLowerCase().slice(0, -1), (<any>tn).def = true;
-							if (!_parent.labels[_low])
-								_parent.labels[_low] = [tn];
-							else if (_parent.labels[_low][0].def)
-								_this.addDiagnostic(diagnostic.duplabel(), tk.offset, tk.length - 1), _parent.labels[_low].push(tn);
-							else
-								_parent.labels[_low].unshift(tn);
-						}
-						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content); break;
-					case 'TK_HOT':
-						topcontinue = true;
-						if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
-						else if (tk.content.match(/\s::$/) || ((m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
-							_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
-						tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2)) as FuncNode;
-						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
-						lk = tk, tk = get_token_ingore_comment(cmm);
-						let ht = lk, v: Variable, vars = new Map<string, any>([['#parent', tn]]);
-						(<FuncNode>tn).params = [v = Variable.create('ThisHotkey', SymbolKind.Variable, makerange(0, 0), makerange(0, 0))];
-						v.detail = completionitem.thishotkey(), (<FuncNode>tn).funccall = [], (<FuncNode>tn).declaration = {}, result.push(tn);
-						(<FuncNode>tn).global = {}, (<FuncNode>tn).local = {}, _this.hotkey.push(tn as FuncNode);
-						if (tk.content === '{') {
-							tn.children = [], tn.children.push(...parseblock(1, vars)), tn.range = makerange(ht.offset, parser_pos - ht.offset);
-							_this.addFoldingRangePos(tn.range.start, tn.range.end);
-							adddeclaration(tn as FuncNode);
-						} else if (tk.content.toLowerCase() === 'return') {
-							if (tk.topofline) {
-								tn.children = [], tn.range = makerange(ht.offset, tk.offset + tk.length - ht.offset);
-								_this.addDiagnostic(diagnostic.invalidhotdef(), ht.offset, ht.length);
-								break;
-							}
-							let hh = tn as FuncNode, t = _parent, tm = mode;
-							_parent = tn, mode = 1;
-							tn.children = parseline();
-							adddeclaration(hh), _parent = t, mode = tm;
-							hh.range = makerange(ht.offset, lk.offset + lk.length - ht.offset);
-						} else {
-							let hh = tn as FuncNode, t = _parent, tm = mode;
-							_parent = tn, mode = 1;
-							if (tk.content.toLowerCase().match(/^(global|local|static)$/)) {
-								hh.children = [], parse_reserved();
-							} else
-								next = false, hh.children = parseline();
-							adddeclaration(hh), _parent = t, mode = tm;
-							hh.range = makerange(ht.offset, lk.offset + lk.length - ht.offset);
-						}
-						break;
-					case 'TK_HOTLINE':
-						if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
-						tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2));
-						if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
-						LF = input.indexOf('\n', parser_pos), parser_pos = LF > -1 ? LF + 1 : input_length, tn.range.end = document.positionAt(parser_pos - 2), result.push(tn);
-						break;
-					case 'TK_START_BLOCK': blocks++, blockpos.push(parser_pos - 1); break;
-					case 'TK_END_BLOCK':
-						if (inswitch === blocks - 1) inswitch = -1;
-						if ((--blocks) < 0) {
-							if (mode === 0) _this.addDiagnostic(diagnostic.unexpected('}'), tk.offset, 1), blocks = 0, blockpos.length = 0;
-							else return result;
-						} else if (blockpos.length)
-							_this.addFoldingRange(blockpos.pop() || 0, parser_pos - 1);
-						// if (mode === 0) _this.addFoldingRange(blockpos[blocks], parser_pos - 1);
-						// else _this.addFoldingRange(blockpos[blocks + 1], parser_pos - 1);
-						break;
-					case 'TK_END_EXPR': _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1); break;
-					case 'TK_START_EXPR':
-						if (tk.content === '[') parsepair('[', ']');
-						else parsepair('(', ')');
-						break;
-					case 'TK_UNKNOWN':
-						_this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length);
-						break;
-					case 'TK_EQUALS':
-						result.push(...parseexp());
-						break;
-					case 'TK_DOT':
-						if (topcontinue && lk.type !== 'TK_WORD')
-							topcontinue = false;
-						break;
-					default: break;
-					case 'TK_OPERATOR':
-						if (tk.content === '%')
-							parsepair('%', '%');
-						else if (mode === 2 && tk.content.match(/^\w+$/))
-							tk.type = 'TK_WORD', next = false, tk.semantic = { type: SemanticTokenTypes.variable };
-						break;
-					case 'TK_NUMBER':
-						if (input.charAt(parser_pos).match(/\(|\[/))
-							tk.type = 'TK_WORD';
-						else break;
-					case 'TK_WORD':
-						if (input.charAt(parser_pos) === '%')
-							break;
-						let comm = '', pr: Variable | undefined, vr: Variable | undefined, predot = (input.charAt(tk.offset - 1) === '.'), isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
-						if (tk.topofline) {
-							if (inswitch > -1 && input.charAt(parser_pos) === ':' && tk.content.toLowerCase() === 'default') {
-								tk.content += ':', tk.length++, tk.type = 'TK_LABEL', parser_pos++;
-								break;
-							}
-							if (h && tk.content.toLowerCase() === 'macro') {
+			parse_block();
+			if (tk.type === 'TK_EOF' && blocks > (mode === 0 ? 0 : -1)) _this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (mode === 0 ? 1 : 0)], 1);
+			return result;
+
+			function parse_block(level = 0) {
+				let last_switch = inswitch;
+				while (nexttoken()) {
+					switch (tk.type) {
+						case 'TK_SHARP':
+							if (m = tk.content.match(/^\s*#include((again)?)\s+((\*i\s+)?<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
+								raw = (m[3] || '').trim(), o = m[4] || m[6], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir).replace(/%a_linefile%/i, filepath).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
+								_this.includedir.set(document.positionAt(tk.offset).line, includedir);
+								if (m === '') {
+									_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
+								} else if (!inBrowser) {
+									if (m.startsWith('*')) {
+										_this.addDiagnostic(diagnostic.unsupportresinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+									} else if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir)) || !existsSync(m.path)) {
+										if (!o)
+											_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length);
+									} else if (statSync(m.path).isDirectory())
+										includedir = m.path;
+									else
+										includetable[m.uri] = { path: m.path, raw };
+									if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+								}
+							} else if (m = tk.content.match(/^(\s*#dllimport\s+)((\w|[^\x00-\x7f])+)/i)) {
+								let rg = makerange(tk.offset + m[1].length, m[2].length), rg2 = Range.create(0, 0, 0, 0);
+								let tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', i6: 'int64' };
+								let n = m[2], args: Variable[] = [], u = '', i = 0;
+								h = true, m = tk.content.substring(m[0].length).match(/^\s*,[^,]+,([^,]*)/);
+								if (m) {
+									m = m[1].replace(/\s/g, '').replace(/^\w*=+/, '').toLowerCase();
+									(<string>m).split('').map(c => {
+										if (c === 'u')
+											u = 'u';
+										else {
+											if (tps[c])
+												args.push(Variable.create((++i).toString() + '_' + u + tps[c], SymbolKind.Variable, rg2, rg2));
+											u = '';
+										}
+									});
+								}
+								result.push(FuncNode.create(n, SymbolKind.Function, rg, rg, args));
+							} else {
 								let t = input.indexOf('\n', parser_pos);
-								t = t === -1 ? input_length : t;
-								if (input.substring(parser_pos, t).match(/^\s*(\w|[^\x00-\x7f])+\(/))
-									t = n_newlines, tk.semantic = { type: SemanticTokenTypes.keyword, modifier: 1 << SemanticTokenModifiers.static }, tk = get_next_token(), n_newlines = t, tk.topofline = true;
+								parser_pos = t === -1 ? input_length : t;
 							}
-						}
-						topcontinue = predot ? topcontinue : tk.topofline || false;
-						if (!predot && input.charAt(parser_pos) === '(') {
-							let se: SemanticToken = tk.semantic = { type: SemanticTokenTypes.function };
-							if (isstatic) { if (cmm.type !== '') comm = trimcomment(cmm.content); }
-							else if (n_newlines === 1) {
-								if (cmm.type)
-									comm = trimcomment(cmm.content);
-								else {
-									if (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')
-										comm = trimcomment(lk.content);
+							break;
+						case 'TK_LABEL':
+							if (inswitch > -1 && tk.content.toLowerCase() === 'default:') break;
+							if (mode === 2) {
+								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
+								break;
+							}
+							tn = SymbolNode.create(tk.content, SymbolKind.Field, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 1)), result.push(tn);
+							if (_parent.labels) {
+								_low = tk.content.toLowerCase().slice(0, -1), (<any>tn).def = true;
+								if (!_parent.labels[_low])
+									_parent.labels[_low] = [tn];
+								else if (_parent.labels[_low][0].def)
+									_this.addDiagnostic(diagnostic.duplabel(), tk.offset, tk.length - 1), _parent.labels[_low].push(tn);
+								else
+									_parent.labels[_low].unshift(tn);
+							}
+							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content); break;
+						case 'TK_HOT':
+							topcontinue = true;
+							if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
+							else if (tk.content.match(/\s::$/) || ((m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
+								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
+							tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2)) as FuncNode;
+							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
+							lk = tk, tk = get_token_ingore_comment(cmm);
+							let ht = lk, v: Variable, vars = new Map<string, any>([['#parent', tn]]);
+							(<FuncNode>tn).params = [v = Variable.create('ThisHotkey', SymbolKind.Variable, makerange(0, 0), makerange(0, 0))];
+							v.detail = completionitem.thishotkey(), (<FuncNode>tn).funccall = [], (<FuncNode>tn).declaration = {}, result.push(tn);
+							(<FuncNode>tn).global = {}, (<FuncNode>tn).local = {}, _this.hotkey.push(tn as FuncNode);
+							if (tk.content === '{') {
+								tn.children = [], tn.children.push(...parseblock(1, vars)), tn.range = makerange(ht.offset, parser_pos - ht.offset);
+								_this.addFoldingRangePos(tn.range.start, tn.range.end);
+								adddeclaration(tn as FuncNode);
+							} else if (tk.content.toLowerCase() === 'return') {
+								if (tk.topofline) {
+									tn.children = [], tn.range = makerange(ht.offset, tk.offset + tk.length - ht.offset);
+									_this.addDiagnostic(diagnostic.invalidhotdef(), ht.offset, ht.length);
+									break;
+								}
+								let hh = tn as FuncNode, t = _parent, tm = mode;
+								_parent = tn, mode = 1;
+								tn.children = parse_line(undefined, undefined, ['return']);
+								adddeclaration(hh), _parent = t, mode = tm;
+								hh.range = makerange(ht.offset, lk.offset + lk.length - ht.offset);
+							} else {
+								let hh = tn as FuncNode, t = _parent, tm = mode;
+								_parent = tn, mode = 1;
+								if (tk.content.toLowerCase().match(/^(global|local|static)$/)) {
+									hh.children = [], parse_reserved();
+								} else
+									next = false, hh.children = parse_line();
+								adddeclaration(hh), _parent = t, mode = tm;
+								hh.range = makerange(ht.offset, lk.offset + lk.length - ht.offset);
+							}
+							break;
+						case 'TK_HOTLINE':
+							if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
+							tn = SymbolNode.create(tk.content, SymbolKind.Event, makerange(tk.offset, tk.length), makerange(tk.offset, tk.length - 2));
+							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content);
+							LF = input.indexOf('\n', parser_pos), parser_pos = LF > -1 ? LF + 1 : input_length, tn.range.end = document.positionAt(parser_pos - 2), result.push(tn);
+							break;
+						case 'TK_START_BLOCK': blocks++, blockpos.push(parser_pos - 1); break;
+						case 'TK_END_BLOCK':
+							if (inswitch === blocks - 1) inswitch = last_switch;
+							if ((--blocks) >= 0 && blockpos.length)
+								_this.addFoldingRange(blockpos.pop() || 0, parser_pos - 1);
+							if (blocks < level) {
+								if (mode === 0 && level === 0) _this.addDiagnostic(diagnostic.unexpected('}'), tk.offset, 1), blocks = 0, blockpos.length = 0;
+								else return;
+							}
+							break;
+						case 'TK_END_EXPR': _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1); break;
+						case 'TK_START_EXPR':
+							if (tk.content === '[') parsepair('[', ']');
+							else parsepair('(', ')');
+							break;
+						case 'TK_UNKNOWN':
+							_this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length);
+							break;
+						case 'TK_EQUALS':
+							result.push(...parseexp());
+							break;
+						case 'TK_DOT':
+							if (topcontinue && lk.type !== 'TK_WORD')
+								topcontinue = false;
+							break;
+						default: break;
+						case 'TK_OPERATOR':
+							if (tk.content === '%')
+								parsepair('%', '%');
+							else if (mode === 2 && tk.content.match(/^\w+$/))
+								tk.type = 'TK_WORD', next = false, tk.semantic = { type: SemanticTokenTypes.variable };
+							break;
+						case 'TK_NUMBER':
+							if (input.charAt(parser_pos).match(/\(|\[/))
+								tk.type = 'TK_WORD';
+							else break;
+						case 'TK_WORD':
+							if (input.charAt(parser_pos) === '%')
+								break;
+							let comm = '', pr: Variable | undefined, vr: Variable | undefined, predot = (input.charAt(tk.offset - 1) === '.'), isstatic = (tk.topofline && lk.content.toLowerCase() === 'static');
+							if (tk.topofline) {
+								if (inswitch > -1 && input.charAt(parser_pos) === ':' && tk.content.toLowerCase() === 'default') {
+									tk.content += ':', tk.length++, tk.type = 'TK_LABEL', parser_pos++;
+									break;
+								}
+								if (h && tk.content.toLowerCase() === 'macro') {
+									let t = input.indexOf('\n', parser_pos);
+									t = t === -1 ? input_length : t;
+									if (input.substring(parser_pos, t).match(/^\s*(\w|[^\x00-\x7f])+\(/))
+										t = n_newlines, tk.semantic = { type: SemanticTokenTypes.keyword, modifier: 1 << SemanticTokenModifiers.static }, tk = get_next_token(), n_newlines = t, tk.topofline = true;
 								}
 							}
-							o = {}, lk = tk, tk = get_next_token();
-							let fc = lk, rof = result.length, par = parsequt(o), quoteend = parser_pos, nk = get_token_ingore_comment(cmm), tn: FuncNode | undefined;
-							if (nk.content === '=>') {
-								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
-								_this.diagnostics.push(...tds);
-								let storemode = mode, pp = _parent;
-								mode |= 1;
-								tn = FuncNode.create(fc.content, storemode === 2 ? (se.type = SemanticTokenTypes.method, SymbolKind.Method) : SymbolKind.Function, Range.create(fc.pos = document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par, undefined, isstatic);
-								_parent = tn, tn.detail = comm || tn.detail, lk = tk, tk = nk;
-								let o: any = {}, sub = parseline(o), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
-								result.push(tn), _parent = pp, mode = storemode, se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
-								if (mode !== 0)
-									tn.parent = _parent;
-								if (fc.content.charAt(0).match(/[\d$]/))
-									_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-								if (lk.content === '=>')
-									_this.addDiagnostic(diagnostic.invaliddefinition('function'), fc.offset, fc.length);
-								tn.range.end = document.positionAt(lk.offset + lk.length), tn.closure = !!(mode & 1), _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-								tn.returntypes = o, tn.static = isstatic, tn.children = [...sub], adddeclaration(tn);
-								for (const t in o)
-									o[t] = tn.range.end;
-								if (mode === 2) {
-									tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
-									if (!isstatic && tn.name.toLowerCase() === '__new')
-										tn.returntypes = { [classfullname.replace(/([^.]+)\.?$/, '@$1')]: tn.range.end };
-									if (!_this.object.method[_low])
-										_this.object.method[_low] = [];
-									_this.object.method[_low].push(tn);
+							topcontinue = predot ? topcontinue : tk.topofline || false;
+							if (!predot && input.charAt(parser_pos) === '(') {
+								let se: SemanticToken = tk.semantic = { type: SemanticTokenTypes.function };
+								if (isstatic) { if (cmm.type !== '') comm = trimcomment(cmm.content); }
+								else if (n_newlines === 1) {
+									if (cmm.type)
+										comm = trimcomment(cmm.content);
+									else {
+										if (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')
+											comm = trimcomment(lk.content);
+									}
 								}
-							} else if (nk.content === '{' && fc.topofline) {
-								if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
-								_this.diagnostics.push(...tds);
-								let vars = new Map<string, any>(), _low = fc.content.toLowerCase();
-								tn = FuncNode.create(fc.content, mode === 2 ? (se.type = SemanticTokenTypes.method, SymbolKind.Method) : SymbolKind.Function, Range.create(fc.pos = document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), par, undefined, isstatic);
-								if (mode !== 0)
-									tn.parent = _parent;
-								vars.set('#parent', tn), tn.funccall = [], tn.detail = comm || tn.detail, result.push(tn), tn.children = [], tn.children.push(...parseblock(mode | 1, vars, classfullname));
-								tn.closure = !!(mode & 1), adddeclaration(tn), se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
-								if (fc.content.charAt(0).match(/[\d$]/))
-									_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-								tn.range.end = document.positionAt(parser_pos), tn.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
-								if (mode !== 0) {
+								o = {}, lk = tk, tk = get_next_token();
+								let fc = lk, rof = result.length, par = parsequt(o), quoteend = parser_pos, nk = get_token_ingore_comment(cmm), tn: FuncNode | undefined;
+								if (nk.content === '=>') {
+									if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
+									_this.diagnostics.push(...tds);
+									let storemode = mode, pp = _parent;
+									mode |= 1;
+									tn = FuncNode.create(fc.content, storemode === 2 ? (se.type = SemanticTokenTypes.method, SymbolKind.Method) : SymbolKind.Function, Range.create(fc.pos = document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), <Variable[]>par, undefined, isstatic);
+									_parent = tn, tn.detail = comm || tn.detail, lk = tk, tk = nk;
+									let o: any = {}, sub = parse_line(o, undefined, ['return']), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
+									result.push(tn), _parent = pp, mode = storemode, se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
+									if (mode !== 0)
+										tn.parent = _parent;
+									if (fc.content.charAt(0).match(/[\d$]/))
+										_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
+									if (lk.content === '=>')
+										_this.addDiagnostic(diagnostic.invaliddefinition('function'), fc.offset, fc.length);
+									tn.range.end = document.positionAt(lk.offset + lk.length), tn.closure = !!(mode & 1), _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
+									tn.returntypes = o, tn.static = isstatic, tn.children = [...sub], adddeclaration(tn);
+									for (const t in o)
+										o[t] = tn.range.end;
 									if (mode === 2) {
 										tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
 										if (!isstatic && tn.name.toLowerCase() === '__new')
@@ -815,299 +800,321 @@ export class Lexer {
 											_this.object.method[_low] = [];
 										_this.object.method[_low].push(tn);
 									}
-								}
-							} else {
-								next = false, lk = tk, tk = nk;
-								if (par) for (const it of par) if (!is_builtinvar(it.name.toLowerCase())) {
-									result.push(it);
-									if ((<Variable>it).ref || (<Variable>it).returntypes)
-										(<Variable>it).def = true;
-								}
-							}
-							if (!tn && input.charAt(fc.offset - 1) !== '%')
-								addvariable(fc), _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
-						} else {
-							if (isstatic) { if (cmm.type !== '') comm = trimcomment(cmm.content); }
-							else if (n_newlines === 1) {
-								if (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT') comm = trimcomment(lk.content);
-								else if (cmm.type !== '') comm = trimcomment(cmm.content);
-							}
-							let bak = lk, restore = false, nn = 0, byref = false, rg: Range, par: DocumentSymbol[] = [];
-							lk = tk, tk = get_token_ingore_comment(cmm), next = false;
-							if (mode === 2 && lk.topofline && tk.content.match(/^(\[|=>|\{)$/)) {
-								let fc = lk;
-								next = true, lk.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
-								if (tk.content === '[') {
-									if (tk.topofline)
-										_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
-									let err = false, lasthasval = false, b: number;
-									loop:
-									while (nexttoken()) {
-										switch (tk.type) {
-											case 'TK_WORD':
-												let nk = get_next_token();
-												if (nk.type === 'TK_WORD' && tk.content.toLowerCase() === 'byref') {
-													_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), tk.offset, 5, DiagnosticSeverity.Warning);
-													byref = true, tk = nk, next = false;
-													continue loop;
-												} else if ((lk.content === ',' || lk.content === '[') && (nk.content.match(/^(:=|,|\]|\*)$/))) {
-													if (tk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.offset, tk.length);
-													tn = Variable.create(tk.content, SymbolKind.Variable, rg = makerange(b = tk.offset, tk.length), rg);
-													tk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition };
-													if (byref) (<Variable>tn).ref = true, (<Variable>tn).def = true, byref = false;
-													par.push(tn);
-													if (nk.content === ':=') {
-														tk = get_token_ingore_comment();
-														if (tk.content === '-' || tk.content === '+') {
-															nk = get_next_token();
-															if (nk.type === 'TK_NUMBER')
-																tk.content = tk.content + nk.content, tk.length = tk.content.length, tk.type = 'TK_NUMBER';
-															else tk.type = 'TK_UNKNOWN';
-														}
-														if (tk.type === 'TK_STRING' || tk.type === 'TK_NUMBER' || ['unset', 'true', 'false'].includes(tk.content.toLowerCase())) {
-															(<Variable>tn).defaultVal = tk.content;
-															if (tk.content.toLowerCase() === 'unset')
-																tk.semantic = { type: SemanticTokenTypes.variable, modifier: 1 << SemanticTokenModifiers.readonly };
-															lasthasval = true, tk = nk, nk = get_token_ingore_comment();
-															if (nk.content === ']')
-																next = false;
-															else if (nk.type !== 'TK_COMMA')
-																err = true;
-														} else if (tk.content === ']') {
-															if (!(<Variable>tn).arr)
-																_this.addDiagnostic(diagnostic.defaultvalmissing(tn.name), b, tn.name.length);
-															next = byref = false;
-															continue;
-														} else err = true;
-													} else {
-														if (nk.content === '*') {
-															if (is_next(']'))
-																(<Variable>tn).arr = true;
-															else _this.addDiagnostic(diagnostic.unexpected('*'), nk.offset, 1);
-														}
-														if (lasthasval && !(<Variable>tn).arr)
-															_this.addDiagnostic(diagnostic.defaultvalmissing(tn.name), b, tn.name.length);
-														next = nk.content !== ']';
-													}
-												} else
-													err = true;
-												lk = tk, tk = nk, byref = false;
-												break;
-											case 'TK_END_EXPR':
-												if (tk.content === ']' && (--nn) < 0) { nexttoken(); break loop; }
-												break;
-											case 'TK_START_EXPR':
-												if (tk.content === '[') nn++;
-											default:
-												if (tk.content === '*' && (lk.content === ',' || lk.content === '[') && is_next(']')) {
-													tk.type = 'TK_WORD', next = false;
-													break;
-												}
-												if (tk.content === '&' && (lk.content === ',' || lk.content === '[')) {
-													nk = get_next_token(), next = false;
-													if (nk.type === 'TK_WORD') {
-														byref = true, tk = nk;
-														break;
-													} else
-														lk = tk, tk = nk;
-												}
-												err = true;
-												break;
+								} else if (nk.content === '{' && fc.topofline) {
+									if (!par) { par = [], result.splice(rof), _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
+									_this.diagnostics.push(...tds);
+									let vars = new Map<string, any>(), _low = fc.content.toLowerCase();
+									tn = FuncNode.create(fc.content, mode === 2 ? (se.type = SemanticTokenTypes.method, SymbolKind.Method) : SymbolKind.Function, Range.create(fc.pos = document.positionAt(fc.offset), { line: 0, character: 0 }), makerange(fc.offset, fc.length), par, undefined, isstatic);
+									if (mode !== 0)
+										tn.parent = _parent;
+									vars.set('#parent', tn), tn.funccall = [], tn.detail = comm || tn.detail, result.push(tn), tn.children = [], tn.children.push(...parseblock(mode | 1, vars, classfullname));
+									tn.closure = !!(mode & 1), adddeclaration(tn), se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
+									if (fc.content.charAt(0).match(/[\d$]/))
+										_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
+									tn.range.end = document.positionAt(parser_pos), tn.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
+									if (mode !== 0) {
+										if (mode === 2) {
+											tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
+											if (!isstatic && tn.name.toLowerCase() === '__new')
+												tn.returntypes = { [classfullname.replace(/([^.]+)\.?$/, '@$1')]: tn.range.end };
+											if (!_this.object.method[_low])
+												_this.object.method[_low] = [];
+											_this.object.method[_low].push(tn);
 										}
-									}
-									if (err)
-										_this.addDiagnostic(diagnostic.invalidparam(), fc.offset, lk.offset - fc.offset + 1);
-									if (par.length === 0)
-										_this.addDiagnostic(diagnostic.propemptyparams(), fc.offset, lk.offset - fc.offset + 1);
-								}
-								let prop = DocumentSymbol.create(fc.content, comm, SymbolKind.Property, rg = makerange(fc.offset, fc.length), Object.assign({}, rg));
-								(<FuncNode>prop).parent = _parent, (<FuncNode>prop).params = par;
-								(<Variable>prop).full = `(${classfullname.slice(0, -1)}) ${isstatic ? 'static ' : ''}${fc.content}` + (par.length ? `[${par.map((it: Variable) => {
-									return (it.ref ? '&' : '') + it.name + (it.defaultVal ? ' := ' + it.defaultVal : '');
-								}).join(', ')}]` : '');
-								(<Variable>prop).static = isstatic, result.push(prop), prop.children = [], addprop(fc);
-								(<FuncNode>prop).funccall = [];
-								if (tk.content === '{') {
-									let nk: Token, sk: Token, tn: FuncNode | undefined, mmm = mode;
-									tk = get_token_ingore_comment(), next = false, mode = 1;
-									while (nexttoken() && tk.type !== 'TK_END_BLOCK') {
-										if (tk.topofline && (tk.content = tk.content.toLowerCase()).match(/^[gs]et$/)) {
-											let v: Variable;
-											tk.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
-											nk = tk, sk = get_token_ingore_comment();
-											if (sk.content === '=>') {
-												tk = sk, mode = 3;
-												let off = parser_pos, o: any = {}, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
-												tn = FuncNode.create(nk.content.toLowerCase(), SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, nk.length), [...par]);
-												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
-												lk = tk, tk = sk;
-												(<FuncNode>tn).parent = prop, sub = parseline(o), mode = 2, tn.funccall?.push(..._parent.funccall.splice(fcs));
-												tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-												(<FuncNode>tn).returntypes = o, tn.children = [];
-												if (lk.content === '=>')
-													_this.addDiagnostic(diagnostic.invaliddefinition('function'), nk.offset, nk.length);
-												for (const t in o)
-													o[t] = tn.range.end;
-												if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(v = Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0))), v.detail = completionitem.value();
-												tn.children.push(...sub), adddeclaration(tn as FuncNode);
-											} else if (sk.content === '{') {
-												tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), [...par]), _this.addFoldingRangePos(tn.range.start, tn.range.end);
-												let vars = new Map<string, any>([['#parent', tn]]);
-												(<FuncNode>tn).parent = prop, tn.children = parseblock(3, vars, classfullname), tn.range.end = document.positionAt(parser_pos);
-												if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(v = Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0))), v.detail = completionitem.value();
-												adddeclaration(tn as FuncNode);
-												_this.addFoldingRangePos(tn.range.start, tn.range.end);
-												if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
-											} else {
-												_this.addDiagnostic(diagnostic.invalidprop(), sk.offset, sk.length);
-												if (sk.content === '}') { next = false; break; } else {
-													tn = undefined;
-													let b = 0;
-													while (tk.type !== 'TK_EOF') {
-														if (tk.content === '{')
-															b++;
-														else if (tk.content === '}')
-															if ((--b) < 0)
-																break;
-														nexttoken();
-													}
-													next = false;
-												}
-											}
-											if (tn)
-												prop.children.push(tn);
-										} else {
-											_this.addDiagnostic(diagnostic.invalidprop(), tk.offset, tk.length);
-											let b = 0;
-											while (tk.type !== 'TK_EOF') {
-												if (tk.content === '{')
-													b++;
-												else if (tk.content === '}')
-													if ((--b) < 0)
-														break;
-												nexttoken();
-											}
-											next = false;
-										}
-									}
-									prop.range.end = document.positionAt(parser_pos - 1), mode = mmm;
-									_this.addFoldingRangePos(prop.range.start, prop.range.end, 'block');
-								} else if (tk.content === '=>') {
-									let off = parser_pos, o: any = {}, tn: FuncNode, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
-									mode = 3, tn = FuncNode.create('get', SymbolKind.Function, makerange(off, parser_pos - off), Object.assign({}, rg), <Variable[]>par), (<FuncNode>tn).returntypes = o;
-									(<FuncNode>tn).parent = prop, tn.children = parseline(o), (<FuncNode>tn).funccall?.push(..._parent.funccall.splice(fcs)), mode = 2;
-									if (lk.content === '=>')
-										_this.diagnostics.push({ message: diagnostic.invaliddefinition('function'), range: tn.selectionRange, severity: DiagnosticSeverity.Error });
-									tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-									for (const t in o)
-										o[t] = tn.range.end;
-									adddeclaration(tn as FuncNode), prop.children.push(tn);
-								}
-								if (prop.children.length === 1 && prop.children[0].name === 'get')
-									(fc.semantic as SemanticToken).modifier = ((fc.semantic as SemanticToken).modifier || 0) | 1 << SemanticTokenModifiers.readonly;
-							} else {
-								if (!lk.topofline && (bak.type === 'TK_HOT' || (bak.topofline && bak.content === '{') || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i))))
-									lk.topofline = restore = topcontinue = true;
-								if (!predot && (!lk.topofline || tk.type === 'TK_EQUALS' || tk.type === 'TK_DOT' || ['=', '?'].includes(tk.content) || input.charAt(lk.offset + lk.length).match(/[^\s,]/))) {
-									if (addvariable(lk, mode)) {
-										vr = result[result.length - 1];
-										if (comm) vr.detail = last_comm = comm;
-										else if (last_comm && bak.content === ',' && !cmm.type)
-											vr.detail = last_comm;
-										else last_comm = '';
-										if (bak.content === '&') {
-											if (input.substring(last_LF + 1, bak.offset - 1).trim().match(/(:=|,|\()$/))
-												vr.def = true;
-										}
-									}
-									if (mode === 2 && tk.type !== 'TK_EQUALS' && input.charAt(lk.offset + lk.length) !== '.')
-										_this.addDiagnostic(diagnostic.propnotinit(), lk.offset, lk.length);
-								} else if (mode === 2) {
-									if (input.charAt(lk.offset + lk.length) !== '.')
-										_this.addDiagnostic(diagnostic.propnotinit(), lk.offset, lk.length);
-								} else if (predot && tk.type === 'TK_DOT') {
-									addprop(lk), pr = vr = maybeclassprop(lk);
-								} else if ((m = input.charAt(lk.offset + lk.length)).match(/^(\(|\s|,|)$/)) {
-									if (lk.topofline) {
-										if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
-										let fc = lk, sub = parseline();
-										if (restore) lk.topofline = false;
-										result.push(...sub);
-										if (input.charAt(fc.offset - 1) !== '%') {
-											fc.semantic = { type: SemanticTokenTypes.function };
-											if (addvariable(fc)) {
-												_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
-												if (lk === fc)
-													tn.range.end = document.positionAt(tk.type === 'TK_EOF' ? input_length : document.offsetAt({ line: document.positionAt(tk.offset).line, character: 0 }) - 1);
-												else if (tk.content === ')')
-													tn.range.end = document.positionAt(tk.offset + tk.length);
-											}
-										}
-										break;
-									} else if (predot && !(tk.type === 'TK_EQUALS' || tk.content === '=')) {
-										addprop(lk), pr = vr = maybeclassprop(lk);
-										if (tk.content === '(' || topcontinue) {
-											if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
-											let sub: DocumentSymbol[], fc = lk;
-											if (tk.content === '(') {
-												next = true, parsepair('(', ')');
-											} else sub = parseline(), result.push(...sub);
-											if (input.charAt(fc.offset - 1) !== '%') {
-												fc.semantic = { type: SemanticTokenTypes.method };
-												_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
-												if (lk === fc)
-													tn.range.end = document.positionAt(tk.type === 'TK_EOF' ? input_length : document.offsetAt({ line: document.positionAt(tk.offset).line, character: 0 }) - 1);
-												else if (tk.content === ')')
-													tn.range.end = document.positionAt(tk.offset + tk.length);
-											}
-											break;
-										}
-									} else if (predot)
-										addprop(lk), pr = vr = maybeclassprop(lk);
-								} else if (predot)
-									addprop(lk), pr = vr = maybeclassprop(lk);
-								if (tk.type === 'TK_EQUALS') {
-									next = true;
-									let o: any = {}, equ = tk.content, ep = parseexp(undefined, o);
-									result.push(...ep);
-									if (vr) {
-										vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
-										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
-										if (equ === ':=' && typeof o[' #object'] === 'object')
-											(<any>vr).property = Object.values(o[' #object']);
-										if (!pr)
-											vr.def = true;
-										let tt = vr.returntypes;
-										for (const t in tt)
-											tt[t] = vr.range.end;
-									}
-								} else if (tk.type === 'TK_OPERATOR') {
-									if (vr && !(tk.topofline && ['!', '~', 'not'].includes(tk.content.toLowerCase()))) {
-										vr.returntypes = { [tk.content === '.' ? '#string' : tk.content.match(/^[a-zA-Z]+$/) ? '#any' : '#number']: true };
-										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
-										let tt = vr.returntypes;
-										for (const t in tt)
-											tt[t] = vr.range.end;
-										if (tk.content.match(/^(\+\+|--)$/))
-											vr.def = true, tk = Object.assign({}, tk), tk.content = '';
 									}
 								} else {
-									if (tk.type === 'TK_UNKNOWN')
-										_this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length);
+									next = false, lk = tk, tk = nk;
+									if (par) for (const it of par) if (!is_builtinvar(it.name.toLowerCase())) {
+										result.push(it);
+										if ((<Variable>it).ref || (<Variable>it).returntypes)
+											(<Variable>it).def = true;
+									}
 								}
+								if (!tn && input.charAt(fc.offset - 1) !== '%')
+									addvariable(fc), _parent.funccall.push(DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, quoteend - fc.offset), makerange(fc.offset, fc.length)));
+							} else {
+								if (isstatic) { if (cmm.type !== '') comm = trimcomment(cmm.content); }
+								else if (n_newlines === 1) {
+									if (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT') comm = trimcomment(lk.content);
+									else if (cmm.type !== '') comm = trimcomment(cmm.content);
+								}
+								let bak = lk, restore = false, nn = 0, byref = false, rg: Range, par: DocumentSymbol[] = [];
+								lk = tk, tk = get_token_ingore_comment(cmm), next = false;
+								if (mode === 2 && lk.topofline && tk.content.match(/^(\[|=>|\{)$/)) {
+									let fc = lk;
+									next = true, lk.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
+									if (tk.content === '[') {
+										if (tk.topofline)
+											_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+										let err = false, lasthasval = false, b: number;
+										loop:
+										while (nexttoken()) {
+											switch (tk.type) {
+												case 'TK_WORD':
+													let nk = get_next_token();
+													if (nk.type === 'TK_WORD' && tk.content.toLowerCase() === 'byref') {
+														_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), tk.offset, 5, DiagnosticSeverity.Warning);
+														byref = true, tk = nk, next = false;
+														continue loop;
+													} else if ((lk.content === ',' || lk.content === '[') && (nk.content.match(/^(:=|,|\]|\*)$/))) {
+														if (tk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.offset, tk.length);
+														tn = Variable.create(tk.content, SymbolKind.Variable, rg = makerange(b = tk.offset, tk.length), rg);
+														tk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition };
+														if (byref) (<Variable>tn).ref = true, (<Variable>tn).def = true, byref = false;
+														par.push(tn);
+														if (nk.content === ':=') {
+															tk = get_token_ingore_comment();
+															if (tk.content === '-' || tk.content === '+') {
+																nk = get_next_token();
+																if (nk.type === 'TK_NUMBER')
+																	tk.content = tk.content + nk.content, tk.length = tk.content.length, tk.type = 'TK_NUMBER';
+																else tk.type = 'TK_UNKNOWN';
+															}
+															if (tk.type === 'TK_STRING' || tk.type === 'TK_NUMBER' || ['unset', 'true', 'false'].includes(tk.content.toLowerCase())) {
+																(<Variable>tn).defaultVal = tk.content;
+																if (tk.content.toLowerCase() === 'unset')
+																	tk.semantic = { type: SemanticTokenTypes.variable, modifier: 1 << SemanticTokenModifiers.readonly };
+																lasthasval = true, tk = nk, nk = get_token_ingore_comment();
+																if (nk.content === ']')
+																	next = false;
+																else if (nk.type !== 'TK_COMMA')
+																	err = true;
+															} else if (tk.content === ']') {
+																if (!(<Variable>tn).arr)
+																	_this.addDiagnostic(diagnostic.defaultvalmissing(tn.name), b, tn.name.length);
+																next = byref = false;
+																continue;
+															} else err = true;
+														} else {
+															if (nk.content === '*') {
+																if (is_next(']'))
+																	(<Variable>tn).arr = true;
+																else _this.addDiagnostic(diagnostic.unexpected('*'), nk.offset, 1);
+															}
+															if (lasthasval && !(<Variable>tn).arr)
+																_this.addDiagnostic(diagnostic.defaultvalmissing(tn.name), b, tn.name.length);
+															next = nk.content !== ']';
+														}
+													} else
+														err = true;
+													lk = tk, tk = nk, byref = false;
+													break;
+												case 'TK_END_EXPR':
+													if (tk.content === ']' && (--nn) < 0) { nexttoken(); break loop; }
+													break;
+												case 'TK_START_EXPR':
+													if (tk.content === '[') nn++;
+												default:
+													if (tk.content === '*' && (lk.content === ',' || lk.content === '[') && is_next(']')) {
+														tk.type = 'TK_WORD', next = false;
+														break;
+													}
+													if (tk.content === '&' && (lk.content === ',' || lk.content === '[')) {
+														nk = get_next_token(), next = false;
+														if (nk.type === 'TK_WORD') {
+															byref = true, tk = nk;
+															break;
+														} else
+															lk = tk, tk = nk;
+													}
+													err = true;
+													break;
+											}
+										}
+										if (err)
+											_this.addDiagnostic(diagnostic.invalidparam(), fc.offset, lk.offset - fc.offset + 1);
+										if (par.length === 0)
+											_this.addDiagnostic(diagnostic.propemptyparams(), fc.offset, lk.offset - fc.offset + 1);
+									}
+									let prop = DocumentSymbol.create(fc.content, comm, SymbolKind.Property, rg = makerange(fc.offset, fc.length), Object.assign({}, rg));
+									(<FuncNode>prop).parent = _parent, (<FuncNode>prop).params = par;
+									(<Variable>prop).full = `(${classfullname.slice(0, -1)}) ${isstatic ? 'static ' : ''}${fc.content}` + (par.length ? `[${par.map((it: Variable) => {
+										return (it.ref ? '&' : '') + it.name + (it.defaultVal ? ' := ' + it.defaultVal : '');
+									}).join(', ')}]` : '');
+									(<Variable>prop).static = isstatic, result.push(prop), prop.children = [], addprop(fc);
+									(<FuncNode>prop).funccall = [];
+									if (tk.content === '{') {
+										let nk: Token, sk: Token, tn: FuncNode | undefined, mmm = mode;
+										tk = get_token_ingore_comment(), next = false, mode = 1;
+										while (nexttoken() && tk.type !== 'TK_END_BLOCK') {
+											if (tk.topofline && (tk.content = tk.content.toLowerCase()).match(/^[gs]et$/)) {
+												let v: Variable;
+												tk.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
+												nk = tk, sk = get_token_ingore_comment();
+												if (sk.content === '=>') {
+													tk = sk, mode = 3;
+													let off = parser_pos, o: any = {}, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
+													tn = FuncNode.create(nk.content.toLowerCase(), SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, nk.length), [...par]);
+													if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
+													lk = tk, tk = sk;
+													(<FuncNode>tn).parent = prop, sub = parse_line(o, undefined, ['return']), mode = 2, tn.funccall?.push(..._parent.funccall.splice(fcs));
+													tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
+													(<FuncNode>tn).returntypes = o, tn.children = [];
+													if (lk.content === '=>')
+														_this.addDiagnostic(diagnostic.invaliddefinition('function'), nk.offset, nk.length);
+													for (const t in o)
+														o[t] = tn.range.end;
+													if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(v = Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0))), v.detail = completionitem.value();
+													tn.children.push(...sub), adddeclaration(tn as FuncNode);
+												} else if (sk.content === '{') {
+													tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), [...par]), _this.addFoldingRangePos(tn.range.start, tn.range.end);
+													let vars = new Map<string, any>([['#parent', tn]]);
+													(<FuncNode>tn).parent = prop, tn.children = parseblock(3, vars, classfullname), tn.range.end = document.positionAt(parser_pos);
+													if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(v = Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0))), v.detail = completionitem.value();
+													adddeclaration(tn as FuncNode);
+													_this.addFoldingRangePos(tn.range.start, tn.range.end);
+													if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
+												} else {
+													_this.addDiagnostic(diagnostic.invalidprop(), sk.offset, sk.length);
+													if (sk.content === '}') { next = false; break; } else {
+														tn = undefined;
+														let b = 0;
+														while (tk.type !== 'TK_EOF') {
+															if (tk.content === '{')
+																b++;
+															else if (tk.content === '}')
+																if ((--b) < 0)
+																	break;
+															nexttoken();
+														}
+														next = false;
+													}
+												}
+												if (tn)
+													prop.children.push(tn);
+											} else {
+												_this.addDiagnostic(diagnostic.invalidprop(), tk.offset, tk.length);
+												let b = 0;
+												while (tk.type !== 'TK_EOF') {
+													if (tk.content === '{')
+														b++;
+													else if (tk.content === '}')
+														if ((--b) < 0)
+															break;
+													nexttoken();
+												}
+												next = false;
+											}
+										}
+										prop.range.end = document.positionAt(parser_pos - 1), mode = mmm;
+										_this.addFoldingRangePos(prop.range.start, prop.range.end, 'block');
+									} else if (tk.content === '=>') {
+										let off = parser_pos, o: any = {}, tn: FuncNode, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
+										mode = 3, tn = FuncNode.create('get', SymbolKind.Function, makerange(off, parser_pos - off), Object.assign({}, rg), <Variable[]>par), (<FuncNode>tn).returntypes = o;
+										(<FuncNode>tn).parent = prop, tn.children = parse_line(o, undefined, ['return']), (<FuncNode>tn).funccall?.push(..._parent.funccall.splice(fcs)), mode = 2;
+										if (lk.content === '=>')
+											_this.diagnostics.push({ message: diagnostic.invaliddefinition('function'), range: tn.selectionRange, severity: DiagnosticSeverity.Error });
+										tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
+										for (const t in o)
+											o[t] = tn.range.end;
+										adddeclaration(tn as FuncNode), prop.children.push(tn);
+									}
+									if (prop.children.length === 1 && prop.children[0].name === 'get')
+										(fc.semantic as SemanticToken).modifier = ((fc.semantic as SemanticToken).modifier || 0) | 1 << SemanticTokenModifiers.readonly;
+								} else {
+									if (!lk.topofline && (bak.type === 'TK_HOT' || (bak.topofline && bak.content === '{') || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i))))
+										lk.topofline = restore = topcontinue = true;
+									if (!predot && (!lk.topofline || tk.type === 'TK_EQUALS' || tk.type === 'TK_DOT' || ['=', '?'].includes(tk.content) || input.charAt(lk.offset + lk.length).match(/[^\s,]/))) {
+										if (addvariable(lk, mode)) {
+											vr = result[result.length - 1];
+											if (comm) vr.detail = last_comm = comm;
+											else if (last_comm && bak.content === ',' && !cmm.type)
+												vr.detail = last_comm;
+											else last_comm = '';
+											if (bak.content === '&') {
+												if (input.substring(last_LF + 1, bak.offset - 1).trim().match(/(:=|,|\()$/))
+													vr.def = true;
+											}
+										}
+										if (mode === 2 && tk.type !== 'TK_EQUALS' && input.charAt(lk.offset + lk.length) !== '.')
+											_this.addDiagnostic(diagnostic.propnotinit(), lk.offset, lk.length);
+									} else if (mode === 2) {
+										if (predot)
+											addprop(lk);
+										if (tk.type !== 'TK_EQUALS' && tk.type !== 'TK_DOT')
+											_this.addDiagnostic(predot ? diagnostic.declarationerr() : diagnostic.propnotinit(), lk.offset, lk.length);
+									} else if (predot && tk.type === 'TK_DOT') {
+										addprop(lk), pr = vr = maybeclassprop(lk);
+									} else if ((m = input.charAt(lk.offset + lk.length)).match(/^(\(|\s|,|)$/)) {
+										if (lk.topofline) {
+											if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
+											let fc = lk, sub = parse_line();
+											if (restore) lk.topofline = false;
+											result.push(...sub);
+											if (input.charAt(fc.offset - 1) !== '%') {
+												fc.semantic = { type: SemanticTokenTypes.function };
+												if (addvariable(fc)) {
+													_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+													if (lk === fc)
+														tn.range.end = document.positionAt(tk.type === 'TK_EOF' ? input_length : document.offsetAt({ line: document.positionAt(tk.offset).line, character: 0 }) - 1);
+													else if (tk.content === ')')
+														tn.range.end = document.positionAt(tk.offset + tk.length);
+												}
+											}
+											break;
+										} else if (predot && !(tk.type === 'TK_EQUALS' || tk.content === '=')) {
+											addprop(lk), pr = vr = maybeclassprop(lk);
+											if (tk.content === '(' || topcontinue) {
+												if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
+												let sub: DocumentSymbol[], fc = lk;
+												if (tk.content === '(') {
+													next = true, parsepair('(', ')');
+												} else sub = parse_line(), result.push(...sub);
+												if (input.charAt(fc.offset - 1) !== '%') {
+													fc.semantic = { type: SemanticTokenTypes.method };
+													_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+													if (lk === fc)
+														tn.range.end = document.positionAt(tk.type === 'TK_EOF' ? input_length : document.offsetAt({ line: document.positionAt(tk.offset).line, character: 0 }) - 1);
+													else if (tk.content === ')')
+														tn.range.end = document.positionAt(tk.offset + tk.length);
+												}
+												break;
+											}
+										} else if (predot)
+											addprop(lk), pr = vr = maybeclassprop(lk);
+									} else if (predot)
+										addprop(lk), pr = vr = maybeclassprop(lk);
+									if (tk.type === 'TK_EQUALS') {
+										next = true;
+										let o: any = {}, equ = tk.content, ep = parseexp(undefined, o);
+										result.push(...ep);
+										if (vr) {
+											vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
+											vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
+											if (equ === ':=' && typeof o[' #object'] === 'object')
+												(<any>vr).property = Object.values(o[' #object']);
+											if (!pr)
+												vr.def = true;
+											let tt = vr.returntypes;
+											for (const t in tt)
+												tt[t] = vr.range.end;
+										}
+									} else if (tk.type === 'TK_OPERATOR') {
+										if (vr && !(tk.topofline && ['!', '~', 'not'].includes(tk.content.toLowerCase()))) {
+											vr.returntypes = { [tk.content === '.' ? '#string' : tk.content.match(/^[a-zA-Z]+$/) ? '#any' : '#number']: true };
+											vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
+											let tt = vr.returntypes;
+											for (const t in tt)
+												tt[t] = vr.range.end;
+											if (tk.content.match(/^(\+\+|--)$/))
+												vr.def = true, tk = Object.assign({}, tk), tk.content = '';
+										}
+									} else {
+										if (tk.type === 'TK_UNKNOWN')
+											_this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length);
+									}
+								}
+								break;
 							}
 							break;
-						}
-						break;
-					case 'TK_RESERVED':
-						parse_reserved(); break;
+						case 'TK_RESERVED':
+							parse_reserved(); break;
+					}
 				}
 			}
-			if (tk.type === 'TK_EOF' && blocks > (mode === 0 ? 0 : -1)) _this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (mode === 0 ? 1 : 0)], 1);
-			return result;
 
 			function parse_reserved() {
-				let _low = tk.content.toLowerCase(), bak = lk, t = parser_pos, newlines = n_newlines, p: Token | undefined, nk: Token | undefined;
+				let _low = tk.content.toLowerCase(), bak = lk, t = parser_pos, newlines = n_newlines, nk: Token | undefined;
 				if (mode === 2) {
 					nk = get_next_token();
 					next = false, parser_pos = tk.offset + tk.length, tk.type = 'TK_WORD';
@@ -1166,6 +1173,7 @@ export class Lexer {
 							_this.addFoldingRangePos(tn.selectionRange.start, tn.range.end, 'block');
 							for (const item of tn.children) if (item.children && item.kind != SymbolKind.Property) (<FuncNode>item).parent = tn;
 							result.push(tn);
+							return true;
 						} else {
 							next = false, lk.type = 'TK_WORD', parser_pos = lk.offset + lk.length, tk = lk, lk = bak;
 						}
@@ -1239,10 +1247,17 @@ export class Lexer {
 						if (tk.type === 'TK_EQUALS') {
 							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
 							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
-						} else if (mode === 2)
+						} else if (mode === 2) {
 							_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
-						else if (next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(tk.content.toLowerCase())))
+							break;
+						} else if (next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(tk.content.toLowerCase())))
 							tk.type = 'TK_RESERVED';
+						if (!tk.topofline && tk.type !== 'TK_START_BLOCK')
+							result.push(...parse_line(undefined, '{'));
+						if (parse_body())
+							return;
+						if (tk.type === 'TK_RESERVED' && tk.content.toLowerCase() === 'until')
+							next = true, result.push(...parseexp());
 						break;
 					case 'for':
 						let nq = is_next('(');
@@ -1263,12 +1278,13 @@ export class Lexer {
 									break;
 								case 'TK_OPERATOR':
 									if (tk.content.toLowerCase() === 'in') {
-										result.push(...parseexp(undefined, undefined));
+										result.push(...parseexp());
 										if (nk) {
 											if (tk.content !== ')') {
 												_this.addDiagnostic(diagnostic.missing(')'), nk.offset, nk.length);
 											} else nexttoken();
 										}
+										parse_body();
 										return;
 									}
 									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, tk.length);
@@ -1314,74 +1330,11 @@ export class Lexer {
 						}
 						break;
 					case 'as':
-						_this.addDiagnostic(diagnostic.unexpected('as'), tk.offset, tk.length);
-						break;
 					case 'catch':
-						if (is_next('('))
-							p = get_token_ingore_comment();
-						lk = nk = tk, tk = get_token_ingore_comment();
-						if (tk.topofline || (tk.type !== 'TK_WORD' && !allIdentifierChar.test(tk.content))) {
-							if (p) {
-								parser_pos = p.offset - 1;
-								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
-							} else
-								next = false;
-						} else {
-							next = true;
-							if (tk.content.toLowerCase() !== 'as') {
-								while (true) {
-									if (tk.type !== 'TK_WORD')
-										_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
-									else addvariable(tk);
-									lk = tk, tk = get_token_ingore_comment();
-									if (tk.content === ',') {
-										lk = tk, tk = get_token_ingore_comment();
-										if (!allIdentifierChar.test(tk.content))
-											break;
-									} else
-										break;
-								}
-								if (p) {
-									if (tk.content === '{') {
-										_this.addDiagnostic(diagnostic.missing('('), p.offset, 1), next = false;
-										break;
-									} else if (tk.content === ')')
-										break;
-								} else if (tk.content === '{' || tk.topofline) {
-									next = false;
-									break;
-								}
-							}
-							if (tk.content.toLowerCase() === 'as') {
-								lk = tk, tk = get_token_ingore_comment();
-								next = false;
-								if (tk.type !== 'TK_WORD' && !allIdentifierChar.test(tk.content)) {
-									_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length);
-								} else if (tk.type !== 'TK_WORD')
-									_this.addDiagnostic(diagnostic.reservedworderr(nk.content), nk.offset, nk.length), tk.type = 'TK_WORD';
-								else {
-									let t = get_token_ingore_comment();
-									parser_pos = tk.offset + tk.length;
-									if (!t.topofline && t.content !== '{' && !(p && t.content === ')'))
-										_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length), next = false;
-									else {
-										if (p) {
-											if (t.content === ')')
-												parser_pos = t.offset + 1, next = true;
-											else
-												_this.addDiagnostic(diagnostic.missing('('), p.offset, 1);
-										}
-										if (addvariable(tk))
-											next = true, (<Variable>result[result.length - 1]).def = true;
-									}
-								}
-							} else {
-								if (p && tk.content === ')')
-									lk = tk, tk = get_token_ingore_comment();
-								if (!tk.topofline)
-									_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
-							}
-						}
+					case 'else':
+					case 'finally':
+					case 'until':
+						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 						break;
 					case 'super':
 						if (!(mode & 3))
@@ -1389,16 +1342,35 @@ export class Lexer {
 						else tk.ignore = true;
 						tk.type = 'TK_WORD', next = false
 						break;
+					case 'case':
+						if (inswitch !== -1 && tk.topofline) {
+							lk = tk, tk = get_token_ingore_comment(), next = false;
+							if (!(tk.type === 'TK_WORD' || tk.type === 'TK_STRING' || tk.type === 'TK_NUMBER' || tk.type === 'TK_OPERATOR' || allIdentifierChar.test(tk.content)))
+								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+						} else
+							tk.type = 'TK_WORD', _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
+						break;
+					case 'try':
+						nexttoken(), next = false;
+						parse_body(null);
+						if (tk.type === 'TK_RESERVED') {
+							if (tk.content.toLowerCase() === 'catch') {
+								next = true;
+								parse_catch();
+							}
+							if (tk.content.toLowerCase() === 'finally')
+								next = true, nexttoken(), next = false, parse_body(null);
+						}
+						break;
 					default:
 						nk = get_token_ingore_comment();
 						if (nk.type === 'TK_EQUALS' || nk.content.match(/^([<>]=?|~=|&&|\|\||[.&|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/))
 							tk.type = 'TK_WORD', parser_pos = t, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						else {
+							let tps: any = {};
 							lk = tk, tk = nk, next = false;
-							if (_low === 'switch') inswitch = blocks;
-							else if (_low === 'return') {
-								let tps: any = {};
-								result.push(...parseline(tps));
+							if (_low === 'return') {
+								result.push(...parse_line(tps, undefined, [_low]));
 								if (mode & 1) {
 									let rg = document.positionAt(lk.offset + lk.length);
 									if (!_parent.returntypes)
@@ -1406,6 +1378,15 @@ export class Lexer {
 									for (const tp in tps)
 										_parent.returntypes[tp] = rg;
 								}
+							} else if (_low === 'switch') {
+								inswitch = blocks;
+								result.push(...parse_line(undefined, '{', [_low, 2]));
+								if (tk.content === '{')
+									parse_body(null);
+								else _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+							} else if (_low === 'if' || _low === 'while') {
+								result.push(...parse_line(undefined, '{', [_low]));
+								parse_body();
 							}
 						}
 						break;
@@ -1422,24 +1403,140 @@ export class Lexer {
 				}
 			}
 
-			function parseline(types?: any): DocumentSymbol[] {
-				let res: DocumentSymbol[] = [], hascomma = false, b = next ? parser_pos : tk.offset;
-				while (true) {
-					let o: any = {};
-					res.push(...parseexp(undefined, o));
-					if (tk.type === 'TK_COMMA')
-						hascomma = next = true;
-					else {
+			function parse_catch() {
+				let p: Token | undefined, nk: Token;
+				if (is_next('('))
+					p = get_token_ingore_comment();
+				lk = nk = tk, tk = get_token_ingore_comment();
+				if (tk.topofline || (tk.type !== 'TK_WORD' && !allIdentifierChar.test(tk.content))) {
+					if (p) {
+						parser_pos = p.offset - 1;
+						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+					} else {
 						next = false;
-						if (types) {
-							if (o = Object.keys(o).pop()?.toLowerCase())
-								types[o] = true;
-							if (hascomma)
-								_this.addDiagnostic(diagnostic.returnmultival(), b, lk.offset > 0 ? lk.offset + lk.length - b : 0);
+						if (tk.topofline)
+							parse_body();
+						else
+							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+					}
+				} else {
+					next = true;
+					if (tk.content.toLowerCase() !== 'as') {
+						while (true) {
+							if (tk.type !== 'TK_WORD')
+								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+							else addvariable(tk);
+							lk = tk, tk = get_token_ingore_comment();
+							if (tk.content === ',') {
+								lk = tk, tk = get_token_ingore_comment();
+								if (!allIdentifierChar.test(tk.content))
+									break;
+							} else
+								break;
 						}
-						break;
+						if (p) {
+							if (tk.content === '{') {
+								_this.addDiagnostic(diagnostic.missing(')'), p.offset, 1);
+								return parse_body();
+							} else if (tk.content === ')') {
+								nexttoken(), next = false;
+								return parse_body();
+							}
+						} else if (tk.content === '{' || tk.topofline) {
+							next = false;
+							return parse_body();
+						}
+					}
+					if (tk.content.toLowerCase() === 'as') {
+						lk = tk, tk = get_token_ingore_comment();
+						next = false;
+						if (tk.type !== 'TK_WORD' && !allIdentifierChar.test(tk.content)) {
+							_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length);
+						} else if (tk.type !== 'TK_WORD')
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length), tk.type = 'TK_WORD';
+						else {
+							let t = get_token_ingore_comment();
+							parser_pos = tk.offset + tk.length;
+							if (!t.topofline && t.content !== '{' && !(p && t.content === ')'))
+								_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length), next = false;
+							else {
+								if (addvariable(tk))
+									next = true, (<Variable>result[result.length - 1]).def = true;
+								if (p) {
+									if (t.content === ')')
+										parser_pos = t.offset + 1, next = true;
+									else
+										_this.addDiagnostic(diagnostic.missing(')'), p.offset, 1);
+								}
+								if (next)
+									nexttoken(), next = false, parse_body();
+							}
+						}
+					} else {
+						if (p) {
+							if (tk.content === ')')
+								lk = tk, tk = get_token_ingore_comment();
+							else _this.addDiagnostic(diagnostic.missing(')'), p.offset, 1);
+						}
+						if (!tk.topofline)
+							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+						else next = false, parse_body();
 					}
 				}
+			}
+
+			function parse_body(else_body: boolean | null = false) {
+				if (tk.type === 'TK_START_BLOCK') {
+					next = true, blockpos.push(parser_pos - 1), parse_block(++blocks);
+					nexttoken();
+					next = tk.type as string === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
+				} else {
+					if (tk.type === 'TK_RESERVED' && tk.content.toLowerCase() !== 'isset') {
+						let t = tk;
+						next = true;
+						if (parse_reserved())
+							return else_body;
+						if (t === tk || (t === lk && !next && !tk.topofline))
+							result.push(...parse_line());
+					} else
+						lk = Object.assign({}, lk), lk.type = '', result.push(...parse_line());
+					next = tk.type === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
+				}
+				if (typeof else_body === 'boolean') {
+					if (else_body)
+						next = false;
+					else if (next) {
+						nexttoken(), next = false;
+						parse_body(true);
+						return true;
+					}
+				}
+				return false;
+			}
+
+			function parse_line(types?: any, end?: string, data?: [string, number?]): DocumentSymbol[] {
+				let res: DocumentSymbol[] = [], hascomma = 0, b = next ? parser_pos : tk.offset, t = 0;
+				while (true) {
+					let o: any = {};
+					res.push(...parseexp(undefined, o, false));
+					if (tk.type === 'TK_COMMA')
+						next = true, ++hascomma;
+					else if (tk.topofline) {
+						next = false;
+						if (types)
+							if (o = Object.keys(o).pop()?.toLowerCase())
+								types[o] = true;
+						break;
+					} else if (end === tk.content)
+						break;
+					else
+						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length), next = false;
+					if (t === parser_pos)
+						break;
+					t = parser_pos;
+				}
+				if (data && hascomma >= (data[1] = data[1] ?? 1))
+					_this.addDiagnostic(diagnostic.acceptparams(data[0], data[1]), b, lk.offset > 0 ? lk.offset + lk.length - b : 0);
 				return res;
 			}
 
@@ -1520,7 +1617,7 @@ export class Lexer {
 				return sta;
 			}
 
-			function parseexp(inpair?: string, types: any = {}, mustexp = false): DocumentSymbol[] {
+			function parseexp(inpair?: string, types: any = {}, mustexp = true): DocumentSymbol[] {
 				let pres = result.length, tpexp = '', byref = false, t: any, objk: any;
 				while (nexttoken()) {
 					if (tk.topofline && !inpair && !linecontinue(lk, tk)) {
@@ -1674,20 +1771,12 @@ export class Lexer {
 							}
 							break;
 						case 'TK_START_BLOCK':
-							if (lk.type === 'TK_EQUALS') {
-								parseobj(true, t = {}, objk = {});
-								tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
+							if (tpexp && (!(lk.type === 'TK_OPERATOR' && !lk.content.match(/^(\+\+|--)$/)) && lk.type !== 'TK_EQUALS')) {
+								types[tpexp] = (tpexp === ' #object' && objk) ? objk : true;
+								next = false; return result.splice(pres);
 							} else {
 								let l = _this.diagnostics.length;
-								if (['TK_WORD', 'TK_STRING', 'TK_NUMBER'].includes(lk.type)) {
-									if (mustexp)
-										_this.addDiagnostic(diagnostic.unexpected('{'), tk.offset, tk.length);
-									else {
-										types[tpexp] = true, _this.diagnostics.splice(l);
-										next = false; return result.splice(pres);
-									}
-								}
-								if (parseobj(mustexp, t = {})) {
+								if (parseobj(mustexp, t = {}, objk = {})) {
 									tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
 								} else {
 									types[tpexp] = true, _this.diagnostics.splice(l);
@@ -1964,7 +2053,7 @@ export class Lexer {
 				}
 
 				function objval(): boolean {
-					let exp = parseexp(',', ts = {}, true);
+					let exp = parseexp(',', ts = {});
 					result.push(...exp);
 					if (k) {
 						if (k.content.toLowerCase() === 'base') {
@@ -2045,7 +2134,7 @@ export class Lexer {
 							_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2);
 							continue;
 						}
-						let prec = _parent.funccall.length, sub = parseexp(e, undefined, true);
+						let prec = _parent.funccall.length, sub = parseexp(e);
 						result.push(tn = FuncNode.create('', SymbolKind.Function, makerange(b, lk.offset + lk.length - b), makerange(b, 0), par, sub));
 						adddeclaration(tn as FuncNode), (<FuncNode>tn).funccall = _parent.funccall.splice(prec);
 						if (_parent.kind === SymbolKind.Function || _parent.kind === SymbolKind.Method)
@@ -2063,7 +2152,7 @@ export class Lexer {
 										if (tk.type === 'TK_EQUALS') {
 											let o: any = {}, equ = tk.content;
 											next = true;
-											result.push(...parseexp(e, o, true));
+											result.push(...parseexp(e, o));
 											vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 											vr.returntypes = { [o = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: vr.range.end };
 											tpexp += o, vr.def = true;
@@ -2082,7 +2171,7 @@ export class Lexer {
 									let o: any = {}, pp = _parent;
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par || []);
 									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-									_parent = tn, tn.children = parseexp(e, o, true);
+									_parent = tn, tn.children = parseexp(e, o);
 									_parent = pp, tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).closure = !!(mode & 1);
 									(<FuncNode>tn).returntypes = o, adddeclaration(tn as FuncNode), (fc.semantic as SemanticToken).modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly;
 									for (const t in o)
@@ -2226,7 +2315,7 @@ export class Lexer {
 					tn.kind = SymbolKind.Property;
 					addprop(token);
 					if (classfullname) tn.full = `(${classfullname.slice(0, -1)}) ${tn.name}`;
-					tn.def = true;
+					// tn.def = true;
 				}
 				if (p) p.push(tn); else result.push(tn);
 				return true;
@@ -2257,7 +2346,7 @@ export class Lexer {
 							if (!dec[_low = it.name.toLowerCase()]) {
 								if (it.kind !== SymbolKind.Variable || (<Variable>it).def)
 									dec[_low] = it;
-							} else
+							} else if (it.kind !== SymbolKind.Property || (<Variable>it).def)
 								_diags.push({ message: samenameerr(dec[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 						}
 					});
@@ -2462,6 +2551,7 @@ export class Lexer {
 					switch (lk.type) {
 						case 'TK_COMMA':
 						case 'TK_EQUALS':
+						case '':
 							return true;
 						case 'TK_OPERATOR':
 							return !lk.content.match(/^(\+\+|--|%)$/);

@@ -47,7 +47,7 @@ export namespace diagnostic {
 	export const propemptyparams = localize('diagnostic.propemptyparams', 'Empty [] not permitted');
 	export const propnotinit = localize('diagnostic.propnotinit', 'Property declaration is not initialized');
 	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name');
-	export const returnmultival = localize('diagnostic.returnmultival', '\'Return\' accepts at most 1 parameter.');
+	export const acceptparams = localize('diagnostic.acceptparams', '\'{0}\' accepts at most {1} parameter.');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');
 	export const unknown = localize('diagnostic.unknown', 'Unknown {0}');
 	export const invalidencoding = localize('diagnostic.invalidencoding', '\'{0}\' invalid file encoding');

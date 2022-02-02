@@ -51,7 +51,7 @@
 	"diagnostic.propemptyparams": "动态属性不允许使用空[]",
 	"diagnostic.propnotinit": "属性声明未初始化",
 	"diagnostic.reservedworderr": "保留字'{0}'不得用作变量名",
-	"diagnostic.returnmultival": "'Return' 最多接受1个返回值",
+	"diagnostic.acceptparams": "'{0}' 最多接受{1}个参数",
 	"diagnostic.unexpected": "意外的'{0}'",
 	"diagnostic.unknown": "未知的{0}",
 	"diagnostic.invalidencoding": "'{0}' 无效的文件编码",
