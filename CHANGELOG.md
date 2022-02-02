@@ -1,3 +1,9 @@
+## 1.2.2
+- 修复[#64](https://github.com/thqby/vscode-autohotkey2-lsp/issues/64)
+- 修复[#66](https://github.com/thqby/vscode-autohotkey2-lsp/issues/66)
+- 修复[#67](https://github.com/thqby/vscode-autohotkey2-lsp/issues/67)
+- 诊断控制流语句[#21](https://github.com/thqby/vscode-autohotkey2-lsp/issues/21)
+
 ## 1.2.1
 - 修复[#63](https://github.com/thqby/vscode-autohotkey2-lsp/issues/63)
 
