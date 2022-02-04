@@ -2045,9 +2045,12 @@
         {
           "name": "meta.head.switch.ahk2",
           "begin": "\\G ?",
-          "end": "((?:\\{))",
+          "end": "(?<!^\\s*)(\\{)(?=\\s*(;.*)?$)|(?<=^\\s*)(\\{)",
           "endCaptures": {
             "1": {
+              "name": "punctuation.section.block.begin.switch.ahk2"
+            },
+            "3": {
               "name": "punctuation.section.block.begin.switch.ahk2"
             }
           },
