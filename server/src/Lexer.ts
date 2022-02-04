@@ -213,7 +213,7 @@ export class Lexer {
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
 		this.document = document, this.scriptpath = (filepath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath).replace(/\\[^\\]+$/, ''), this.initlibdirs();
-		
+
 		MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', ForInitializer: 'ForInitializer', Conditional: 'Conditional', Expression: 'Expression' };
 		handlers = {
 			'TK_START_EXPR': handle_start_expr,
@@ -662,7 +662,9 @@ export class Lexer {
 								else
 									_parent.labels[_low].unshift(tn);
 							}
-							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trimcomment(lk.content); break;
+							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT'))
+								tn.detail = trimcomment(lk.content);
+							break;
 						case 'TK_HOT':
 							topcontinue = true;
 							if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
@@ -758,9 +760,13 @@ export class Lexer {
 									if (input.substring(parser_pos, t).match(/^\s*(\w|[^\x00-\x7f])+\(/))
 										t = n_newlines, tk.semantic = { type: SemanticTokenTypes.keyword, modifier: 1 << SemanticTokenModifiers.static }, tk = get_next_token(), n_newlines = t, tk.topofline = true;
 								}
-							} else if (inswitch > -1 && lk.topofline && lk.content === '{' && input.charAt(parser_pos) === ':' && tk.content.toLowerCase() === 'default') {
-								tk.content += ':', tk.length++, tk.type = 'TK_LABEL', parser_pos++;
-								break;
+							} else if (lk.topofline && lk.content === '{' && input.charAt(parser_pos) === ':') {
+								let t: Token | undefined;
+								if ((inswitch > -1 && tk.content.toLowerCase() === 'default') || (t = _this.get_tokon(parser_pos + 1)).topofline || t.type.endsWith('COMMENT')) {
+									tk.content += ':', tk.length++, tk.type = 'TK_LABEL', parser_pos++;
+									next = !t;
+									break;
+								}
 							}
 							topcontinue = predot ? topcontinue : tk.topofline || false;
 							if (!predot && input.charAt(parser_pos) === '(') {
@@ -1791,7 +1797,7 @@ export class Lexer {
 										ternaryMiss();
 										return result.splice(pres);
 									}
-									next = isobj = true;  
+									next = isobj = true;
 								}
 								if (parseobj(mustexp || isobj, t = {}, objk = {})) {
 									tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;

@@ -1,3 +1,6 @@
+## 1.2.3
+- 修复[#68](https://github.com/thqby/vscode-autohotkey2-lsp/issues/68)
+
 ## 1.2.2
 - 修复[#64](https://github.com/thqby/vscode-autohotkey2-lsp/issues/64)
 - 修复[#66](https://github.com/thqby/vscode-autohotkey2-lsp/issues/66)
