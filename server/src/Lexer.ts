@@ -738,6 +738,12 @@ export class Lexer {
 						case 'TK_OPERATOR':
 							if (tk.content === '%')
 								parsepair('%', '%');
+							else if (tk.content === '?') {
+								result.push(...parseexp(undefined, undefined, true, ':')), next = true;
+								if (tk.content as string === ':')
+									result.push(...parseexp());
+							} else if (tk.content === ':')
+								_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
 							else if (mode === 2 && tk.content.match(/^\w+$/))
 								tk.type = 'TK_WORD', next = false, tk.semantic = { type: SemanticTokenTypes.variable };
 							break;
@@ -1358,6 +1364,7 @@ export class Lexer {
 								incase = lk.offset, result.push(...parse_line(undefined, ':', ['case', 20])), incase = -1;
 								if (tk.content !== ':')
 									_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length), next = false;
+								else next = true;
 							} else
 								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 						} else
@@ -1427,7 +1434,7 @@ export class Lexer {
 						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 					} else {
 						next = false;
-						if (tk.topofline)
+						if (tk.topofline || tk.content === '{')
 							parse_body();
 						else
 							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
@@ -1531,7 +1538,7 @@ export class Lexer {
 				let res: DocumentSymbol[] = [], hascomma = 0, b = next ? parser_pos : tk.offset, t = 0;
 				while (true) {
 					let o: any = {};
-					res.push(...parseexp(undefined, o, false));
+					res.push(...parseexp(undefined, o, false, end));
 					if (tk.type === 'TK_COMMA')
 						next = true, ++hascomma;
 					else if (tk.topofline) {
@@ -1630,7 +1637,7 @@ export class Lexer {
 				return sta;
 			}
 
-			function parseexp(inpair?: string, types: any = {}, mustexp = true): DocumentSymbol[] {
+			function parseexp(inpair?: string, types: any = {}, mustexp = true, end?: string): DocumentSymbol[] {
 				let pres = result.length, tpexp = '', byref = false, ternarys: number[] = [], t: any, objk: any;
 				while (nexttoken()) {
 					if (tk.topofline && !inpair && !linecontinue(lk, tk)) {
@@ -1701,7 +1708,7 @@ export class Lexer {
 									if (tk.type === 'TK_EQUALS') {
 										let o: any = {}, equ = tk.content;
 										next = true;
-										result.push(...parseexp(inpair, o));
+										result.push(...parseexp(inpair, o, true, end ?? (ternarys.length ? ':' : undefined)));
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 										vr.returntypes = { [o = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: vr.range.end };
 										tpexp += o, vr.def = true;
@@ -1744,7 +1751,7 @@ export class Lexer {
 								else nk = tk;
 								if (nk.content === '=>' && par) {
 									_this.diagnostics.push(...tds);
-									let o: any = {}, prec = _parent.funccall.length, sub = parseexp(inpair, o);
+									let o: any = {}, prec = _parent.funccall.length, sub = parseexp(inpair, o, true, end ?? (ternarys.length ? ':' : undefined));
 									if (fc) {
 										if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 										fc.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
@@ -1852,7 +1859,7 @@ export class Lexer {
 								let p = lk.content.toLowerCase();
 								if (result.length && result[result.length - 1].name === lk.content)
 									result.pop();
-								let o = {}, sub = parseexp(inpair, o);
+								let o = {}, sub = parseexp(inpair, o, true, end ?? (ternarys.length ? ':' : undefined));
 								for (let i = sub.length - 1; i >= 0; i--) {
 									if (sub[i].name.toLowerCase() === p)
 										sub.splice(i, 1);
@@ -1872,8 +1879,13 @@ export class Lexer {
 									ternarys.push(tk.offset);
 								else if (tk.content === ':')
 									if (ternarys.pop() === undefined) {
-										if (incase > -1)
+										if (end === ':' || incase > -1) {
+											next = false, tpexp = tpexp.slice(0, -2);
+											types[tpexp] = true;
+											if (tpexp === ' #object' && objk)
+												types[tpexp] = objk;
 											return result.splice(pres);
+										}
 										_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
 									}
 							}
@@ -2131,7 +2143,8 @@ export class Lexer {
 			}
 
 			function parsepair(b: string, e: string, pairbeg?: number, types: any = {}, strs?: Token[]) {
-				let pairnum = 0, apos = result.length, tp = parser_pos, llk = lk, pairpos: number[], rpair = 0, tpexp = '', byref = false;
+				let pairnum = 0, apos = result.length, tp = parser_pos, llk = lk, pairpos: number[];
+				let rpair = 0, tpexp = '', byref = false, ternarys: number[] = [];
 				pairpos = pairbeg === undefined ? [parser_pos - 1] : [pairbeg];
 				while (nexttoken()) {
 					if (b === '%' && tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
@@ -2173,7 +2186,7 @@ export class Lexer {
 							_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2);
 							continue;
 						}
-						let prec = _parent.funccall.length, sub = parseexp(e);
+						let prec = _parent.funccall.length, sub = parseexp(e, undefined, true, ternarys.length ? ':' : undefined);
 						result.push(tn = FuncNode.create('', SymbolKind.Function, makerange(b, lk.offset + lk.length - b), makerange(b, 0), par, sub));
 						adddeclaration(tn as FuncNode), (<FuncNode>tn).funccall = _parent.funccall.splice(prec);
 						if (_parent.kind === SymbolKind.Function || _parent.kind === SymbolKind.Method)
@@ -2191,7 +2204,7 @@ export class Lexer {
 										if (tk.type === 'TK_EQUALS') {
 											let o: any = {}, equ = tk.content;
 											next = true;
-											result.push(...parseexp(e, o));
+											result.push(...parseexp(e, o, true, ternarys.length ? ':' : undefined));
 											vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
 											vr.returntypes = { [o = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: vr.range.end };
 											tpexp += o, vr.def = true;
@@ -2210,7 +2223,7 @@ export class Lexer {
 									let o: any = {}, pp = _parent;
 									tn = FuncNode.create(fc.content, SymbolKind.Function, makerange(fc.offset, parser_pos - fc.offset), makerange(fc.offset, fc.length), <Variable[]>par || []);
 									if (fc.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-									_parent = tn, tn.children = parseexp(e, o);
+									_parent = tn, tn.children = parseexp(e, o, true, ternarys.length ? ':' : undefined);
 									_parent = pp, tn.range.end = document.positionAt(lk.offset + lk.length), (<FuncNode>tn).closure = !!(mode & 1);
 									(<FuncNode>tn).returntypes = o, adddeclaration(tn as FuncNode), (fc.semantic as SemanticToken).modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly;
 									for (const t in o)
@@ -2269,6 +2282,7 @@ export class Lexer {
 					} else if (tk.content.match(/^[)}]$/)) {
 						_this.addDiagnostic(diagnostic.missing(e), pairpos[pairnum], 1), next = false;
 						types[tpexp.indexOf('#any') === -1 ? '(' + tpexp + ')' : '#any'] = true;
+						ternaryMiss();
 						return;
 					} else if (tk.type === 'TK_RESERVED') {
 						if (tk.content.match(/\b(and|or|not)\b/i)) {
@@ -2299,13 +2313,23 @@ export class Lexer {
 						if (tk.content === '&') {
 							byref = true;
 							continue;
-						}
+						} else if (tk.content === '?')
+							ternarys.push(tk.offset);
+						else if (tk.content === ':' && ternarys.pop() === undefined)
+							_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
 					}
 					byref = false;
 				}
 				types['(' + tpexp + ')'] = true;
 				if (tk.type === 'TK_EOF' && pairnum > -1)
 					_this.addDiagnostic(diagnostic.missing(e), pairpos[pairnum], 1);
+				ternaryMiss();
+
+				function ternaryMiss() {
+					let o: number | undefined;
+					while ((o = ternarys.pop()) !== undefined)
+						_this.addDiagnostic(diagnostic.missing(':'), o, 1);
+				}
 			}
 
 			function maybeclassprop(tk: Token) {
