@@ -1661,7 +1661,7 @@ export class Lexer {
 									}
 									tpexp += ' ' + lk.content;
 								}
-								types[tpexp] = true;
+								types[tpexp] = true, next = false;
 								return result.splice(pres);
 							} else if (tk.topofline) {
 								next = false;
@@ -1870,7 +1870,7 @@ export class Lexer {
 								tpexp = tpexp.replace(/\S+$/, '#func');
 							} else {
 								tpexp += ' ' + tk.content;
-								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^[:?%]$/) && !tk.content.match(/[+\-%!]/))
+								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^([:?%]|\+\+|--)$/) && !tk.content.match(/[+\-%!]/))
 									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, tk.length);
 								if (tk.content === '&' && (['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lk.type))) {
 									byref = true;
@@ -2919,6 +2919,7 @@ export class Lexer {
 				(last_type === 'TK_WORD' && flags.mode === MODE.BlockStatement
 					&& !flags.in_case && !in_array(token_type, ['TK_WORD', 'TK_RESERVED', 'TK_START_EXPR'])
 					&& !in_array(token_text, ['--', '++', '%', '::'])) ||
+				(token_type === 'TK_OPERATOR' && flags.mode === MODE.BlockStatement && !in_array(token_text, ['--', '++', '%', '::'])) ||
 				(flags.mode === MODE.ObjectLiteral && flags.last_text === ':' && flags.ternary_depth === 0)) {
 
 				set_mode(MODE.Statement);
@@ -3820,7 +3821,8 @@ export class Lexer {
 					// no newline between 'return nnn'
 					output_space_before_token = true;
 				} else if (last_type !== 'TK_END_EXPR') {
-					if ((last_type !== 'TK_START_EXPR' || !(token_type === 'TK_RESERVED' && in_array(token_text_low, ['local', 'static', 'global']))) && flags.last_text !== ':') {
+					if ((last_type !== 'TK_START_EXPR' || !(token_type === 'TK_RESERVED' && in_array(token_text_low, ['local', 'static', 'global']))) &&
+						(flags.last_text !== ':' || output_lines[output_lines.length - 1].text.slice(-2)[0] === ' ')) {
 						// no need to force newline on 'let': for (let x = 0...)
 						if (token_type === 'TK_RESERVED' && token_text_low === 'if' && flags.last_word.match(/^else$/i) && flags.last_text !== '{') {
 							// no newline for } else if {
@@ -4079,10 +4081,8 @@ export class Lexer {
 						flags.mode = MODE.ObjectLiteral;
 					}
 					space_before = false;
-				} else {
+				} else
 					flags.ternary_depth -= 1;
-					indent();
-				}
 			} else if (token_text === '?') {
 				flags.ternary_depth += 1;
 				if (!flags.indentation_level)
