@@ -1,7 +1,7 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
-import { checksamenameerr, ClassNode, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable } from './Lexer';
+import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, getClassMembers, ParamInfo } from './Lexer';
 import { diagnostic } from './localize';
-import { ahkvars, connection, getallahkfiles, inBrowser, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
+import { ahkvars, connection, extsettings, getallahkfiles, inBrowser, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
 import { URI } from 'vscode-uri';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
@@ -10,7 +10,7 @@ export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
 export async function symbolProvider(params: DocumentSymbolParams): Promise<SymbolInformation[]> {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
 	if (!doc || (!doc.reflat && symbolcache[uri])) return symbolcache[uri];
-	let tree = <DocumentSymbol[]>doc.children, gvar: any = {}, glo = doc.declaration;
+	let gvar: any = {}, glo = doc.declaration;
 	for (const key in ahkvars)
 		gvar[key] = ahkvars[key];
 	let list = doc.relevance;
@@ -21,12 +21,12 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 				gvar[key] = gg[key], (<any>gg[key]).uri = uri;
 	}
 	for (const key in glo) {
-		if (!gvar[key] || gvar[key].kind === SymbolKind.Variable || (gvar[key] === ahkvars[key] && gvar[key].kind === SymbolKind.Function && glo[key].kind !== SymbolKind.Variable))
+		if (!gvar[key] || gvar[key].kind === SymbolKind.Variable || (gvar[key] === ahkvars[key] && glo[key].kind !== SymbolKind.Variable && (gvar[key].kind === SymbolKind.Function || gvar[key].def === false)))
 			gvar[key] = glo[key], (<any>glo[key]).uri = uri;
 	}
 	doc.reflat = false, globalsymbolcache = gvar;
 	let rawuri = doc.document.uri;
-	symbolcache[uri] = flatTree(tree).map(info => {
+	symbolcache[uri] = flatTree(doc).map(info => {
 		return SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri,
 			info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
 	});
@@ -34,10 +34,11 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		checksamename(doc), setTimeout(sendDiagnostics, 200);
 	return symbolcache[uri];
 
-	function flatTree(tree: DocumentSymbol[], vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
-		const result: DocumentSymbol[] = [], t: DocumentSymbol[] = [], p: { [name: string]: DocumentSymbol } = {};
+	function flatTree(node: { children?: DocumentSymbol[], funccall?: CallInfo[] }, vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
+		const result: DocumentSymbol[] = [], t: DocumentSymbol[] = [];
 		let tk: Token;
-		tree.map(info => {
+		vars['isset'] = ahkvars['isset'];
+		node.children?.map(info => {
 			if (info.children)
 				t.push(info);
 			if (!info.name)
@@ -71,6 +72,10 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					if ((tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]).semantic)
 						delete tk.semantic;
 			}
+		});
+		node.funccall?.map(info => {
+			if (info.kind === SymbolKind.Function)
+				checkParams(doc, vars[info.name.toLowerCase()] as FuncNode, info);
 		});
 		t.map(info => {
 			if (info.children) {
@@ -122,7 +127,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					if ((<ClassNode>info).extends)
 						inherit['super'] = DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg);
 				}
-				result.push(...flatTree(info.children, inherit, gg));
+				result.push(...flatTree(info, inherit, gg));
 			}
 		});
 		return result;
@@ -218,6 +223,70 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 				stk.type = st;
 			if (st < 3)
 				stk.modifier = (stk.modifier || 0) | (1 << SemanticTokenModifiers.readonly) | (islib ? 1 << SemanticTokenModifiers.defaultLibrary : 0);
+		}
+	}
+}
+
+export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
+	let paraminfo = info.paraminfo as ParamInfo;
+	if (!extsettings.Diagnostics.ParamsCheck || !paraminfo) return;
+	if (node && node.kind === SymbolKind.Class) {
+		let cl = node as unknown as ClassNode;
+		node = (cl.staticdeclaration['call'] ?? cl.declaration['__new']) as FuncNode;
+		if (!node && cl.extends) {
+			let t = getClassMembers(doc, cl, true);
+			if (t['call'] && (<any>t['call']).def !== false)
+				node = t['call'] as FuncNode;
+			else node = (t['__new'] ?? t['call']) as FuncNode;
+		}
+	}
+	if (!node) return;
+	if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) {
+		let paramcount = node.params.length, isVariadic = false, pc = paraminfo.count, miss: { [index: number]: boolean } = {};
+		if (node.full.includes('*')) {
+			isVariadic = true;
+			if (paramcount > 0 && node.params[paramcount - 1].arr)
+				paramcount--;
+		}
+		if (isVariadic) {
+			while (paramcount > 0 && node.params[paramcount - 1].defaultVal !== undefined) --paramcount;
+			for (let i = 0; i < paramcount; ++i)
+				if (node.params[i].defaultVal === null)
+					--paramcount;
+			if (pc < paramcount)
+				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount + '+', pc), range: info.range, severity: 1 });
+			paraminfo.miss.map(index => {
+				miss[index] = true;
+				if (index < paramcount && node.params[index].defaultVal === undefined)
+					doc.addDiagnostic(diagnostic.missingparam(), paraminfo.comma[index] ?? doc.document.offsetAt(info.range.end), 1);
+			});
+		} else {
+			let maxcount = paramcount, l = paraminfo.miss.length, t = 0;
+			while (paramcount > 0 && node.params[paramcount - 1].defaultVal !== undefined) --paramcount;
+			for (let i = 0; i < paramcount; ++i)
+				if (node.params[i].defaultVal === null)
+					--paramcount;
+			while (l > 0) {
+				if ((t = paraminfo.miss[l - 1]) >= maxcount) {
+					if (t + 1 === pc) --pc;
+				} else if (node.params[t].defaultVal === undefined)
+					doc.addDiagnostic(diagnostic.missingparam(), paraminfo.comma[t] ?? doc.document.offsetAt(info.range.end), 1);
+				miss[t] = true, --l;
+			}
+			if (pc < paramcount || pc > maxcount)
+				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount === maxcount ? maxcount : paramcount + '-' + maxcount, pc), range: info.range, severity: 1 });
+		}
+		if (node.hasref) {
+			node.params.map((param, index) => {
+				if (index < pc && param.ref && !miss[index]) {
+					let o: number, t: Token;
+					if (index === 0)
+						o = info.offset as number + info.name.length + 1;
+					else o = paraminfo.comma[index - 1] + 1;
+					if ((t = doc.get_tokon(o)).content !== '&')
+						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset, t.length, 2);
+				}
+			});
 		}
 	}
 }

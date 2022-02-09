@@ -88,7 +88,7 @@ ClipWait([Timeout, WaitForanyData]) => Number
  * @param ComObject The target COM object; that is, a COM interface pointer.
  * The pointer value can be passed directly or encapsulated in an object with Ptr attribute, such as ComObj with VT_UNKNOWN variable type.
  */
-ComCall(Index, ComObject [, Type1, arg1, * , ReturnType]) => Number | string
+ComCall(Index, ComObject [, Type1, arg1, *, ReturnType]) => Number | string
 
 /**
  * Retrieve running objects that have been registered using OLE (Object Connection and Embedding).
@@ -371,7 +371,7 @@ Cos(Number) => Number
  * Prevent the current thread from being interrupted by other threads, or enable it to be interrupted.
  * @param OnOffNumeric
  */
-Critical(OnOffNumeric) => void
+Critical(OnOffNumeric := 'On') => void
 
 /**
  * Add or subtract time from the date-time value.
@@ -1586,7 +1586,7 @@ NumGet(Source [, Offset], Type) => Number
 /**
  * Store one or more numbers in binary format to the specified address + offset location.
  */
-NumPut(Type1, Number1, * , Target [, Offset]) => Number
+NumPut(Type1, Number1, *, Target [, Offset]) => Number
 
 /**
  * Increase the reference count of the object.
@@ -1596,7 +1596,7 @@ ObjAddRef(Ptr) => Number
 /**
  * Create a binding function object, which can call methods of the specified object.
  */
-ObjBindMethod(Obj, Method, Params) => Func
+ObjBindMethod(Obj, Method, Params*) => Func
 
 /**
  * Convert the address to a suitable reference.
@@ -2122,7 +2122,7 @@ StrCompare(String1, String2, CaseSense := false) => Number
  * By default, only the first binary zero is copied. If Length is negative, its absolute value indicates the exact number of characters to be converted, including any binary zeros that the string may contain-in other words, the result is always with String of that length.
  * @param Encoding "UTF-8", "UTF-16" or "CP936". For numeric identifiers, the prefix "CP" can be omitted only when Length is specified. Specify an empty string or "CP0" to use the system The default ANSI code page.
  */
-StrGet(Source, Length, Encoding := '') => String
+StrGet(Source [, Length, Encoding]) => String
 
 /**
  * Retrieve the number of characters in a string.
@@ -2661,7 +2661,7 @@ class ComValue extends Any {
 	 * @param Value The value to be wrapped. Currently only integer and pointer values are supported.
 	 * @param Flags Flags that affect the behavior of the wrapper object; for details, see ComObjFlags.
 	 */
-	static Call(VarType, Value [, Flags]) => Comobject
+	static Call(VarType, Value [, Flags]) => ComValue | ComObject | ComObjArray
 }
 
 class ComValueRef extends ComValue {
@@ -3152,12 +3152,12 @@ class Gui extends Object {
 	/**
 	 * Retrieve the position and size of the working area of the window.
 	 */
-	GetClientPos([X, Y, Width, Height]) => void
+	GetClientPos([&X, &Y, &Width, &Height]) => void
 
 	/**
 	 * Retrieve the position and size of the window.
 	 */
-	GetPos([X, Y, Width, Height]) => void
+	GetPos([&X, &Y, &Width, &Height]) => void
 
 	/**
 	 * Hide window.
@@ -3301,7 +3301,7 @@ class Gui extends Object {
 		/**
 		 * Retrieve the position and size of the control.
 		 */
-		GetPos([X, Y, Width, Height]) => void
+		GetPos([&X, &Y, &Width, &Height]) => void
 
 		/**
 		 * Move/resize controls.
@@ -3934,7 +3934,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	__New(code) => OSError
+	__New(code [, What, Extra]) => OSError
 }
 
 class Primitive extends Any {
@@ -3987,6 +3987,9 @@ class TypeError extends Error {
 }
 
 class ValueError extends Error {
+}
+
+class VarRef extends Any {
 }
 
 class ZeroDivisionError extends Error {

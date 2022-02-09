@@ -20,6 +20,7 @@ export namespace codeaction {
 }
 
 export namespace diagnostic {
+	export const acceptparams = localize('diagnostic.acceptparams', '\'{0}\' accepts at most {1} parameter');
 	export const assignerr = localize('diagnostic.assignerr', 'This {0} \'{1}\' cannot be used as an output variable');
 	export const classinfuncerr = localize('diagnostic.classinfuncerr', 'Functions cannot contain classes');
 	export const classuseerr = localize('diagnostic.classuseerr', 'This class cannot be used as an output variable');
@@ -41,13 +42,15 @@ export namespace diagnostic {
 	export const invalidpropname = localize('diagnostic.invalidpropname', 'Invalid property name in object literal');
 	export const invalidsymbolname = localize('diagnostic.invalidsymbolname', 'Invalid symbol naming \'{0}\'');
 	export const missing = localize('diagnostic.missing', 'Missing \'{0}\'');
+	export const missingparam = localize('diagnostic.missingparam', 'Missing a required parameter');
 	export const objectliteralerr = localize('diagnostic.objectliteralerr', 'Error in object literal');
 	export const pathinvalid = localize('diagnostic.pathinvalid', 'Invalid file path');
+	export const paramcounterr = localize('diagnostic.paramcounterr', 'Expected {0} parameters, but got {1}');
 	export const propdeclaraerr = localize('diagnostic.propdeclaraerr', 'Not a valid method, class or property definition');
 	export const propemptyparams = localize('diagnostic.propemptyparams', 'Empty [] not permitted');
 	export const propnotinit = localize('diagnostic.propnotinit', 'Property declaration is not initialized');
 	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name');
-	export const acceptparams = localize('diagnostic.acceptparams', '\'{0}\' accepts at most {1} parameter.');
+	export const typemaybenot = localize('diagnostic.typemaybenot', 'Type maybe not \'{0}\'');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');
 	export const unknown = localize('diagnostic.unknown', 'Unknown {0}');
 	export const invalidencoding = localize('diagnostic.invalidencoding', '\'{0}\' invalid file encoding');

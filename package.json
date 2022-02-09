@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.2.4",
+	"version": "1.2.5",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -104,11 +104,17 @@
 					"default": "C:\\Program Files\\Autohotkey\\AutoHotkey.exe",
 					"description": "%ahk2.interpreterpath%"
 				},
-				"AutoHotkey2.completeFunctionParens": {
+				"AutoHotkey2.CompleteFunctionParens": {
 					"scope": "window",
 					"type": "boolean",
 					"default": false,
 					"description": "%ahk2.completefunctionparens%"
+				},
+				"AutoHotkey2.Diagnostics.ParamsCheck": {
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "%ahk2.diagnostics.paramscheck%"
 				}
 			}
 		},

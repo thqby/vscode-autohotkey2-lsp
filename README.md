@@ -11,7 +11,7 @@
 
 [Gitee](https://gitee.com/orz707/vscode-autohotkey2-lsp)
 
-AutoHotKey V2 Language support for VS Code, Function realization based on v2 syntax analysis.
+AutoHotkey V2 Language support for VS Code, Function realization based on v2 syntax analysis.
 Supports running on the Web, such as `Chrome/Edge`.
 
 - [Language Features](#language-features)
@@ -174,6 +174,10 @@ Extract the following files into the coc.nvim\plugin
 - syntaxes/*
 - package.nls.json
 - package.nls.zh-cn.json
+
+```bat
+git clone --depth=1 -b server https://github.com/thqby/vscode-autohotkey2-lsp
+```
 
 Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
 ```json
@@ -356,6 +360,10 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 - syntaxes/*
 - package.nls.json
 - package.nls.zh-cn.json
+
+```bat
+git clone --depth=1 -b server https://github.com/thqby/vscode-autohotkey2-lsp
+```
 
 打开(n)vim, 输入命令 `:CocConfig` 进入`coc.nvim`配置文件增加配置信息
 ```json

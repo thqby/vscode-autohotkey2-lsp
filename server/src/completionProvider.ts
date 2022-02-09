@@ -40,7 +40,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 		if (triggerchar === '.') {
 			if (temp[3]) {
 				searchNode(doc, doc.buildContext(position, true).text.replace(/\.[^.]*$/, '').toLowerCase(), position, SymbolKind.Class)?.map(it => {
-					getClassMembers(doc, it.node, true).map(it => {
+					Object.values(getClassMembers(doc, it.node, true)).map(it => {
 						if (it.kind === SymbolKind.Class && !vars[_low = it.name.toLowerCase()] && expg.test(_low))
 							items.push(convertNodeCompletion(it)), vars[_low] = true;
 					});
@@ -118,7 +118,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			for (const node of tps) {
 				switch (node.kind) {
 					case SymbolKind.Class:
-						let mems = getClassMembers(doc, node, isstatic);
+						let mems = Object.values(getClassMembers(doc, node, isstatic));
 						mems.map((it: any) => {
 							if (expg.test(it.name)) {
 								if (it.kind === SymbolKind.Property || it.kind === SymbolKind.Class) {
@@ -229,6 +229,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (pre.charAt(pre.length - 1) === '/')
 					xg = '/';
 				let extreg = inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i), ts = tt.replace(/['"<>]/g, '').replace(/^.*[\\/]/, '');
+				if (ts.includes('*'))
+					return undefined;
 				let expg = new RegExp((ts.match(/[^\w]/) ? ts.replace(/(.)/g, '$1.*') : '(' + ts.replace(/(.)/g, '$1.*') + '|[^\\w])').replace(/\.\./, '\\..'), 'i');
 				let textedit: TextEdit | undefined;
 				if (ts.includes('.'))
@@ -368,7 +370,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 											} else if (ts[tp])
 												ns = [ts[tp]];
 											ns?.map((it: any) => {
-												getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/)).map(it => {
+												Object.values(getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/))).map(it => {
 													if (it.kind === SymbolKind.Method && !funcs[temp = it.name.toLowerCase()] && expg.test(temp)) {
 														funcs[temp] = true, cpitem = CompletionItem.create(it.name), cpitem.kind = CompletionItemKind.Method, items.push(cpitem);
 													}
@@ -553,7 +555,7 @@ function convertNodeCompletion(info: any): CompletionItem {
 		case SymbolKind.Function:
 		case SymbolKind.Method:
 			ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
-			if (extsettings.completeFunctionParens) {
+			if (extsettings.CompleteFunctionParens) {
 				if ((<FuncNode>info).params.length) {
 					ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
 					if ((<FuncNode>info).params[0].name.includes('|')) {

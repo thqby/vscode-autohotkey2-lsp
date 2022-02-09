@@ -88,7 +88,7 @@ ClipWait([Timeout, WaitForAnyData]) => Number
  * @param ComObject 目标 COM 对象; 也就是说, 一个 COM 接口指针.
  * 指针值可以直接传递, 也可以封装在带有 Ptr 属性的对象中, 如带有 VT_UNKNOWN 变量类型的 ComObj.
  */
-ComCall(Index, ComObject [, Type1, Arg1, * , ReturnType]) => Number | String
+ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Number | String
 
 /**
  * 检索已使用 OLE(对象连接与嵌入) 注册的运行中的对象.
@@ -371,7 +371,7 @@ Cos(Number) => Number
  * 防止当前线程被其他线程中断, 或使其能够被中断.
  * @param OnOffNumeric
  */
-Critical(OnOffNumeric) => void
+Critical(OnOffNumeric := 'On') => void
 
 /**
  * 从日期-时间值中添加或减去时间.
@@ -1586,7 +1586,7 @@ NumGet(Source [, Offset], Type) => Number
 /**
  * 将一个或多个数字以二进制格式存储到指定地址+偏移的位置.
  */
-NumPut(Type1, Number1, * , Target [, Offset]) => Number
+NumPut(Type1, Number1, *, Target [, Offset]) => Number
 
 /**
  * 增加对象的引用计数.
@@ -1596,7 +1596,7 @@ ObjAddRef(Ptr) => Number
 /**
  * 创建一个绑定函数对象, 它能调用指定对象的方法.
  */
-ObjBindMethod(Obj, Method, Params) => Func
+ObjBindMethod(Obj, Method, Params*) => Func
 
 /**
  * 将地址转换为一个合适的引用.
@@ -2122,7 +2122,7 @@ StrCompare(String1, String2, CaseSense := false) => Number
  * 默认情况下, 只复制到第一个二进制零. 如果 Length 为负数, 则它的绝对值指示要转换的确切字符数, 包括字符串可能包含的任何二进制零 - 换句话说, 结果始终是具有该长度的字符串.
  * @param Encoding "UTF-8", "UTF-16" 或 "CP936". 对于数字标识符, 只有在指定 Length 时, 才可以省略前缀 "CP". 指定空字符串或 "CP0" 则使用系统默认 ANSI 代码页.
  */
-StrGet(Source, Length, Encoding := '') => String
+StrGet(Source [, Length, Encoding]) => String
 
 /**
  * 检索字符串中的字符数.
@@ -2661,7 +2661,7 @@ class ComValue extends Any {
 	 * @param Value 要包装的值. 当前仅支持整数和指针值.
 	 * @param Flags 影响包装器对象行为的标志; 有关详情, 请参阅 ComObjFlags.
 	 */
-	static Call(VarType, Value [, Flags]) => Comobject
+	static Call(VarType, Value [, Flags]) => ComValue | ComObject | ComObjArray
 }
 
 class ComValueRef extends ComValue {
@@ -3102,12 +3102,12 @@ class Gui extends Object {
 	/**
 	 * 检索窗口工作区的位置和大小.
 	 */
-	GetClientPos([X, Y, Width, Height]) => void
+	GetClientPos([&X, &Y, &Width, &Height]) => void
 
 	/**
 	 * 检索窗口的位置和大小.
 	 */
-	GetPos([X, Y, Width, Height]) => void
+	GetPos([&X, &Y, &Width, &Height]) => void
 
 	/**
 	 * 隐藏窗口.
@@ -3235,7 +3235,7 @@ class Gui extends Object {
 		/**
 		 * 检索控件的位置和大小.
 		 */
-		GetPos([X, Y, Width, Height]) => void
+		GetPos([&X, &Y, &Width, &Height]) => void
 
 		/**
 		 * 移动/调整控件大小.
@@ -3868,7 +3868,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	__New(code) => OSError
+	__New(code [, What, Extra]) => OSError
 }
 
 class Primitive extends Any {
@@ -3921,6 +3921,9 @@ class TypeError extends Error {
 }
 
 class ValueError extends Error {
+}
+
+class VarRef extends Any {
 }
 
 class ZeroDivisionError extends Error {

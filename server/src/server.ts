@@ -15,7 +15,7 @@ import {
 	documentFormatting, extsettings, fixinclude, generateAuthor, generateComment, getallahkfiles, getincludetable, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
-	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Settings, set_Workfolder, setting, signatureProvider, sleep,
+	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workfolder, setting, signatureProvider, sleep,
 	symbolProvider, typeFormatting, updateFileInfo, workspaceFolders, ahkpath_cur, set_ahkpath, LibIncludeType, workspaceSymbolProvider, inWorkspaceFolders, parseWorkspaceFolders, winapis
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
@@ -165,8 +165,8 @@ connection.onDidChangeConfiguration(async (change) => {
 });
 
 documents.onDidOpen(async e => {
-	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
-	lexers[uri] = doc, doc.actived = true, doc.d = lexers[uri]?.d || doc.d;
+	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document), old = lexers[uri]?.d;
+	lexers[uri] = doc, doc.actived = true, doc.d = old ?? doc.d;
 	if (extsettings.AutoLibInclude & 1)
 		parseproject(uri);
 });
@@ -315,7 +315,8 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 		let t = await connection.workspace.getConfiguration('AutoHotkey2');
 		if (!t && process.env.AHK2_LS_CONFIG)
 			t = JSON.parse(process.env.AHK2_LS_CONFIG);
-		if (!(set_Settings(t || extsettings)).InterpreterPath && !ahkpath_cur) return false;
+		if (t) Object.assign(extsettings, t);
+		if (!extsettings.InterpreterPath && !ahkpath_cur) return false;
 		if (typeof extsettings.AutoLibInclude === 'string')
 			extsettings.AutoLibInclude = LibIncludeType[extsettings.AutoLibInclude] as unknown as LibIncludeType;
 		else if (typeof extsettings.AutoLibInclude === 'boolean')

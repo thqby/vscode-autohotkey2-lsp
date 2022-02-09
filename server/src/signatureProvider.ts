@@ -56,16 +56,9 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 			let nn = it.node, kind = nn.kind, m: RegExpExecArray | null;
 			if (kind === SymbolKind.Class) {
 				let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, true);
-				let n: FuncNode | undefined;
-				for (const m of mems) {
-					let _ = m.name.toLowerCase();
-					if (_  === 'call') {
-						n = m as FuncNode;
-						if ((<any>m).def !== false)
-							break;
-					} else if (_ === '__new')
-						n = m as FuncNode;
-				}
+				let n: FuncNode | undefined = (mems['__new'] ?? mems['call']) as FuncNode;
+				if (mems['call'] && (<any>mems['call']).def !== false)
+					n = mems['call'] as FuncNode;
 				if (n)
 					nodes.push({ node: n, uri: '' });
 			} else if (kind === SymbolKind.Function || kind === SymbolKind.Method)

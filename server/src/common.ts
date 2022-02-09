@@ -33,7 +33,10 @@ export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [
 export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
 	AutoLibInclude: 0,
-	completeFunctionParens: false
+	CompleteFunctionParens: false,
+	Diagnostics: {
+		ParamsCheck: true
+	}
 };
 export let winapis: string[] = [];
 export let getDllExport = (paths: string[]) => [] as string[];
@@ -51,7 +54,10 @@ export enum LibIncludeType {
 export interface AHKLSSettings {
 	InterpreterPath: string
 	AutoLibInclude: LibIncludeType
-	completeFunctionParens: boolean
+	CompleteFunctionParens: boolean
+	Diagnostics: {
+		ParamsCheck: boolean
+	}
 }
 
 export function set_Connection(conn: any, browser: boolean, getDll?:  (paths: string[]) => string[]) {
@@ -359,7 +365,6 @@ export function set_ahkpath(path: string) { ahkpath_cur = path; }
 export function set_dirname(dir: string) { dirname = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str; }
 export function set_Workfolder(folders?: string[]) { workspaceFolders = folders || []; }
-export function set_Settings(sets: AHKLSSettings) { return extsettings = sets; }
 
 export async function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));

@@ -14,5 +14,6 @@
 	"ahk2.run": "Run Script",
 	"ahk2.setinterpreter": "Select AutoHotkey2 Interpreter",
 	"ahk2.selection.run": "Run Selected Script",
-	"ahk2.stop": "Stop Running Script"
+	"ahk2.stop": "Stop Running Script",
+	"ahk2.diagnostics.paramscheck": "Statically check function calls"
 }

@@ -147,8 +147,8 @@ connection.onDidChangeConfiguration(async change => {
 });
 
 documents.onDidOpen(async e => {
-	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document);
-	lexers[uri] = doc, doc.actived = true, doc.d = lexers[uri]?.d || doc.d;
+	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document), old = lexers[uri]?.d;
+	lexers[uri] = doc, doc.actived = true, doc.d = old ?? doc.d;
 });
 
 // Only keep settings for open documents
