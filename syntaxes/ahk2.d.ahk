@@ -1346,7 +1346,7 @@ IsXDigit(Value) => Number
  * @param MaxEvents Ignore this parameter to display the main window of the script, which is equivalent to selecting the "View -> Key History" menu item.
  * Otherwise, this parameter setting can record the maximum number of keyboard and mouse events displayed in the window (the default is 40, the limit is 500). The key history is also reset, but the main window is not displayed or refreshed. Specify 0 to complete Disable key history.
  */
-KeyHistory(MaxEvents)
+KeyHistory([MaxEvents])
 
 /**
  * Wait for the key or mouse/joystick button to be released or pressed.
@@ -2192,7 +2192,7 @@ SubStr(String, StartingPos [, Length]) => String
 /**
  * Disable or enable all or selected hotkeys and hotstrings.
  */
-Suspend(Mode)
+Suspend(Mode := -1)
 
 /**
  * Convert string to title case.

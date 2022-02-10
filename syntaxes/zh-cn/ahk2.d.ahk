@@ -1346,7 +1346,7 @@ IsXDigit(Value) => Number
  * @param MaxEvents 忽略此参数以显示脚本的主窗口, 等效于选择“查看->键历史记录”菜单项.
  * 否则, 此参数设置可以记录在窗口中显示的最大键盘和鼠标事件数（默认为40, 限制为500）. 密钥历史记录也被重置, 但是主窗口未显示或刷新. 指定0以完全禁用密钥历史记录.
  */
-KeyHistory(MaxEvents)
+KeyHistory([MaxEvents])
 
 /**
  * 等待按键或鼠标/操纵杆按钮被释放或按下.
@@ -2192,7 +2192,7 @@ SubStr(String, StartingPos [, Length]) => String
 /**
  * 禁用或启用所有的或选择的热键和热字串.
  */
-Suspend(Mode)
+Suspend(Mode := -1)
 
 /**
  * 将字符串转换为标题大小写.
