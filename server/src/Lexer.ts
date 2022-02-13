@@ -23,6 +23,7 @@ export interface ParamInfo {
 	count: number
 	comma: number[]
 	miss: number[]
+	unknown: boolean
 }
 
 export interface CallInfo extends DocumentSymbol {
@@ -1562,7 +1563,7 @@ export class Lexer {
 					nexttoken();
 					next = tk.type as string === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
 				} else {
-					if (tk.type === 'TK_RESERVED' && tk.content.toLowerCase() !== 'isset') {
+					if (tk.type === 'TK_RESERVED' && line_starters.includes(tk.content.toLowerCase())) {
 						let t = tk;
 						next = true;
 						if (parse_reserved())
@@ -1587,7 +1588,7 @@ export class Lexer {
 
 			function parse_line(types?: any, end?: string, data?: [string, number?]): DocumentSymbol[] {
 				let b: number, res: DocumentSymbol[] = [], hascomma = 0, t = 0;
-				let info: any = { count: 0, comma: [], miss: [] };
+				let info: ParamInfo = { count: 0, comma: [], miss: [], unknown: false };
 				if (next) {
 					if (!_this.get_tokon(b = parser_pos, true).topofline)
 						++info.count;
@@ -1603,6 +1604,8 @@ export class Lexer {
 						next = true, ++hascomma, ++info.count;
 						if (lk.type === 'TK_COMMA' || lk.content === '(')
 							info.miss.push(info.comma.length);
+						else if (lk.type === 'TK_OPERATOR' && !lk.content.match(/(--|\+\+|%)/))
+							_this.addDiagnostic(diagnostic.unexpected(','), tk.offset, 1);
 						info.comma.push(tk.offset);
 					} else if (tk.topofline) {
 						next = false;
@@ -1620,6 +1623,8 @@ export class Lexer {
 				}
 				if (data && hascomma >= (data[1] = data[1] ?? 1))
 					_this.addDiagnostic(diagnostic.acceptparams(data[0], data[1]), b, lk.offset > 0 ? lk.offset + lk.length - b : 0);
+				if (lk.content === '*')
+					info.unknown = true;
 				Object.defineProperty(res, 'paraminfo', { value: info });
 				return res;
 			}
@@ -1944,7 +1949,7 @@ export class Lexer {
 								tpexp = tpexp.replace(/\S+$/, '#func');
 							} else {
 								tpexp += ' ' + tk.content;
-								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^([:?%]|\+\+|--)$/) && !tk.content.match(/[+\-%!]/))
+								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^([:?%]|\+\+|--)$/) && !tk.content.match(/[+\-%!~]/))
 									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, tk.length);
 								if (tk.content === '&' && (['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lk.type))) {
 									byref = true;
@@ -1983,7 +1988,7 @@ export class Lexer {
 
 			function parsequt(types: any = {}) {
 				let paramsdef = true, beg = parser_pos - 1, cache = [], rg, ds = _this.diagnostics.length;
-				let byref = false, bak = tk, tpexp = '', info: any = { count: 0, comma: [], miss: [] };
+				let byref = false, bak = tk, tpexp = '', info: ParamInfo = { count: 0, comma: [], miss: [], unknown: false };
 				if (!tk.topofline && ((lk.type === 'TK_OPERATOR' && !lk.content.match(/(:=|\?|:)/)) || !in_array(lk.type, ['TK_START_EXPR', 'TK_WORD', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA'])
 					|| (lk.type === 'TK_WORD' && in_array(input.charAt(tk.offset - 1), whitespace))))
 					paramsdef = false;
@@ -2054,6 +2059,7 @@ export class Lexer {
 										else {
 											tn = Variable.create(lk.content, SymbolKind.Variable, rg = makerange(lk.offset, lk.length), rg);
 											cache.push(tn), lk = tk, tk = nk, next = false, (<any>tn).arr = true;
+											info.unknown = true;
 										}
 									} else { paramsdef = false; break; }
 									continue;
@@ -2237,7 +2243,7 @@ export class Lexer {
 			function parsepair(b: string, e: string, pairbeg?: number, types: any = {}, strs?: Token[]) {
 				let pairnum = 0, apos = result.length, tp = parser_pos, llk = lk, pairpos: number[];
 				let rpair = 0, tpexp = '', byref = false, ternarys: number[] = [];
-				let info: any = { count: 0, comma: [], miss: [] };
+				let info: ParamInfo = { count: 0, comma: [], miss: [], unknown: false };
 				pairpos = pairbeg === undefined ? [parser_pos - 1] : [pairbeg];
 				while (nexttoken()) {
 					if (b === '%' && tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
@@ -2410,6 +2416,8 @@ export class Lexer {
 							tpexp = '', ++info.count;
 							if (lk.type === 'TK_COMMA' || lk.content === '(')
 								info.miss.push(info.comma.length);
+							else if (lk.type === 'TK_OPERATOR' && !lk.content.match(/(--|\+\+|%)/))
+								_this.addDiagnostic(diagnostic.unexpected(','), tk.offset, 1);
 							info.comma.push(tk.offset);
 						} else {
 							let p = tpexp.lastIndexOf('(');
@@ -2435,8 +2443,11 @@ export class Lexer {
 				else {
 					if (lk.content === ',')
 						info.miss.push(info.count++);
-					else if (lk.content !== '(')
+					else if (lk.content !== '(') {
 						info.count++;
+						if (lk.content === '*')
+							info.unknown = true;
+					}
 					Object.defineProperty(types, 'paraminfo', { value: info });
 				}
 				ternaryMiss();
@@ -2762,7 +2773,6 @@ export class Lexer {
 				last_text: flags_base ? flags_base.last_text : '',
 				last_word: flags_base ? flags_base.last_word : '',
 				declaration_statement: false,
-				in_html_comment: false,
 				multiline_frame: false,
 				if_block: false,
 				else_block: false,
@@ -3035,7 +3045,7 @@ export class Lexer {
 				(last_type === 'TK_WORD' && flags.mode === MODE.BlockStatement
 					&& !flags.in_case && !in_array(token_type, ['TK_WORD', 'TK_RESERVED', 'TK_START_EXPR'])
 					&& !in_array(token_text, ['--', '++', '%', '::'])) ||
-				(token_type === 'TK_OPERATOR' && flags.mode === MODE.BlockStatement && !in_array(token_text, ['--', '++', '%', '::'])) ||
+				// (token_type === 'TK_OPERATOR' && flags.mode === MODE.BlockStatement && !in_array(token_text, ['--', '++', '%', '::'])) ||
 				(flags.mode === MODE.ObjectLiteral && flags.last_text === ':' && flags.ternary_depth === 0)) {
 
 				set_mode(MODE.Statement);
@@ -3938,7 +3948,7 @@ export class Lexer {
 					output_space_before_token = true;
 				} else if (last_type !== 'TK_END_EXPR') {
 					if ((last_type !== 'TK_START_EXPR' || !(token_type === 'TK_RESERVED' && in_array(token_text_low, ['local', 'static', 'global']))) &&
-						(flags.last_text !== ':' || output_lines[output_lines.length - 1].text.slice(-2)[0] === ' ')) {
+						(flags.last_text !== ':' || (flags.case_body && flags.ternary_depth === 0))) {
 						// no need to force newline on 'let': for (let x = 0...)
 						if (token_type === 'TK_RESERVED' && token_text_low === 'if' && flags.last_word.match(/^else$/i) && flags.last_text !== '{') {
 							// no newline for } else if {

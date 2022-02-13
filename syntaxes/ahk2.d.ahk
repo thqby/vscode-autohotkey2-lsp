@@ -1806,7 +1806,7 @@ RegExReplace(Haystack, NeedleRegEx, Replacement := '', &OutputVarCount := '', Li
 /**
  * Read the value from the registry.
  */
-RegRead([KeyName, ValueName]) => String
+RegRead([KeyName, ValueName, Default]) => String
 
 /**
  * Write the value to the registry.

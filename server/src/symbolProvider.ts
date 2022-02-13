@@ -253,7 +253,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 			for (let i = 0; i < paramcount; ++i)
 				if (node.params[i].defaultVal === null)
 					--paramcount;
-			if (pc < paramcount)
+			if (pc < paramcount && !paraminfo.unknown)
 				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount + '+', pc), range: info.range, severity: 1 });
 			paraminfo.miss.map(index => {
 				miss[index] = true;
@@ -273,7 +273,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 					doc.addDiagnostic(diagnostic.missingparam(), paraminfo.comma[t] ?? doc.document.offsetAt(info.range.end), 1);
 				miss[t] = true, --l;
 			}
-			if (pc < paramcount || pc > maxcount)
+			if ((pc < paramcount && !paraminfo.unknown) || pc > maxcount)
 				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount === maxcount ? maxcount : paramcount + '-' + maxcount, pc), range: info.range, severity: 1 });
 		}
 		if (node.hasref) {
