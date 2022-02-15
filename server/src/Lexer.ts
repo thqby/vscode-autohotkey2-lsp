@@ -4347,7 +4347,7 @@ export class Lexer {
 				print_newline(n_newlines === 1);
 			print_token();
 			if (token_type === 'TK_HOTLINE')
-				output_lines[output_lines.length - 1].text.push(input.substring(parser_pos, last_LF).trimRight()), parser_pos = last_LF + 1;
+				output_lines[output_lines.length - 1].text.push(input.substring(parser_pos, last_LF = last_LF > -1 ? last_LF : input_length).trimRight()), parser_pos = last_LF + 1;
 			print_newline();
 		}
 	}
