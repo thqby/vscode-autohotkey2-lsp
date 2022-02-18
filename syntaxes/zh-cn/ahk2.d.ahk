@@ -1366,7 +1366,7 @@ KeyWait(KeyName, Options := '') => Number
 /**
  * 启用或禁用行日志记录或显示最近执行的脚本行.
  */
-ListLines(Mode)
+ListLines([Mode])
 
 /**
  * 返回列表视图中的项目/行列表.
@@ -2594,7 +2594,7 @@ class Buffer extends Object {
 	 * 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
 	 * 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
 	 */
-	__New(ByteCount [, FillByte]) => Buffer
+	__New([ByteCount, FillByte]) => Buffer
 
 	/**
 	 * 检索缓冲区的当前内存地址.

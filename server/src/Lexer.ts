@@ -4841,6 +4841,8 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 				else if (l === 'call' && (<any>v['call']).def === false)
 					v[l] = it, (<any>it).uri = u;
 			}
+			if ((v['__new'] as FuncNode)?.static)
+				delete v['__new'];
 		} else {
 			for (let it of Object.values((node as ClassNode).declaration)) {
 				if (!v[l = it.name.toLowerCase()])

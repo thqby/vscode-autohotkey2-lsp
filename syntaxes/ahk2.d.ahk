@@ -1366,7 +1366,7 @@ KeyWait(KeyName, Options := '') => Number
 /**
  * Enable or disable line logging or display the most recently executed script line.
  */
-ListLines(Mode)
+ListLines([Mode])
 
 /**
  * Return to the list of items/rows in the list view.
@@ -2594,7 +2594,7 @@ class Buffer extends Object {
 	 * In the case of direct writing without first reading the buffer, it should usually be omitted, because its time overhead is proportional to the number of bytes.
 	 * If omitted, the buffered memory is not initialized; the value of each byte is arbitrary.
 	 */
-	__New(ByteCount [, FillByte]) => Buffer
+	__New([ByteCount, FillByte]) => Buffer
 
 	/**
 	 * Retrieve the current memory address of the buffer.
