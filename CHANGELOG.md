@@ -1,3 +1,11 @@
+## 1.2.7
+- 修复[#75](https://github.com/thqby/vscode-autohotkey2-lsp/issues/75)
+- 修复[#76](https://github.com/thqby/vscode-autohotkey2-lsp/issues/76)
+- 修复[#77](https://github.com/thqby/vscode-autohotkey2-lsp/issues/77)
+- 修复[#78](https://github.com/thqby/vscode-autohotkey2-lsp/issues/78)
+- 增加`#DllLoad `补全支持, `DllCall`对`#DllLoad`加载的dll提供补全及导出函数解析
+- `;@include custom.d.ahk`导入头文件增加自定义补全
+
 ## 1.2.6
 - 修复[#71](https://github.com/thqby/vscode-autohotkey2-lsp/issues/71)
 - 修复[#72](https://github.com/thqby/vscode-autohotkey2-lsp/issues/72)

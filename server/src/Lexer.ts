@@ -198,10 +198,10 @@ export class Lexer {
 	public foldingranges: FoldingRange[] = [];
 	public funccall: CallInfo[] = [];
 	public get_tokon: (offset?: number, ignorecomment?: boolean) => Token;
-	public hotkey: FuncNode[] = [];
 	public include: { [uri: string]: { url: string, path: string, raw: string } } = {};
 	public includedir: Map<number, string> = new Map();
-	public label: DocumentSymbol[] = [];
+	public dlldir: Map<number, string> = new Map();
+	public dllpaths: string[] = [];
 	public labels: { [key: string]: DocumentSymbol[] } = {};
 	public libdirs: string[] = [];
 	public object: { method: { [key: string]: FuncNode[] }, property: { [key: string]: any }, userdef: { [key: string]: FuncNode } } = { method: {}, property: {}, userdef: {} };
@@ -218,14 +218,13 @@ export class Lexer {
 	public version: number = 0;
 	constructor(document: TextDocument) {
 		let input: string, output_lines: { text: any[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
-		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, _this: Lexer = this, h = isahk2_h;
-		let parser_pos: number, filepath: string, customblocks: { region: number[], bracket: number[] };
+		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
+		let parser_pos: number, filepath: string, customblocks: { region: number[], bracket: number[] }, _this: Lexer = this, h = isahk2_h;
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_Object_line: boolean, begin_line: boolean, end_of_object: boolean, closed_cycle: number, tks: Token[] = [], ck: Token;
 		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], beginpos: number, preindent_string: string, keep_comma_space = false, last_top = false, lst: Token;
 		let handlers: any, MODE: { BlockStatement: any; Statement: any; ArrayLiteral: any; Expression: any; ForInitializer: any; Conditional: any; ObjectLiteral: any; };
 
 		this.document = document, this.scriptpath = (filepath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath).replace(/\\[^\\]+$/, ''), this.initlibdirs();
-
 		MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', ForInitializer: 'ForInitializer', Conditional: 'Conditional', Expression: 'Expression' };
 		handlers = {
 			'TK_START_EXPR': handle_start_expr,
@@ -523,10 +522,10 @@ export class Lexer {
 										rets = [];
 										do {
 											j = j + 1, r = '', lt = '';
-											while (((lk = tokens[j + 1]).type === 'TK_WORD' || lk.type === 'TK_DOT') && (!lk.topofline && lt !== lk.type))
+											while ((lk = tokens[j + 1]) && (lk.type === 'TK_WORD' || lk.type === 'TK_DOT') && (!lk.topofline && lt !== lk.type))
 												r += lk.content, j++, lt = lk.type, lk.semantic = { type: SemanticTokenTypes.class };
 											rets.push(r.replace(/([^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e\x60\x7b-\x7f]+)$/, '@$1'));
-										} while (tokens[j + 1].content === '|');
+										} while (j + 1 < tokens.length && tokens[j + 1].content === '|');
 										lk = tokens[j];
 									}
 									let tn = FuncNode.create(tk.content, blocks ? SymbolKind.Method : SymbolKind.Function, makerange(tk.offset, lk.offset + lk.length - tk.offset), makerange(tk.offset, tk.length), params, [], isstatic);
@@ -538,8 +537,8 @@ export class Lexer {
 										rets.map((tp: string) => o[tp.toLowerCase()] = true);
 										tn.returntypes = o;
 									}
-									if (tokens[i - (isstatic ? 2 : 1)].type.endsWith('COMMENT'))
-										tn.detail = trimcomment(tokens[i - (isstatic ? 2 : 1)].content);
+									if ((i -= (isstatic ? 2 : 1)) >= 0 && tokens[i].type.endsWith('COMMENT'))
+										tn.detail = trimcomment(tokens[i].content);
 									p[blocks].children?.push(tn);
 									if (isstatic && blocks)
 										(<ClassNode>p[blocks]).staticdeclaration[tn.name.toLowerCase()] = tn;
@@ -606,12 +605,12 @@ export class Lexer {
 			}
 		} else {
 			this.parseScript = function (islib?: boolean): void {
-				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
+				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
 				tks.length = 0, whitespace_before_token = [], beginpos = 0, following_bracket = false, begin_line = true;
 				bracketnum = 0, parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, closed_cycle = 0, h = isahk2_h;
-				this.label.length = this.funccall.length = this.diagnostics.length = this.hotkey.length = 0;
-				this.foldingranges.length = this.children.length = 0, this.labels = {};
-				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map();
+				this.funccall.length = this.diagnostics.length = 0;
+				this.foldingranges.length = this.children.length = this.dllpaths.length = 0, this.labels = {};
+				this.object = { method: {}, property: {}, userdef: {} }, this.includedir = new Map(), this.dlldir = new Map();
 				this.blocks = [], this.texts = {}, this.reflat = true, this.declaration = {}, this.strcommpos.length = 0;
 				this.include = includetable = {}, this.tokens = {}, lst = { type: '', content: '', offset: 0, length: 0 };
 				this.children.push(...parseblock()), this.children.push(...this.blocks), this.blocks = undefined;
@@ -638,24 +637,9 @@ export class Lexer {
 				while (nexttoken()) {
 					switch (tk.type) {
 						case 'TK_SHARP':
-							if (m = tk.content.match(/^\s*#include((again)?)\s+((\*i\s+)?<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
-								raw = (m[3] || '').trim(), o = m[4] || m[6], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir).replace(/%a_linefile%/i, filepath).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
-								_this.includedir.set(document.positionAt(tk.offset).line, includedir);
-								if (m === '') {
-									_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
-								} else if (!inBrowser) {
-									if (m.startsWith('*')) {
-										_this.addDiagnostic(diagnostic.unsupportresinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-									} else if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir)) || !existsSync(m.path)) {
-										if (!o)
-											_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length);
-									} else if (statSync(m.path).isDirectory())
-										includedir = m.path;
-									else
-										includetable[m.uri] = { path: m.path, raw };
-									if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-								}
-							} else if (m = tk.content.match(/^(\s*#dllimport\s+)((\w|[^\x00-\x7f])+)/i)) {
+							if (tk.content.match(/^#(include(again)?|dllload)\s/i))
+								add_include_dllload(tk.content, tk, mode);
+							else if (m = tk.content.match(/^(\s*#dllimport\s+)((\w|[^\x00-\x7f])+)/i)) {
 								let rg = makerange(tk.offset + m[1].length, m[2].length), rg2 = Range.create(0, 0, 0, 0);
 								let tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', i6: 'int64' };
 								let n = m[2], args: Variable[] = [], u = '', i = 0;
@@ -708,7 +692,7 @@ export class Lexer {
 							let ht = lk, v: Variable, vars = new Map<string, any>([['#parent', tn]]);
 							(<FuncNode>tn).params = [v = Variable.create('ThisHotkey', SymbolKind.Variable, makerange(0, 0), makerange(0, 0))];
 							v.detail = completionitem.thishotkey(), (<FuncNode>tn).funccall = [], (<FuncNode>tn).declaration = {}, result.push(tn);
-							(<FuncNode>tn).global = {}, (<FuncNode>tn).local = {}, _this.hotkey.push(tn as FuncNode);
+							(<FuncNode>tn).global = {}, (<FuncNode>tn).local = {};
 							if (tk.content === '{') {
 								tn.children = [], tn.children.push(...parseblock(1, vars)), tn.range = makerange(ht.offset, parser_pos - ht.offset);
 								_this.addFoldingRangePos(tn.range.start, tn.range.end);
@@ -2690,6 +2674,44 @@ export class Lexer {
 			}
 		}
 
+		function add_include_dllload(text: string, tk?: Token, mode = 0) {
+			let m: any, o: string, raw: string;
+			if (m = text.match(/^\s*#(include(again)?|dllload)\s+((\*i\s+)?<.+>|(['"]?)(\s*\*i\s+)?.+?\4)?\s*(\s;.*)?$/i)) {
+				let isdll = m[1].toLowerCase() === 'dllload';
+				raw = (m[3] || '').trim(), o = m[4] || m[6], m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir).replace(/%a_linefile%/i, filepath).replace(/\s*\*i\s+/i, '').replace(/['"]/g, '');
+				if (tk)
+					_this[isdll ? 'dlldir' : 'includedir'].set(_this.document.positionAt(tk.offset).line, isdll ? dlldir : includedir);
+				if (m === '') {
+					if (isdll)
+						dlldir = '';
+					else if (tk)
+						_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
+				} else if (!inBrowser) {
+					if (isdll) {
+						if (existsSync(m) && statSync(m).isDirectory())
+							dlldir = m.endsWith('/') || m.endsWith('\\') ? m : m + '\\';
+						else if (m.includes(':'))
+							_this.dllpaths.push(m.replace(/\\/g, '/'));
+						else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/'));
+					} else {
+						if (tk) {
+							if (m.startsWith('*'))
+								_this.addDiagnostic(diagnostic.unsupportresinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+							else if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir)) || !existsSync(m.path)) {
+								if (!o)
+									_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length);
+							} else if (statSync(m.path).isDirectory())
+								includedir = m.path;
+							else
+								includetable[m.uri] = { path: m.path, raw };
+							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+						} else if ((m = pathanalyze(m.toLowerCase().replace(/(\.d)?>$/, '.d>'), _this.libdirs, _this.scriptpath)) && existsSync(m.path) && !statSync(m.path).isDirectory())
+							includetable[m.uri] = { path: m.path, raw };
+					}
+				}
+			}
+		}
+
 		function trimcomment(comment: string): string {
 			if (comment.charAt(0) === ';') comment = '\n' + comment.replace(/(?<=^[ \t]*);\s*/gm, '') + '\n';
 			let c = comment.split(/\r?\n/), cc = '';
@@ -3371,6 +3393,10 @@ export class Lexer {
 						comment_type = '';
 					} else if (t = comment.match(/^;(\s*~?\s*)todo(:?\s*)(.*)/i))
 						_this.blocks.push(DocumentSymbol.create('TODO: ' + t[3].trim(), undefined, SymbolKind.Module, rg = makerange(offset, comment.length), rg));
+					else if (comment.match(/^;@include\s/i) && (t = comment.match(/^[ \t]*;@include[ \t]+(<.+>|(['"]?).+?\2)[ \t]*([ \t];.*)?$/img))) {
+						for (c of t)
+							add_include_dllload('#' + c.trim().substring(2));
+					}
 				}
 				_this.strcommpos.push({ start: offset, end: parser_pos, type: 1 });
 				return createToken(comment, comment_type, offset, comment.length, bg);

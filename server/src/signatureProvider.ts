@@ -87,7 +87,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 					let params: any = [], rg = Range.create(0, 0, 0, 0), node: FuncNode;
 					m[0].match(/(?<=[(,]\s*)(\w|[^\x00-\xff])+/g)?.map(name => params.push({ name }));
 					node = FuncNode.create(nn.name, SymbolKind.Function, rg, rg, params);
-					node.detail = nn.detail.replace(m[0], ''), nodes.push({ node });
+					node.full = nn.detail, nodes.push({ node });
 				}
 			}
 		});
