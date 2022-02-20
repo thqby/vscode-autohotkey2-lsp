@@ -3869,6 +3869,8 @@ export class Lexer {
 					// loop .. \n .. \n throw ..
 					// print_newline();
 					flags.do_block = false;
+					if (!flags.else_block && token_type === 'TK_RESERVED' && token_text_low === 'else')
+						flags.else_block = true;
 				}
 			}
 
@@ -3951,7 +3953,7 @@ export class Lexer {
 				if (end_of_object || last_type !== 'TK_END_BLOCK' || opt.brace_style === "expand" || opt.brace_style === "end-expand") {
 					if (not_add_line)
 						print_newline();
-				} else if ((token_text_low === 'else' && flags.last_word === 'if')
+				} else if ((token_text_low === 'else' && flags.last_word.match(/^(if|loop|for|while|catch)$/))
 					|| (token_text_low === 'until' && flags.last_word === 'loop')
 					|| (token_text_low === 'catch' && flags.last_word === 'try')
 					|| (token_text_low === 'finally' && flags.last_word.match(/^(catch|try)$/i))) {
