@@ -3250,7 +3250,7 @@ export class Lexer {
 						return lst = createToken(m[1] + ':', 'TK_LABEL', offset, m[1].length + 1, true);
 					}
 				} else if (m = line.match(/^(:(\s|\*|\?0?|c[01]?|[pk]\d+|s[ipe]|[brto]0?|x|z)*:[\x09\x20-\x7E]+?::)(.*)$/i)) {
-					if ((m[2] && m[2].match(/[xX]/)) || (m[3] && m[3].trim().match(/^\{\s*(\s;.*)?$/))) {
+					if ((m[2] && m[2].match(/[xX]/)) || (m[3] !== undefined && m[3].trim().match(/^\{?\s*(\s;.*)?$/))) {
 						parser_pos += m[1].length - 1;
 						return lst = createToken(m[1], 'TK_HOT', offset, m[1].length, true);
 					} else {
