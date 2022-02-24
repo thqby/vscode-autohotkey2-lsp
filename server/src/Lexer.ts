@@ -2755,7 +2755,7 @@ export class Lexer {
 				case 'TK_EQUALS':
 					return true;
 				case 'TK_OPERATOR':
-					return !tk.content.match(/^(!|~|not|in|is|contains|%|\+\+|--)$/i);
+					return lk.type === '' || !tk.content.match(/^(!|~|not|in|is|contains|%|\+\+|--)$/i);
 				case 'TK_END_BLOCK':
 				case 'TK_END_EXPR':
 					return false;

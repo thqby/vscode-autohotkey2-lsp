@@ -328,10 +328,25 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 												winapis.map(f => { if (expg.test(f)) additem(f, CompletionItemKind.Function); });
 												return items;
 											} else {
-												let dlls = [pre = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/')];
-												l = (pre.includes('/') ? pre : '/' + pre).toLowerCase();
-												docs.map(d => d.dllpaths.map(path => { if (path.endsWith(l) || path.endsWith(l + '.dll')) dlls.push(path); }));
-												getDllExport(dlls).map(it => additem(it, CompletionItemKind.Function));
+												let dlls = [pre = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/')], onlyfile = true;
+												if (pre.includes(':')) onlyfile = false;
+												else if ((l = pre.toLowerCase()).includes('/')) {
+													if (l.startsWith('/'))
+														dlls.push(doc.scriptpath + l);
+													else dlls.push(doc.scriptpath + '/' + l);
+												} else {
+													docs.map(d => {
+														d.dllpaths.map(path => {
+															if (path.endsWith(l) || path.endsWith(l + '.dll')) {
+																dlls.push(path);
+																if (onlyfile && path.includes('/'))
+																	onlyfile = false;
+															}
+														});
+														if (onlyfile) dlls.push(d.scriptpath + '/' + l);
+													});
+												}
+												getDllExport(dlls, true).map(it => additem(it, CompletionItemKind.Function));
 												return items;
 											}
 										}

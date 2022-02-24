@@ -484,10 +484,15 @@ function getAHKversion(params: string[]) {
 	});
 }
 
-function getDllExport(paths: string[]) {
+function getDllExport(paths: string[], onlyone = false) {
 	let funcs: any = {};
-	for (let path of paths)
-		searchAndOpenPEFile(path)?.getExport()?.Functions.map((it) => funcs[it.Name] = true);
+	for (let path of paths) {
+		let pe = searchAndOpenPEFile(path);
+		if (pe) {
+			pe.getExport()?.Functions.map((it) => funcs[it.Name] = true);
+			if (onlyone) break;
+		}
+	}
 	delete funcs[''];
 	return Object.keys(funcs);
 }

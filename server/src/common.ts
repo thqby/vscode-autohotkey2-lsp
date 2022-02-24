@@ -39,7 +39,7 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	}
 };
 export let winapis: string[] = [];
-export let getDllExport = (paths: string[]) => [] as string[];
+export let getDllExport = (paths: string[], onlyone: boolean = false) => [] as string[];
 
 export let locale = 'en-us';
 export type Maybe<T> = T | undefined;
