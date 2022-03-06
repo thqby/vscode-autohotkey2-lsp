@@ -183,7 +183,7 @@ documents.onDidClose(async e => {
 documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
 	let uri = change.document.uri.toLowerCase(), doc = lexers[uri];
 	let initial = doc.include, cg = false;
-	doc.parseScript();
+	doc.isparsed = false, doc.parseScript();
 	if (libfuncs[uri]) {
 		libfuncs[uri].length = 0;
 		libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));

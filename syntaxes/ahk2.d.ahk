@@ -2705,7 +2705,7 @@ class Error extends Object {
 	/**
 	 * Create an Error object.
 	 */
-	__New(Message [, What, Extra]) => Error
+	__New([Message, What, Extra]) => Error
 }
 
 class File extends Object {
@@ -3940,7 +3940,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	__New(code [, What, Extra]) => OSError
+	__New([code, What, Extra]) => OSError
 }
 
 class Primitive extends Any {
@@ -3953,12 +3953,12 @@ class RegExMatchInfo extends Object {
 	/**
 	 * Returns the position of the overall matched or captured sub-pattern.
 	 */
-	Pos(N) => Number
+	Pos([N]) => Number
 
 	/**
 	 * Returns the length of the overall matched or captured sub-pattern.
 	 */
-	Len(N) => Number
+	Len([N]) => Number
 
 	/**
 	 * Return the name of the given submode (if any).

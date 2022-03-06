@@ -207,6 +207,7 @@ export class Lexer {
 	public object: { method: { [key: string]: FuncNode[] }, property: { [key: string]: any }, userdef: { [key: string]: FuncNode } } = { method: {}, property: {}, userdef: {} };
 	public parseScript: (islib?: boolean) => void;
 	public reflat: boolean = false;
+	public isparsed: boolean = false;
 	public relevance: { [uri: string]: { url: string, path: string, raw: string } } | undefined;
 	public scriptdir: string = '';
 	public scriptpath: string;
@@ -266,6 +267,7 @@ export class Lexer {
 		this.beautify = function (options: any) {
 			/*jshint onevar:true */
 			let i: number, keep_whitespace: boolean, sweet_code: string, top: boolean = false;
+			if (!_this.isparsed) _this.parseScript();
 			options = options ? options : {}, opt = {}, lst = { type: '', content: '', offset: 0, length: 0 };
 			if (options.braces_on_own_line !== undefined) { //graceful handling of deprecated option
 				opt.brace_style = options.braces_on_own_line ? "expand" : "collapse";
@@ -330,9 +332,9 @@ export class Lexer {
 					if (opt.preserve_newlines) {
 						if (n_newlines > 1) {
 							// if (n_newlines && token_text !== ',') {
-							print_newline();
+							print_newline(false, true);
 							for (i = 1; i < n_newlines; i += 1) {
-								print_newline(true);
+								print_newline(true, true);
 							}
 						}
 					}
@@ -600,7 +602,7 @@ export class Lexer {
 				}
 				checksamenameerr({}, this.children, this.diagnostics);
 				this.children.push(...this.blocks);
-				this.diags = this.diagnostics.length, this.blocks = undefined;
+				this.diags = this.diagnostics.length, this.blocks = undefined, this.isparsed = true;
 				customblocks.region.map(o => this.addFoldingRange(o, parser_pos - 1, 'line'));
 			}
 		} else {
@@ -615,7 +617,7 @@ export class Lexer {
 				this.include = includetable = {}, this.tokens = {}, lst = { type: '', content: '', offset: 0, length: 0 };
 				this.children.push(...parseblock()), this.children.push(...this.blocks), this.blocks = undefined;
 				checksamenameerr(this.declaration, this.children, this.diagnostics);
-				this.diags = this.diagnostics.length;
+				this.diags = this.diagnostics.length, this.isparsed = true;
 				customblocks.region.map(o => this.addFoldingRange(o, parser_pos - 1, 'line'));
 			}
 		}
@@ -2797,6 +2799,9 @@ export class Lexer {
 				multiline_frame: false,
 				if_block: false,
 				else_block: false,
+				try_block: false,
+				catch_block: false,
+				finally_block: false,
 				do_block: false,
 				do_while: false,
 				in_case_statement: false,
@@ -2903,12 +2908,15 @@ export class Lexer {
 
 			if (!preserve_statement_flags) {
 				if (flags.last_text !== ',' && flags.last_text !== '=' && (last_type !== 'TK_OPERATOR' || in_array(flags.last_text, ['++', '--', '%']))) {
-					while (flags.mode === MODE.Statement && !flags.if_block && !flags.do_block) {
-						// if (n && flags.last_text === 'try')
-						// 	break;
-						restore_mode();
-						++n;
-					}
+					if (token_text_low === 'else') {
+						while (flags.mode === MODE.Statement && !flags.if_block && !flags.do_block && !flags.catch_block)
+							restore_mode();
+					} else if (token_text_low === 'finally') {
+						while (flags.mode === MODE.Statement && !flags.catch_block && !flags.try_block && !(flags.else_block && flags.catch_block))
+							restore_mode();
+					} else
+						while (flags.mode === MODE.Statement && !flags.if_block && !flags.do_block && !flags.try_block)
+							restore_mode();
 				}
 			}
 
@@ -3878,15 +3886,30 @@ export class Lexer {
 			// Need to unwind the modes correctly: if (a) if (b) c(); else d(); else e();
 			if (flags.if_block) {
 				if (!flags.else_block && (token_type === 'TK_RESERVED' && token_text_low === 'else')) {
-					flags.else_block = true;
+					flags.else_block = true, flags.if_block = false;
 				} else {
 					if (token_text_low !== 'if' || last_text !== 'else') {
 						while (flags.mode === MODE.Statement)
 							restore_mode();
 					}
-					flags.if_block = false;
-					flags.else_block = false;
+					flags.if_block = flags.else_block = false;
 				}
+			} else if (flags.try_block) {
+				if (!flags.catch_block && (token_type === 'TK_RESERVED' && token_text_low === 'catch'))
+					flags.catch_block = true, flags.try_block = false;
+				else if (!flags.finally_block && (token_type === 'TK_RESERVED' && token_text_low === 'finally'))
+					flags.finally_block = true, flags.try_block = false;
+				else {
+					while (flags.mode === MODE.Statement)
+						restore_mode();
+					flags.try_block = flags.catch_block = false;
+				}
+			} else if (flags.catch_block) {
+				if (token_type === 'TK_RESERVED')
+					if (token_text_low === 'else')
+						flags.else_block = true;
+					else if (token_text_low === 'finally')
+						flags.finally_block = true, flags.catch_block = false;
 			}
 			if (flags.in_case_statement || (flags.mode === 'BlockStatement' && flags.last_word === 'switch')) {
 				if ((token_text_low === 'case' && token_type === 'TK_RESERVED') || token_text_low === 'default') {
@@ -4007,6 +4030,9 @@ export class Lexer {
 						break;
 					case 'if':
 						flags.if_block = true;
+						break;
+					case 'try':
+						flags.try_block = true;
 						break;
 					case 'else':
 						output_space_before_token = true;

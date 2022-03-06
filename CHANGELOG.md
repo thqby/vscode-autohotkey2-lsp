@@ -1,3 +1,10 @@
+## 1.2.9
+- 修复`try ... catch ... catch`诊断错误
+- 修复`this()`参数提示错误, 着色错误
+- 修复`prop => ...`着色错误
+- 优化代码格式化
+- 修正头文件
+
 ## 1.2.8
 - 修复[#79](https://github.com/thqby/vscode-autohotkey2-lsp/issues/79)
 - 修复[#80](https://github.com/thqby/vscode-autohotkey2-lsp/issues/80)
