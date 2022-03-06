@@ -2215,7 +2215,13 @@ SysGetIPAddresses() => Array
 Tan(Number) => Number
 
 /**
- * Set the thread priority or whether it can be interrupted. It can also temporarily disable all timers.\n\nThread'NoTimers', TrueOrFalse\n\nThread'Priority', Level\n\nThread'Interrupt' [, Duration, Linecount ]
+ * Set the thread priority or whether it can be interrupted. It can also temporarily disable all timers.
+ * 
+ * Thread 'NoTimers' , TrueOrFalse
+ * 
+ * Thread 'Priority', Level
+ * 
+ * Thread 'Interrupt' [, Duration, LineCount]
  */
 Thread(SubFunction [, Value1, Value2])
 

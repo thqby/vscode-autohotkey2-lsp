@@ -50,7 +50,7 @@ MemoryGetProcAddress(hModule, FuncName) => Number
 /**
  * Load the specified dll into the process. Similar to LoadLibrary, but load the module from the memory instead of the disk, and allow multiple loading of the module.
  */
-MemoryLoadLibrary(PathToDll) => Number
+MemoryLoadLibrary(PathOrData, Size := 0 [, DefaultLoadLibrary, DefaultGetProcAddress, DefaultFreeLibrary]) => Number
 
 /**
  * Load resources into the specified dll previously loaded through MemoryLoadLibrary. Similar to LoadResource.

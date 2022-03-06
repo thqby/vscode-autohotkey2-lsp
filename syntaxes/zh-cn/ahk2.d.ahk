@@ -2215,7 +2215,13 @@ SysGetIPAddresses() => Array
 Tan(Number) => Number
 
 /**
- * 设置线程的优先级或是否可以被中断. 它也可以临时禁用所有的计时器.\n\nThread 'NoTimers' , TrueOrFalse\n\nThread 'Priority', Level\n\nThread 'Interrupt' [, Duration, LineCount]
+ * 设置线程的优先级或是否可以被中断. 它也可以临时禁用所有的计时器.
+ * 
+ * Thread 'NoTimers' , TrueOrFalse
+ * 
+ * Thread 'Priority', Level
+ * 
+ * Thread 'Interrupt' [, Duration, LineCount]
  */
 Thread(SubFunction [, Value1, Value2])
 

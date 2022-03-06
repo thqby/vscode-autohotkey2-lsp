@@ -50,7 +50,7 @@ MemoryGetProcAddress(hModule, FuncName) => Number
 /**
  * 将指定的dll加载到进程中.与LoadLibrary类似, 但是从内存而不是从磁盘加载模块, 并允许多次加载模块.
  */
-MemoryLoadLibrary(PathToDll) => Number
+MemoryLoadLibrary(PathOrData, Size := 0 [, DefaultLoadLibrary, DefaultGetProcAddress, DefaultFreeLibrary]) => Number
 
 /**
  * 将资源加载到以前通过MemoryLoadLibrary加载的指定dll中.类似于LoadResource.

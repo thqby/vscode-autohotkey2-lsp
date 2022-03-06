@@ -55,8 +55,8 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		tns.map((it: any) => {
 			let nn = it.node, kind = nn.kind, m: RegExpExecArray | null;
 			if (kind === SymbolKind.Class) {
-				let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, true);
-				let n: FuncNode | undefined = (mems['__new'] ?? mems['call']) as FuncNode;
+				let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, !it.ref);
+				let n: FuncNode | undefined = (it.ref ? mems['call'] : mems['__new'] ?? mems['call']) as FuncNode;
 				if (mems['call'] && (<any>mems['call']).def !== false)
 					n = mems['call'] as FuncNode;
 				if (n)

@@ -877,7 +877,7 @@ export class Lexer {
 								lk = tk, tk = get_token_ingore_comment(cmm), next = false;
 								if (mode === 2 && lk.topofline && tk.content.match(/^(\[|=>|\{)$/)) {
 									let fc = lk;
-									next = true, lk.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
+									next = true;
 									if (tk.content === '[') {
 										if (tk.topofline)
 											_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
@@ -966,8 +966,8 @@ export class Lexer {
 									(<Variable>prop).full = `(${classfullname.slice(0, -1)}) ${isstatic ? 'static ' : ''}${fc.content}` + (par.length ? `[${par.map((it: Variable) => {
 										return (it.ref ? '&' : '') + it.name + (it.defaultVal ? ' := ' + it.defaultVal : '');
 									}).join(', ')}]` : '');
-									(<Variable>prop).static = isstatic, result.push(prop), prop.children = [], addprop(fc);
-									(<FuncNode>prop).funccall = [];
+									(<Variable>prop).static = isstatic, result.push(prop), prop.children = [], addprop(fc), (<FuncNode>prop).funccall = [];
+									fc.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
 									if (tk.content === '{') {
 										let nk: Token, sk: Token, tn: FuncNode | undefined, mmm = mode;
 										tk = get_token_ingore_comment(), next = false, mode = 1;
@@ -1042,7 +1042,7 @@ export class Lexer {
 										tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 										for (const t in o)
 											o[t] = tn.range.end;
-										adddeclaration(tn as FuncNode), prop.children.push(tn);
+										adddeclaration(tn as FuncNode), prop.children.push(tn), tn.selectionRange.start.character += tn.name.length;
 									}
 									if (prop.children.length === 1 && prop.children[0].name === 'get')
 										(fc.semantic as SemanticToken).modifier = ((fc.semantic as SemanticToken).modifier || 0) | 1 << SemanticTokenModifiers.readonly;
@@ -1090,7 +1090,7 @@ export class Lexer {
 												}
 											}
 											break;
-										} else if (predot && !(tk.type === 'TK_EQUALS' || tk.content === '=')) {
+										} else if (predot && !(tk.type === 'TK_EQUALS' || tk.content === '=' || tk.content === '?')) {
 											addprop(lk), pr = vr = maybeclassprop(lk);
 											if (tk.content === '(' || topcontinue) {
 												if (m === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
@@ -1401,15 +1401,14 @@ export class Lexer {
 							tk.type = 'TK_WORD', _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						break;
 					case 'try':
-						nexttoken(), next = false;
-						parse_body(null);
-						if (tk.type === 'TK_RESERVED') {
-							if (tk.content.toLowerCase() === 'catch') {
-								next = true;
-								parse_catch();
-							}
+						nexttoken(), next = false, parse_body(true);
+						if (tk.type === 'TK_RESERVED' && tk.content.toLowerCase() !== 'else') {
+							while (tk.content.toLowerCase() === 'catch')
+								next = true, parse_catch();
+							if (tk.content.toLowerCase() === 'else')
+								next = true, nexttoken(), next = false, parse_body(true);
 							if (tk.content.toLowerCase() === 'finally')
-								next = true, nexttoken(), next = false, parse_body(null);
+								next = true, nexttoken(), next = false, parse_body(true);
 						}
 						break;
 					case 'isset':
@@ -1471,7 +1470,7 @@ export class Lexer {
 					} else {
 						next = false;
 						if (tk.topofline || tk.content === '{')
-							parse_body();
+							parse_body(null);
 						else
 							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 					}
@@ -1493,14 +1492,14 @@ export class Lexer {
 						if (p) {
 							if (tk.content === '{') {
 								_this.addDiagnostic(diagnostic.missing(')'), p.offset, 1);
-								return parse_body();
+								return parse_body(null);
 							} else if (tk.content === ')') {
 								nexttoken(), next = false;
-								return parse_body();
+								return parse_body(null);
 							}
 						} else if (tk.content === '{' || tk.topofline) {
 							next = false;
-							return parse_body();
+							return parse_body(null);
 						}
 					}
 					if (tk.content.toLowerCase() === 'as') {
@@ -1525,7 +1524,7 @@ export class Lexer {
 										_this.addDiagnostic(diagnostic.missing(')'), p.offset, 1);
 								}
 								if (next)
-									nexttoken(), next = false, parse_body();
+									nexttoken(), next = false, parse_body(null);
 							}
 						}
 					} else {
@@ -1536,7 +1535,7 @@ export class Lexer {
 						}
 						if (!tk.topofline)
 							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
-						else next = false, parse_body();
+						else next = false, parse_body(null);
 					}
 				}
 			}
@@ -2905,8 +2904,8 @@ export class Lexer {
 			if (!preserve_statement_flags) {
 				if (flags.last_text !== ',' && flags.last_text !== '=' && (last_type !== 'TK_OPERATOR' || in_array(flags.last_text, ['++', '--', '%']))) {
 					while (flags.mode === MODE.Statement && !flags.if_block && !flags.do_block) {
-						if (n && flags.last_text === 'try')
-							break;
+						// if (n && flags.last_text === 'try')
+						// 	break;
 						restore_mode();
 						++n;
 					}
