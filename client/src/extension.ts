@@ -444,6 +444,8 @@ async function setInterpreter() {
 
 	async function addpath(dirpath: string) {
 		let paths: string[] = [];
+		if (!existsSync(dirpath))
+			return;
 		for (let file of readdirSync(dirpath)) {
 			let path = resolve(dirpath, file);
 			if (statSync(path).isDirectory()) {

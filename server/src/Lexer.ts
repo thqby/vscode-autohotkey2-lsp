@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { ahkvars, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv } from './common';
+import { ahkvars, extsettings, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv } from './common';
 
 export interface ParamInfo {
 	count: number
@@ -697,7 +697,7 @@ export class Lexer {
 							(<FuncNode>tn).global = {}, (<FuncNode>tn).local = {};
 							if (tk.content === '{') {
 								tn.children = [], tn.children.push(...parseblock(1, vars)), tn.range = makerange(ht.offset, parser_pos - ht.offset);
-								_this.addFoldingRangePos(tn.range.start, tn.range.end);
+								_this.addSymbolFolding(tn, tk.offset);
 								adddeclaration(tn as FuncNode);
 							} else if (tk.content.toLowerCase() === 'return') {
 								if (tk.topofline) {
@@ -844,7 +844,9 @@ export class Lexer {
 									tn.closure = !!(mode & 1), adddeclaration(tn), se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
 									if (fc.content.charAt(0).match(/[\d$]/))
 										_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-									tn.range.end = document.positionAt(parser_pos), tn.static = isstatic, _this.addFoldingRangePos(tn.range.start, tn.range.end);
+									tn.range.end = document.positionAt(parser_pos), tn.static = isstatic;
+									_this.addSymbolFolding(tn, nk.offset);
+									// _this.addFoldingRangePos(tn.range.start, tn.range.end);
 									if (mode !== 0) {
 										if (mode === 2) {
 											tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
@@ -971,7 +973,7 @@ export class Lexer {
 									(<Variable>prop).static = isstatic, result.push(prop), prop.children = [], addprop(fc), (<FuncNode>prop).funccall = [];
 									fc.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
 									if (tk.content === '{') {
-										let nk: Token, sk: Token, tn: FuncNode | undefined, mmm = mode;
+										let nk: Token, sk: Token, tn: FuncNode | undefined, mmm = mode, brace = tk.offset;
 										tk = get_token_ingore_comment(), next = false, mode = 1;
 										while (nexttoken() && tk.type !== 'TK_END_BLOCK') {
 											if (tk.topofline && (tk.content = tk.content.toLowerCase()).match(/^[gs]et$/)) {
@@ -994,12 +996,13 @@ export class Lexer {
 													if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(v = Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0))), v.detail = completionitem.value();
 													tn.children.push(...sub), adddeclaration(tn as FuncNode);
 												} else if (sk.content === '{') {
-													tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), [...par]), _this.addFoldingRangePos(tn.range.start, tn.range.end);
+													tn = FuncNode.create(nk.content, SymbolKind.Function, makerange(nk.offset, parser_pos - nk.offset), makerange(nk.offset, 3), [...par]);
 													let vars = new Map<string, any>([['#parent', tn]]);
 													(<FuncNode>tn).parent = prop, tn.children = parseblock(3, vars, classfullname), tn.range.end = document.positionAt(parser_pos);
 													if (nk.content.toLowerCase() === 'set') (<FuncNode>tn).params.unshift(v = Variable.create('Value', SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0))), v.detail = completionitem.value();
 													adddeclaration(tn as FuncNode);
-													_this.addFoldingRangePos(tn.range.start, tn.range.end);
+													_this.addSymbolFolding(tn, sk.offset);
+													// _this.addFoldingRangePos(tn.range.start, tn.range.end);
 													if (nk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(nk.content), nk.offset, nk.length);
 												} else {
 													_this.addDiagnostic(diagnostic.invalidprop(), sk.offset, sk.length);
@@ -1034,7 +1037,8 @@ export class Lexer {
 											}
 										}
 										prop.range.end = document.positionAt(parser_pos - 1), mode = mmm;
-										_this.addFoldingRangePos(prop.range.start, prop.range.end, 'block');
+										_this.addSymbolFolding(prop, brace);
+										// _this.addFoldingRangePos(prop.range.start, prop.range.end, 'block');
 									} else if (tk.content === '=>') {
 										let off = parser_pos, o: any = {}, tn: FuncNode, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
 										mode = 3, tn = FuncNode.create('get', SymbolKind.Function, makerange(off, parser_pos - off), Object.assign({}, rg), <Variable[]>par), (<FuncNode>tn).returntypes = o;
@@ -1179,12 +1183,12 @@ export class Lexer {
 							comm = trimcomment(cmm.content), beginpos = cmm.offset;
 						else cmm.type = '';
 						nexttoken();
-						if (tk.type === 'TK_RESERVED') {
+						if (!tk.topofline && tk.type === 'TK_RESERVED') {
 							tk.type = 'TK_WORD';
 							if (mode !== 2)
 								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						}
-						if (tk.type === 'TK_WORD') {
+						if (!tk.topofline && tk.type === 'TK_WORD') {
 							if (mode & 1) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset, tk.length);
 							cl = tk, lk = tk, tk = get_token_ingore_comment();
 							if (tk.content.toLowerCase() === 'extends') {
@@ -1217,7 +1221,8 @@ export class Lexer {
 							if (comm) tn.detail = comm; if (ex) (<ClassNode>tn).extends = ex;
 							tn.children.push(...parseblock(2, sv, classfullname + cl.content + '.')), tn.range = makerange(beginpos, parser_pos - beginpos);
 							adddeclaration(tn as ClassNode), cl.semantic = { type: SemanticTokenTypes.class, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
-							_this.addFoldingRangePos(tn.selectionRange.start, tn.range.end, 'block');
+							_this.addSymbolFolding(tn, tk.offset);
+							// _this.addFoldingRangePos(tn.range.start, tn.range.end, 'block');
 							for (const item of tn.children) if (item.children && item.kind != SymbolKind.Property) (<FuncNode>item).parent = tn;
 							result.push(tn);
 							return true;
@@ -4813,6 +4818,12 @@ export class Lexer {
 	private addFoldingRangePos(start: Position, end: Position, kind: string = 'block') {
 		let l1 = start.line, l2 = end.line - (kind === 'block' ? 1 : 0);
 		if (l1 < l2) this.foldingranges.push(FoldingRange.create(l1, l2, undefined, undefined, kind));
+	}
+
+	private addSymbolFolding(symbol: DocumentSymbol, first_brace: number) {
+		let l1 = extsettings.SymbolFoldingFromOpenBrace ? this.document.positionAt(first_brace).line : symbol.range.start.line;
+		let l2 = symbol.range.end.line - 1;
+		if (l1 < l2) this.foldingranges.push(FoldingRange.create(l1, l2, undefined, undefined, 'block'));
 	}
 }
 

@@ -36,7 +36,8 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	CompleteFunctionParens: false,
 	Diagnostics: {
 		ParamsCheck: true
-	}
+	},
+	SymbolFoldingFromOpenBrace: false
 };
 export let winapis: string[] = [];
 export let getDllExport = (paths: string[], onlyone: boolean = false) => [] as string[];
@@ -58,6 +59,7 @@ export interface AHKLSSettings {
 	Diagnostics: {
 		ParamsCheck: boolean
 	}
+	SymbolFoldingFromOpenBrace: boolean
 }
 
 export function set_Connection(conn: any, browser: boolean, getDll?:  (paths: string[]) => string[]) {

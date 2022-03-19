@@ -11,6 +11,16 @@
 
 [Gitee](https://gitee.com/orz707/vscode-autohotkey2-lsp)
 
+## lsp-server download
+
+```shell
+# git
+git clone --depth=1 -b server https://github.com/thqby/vscode-autohotkey2-lsp
+
+# curl (windows)
+mkdir vscode-autohotkey2-lsp & cd vscode-autohotkey2-lsp & curl.exe -L -o ahk2-lsp-update.exe https://github.com/thqby/vscode-autohotkey2-lsp/releases/download/v1.3.9/ahk2-lsp-update.exe & ahk2-lsp-update.exe
+```
+
 AutoHotkey V2 Language support for VS Code, Function realization based on v2 syntax analysis.
 Supports running on the Web, such as `Chrome/Edge`.
 
@@ -167,17 +177,7 @@ cd $VIMRUNTIME\plugin
 git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 ```
 
-Download and unpack [thqby.vscode-autohotkey2-LSP plugin](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
-
-Extract the following files into the coc.nvim\plugin
-- server/*
-- syntaxes/*
-- package.nls.json
-- package.nls.zh-cn.json
-
-```bat
-git clone --depth=1 -b server https://github.com/thqby/vscode-autohotkey2-lsp
-```
+[Download lsp-server](#lsp-server-download)
 
 Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
 ```json
@@ -353,17 +353,7 @@ cd $VIMRUNTIME\plugin
 git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 ```
 
-下载并解压[thqby.vscode-autohotkey2-lsp插件](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
-
-提取以下文件到coc.nvim\plugin
-- server/*
-- syntaxes/*
-- package.nls.json
-- package.nls.zh-cn.json
-
-```bat
-git clone --depth=1 -b server https://github.com/thqby/vscode-autohotkey2-lsp
-```
+[下载lsp-server](#lsp-server-download)
 
 打开(n)vim, 输入命令 `:CocConfig` 进入`coc.nvim`配置文件增加配置信息
 ```json
