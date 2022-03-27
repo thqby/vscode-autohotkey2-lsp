@@ -188,6 +188,9 @@
         "1": {
           "patterns": [
             {
+              "include": "#compiler_directive"
+            },
+            {
               "include": "#comments"
             }
           ]
@@ -282,6 +285,9 @@
           "end": "(?=\\{)",
           "patterns": [
             {
+              "include": "#compiler_directive"
+            },
+            {
               "include": "#comments"
             },
             {
@@ -320,6 +326,9 @@
           "name": "meta.block.class.body.ahk2",
           "patterns": [
             {
+              "include": "#compiler_directive"
+            },
+            {
               "include": "#comments"
             },
             {
@@ -328,6 +337,12 @@
             },
             {
               "match": "(?<=(^\\s*(?i:static\\s+)?|,\\s*))\\w+(?=\\s*(:=|=>))",
+              "captures": {
+                "0": {
+                  "match": "\\b(?i:__item)\\b",
+                  "name": "storage.type.metafunction.ahk2"
+                }
+              },
               "name": "variable.other.property.ahk2"
             },
             {
@@ -408,6 +423,9 @@
                   ]
                 },
                 {
+                  "include": "#compiler_directive"
+                },
+                {
                   "include": "#comments"
                 }
               ]
@@ -453,6 +471,9 @@
                   ]
                 },
                 {
+                  "include": "#compiler_directive"
+                },
+                {
                   "include": "#comments"
                 },
                 {
@@ -479,6 +500,9 @@
                       },
                       "end": "(?=\\n)",
                       "patterns": [
+                        {
+                          "include": "#compiler_directive"
+                        },
                         {
                           "include": "#comments"
                         },
@@ -531,6 +555,9 @@
                       },
                       "end": "(?=\\n)",
                       "patterns": [
+                        {
+                          "include": "#compiler_directive"
+                        },
                         {
                           "include": "#comments"
                         },
@@ -798,6 +825,9 @@
           "end": "(?=([^\\s.;]|\\.[^\\w]))",
           "patterns": [
             {
+              "include": "#compiler_directive"
+            },
+            {
               "include": "#comments"
             },
             {
@@ -829,6 +859,9 @@
       "beginCaptures": {
         "1": {
           "patterns": [
+            {
+              "include": "#compiler_directive"
+            },
             {
               "include": "#comments"
             }
@@ -1366,6 +1399,9 @@
                   "include": "$base"
                 }
               ]
+            },
+            {
+              "include": "#compiler_directive"
             },
             {
               "include": "#comments"
@@ -1918,6 +1954,9 @@
               "include": "#string_escaped_char"
             },
             {
+              "include": "#compiler_directive"
+            },
+            {
               "include": "#comments"
             }
           ]
@@ -1937,6 +1976,9 @@
           },
           "name": "string.quoted.brack",
           "patterns": [
+            {
+              "include": "#compiler_directive"
+            },
             {
               "include": "#comments"
             },
@@ -1973,6 +2015,9 @@
       "beginCaptures": {
         "1": {
           "patterns": [
+            {
+              "include": "#compiler_directive"
+            },
             {
               "include": "#comments"
             }
@@ -2021,6 +2066,9 @@
         },
         "2": {
           "patterns": [
+            {
+              "include": "#compiler_directive"
+            },
             {
               "include": "#comments"
             }

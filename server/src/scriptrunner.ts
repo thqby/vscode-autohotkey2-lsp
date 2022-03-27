@@ -6,7 +6,7 @@ export function runscript(script: string, out?: Function): boolean {
 	let executePath = ahkpath_cur || extsettings.InterpreterPath;
 	if (existsSync(executePath)) {
 		const process = spawnSync(`\"${executePath}\" /CP65001 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
-		if (process) {
+		if (process && process.pid) {
 			if (out)
 				out(process.stdout.toString());
 			return true;

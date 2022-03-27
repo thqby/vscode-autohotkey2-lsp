@@ -1041,14 +1041,14 @@ export class Lexer {
 										// _this.addFoldingRangePos(prop.range.start, prop.range.end, 'block');
 									} else if (tk.content === '=>') {
 										let off = parser_pos, o: any = {}, tn: FuncNode, sub: DocumentSymbol[], pars: { [key: string]: any } = {}, fcs = _parent.funccall.length;
-										mode = 3, tn = FuncNode.create('get', SymbolKind.Function, makerange(off, parser_pos - off), Object.assign({}, rg), <Variable[]>par), (<FuncNode>tn).returntypes = o;
+										mode = 3, tn = FuncNode.create('get', SymbolKind.Function, rg = makerange(off, parser_pos - off), Object.assign({}, rg), <Variable[]>par), (<FuncNode>tn).returntypes = o;
 										(<FuncNode>tn).parent = prop, tn.children = parse_line(o, undefined, ['return']), (<FuncNode>tn).funccall?.push(..._parent.funccall.splice(fcs)), mode = 2;
 										if (lk.content === '=>')
 											_this.diagnostics.push({ message: diagnostic.invaliddefinition('function'), range: tn.selectionRange, severity: DiagnosticSeverity.Error });
 										tn.range.end = document.positionAt(lk.offset + lk.length), prop.range.end = tn.range.end, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 										for (const t in o)
 											o[t] = tn.range.end;
-										adddeclaration(tn as FuncNode), prop.children.push(tn), tn.selectionRange.start.character += tn.name.length;
+										adddeclaration(tn as FuncNode), prop.children.push(tn);
 									}
 									if (prop.children.length === 1 && prop.children[0].name === 'get')
 										(fc.semantic as SemanticToken).modifier = ((fc.semantic as SemanticToken).modifier || 0) | 1 << SemanticTokenModifiers.readonly;
@@ -2697,8 +2697,8 @@ export class Lexer {
 						if (existsSync(m) && statSync(m).isDirectory())
 							dlldir = m.endsWith('/') || m.endsWith('\\') ? m : m + '\\';
 						else if (m.includes(':'))
-							_this.dllpaths.push(m.replace(/\\/g, '/'));
-						else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/'));
+							_this.dllpaths.push(m.replace(/\\/g, '/').toLowerCase());
+						else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/').toLowerCase());
 					} else {
 						if (tk) {
 							if (m.startsWith('*'))

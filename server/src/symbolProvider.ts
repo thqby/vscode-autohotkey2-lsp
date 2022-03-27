@@ -60,8 +60,10 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					if (info !== vars[_l])
 						if (vars[_l].kind !== SymbolKind.TypeParameter || vars[_l].selectionRange.start.character !== vars[_l].selectionRange.end.character)
 							converttype(info, vars[_l] === ahkvars[_l], vars[_l].kind);
-						else if ((tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]).semantic)
-							delete tk.semantic;
+						else if (tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]) {
+							if (tk.semantic)
+								delete tk.semantic;
+						}
 				} else if (info !== vars[_l])
 					result.push(info), vars[_l] = info, converttype(info, info === ahkvars[_l]);
 				else if (info === gvar[_l])
@@ -69,8 +71,10 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			} else if (info.kind !== SymbolKind.TypeParameter) {
 				result.push(info);
 				if ((info.kind === SymbolKind.Method || info.kind === SymbolKind.Property) && info.name.match(/^__\w+$/))
-					if ((tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]).semantic)
-						delete tk.semantic;
+					if (tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]) {
+						if (tk.semantic)
+							delete tk.semantic;
+					}
 			}
 		});
 		node.funccall?.map(info => {
