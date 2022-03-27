@@ -1,5 +1,6 @@
 ## 1.3.1
 - 修复[#84](https://github.com/thqby/vscode-autohotkey2-lsp/issues/84)
+- 修复[#85](https://github.com/thqby/vscode-autohotkey2-lsp/issues/85)
 
 ## 1.2.9
 - 修复`try ... catch ... catch`诊断错误

@@ -344,13 +344,6 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 		let paths = data.split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '';
 		for (let i in paths)
 			pathenv[s[i]] = paths[i].toLowerCase();
-		if (!pathenv.ahkpath) {
-			if (initnum < 3)
-				setTimeout(() => {
-					initnum++, initpathenv(true);
-				}, 1000);
-			return;
-		}
 		initnum = 1;
 		if (pathenv.version?.match(/^1\./))
 			connection.window.showErrorMessage(setting.versionerr());
@@ -391,6 +384,13 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 			parseuserlibs();
 	});
 	if (!ret) connection.window.showErrorMessage(setting.ahkpatherr());
+	else if (!pathenv.ahkpath) {
+		if (initnum < 3)
+			setTimeout(() => {
+				initnum++, initpathenv(true);
+			}, 1000);
+		return false;
+	}
 	return ret;
 }
 
