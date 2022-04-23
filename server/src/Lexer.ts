@@ -1339,9 +1339,10 @@ export class Lexer {
 										if (nk) {
 											if (tk.content !== ')') {
 												_this.addDiagnostic(diagnostic.missing(')'), nk.offset, nk.length);
-											} else nexttoken();
+											} else next = true, nexttoken();
 										}
-										parse_body();
+										if (!parse_body() && (tk as Token).type === 'TK_RESERVED' && tk.content.toLowerCase() === 'until')
+											next = true, result.push(...parseexp());
 										return;
 									}
 									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, tk.length);
