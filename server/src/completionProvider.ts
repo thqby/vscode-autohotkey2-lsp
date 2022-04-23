@@ -328,25 +328,28 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 												winapis.map(f => { if (expg.test(f)) additem(f, CompletionItemKind.Function); });
 												return items;
 											} else {
-												let dlls = [pre = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/')], onlyfile = true;
-												if (pre.includes(':')) onlyfile = false;
-												else if ((l = pre.toLowerCase()).includes('/')) {
+												let dlls: { [key: string]: any } = {}, onlyfile = true;
+												l = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/').toLowerCase();
+												if (!l.match(/\.\w+$/))
+													l = l + '.dll';
+												if (l.includes(':')) onlyfile = false;
+												else if (l.includes('/')) {
 													if (l.startsWith('/'))
-														dlls.push(doc.scriptpath + l);
-													else dlls.push(doc.scriptpath + '/' + l);
+														dlls[doc.scriptpath + l] = 1;
+													else dlls[doc.scriptpath + '/' + l] = 1;
 												} else {
 													docs.map(d => {
 														d.dllpaths.map(path => {
-															if (path.endsWith(l) || path.endsWith(l + '.dll')) {
-																dlls.push(path);
+															if (path.endsWith(l)) {
+																dlls[path] = 1;
 																if (onlyfile && path.includes('/'))
 																	onlyfile = false;
 															}
 														});
-														if (onlyfile) dlls.push(d.scriptpath + '/' + l);
+														if (onlyfile) dlls[d.scriptpath + '/' + l] = 1;
 													});
 												}
-												getDllExport(dlls, true).map(it => additem(it, CompletionItemKind.Function));
+												getDllExport(Object.keys(dlls), true).map(it => additem(it, CompletionItemKind.Function));
 												return items;
 											}
 										}
@@ -523,12 +526,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						items.push(it);
 				}
 			});
-			let dir = inWorkspaceFolders(doc.document.uri) || doc.document.uri.toLowerCase(), exportnum = 0;
+			let dir = inWorkspaceFolders(doc.document.uri) || doc.scriptdir, exportnum = 0;
 			if (extsettings.AutoLibInclude)
 				for (const u in libfuncs) {
 					if (!list || !list[u]) {
 						path = URI.parse(u).fsPath;
-						if ((extsettings.AutoLibInclude > 1 && (<any>libfuncs[u]).islib) || ((extsettings.AutoLibInclude & 1) && u.startsWith(dir))) {
+						if ((extsettings.AutoLibInclude > 1 && (<any>libfuncs[u]).islib) || ((extsettings.AutoLibInclude & 1) && path.startsWith(dir))) {
 							libfuncs[u].map(it => {
 								if (!vars[l = it.name.toLowerCase()] && expg.test(l)) {
 									cpitem = convertNodeCompletion(it);

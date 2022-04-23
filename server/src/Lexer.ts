@@ -2708,9 +2708,13 @@ export class Lexer {
 					if (isdll) {
 						if (existsSync(m) && statSync(m).isDirectory())
 							dlldir = m.endsWith('/') || m.endsWith('\\') ? m : m + '\\';
-						else if (m.includes(':'))
-							_this.dllpaths.push(m.replace(/\\/g, '/').toLowerCase());
-						else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/').toLowerCase());
+						else {
+							if (!m.match(/\.\w+$/))
+								m = m + '.dll';
+							if (m.includes(':'))
+								_this.dllpaths.push(m.replace(/\\/g, '/').toLowerCase());
+							else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/').toLowerCase());
+						}
 					} else {
 						if (tk) {
 							if (m.startsWith('*'))
@@ -4786,8 +4790,10 @@ export class Lexer {
 		if (inBrowser)
 			return;
 		const workfolder = resolve().toLowerCase();
-		if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder)) {
-			this.scriptdir = workfolder.replace(/\\lib$/, '');
+		if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder) && !this.scriptpath.endsWith('\\lib')) {
+			if (existsSync(this.scriptpath + '\\lib') && statSync(this.scriptpath + '\\lib').isDirectory())
+				this.scriptdir = this.scriptpath;
+			else this.scriptdir = workfolder.replace(/\\lib$/, '');
 		} else this.scriptdir = this.scriptpath.replace(/\\lib$/, '');
 		this.libdirs = [this.scriptdir + '\\lib'];
 		for (const t of libdirs) if (this.libdirs[0] !== t) this.libdirs.push(t);
