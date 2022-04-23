@@ -42,7 +42,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			if (kind === SymbolKind.Method) {
 			} else if (ahkvars[word])
 				nodes = [{ node: ahkvars[word], uri: '' }];
-			else if (kind === SymbolKind.Function) {
+			else if (kind === SymbolKind.Function && doc.tokens[doc.document.offsetAt(context.range.start)]?.semantic) {
 				if ((t = hoverCache[0]) && t[word])
 					return t[word][0];
 			} else if ((t = hoverCache[1]) && t[word])
