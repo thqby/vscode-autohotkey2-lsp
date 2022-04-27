@@ -4268,7 +4268,8 @@ export class Lexer {
 					print_token();
 					output_space_before_token = space_after;
 					return;
-				}
+				} else if (!output_space_before_token && (token_text === '++' || token_text === '--'))
+					space_after = true;
 				if ((flags.mode === MODE.BlockStatement || flags.mode === MODE.Statement) && flags.last_text === '{') {
 					// { foo; --i }
 					// foo(); --bar;

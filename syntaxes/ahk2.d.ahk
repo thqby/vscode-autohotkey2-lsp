@@ -616,7 +616,7 @@ EnvGet(EnvVarName) => String
 /**
  * Write the value to the variable contained in the environment variable.
  */
-EnvSet(EnvVar, Value) => void
+EnvSet(EnvVar [, Value]) => void
 
 /**
  * Exit the current thread. When the script exits, it returns an integer between -2147483648 and 2147483647 to its caller.
@@ -1811,7 +1811,7 @@ RegRead([KeyName, ValueName, Default]) => String
 /**
  * Write the value to the registry.
  */
-RegWrite(Value, ValueType, KeyName [, ValueName]) => void
+RegWrite(Value [, ValueType, KeyName, ValueName]) => void
 
 /**
  * Replaces the currently running instance of the script with a new one.

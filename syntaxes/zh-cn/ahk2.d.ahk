@@ -616,7 +616,7 @@ EnvGet(EnvVarName) => String
 /**
  * 将值写入环境变量包含的变量中.
  */
-EnvSet(EnvVar, Value) => void
+EnvSet(EnvVar [, Value]) => void
 
 /**
  * 退出当前线程. 脚本退出时, 返回给其调用者的-2147483648和2147483647之间的整数.
@@ -1811,7 +1811,7 @@ RegRead([KeyName, ValueName, Default]) => String
 /**
  * 将值写入注册表.
  */
-RegWrite(Value, ValueType, KeyName [, ValueName]) => void
+RegWrite(Value [, ValueType, KeyName, ValueName]) => void
 
 /**
  * 使用新的脚本实例替换当前正在运行的.
