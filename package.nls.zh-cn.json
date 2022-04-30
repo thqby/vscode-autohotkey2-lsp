@@ -1,7 +1,7 @@
 {
 	"ahk2.autolibinclude": "对用户库和标准库, 本地库提供补全和自动include",
 	"ahk2.compile": "编译脚本",
-	"ahk2.compilercmd": "编译器命令行选项",
+	"ahk2.compilercmd": "编译器命令行选项. 如果未指定ahk2exe.exe, 将使用默认路径.",
 	"ahk2.completefunctionparens": "给函数补全添加括号",
 	"ahk2.debug": "调试脚本",
 	"ahk2.debug.attach": "附加到运行中的脚本",
@@ -17,6 +17,7 @@
 	"ahk2.stop": "停止运行中的脚本",
 	"ahk2.diagnostics.paramscheck": "静态检查函数调用",
 	"ahk2.symbolfoldingfromopenbrace": "强制符号折叠从大括号处开始",
+	"ahk2.updateversioninfo": "更新文件版本信息",
 	"codeaction.include": "导入 '{0}'",
 	"completionitem.author": "添加作者, 描述, 日期, 版本等文件信息.",
 	"completionitem.generatecomment": "生成当前作用域函数/方法的注释模板.",

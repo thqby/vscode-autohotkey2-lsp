@@ -1,7 +1,7 @@
 {
 	"ahk2.autolibinclude": "Provide completion and automatic include from User and Standard library, Local library",
 	"ahk2.compile": "Compile Script",
-	"ahk2.compilercmd": "Compiler command line options",
+	"ahk2.compilercmd": "Compiler command line options. If ahk2exe.exe is not specified, the default path will be used.",
 	"ahk2.completefunctionparens": "Add parentheses to function completions",
 	"ahk2.debug": "Debug Script",
 	"ahk2.debug.attach": "Attach Running Script",
@@ -16,5 +16,6 @@
 	"ahk2.selection.run": "Run Selected Script",
 	"ahk2.stop": "Stop Running Script",
 	"ahk2.diagnostics.paramscheck": "Statically check function calls",
-	"ahk2.symbolfoldingfromopenbrace": "Force symbol folding from open brace"
+	"ahk2.symbolfoldingfromopenbrace": "Force symbol folding from open brace",
+	"ahk2.updateversioninfo": "Update file version info"
 }

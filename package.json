@@ -4,7 +4,7 @@
 	"description": "Autohotkey2 Language Support using vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.3.2",
+	"version": "1.3.3",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -110,7 +110,7 @@
 					"default": false,
 					"description": "%ahk2.completefunctionparens%"
 				},
-				"AutoHotkey2.Diagnostics.ParamsCheck": {
+				"AutoHotkey2.diagnostics.ParamsCheck": {
 					"scope": "window",
 					"type": "boolean",
 					"default": true,
@@ -184,22 +184,27 @@
 				"command": "ahk2.setinterpreter",
 				"title": "%ahk2.setinterpreter%",
 				"category": "ahk2"
+			},
+			{
+				"command": "ahk2.updateversioninfo",
+				"title": "%ahk2.updateversioninfo%",
+				"category": "ahk2"
 			}
 		],
 		"menus": {
 			"editor/context": [
 				{
-					"when": "editorLangId == ahk2 && !isWeb && !inDebugMode",
+					"when": "editorLangId == ahk2 && !isWeb",
 					"command": "ahk2.debug",
 					"group": "navigation@1"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb && !inDebugMode",
+					"when": "editorLangId == ahk2 && !isWeb",
 					"command": "ahk2.debug.attach",
 					"group": "navigation@2"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb && !inDebugMode",
+					"when": "editorLangId == ahk2 && !isWeb",
 					"command": "ahk2.debug.params",
 					"group": "navigation@2"
 				},
@@ -232,6 +237,11 @@
 					"when": "editorLangId == ahk2",
 					"command": "ahk2.generate.comment",
 					"group": "navigation@2"
+				},
+				{
+					"when": "editorLangId == ahk2",
+					"command": "ahk2.updateversioninfo",
+					"group": "navigation@2"
 				}
 			]
 		},
@@ -259,7 +269,7 @@
 			{
 				"command": "ahk2.debug.params",
 				"key": "shift+f5",
-				"when": "editorLangId == ahk2 && !isWeb && !inDebugMode"
+				"when": "editorLangId == ahk2 && !isWeb"
 			},
 			{
 				"command": "ahk2.help",

@@ -34,7 +34,7 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
 	AutoLibInclude: 0,
 	CompleteFunctionParens: false,
-	Diagnostics: {
+	diagnostics: {
 		ParamsCheck: true
 	},
 	SymbolFoldingFromOpenBrace: false
@@ -56,7 +56,7 @@ export interface AHKLSSettings {
 	InterpreterPath: string
 	AutoLibInclude: LibIncludeType
 	CompleteFunctionParens: boolean
-	Diagnostics: {
+	diagnostics: {
 		ParamsCheck: boolean
 	}
 	SymbolFoldingFromOpenBrace: boolean
@@ -290,21 +290,6 @@ export async function loadahk2(filename = 'ahk2') {
 			hoverCache[n][_low].push(hover);
 	}
 	function bodytostring(body: any) { return (typeof body === 'object' ? body.join('\n') : body) };
-}
-
-export function updateFileInfo(info: string, revised: boolean = true): string {
-	let d: Date = new Date;
-	info = info.replace(/(?<=@?(date|日期)[:\s]\s*)(\d+\/\d+\/\d+)/i, d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2));
-	info = info.replace(/(?<=@?(version|版本号)[:\s]\s*)(\d+(\.\d+)*)/i, (m) => {
-		let ver: string[] = m.split('.');
-		while (ver.length < 3)
-			ver.push('0');
-		if (revised)
-			ver[ver.length - 1] = (parseInt(ver[ver.length - 1]) + 1).toString();
-		else ver[ver.length - 2] = (parseInt(ver[ver.length - 2]) + 1).toString(), ver[ver.length - 1] = '0';
-		return ver.join('.');
-	});
-	return info;
 }
 
 export function getallahkfiles(dirpath: string, maxdeep = 3): string[] {

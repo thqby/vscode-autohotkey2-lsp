@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, ExtensionContext, Range, RelativePattern, SnippetString, Uri, window, workspace } from 'vscode';
+import { commands, ExtensionContext, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 
 // this method is called when vs code is activated
@@ -17,7 +17,38 @@ export function activate(context: ExtensionContext) {
 	}, worker);
 
 	const disposable = client.start();
-	context.subscriptions.push(disposable);
+	context.subscriptions.push(disposable,
+		commands.registerCommand('ahk2.updateversioninfo', async () => {
+			const editor = window.activeTextEditor;
+			if(editor) {
+				let info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', editor.document.uri.toString());
+				if (!info) {
+					await editor.insertSnippet(new SnippetString([
+						"/************************************************************************",
+						" * @description ${1:}",
+						" * @file $TM_FILENAME",
+						" * @author ${2:}",
+						" * @date ${3:$CURRENT_YEAR/$CURRENT_MONTH/$CURRENT_DATE}",
+						" * @version ${4:0.0.0}",
+						" ***********************************************************************/",
+						"", ""
+					].join('\n')), new Range(0, 0, 0, 0));
+				} else {
+					let d = new Date;
+					let content = info.content, ver;
+					content = content.replace(/(?<=^\s*[;*]?\s*@date[:\s]\s*)(\d+\/\d+\/\d+)/im, d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2));
+					if (content.match(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im) &&
+						(ver = await window.showInputBox({ prompt: 'Enter version info', value: content.match(/(?<=^[\s*]*@version[:\s]\s*)(\S*)/im)?.[1] })))
+						content = content.replace(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im, ver);
+					if (content !== info.content) {
+						let ed = new WorkspaceEdit();
+						ed.replace(Uri.parse(info.uri), info.range, content);
+						workspace.applyEdit(ed);
+					}
+				}
+			}
+		})
+	);
 
 	client.onReady().then(() => {
 		client.onRequest('ahk2.executeCommands', async (params: any[]) => {

@@ -14,7 +14,7 @@ import {
 	extsettings, generateAuthor, generateComment, getincludetable, hoverProvider, initahk2cache, Lexer, lexers,
 	libfuncs, loadahk2, loadlocalize, parseinclude, prepareRename, rangeFormatting, referenceProvider, renameProvider,
 	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, sendDiagnostics, set_ahk_h, set_Connection,
-	set_dirname, set_locale, set_Workfolder, signatureProvider,	symbolProvider, typeFormatting, updateFileInfo, workspaceFolders, workspaceSymbolProvider
+	set_dirname, set_locale, set_Workfolder, signatureProvider,	symbolProvider, typeFormatting, workspaceFolders, workspaceSymbolProvider
 } from './common';
 
 export const languageServer = 'ahk2-language-server';
@@ -52,8 +52,6 @@ connection.onInitialize((params: InitializeParams) => {
 		capabilities: {
 			textDocumentSync: {
 				openClose: true,
-				willSave: true,
-				willSaveWaitUntil: true,
 				change: TextDocumentSyncKind.Incremental
 			},
 			completionProvider: {
@@ -207,24 +205,6 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 	}
 });
 
-documents.onWillSaveWaitUntil((e) => {
-	let doc = lexers[e.document.uri.toLowerCase()];
-	if (doc.version !== e.document.version) {
-		let tk = doc.tokens[0];
-		if (tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') {
-			let t: string = updateFileInfo(tk.content);
-			if (t !== tk.content) {
-				setTimeout(() => {
-					doc.version = doc.document.version;
-				}, 200);
-				return [TextEdit.replace(Range.create(doc.document.positionAt(tk.offset), doc.document.positionAt(tk.offset + tk.length)), t)];
-			}
-		}
-		doc.version = doc.document.version;
-	}
-	return [];
-});
-
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
 	// console.log('We received an file change event');
@@ -249,6 +229,23 @@ connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
+connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
+	let doc = lexers[uri.toLowerCase()];
+	if (doc) {
+		let tk = doc.get_tokon(0);
+		if ((tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') && tk.content.match(/^\s*[;*]?\s*@(date|version)\b/im)) {
+			return {
+				uri: uri,
+				content: tk.content,
+				range: {
+					start: doc.document.positionAt(tk.offset),
+					end: doc.document.positionAt(tk.offset + tk.length)
+				}
+			};
+		}
+	}
+	return null;
+});
 documents.listen(connection);
 connection.listen();
 
