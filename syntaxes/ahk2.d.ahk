@@ -1038,7 +1038,7 @@ GetKeyVK(KeyName) => Number
 /**
  * The implementation function of the retrieval method.
  */
-GetMethod(Value, Name) => Func
+GetMethod(Value [, Name, ParamCount]) => Func
 
 /**
  * Activate the next window in the window group defined by GroupAdd.
@@ -1090,7 +1090,7 @@ HasBase(Value, BaseObj) => Number
 /**
  * If the specified value has a method with the specified name, a non-zero number is returned.
  */
-HasMethod(Value, Name) => Number
+HasMethod(Value [, Name, ParamCount]) => Number
 
 /**
  * If the specified value has an attribute with the specified name, a non-zero number is returned.
