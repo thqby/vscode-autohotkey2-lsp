@@ -3784,6 +3784,8 @@ export class Lexer {
 				flags.last_text = ')';
 			}
 			set_mode(MODE.BlockStatement);
+			if (previous_flags.in_case_statement && previous_flags.last_text === ':')
+				flags.indentation_level -= 1;
 
 			if (opt.brace_style === "expand") {
 				if (last_type !== 'TK_OPERATOR' &&
@@ -3857,6 +3859,8 @@ export class Lexer {
 			}
 			restore_mode();
 			print_token();
+			if (flags.in_case_statement && flags.last_text === ':')
+				output_lines[output_lines.length - 1].text.shift();
 		}
 
 		function handle_word() {
@@ -4355,6 +4359,7 @@ export class Lexer {
 			// print_newline(false, true);
 			output_space_before_token = false, output_lines[output_lines.length - 1].text.push('\t');
 			print_token();
+			print_newline(false, true);
 			output_space_before_token = true;
 		}
 

@@ -1038,7 +1038,7 @@ GetKeyVK(KeyName) => Number
 /**
  * 检索方法的实现函数.
  */
-GetMethod(Value, Name) => Func
+GetMethod(Value [, Name, ParamCount]) => Func
 
 /**
  * 激活由 GroupAdd 定义的窗口组中的下一个窗口.
