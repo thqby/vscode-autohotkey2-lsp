@@ -122,7 +122,7 @@ export interface Token {
 	content: string
 	offset: number
 	length: number
-	topofline?: boolean
+	topofline?: boolean | 1
 	ignore?: boolean
 	semantic?: SemanticToken
 	pos?: Position
@@ -625,7 +625,7 @@ export class Lexer {
 		function parseblock(mode = 0, scopevar = new Map<string, any>(), classfullname: string = ''): DocumentSymbol[] {
 			const result: DocumentSymbol[] = [], document = _this.document, cmm: Token = { content: '', offset: 0, type: '', length: 0 };
 			let _parent = scopevar.get('#parent') || _this, tk: Token = { content: '', type: '', offset: 0, length: 0 };
-			let lk: Token = tk, next: boolean = true, LF: number = 0, topcontinue = false, _low = '', m: any;
+			let lk: Token = tk, next: boolean = true, LF: number = 0, topcontinue: boolean | 1 = false, _low = '', m: any;
 			let blocks = 0, inswitch = -1, incase = -1, blockpos: number[] = [], tn: DocumentSymbol | FuncNode | Variable | undefined;
 			let raw = '', o: any = '', last_comm = '', tds: Diagnostic[] = [];
 			if (mode !== 0)
@@ -1150,9 +1150,6 @@ export class Lexer {
 											if (tk.content.match(/^(\+\+|--)$/))
 												vr.def = true, tk = Object.assign({}, tk), tk.content = '';
 										}
-									} else {
-										if (tk.type === 'TK_UNKNOWN')
-											_this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length);
 									}
 								}
 								break;
@@ -1566,8 +1563,62 @@ export class Lexer {
 							return else_body;
 						if (t === tk || (t === lk && !next && !tk.topofline))
 							result.push(...parse_line());
-					} else
-						lk = Object.assign({}, lk), lk.type = '', result.push(...parse_line());
+					} else {
+						let c = '', bak = lk;
+						next = true, nexttoken(), next = false;
+						if (lk.type === 'TK_WORD' && (tk.type === 'TK_DOT' || tk.type !== 'TK_EQUALS' && (c = input.charAt(lk.offset + lk.length)).match(/^[,\s]?$/)) && (lk.topofline || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i)))) {
+							if (tk.type === 'TK_DOT') {
+								addvariable(lk);
+								bak = tk, next = true;
+								while (nexttoken()) {
+									if (tk.type as string === 'TK_WORD') {
+										addprop(tk);
+										nexttoken();
+										if (tk.type === 'TK_DOT')
+											continue;
+										next = false;
+										if (tk.type !== 'TK_EQUALS' && input.charAt(lk.offset + lk.length).match(/^[,\s]?$/)) {
+											let fc = lk, sub = parse_line();
+											result.push(...sub);
+											let tn: CallInfo;
+											fc.semantic = { type: SemanticTokenTypes.method };
+											_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Method, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+											tn.paraminfo = (sub as any).paraminfo, tn.offset = fc.offset, fc.callinfo = tn;
+											if (lk === fc) {
+												let lf = input.indexOf('\n', fc.offset);
+												tn.range.end = document.positionAt(lf === -1 ? input_length : lf);
+											} else if (tk.content === ')')
+												tn.range.end = document.positionAt(tk.offset + tk.length);
+										} else
+											result.push(...parse_line());
+									} else {
+										next = false;
+										result.push(...parse_line());
+									}
+									break;
+								}
+							} else {
+								if (c === ',') _this.addDiagnostic(diagnostic.funccallerr(), tk.offset + tk.length, 1);
+								addvariable(lk);
+								let fc = lk, sub = parse_line();
+								result.push(...sub);
+								let tn: CallInfo;
+								fc.semantic = { type: SemanticTokenTypes.function };
+								_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, makerange(fc.offset, lk.offset + lk.length - fc.offset), makerange(fc.offset, fc.length)));
+								tn.paraminfo = (sub as any).paraminfo, tn.offset = fc.offset, fc.callinfo = tn;
+								if (lk === fc) {
+									let lf = input.indexOf('\n', fc.offset);
+									tn.range.end = document.positionAt(lf === -1 ? input_length : lf);
+								} else if (tk.content === ')')
+									tn.range.end = document.positionAt(tk.offset + tk.length);
+							}
+						} else {
+							tk = lk, lk = bak, parser_pos = tk.offset + tk.length;
+							if (tk.topofline)
+								tk.topofline = 1;
+							result.push(...parse_line());
+						}
+					}
 					next = tk.type === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
 				}
 				if (typeof else_body === 'boolean') {
@@ -1705,7 +1756,7 @@ export class Lexer {
 			function parseexp(inpair?: string, types: any = {}, mustexp = 1, end?: string): DocumentSymbol[] {
 				let pres = result.length, tpexp = '', byref = false, ternarys: number[] = [], t: any, objk: any;
 				while (nexttoken()) {
-					if (tk.topofline && !inpair && !linecontinue(lk, tk)) {
+					if (tk.topofline === true && !inpair && !linecontinue(lk, tk)) {
 						if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) === '.')
 							addprop(lk), maybeclassprop(lk);
 						next = false; break;
@@ -3557,7 +3608,7 @@ export class Lexer {
 			if (c === '.') {
 				let nextc = input.charAt(parser_pos);
 				if (nextc === '=') {
-					parser_pos++
+					parser_pos++;
 					return lst = createToken('.=', 'TK_EQUALS', offset, 2, bg);
 				} else if (in_array(input.charAt(parser_pos - 2), whitespace) && in_array(nextc, whitespace)) {
 					return lst = createToken(c, 'TK_OPERATOR', offset, 1, bg);
@@ -3578,7 +3629,7 @@ export class Lexer {
 						}
 					}
 				}
-				return lst = createToken(c, 'TK_DOT', offset, 1, bg);
+				return lst = createToken(c, nextc === '' || in_array(nextc, whitespace) ? 'TK_UNKNOWN' : 'TK_DOT', offset, 1, bg);
 			}
 
 			if (c === '/' && bg) {
@@ -4959,10 +5010,13 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 						getmems(dc, nd, staticmem);
 						break;
 					} else {
+						let bak = v;
+						v = {};
 						getmems(dc, nd, true);
 						p.splice(0, 1);
 						if ((nd = v[p[0]]) && nd.kind !== SymbolKind.Class)
 							nd = undefined;
+						v = bak;
 					}
 				}
 			}
@@ -5423,7 +5477,10 @@ export function getFuncCallInfo(doc: Lexer, position: Position) {
 	for (const item of funccall) {
 		const start = doc.document.offsetAt(item.range.start), end = doc.document.offsetAt(item.range.end);
 		if (start + item.name.length < offset) {
-			if (offset > end || offset === end && doc.document.getText(Range.create({ line: position.line, character: position.character - 1 }, position)) === ')')
+			if (offset > end) {
+				if (item.range.end.line !== position.line || doc.document.getText({ start: item.range.end, end: position }).trim())
+					continue;
+			} else if (offset === end && doc.document.getText(Range.create({ line: position.line, character: position.character - 1 }, position)) === ')')
 				continue;
 			if (!func || (off.start <= start && end <= off.end))
 				func = item, off = { start, end }, pos = item.range.start;

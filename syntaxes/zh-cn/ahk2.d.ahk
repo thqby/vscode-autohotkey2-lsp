@@ -1090,7 +1090,7 @@ HasBase(Value, BaseObj) => Number
 /**
  * 如果指定的值具有指定名称的方法, 则返回非零数字.
  */
-HasMethod(Value, Name) => Number
+HasMethod(Value [, Name, ParamCount]) => Number
 
 /**
  * 如果指定值具有指定名称的属性, 则返回非零数字.

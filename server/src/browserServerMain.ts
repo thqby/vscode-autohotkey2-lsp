@@ -197,6 +197,9 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 	}
 	parseinclude(doc.include);
 	doc.relevance = getincludetable(uri).list, resetrelevance();
+	for (const t in initial)
+		if (!doc.include[t] && lexers[t]?.diagnostics.length)
+			lexers[t].parseScript();
 	sendDiagnostics();
 	function resetrelevance() {
 		for (const u in initial)
