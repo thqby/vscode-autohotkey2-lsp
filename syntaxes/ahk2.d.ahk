@@ -3787,7 +3787,7 @@ class Map extends Object {
 	/**
 	 * Retrieve or set the case sensitivity setting of the mapping.
 	 */
-	CaseSense => Number
+	CaseSense => String
 
 	/**
 	 * Define the default value returned when the key is not found.

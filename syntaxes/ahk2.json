@@ -111,7 +111,7 @@
 			"prefix": "_Ignore"
 		},
 		{
-			"body": "/*Ahk2Exe-Keep\n$0\n*/",
+			"body": "/*@Ahk2Exe-Keep\n$0\n*/",
 			"description": "Marked code snippets are only executed in the compiled script.",
 			"prefix": "_Keep"
 		},

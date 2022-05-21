@@ -3771,7 +3771,7 @@ class Map extends Object {
 	/**
 	 * 检索或设置映射的大小写敏感性设置.
 	 */
-	CaseSense => Number
+	CaseSense => String
 
 	/**
 	 * 定义找不到键时返回的默认值.
