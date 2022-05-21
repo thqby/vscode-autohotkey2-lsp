@@ -75,7 +75,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			return items;
 		case '.':
 			let c = doc.buildContext(position, true);
-			if (c.text.match(/\b\d+\.$/) || c.linetext.match(/\s\.$/))
+			if (c.text.match(/\b\d+\.$/) || c.linetext.match(/(^|\s)\.$/))
 				return;
 			content.pre = c.text.slice(0, content.text === '' && content.pre.match(/\.$/) ? -1 : -content.text.length);
 			content.text = c.text, content.kind = c.kind, content.linetext = c.linetext;;

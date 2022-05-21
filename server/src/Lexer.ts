@@ -4605,6 +4605,7 @@ export class Lexer {
 				if (i > 0) {
 					j = i, i--, t = linetext, c = t.charCodeAt(i);
 				} else {
+					if (l === 0) break;
 					l--, t = this.document.getText(Range.create(l, 0, l + 1, 0));
 					let m = t.replace(/('|").*?(?<!`)\1/, '').match(/(^|\s+)(;.*|\/\*.*\*\/\s*)?[\r\n]*$/);
 					j = t.length - (m ? m[0].length : 0), i = j - 1, c = t.charCodeAt(i);
