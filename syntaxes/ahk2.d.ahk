@@ -1417,7 +1417,7 @@ Log(Number) => Number
 /**
  * Trim characters from the beginning of the string.
  */
-LTrim(String, OmitChars := '`t') => String
+LTrim(String, OmitChars := ' `t') => String
 
 /**
  * Returns the maximum value of one or more numbers.
@@ -1826,7 +1826,7 @@ Round(Number, N := 0) => Number | String
 /**
  * Trim characters from the end of the string.
  */
-RTrim(String, OmitChars := '`t') => String
+RTrim(String, OmitChars := ' `t') => String
 
 /**
  * Run external programs.
@@ -2261,7 +2261,7 @@ TrayTip(Text := '', Title := '', Options := 0) => void
 /**
  * Trim characters from the beginning and end of the string.
  */
-Trim(String, OmitChars := '`t') => String
+Trim(String, OmitChars := ' `t') => String
 
 /**
  * The exact type of the return value.
