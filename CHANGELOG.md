@@ -1,3 +1,7 @@
+## 1.3.5
+- 修复[#99](https://github.com/thqby/vscode-autohotkey2-lsp/issues/99)
+- 修复语法高亮的错误 [#101](https://github.com/thqby/vscode-autohotkey2-lsp/issues/101)
+
 ## 1.3.4
 - 修复部分行语句无法触发参数提示
 - 修复格式化错误 [#95](https://github.com/thqby/vscode-autohotkey2-lsp/issues/95)
