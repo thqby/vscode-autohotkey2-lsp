@@ -8,7 +8,7 @@ import { basename, resolve } from 'path';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, Connection, DidChangeConfigurationNotification, ExecuteCommandParams, FoldingRange, FoldingRangeParams, InitializeParams,
-	InitializeResult, ProposedFeatures, Range, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit, WorkspaceFoldersChangeEvent
+	InitializeResult, ProposedFeatures, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, WorkspaceFoldersChangeEvent
 } from 'vscode-languageserver/node';
 import {
 	AHKLSSettings, clearLibfuns, codeActionProvider, colorPresentation, colorProvider, completionProvider, defintionProvider,
@@ -23,6 +23,7 @@ import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 const languageServer = 'ahk2-language-server';
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false, connection: Connection;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
+let initnum = 0;
 
 connection = createConnection(ProposedFeatures.all);
 set_Connection(connection, false, getDllExport);
@@ -309,7 +310,6 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	}
 }
 
-let initnum = 0;
 async function initpathenv(hasconfig = false, samefolder = false) {
 	if (!hasconfig) {
 		let t = await connection.workspace.getConfiguration('AutoHotkey2');

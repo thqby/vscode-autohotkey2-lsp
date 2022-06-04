@@ -70,7 +70,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					result.push(info), converttype(info, info === ahkvars[_l]);
 			} else if (info.kind !== SymbolKind.TypeParameter) {
 				result.push(info);
-				if ((info.kind === SymbolKind.Method || info.kind === SymbolKind.Property) && info.name.match(/^__\w+$/))
+				if ((info.kind === SymbolKind.Method || info.kind === SymbolKind.Property) && info.name.match(/^__(set|get|call|new|item|delete)$/i))
 					if (tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]) {
 						if (tk.semantic)
 							delete tk.semantic;

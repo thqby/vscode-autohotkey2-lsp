@@ -2,12 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { URI } from 'vscode-uri';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, BrowserMessageReader, BrowserMessageWriter, DidChangeConfigurationNotification,
 	FoldingRange, FoldingRangeParams, InitializeParams, InitializeResult, ExecuteCommandParams,
-	Range, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, TextEdit, WorkspaceFoldersChangeEvent
+	SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, WorkspaceFoldersChangeEvent
 } from 'vscode-languageserver/browser';
 import {
 	AHKLSSettings, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,

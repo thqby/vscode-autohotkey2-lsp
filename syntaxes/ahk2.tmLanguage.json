@@ -336,7 +336,37 @@
               "name": "storage.modifier.ahk2"
             },
             {
-              "match": "(?<=(^\\s*(?i:static\\s+)?|,\\s*))\\w+(?=\\s*(:=|=>))",
+              "begin": "(?<=^\\s*(?i:static\\s+)?)(\\w+)\\s*(=>)(\\s+(;.*)\\n|\\s*\\n)?",
+              "beginCaptures": {
+                "1": {
+                  "patterns": [
+                    {
+                      "match": "\\b(?i:__item)\\b",
+                      "name": "storage.type.metafunction.ahk2"
+                    }
+                  ],
+                  "name": "variable.other.property.ahk2"
+                },
+                "2": {
+                  "name": "storage.type.function.arrow.ahk2"
+                },
+                "4": {
+                  "name": "comment.inline.ahk2"
+                }
+              },
+              "end": "(?=\\n)",
+              "name": "meta.block.prototype.body.ahk2",
+              "patterns": [
+                {
+                  "include": "#line_continue"
+                },
+                {
+                  "include": "$base"
+                }
+              ]
+            },
+            {
+              "match": "(?<=(^\\s*(?i:static\\s+)?|,\\s*))\\w+(?=\\s*:=)",
               "captures": {
                 "0": {
                   "match": "\\b(?i:__item)\\b",
@@ -352,11 +382,7 @@
                   "patterns": [
                     {
                       "match": "\\b(__(?i:new|get|call|set|delete))\\b",
-                      "captures": {
-                        "1": {
-                          "name": "storage.type.metafunction.ahk2"
-                        }
-                      }
+                      "name": "storage.type.metafunction.ahk2"
                     }
                   ],
                   "name": "entity.name.function.method.ahk2"
@@ -405,10 +431,13 @@
                   ]
                 },
                 {
-                  "begin": "=>",
+                  "begin": "(=>)(\\s+(;.*)\\n|\\s*\\n)?",
                   "beginCaptures": {
-                    "0": {
+                    "1": {
                       "name": "storage.type.function.arrow.ahk2"
+                    },
+                    "3": {
+                      "name": "comment.inline.ahk2"
                     }
                   },
                   "end": "(?=\\n)",
@@ -527,10 +556,13 @@
                           ]
                         },
                         {
-                          "begin": "=>",
+                          "begin": "(=>)(\\s+(;.*)\\n|\\s*\\n)?",
                           "beginCaptures": {
-                            "0": {
+                            "1": {
                               "name": "storage.type.function.arrow.ahk2"
+                            },
+                            "3": {
+                              "name": "comment.inline.ahk2"
                             }
                           },
                           "name": "meta.block.property.setter.body.ahk2",
@@ -582,10 +614,13 @@
                           ]
                         },
                         {
-                          "begin": "=>",
+                          "begin": "(=>)(\\s+(;.*)\\n|\\s*\\n)?",
                           "beginCaptures": {
-                            "0": {
+                            "1": {
                               "name": "storage.type.function.arrow.ahk2"
+                            },
+                            "3": {
+                              "name": "comment.inline.ahk2"
                             }
                           },
                           "name": "meta.block.property.getter.body.ahk2",
@@ -607,10 +642,13 @@
                   ]
                 },
                 {
-                  "begin": "=>",
+                  "begin": "(=>)(\\s+(;.*)\\n|\\s*\\n)?",
                   "beginCaptures": {
-                    "0": {
+                    "1": {
                       "name": "storage.type.function.arrow.ahk2"
+                    },
+                    "3": {
+                      "name": "comment.inline.ahk2"
                     }
                   },
                   "name": "meta.block.property.getter.body.ahk2",
