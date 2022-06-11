@@ -458,14 +458,16 @@ async function setInterpreter() {
 			return;
 		for (let file of readdirSync(dirpath)) {
 			let path = resolve(dirpath, file);
-			if (statSync(path).isDirectory()) {
-				for (file of readdirSync(path)) {
-					let path2 = resolve(path, file);
-					if (file.toLowerCase().endsWith('.exe') && !statSync(path2).isDirectory())
-						paths.push(path2);
-				}
-			} else if (file.toLowerCase().endsWith('.exe'))
-				paths.push(path);
+			try {
+				if (statSync(path).isDirectory()) {
+					for (file of readdirSync(path)) {
+						let path2 = resolve(path, file);
+						if (file.toLowerCase().endsWith('.exe') && !statSync(path2).isDirectory())
+							paths.push(path2);
+					}
+				} else if (file.toLowerCase().endsWith('.exe'))
+					paths.push(path);
+			} catch { }
 		}
 		(await getAHKversion(paths)).map((label, i) => {
 			if (label.match(/\bautohotkey.*?2\./i))
