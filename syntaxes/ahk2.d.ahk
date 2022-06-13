@@ -1596,7 +1596,7 @@ ObjAddRef(Ptr) => Number
 /**
  * Create a binding function object, which can call methods of the specified object.
  */
-ObjBindMethod(Obj, Method, Params*) => Func
+ObjBindMethod(Obj, Method := 'Call', Params*) => Func
 
 /**
  * Convert the address to a suitable reference.

@@ -1596,7 +1596,7 @@ ObjAddRef(Ptr) => Number
 /**
  * 创建一个绑定函数对象, 它能调用指定对象的方法.
  */
-ObjBindMethod(Obj, Method, Params*) => Func
+ObjBindMethod(Obj, Method := 'Call', Params*) => Func
 
 /**
  * 将地址转换为一个合适的引用.
