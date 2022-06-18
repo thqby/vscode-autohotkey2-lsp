@@ -1,3 +1,11 @@
+## 1.3.6
+- 修复格式化错误
+- 修复部分类型推导失败
+- 修复在`coc.nvim`中获取配置失败导致语言服务器无法启动
+- 修复[#102](https://github.com/thqby/vscode-autohotkey2-lsp/issues/102)
+- 修复[#104](https://github.com/thqby/vscode-autohotkey2-lsp/issues/104)
+- 修复[#105](https://github.com/thqby/vscode-autohotkey2-lsp/issues/105)
+
 ## 1.3.5
 - 修复[#99](https://github.com/thqby/vscode-autohotkey2-lsp/issues/99)
 - 修复语法高亮的错误 [#101](https://github.com/thqby/vscode-autohotkey2-lsp/issues/101)

@@ -115,6 +115,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					}
 				}
 			}
+			if (ts = ahkvars['any'])
+				tps.push(ts);
 			for (const node of tps) {
 				switch (node.kind) {
 					case SymbolKind.Class:
@@ -168,7 +170,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							props[n].detail = '(...) ' + props[n].label;
 			}
 			for (const cl in ahkvars) {
-				if ((isobj && cl === 'object') || (isfunc && cl === 'func') || (isclass && cl === 'class') || !ahkvars[cl].children)
+				if ((isobj && cl === 'object') || (isfunc && cl === 'func') || (isclass && cl === 'class') || cl === 'any' || !ahkvars[cl].children)
 					continue;
 				let cls: DocumentSymbol[] = [];
 				ahkvars[cl].children?.map((it: any) => {

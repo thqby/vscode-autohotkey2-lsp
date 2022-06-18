@@ -401,7 +401,7 @@ export class Lexer {
 					}
 					flags.had_comment = false;
 					last_text = token_text_low;
-				} else flags.had_comment = token_type === 'TK_INLINE_COMMENT';
+				} else flags.had_comment = token_type.endsWith('_COMMENT');
 			}
 
 			sweet_code = output_lines[0].text.join('');
@@ -4009,7 +4009,7 @@ export class Lexer {
 			prefix = 'NONE';
 
 			if (last_type === 'TK_END_BLOCK') {
-				if (end_of_object || !(token_type === 'TK_RESERVED' && in_array(token_text_low, ['else', 'until', 'catch', 'finally']))) {
+				if (end_of_object || flags.had_comment || !(token_type === 'TK_RESERVED' && in_array(token_text_low, ['else', 'until', 'catch', 'finally']))) {
 					prefix = 'NEWLINE';
 				} else {
 					if (opt.brace_style === "expand" || opt.brace_style === "end-expand") {
@@ -4055,7 +4055,7 @@ export class Lexer {
 					|| (token_text_low === 'catch' && flags.last_word === 'try')
 					|| (token_text_low === 'finally' && flags.last_word.match(/^(catch|try)$/i))) {
 					if (just_added_newline()) {
-						if (flags.last_text === '}')
+						if (flags.last_text === '}' && !flags.had_comment)
 							trim_output(true);
 					} else {
 						let line = output_lines[output_lines.length - 1];
@@ -4180,7 +4180,7 @@ export class Lexer {
 					}
 					if (had_comment) {
 						let line = output_lines[output_lines.length - 1].text, comment = [];
-						if (line[line.length - 1].charAt(0) === ';') {
+						if (line.length && line[line.length - 1].charAt(0) === ';') {
 							comment.push(line.pop());
 							while (line.length > 0 && in_array(line[line.length - 1], ['\t', ' ']))
 								comment.unshift(line.pop());
@@ -5048,7 +5048,7 @@ export function detectVariableType(doc: Lexer, name: string, pos?: Position) {
 		return [name];
 	else if (name === 'a_args')
 		return ['#array'];
-	else if (name.substr(0, 2) === 'a_')
+	else if (name.substring(0, 2) === 'a_')
 		return ['#string'];
 	let scope = pos ? doc.searchScopedNode(pos) : undefined, types: any = {}, ite: Variable | undefined;
 	let uri = doc.uri, dec: any, tt: DocumentSymbol | undefined, list = doc.relevance, ts: string[] | undefined;
@@ -5144,10 +5144,11 @@ export function detectVariableType(doc: Lexer, name: string, pos?: Position) {
 }
 
 export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: string): string[] {
-	if (hasdetectcache[exp] !== undefined)
-		return hasdetectcache[exp] || [];
-	hasdetectcache[exp] = false;
-	return hasdetectcache[exp] = detect(doc, exp, pos, 0, fullexp);
+	let tz = `${exp.trim()},${doc.uri},${pos.line},${pos.character}`;
+	if (hasdetectcache[tz] !== undefined)
+		return hasdetectcache[tz] || [];
+	hasdetectcache[tz] = false;
+	return hasdetectcache[tz] = detect(doc, exp, pos, 0, fullexp);
 	function detect(doc: Lexer, exp: string, pos: Position, deep: number = 0, fullexp?: string): string[] {
 		let t: string | RegExpMatchArray | null, tps: string[] = [];
 		exp = exp.replace(/#any(\(\)|\.(\w|[^\x00-\x7f])+)+/g, '#any').replace(/\b(true|false)\b/gi, '#number');

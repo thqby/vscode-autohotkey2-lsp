@@ -143,6 +143,10 @@ connection.onInitialized(async () => {
 connection.onDidChangeConfiguration(async (change) => {
 	if (hasConfigurationCapability) {
 		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
+		if (!newset) {
+			connection.window.showWarningMessage('Failed to obtain the configuration');
+			return;
+		}
 		let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
 		if (typeof newset.AutoLibInclude === 'string')
 			newset.AutoLibInclude = LibIncludeType[newset.AutoLibInclude] as unknown as LibIncludeType;

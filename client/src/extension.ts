@@ -360,8 +360,7 @@ async function begindebug(extlist: string[], debugexts: any, params = false, att
 			useAnnounce: 'detail',
 			useAutoJumpToError: true,
 			useDebugDirective: true,
-			usePerfTips: true,
-			stopOnEntry: true
+			usePerfTips: true
 		};
 		for (const t in debugexts)
 			if (debugexts[t] === extname) {
