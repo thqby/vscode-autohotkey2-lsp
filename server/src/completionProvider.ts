@@ -334,7 +334,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 												l = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/').toLowerCase();
 												if (!l.match(/\.\w+$/))
 													l = l + '.dll';
-												if (l.includes(':')) onlyfile = false;
+												if (l.includes(':')) onlyfile = false, dlls[l] = 1;
 												else if (l.includes('/')) {
 													if (l.startsWith('/'))
 														dlls[doc.scriptpath + l] = 1;
@@ -348,7 +348,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 																	onlyfile = false;
 															}
 														});
-														if (onlyfile) dlls[d.scriptpath + '/' + l] = 1;
+														if (onlyfile)
+															dlls[l] = dlls[d.scriptpath + '/' + l] = 1;
 													});
 												}
 												getDllExport(Object.keys(dlls), true).map(it => additem(it, CompletionItemKind.Function));
