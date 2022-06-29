@@ -2537,7 +2537,7 @@ export class Lexer {
 				return undefined;
 			}
 
-			function is_builtinvar(name: string): boolean {
+			function is_builtinvar(name: string, mode = 0): boolean {
 				if (mode === 2)
 					return false;
 				if (builtin_variable.includes(name) || (h && builtin_variable_h.includes(name)))
@@ -2547,7 +2547,7 @@ export class Lexer {
 
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
 				let _low = token.content.toLowerCase();
-				if (token.ignore || is_builtinvar(_low)) {
+				if (token.ignore || is_builtinvar(_low, md)) {
 					if (token.semantic)
 						delete token.semantic;
 					return false;
