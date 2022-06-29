@@ -21,7 +21,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 		if (triggerKind === 2)
 			return;
 		triggerchar = '';
-	} else {
+	} else if (content.pre.startsWith('#')) {
 		for (let i = 0; i < position.character; i++) {
 			char = lt.charAt(i);
 			if (quote === char) {
@@ -232,7 +232,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				let extreg = isdll ? new RegExp(/\.(dll|ocx|cpl)$/i) : inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i), ts = tt.replace(/['"<>]/g, '').replace(/^.*[\\/]/, '');
 				if (ts.includes('*'))
 					return undefined;
-				let expg = new RegExp((ts.match(/[^\w]/) ? ts.replace(/(.)/g, '$1.*') : '(' + ts.replace(/(.)/g, '$1.*') + '|[^\\w])').replace(/\.\./, '\\..'), 'i');
+				let ep = new RegExp((ts.match(/[^\w]/) ? ts.replace(/(.)/g, '$1.*') : '(' + ts.replace(/(.)/g, '$1.*') + '|[^\\w])').replace(/\.\./, '\\..'), 'i');
 				let textedit: TextEdit | undefined;
 				if (isdll)
 					paths = [(temp = doc.dlldir.get(position.line)) ? temp : doc.scriptpath, 'C:\\Windows\\System32'];
@@ -244,7 +244,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					for (let it of readdirSync(path)) {
 						try {
 							if (statSync(path + it).isDirectory()) {
-								if (expg.test(it)) {
+								if (ep.test(it)) {
 									additem(it, CompletionItemKind.Folder);
 									cpitem.command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
 									if (textedit)
@@ -252,7 +252,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 									else
 										cpitem.insertText = cpitem.label + xg;
 								}
-							} else if (extreg.test(it) && expg.test(inlib ? it = it.replace(extreg, '') : it)) {
+							} else if (extreg.test(it) && ep.test(inlib ? it = it.replace(extreg, '') : it)) {
 								additem(it, CompletionItemKind.File);
 								if (textedit)
 									cpitem.textEdit = Object.assign({}, textedit, { newText: cpitem.label + lchar });
