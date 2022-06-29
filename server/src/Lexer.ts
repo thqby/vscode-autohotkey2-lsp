@@ -1182,7 +1182,7 @@ export class Lexer {
 						}
 						let cl: Token, ex: string = '', sv = new Map(), rg: Range, beginpos = tk.offset, comm = '';
 						if (newlines === 1 && (cmm.type === 'TK_COMMENT' || cmm.type === 'TK_BLOCK_COMMENT'))
-							comm = trimcomment(cmm.content), beginpos = cmm.offset;
+							comm = trimcomment(cmm.content);
 						else cmm.type = '';
 						nexttoken();
 						if (!tk.topofline && tk.type === 'TK_RESERVED') {
