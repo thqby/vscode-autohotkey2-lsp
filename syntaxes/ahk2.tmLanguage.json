@@ -1694,7 +1694,7 @@
           "name": "keyword.operator.comparison.ahk2"
         },
         {
-          "match": "&&|!|\\|\\|",
+          "match": "\\?\\?|&&|!|\\|\\|",
           "name": "keyword.operator.logical.ahk2"
         },
         {
@@ -1726,7 +1726,7 @@
           "name": "punctuation.square.end.ahk2"
         },
         {
-          "match": "(\\?|:(?!\\:))",
+          "match": "(\\?(?!\\s*[,)])|:(?!\\:))",
           "name": "keyword.operator.ternary.ahk2"
         }
       ]

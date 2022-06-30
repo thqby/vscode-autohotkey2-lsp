@@ -179,7 +179,7 @@ export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e
 const colorregexp = new RegExp(/(?<=['"\s])(c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
 const whitespace = "\n\r\t ".split(''), digits = '0123456789'.split(''), wordchar = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$'.split('');
-const punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , : ? ^ ^= |= :: =>'.split(' ');
+const punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , ?? : ? ^ ^= |= :: =>'.split(' ');
 const line_starters = 'try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
 const reserved_words = line_starters.concat(['class', 'in', 'is', 'isset', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not', 'as', 'unset', 'super']);
 let searchcache: { [name: string]: any } = {};
@@ -762,9 +762,11 @@ export class Lexer {
 							if (tk.content === '%')
 								parsepair('%', '%');
 							else if (tk.content === '?') {
-								result.push(...parseexp(undefined, undefined, 2, ':')), next = true;
-								if (tk.content as string === ':')
-									result.push(...parseexp());
+								if (!is_optional(tk)) {
+									result.push(...parseexp(undefined, undefined, 2, ':')), next = true;
+									if (tk.content as string === ':')
+										result.push(...parseexp());
+								}
 							} else if (tk.content === ':')
 								_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
 							else if (mode === 2 && tk.content.match(/^\w+$/))
@@ -2007,9 +2009,10 @@ export class Lexer {
 								if (tk.content === '&' && (['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lk.type))) {
 									byref = true;
 									continue;
-								} else if (tk.content === '?')
-									ternarys.push(tk.offset);
-								else if (tk.content === ':')
+								} else if (tk.content === '?') {
+									if (!is_optional(tk))
+										ternarys.push(tk.offset);
+								} else if (tk.content === ':')
 									if (ternarys.pop() === undefined) {
 										if (end === ':' || incase > -1) {
 											next = false, tpexp = tpexp.slice(0, -2);
@@ -2483,9 +2486,10 @@ export class Lexer {
 						if (tk.content === '&') {
 							byref = true;
 							continue;
-						} else if (tk.content === '?')
-							ternarys.push(tk.offset);
-						else if (tk.content === ':' && ternarys.pop() === undefined)
+						} else if (tk.content === '?') {
+							if (!is_optional(tk))
+								ternarys.push(tk.offset);
+						} else if (tk.content === ':' && ternarys.pop() === undefined)
 							_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
 					}
 					byref = false;
@@ -3120,6 +3124,18 @@ export class Lexer {
 
 		function is_expression(mode: any): boolean {
 			return in_array(mode, [MODE.Expression, MODE.ForInitializer, MODE.Conditional]);
+		}
+
+		function is_optional(tk: Token): boolean {
+			if (tk.content === '?') {
+				let bak = parser_pos;
+				parser_pos = tk.offset + tk.length;
+				let t = get_token_ingore_comment();
+				parser_pos = bak;
+				if (t.type === 'TK_COMMA' || t.content === ')' || t.type === 'TK_EOF')
+					return true;
+			}
+			return false
 		}
 
 		function restore_mode(): void {
@@ -4339,14 +4355,16 @@ export class Lexer {
 				} else
 					flags.ternary_depth -= 1;
 			} else if (token_text === '?') {
-				flags.ternary_depth += 1;
-				if (!flags.indentation_level)
-					indent();
-				else if (output_lines.length) {
-					let line = output_lines[output_lines.length - 1].text;
-					if (line[flags.indentation_level - (line[0] === preindent_string ? 0 : 1)] === indent_string)
+				if (!is_optional(ck)) {
+					flags.ternary_depth += 1;
+					if (!flags.indentation_level)
 						indent();
-				}
+					else if (output_lines.length) {
+						let line = output_lines[output_lines.length - 1].text;
+						if (line[flags.indentation_level - (line[0] === preindent_string ? 0 : 1)] === indent_string)
+							indent();
+					}
+				} else space_before = space_after = false;
 			} else if (token_text === '&') {
 				if (last_type !== 'TK_WORD' && last_type !== 'TK_END_EXPR')
 					space_after = false;
