@@ -1,3 +1,10 @@
+## 1.3.7
+- 增加空值合并运算符`??`和可选参数操作符`?`
+- 修复部分dllcall补全未触发
+- 修复[#106](https://github.com/thqby/vscode-autohotkey2-lsp/issues/106)
+- 修复[#107](https://github.com/thqby/vscode-autohotkey2-lsp/issues/107)
+- 修复[#108](https://github.com/thqby/vscode-autohotkey2-lsp/issues/108)
+
 ## 1.3.6
 - 修复格式化错误
 - 修复部分类型推导失败
