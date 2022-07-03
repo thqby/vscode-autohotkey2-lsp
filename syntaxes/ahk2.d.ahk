@@ -584,7 +584,7 @@ DriveUnlock(Drive) => void
  *
  * This function has no effect when operating from within a compiled script.
  */
-Edit
+Edit()
 
 /**
  * Returns the column number of the caret (text insertion point) in the Edit control.
