@@ -578,6 +578,14 @@ DriveSetLabel(Drive, NewLabel := '') => void
  */
 DriveUnlock(Drive) => void
 
+/*
+ * The Edit function opens the current script for editing using the associated "edit" verb in the registry (or Notepad if no verb). 
+ * However, if an editor window appears to have the script already open (based on its window title), that window is activated instead of opening a new instance of the editor.
+ *
+ * This function has no effect when operating from within a compiled script.
+ */
+Edit
+
 /**
  * Returns the column number of the caret (text insertion point) in the Edit control.
  */
@@ -1367,6 +1375,18 @@ KeyWait(KeyName, Options := '') => Number
  * Enable or disable line logging or display the most recently executed script line.
  */
 ListLines([Mode])
+
+/**
+ * Displays the script's variables: their names and current contents.
+ */
+ListVars()
+
+/**
+ * Displays the hotkeys in use by the current script, whether their subroutines are currently running, and whether or not they use the keyboard or mouse hook.
+ * 
+ * This function is equivalent to selecting the View->Hotkeys menu item in the main window.
+ */
+ListHotkeys()
 
 /**
  * Return to the list of items/rows in the list view.
@@ -2417,6 +2437,18 @@ WinMaximize([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
  * Minimize the specified window to a button on the taskbar (minimize the specified window).
  */
 WinMinimize([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+
+/**
+ * Minimizes all windows.
+ * On most systems, this is equivalent to Explorer's Win+M and Win+D hotkeys.
+ */
+WinMinimizeAll()
+
+/**
+ * Unminimizes
+ * On most systems, this is equivalent to Explorer's Win+M and Win+D hotkeys.
+ */
+WinMinimizeAllUndo()
 
 /**
  * Change the position and/or size of the specified window.
