@@ -2017,8 +2017,7 @@ export class Lexer {
 				let paramsdef = true, beg = parser_pos - 1, cache: Variable[] = [], rg, la = [',', endc === ')' ? '(' : '['];
 				let byref = false, tpexp = '', info: ParamInfo = { count: 0, comma: [], miss: [], unknown: false };
 				let bb = parser_pos, bak = tk, hasexpr = false;
-				if (!tk.topofline && ((lk.type === 'TK_OPERATOR' && !lk.content.match(/(:=|\?|:)/)) || !in_array(lk.type, ['TK_START_EXPR', 'TK_WORD', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA'])
-					|| (lk.type === 'TK_WORD' && in_array(input.charAt(tk.offset - 1), whitespace))))
+				if (!tk.topofline && ((lk.type === 'TK_OPERATOR' && !lk.content.match(/(\?|:)/)) || !in_array(lk.type, ['TK_START_EXPR', 'TK_WORD', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA'])))
 					paramsdef = false;
 				if (paramsdef) {
 					while (nexttoken()) {
