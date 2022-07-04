@@ -529,6 +529,8 @@ export class Lexer {
 														tn.defaultVal = lk.content;
 												} else if (lk.content === '*')
 													tn.arr = true, j++;
+												else if (lk.content === '?')
+													tn.defaultVal = null, j++;
 												else if (lk.content === '[')
 													defVal = true;
 												else {
