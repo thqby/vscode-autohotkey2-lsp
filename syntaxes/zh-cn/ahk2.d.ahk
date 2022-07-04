@@ -22,7 +22,7 @@ ATan(Number) => Number
 /**
  * 禁用或启用用户通过键盘和鼠标与计算机交互的能力.
  */
-BlockInput(Option)
+BlockInput(Option) => void
 
 /**
  * 创建机器码地址, 当它被调用时会重定向到脚本中的函数.
@@ -390,12 +390,12 @@ DateDiff(DateTime1, DateTime2, TimeUnits) => Number
 /**
  * 设置在查找窗口时是否 '看见' 隐藏的文本. 这将影响 WinExist 和 WinActivate 等内置函数.
  */
-DetectHiddenText(Mode)
+DetectHiddenText(Mode) => void
 
 /**
  * 设置脚本是否可以'看见'隐藏的窗口.
  */
-DetectHiddenWindows(Mode)
+DetectHiddenWindows(Mode) => void
 
 /**
  * 复制文件夹, 及其所有子文件夹和文件(类似于 xcopy).
@@ -566,7 +566,7 @@ DriveLock(Drive) => void
 /**
  * 收回指定 CD/DVD 驱动器.
  */
-DriveRetract([Drive])
+DriveRetract([Drive]) => void
 
 /**
  * 更改指定驱动器的卷标签.
@@ -577,6 +577,11 @@ DriveSetLabel(Drive, NewLabel := '') => void
  * 恢复指定驱动器的弹出功能.
  */
 DriveUnlock(Drive) => void
+
+/**
+ * 在关联编辑器中打开当前脚本进行编辑.
+ */
+Edit() => void
 
 /**
  * 返回插入符号(文本插入点) 在的 Edit 控件中的列号.
@@ -1100,27 +1105,27 @@ HasProp(Value, Name) => Number
 /**
  * 指定后续创建或修改热键变体的条件.
  */
-HotIf(FuncOrExpr)
+HotIf(FuncOrExpr) => void
 
 /**
  * 指定随后创建或修改的热键变体的条件.
  */
-HotIfWinActive([WinTitle, WinText])
+HotIfWinActive([WinTitle, WinText]) => void
 
 /**
  * 指定随后创建或修改的热键变体的条件.
  */
-HotIfWinExist([WinTitle, WinText])
+HotIfWinExist([WinTitle, WinText]) => void
 
 /**
  * 指定随后创建或修改的热键变体的条件.
  */
-HotIfWinNotActive([WinTitle, WinText])
+HotIfWinNotActive([WinTitle, WinText]) => void
 
 /**
  * 指定随后创建或修改的热键变体的条件.
  */
-HotIfWinNotExist([WinTitle, WinText])
+HotIfWinNotExist([WinTitle, WinText]) => void
 
 /**
  * 在脚本运行时创建,修改,启用或禁用热键.
@@ -1346,7 +1351,7 @@ IsXDigit(Value) => Number
  * @param MaxEvents 忽略此参数以显示脚本的主窗口, 等效于选择“查看->键历史记录”菜单项.
  * 否则, 此参数设置可以记录在窗口中显示的最大键盘和鼠标事件数（默认为40, 限制为500）. 密钥历史记录也被重置, 但是主窗口未显示或刷新. 指定0以完全禁用密钥历史记录.
  */
-KeyHistory([MaxEvents])
+KeyHistory([MaxEvents]) => void
 
 /**
  * 等待按键或鼠标/操纵杆按钮被释放或按下.
@@ -1364,9 +1369,19 @@ KeyHistory([MaxEvents])
 KeyWait(KeyName, Options := '') => Number
 
 /**
+ * 显示当前脚本使用的热键, 不论它们的子程序当前是否运行, 也不论它们是否使用键盘或鼠标钩子.
+ */
+ListHotkeys() => void
+
+/**
  * 启用或禁用行日志记录或显示最近执行的脚本行.
  */
-ListLines([Mode])
+ListLines([Mode]) => void
+
+/**
+ * 显示脚本的变量: 它们的名称和当前的内容.
+ */
+ListVars() => void
 
 /**
  * 返回列表视图中的项目/行列表.
@@ -1706,7 +1721,7 @@ OutputDebug(Text) => void
 /**
  * 暂停脚本的当前线程.
  */
-Pause([NewState])
+Pause([NewState]) => void
 
 /**
  * 阻止脚本在其最后一个线程完成时自动退出, 从而使其保持在空闲状态下运行.
@@ -1796,12 +1811,12 @@ RegDeleteKey([KeyName]) => void
 /**
  * 确定字符串是否包含某个匹配模式（正则表达式）.
  */
-RegExMatch(Haystack, NeedleRegEx, &OutputVar := '', StartingPosition := 1) => Number
+RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Number
 
 /**
  * 替换字符串中匹配模式(正则表达式) 出现的地方.
  */
-RegExReplace(Haystack, NeedleRegEx, Replacement := '', &OutputVarCount := '', Limit := -1, StartingPosition := 1) => String
+RegExReplace(Haystack, NeedleRegEx, Replacement := '', &OutputVarCount?, Limit := -1, StartingPosition := 1) => String
 
 /**
  * 从注册表读取值.
@@ -1868,7 +1883,7 @@ SendInput(Keys) => void
 /**
  * 控制热键和热字串是否忽略模拟的键盘和鼠标事件.
  */
-SendLevel(Level)
+SendLevel(Level) => void
 
 /**
  * 将消息发送到窗口或控件,然后等待确认.
@@ -1878,7 +1893,7 @@ SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, Exclude
 /**
  * 使 Send 等同于 SendEvent 或 SendPlay, 而不是默认的(SendInput). 也使 Click 和 MouseMove/Click/Drag 使用指定的方法.
  */
-SendMode(Mode)
+SendMode(Mode) => void
 
 /**
  * SendInput和SendPlay使用与Send相同的语法,但通常更快,更可靠.此外,它们在发送过程中缓冲了任何物理键盘或鼠标活动,从而防止了用户的击键被散布在发送中.
@@ -1898,47 +1913,47 @@ SendText(Keys) => void
 /**
  * 设置每个控件改动函数后将发生的延迟.
  */
-SetControlDelay(Delay)
+SetControlDelay(Delay) => void
 
 /**
  * 设置在 Click 和 MouseMove/Click/Drag 中没有指定鼠标速度时使用的速度.
  */
-SetDefaultMouseSpeed(Speed)
+SetDefaultMouseSpeed(Speed) => void
 
 /**
  * 设置由Send和ControlSend发送的每次击键之后将发生的延迟.
  */
-SetKeyDelay([Delay, PressDuration, 'Play'])
+SetKeyDelay([Delay, PressDuration, 'Play']) => void
 
 /**
  * 设置每次鼠标移动或单击后发生的延迟.
  */
-SetMouseDelay(Delay [, 'Play'])
+SetMouseDelay(Delay [, 'Play']) => void
 
 /**
  * 设置Caps Lock键的状态.还可以强制按键保持打开或关闭状态.
  */
-SetCapsLockState(State)
+SetCapsLockState(State) => void
 
 /**
  * 设置NumLock键的状态. 也可以强制按键保持打开或关闭状态.
  */
-SetNumLockState(State)
+SetNumLockState(State) => void
 
 /**
  * 设置滚动锁定键的状态. 也可以强制按键保持打开或关闭状态.
  */
-SetScrollLockState(State)
+SetScrollLockState(State) => void
 
 /**
  * 在 Send 之后是否恢复 CapsLock 的状态.
  */
-SetStoreCapsLockMode(State)
+SetStoreCapsLockMode(State) => void
 
 /**
  * 设置RegRead,RegWrite,RegDelete,RegDeleteKey和注册表循环使用的注册表视图.
  */
-SetRegView(RegView)
+SetRegView(RegView) => void
 
 /**
  * 在指定的时间间隔自动重复调用函数.
@@ -1957,22 +1972,22 @@ SetTimer([Callback, Period := 250, Priority := 0]) => void
 /**
  * 在诸如WinWait之类的命令中设置WinTitle参数的匹配行为.
  */
-SetTitleMatchMode(MatchModeOrSpeed)
+SetTitleMatchMode(MatchModeOrSpeed) => void
 
 /**
  * 设置在每次执行窗口函数(例如 WinActivate) 后的延时.
  */
-SetWinDelay(Delay)
+SetWinDelay(Delay) => void
 
 /**
  * 更改脚本当前的工作目录.
  */
-SetWorkingDir(DirName)
+SetWorkingDir(DirName) => void
 
 /**
  * 关机, 重启或注销系统.
  */
-Shutdown(Code)
+Shutdown(Code) => void
 
 /*
  * 返回 Number 的正弦.
@@ -2162,7 +2177,7 @@ StrPut(String, Target [, Length], Encoding := '') => Number
  * 
  * "Locale": 根据当前用户的区域设置规则, 搜索是不区分大小写的. 例如, 在大多数英语及西欧地区, 不仅将 A-Z 视为等同于它们的小写形式, 同时也将非-ASCII 字母(如 Ä 和 Ü) 视为等同的. 根据被比较字符串的性质, Locale 比 Off 慢 1 到 8 倍.
  */
-StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputVarCount := '', Limit := -1) => String
+StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputVarCount?, Limit := -1) => String
 
 /**
  * 使用指定的分隔符将字符串分成子字符串数组.
@@ -2223,7 +2238,7 @@ Tan(Number) => Number
  * 
  * Thread 'Interrupt' [, Duration, LineCount]
  */
-Thread(SubFunction [, Value1, Value2])
+Thread(SubFunction [, Value1, Value2]) => void
 
 /**
  * 在屏幕的任意位置创建置顶的窗口.
@@ -2276,7 +2291,7 @@ VarSetStrCapacity(&TargetVar [, RequestedCapacity]) => Number
 /**
  * 比较两个版本字符串.
  */
-VerCompare(VersionA, VersionB)
+VerCompare(VersionA, VersionB) => Number
 
 /**
  * 激活指定的窗口.
@@ -2419,6 +2434,16 @@ WinMaximize([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 WinMinimize([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
+ * 最小化所有窗口.
+ */
+WinMinimizeAll() => void
+
+/**
+ * 还原所有窗口.
+ */
+WinMinimizeAllUndo() => void
+
+/**
  * 更改指定窗口的位置和/或大小.
  */
 WinMove(X, Y [, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
@@ -2549,9 +2574,19 @@ class Array extends Object {
 	Clone() => Array
 
 	/**
+	 * 定义请求没有值的元素时返回的默认值.
+	 */
+	Default => Any
+
+	/**
 	 * 删除数组元素的值, 使索引不包含值.
 	 */
 	Delete(Index) => Any
+
+	/**
+	 * 返回给定索引处的值, 或默认值.
+	 */
+	Get(Index [, Default]) => Any
 
 	/**
 	 * 如果 Index 有效且在该位置有一个值, 则返回 true, 否则返回 false.

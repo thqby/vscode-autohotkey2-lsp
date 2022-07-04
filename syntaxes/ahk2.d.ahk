@@ -22,7 +22,7 @@ ATan(Number) => Number
 /**
  * Disable or enable the user's ability to interact with the computer through the keyboard and mouse.
  */
-BlockInput(Option)
+BlockInput(Option) => void
 
 /**
  * Create a machine code address, when it is called, it will be redirected to the function in the script.
@@ -390,12 +390,12 @@ DateDiff(DateTime1, DateTime2, TimeUnits) => Number
 /**
  * Set whether to'see' hidden text when searching for windows. This will affect built-in functions such as WinExist and Winactivate.
  */
-DetectHiddenText(Mode)
+DetectHiddenText(Mode) => void
 
 /**
  * Set whether the script can'see' the hidden window.
  */
-DetectHiddenWindows(Mode)
+DetectHiddenWindows(Mode) => void
 
 /**
  * Copy the folder, and all its subfolders and files (similar to xcopy).
@@ -566,7 +566,7 @@ DriveLock(Drive) => void
 /**
  * Recover designated CD/DVD drives.
  */
-DriveRetract([Drive])
+DriveRetract([Drive]) => void
 
 /**
  * Change the volume label of the specified drive.
@@ -577,6 +577,11 @@ DriveSetLabel(Drive, NewLabel := '') => void
  * Restore the eject function of the specified drive.
  */
 DriveUnlock(Drive) => void
+
+/**
+ * Opens the current script for editing in the associated editor.
+ */
+Edit() => void
 
 /**
  * Returns the column number of the caret (text insertion point) in the Edit control.
@@ -1100,27 +1105,27 @@ HasProp(Value, Name) => Number
 /**
  * Specify the conditions for subsequent creation or modification of hotkey variants.
  */
-HotIf(FuncOrExpr)
+HotIf(FuncOrExpr) => void
 
 /**
  * Specify the conditions for the hotkey variants to be subsequently created or modified.
  */
-HotIfWinactive([WinTitle, WinText])
+HotIfWinactive([WinTitle, WinText]) => void
 
 /**
  * Specify the conditions for the hotkey variants to be subsequently created or modified.
  */
-HotIfWinExist([WinTitle, WinText])
+HotIfWinExist([WinTitle, WinText]) => void
 
 /**
  * Specify the conditions for the hotkey variants to be subsequently created or modified.
  */
-HotIfWinNotactive([WinTitle, WinText])
+HotIfWinNotactive([WinTitle, WinText]) => void
 
 /**
  * Specify the conditions for the hotkey variants to be subsequently created or modified.
  */
-HotIfWinNotExist([WinTitle, WinText])
+HotIfWinNotExist([WinTitle, WinText]) => void
 
 /**
  * Create, modify, enable or disable hotkeys while the script is running.
@@ -1346,7 +1351,7 @@ IsXDigit(Value) => Number
  * @param MaxEvents Ignore this parameter to display the main window of the script, which is equivalent to selecting the "View -> Key History" menu item.
  * Otherwise, this parameter setting can record the maximum number of keyboard and mouse events displayed in the window (the default is 40, the limit is 500). The key history is also reset, but the main window is not displayed or refreshed. Specify 0 to complete Disable key history.
  */
-KeyHistory([MaxEvents])
+KeyHistory([MaxEvents]) => void
 
 /**
  * Wait for the key or mouse/joystick button to be released or pressed.
@@ -1364,9 +1369,19 @@ KeyHistory([MaxEvents])
 KeyWait(KeyName, Options := '') => Number
 
 /**
+ * Displays the hotkeys in use by the current script, whether their subroutines are currently running, and whether or not they use the keyboard or mouse hook.
+ */
+ListHotkeys() => void
+
+/**
  * Enable or disable line logging or display the most recently executed script line.
  */
-ListLines([Mode])
+ListLines([Mode]) => void
+
+/**
+ * Displays the script's variables: their names and current contents.
+ */
+ListVars() => void
 
 /**
  * Return to the list of items/rows in the list view.
@@ -1706,7 +1721,7 @@ OutputDebug(Text) => void
 /**
  * Pause the current thread of the script.
  */
-Pause([Newstate])
+Pause([Newstate]) => void
 
 /**
  * Prevent the script from automatically exiting when its last thread finishes, thereby keeping it running in an idle state.
@@ -1796,12 +1811,12 @@ RegDeleteKey([KeyName]) => void
 /**
  * Determine whether the string contains a certain matching pattern (regular expression).
  */
-RegExMatch(Haystack, NeedleRegEx, &OutputVar := '', StartingPosition := 1) => Number
+RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Number
 
 /**
  * Replace the place where the matching pattern (regular expression) appears in the string.
  */
-RegExReplace(Haystack, NeedleRegEx, Replacement := '', &OutputVarCount := '', Limit := -1, StartingPosition := 1) => String
+RegExReplace(Haystack, NeedleRegEx, Replacement := '', &OutputVarCount?, Limit := -1, StartingPosition := 1) => String
 
 /**
  * Read the value from the registry.
@@ -1868,7 +1883,7 @@ SendInput(Keys) => void
 /**
  * Controls whether hotkeys and hotstrings ignore simulated keyboard and mouse events.
  */
-SendLevel(Level)
+SendLevel(Level) => void
 
 /**
  * Send the message to the window or control, and then wait for confirmation.
@@ -1878,7 +1893,7 @@ SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, Exclude
 /**
  * Make Send equal to SendEvent or SendPlay, instead of the default (SendInput). Also make Click and MouseMove/Click/Drag use specified methods.
  */
-SendMode(Mode)
+SendMode(Mode) => void
 
 /**
  * SendInput and SendPlay use the same syntax as Send, but are generally faster and more reliable. In addition, they buffer any physical keyboard or mouse activity during the sending process, thus preventing the user's keystrokes from being scattered in the sending.
@@ -1898,47 +1913,47 @@ SendText(Keys) => void
 /**
  * Set the delay that will occur after each control changes the function.
  */
-SetControlDelay(Delay)
+SetControlDelay(Delay) => void
 
 /**
  * Set the speed used when the mouse speed is not specified in click and MouseMove/click/Drag.
  */
-SetDefaultMousespeed(Speed)
+SetDefaultMouseSpeed(Speed) => void
 
 /**
  * Set the delay that will occur after each keystroke sent by send and controlsend.
  */
-SetKeyDelay([Delay, PressDuration, 'Play'])
+SetKeyDelay([Delay, PressDuration, 'Play']) => void
 
 /**
  * Set the delay that occurs after each mouse move or click.
  */
-SetMouseDelay(Delay [, 'Play'])
+SetMouseDelay(Delay [, 'Play']) => void
 
 /**
  * Set the state of the caps Lock key. You can also force the key to stay on or off.
  */
-SetCapsLockState(State)
+SetCapsLockState(State) => void
 
 /**
  * Set the state of the NumLock key. You can also force the key to remain open or closed.
  */
-SetNumLockState(State)
+SetNumLockState(State) => void
 
 /**
  * Set the state of the scroll lock key. You can also force the key to stay on or off.
  */
-SetScrollLockState(State)
+SetScrollLockState(State) => void
 
 /**
  * Whether to restore the capsLock state after send.
  */
-SetStoreCapsLockMode(State)
+SetStoreCapsLockMode(State) => void
 
 /**
  * Set RegRead, RegWrite, RegDelete, RegDeleteKey and the registry view used by the registry cycle.
  */
-SetRegView(RegView)
+SetRegView(RegView) => void
 
 /**
  * Automatically call the function repeatedly at the specified time interval.
@@ -1957,22 +1972,22 @@ SetTimer([Callback, Period := 250, Priority := 0]) => void
 /**
  * Set the matching behavior of WinTitle parameters in commands such as WinWait.
  */
-SetTitleMatchMode(MatchModeOrspeed)
+SetTitleMatchMode(MatchModeOrspeed) => void
 
 /**
  * Set the delay after each execution of a window function (such as Winactivate).
  */
-SetWinDelay(Delay)
+SetWinDelay(Delay) => void
 
 /**
  * change the current working directory of the script.
  */
-SetWorkingDir(DirName)
+SetWorkingDir(DirName) => void
 
 /**
  * shut down, restart or log off the system.
  */
-Shutdown(Code)
+Shutdown(Code) => void
 
 /*
  * Returns the sine of Number.
@@ -2162,7 +2177,7 @@ StrPut(String, Target [, Length], Encoding := '') => Number
  * 
  * "Locale": According to the current user's locale rules, the search is not case sensitive. For example, in most English and Western European regions, not only treats AZ as equivalent to their lowercase form, but also treats non-ASCII letters ( Such as Ä and Ü) are considered equivalent. Depending on the nature of the string being compared, Locale is 1 to 8 times slower than Off.
  */
-StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputVarCount := '', Limit := -1) => String
+StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputVarCount?, Limit := -1) => String
 
 /**
  * Use the specified delimiter to divide the string into an array of substrings.
@@ -2223,7 +2238,7 @@ Tan(Number) => Number
  * 
  * Thread 'Interrupt' [, Duration, LineCount]
  */
-Thread(SubFunction [, Value1, Value2])
+Thread(SubFunction [, Value1, Value2]) => void
 
 /**
  * Create a top window anywhere on the screen.
@@ -2276,7 +2291,7 @@ VarSetStrCapacity(&TargetVar [, RequestedCapacity]) => Number
 /**
  * Compare two version strings.
  */
-VerCompare(VersionA, VersionB)
+VerCompare(VersionA, VersionB) => Number
 
 /**
  * Activate the specified window.
@@ -2419,6 +2434,16 @@ WinMaximize([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 WinMinimize([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
+ * Minimizes all windows.
+ */
+WinMinimizeAll() => void
+
+/**
+ * Unminimizes all windows.
+ */
+WinMinimizeAllUndo() => void
+
+/**
  * Change the position and/or size of the specified window.
  */
 WinMove(X, Y [, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
@@ -2549,9 +2574,19 @@ class Array extends Object {
 	Clone() => Array
 
 	/**
+	 * Defines the default value returned when an element with no value is requested.
+	 */
+	Default => Any
+
+	/**
 	 * Delete the value of the array element so that the index does not contain a value.
 	 */
 	Delete(Index) => Any
+
+	/**
+	 * Returns the value at a given index, or a default value.
+	 */
+	Get(Index [, Default]) => Any
 
 	/**
 	 * If Index is valid and there is a value at that position, it returns true, otherwise it returns false.

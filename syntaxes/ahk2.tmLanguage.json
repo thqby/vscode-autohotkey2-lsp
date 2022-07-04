@@ -1281,8 +1281,8 @@
               "name": "entity.name.function.method.ahk2"
             },
             {
-              "match": "\\b(?i:true|false)\\b",
-              "name": "constant.language.true.ahk2"
+              "match": "\\b(?i:true|false|unset)\\b",
+              "name": "constant.language.ahk2"
             },
             {
               "match": "\\b(?<!\\.)(?i:this|super)\\b",
@@ -1726,7 +1726,11 @@
           "name": "punctuation.square.end.ahk2"
         },
         {
-          "match": "(\\?(?!\\s*[,)])|:(?!\\:))",
+          "match": "\\?(?=\\s*([,)\\]}]|$))",
+          "name": "punctuation.optional.ahk2"
+        },
+        {
+          "match": "\\?|:(?!\\:)",
           "name": "keyword.operator.ternary.ahk2"
         }
       ]
@@ -1762,8 +1766,8 @@
           "name": "punctuation.separator.comma.ahk2"
         },
         {
-          "match": "(?!<\\.)\\b(?i:(true|false))\\b",
-          "name": "constant.language.true.ahk2"
+          "match": "(?!<\\.)\\b(?i:(true|false|unset))\\b",
+          "name": "constant.language.ahk2"
         }
       ]
     },
@@ -2202,8 +2206,8 @@
               "include": "#object_property"
             },
             {
-              "match": "\\b(?i:true|false)\\b",
-              "name": "constant.language.true.ahk2"
+              "match": "\\b(?i:true|false|unset)\\b",
+              "name": "constant.language.ahk2"
             },
             {
               "match": "\\b(?<!\\.)(?i:this|super)\\b",

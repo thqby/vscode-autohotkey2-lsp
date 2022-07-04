@@ -101,6 +101,8 @@ export function openFile(path: string): TextDocument {
 			}
 			buf = buf.toString('utf8');
 		}
+		if (path === path.toLowerCase())
+			path = restorePath(path);
 		return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, buf);
 	}
 }

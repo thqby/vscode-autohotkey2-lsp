@@ -162,7 +162,7 @@ export async function generateAuthor() {
 	];
 	await executeCommands([{ command: 'undo', wait: true }, { command: 'undo', wait: true }]);
 	let { uri, pos } = await connection.sendRequest('ahk2.getpos'), doc = lexers[uri = uri.toLowerCase()];
-	let tk: { type: string, content: string, offset: number } = doc.get_tokon(0), range = Range.create(0, 0, 0, 0);
+	let tk: { type: string, content: string, offset: number } = doc.get_token(0), range = Range.create(0, 0, 0, 0);
 	if (tk.type.endsWith('COMMENT')) {
 		if (tk.type === 'TK_BLOCK_COMMENT' && tk.content.match(/@(version|版本)\b/i))
 			return;

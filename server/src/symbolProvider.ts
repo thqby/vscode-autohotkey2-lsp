@@ -1,5 +1,5 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
-import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, getClassMembers, ParamInfo } from './Lexer';
+import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, getClassMembers, ParamInfo, samenameerr } from './Lexer';
 import { diagnostic } from './localize';
 import { ahkvars, connection, extsettings, getallahkfiles, inBrowser, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
 import { URI } from 'vscode-uri';
@@ -85,15 +85,19 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			if (info.children) {
 				let inherit: { [key: string]: DocumentSymbol } = {}, gg = false;
 				if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Method || info.kind === SymbolKind.Event) {
-					let p = info as FuncNode, ps: any = {}, ll = '';
+					let p = info as FuncNode, ps: any = {}, ll = '', fn_is_static = info.kind === SymbolKind.Function && (<FuncNode>info).static;
 					for (const k in p.global)
 						inherit[k] = p.global[k];
 					(<FuncNode>info).params?.map(it => {
-						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true, converttype(it, false, SymbolKind.TypeParameter);
+						ps[ll] = true, converttype(it, false, SymbolKind.TypeParameter);
+						inherit[ll = it.name.toLowerCase()] = it;
 					});
 					for (const k in p.local)
-						if (k && !ps[k])
-							inherit[k] = p.local[k], result.push(inherit[k]), converttype(inherit[k]);
+						if (k && !ps[k]) {
+							let it = p.local[k];
+							result.push(it), converttype(it);
+							inherit[k] = it;
+						}
 					if (p.assume === FuncScope.GLOBAL || global) {
 						gg = true;
 					} else {
@@ -109,7 +113,11 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 									inherit['super'] = DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg);
 							}
 							if (kk.kind === SymbolKind.Function || kk.kind === SymbolKind.Method || kk.kind === SymbolKind.Event)
-								for (const k in vars)
+								if (fn_is_static) {
+									for (const k in vars)
+										if (!inherit[k] && ((<Variable>vars[k]).static || vars[k] === gvar[k]))
+											inherit[k] = vars[k];
+								} else for (const k in vars)
 									if (!inherit[k])
 										inherit[k] = vars[k];
 						}
@@ -196,18 +204,18 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		}
 		function err_extends(doc: Lexer, it: ClassNode, not_exist = true) {
 			let o = doc.document.offsetAt(it.selectionRange.end) + 1, tk: Token;
-			tk = doc.get_tokon(o);
+			tk = doc.get_token(o);
 			if (tk.content.toLowerCase() === 'extends')
-				tk = doc.get_tokon(o = tk.offset + tk.length);
+				tk = doc.get_token(o = tk.offset + tk.length);
 			while (tk.type !== 'TK_WORD')
-				tk = doc.get_tokon(o = tk.offset + tk.length);
+				tk = doc.get_token(o = tk.offset + tk.length);
 			o = tk.offset;
 			let rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
 			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Error });
 		}
 	}
 	function converttype(it: DocumentSymbol, islib: boolean = false, kind?: number) {
-		let tk: Token, stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined;
+		let tk: Token, stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined, offset: number;
 		switch (kind || it.kind) {
 			case SymbolKind.TypeParameter:
 				if (it.range.start.line === 0 && it.range.start.character === 0)
@@ -220,10 +228,12 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			case SymbolKind.Function:
 				st = SemanticTokenTypes.function; break;
 		}
-		if (st !== undefined && (tk = doc.tokens[doc.document.offsetAt(it.selectionRange.start)])) {
-			if ((stk = tk.semantic) === undefined)
+		if (st !== undefined && (tk = doc.tokens[offset = doc.document.offsetAt(it.selectionRange.start)])) {
+			if ((stk = tk.semantic) === undefined) {
 				tk.semantic = stk = { type: st };
-			else if (kind !== undefined)
+				if (it.kind === SymbolKind.Variable && (<Variable>it).def && (kind === SymbolKind.Class || kind === SymbolKind.Function))
+					doc.addDiagnostic(samenameerr(it, { kind } as DocumentSymbol), offset, it.name.length);
+			} else if (kind !== undefined)
 				stk.type = st;
 			if (st < 3)
 				stk.modifier = (stk.modifier || 0) | (1 << SemanticTokenModifiers.readonly) | (islib ? 1 << SemanticTokenModifiers.defaultLibrary : 0);
@@ -255,7 +265,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 		if (isVariadic) {
 			while (paramcount > 0 && node.params[paramcount - 1].defaultVal !== undefined) --paramcount;
 			for (let i = 0; i < paramcount; ++i)
-				if (node.params[i].defaultVal === null)
+				if (node.params[i].defaultVal === false)
 					--paramcount;
 			if (pc < paramcount && !paraminfo.unknown)
 				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount + '+', pc), range: info.range, severity: 1 });
@@ -268,7 +278,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 			let maxcount = paramcount, l = paraminfo.miss.length, t = 0;
 			while (paramcount > 0 && node.params[paramcount - 1].defaultVal !== undefined) --paramcount;
 			for (let i = 0; i < paramcount; ++i)
-				if (node.params[i].defaultVal === null)
+				if (node.params[i].defaultVal === false)
 					--paramcount;
 			while (l > 0) {
 				if ((t = paraminfo.miss[l - 1]) >= maxcount) {
@@ -287,7 +297,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 					if (index === 0)
 						o = info.offset as number + info.name.length + 1;
 					else o = paraminfo.comma[index - 1] + 1;
-					if ((t = doc.get_tokon(o)).content !== '&')
+					if ((t = doc.get_token(o)).content !== '&')
 						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset, t.length, 2);
 				}
 			});

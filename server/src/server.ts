@@ -262,7 +262,7 @@ connection.onRequest('ahk2.getAHKversion', getAHKversion);
 connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
 	let doc = lexers[uri.toLowerCase()];
 	if (doc) {
-		let tk = doc.get_tokon(0);
+		let tk = doc.get_token(0);
 		if ((tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') && tk.content.match(/^\s*[;*]?\s*@(date|version)\b/im)) {
 			return {
 				uri: uri,

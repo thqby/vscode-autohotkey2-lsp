@@ -70,13 +70,13 @@ export class PEFile {
 		for (let i = 0; i < nameCount; i++) {
 			let nameOffset = imageData.readUInt32LE(nameTblPtr), ordinal = imageData.readUInt16LE(ordTblPtr), fnOffset = imageData.readUInt32LE(funcTblPtr + ordinal * 4);
 			nameTblPtr += 4, ordTblPtr += 2, ordinalList[ordinal] = true;
-			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? this.getAscii(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substr(1);
+			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? this.getAscii(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substring(1);
 			Exports.Functions.push({ Name: this.getAscii(nameOffset), EntryPoint, Ordinal: OrdinalBase + ordinal });
 		}
 		for (let ordinal = 0; nameCount < funcCount; ordinal++, nameCount++) {
 			while (ordinalList[ordinal]) ordinal++;
 			let fnOffset = imageData.readUInt32LE(funcTblPtr + ordinal * 4);
-			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? this.getAscii(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substr(1);
+			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? this.getAscii(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substring(1);
 			ordinalList[ordinal] = true, Exports.Functions.splice(ordinal, 0, { Name: '', EntryPoint, Ordinal: OrdinalBase + ordinal });
 		}
 		return resinfo.data = Exports;
