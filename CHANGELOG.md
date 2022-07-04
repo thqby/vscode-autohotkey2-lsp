@@ -1,3 +1,7 @@
+## 1.4.1
+- 修复[#114](https://github.com/thqby/vscode-autohotkey2-lsp/issues/114)
+- 修复[#115](https://github.com/thqby/vscode-autohotkey2-lsp/issues/115)
+
 ## 1.4.0
 - 适配beta.6语法解析
 - 增加遗漏的内置函数[#111](https://github.com/thqby/vscode-autohotkey2-lsp/issues/111)
