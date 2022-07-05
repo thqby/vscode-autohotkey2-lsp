@@ -2006,125 +2006,121 @@ export class Lexer {
 				let paramsdef = true, beg = parser_pos - 1, cache: Variable[] = [], rg, la = [',', endc === ')' ? '(' : '['];
 				let byref = false, tpexp = '', info: ParamInfo = { count: 0, comma: [], miss: [], unknown: false };
 				let bb = parser_pos, bak = tk, hasexpr = false;
-				if (!tk.topofline && ((lk.type === 'TK_OPERATOR' && !lk.content.match(/(\?|:)/)) || !['TK_START_EXPR', 'TK_WORD', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA'].includes(lk.type)))
-					paramsdef = false;
-				if (paramsdef) {
-					while (nexttoken()) {
-						if (tk.content === endc) {
-							if (lk.type === 'TK_COMMA') {
-								types['#void'] = true;
-								info.miss.push(info.count++);
-								Object.defineProperty(types, 'paraminfo', { value: info, configurable: true });
-								result.push(...cache);
-								return;
-							}
-							break;
-						} else if (tk.type === 'TK_WORD') {
-							info.count++;
-							if (la.includes(lk.content)) {
-								lk = tk, tk = get_token_ingore_comment(cmm);
-								if (tk.content === ',' || tk.content === endc) {
-									if (lk.content.charAt(0).match(/[\d$]/))
-										_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
-									else if (is_builtinvar(lk.content.toLowerCase())) {
-										paramsdef = false, info.count--;
-										break;
-									}
-									tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg);
-									if (byref)
-										byref = false, (<Variable>tn).ref = (<Variable>tn).def = true, tpexp = '#varref';
-									else tpexp = tn.name;
-									cache.push(tn), bb = parser_pos, bak = tk;
-									if (tk.content === ',')
-										info.comma.push(tk.offset);
-									else break;
-								} else if (tk.content === ':=') {
-									let o: any, b = tk.offset;
-									if (lk.content.charAt(0).match(/[\d$]/))
-										_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
-									else if (is_builtinvar(lk.content.toLowerCase())) {
-										paramsdef = false, info.count--;
-										break;
-									}
-									let tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg);
-									tn.def = true, tn.defaultVal = null, cache.push(tn);
-									result.push(...parse_expression(',', o = {}, 2)), next = true;
-									bb = parser_pos, bak = tk;
-									let t = Object.keys(o).pop();
-									if (t) {
-										t = t.trim().toLowerCase();
-										if (t === '#string') {
+				while (nexttoken()) {
+					if (tk.content === endc) {
+						if (lk.type === 'TK_COMMA') {
+							types['#void'] = true;
+							info.miss.push(info.count++);
+							Object.defineProperty(types, 'paraminfo', { value: info, configurable: true });
+							result.push(...cache);
+							return;
+						}
+						break;
+					} else if (tk.type === 'TK_WORD') {
+						info.count++;
+						if (la.includes(lk.content)) {
+							lk = tk, tk = get_token_ingore_comment(cmm);
+							if (tk.content === ',' || tk.content === endc) {
+								if (lk.content.charAt(0).match(/[\d$]/))
+									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
+								else if (is_builtinvar(lk.content.toLowerCase())) {
+									paramsdef = false, info.count--;
+									break;
+								}
+								tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg);
+								if (byref)
+									byref = false, (<Variable>tn).ref = (<Variable>tn).def = true, tpexp = '#varref';
+								else tpexp = tn.name;
+								cache.push(tn), bb = parser_pos, bak = tk;
+								if (tk.content === ',')
+									info.comma.push(tk.offset);
+								else break;
+							} else if (tk.content === ':=') {
+								let o: any, b = tk.offset;
+								if (lk.content.charAt(0).match(/[\d$]/))
+									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
+								else if (is_builtinvar(lk.content.toLowerCase())) {
+									paramsdef = false, info.count--;
+									break;
+								}
+								let tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg);
+								tn.def = true, tn.defaultVal = null, cache.push(tn);
+								result.push(...parse_expression(',', o = {}, 2)), next = true;
+								bb = parser_pos, bak = tk;
+								let t = Object.keys(o).pop();
+								if (t) {
+									t = t.trim().toLowerCase();
+									if (t === '#string') {
+										tn.defaultVal = _this.get_token(b + 2, true).content;
+									} else if (t === 'true' || t === 'false')
+										tn.defaultVal = t;
+									else if (t.match(/^([-+]\s)?#number$/)) {
+										if (t.charAt(0) === '#')
 											tn.defaultVal = _this.get_token(b + 2, true).content;
-										} else if (t === 'true' || t === 'false')
-											tn.defaultVal = t;
-										else if (t.match(/^([-+]\s)?#number$/)) {
-											if (t.charAt(0) === '#')
-												tn.defaultVal = _this.get_token(b + 2, true).content;
-											else {
-												let t = _this.get_token(b + 2, true);
-												tn.defaultVal = t.content + _this.get_token(t.offset + t.length, true).content;
-											}
-										} else if (t !== 'unset')
-											tn.range_offset = [b, tk.offset], hasexpr = true;
-									}
-									if (byref)
-										byref = false, tn.ref = true, tpexp = '#varref', tn.returntypes = { '#varref': true };
-									else tpexp = Object.keys(o).pop() ?? '#void', tn.returntypes = o;
+										else {
+											let t = _this.get_token(b + 2, true);
+											tn.defaultVal = t.content + _this.get_token(t.offset + t.length, true).content;
+										}
+									} else if (t !== 'unset')
+										tn.range_offset = [b, tk.offset], hasexpr = true;
+								}
+								if (byref)
+									byref = false, tn.ref = true, tpexp = '#varref', tn.returntypes = { '#varref': true };
+								else tpexp = Object.keys(o).pop() ?? '#void', tn.returntypes = o;
+								if (tk.type === 'TK_COMMA') {
+									info.comma.push(tk.offset);
+									continue;
+								} else {
+									paramsdef = (tk as Token).content === endc;
+									break;
+								}
+							} else if (tk.type === 'TK_OPERATOR') {
+								if (tk.content === '*') {
+									let t = lk;
+									nexttoken();
+									if (tk.content === endc) {
+										tn = Variable.create(t.content, SymbolKind.Variable, rg = make_range(t.offset, t.length), rg);
+										cache.push(tn), (<any>tn).arr = true, info.unknown = true, bb = parser_pos, bak = tk;
+										break;
+									} else { paramsdef = false, info.count--; break; }
+								} else if (tk.content === '?' && tk.ignore) {
+									if (lk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
+									tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg);
+									(<Variable>tn).def = true, (<Variable>tn).defaultVal = null, cache.push(tn), bb = parser_pos, bak = tk;
+									if (byref) byref = false, (<Variable>tn).ref = true, tpexp = '#varref';
+									else tpexp = lk.content;
+									lk = tk, tk = get_token_ingore_comment(cmm);
 									if (tk.type === 'TK_COMMA') {
 										info.comma.push(tk.offset);
 										continue;
 									} else {
-										paramsdef = (tk as Token).content === endc;
+										paramsdef = tk.content === endc;
 										break;
 									}
-								} else if (tk.type === 'TK_OPERATOR') {
-									if (tk.content === '*') {
-										let t = lk;
-										nexttoken();
-										if (tk.content === endc) {
-											tn = Variable.create(t.content, SymbolKind.Variable, rg = make_range(t.offset, t.length), rg);
-											cache.push(tn), (<any>tn).arr = true, info.unknown = true, bb = parser_pos, bak = tk;
-											break;
-										} else { paramsdef = false, info.count--; break; }
-									} else if (tk.content === '?' && tk.ignore) {
-										if (lk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
-										tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg);
-										(<Variable>tn).def = true, (<Variable>tn).defaultVal = null, cache.push(tn), bb = parser_pos, bak = tk;
-										if (byref) byref = false, (<Variable>tn).ref = true, tpexp = '#varref';
-										else tpexp = lk.content;
-										lk = tk, tk = get_token_ingore_comment(cmm);
-										if (tk.type === 'TK_COMMA') {
-											info.comma.push(tk.offset);
-											continue;
-										} else {
-											paramsdef = tk.content === endc;
-											break;
-										}
-									} else { paramsdef = false, info.count--; break; }
-								} else {
-									if (tk.content === '(')
-										bb = lk.offset + lk.length, bak = lk;
-									paramsdef = false, info.count--; break;
-								}
-							} else { paramsdef = false, info.count--; break; }
-						} else if (la.includes(lk.content)) {
-							if (tk.content === '*') {
-								nexttoken();
-								if (tk.content === endc) {
-									cache.push(Variable.create('*', SymbolKind.Null, rg = make_range(0, 0), rg));
-									break;
-								} else _this.addDiagnostic(diagnostic.unexpected('*'), lk.offset, 1), next = false;
-							} else if (tk.content === '&') {
-								let t = tk.offset;
-								tk = get_token_ingore_comment(), next = false;
-								if (tk.type === 'TK_WORD') {
-									byref = true; continue;
-								} else _this.addDiagnostic(diagnostic.unexpected('&'), t, 1);
+								} else { paramsdef = false, info.count--; break; }
+							} else {
+								if (tk.content === '(')
+									bb = lk.offset + lk.length, bak = lk;
+								paramsdef = false, info.count--; break;
 							}
-							paramsdef = false; break;
-						} else {
-							paramsdef = false; break;
+						} else { paramsdef = false, info.count--; break; }
+					} else if (la.includes(lk.content)) {
+						if (tk.content === '*') {
+							nexttoken();
+							if (tk.content === endc) {
+								cache.push(Variable.create('*', SymbolKind.Null, rg = make_range(0, 0), rg));
+								break;
+							} else _this.addDiagnostic(diagnostic.unexpected('*'), lk.offset, 1), next = false;
+						} else if (tk.content === '&') {
+							let t = tk.offset;
+							tk = get_token_ingore_comment(), next = false;
+							if (tk.type === 'TK_WORD') {
+								byref = true; continue;
+							} else _this.addDiagnostic(diagnostic.unexpected('&'), t, 1);
 						}
+						paramsdef = false; break;
+					} else {
+						paramsdef = false; break;
 					}
 				}
 				if (paramsdef) {
@@ -2468,7 +2464,7 @@ export class Lexer {
 							tpexp = '', ++info.count;
 							if (lk.type === 'TK_COMMA' || lk.content === '(')
 								info.miss.push(info.comma.length);
-							else if (lk.type === 'TK_OPERATOR' && !lk.content.match(/(--|\+\+|%)/))
+							else if (lk.type === 'TK_OPERATOR' && !lk.ignore && !lk.content.match(/(--|\+\+|%)/))
 								_this.addDiagnostic(diagnostic.unexpected(','), tk.offset, 1);
 							info.comma.push(tk.offset);
 						} else {
@@ -5140,7 +5136,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			exp = t;
 		while ((t = exp.replace(/(not|!|~|\+|-)\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])/g, ' #number ')) !== exp)
 			exp = t;
-		while ((t = exp.replace(/(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*(\b(and|or)\b|&&|\|\||\?\?)\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])/ig, (...m) => {
+		while ((t = exp.replace(/(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])\s*(\sand\s|\sor\s|&&|\|\||\?\?)\s*(([@#\w.]|[^\x00-\x7f]|\(\))+|\[[^\[\]]+\])/ig, (...m) => {
 			let ts: any = {}, mt: RegExpMatchArray | null;
 			for (let i = 1; i < 5; i += 3) {
 				if (mt = m[i].match(/^\[([^\[\]]+)\]$/)) {
@@ -5148,6 +5144,8 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 				} else
 					ts[m[i]] = true;
 			}
+			if (ts['#any'])
+				return '#any';
 			ts = Object.keys(ts);
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#void');
 		})) !== exp)
@@ -5160,6 +5158,8 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 				} else
 					ts[m[i]] = true;
 			}
+			if (ts['#any'])
+				return '#any';
 			ts = Object.keys(ts);
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#void');
 		})) !== exp)
