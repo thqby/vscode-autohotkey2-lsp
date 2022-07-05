@@ -205,27 +205,26 @@ documents.onDidClose(async e => {
 
 documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
 	let uri = change.document.uri.toLowerCase(), doc = lexers[uri];
-	let initial = doc.include, cg = false;
+	let initial = doc.include, il = Object.keys(initial).length;
 	doc.isparsed = false, doc.parseScript();
 	if (libfuncs[uri]) {
 		libfuncs[uri].length = 0;
 		libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
 	}
-	for (const t in doc.include)
-		if (!initial[t])
-			initial[t] = doc.include[t], cg = true;
-	if (!cg && Object.keys(initial).length === Object.keys(doc.include).length) {
+	if (Object.keys(Object.assign(initial, doc.include)).length === il) {
 		if (!doc.relevance)
-			doc.relevance = getincludetable(uri).list;
+			doc.update_relevance();
 		sendDiagnostics();
 		return;
 	}
 	parseinclude(doc.include);
-	doc.relevance = getincludetable(uri).list, resetrelevance();
 	for (const t in initial)
 		if (!doc.include[t] && lexers[t]?.diagnostics.length)
 			lexers[t].parseScript();
+	resetrelevance();
+	doc.update_relevance();
 	sendDiagnostics();
+
 	function resetrelevance() {
 		for (const u in initial)
 			if (lexers[u])

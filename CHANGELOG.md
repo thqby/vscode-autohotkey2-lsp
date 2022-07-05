@@ -1,3 +1,7 @@
+## 1.4.2
+- 修复[#116](https://github.com/thqby/vscode-autohotkey2-lsp/issues/116)
+- 优化关联脚本识别
+
 ## 1.4.1
 - 修复[#114](https://github.com/thqby/vscode-autohotkey2-lsp/issues/114)
 - 修复[#115](https://github.com/thqby/vscode-autohotkey2-lsp/issues/115)

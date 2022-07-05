@@ -847,10 +847,9 @@ export class Lexer {
 									mode |= 1;
 									tn = FuncNode.create(fc.content, storemode === 2 ? (se.type = SemanticTokenTypes.method, SymbolKind.Method) : SymbolKind.Function, Range.create(fc.pos = document.positionAt(fc.offset), { line: 0, character: 0 }), make_range(fc.offset, fc.length), <Variable[]>par, undefined, isstatic);
 									_parent = tn, tn.detail = comm || tn.detail, lk = tk, tk = nk;
+									if (mode !== 0) tn.parent = pp;
 									let o: any = {}, sub = parse_line(o, undefined, ['return']), pars: { [key: string]: any } = {}, _low = fc.content.toLowerCase();
 									result.push(tn), _parent = pp, mode = storemode, se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0);
-									if (mode !== 0)
-										tn.parent = _parent;
 									if (fc.content.charAt(0).match(/[\d$]/))
 										_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									if (lk.content === '=>')
@@ -1032,7 +1031,7 @@ export class Lexer {
 											_this.addDiagnostic(diagnostic.propnotinit(), lk.offset, lk.length);
 									} else if (mode === 2) {
 										if (predot)
-											addprop(lk);
+											addprop(lk), maybeclassprop(lk);
 										if (tk.type !== 'TK_EQUALS' && tk.type !== 'TK_DOT')
 											_this.addDiagnostic(predot ? diagnostic.declarationerr() : diagnostic.propnotinit(), lk.offset, lk.length);
 									} else if (predot && tk.type === 'TK_DOT') {
@@ -1797,9 +1796,9 @@ export class Lexer {
 								} else
 									tpexp += ' ' + lk.content, next = false;
 							} else if (tk.type === 'TK_EQUALS') {
-								tpexp = tpexp.replace(/\s*\S+$/, ''), addprop(lk), next = true;
+								tpexp = tpexp.replace(/\s*\S+$/, ''), addprop(lk), maybeclassprop(lk), next = true;
 							} else
-								tpexp += (predot ? '.' : ' ') + lk.content, addprop(lk), next = false;
+								tpexp += '.' + lk.content, addprop(lk), maybeclassprop(lk), next = false;
 							break;
 						case 'TK_START_EXPR':
 							if (tk.content === '[') {
@@ -4812,6 +4811,16 @@ export class Lexer {
 				nodes.push(it);
 			}
 			return nodes;
+		}
+	}
+
+	public update_relevance() {
+		let uri = this.uri;
+		this.relevance = getincludetable(uri).list;
+		for (let u in { ...this.relevance, ...this.include }) {
+			let d = lexers[u];
+			if (d && !(d.relevance && d.relevance[uri]))
+				d.relevance = getincludetable(u).list;
 		}
 	}
 
