@@ -2016,16 +2016,15 @@ export class Lexer {
 						}
 						break;
 					} else if (tk.type === 'TK_WORD') {
+						if (is_builtinvar(tk.content.toLowerCase())) {
+							paramsdef = false; break;
+						}
 						info.count++;
 						if (la.includes(lk.content)) {
 							lk = tk, tk = get_token_ingore_comment(cmm);
 							if (tk.content === ',' || tk.content === endc) {
 								if (lk.content.charAt(0).match(/[\d$]/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
-								else if (is_builtinvar(lk.content.toLowerCase())) {
-									paramsdef = false, info.count--;
-									break;
-								}
 								tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg);
 								if (byref)
 									byref = false, (<Variable>tn).ref = (<Variable>tn).def = true, tpexp = '#varref';
@@ -2038,10 +2037,6 @@ export class Lexer {
 								let o: any, b = tk.offset;
 								if (lk.content.charAt(0).match(/[\d$]/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
-								else if (is_builtinvar(lk.content.toLowerCase())) {
-									paramsdef = false, info.count--;
-									break;
-								}
 								let tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg);
 								tn.def = true, tn.defaultVal = null, cache.push(tn);
 								result.push(...parse_expression(',', o = {}, 2)), next = true;
@@ -2083,39 +2078,38 @@ export class Lexer {
 										break;
 									} else { paramsdef = false, info.count--; break; }
 								} else if (tk.content === '?' && tk.ignore) {
-									if (lk.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
+									let t = lk;
 									tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg);
-									(<Variable>tn).def = true, (<Variable>tn).defaultVal = null, cache.push(tn), bb = parser_pos, bak = tk;
+									(<Variable>tn).def = true, (<Variable>tn).defaultVal = null, cache.push(tn);
 									if (byref) byref = false, (<Variable>tn).ref = true, tpexp = '#varref';
 									else tpexp = lk.content;
 									lk = tk, tk = get_token_ingore_comment(cmm);
 									if (tk.type === 'TK_COMMA') {
-										info.comma.push(tk.offset);
+										if (t.content.charAt(0).match(/[\d$]/)) _this.addDiagnostic(diagnostic.invalidsymbolname(t.content), t.offset, t.length);
+										info.comma.push(tk.offset), bb = parser_pos, bak = tk;
 										continue;
 									} else {
-										paramsdef = tk.content === endc;
+										if (!(paramsdef = tk.content === endc))
+											cache.pop(), info.count--;
 										break;
 									}
 								} else { paramsdef = false, info.count--; break; }
-							} else {
-								if (tk.content === '(')
-									bb = lk.offset + lk.length, bak = lk;
-								paramsdef = false, info.count--; break;
-							}
+							} else { paramsdef = false, info.count--; break; }
 						} else { paramsdef = false, info.count--; break; }
 					} else if (la.includes(lk.content)) {
 						if (tk.content === '*') {
+							let t = tk;
 							nexttoken();
 							if (tk.content === endc) {
 								cache.push(Variable.create('*', SymbolKind.Null, rg = make_range(0, 0), rg));
 								break;
-							} else _this.addDiagnostic(diagnostic.unexpected('*'), lk.offset, 1), next = false;
+							} else _this.addDiagnostic(diagnostic.unexpected('*'), t.offset, 1);
 						} else if (tk.content === '&') {
-							let t = tk.offset;
-							tk = get_token_ingore_comment(), next = false;
+							let t = tk;
+							tk = get_token_ingore_comment();
 							if (tk.type === 'TK_WORD') {
-								byref = true; continue;
-							} else _this.addDiagnostic(diagnostic.unexpected('&'), t, 1);
+								byref = true, next = false; continue;
+							} else _this.addDiagnostic(diagnostic.unexpected('&'), t.offset, 1);
 						}
 						paramsdef = false; break;
 					} else {

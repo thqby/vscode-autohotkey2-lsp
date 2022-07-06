@@ -1,3 +1,6 @@
+## 1.4.3
+修复解析时部分变量丢失
+
 ## 1.4.2
 - 修复[#116](https://github.com/thqby/vscode-autohotkey2-lsp/issues/116)
 - 优化关联脚本识别
