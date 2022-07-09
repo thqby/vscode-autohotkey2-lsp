@@ -212,7 +212,7 @@ export class Lexer {
 	public relevance: { [uri: string]: { url: string, path: string, raw: string } } | undefined;
 	public scriptdir = '';
 	public scriptpath = '';
-	public tokens: { [pos: number]: Token } = {};
+	public tokens: { [offset: number]: Token } = {};
 	public STB: SemanticTokensBuilder = new SemanticTokensBuilder;
 	public strcommpos: { start: number, end: number, type: 1 | 2 | 3 }[] = [];
 	public texts: { [key: string]: string } = {};
