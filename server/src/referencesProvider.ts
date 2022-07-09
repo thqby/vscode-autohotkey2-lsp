@@ -142,7 +142,10 @@ export function findAllVar(node: FuncNode, name: string, global = false, ranges:
 		if (!global)
 			return;
 		assume_glo = false;
-	}
+	} else if (fn_is_static && global && !assume_glo && (!node.declaration || node.declaration[name].kind === SymbolKind.Variable && !(<Variable>node.declaration[name]).def))
+		assume_glo = true;
+	else if (assume_glo && node.declaration && node.declaration[name])
+		assume_glo = false;
 	if (not_static)
 		not_static = !((<any>node)?.local?.[name]?.static);
 	if (assume_glo === global) {
@@ -157,16 +160,10 @@ export function findAllVar(node: FuncNode, name: string, global = false, ranges:
 			if (it.children)
 				findAllVar(it as FuncNode, name, global, ranges, global ? false : undefined, not_static);
 		});
-		if (!global)
-			node.funccall?.map(it => {
-				if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
-					ranges.push(it.selectionRange);
-			});
-		else if (node.static) {
-			node.children?.map(it => {
-				if (it.kind === SymbolKind.Variable && !(<Variable>it).def && it.name.toLowerCase() === name)
-					ranges.push(it.selectionRange);
-			});
-		}
+		// if (!global)
+		// 	node.funccall?.map(it => {
+		// 		if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
+		// 			ranges.push(it.selectionRange);
+		// 	});
 	}
 }
