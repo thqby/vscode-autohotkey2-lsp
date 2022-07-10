@@ -1,5 +1,9 @@
+## 1.4.4
+- 修复[#117](https://github.com/thqby/vscode-autohotkey2-lsp/issues/117)
+- 修复部分`寻找所有引用`不正确
+
 ## 1.4.3
-修复解析时部分变量丢失
+- 修复解析时部分变量丢失
 
 ## 1.4.2
 - 修复[#116](https://github.com/thqby/vscode-autohotkey2-lsp/issues/116)
