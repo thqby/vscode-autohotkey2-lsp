@@ -1338,6 +1338,7 @@ export class Lexer {
 									if (i.content.indexOf('\n') === -1)
 										addlabel({ content: i.content.slice(1, -1), offset: i.offset + 1, length: i.length - 2, type: '' });
 								});
+								nexttoken(), next = false;
 							}
 						}
 						break;
