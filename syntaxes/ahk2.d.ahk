@@ -1770,12 +1770,22 @@ ProcessClose(PIDOrName) => Number
  * 
  * Name: The name of the process is usually the same as its executable file (no path), such as notepad.exe or winword.exe. Since the name may match multiple running processes, only the first matching process is operated on. The name is not case sensitive.
  */
-ProcessExist(PIDOrName := '') => Number
+ProcessExist(PIDOrName?) => Number
+
+/**
+ * Returns the name of the specified process.
+ */
+ProcessGetName(PIDOrName?) => String
+
+/**
+ * Returns the path of the specified process.
+ */
+ProcessGetPath(PIDOrName?) => String
 
 /**
  * Change the priority of the first matching process.
  */
-ProcessSetPriority(Level, PIDOrName := '') => Number
+ProcessSetPriority(Level, PIDOrName?) => Number
 
 /**
  * Wait for the specified process to exist.
@@ -1797,6 +1807,11 @@ ProcessWaitClose(PIDOrName [, Timeout]) => Number
  * For floating point numbers, the maximum value is usually not included.
  */
 Random([A, B]) => Number
+
+/**
+ * Creates a registry key without writing a value.
+ */
+RegCreateKey(KeyName?) => void
 
 /**
  * Delete the value from the registry.

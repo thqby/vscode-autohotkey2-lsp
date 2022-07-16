@@ -210,12 +210,16 @@ async function stopRunningScript(wait = false) {
 
 async function compileScript() {
 	let editor = window.activeTextEditor, cmdop = getConfig('CompilerCMD');
-	let executePath = ahkpath_cur || getConfig('InterpreterPath'), cmd = '', compilePath = executePath;
+	let executePath = ahkpath_cur || getConfig('InterpreterPath'), cmd = '', compilePath: string;
 	if (!editor) return;
-	compilePath = resolve(compilePath, '..\\Compiler\\Ahk2Exe.exe')
+	compilePath = resolve(executePath, '..\\Compiler\\Ahk2Exe.exe');
 	if (!existsSync(compilePath)) {
-		window.showErrorMessage(zhcn ? `"${compilePath}"不存在!` : `"${compilePath}" not find!`);
-		return;
+		let t = resolve(executePath, '..\\..\\Compiler\\Ahk2Exe.exe');
+		if (!existsSync(t)) {
+			window.showErrorMessage(zhcn ? `"${compilePath}"不存在!` : `"${compilePath}" not find!`);
+			return;
+		} else
+			compilePath = t;
 	}
 	if (editor.document.isUntitled) {
 		window.showErrorMessage(zhcn ? '编译前请先保存脚本' : 'Please save the script before compiling');

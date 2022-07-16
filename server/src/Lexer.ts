@@ -2706,6 +2706,18 @@ export class Lexer {
 						(<FuncNode>node).local[n] = funcs[n];
 					if (node.kind === SymbolKind.Method && pars['this'])
 						_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', 'this'), range: pars['this'].selectionRange, severity: DiagnosticSeverity.Error });
+					for (const n of ['this', 'super']) {
+						if (node.declaration[n]) {
+							let t: FuncNode | undefined = node as FuncNode;
+							while (t && (t.kind === SymbolKind.Method || t.kind === SymbolKind.Function)) {
+								if (t.local[n] || t.global[n])
+									t = undefined;
+								else t = t.parent as FuncNode;
+							}
+							if (t && t.kind === SymbolKind.Class)
+								delete node.declaration[n];
+						}
+					}
 				}
 			}
 
@@ -4426,12 +4438,13 @@ export class Lexer {
 		}
 	}
 
-	public getWordAtPosition(position: Position, full: boolean = false): { text: string, range: Range } {
+	public getWordAtPosition(position: Position, full: boolean = false, ingoreright = false): { text: string, range: Range } {
 		let start = position.character, l = position.line;
 		let line = this.document.getText(Range.create(Position.create(l, 0), Position.create(l + 1, 0)));
 		let len = line.length, end = start, c: number, dot = false;
-		while (end < len && isIdentifierChar(line.charCodeAt(end)))
-			end++;
+		if (!ingoreright)
+			while (end < len && isIdentifierChar(line.charCodeAt(end)))
+				end++;
 		for (start = position.character - 1; start >= 0; start--) {
 			c = line.charCodeAt(start);
 			if (c === 46) {
@@ -4558,8 +4571,8 @@ export class Lexer {
 		return undefined;
 	}
 
-	public buildContext(position: Position, full: boolean = true) {
-		let word = this.getWordAtPosition(position, full), linetext = '', t = '', pre = '', suf = '', dot = false;
+	public buildContext(position: Position, full: boolean = true, ingoreright = false) {
+		let word = this.getWordAtPosition(position, full, ingoreright), linetext = '', t = '', pre = '', suf = '', dot = false;
 		let kind: SymbolKind = SymbolKind.Variable, i = 0, j = 0, c = 0, l = 0, text = '', document = this.document;
 		linetext = document.getText(Range.create(word.range.start.line, 0, word.range.end.line + 1, 0)).replace(/\r?\n/, '');
 		if (full && (linetext.match(/^\./) || word.text.match(/^\./))) {
@@ -5320,6 +5333,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 		if (!nodes)
 			return undefined;
 		let { node: n, uri: u } = nodes[0];
+		uri = u || uri;
 		if (nodes[0].ref && p[0].match(/^[^@#]/))
 			p[0] = '@' + p[0];
 		if (n.kind === SymbolKind.Variable) {

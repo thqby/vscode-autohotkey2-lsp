@@ -10,7 +10,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
 	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, txs: any = {};
 	let scopenode: DocumentSymbol | undefined, other = true, triggerKind = params.context?.triggerKind;
-	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], content = doc.buildContext(position, false);
+	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], content = doc.buildContext(position, false, true);
 	let quote = '', char = '', l = '', percent = false, lt = content.linetext, triggerchar = lt.charAt(content.range.start.character - 1);
 	let list = doc.relevance, cpitem: CompletionItem = { label: '' }, temp: any, path: string, { line, character } = position;
 	let expg = new RegExp(content.text.match(/[^\w]/) ? content.text.replace(/(.)/g, '$1.*') : '(' + content.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
@@ -39,7 +39,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	if (temp = lt.match(/^\s*((class\s+(\w|[^\x00-\xff])+\s+)?(extends)|class)\s/i)) {
 		if (triggerchar === '.') {
 			if (temp[3]) {
-				searchNode(doc, doc.buildContext(position, true).text.replace(/\.[^.]*$/, '').toLowerCase(), position, SymbolKind.Class)?.map(it => {
+				searchNode(doc, doc.buildContext(position, true, true).text.replace(/\.[^.]*$/, '').toLowerCase(), position, SymbolKind.Class)?.map(it => {
 					Object.values(getClassMembers(doc, it.node, true)).map(it => {
 						if (it.kind === SymbolKind.Class && !vars[l = it.name.toLowerCase()] && expg.test(l))
 							items.push(convertNodeCompletion(it)), vars[l] = true;
@@ -74,7 +74,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			items.push(...completionItemCache.snippet);
 			return items;
 		case '.':
-			let c = doc.buildContext(position, true);
+			let c = doc.buildContext(position, true, true);
 			if (c.text.match(/\b\d+\.$/) || c.linetext.match(/(^|\s)\.$/))
 				return;
 			content.pre = c.text.slice(0, content.text === '' && content.pre.match(/\.$/) ? -1 : -content.text.length);
@@ -289,168 +289,200 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			} else if (istr) {
 				let res = getFuncCallInfo(doc, position);
 				if (res) {
-					switch (res.name) {
-						case 'add':
-							if (res.index === 0 && lt.charAt(res.pos.character - 1) === '.') {
-								let c = doc.buildContext(res.pos, true), n = searchNode(doc, c.text, res.pos, SymbolKind.Method);
-								if (n && (<FuncNode>n[0].node).full?.match(/\(gui\)\s+add\(/i)) {
-									return ['Text', 'Edit', 'UpDown', 'Picture', 'Button', 'Checkbox', 'Radio', 'DropDownList',
-										'ComboBox', 'ListBox', 'ListView', 'TreeView', 'Link', 'Hotkey', 'DateTime', 'MonthCal',
-										'Slider', 'Progress', 'GroupBox', 'Tab', 'Tab2', 'Tab3', 'StatusBar', 'ActiveX', 'Custom'].map(maptextitem);
+					let ismethod = lt.charAt(res.pos.character - 1) === '.';
+					if (ismethod) {
+						switch (res.name) {
+							case 'add':
+								if (res.index === 0) {
+									let n = searchNode(doc, doc.buildContext(res.pos, true).text.toLowerCase(), res.pos, SymbolKind.Method);
+									if (n && (<FuncNode>n[0].node).full?.match(/\(gui\)\s+add\(/i)) {
+										return ['Text', 'Edit', 'UpDown', 'Picture', 'Button', 'Checkbox', 'Radio', 'DropDownList',
+											'ComboBox', 'ListBox', 'ListView', 'TreeView', 'Link', 'Hotkey', 'DateTime', 'MonthCal',
+											'Slider', 'Progress', 'GroupBox', 'Tab', 'Tab2', 'Tab3', 'StatusBar', 'ActiveX', 'Custom'].map(maptextitem);
+									}
 								}
-							}
-							break;
-						case 'dynacall':
-							if (res.index !== 0)
 								break;
-						case 'dllcall':
-							if (res.index === 0) {
-								if (inBrowser) break;
-								let offset = doc.document.offsetAt(res.pos), tks = Object.values(doc.tokens), index = tks.findIndex(it => it.offset === offset);
-								if (index > -1) {
-									index++;
-									while (tks[index] && (tks[index].type.endsWith('COMMENT') || tks[index].content === '(')) index++;
-									if (tks[index] && tks[index].type === 'TK_STRING') {
-										let offset = doc.document.offsetAt(position);
-										if (offset > tks[index].offset && offset <= tks[index].offset + tks[index].length) {
-											let pre = tks[index].content.substring(1, offset - tks[index].offset);
-											let docs = [doc], files: any = {};
-											for (let u in list) docs.push(lexers[u]);
-											items.splice(0);
-											if (!pre.match(/[\\/]/)) {
-												docs.map(d => d.dllpaths.map(path => {
-													path = path.replace(/^.*[\\/]/, '').replace(/\.dll$/i, '');
-													if (!files[l = path.toLowerCase()])
-														files[l] = true, additem(path + '\\', CompletionItemKind.File);
-												}));
-												readdirSync('C:\\Windows\\System32').map(file => {
-													if (file.toLowerCase().endsWith('.dll') && expg.test(file = file.slice(0, -4)))
-														additem(file + '\\', CompletionItemKind.File);
-												});
-												winapis.map(f => { if (expg.test(f)) additem(f, CompletionItemKind.Function); });
-												return items;
-											} else {
-												let dlls: { [key: string]: any } = {}, onlyfile = true;
-												l = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/').toLowerCase();
-												if (!l.match(/\.\w+$/))
-													l = l + '.dll';
-												if (l.includes(':')) onlyfile = false, dlls[l] = 1;
-												else if (l.includes('/')) {
-													if (l.startsWith('/'))
-														dlls[doc.scriptpath + l] = 1;
-													else dlls[doc.scriptpath + '/' + l] = 1;
-												} else {
-													docs.map(d => {
-														d.dllpaths.map(path => {
-															if (path.endsWith(l)) {
-																dlls[path] = 1;
-																if (onlyfile && path.includes('/'))
-																	onlyfile = false;
-															}
-														});
-														if (onlyfile)
-															dlls[l] = dlls[d.scriptpath + '/' + l] = 1;
+							case 'bind':
+							case 'call': {
+								let t = doc.buildContext(res.pos, true).text.toLowerCase();
+								let n = searchNode(doc, t, res.pos, SymbolKind.Method)?.[0].node;
+								if (n && (<FuncNode>n).full?.match(/\(func\)\s+\w+\(/i)) {
+									res.name = t.slice(0, -5);
+									ismethod = false;
+								} else if (n && n.kind === SymbolKind.Function) {
+									res.name = n.name.toLowerCase();
+									ismethod = false;
+								}
+								break;
+							}
+						}
+					}
+					if (!ismethod) {
+						switch (res.name) {
+							case 'dynacall':
+								if (res.index !== 0)
+									break;
+							case 'dllcall':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 0) {
+									if (inBrowser) break;
+									let offset = doc.document.offsetAt(res.pos), tks = Object.values(doc.tokens), index = tks.findIndex(it => it.offset === offset);
+									if (index > -1) {
+										index++;
+										while (tks[index] && (tks[index].type.endsWith('COMMENT') || tks[index].content === '(')) index++;
+										if (tks[index] && tks[index].type === 'TK_STRING') {
+											let offset = doc.document.offsetAt(position);
+											if (offset > tks[index].offset && offset <= tks[index].offset + tks[index].length) {
+												let pre = tks[index].content.substring(1, offset - tks[index].offset);
+												let docs = [doc], files: any = {};
+												for (let u in list) docs.push(lexers[u]);
+												items.splice(0);
+												if (!pre.match(/[\\/]/)) {
+													docs.map(d => d.dllpaths.map(path => {
+														path = path.replace(/^.*[\\/]/, '').replace(/\.dll$/i, '');
+														if (!files[l = path.toLowerCase()])
+															files[l] = true, additem(path + '\\', CompletionItemKind.File);
+													}));
+													readdirSync('C:\\Windows\\System32').map(file => {
+														if (file.toLowerCase().endsWith('.dll') && expg.test(file = file.slice(0, -4)))
+															additem(file + '\\', CompletionItemKind.File);
 													});
+													winapis.map(f => { if (expg.test(f)) additem(f, CompletionItemKind.Function); });
+													return items;
+												} else {
+													let dlls: { [key: string]: any } = {}, onlyfile = true;
+													l = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/').toLowerCase();
+													if (!l.match(/\.\w+$/))
+														l = l + '.dll';
+													if (l.includes(':')) onlyfile = false, dlls[l] = 1;
+													else if (l.includes('/')) {
+														if (l.startsWith('/'))
+															dlls[doc.scriptpath + l] = 1;
+														else dlls[doc.scriptpath + '/' + l] = 1;
+													} else {
+														docs.map(d => {
+															d.dllpaths.map(path => {
+																if (path.endsWith(l)) {
+																	dlls[path] = 1;
+																	if (onlyfile && path.includes('/'))
+																		onlyfile = false;
+																}
+															});
+															if (onlyfile)
+																dlls[l] = dlls[d.scriptpath + '/' + l] = 1;
+														});
+													}
+													getDllExport(Object.keys(dlls), true).map(it => additem(it, CompletionItemKind.Function));
+													return items;
 												}
-												getDllExport(Object.keys(dlls), true).map(it => additem(it, CompletionItemKind.Function));
-												return items;
 											}
 										}
 									}
+								} else if (res.index > 0 && res.index % 2 === 1) {
+									for (const name of ['cdecl'].concat(dllcalltpe))
+										additem(name, CompletionItemKind.TypeParameter), cpitem.commitCharacters = ['*'];
+									return items;
 								}
-							} else if (res.index > 0 && res.index % 2 === 1) {
-								for (const name of ['cdecl'].concat(dllcalltpe))
-									additem(name, CompletionItemKind.TypeParameter), cpitem.commitCharacters = ['*'];
-								return items;
-							}
-							break;
-						case 'comcall':
-							if (res.index > 1 && res.index % 2 === 0) {
-								for (const name of ['cdecl'].concat(dllcalltpe))
-									additem(name, CompletionItemKind.TypeParameter), cpitem.commitCharacters = ['*'];
-								return items;
-							}
-							break;
-						case 'numget':
-							if (res.index === 2 || res.index === 1) {
-								for (const name of dllcalltpe.filter(v => (v.match(/str$/i) ? false : true)))
-									additem(name, CompletionItemKind.TypeParameter);
-								return items;
-							}
-							break;
-						case 'numput':
-							if (res.index % 2 === 0) {
-								for (const name of dllcalltpe.filter(v => (v.match(/str$/i) ? false : true)))
-									additem(name, CompletionItemKind.TypeParameter);
-								return items;
-							}
-							break;
-						case 'objbindmethod':
-							if (res.index === 1) {
-								let ns: any, funcs: { [key: string]: any } = {};
-								['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
-								if (temp = content.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,/i)) {
-									let ts: any = {};
-									cleardetectcache(), detectExpType(doc, temp[1], position, ts);
-									if (ts['#any'] === undefined) {
-										for (const tp in ts) {
-											if (ts[tp] === false) {
-												ns = searchNode(doc, tp, position, SymbolKind.Class);
-											} else if (ts[tp])
-												ns = [ts[tp]];
-											ns?.map((it: any) => {
-												Object.values(getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/))).map(it => {
-													if (it.kind === SymbolKind.Method && !funcs[temp = it.name.toLowerCase()] && expg.test(temp))
-														funcs[temp] = true, additem(it.name, CompletionItemKind.Method);
+								break;
+							case 'comcall':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index > 1 && res.index % 2 === 0) {
+									for (const name of ['cdecl'].concat(dllcalltpe))
+										additem(name, CompletionItemKind.TypeParameter), cpitem.commitCharacters = ['*'];
+									return items;
+								}
+								break;
+							case 'numget':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 2 || res.index === 1) {
+									for (const name of dllcalltpe.filter(v => (v.match(/str$/i) ? false : true)))
+										additem(name, CompletionItemKind.TypeParameter);
+									return items;
+								}
+								break;
+							case 'numput':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index % 2 === 0) {
+									for (const name of dllcalltpe.filter(v => (v.match(/str$/i) ? false : true)))
+										additem(name, CompletionItemKind.TypeParameter);
+									return items;
+								}
+								break;
+							case 'objbindmethod':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 1) {
+									let ns: any, funcs: { [key: string]: any } = {};
+									['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
+									if (temp = content.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,/i)) {
+										let ts: any = {};
+										cleardetectcache(), detectExpType(doc, temp[1], position, ts);
+										if (ts['#any'] === undefined) {
+											for (const tp in ts) {
+												if (ts[tp] === false) {
+													ns = searchNode(doc, tp, position, SymbolKind.Class);
+												} else if (ts[tp])
+													ns = [ts[tp]];
+												ns?.map((it: any) => {
+													Object.values(getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/))).map(it => {
+														if (it.kind === SymbolKind.Method && !funcs[temp = it.name.toLowerCase()] && expg.test(temp))
+															funcs[temp] = true, additem(it.name, CompletionItemKind.Method);
+													});
 												});
-											});
+											}
 										}
 									}
+									if (!ns) {
+										let meds = [doc.object.method];
+										for (const uri in list)
+											meds.push(lexers[uri].object.method);
+										for (const med of meds)
+											for (const it in med)
+												if (!funcs[it] && expg.test(it))
+													funcs[it] = true, additem(med[it][0].name, CompletionItemKind.Method);
+									}
+									return items;
 								}
-								if (!ns) {
-									let meds = [doc.object.method];
-									for (const uri in list)
-										meds.push(lexers[uri].object.method);
-									for (const med of meds)
-										for (const it in med)
-											if (!funcs[it] && expg.test(it))
-												funcs[it] = true, additem(med[it][0].name, CompletionItemKind.Method);
-								}
-								return items;
-							}
-							break;
-						case 'processsetpriority':
-							if (res.index === 0)
-								return ['Low', 'BelowNormal', 'Normal', 'AboveNormal', 'High', 'Realtime'].map(maptextitem);
-							break;
-						case 'thread':
-							if (res.index === 0)
-								return ['NoTimers', 'Priority', 'Interrupt'].map(maptextitem);
-							break;
-						case 'settitlematchmode':
-							if (res.index === 0)
-								return ['Fast', 'Slow', 'RegEx'].map(maptextitem);
-							break;
-						case 'setnumlockstate':
-						case 'setcapslockstate':
-						case 'setscrolllockstate':
-							if (res.index === 0)
-								return ['On', 'Off', 'AlwaysOn', 'AlwaysOff'].map(maptextitem);
-							break;
-						case 'sendmode':
-							if (res.index === 0)
-								return ['Event', 'Input', 'InputThenPlay', 'Play'].map(maptextitem);
-							break;
-						case 'blockinput':
-							if (res.index === 0)
-								return ['On', 'Off', 'Send', 'Mouse', 'SendAndMouse', 'Default', 'MouseMove', 'MouseMoveOff'].map(maptextitem);
-							break;
-						case 'coordmode':
-							if (res.index === 0)
-								return ['ToolTip', 'Pixel', 'Mouse', 'Caret', 'Menu'].map(maptextitem);
-							else if (res.index === 1)
-								return ['Screen', 'Window', 'Client'].map(maptextitem);
-							break;
+								break;
+							case 'processsetpriority':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 0)
+									return ['Low', 'BelowNormal', 'Normal', 'AboveNormal', 'High', 'Realtime'].map(maptextitem);
+								break;
+							case 'thread':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 0)
+									return ['NoTimers', 'Priority', 'Interrupt'].map(maptextitem);
+								break;
+							case 'settitlematchmode':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 0)
+									return ['Fast', 'Slow', 'RegEx'].map(maptextitem);
+								break;
+							case 'setnumlockstate':
+							case 'setcapslockstate':
+							case 'setscrolllockstate':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 0)
+									return ['On', 'Off', 'AlwaysOn', 'AlwaysOff'].map(maptextitem);
+								break;
+							case 'sendmode':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 0)
+									return ['Event', 'Input', 'InputThenPlay', 'Play'].map(maptextitem);
+								break;
+							case 'blockinput':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 0)
+									return ['On', 'Off', 'Send', 'Mouse', 'SendAndMouse', 'Default', 'MouseMove', 'MouseMoveOff'].map(maptextitem);
+								break;
+							case 'coordmode':
+								if (!isbuiltin(res.name, res.pos)) break;
+								if (res.index === 0)
+									return ['ToolTip', 'Pixel', 'Mouse', 'Caret', 'Menu'].map(maptextitem);
+								else if (res.index === 1)
+									return ['Screen', 'Window', 'Client'].map(maptextitem);
+								break;
+						}
 					}
 				}
 				if (other)
@@ -556,6 +588,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			if (other)
 				addOther();
 			return items.concat(Object.values(vars));
+	}
+	function isbuiltin(name: string, pos: any) {
+		let n = searchNode(doc, name, pos, SymbolKind.Variable)?.[0].node;
+		return n && n === ahkvars[name];
 	}
 	function addOther() {
 		items.push(...completionItemCache.snippet);

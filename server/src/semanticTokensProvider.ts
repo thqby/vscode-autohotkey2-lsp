@@ -17,8 +17,8 @@ function resolve_sem(tk: Token, doc: Lexer) {
 		curclass = undefined;
 	else if (tk.type === 'TK_WORD' && ['this', 'super'].includes(l = tk.content.toLowerCase())) {
 		let r = doc.searchNode(l, doc.document.positionAt(tk.offset), SymbolKind.Variable);
-		if (r && !r?.ref)
-			curclass = r?.node as ClassNode;
+		if (r && r.ref === false)
+			curclass = r.node as ClassNode;
 	}
 }
 

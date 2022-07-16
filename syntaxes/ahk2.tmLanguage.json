@@ -406,7 +406,7 @@
                   },
                   "patterns": [
                     {
-                      "include": "#paramters"
+                      "include": "$base"
                     }
                   ]
                 },
@@ -495,7 +495,7 @@
                   },
                   "patterns": [
                     {
-                      "include": "#paramters"
+                      "include": "$base"
                     }
                   ]
                 },
@@ -1724,42 +1724,6 @@
         {
           "match": "\\?|:(?!\\:)",
           "name": "keyword.operator.ternary.ahk2"
-        }
-      ]
-    },
-    "paramters": {
-      "patterns": [
-        {
-          "match": "(?<=(?:^|[,(\\[])\\s*)(&?)\\s*(\\w+)\\s*((:=)|(\\*))?\\s*",
-          "captures": {
-            "1": {
-              "name": "keyword.operator.ahk2"
-            },
-            "2": {
-              "name": "variable.paramter.ahk2"
-            },
-            "4": {
-              "name": "keyword.operator.assignment.ahk2"
-            },
-            "5": {
-              "name": "keyword.operator.ahk2"
-            }
-          },
-          "name": "meta.definition.variable.name"
-        },
-        {
-          "include": "#strings"
-        },
-        {
-          "include": "#numbers"
-        },
-        {
-          "match": ",",
-          "name": "punctuation.separator.comma.ahk2"
-        },
-        {
-          "match": "(?!<\\.)\\b(?i:(true|false|unset))\\b",
-          "name": "constant.language.ahk2"
         }
       ]
     },
