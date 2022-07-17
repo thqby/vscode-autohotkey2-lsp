@@ -1526,7 +1526,7 @@ export class Lexer {
 						next = true, nexttoken(), next = false;
 						if (lk.type === 'TK_WORD' && (tk.type === 'TK_DOT' || tk.type !== 'TK_EQUALS' && (c = input.charAt(lk.offset + lk.length)).match(/^[,\s]?$/)) && (lk.topofline || (bak.type === 'TK_RESERVED' && bak.content.match(/^(try|else|finally)$/i)))) {
 							if (tk.type === 'TK_DOT') {
-								bak = tk, next = true;
+								bak = tk, next = true, addvariable(lk);
 								while (nexttoken()) {
 									if (tk.type as string === 'TK_WORD') {
 										addprop(tk);
