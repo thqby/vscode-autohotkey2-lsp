@@ -353,6 +353,10 @@
 			"prefix": "__New"
 		},
 		{
+			"body": "__Init($0)",
+			"prefix": "__Init"
+		},
+		{
 			"body": "__Set(${1:Key}, ${2:Params}, ${3:Value})",
 			"prefix": "__Set"
 		}
