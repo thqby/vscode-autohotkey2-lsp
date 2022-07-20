@@ -381,7 +381,7 @@
                 "1": {
                   "patterns": [
                     {
-                      "match": "\\b(__(?i:new|get|call|set|delete))\\b",
+                      "match": "\\b(__(?i:new|init|enum|get|call|set|delete))\\b",
                       "name": "storage.type.metafunction.ahk2"
                     }
                   ],

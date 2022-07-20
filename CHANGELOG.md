@@ -1,3 +1,9 @@
+## 1.4.6
+- 修复[#125](https://github.com/thqby/vscode-autohotkey2-lsp/issues/125)
+- 修复[#126](https://github.com/thqby/vscode-autohotkey2-lsp/issues/126)
+- 增加`[]`,`()`折叠
+
+
 ## 1.4.5
 - 修复[#118](https://github.com/thqby/vscode-autohotkey2-lsp/issues/118)
 - 修复[#119](https://github.com/thqby/vscode-autohotkey2-lsp/issues/119)

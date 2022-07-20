@@ -120,8 +120,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			for (const node of tps) {
 				switch (node.kind) {
 					case SymbolKind.Class:
-						let mems = Object.values(getClassMembers(doc, node, isstatic));
-						mems.map((it: any) => {
+						let omems = getClassMembers(doc, node, isstatic);
+						if (isstatic && (<FuncNode>omems['__new'])?.static === false)
+							delete omems['__new'];
+						Object.values(omems).map((it: any) => {
 							if (expg.test(it.name)) {
 								if (it.kind === SymbolKind.Property || it.kind === SymbolKind.Class) {
 									if (!props[l = it.name.toLowerCase()])
@@ -129,12 +131,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 									else if (props[l].detail !== it.full)
 										props[l].detail = '(...) ' + it.name, props[l].insertText = it.name;
 								} else if (it.kind === SymbolKind.Method) {
-									if (!it.name.match(/^__(get|set|call|new|delete)$/i)) {
-										if (!props[l = it.name.toLowerCase()])
-											items.push(props[l] = convertNodeCompletion(it));
-										else if (props[l].detail !== it.full)
-											props[l].detail = '(...) ' + it.name + '()', props[l].documentation = '';
-									}
+									if (!props[l = it.name.toLowerCase()])
+										items.push(props[l] = convertNodeCompletion(it));
+									else if (props[l].detail !== it.full)
+										props[l].detail = '(...) ' + it.name + '()', props[l].documentation = '';
 								}
 							}
 						});
@@ -326,56 +326,52 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 0) {
 									if (inBrowser) break;
-									let offset = doc.document.offsetAt(res.pos), tks = Object.values(doc.tokens), index = tks.findIndex(it => it.offset === offset);
-									if (index > -1) {
-										index++;
-										while (tks[index] && (tks[index].type.endsWith('COMMENT') || tks[index].content === '(')) index++;
-										if (tks[index] && tks[index].type === 'TK_STRING') {
-											let offset = doc.document.offsetAt(position);
-											if (offset > tks[index].offset && offset <= tks[index].offset + tks[index].length) {
-												let pre = tks[index].content.substring(1, offset - tks[index].offset);
-												let docs = [doc], files: any = {};
-												for (let u in list) docs.push(lexers[u]);
-												items.splice(0);
-												if (!pre.match(/[\\/]/)) {
-													docs.map(d => d.dllpaths.map(path => {
-														path = path.replace(/^.*[\\/]/, '').replace(/\.dll$/i, '');
-														if (!files[l = path.toLowerCase()])
-															files[l] = true, additem(path + '\\', CompletionItemKind.File);
-													}));
-													readdirSync('C:\\Windows\\System32').map(file => {
-														if (file.toLowerCase().endsWith('.dll') && expg.test(file = file.slice(0, -4)))
-															additem(file + '\\', CompletionItemKind.File);
+									let tk = doc.tokens[doc.document.offsetAt(res.pos)], offset = doc.document.offsetAt(position);
+									if (!tk) break;
+									while ((tk = doc.tokens[tk.next_token_offset]) && tk.content === '(')
+										continue;
+									if (tk && tk.type === 'TK_STRING' && offset > tk.offset && offset <= tk.offset + tk.length) {
+										let pre = tk.content.substring(1, offset - tk.offset);
+										let docs = [doc], files: any = {};
+										for (let u in list) docs.push(lexers[u]);
+										items.splice(0);
+										if (!pre.match(/[\\/]/)) {
+											docs.map(d => d.dllpaths.map(path => {
+												path = path.replace(/^.*[\\/]/, '').replace(/\.dll$/i, '');
+												if (!files[l = path.toLowerCase()])
+													files[l] = true, additem(path + '\\', CompletionItemKind.File);
+											}));
+											readdirSync('C:\\Windows\\System32').map(file => {
+												if (file.toLowerCase().endsWith('.dll') && expg.test(file = file.slice(0, -4)))
+													additem(file + '\\', CompletionItemKind.File);
+											});
+											winapis.map(f => { if (expg.test(f)) additem(f, CompletionItemKind.Function); });
+											return items;
+										} else {
+											let dlls: { [key: string]: any } = {}, onlyfile = true;
+											l = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/').toLowerCase();
+											if (!l.match(/\.\w+$/))
+												l = l + '.dll';
+											if (l.includes(':')) onlyfile = false, dlls[l] = 1;
+											else if (l.includes('/')) {
+												if (l.startsWith('/'))
+													dlls[doc.scriptpath + l] = 1;
+												else dlls[doc.scriptpath + '/' + l] = 1;
+											} else {
+												docs.map(d => {
+													d.dllpaths.map(path => {
+														if (path.endsWith(l)) {
+															dlls[path] = 1;
+															if (onlyfile && path.includes('/'))
+																onlyfile = false;
+														}
 													});
-													winapis.map(f => { if (expg.test(f)) additem(f, CompletionItemKind.Function); });
-													return items;
-												} else {
-													let dlls: { [key: string]: any } = {}, onlyfile = true;
-													l = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/').toLowerCase();
-													if (!l.match(/\.\w+$/))
-														l = l + '.dll';
-													if (l.includes(':')) onlyfile = false, dlls[l] = 1;
-													else if (l.includes('/')) {
-														if (l.startsWith('/'))
-															dlls[doc.scriptpath + l] = 1;
-														else dlls[doc.scriptpath + '/' + l] = 1;
-													} else {
-														docs.map(d => {
-															d.dllpaths.map(path => {
-																if (path.endsWith(l)) {
-																	dlls[path] = 1;
-																	if (onlyfile && path.includes('/'))
-																		onlyfile = false;
-																}
-															});
-															if (onlyfile)
-																dlls[l] = dlls[d.scriptpath + '/' + l] = 1;
-														});
-													}
-													getDllExport(Object.keys(dlls), true).map(it => additem(it, CompletionItemKind.Function));
-													return items;
-												}
+													if (onlyfile)
+														dlls[l] = dlls[d.scriptpath + '/' + l] = 1;
+												});
 											}
+											getDllExport(Object.keys(dlls), true).map(it => additem(it, CompletionItemKind.Function));
+											return items;
 										}
 									}
 								} else if (res.index > 0 && res.index % 2 === 1) {
