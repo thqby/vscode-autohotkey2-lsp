@@ -598,7 +598,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					items.push(it);
 		}
 	}
-	function additem(label: string, kind: CompletionItemKind) { items.push(cpitem = CompletionItem.create(label)), cpitem.kind = kind; };
+	function additem(label: string, kind: CompletionItemKind) {
+		if (vars[l = label.toLowerCase()]) return;
+		items.push(cpitem = CompletionItem.create(label)), cpitem.kind = kind, vars[l] = true;
+	};
 	function ateditpos(it: DocumentSymbol) {
 		return it.range.end.line === line && it.range.start.character <= character && character <= it.range.end.character;
 	}

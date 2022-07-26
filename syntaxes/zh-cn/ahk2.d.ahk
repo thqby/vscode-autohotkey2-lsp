@@ -3589,7 +3589,7 @@ class Gui extends Object {
 	}
 }
 
-class IndexError extends Error {
+class IndexError extends ValueError {
 }
 
 class InputHook extends Object {
@@ -3769,9 +3769,6 @@ class Integer extends Number {
 	static Call(Value) => Number
 }
 
-class KeyError extends IndexError {
-}
-
 class Map extends Object {
 	/**
 	 * Map对象将一组称为键的值关联或映射到另一组值.
@@ -3829,7 +3826,7 @@ class Map extends Object {
 	Default => Any
 }
 
-class MemberError extends Error {
+class MemberError extends UnsetError {
 }
 
 class MemoryError extends Error {
@@ -4024,6 +4021,12 @@ class TimeoutError extends Error {
 }
 
 class TypeError extends Error {
+}
+
+class UnsetError extends Error {
+}
+
+class UnsetItemError extends UnsetError {
 }
 
 class ValueError extends Error {

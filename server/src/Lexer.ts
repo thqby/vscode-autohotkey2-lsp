@@ -220,8 +220,7 @@ export class Lexer {
 	public strcommpos: { start: number, end: number, type: 1 | 2 | 3 }[] = [];
 	public texts: { [key: string]: string } = {};
 	public uri = '';
-	public version = 0;
-	constructor(document: TextDocument) {
+	constructor(document: TextDocument, scriptdir?: string) {
 		let input: string, output_lines: { text: string[]; }[], flags: any, opt: any, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: { path: string, raw: string } };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
 		let parser_pos: number, customblocks: { region: number[], bracket: number[] }, _this = this, h = isahk2_h, filepath = '', sharp_offsets: number[] = [], keep_comma_space = false, last_top = false;
@@ -253,7 +252,7 @@ export class Lexer {
 		this.document = document;
 		if (document.uri) {
 			this.scriptpath = (filepath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath).replace(/\\[^\\]+$/, '');
-			this.initlibdirs();
+			this.initlibdirs(scriptdir);
 		}
 
 		this.get_token = function (offset?: number, ignorecomment = false): Token {
@@ -486,7 +485,7 @@ export class Lexer {
 												lk = tokens[++j], rets = ['#' + lk.content.toLowerCase()];
 												while (tokens[j + 1].content === '|')
 													rets.push('#' + (lk = tokens[j = j + 2]).content), lk.semantic = { type: SemanticTokenTypes.class };
-												tt.range.end = document.positionAt(lk.offset + lk.length);
+												tt.range.end = this.document.positionAt(lk.offset + lk.length);
 												tt.returntypes = { [rets.length > 1 ? `[${rets.join(',')}]` : (rets.pop() ?? '#any')]: true };
 												tn.children?.push(tt);
 											} else lk = tk;
@@ -4819,20 +4818,27 @@ export class Lexer {
 	}
 
 	public update_relevance() {
-		let uri = this.uri;
-		this.relevance = getincludetable(uri).list;
+		let uri = this.uri, { list, main } = getincludetable(uri), dir = lexers[main.toLowerCase()].scriptdir;
+		this.relevance = list;
+		if (dir !== this.scriptdir)
+			this.initlibdirs(dir), this.parseScript();
 		for (let u in { ...this.relevance, ...this.include }) {
 			let d = lexers[u];
-			if (d && !(d.relevance && d.relevance[uri]))
+			if (d && !(d.relevance && d.relevance[uri])) {
 				d.relevance = getincludetable(u).list;
+				if (d.scriptdir !== dir)
+					d.initlibdirs(dir), d.parseScript();
+			}
 		}
 	}
 
-	public initlibdirs() {
+	public initlibdirs(dir?: string) {
 		if (inBrowser)
 			return;
 		const workfolder = resolve().toLowerCase();
-		if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder) && !this.scriptpath.endsWith('\\lib')) {
+		if (dir)
+			this.scriptdir = dir;
+		else if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder) && !this.scriptpath.endsWith('\\lib')) {
 			if (existsSync(this.scriptpath + '\\lib') && statSync(this.scriptpath + '\\lib').isDirectory())
 				this.scriptdir = this.scriptpath;
 			else this.scriptdir = workfolder.replace(/\\lib$/, '');
@@ -4913,16 +4919,16 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 	}
 }
 
-export function parseinclude(include: { [uri: string]: { path: string, raw: string } }) {
+export function parseinclude(include: { [uri: string]: { path: string, raw: string } }, dir: string) {
 	for (const uri in include) {
 		let path = include[uri].path;
 		if (!(lexers[uri]) && existsSync(path)) {
 			let t = openFile(path);
 			if (!t)
 				continue;
-			let doc = new Lexer(t);
+			let doc = new Lexer(t, dir);
 			lexers[uri] = doc, doc.parseScript();
-			parseinclude(doc.include);
+			parseinclude(doc.include, dir);
 			doc.relevance = getincludetable(uri).list;
 		}
 	}

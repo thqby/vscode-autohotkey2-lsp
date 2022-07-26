@@ -168,8 +168,10 @@ connection.onDidChangeConfiguration(async (change) => {
 });
 
 documents.onDidOpen(async e => {
-	let uri = e.document.uri.toLowerCase(), doc = new Lexer(e.document), old = lexers[uri]?.d;
-	lexers[uri] = doc, doc.actived = true, doc.d = old ?? doc.d;
+	let uri = e.document.uri.toLowerCase(), doc = lexers[uri];
+	if (doc) doc.document = e.document;
+	else lexers[uri] = doc = new Lexer(e.document);
+	doc.actived = true;
 	if (extsettings.AutoLibInclude & 1)
 		parseproject(uri);
 });
@@ -217,7 +219,7 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 		sendDiagnostics();
 		return;
 	}
-	parseinclude(doc.include);
+	parseinclude(doc.include, doc.scriptdir);
 	for (const t in initial)
 		if (!doc.include[t] && lexers[t]?.diagnostics.length)
 			lexers[t].parseScript();
@@ -376,7 +378,7 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 			if (!doc.d) {
 				doc.initlibdirs();
 				if (Object.keys(doc.include).length || doc.diagnostics.length) {
-					doc.parseScript(), parseinclude(doc.include);
+					doc.parseScript(), parseinclude(doc.include, doc.scriptdir);
 					doc.relevance = getincludetable(doc.uri).list;
 				}
 			}
