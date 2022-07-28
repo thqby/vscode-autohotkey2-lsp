@@ -4818,7 +4818,7 @@ export class Lexer {
 	}
 
 	public update_relevance() {
-		let uri = this.uri, { list, main } = getincludetable(uri), dir = lexers[main.toLowerCase()].scriptdir;
+		let uri = this.uri, { list, main } = getincludetable(uri), dir = (lexers[main.toLowerCase()] ?? this).scriptdir;
 		this.relevance = list;
 		if (dir !== this.scriptdir)
 			this.initlibdirs(dir), this.parseScript();
