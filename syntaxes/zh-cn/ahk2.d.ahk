@@ -1105,7 +1105,7 @@ HasProp(Value, Name) => Number
 /**
  * 指定后续创建或修改热键变体的条件.
  */
-HotIf(FuncOrExpr) => void
+HotIf([FuncOrExpr]) => void
 
 /**
  * 指定随后创建或修改的热键变体的条件.

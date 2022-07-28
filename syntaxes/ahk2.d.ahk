@@ -1105,7 +1105,7 @@ HasProp(Value, Name) => Number
 /**
  * Specify the conditions for subsequent creation or modification of hotkey variants.
  */
-HotIf(FuncOrExpr) => void
+HotIf([FuncOrExpr]) => void
 
 /**
  * Specify the conditions for the hotkey variants to be subsequently created or modified.

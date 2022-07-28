@@ -713,7 +713,7 @@ export class Lexer {
 						case 'TK_HOT':
 							topcontinue = true;
 							if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
-							else if (tk.content.match(/\s::$/) || ((m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
+							else if (!tk.ignore && (tk.content.match(/\s::$/) || (m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
 							tn = SymbolNode.create(tk.content, SymbolKind.Event, make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2)) as FuncNode;
 							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trim_comment(lk.content);
@@ -750,6 +750,8 @@ export class Lexer {
 							break;
 						case 'TK_HOTLINE': {
 							if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
+							else if (!tk.ignore && (tk.content.match(/\s::$/) || (m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
+								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
 							tn = SymbolNode.create(tk.content, SymbolKind.Event, make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2));
 							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trim_comment(lk.content);
 							let LF = input.indexOf('\n', parser_pos);
@@ -1589,11 +1591,16 @@ export class Lexer {
 				let b: number, res: DocumentSymbol[] = [], hascomma = 0, t = 0;
 				let info: ParamInfo = { count: 0, comma: [], miss: [], unknown: false };
 				if (next) {
-					if (!_this.get_token(b = parser_pos, true).topofline)
+					let t = _this.get_token(b = parser_pos, true);
+					if (t.type === 'TK_COMMA')
+						info.miss.push(info.count++);
+					else if (!t.topofline)
 						++info.count;
 				} else {
 					b = tk.offset;
-					if (!tk.topofline && !tk.type.endsWith('COMMET'))
+					if (tk.type === 'TK_COMMA')
+						info.miss.push(info.count++);
+					else if (!tk.topofline)
 						++info.count;
 				}
 				while (true) {
@@ -3265,11 +3272,13 @@ export class Lexer {
 				} else if (m = line.match(/^(:(\s|\*|\?0?|c[01]?|[pk]\d+|s[ipe]|[brto]0?|x|z)*:[\x09\x20-\x7E]+?::)(.*)$/i)) {
 					if ((m[2] && m[2].match(/[xX]/)) || (m[3] !== undefined && m[3].trim().match(/^\{?\s*(\s;.*)?$/))) {
 						parser_pos += m[1].length - 1, add_sharp_foldingrange();
-						return lst = createToken(m[1], 'TK_HOT', offset, m[1].length, true);
+						lst = createToken(m[1], 'TK_HOT', offset, m[1].length, true);
 					} else {
 						last_LF = next_LF, parser_pos += m[1].length - 1, begin_line = true, add_sharp_foldingrange();
-						return lst = createToken(m[1], 'TK_HOTLINE', offset, m[1].length, true);
+						lst = createToken(m[1], 'TK_HOTLINE', offset, m[1].length, true);
 					}
+					lst.ignore = true;
+					return lst;
 				} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))|(`;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*&\s*~?(`;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))(\s+up)?\s*::)(.*)$/i)) {
 					if (m[9].trim().match(/^([<>~*!+#^])(`{|[\x21-\x7A\x7C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*(\s;.*)?$/i)) {
 						last_LF = next_LF, begin_line = true, add_sharp_foldingrange();
