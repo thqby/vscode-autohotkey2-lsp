@@ -42,6 +42,7 @@
 	"diagnostic.funcassignerr": "无法为函数分配值",
 	"diagnostic.funccallerr": "函数调用需要空格或'(', 仅在参数之间使用逗号",
 	"diagnostic.hotdeferr": "热键/热字串不能在函数/类中定义",
+	"diagnostic.hotmissbrace": "热键或热字符串缺少左括号",
 	"diagnostic.invaliddefinition": "无效的{0}定义",
 	"diagnostic.invalidhotdef": "无效的热键定义",
 	"diagnostic.invalidparam": "无效的参数定义",

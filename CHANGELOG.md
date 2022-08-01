@@ -1,3 +1,6 @@
+## 1.5.0
+- 检测到v1脚本, 词法解析器将停止解析
+
 ## 1.4.9
 - 修复[#130](https://github.com/thqby/vscode-autohotkey2-lsp/issues/130)
 
