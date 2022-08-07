@@ -5037,7 +5037,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 				if (it) v['__new'] = it, (<any>it).uri = u;
 			}
 			for (let it of Object.values((node as ClassNode).staticdeclaration)) {
-				if (!v[l = it.name.toLowerCase()] || it.kind === SymbolKind.Class)
+				if (!v[l = it.name.toLowerCase()] || (it.kind === SymbolKind.Class || it.kind === SymbolKind.Method) && v[l].kind === SymbolKind.Property)
 					v[l] = it, (<any>it).uri = u;
 				else if (l === 'call' && (<any>v['call']).def === false)
 					v[l] = it, (<any>it).uri = u;

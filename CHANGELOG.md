@@ -4,9 +4,9 @@
 - 修复[#135](https://github.com/thqby/vscode-autohotkey2-lsp/issues/135)
 - 修复[#136](https://github.com/thqby/vscode-autohotkey2-lsp/issues/136)
 - 修复[#137](https://github.com/thqby/vscode-autohotkey2-lsp/issues/137)
+- 修复[#138](https://github.com/thqby/vscode-autohotkey2-lsp/issues/138)
 - 识别stdout,stderr输出的字符编码
 - `ahk2exe`的`/base`命令行参数现在是可选的
-
 
 ## 1.5.0
 - 检测到v1脚本, 词法解析器将停止解析
