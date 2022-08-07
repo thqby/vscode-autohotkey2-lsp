@@ -1,3 +1,8 @@
+## 1.5.1
+- 修复[#133](https://github.com/thqby/vscode-autohotkey2-lsp/issues/133)
+- 修复[#134](https://github.com/thqby/vscode-autohotkey2-lsp/issues/134)
+- 修复[#135](https://github.com/thqby/vscode-autohotkey2-lsp/issues/135)
+
 ## 1.5.0
 - 检测到v1脚本, 词法解析器将停止解析
 

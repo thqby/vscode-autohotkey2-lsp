@@ -670,8 +670,8 @@ export class Lexer {
 				let last_switch = inswitch;
 				if (tk.type === 'TK_START_BLOCK') {
 					nexttoken(), next = false;
-					if (!tk.topofline && !tk.type.endsWith('COMMENT'))
-						_this.addDiagnostic(diagnostic.unexpected(lk.content), lk.offset, lk.length);
+					if (!tk.topofline && !lk.topofline)
+						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 				}
 				while (nexttoken()) {
 					switch (tk.type) {
@@ -719,8 +719,8 @@ export class Lexer {
 								else
 									_parent.labels[_low].unshift(tn);
 							}
-							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT'))
-								tn.detail = trim_comment(lk.content);
+							if (n_newlines === 1 && cmm.type)
+								tn.detail = trim_comment(cmm.content);
 							break;
 						case 'TK_HOT':
 							topcontinue = true;
@@ -728,7 +728,7 @@ export class Lexer {
 							else if (!tk.ignore && (tk.content.match(/\s::$/) || (m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
 							tn = SymbolNode.create(tk.content, SymbolKind.Event, make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2)) as FuncNode;
-							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trim_comment(lk.content);
+							if (n_newlines === 1 && cmm.type) tn.detail = trim_comment(cmm.content);
 							lk = tk, tk = get_token_ignore_comment(cmm);
 							let ht = lk, v: Variable, vars = new Map<string, any>([['#parent', tn]]);
 							(<FuncNode>tn).params = [v = Variable.create('ThisHotkey', SymbolKind.Variable, make_range(0, 0), make_range(0, 0))];
@@ -754,10 +754,16 @@ export class Lexer {
 								_parent = tn, mode = 1;
 								if (tk.content.toLowerCase().match(/^(global|local|static)$/)) {
 									hh.children = [], parse_reserved();
-								} else
-									next = false, hh.children = parse_line();
+								} else if (tk.type === 'TK_WORD') {
+									let rl = result.length;
+									tk.topofline = true, parse_body(null);
+									hh.children = result.splice(rl);
+								} else next = false, hh.children = parse_line();
 								adddeclaration(hh), _parent = t, mode = tm;
-								hh.range = make_range(ht.offset, lk.offset + lk.length - ht.offset);
+								t = lk.offset + lk.length;
+								while (' \t'.includes(input.charAt(t) || '\0'))
+									t++;
+								hh.range = make_range(ht.offset, t - ht.offset);
 							}
 							break;
 						case 'TK_HOTLINE': {
@@ -765,7 +771,7 @@ export class Lexer {
 							else if (!tk.ignore && (tk.content.match(/\s::$/) || (m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
 							tn = SymbolNode.create(tk.content, SymbolKind.Event, make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2));
-							if (n_newlines === 1 && (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT')) tn.detail = trim_comment(lk.content);
+							if (n_newlines === 1 && cmm.type) tn.detail = trim_comment(cmm.content);
 							let LF = input.indexOf('\n', parser_pos);
 							parser_pos = LF > -1 ? LF + 1 : input_length, tn.range.end = document.positionAt(parser_pos - 2), result.push(tn);
 							break;
@@ -840,7 +846,7 @@ export class Lexer {
 							topcontinue = predot ? topcontinue : tk.topofline || false;
 							if (!predot && input.charAt(parser_pos) === '(') {
 								let se: SemanticToken = tk.semantic = { type: SemanticTokenTypes.function };
-								if (isstatic) { if (cmm.type !== '') comm = trim_comment(cmm.content); }
+								if (isstatic) { if (cmm.type) comm = trim_comment(cmm.content); }
 								else if (n_newlines === 1) {
 									if (cmm.type)
 										comm = trim_comment(cmm.content);
@@ -916,10 +922,10 @@ export class Lexer {
 									tn.paraminfo = o.paraminfo, tn.offset = fc.offset, fc.callinfo = tn;
 								}
 							} else {
-								if (isstatic) { if (cmm.type !== '') comm = trim_comment(cmm.content); }
+								if (isstatic) { if (cmm.type) comm = trim_comment(cmm.content); }
 								else if (n_newlines === 1) {
 									if (lk.type === 'TK_COMMENT' || lk.type === 'TK_BLOCK_COMMENT') comm = trim_comment(lk.content);
-									else if (cmm.type !== '') comm = trim_comment(cmm.content);
+									else if (cmm.type) comm = trim_comment(cmm.content);
 								}
 								let bak = lk, restore = false, nn = 0, byref = false, rg: Range;
 								lk = tk, tk = get_token_ignore_comment(cmm), next = false;
@@ -1136,6 +1142,8 @@ export class Lexer {
 					nk = get_next_token();
 					next = false, parser_pos = tk.offset + tk.length, tk.type = 'TK_WORD';
 					if (nk.content.match(/^(:=|=>|\{)$/) || input.charAt(tk.offset + tk.length).match(/(\[|\()/)) {
+						if (newlines === 1 && cmm.type)
+							next = true, parser_pos = lk.offset + lk.length;
 						return;
 					} else if (nk.content !== ':=' && (_low === 'class' || _low === 'static')) {
 						nk = undefined, next = true, tk.type = 'TK_RESERVED';
@@ -1150,7 +1158,7 @@ export class Lexer {
 							next = false, tk.type = 'TK_WORD'; break;
 						}
 						let cl: Token, ex: string = '', sv = new Map(), rg: Range, beginpos = tk.offset, comm = '';
-						if (newlines === 1 && (cmm.type === 'TK_COMMENT' || cmm.type === 'TK_BLOCK_COMMENT'))
+						if (newlines === 1 && cmm.type)
 							comm = trim_comment(cmm.content);
 						else cmm.type = '';
 						nexttoken();
@@ -1979,7 +1987,7 @@ export class Lexer {
 								tpexp = tpexp.replace(/\S+$/, '#func');
 							} else {
 								tpexp += ' ' + tk.content;
-								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^([:?%]|\+\+|--)$/) && !tk.content.match(/[+\-%!~]/))
+								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^([:?%]|\+\+|--)$/) && !tk.content.match(/[+\-%!~]|^not$/i))
 									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, tk.length);
 								if (tk.content === '&' && (['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lk.type))) {
 									byref = true;
@@ -3276,7 +3284,7 @@ export class Lexer {
 			if (_tk && _tk.length) {
 				parser_pos = offset + _tk.length;
 				begin_line = false;
-				return _tk;
+				return lst = _tk;
 			}
 			if (begin_line) {
 				begin_line = false, bg = true;
@@ -3301,7 +3309,7 @@ export class Lexer {
 					lst.ignore = true;
 					return lst;
 				} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))|(`;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*&\s*~?(`;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))(\s+up)?\s*::)(.*)$/i)) {
-					if (m[9].trim().match(/^([<>~*!+#^])(`{|[\x21-\x7A\x7C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*(\s;.*)?$/i)) {
+					if (m[9].trim().match(/^([<>~*!+#^]*?)(`[{;]|[\x21-\x7A\x7C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*(\s;.*)?$/i)) {
 						last_LF = next_LF, begin_line = true, add_sharp_foldingrange();
 						parser_pos = input.indexOf('::', parser_pos) + m[9].length - m[9].trimLeft().length + 2;
 						return lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, true);
