@@ -1996,6 +1996,10 @@
               "name": "string.continuation",
               "patterns": [
                 {
+                  "match": "(?<=^\\s*)`\\)",
+                  "name": "constant.character.escape.ahk2"
+                },
+                {
                   "include": "#string_escaped_char"
                 }
               ]

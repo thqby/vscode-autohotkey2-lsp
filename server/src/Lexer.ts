@@ -121,6 +121,7 @@ export interface Token {
 	semantic?: SemanticToken
 	pos?: Position
 	callinfo?: CallInfo
+	data?: any
 }
 
 export interface FormatOptions {
@@ -233,7 +234,7 @@ export class Lexer {
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
 		let parser_pos: number, customblocks: { region: number[], bracket: number[] }, _this = this, h = isahk2_h, filepath = '', sharp_offsets: number[] = [], keep_comma_space = false, last_top = false;
 		let input_wanted_newline: boolean, output_space_before_token: boolean, following_bracket: boolean, keep_object_line: boolean, begin_line: boolean, end_of_object: boolean, closed_cycle: number;
-		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], preindent_string: string, lst: Token, ck: Token;
+		let input_length: number, n_newlines: number, last_LF: number, bracketnum: number, whitespace_before_token: any[], preindent_string: string, lst: Token, ck: Token, preserve_newlines = false, cscs = false;
 		let handlers: { [index: string]: () => void } = {
 			'TK_START_EXPR': handle_start_expr,
 			'TK_END_EXPR': handle_end_expr,
@@ -333,7 +334,9 @@ export class Lexer {
 						n_newlines = opt.max_preserve_newlines;
 					}
 
-					if (opt.preserve_newlines) {
+					if (preserve_newlines && n_newlines) {
+						print_newline(false, true);
+					} else if (opt.preserve_newlines) {
 						if (n_newlines > 1) {
 							// if (n_newlines && token_text !== ',') {
 							print_newline(false, true);
@@ -1942,6 +1945,7 @@ export class Lexer {
 								types[tpexp] = objk;
 							ternaryMiss();
 							return result.splice(pres);
+						case 'TK_LABEL': _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length); break;
 						case 'TK_UNKNOWN': _this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length); break;
 						case 'TK_RESERVED':
 							if (tk.content.match(/\b(and|or|not)\b/i)) {
@@ -2161,7 +2165,8 @@ export class Lexer {
 			}
 
 			function parse_obj(must: boolean = false, tp: any = {}, ks: any = {}): boolean {
-				let l = lk, b = tk, rl = result.length, isobj = true, ts: any = {}, k: Token | undefined, nk: Token;
+				let l = lk, b = tk, rl = result.length, isobj = true, joinmode = false;
+				let ts: any = {}, k: Token | undefined, nk: Token;
 				if (!next && tk.type === 'TK_START_BLOCK')
 					next = true;
 				while (objkey())
@@ -2176,8 +2181,8 @@ export class Lexer {
 						return true;
 					}
 					return next = false;
-				} else if (lk.content === ':')
-					_this.addDiagnostic(diagnostic.objectliteralerr(), lk.offset, parser_pos - lk.offset);
+				} else if (lk.content === ':' || lk.type === 'TK_LABEL')
+					_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 				if (tk.type === 'TK_END_BLOCK')
 					_this.addFoldingRange(b.offset, tk.offset);
 				else
@@ -2206,8 +2211,6 @@ export class Lexer {
 									_this.addDiagnostic(diagnostic.invalidpropname(), lk.offset, lk.length);
 									return true;
 								}
-								return isobj = false;
-							case 'TK_START_EXPR':
 								return isobj = false;
 							case 'TK_OPERATOR':
 								if (tk.content === '%') {
@@ -2255,6 +2258,18 @@ export class Lexer {
 										return true;
 									}
 								}
+							case 'TK_START_EXPR':
+								if (tk.ignore && !joinmode) {
+									let op = input.substring(tk.offset + 1, tk.offset + tk.length).replace(/\s;.*$/, '');
+									if ((' ' + op + ' ').match(/\sjoin\S*,/i)) {
+										joinmode = true;
+										return objkey();
+									}
+								}
+								return isobj = false;
+							case 'TK_COMMA':
+								if (lk.type === 'TK_COMMA' || lk.type === 'TK_START_BLOCK')
+									return true;
 							default:
 								return isobj = false;
 						}
@@ -2263,7 +2278,7 @@ export class Lexer {
 				}
 
 				function objval(): boolean {
-					let exp = parse_expression(',', ts = {});
+					let exp = parse_expression(joinmode ? undefined : ',', ts = {});
 					result.push(...exp);
 					if (k) {
 						if (k.content.toLowerCase() === 'base') {
@@ -2272,6 +2287,12 @@ export class Lexer {
 								tp[t.slice(0, -10).trim().toLowerCase().replace(/([^.]+)$/, '@$1')] = true;
 						} else
 							addprop(k);
+					}
+					if (joinmode) {
+						if (tk.ignore && tk.content === ')') {
+							joinmode = false, next = true;
+							nexttoken();
+						} else return next = false;
 					}
 					if (tk.type === 'TK_COMMA')
 						return !(next = true);
@@ -2872,7 +2893,7 @@ export class Lexer {
 						case '':
 							return true;
 						case 'TK_OPERATOR':
-							return !lk.content.match(/^(\+\+|--|%)$/);
+							return lk.ignore ? false : !lk.content.match(/^(\+\+|--|%)$/);
 						default:
 							return false;
 					}
@@ -3388,9 +3409,13 @@ export class Lexer {
 								closed_cycle = 1;
 								lst = createToken(c, 'TK_START_EXPR', offset, parser_pos - offset, false);
 								lst.ignore = true;
+								if ((lst.data = input.substring(offset + 1, i - 1).trim()).match(/(^|\s)join(`[srn])*[,)\]}]/i))
+									cscs = true;
 								return lst;
-							} else if (t === ')')
-								break;
+							} else if (t === ')' || t === '(') {
+								if (!input.substring(i - 6, i - 1).match(/[(\s]join\S*$/i))
+									break;
+							}
 						}
 					}
 				}
@@ -3398,13 +3423,16 @@ export class Lexer {
 			}
 
 			if (c === ')' || c === ']') {
+				lst = createToken(c, 'TK_END_EXPR', offset, 1, bg);
 				if (c === ')') {
 					if (following_bracket)
 						bracketnum--;
-					if (closed_cycle > 0)
-						closed_cycle--;
+					if (closed_cycle > 0) {
+						if (!(--closed_cycle))
+							lst.ignore = true, cscs = false;
+					}
 				}
-				return lst = createToken(c, 'TK_END_EXPR', offset, 1, bg);
+				return lst;
 			}
 
 			if (c === '{')
@@ -3482,6 +3510,7 @@ export class Lexer {
 							} else {
 								parser_pos = input_length + 1;
 								_this.addDiagnostic(diagnostic.missing(sep), offset, 1);
+								_this.addDiagnostic(diagnostic.unexpected(LF.trim()), pos, LF.length);
 							}
 							resulting_string += whitespace + input.substring(pos, parser_pos).trim();
 							_this.strcommpos.push({ start: offset, end: parser_pos - 1, type: 3 });
@@ -3567,6 +3596,8 @@ export class Lexer {
 					return lst = createToken(c, 'TK_COMMA', offset, 1, bg);
 				else if (c === '?') {
 					lst = createToken(c, 'TK_OPERATOR', offset, 1, bg);
+					if (cscs)
+						return lst.ignore = true, lst;
 					let bak = parser_pos, tk = lst, t = get_token_ignore_comment();
 					parser_pos = bak;
 					if (t.type === 'TK_COMMA' || t.type === 'TK_END_EXPR' || t.content === '}' || t.type === 'TK_EOF')
@@ -3760,7 +3791,8 @@ export class Lexer {
 			}
 			// (options\n...\n)
 			if (ck.ignore) {
-				print_token(input.substring(ck.offset + 1, last_LF = input.indexOf('\n', ck.offset)).trim());
+				print_token(ck.data || '');
+				preserve_newlines = true;
 				// print_newline(false, true);
 				// parser_pos = last_LF + 1;
 			}
@@ -3798,8 +3830,9 @@ export class Lexer {
 				previous_flags.mode = MODE.Expression;
 				flags.do_block = false;
 				flags.do_while = false;
-
 			}
+			if (ck.ignore)
+				preserve_newlines = false;
 		}
 
 		function handle_start_block() {
