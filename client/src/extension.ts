@@ -36,6 +36,7 @@ let ahkprocess: child_process.ChildProcess | undefined;
 let ahkhelp: child_process.ChildProcessWithoutNullStreams | undefined;
 let ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 let ahkpath_cur = '', server_is_ready = false, zhcn = false;
+let textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
 
 export async function activate(context: ExtensionContext) {
@@ -78,6 +79,7 @@ export async function activate(context: ExtensionContext) {
 		clientOptions
 	);
 	zhcn = client.getLocale().startsWith('zh-');
+	textdecoders.push(new TextDecoder(zhcn ? 'gbk' : 'windows-1252'));
 
 	// Start the client. This will also launch the server
 	client.onReady().then(ready => {
@@ -159,10 +161,19 @@ export function deactivate(): Thenable<void> | undefined {
 	return client.stop();
 }
 
+function decode(buf: Buffer) {
+	for (let td of textdecoders) {
+		try {
+			return td.decode(buf);
+		} catch { };
+	}
+	return buf.toString();
+}
+
 async function runCurrentScriptFile(selection = false): Promise<void> {
 	const editor = window.activeTextEditor, executePath = ahkpath_cur || getConfig('InterpreterPath');
 	if (!editor || !executePath) return;
-	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut `;
+	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
 	let startTime: Date;
 	await stopRunningScript(true);
 	outputchannel.show(true), outputchannel.clear();
@@ -180,13 +191,13 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 	if (ahkprocess) {
 		commands.executeCommand('setContext', 'ahk2:isRunning', true);
 		ahkprocess.stderr?.on('data', (data) => {
-			outputchannel.appendLine(`[Error] ${data.toString().trim()}`);
+			outputchannel.appendLine(`[Error] ${decode(data)}`);
 		});
 		ahkprocess.on('error', (error) => {
 			console.error(error.message);
 		});
 		ahkprocess.stdout?.on('data', (data) => {
-			outputchannel.append(data.toString());
+			outputchannel.append(decode(data));
 		});
 		ahkprocess.on('exit', (code) => {
 			ahkprocess = undefined;

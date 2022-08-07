@@ -68,12 +68,12 @@ export function set_Connection(conn: any, browser: boolean, getDll?:  (paths: st
 	if (getDll) getDllExport = getDll;
 }
 
-export function openFile(path: string): TextDocument {
+export function openFile(path: string): TextDocument | undefined {
 	if (inBrowser) {
 		let data = getwebfile(path);
 		if (data)
 			return TextDocument.create(data.url, 'ahk2', -10, data.text);
-		return undefined as unknown as TextDocument;
+		return undefined;
 	} else {
 		let buf: Buffer | string;
 		buf = readFileSync(path);
@@ -82,24 +82,12 @@ export function openFile(path: string): TextDocument {
 		else if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
 			buf = buf.toString('utf8').substring(1);
 		else {
-			let len = Math.min(buf.byteLength, 256), i = 0, c = 0, l = 0;
-			while (i < len) {
-				c = buf[i];
-				if (c < 0x80) { i++; continue; }
-				else if (c >= 0xc0 && c < 0xff) {
-					l = c < 0xe0 ? 1 : c < 0xf0 ? 2 : c < 0xf8 ? 3 : c < 0xfc ? 4 : c < 0xfe ? 5 : 6;
-					if (i + l >= len) break;
-					for (++i; l; --l)
-						if ((buf[i++] & 0xc0) !== 0x80) {
-							connection.window.showErrorMessage(diagnostic.invalidencoding(path));
-							return undefined as unknown as TextDocument;
-						}
-				} else {
-					connection.window.showErrorMessage(diagnostic.invalidencoding(path));
-					return undefined as unknown as TextDocument;
-				}
+			try {
+				buf = new TextDecoder('utf8', { fatal: true }).decode(buf);
+			} catch {
+				connection.window.showErrorMessage(diagnostic.invalidencoding(path));
+				return undefined;
 			}
-			buf = buf.toString('utf8');
 		}
 		if (path === path.toLowerCase())
 			path = restorePath(path);
@@ -218,8 +206,9 @@ export async function loadahk2(filename = 'ahk2') {
 			build(JSON.parse(data.text));
 	} else {
 		const file = resolve(__dirname, `../../syntaxes/<>/${filename}`);
-		if (path = getlocalefilepath(file + '.d.ahk')) {
-			let doc = new Lexer(openFile(path));
+		let td: TextDocument | undefined;
+		if ((path = getlocalefilepath(file + '.d.ahk')) && (td = openFile(path))) {
+			let doc = new Lexer(td);
 			doc.parseScript(true), lexers[doc.uri] = doc;
 		}
 		if (!(path = getlocalefilepath(file + '.json')))

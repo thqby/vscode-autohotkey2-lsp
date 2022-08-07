@@ -402,7 +402,7 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 async function parseuserlibs() {
 	for (let dir of libdirs)
 		for (let path of getallahkfiles(dir)) {
-			let uri = URI.file(path).toString().toLowerCase(), d: Lexer, t: TextDocument;
+			let uri = URI.file(path).toString().toLowerCase(), d: Lexer, t: TextDocument | undefined;
 			if (!libfuncs[uri]) {
 				if (!(d = lexers[uri])) {
 					if (!(t = openFile(path))) continue;
@@ -462,7 +462,7 @@ async function parseproject(uri: string) {
 		else
 			searchdir = doc.scriptdir + '\\lib';
 		for (let path of getallahkfiles(searchdir)) {
-			let u = URI.file(path).toString().toLowerCase(), d: Lexer, t: TextDocument;
+			let u = URI.file(path).toString().toLowerCase(), d: Lexer, t: TextDocument | undefined;
 			if (u !== uri && !libfuncs[u]) {
 				libfuncs[u] = [], Object.defineProperty(libfuncs[u], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
 				if (!(d = lexers[u])) {

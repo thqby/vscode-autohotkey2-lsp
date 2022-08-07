@@ -313,7 +313,7 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams): Pr
 	for (let uri in lexers)
 		if (await filterSymbols(uri)) return symbols;
 	if (!inBrowser) {
-		let uri: string, d: Lexer, t: TextDocument;
+		let uri: string, d: Lexer, t: TextDocument | undefined;
 		for (let dir of workspaceFolders) {
 			dir = URI.parse(dir).fsPath;
 			for (let path of getallahkfiles(dir)) {
