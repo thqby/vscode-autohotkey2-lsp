@@ -121,9 +121,9 @@
 			"prefix": "_AddResource"
 		},
 		{
-			"body": ";@Ahk2Exe-Bin ${1:[Path\\]Name [, [Exe_path\\][Name], Codepage]}",
+			"body": ";@Ahk2Exe-Base ${1:[Path\\]Name [, [Exe_path\\][Name], Codepage]}",
 			"description": "Specify the binary version of AutoHotkey to be included in the generated .exe file.",
-			"prefix": "_Bin"
+			"prefix": "_Base"
 		},
 		{
 			"body": ";@Ahk2Exe-ConsoleApp",

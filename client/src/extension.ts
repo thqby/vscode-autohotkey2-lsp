@@ -246,17 +246,15 @@ async function compileScript() {
 		window.showErrorMessage(e.message);
 		return;
 	}
-	if (!cmdop.match(/\/bin /i))
-		cmdop += ' /bin "' + executePath + '"';
+	cmdop = cmdop.replace(/\$\{execPath\}/gi, executePath);
 	if (cmdop.match(/\bahk2exe\w*\.exe/i)) {
 		cmd = cmdop + ' /in ' + currentPath;
 		if (!cmd.toLowerCase().includes(' /out '))
 			cmd += '/out "' + exePath + '"';
 	} else {
-		cmd = `"${compilePath}" /in "${currentPath}" `;
+		cmd = `"${compilePath}" ${cmdop} /in "${currentPath}" `;
 		if (!cmdop.toLowerCase().includes(' /out '))
 			cmd += '/out "' + exePath + '"';
-		cmd += ' ' + cmdop;
 	}
 	if (child_process.exec(cmd, { cwd: resolve(currentPath, '..') })) {
 		let start = new Date().getTime();
@@ -265,7 +263,7 @@ async function compileScript() {
 			if (!checkcompilesuccess()) {
 				if (end - start > 5000) {
 					clearInterval(timer);
-					window.showErrorMessage(zhcn ? '编译失败!' : 'Compilation failed!');
+					window.showErrorMessage(zhcn ? '编译失败!' : 'Compiled failed!');
 				}
 			} else
 				clearInterval(timer);

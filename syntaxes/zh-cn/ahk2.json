@@ -121,9 +121,9 @@
 			"prefix": "_AddResource"
 		},
 		{
-			"body": ";@Ahk2Exe-Bin ${1:[Path\\]Name [, [Exe_path\\][Name], Codepage]}",
+			"body": ";@Ahk2Exe-Base ${1:[Path\\]Name [, [Exe_path\\][Name], Codepage]}",
 			"description": "指定要包含在生成的 .exe 文件中的 AutoHotkey 的二进制版本.",
-			"prefix": "_Bin"
+			"prefix": "_Base"
 		},
 		{
 			"body": ";@Ahk2Exe-ConsoleApp",

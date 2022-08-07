@@ -89,7 +89,7 @@
 				"AutoHotkey2.CompilerCMD": {
 					"scope": "window",
 					"type": "string",
-					"default": "/compress 0",
+					"default": "/compress 0 /base ${execPath}",
 					"description": "%ahk2.compilercmd%"
 				},
 				"AutoHotkey2.DefaultDebugger": {

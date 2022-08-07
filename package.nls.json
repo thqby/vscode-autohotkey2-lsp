@@ -1,7 +1,7 @@
 {
 	"ahk2.autolibinclude": "Provide completion and automatic include from User and Standard library, Local library",
 	"ahk2.compile": "Compile Script",
-	"ahk2.compilercmd": "Compiler command line options. If ahk2exe.exe is not specified, the default path will be used.",
+	"ahk2.compilercmd": "Compiler command line options. If ahk2exe.exe is not specified, the default path will be used. ${execPath} is equal to the currently selected AutoHotkey.exe",
 	"ahk2.completefunctionparens": "Add parentheses to function completions",
 	"ahk2.debug": "Debug Script",
 	"ahk2.debug.attach": "Attach Running Script",
