@@ -3,6 +3,7 @@
 - 修复[#134](https://github.com/thqby/vscode-autohotkey2-lsp/issues/134)
 - 修复[#135](https://github.com/thqby/vscode-autohotkey2-lsp/issues/135)
 - 修复[#136](https://github.com/thqby/vscode-autohotkey2-lsp/issues/136)
+- 修复[#137](https://github.com/thqby/vscode-autohotkey2-lsp/issues/137)
 - 识别stdout,stderr输出的字符编码
 - `ahk2exe`的`/base`命令行参数现在是可选的
 

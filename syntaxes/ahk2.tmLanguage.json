@@ -1895,7 +1895,7 @@
     "reserved": {
       "patterns": [
         {
-          "match": "(?<!\\.)((?i:break|continue|goto))\\s+([^;]\\S*)",
+          "match": "(?<!\\.)((?i:break|continue|goto))\\s+([^;\\s]\\S*)",
           "captures": {
             "1": {
               "name": "keyword.control.ahk2"
