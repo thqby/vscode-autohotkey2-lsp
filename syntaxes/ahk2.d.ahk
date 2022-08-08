@@ -2461,7 +2461,7 @@ WinMinimizeAllUndo() => void
 /**
  * Change the position and/or size of the specified window.
  */
-WinMove(X, Y [, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinMove([X, Y, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Send the specified window to the bottom of the stack; that is, below all other windows.

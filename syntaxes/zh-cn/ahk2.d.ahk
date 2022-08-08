@@ -2461,7 +2461,7 @@ WinMinimizeAllUndo() => void
 /**
  * 更改指定窗口的位置和/或大小.
  */
-WinMove(X, Y [, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinMove([X, Y, Width, Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * 发送指定的窗口到堆栈的底部; 也就是说, 在所有其他窗口下方.
