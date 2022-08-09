@@ -1259,13 +1259,13 @@ InStr(Haystack, Needle, CaseSense := false, StartingPos := 1, Occurrence := 1) =
 /**
  * 除了还允许 0 到 9 的数字外, 其他与 IsAlpha 相同.
  */
-IsAlnum(Value) => Number
+IsAlnum(Value, Mode?) => Number
 
 /**
  * 如果 Value 是字符串, 可以为空字符串或仅包含字母字符. 如果字符串任意位置有任何 digit, 空格, 制表符, 标点或其他非字母的字符时, 则为 False. 例如, 如果 Value 包含一个空格后跟字母, 则 不被 视为 alpha.
  * 默认情况下, 只考虑ASCII字母. 如果要根据当前用户的区域规则来执行检查, 请使用 IsAlpha(Value, 'Locale').
  */
-IsAlpha(Value) => Number
+IsAlpha(Value, Mode?) => Number
 
 /**
  * 如果 Value 是有效的日期时间戳, 可以是 YYYYMMDDHH24MISS 格式的全部或开始部分, 则为 True. 例如, 类似 2004 这样的 4 位字符串被视为有效的. 使用 StrLen 确定是否存在其他时间分量.
@@ -1297,7 +1297,7 @@ IsLabel(Value) => Number
  * 如果 Value 是字符串, 可以为空字符串或仅包含小写字母字符, 则为 True. 如果字符串任意位置有任何 digit, 空格, 制表符, 标点或其他非小写字母的字符时, 则为 False.
  * 默认情况下, 只考虑ASCII字母. 如果要根据当前用户的区域规则来执行检查, 请使用 IsLower(Value, 'Locale').
  */
-IsLower(Value) => Number
+IsLower(Value, Mode?) => Number
 
 /**
  * 如果 IsInteger(Value) or IsFloat(Value) 为 true, 则为 True.
@@ -1339,7 +1339,7 @@ IsTime(Value) => Number
  * 如果 Value 是字符串, 可以为空字符串或仅包含大写字母字符, 则为 True. 如果字符串任意位置有任何 digit, 空格, 制表符, 标点或其他非大写字母的字符时, 则为 False.
  * 默认情况下, 只考虑ASCII字母. 如果要根据当前用户的区域规则来执行检查, 请使用 IsUpper(Value, 'Locale').
  */
-IsUpper(Value) => Number
+IsUpper(Value, Mode?) => Number
 
 /**
  * 十六进制数字: 与 digit 相同, 但也允许使用字符 A 到 F(大写或小写). 如果存在前缀 0x, 则可以接受.

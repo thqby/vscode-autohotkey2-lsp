@@ -1259,13 +1259,13 @@ InStr(Haystack, Needle, CaseSense := false, StartingPos := 1, Occurrence := 1) =
 /**
  * Except that numbers from 0 to 9 are allowed, the others are the same as IsAlpha.
  */
-IsAlnum(Value) => Number
+IsAlnum(Value, Mode?) => Number
 
 /**
  * If Value is a string, it can be an empty string or only contain alphabetic characters. If there are any digits, spaces, tabs, punctuation or other non-letter characters anywhere in the string, it will be False. For example, if Value If it contains a space followed by a letter, it is not considered as an alpha.
  * By default, only ASCII letters are considered. If you want to perform the check according to the current user's regional rules, please use IsAlpha(Value,'Locale').
  */
-IsAlpha(Value) => Number
+IsAlpha(Value, Mode?) => Number
 
 /**
  * If Value is a valid date and time stamp, it can be all or the beginning of the YYYYMMDDHH24MISS format, then it is True. For example, a 4-digit string like 2004 is considered valid. Use StrLen to determine whether there are other time components.
@@ -1297,7 +1297,7 @@ IsLabel(Value) => Number
  * If Value is a string, it can be an empty string or only contains lowercase alphabetic characters, then it is True. If there are any digits, spaces, tabs, punctuation or other non-lowercase alphabetic characters anywhere in the string, it is False.
  * By default, only ASCII letters are considered. If you want to perform the check according to the current user's regional rules, please use IsLower(Value,'Locale').
  */
-IsLower(Value) => Number
+IsLower(Value, Mode?) => Number
 
 /**
  * If IsInteger(Value) or IsFloat(Value) is true, then it is True.
@@ -1339,7 +1339,7 @@ IsTime(Value) => Number
  * If Value is a string, it can be an empty string or only contains uppercase alphabetic characters, then it is True. If there are any digits, spaces, tabs, punctuations or other non-uppercase alphabetic characters anywhere in the string, it is False.
  * By default, only ASCII letters are considered. If you want to perform the check according to the current user's regional rules, please use IsUpper(Value,'Locale').
  */
-IsUpper(Value) => Number
+IsUpper(Value, Mode?) => Number
 
 /**
  * Hexadecimal digits: Same as digit, but the characters A to F (uppercase or lowercase) are also allowed. If the prefix 0x is present, it is acceptable.
