@@ -186,6 +186,7 @@ const line_starters = 'try,throw,return,global,local,static,if,switch,case,for,w
 const reserved_words = line_starters.concat(['class', 'in', 'is', 'isset', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not', 'as', 'super']);
 const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', ForInitializer: 'ForInitializer', Conditional: 'Conditional', Expression: 'Expression' };
 const EXPR_FORMAT_OPTS = { brace_style: "collapse", preserve_newlines: false, max_preserve_newlines: 0, wrap_line_length: 0 };
+const KEYSEXP = /^(shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheelleft|wheelright|xbutton1|xbutton2|joy1|joy2|joy3|joy4|joy5|joy6|joy7|joy8|joy9|joy10|joy11|joy12|joy13|joy14|joy15|joy16|joy17|joy18|joy19|joy20|joy21|joy22|joy23|joy24|joy25|joy26|joy27|joy28|joy29|joy30|joy31|joy32|joyx|joyy|joyz|joyr|joyu|joyv|joypov|joyname|joybuttons|joyaxes|joyinfo|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x3A\x3C-\x7E])$/i;
 
 let searchcache: { [name: string]: any } = {};
 let hasdetectcache: { [exp: string]: any } = {};
@@ -679,32 +680,7 @@ export class Lexer {
 				while (nexttoken()) {
 					switch (tk.type) {
 						case 'TK_SHARP':
-							if (tk.content.match(/^#(include(again)?|dllload)\s/i))
-								add_include_dllload(tk.content, tk, mode);
-							else if (m = tk.content.match(/^(#dllimport\s+)((\w|[^\x00-\x7f])+)/i)) {
-								let rg = make_range(tk.offset + m[1].length, m[2].length), rg2 = Range.create(0, 0, 0, 0);
-								let tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', i6: 'int64' };
-								let n = m[2], args: Variable[] = [], u = '', i = 0;
-								h = true, m = tk.content.substring(m[0].length).match(/^\s*,[^,]+,([^,]*)/);
-								if (m) {
-									m = m[1].replace(/\s/g, '').replace(/^\w*=+/, '').toLowerCase();
-									(<string>m).split('').map(c => {
-										if (c === 'u')
-											u = 'u';
-										else {
-											if (tps[c])
-												args.push(Variable.create((++i).toString() + '_' + u + tps[c], SymbolKind.Variable, rg2, rg2));
-											u = '';
-										}
-									});
-								}
-								result.push(FuncNode.create(n, SymbolKind.Function, rg, rg, args));
-							} else if (tk.content.match(/^#Requires\s+AutoHotkey\s+v1/i) || tk.content.match(/^#(If|Hotkey|(NoEnv|Persistent|CommentFlag|EscapeChar|MenuMaskKey|MaxMem|MaxHotkeysPerInterval|KeyHistory)\b)/i))
-								stop_parse(tk);
-							else {
-								let t = input.indexOf('\n', parser_pos);
-								parser_pos = t === -1 ? input_length : t;
-							}
+							parse_sharp();
 							break;
 						case 'TK_LABEL':
 							if (inswitch > -1 && tk.content.toLowerCase() === 'default:') break;
@@ -738,45 +714,59 @@ export class Lexer {
 							v.detail = completionitem.thishotkey(), (<FuncNode>tn).funccall = [], (<FuncNode>tn).declaration = {}, result.push(tn);
 							(<FuncNode>tn).global = {}, (<FuncNode>tn).local = {};
 							if (tk.content === '{') {
-								tn.children = [], tn.children.push(...parse_block(1, vars)), tn.range = make_range(ht.offset, parser_pos - ht.offset);
-								_this.addSymbolFolding(tn, tk.offset);
+								tn.children = [], tn.children.push(...parse_block(1, vars));
+								tn.range = make_range(ht.offset, parser_pos - ht.offset);
+								_this.addSymbolFolding(tn, tk.offset), adddeclaration(tn as FuncNode);
+							} else if (tk.topofline) {
 								adddeclaration(tn as FuncNode);
-							} else if (tk.content.toLowerCase() === 'return') {
-								if (tk.topofline) {
-									tn.children = [], tn.range = make_range(ht.offset, tk.offset + tk.length - ht.offset);
-									_this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
+								while (tk.type === 'TK_SHARP')
+									parse_sharp(), nexttoken();
+								next = false;
+								if (tk.type.startsWith('TK_HOT'))
 									break;
-								}
-								let hh = tn as FuncNode, t = _parent, tm = mode;
-								_parent = tn, mode = 1;
-								tn.children = parse_line(undefined, undefined, ['return']);
-								adddeclaration(hh), _parent = t, mode = tm;
-								hh.range = make_range(ht.offset, lk.offset + lk.length - ht.offset);
+								else if (tk.type !== 'TK_WORD' || !is_func_def(tk))
+									_this.addDiagnostic(diagnostic.hotmissbrace(), lk.offset, lk.length);
 							} else {
-								let hh = tn as FuncNode, t = _parent, tm = mode;
+								let tparent = _parent, tmode = mode, l = tk.content.toLowerCase();
 								_parent = tn, mode = 1;
-								if (tk.content.toLowerCase().match(/^(global|local|static)$/)) {
-									hh.children = [], parse_reserved();
-								} else if (tk.type === 'TK_WORD') {
+								if (l === 'return')
+									tn.children = parse_line(undefined, undefined, ['return']);
+								else if (['global', 'local', 'static'].includes(l))
+									tn.children = [], parse_reserved();
+								else if (tk.type === 'TK_WORD') {
 									let rl = result.length;
 									tk.topofline = true, parse_body(null);
-									hh.children = result.splice(rl);
-								} else next = false, hh.children = parse_line();
-								adddeclaration(hh), _parent = t, mode = tm;
-								t = lk.offset + lk.length;
-								while (' \t'.includes(input.charAt(t) || '\0'))
-									t++;
-								hh.range = make_range(ht.offset, t - ht.offset);
+									tn.children = result.splice(rl);
+								}
+								_parent = tparent, mode = tmode, adddeclaration(tn as FuncNode);
+								let o = lk.offset + lk.length;
+								while (' \t'.includes(input.charAt(o) || '\0')) o++;
+								tn.range = make_range(ht.offset, o - ht.offset);
 							}
 							break;
 						case 'TK_HOTLINE': {
-							if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
-							else if (!tk.ignore && (tk.content.match(/\s::$/) || (m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
-								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
 							tn = SymbolNode.create(tk.content, SymbolKind.Event, make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2));
 							if (n_newlines === 1 && cmm.type) tn.detail = trim_comment(cmm.content);
 							let LF = input.indexOf('\n', parser_pos);
-							parser_pos = LF > -1 ? LF + 1 : input_length, tn.range.end = document.positionAt(parser_pos - 2), result.push(tn);
+							parser_pos = LF > -1 ? LF : input_length, tn.range.end = document.positionAt(parser_pos - 1), result.push(tn);
+							if (mode !== 0) _this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
+							else if (!tk.ignore) {
+								if (tk.content.match(/\s::$/) || (m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === ''))
+									_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
+								else {
+									let k = tk.data as string;
+									if (k.match(allIdentifierChar) && !k.match(/^[$\d]/) && !k.match(KEYSEXP)) {
+										tk.type = 'TK_HOT', lst = tk;
+										lk = _this.get_token(tk.offset + tk.length);
+										if (lk.type === 'TK_WORD') {
+											addvariable(lk);
+											(<FuncNode>tn).funccall = [DocumentSymbol.create(lk.content, undefined, SymbolKind.Function, make_range(lk.offset, parser_pos - 1), make_range(lk.offset, lk.length))];
+										} else _this.addDiagnostic(diagnostic.unexpected(lk.content), lk.offset, lk.length);
+										tk = _this.get_token(lk.offset + lk.length, true), lst = tk, next = false;
+										tk.previous_token = lk, lk.next_token_offset = tk.offset;
+									}
+								}
+							}
 							break;
 						}
 						case 'TK_START_BLOCK': blocks++, blockpos.push(parser_pos - 1); break;
@@ -1660,6 +1650,35 @@ export class Lexer {
 					info.unknown = true;
 				Object.defineProperty(res, 'paraminfo', { value: info, configurable: true });
 				return res;
+			}
+
+			function parse_sharp() {
+				if (tk.content.match(/^#(include(again)?|dllload)\s/i))
+					add_include_dllload(tk.content, tk, mode);
+				else if (m = tk.content.match(/^(#dllimport\s+)((\w|[^\x00-\x7f])+)/i)) {
+					let rg = make_range(tk.offset + m[1].length, m[2].length), rg2 = Range.create(0, 0, 0, 0);
+					let tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', i6: 'int64' };
+					let n = m[2], args: Variable[] = [], u = '', i = 0;
+					h = true, m = tk.content.substring(m[0].length).match(/^\s*,[^,]+,([^,]*)/);
+					if (m) {
+						m = m[1].replace(/\s/g, '').replace(/^\w*=+/, '').toLowerCase();
+						(<string>m).split('').map(c => {
+							if (c === 'u')
+								u = 'u';
+							else {
+								if (tps[c])
+									args.push(Variable.create((++i).toString() + '_' + u + tps[c], SymbolKind.Variable, rg2, rg2));
+								u = '';
+							}
+						});
+					}
+					result.push(FuncNode.create(n, SymbolKind.Function, rg, rg, args));
+				} else if (tk.content.match(/^#Requires\s+AutoHotkey\s+v1/i) || tk.content.match(/^#(If|Hotkey|(NoEnv|Persistent|CommentFlag|EscapeChar|MenuMaskKey|MaxMem|MaxHotkeysPerInterval|KeyHistory)\b)/i))
+					stop_parse(tk);
+				else {
+					let t = input.indexOf('\n', parser_pos);
+					parser_pos = t === -1 ? input_length : t;
+				}
 			}
 
 			function parse_statement(local: string) {
@@ -2900,6 +2919,22 @@ export class Lexer {
 			}
 		}
 
+		function is_func_def(tk: Token) {
+			if (input.charAt(tk.offset + tk.length) !== '(')
+				return false;
+			let bp = parser_pos, bt = lst, nl = n_newlines, c = '', n = 0;
+			parser_pos = tk.offset + tk.length + 1;
+			while (tk.type !== 'TK_EOF') {
+				tk = get_next_token();
+				if ((c = tk.content) === '(')
+					n++;
+				else if (c === ')' && (--n) < 0)
+					break;
+			}
+			c = get_token_ignore_comment().content, parser_pos = bp, lst = bt, n_newlines = nl;
+			return c === '{' || c === '=>';
+		}
+
 		function createToken(content: string, type: string, offset: number, length: number, topofline?: boolean): Token {
 			let tk: Token = { content, type, offset, length, topofline, previous_token: lst, next_token_offset: -1 };
 			_this.tokens[offset] = tk;
@@ -3330,10 +3365,13 @@ export class Lexer {
 					lst.ignore = true;
 					return lst;
 				} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))|(`;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*&\s*~?(`;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))(\s+up)?\s*::)(.*)$/i)) {
-					if (m[9].trim().match(/^([<>~*!+#^]*?)(`[{;]|[\x21-\x7A\x7C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*(\s;.*)?$/i)) {
+					let mm = m[9].trim().match(/^(([<>~*!+#^]*?)(`[{;]|[\x21-\x7A\x7C-\x7E]|[a-z]\w+|[^\x00-\x7f]))\s*(\s;.*)?$/i);
+					if (mm) {
 						last_LF = next_LF, begin_line = true, add_sharp_foldingrange();
-						parser_pos = input.indexOf('::', parser_pos) + m[9].length - m[9].trimLeft().length + 2;
-						return lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, true);
+						parser_pos = offset + m[0].length;
+						lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, true);
+						lst.data = mm[1];
+						return lst;
 					} else {
 						parser_pos = input.indexOf('::', parser_pos) + 2, add_sharp_foldingrange();
 						return lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOT', offset, m[1].length, true);
