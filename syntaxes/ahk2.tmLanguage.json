@@ -1322,33 +1322,33 @@
     "hotkey_hotstring": {
       "patterns": [
         {
-          "match": "^\\s*(:[^xX]*:[\\x09\\x20-\\x7E]+?)(::)((;|\\s*[^{;\\s]).*?)(\\s;.*)?$",
+          "match": "^\\s*(:[^xX:]*:(`.|[^`])*?)(::)((;|\\s*[^{;\\s]).*?)(\\s;.*)?$",
           "captures": {
             "1": {
               "name": "keyword.keys.ahk2"
             },
-            "2": {
+            "3": {
               "name": "punctuation.definition.colon"
             },
-            "3": {
+            "4": {
               "name": "string.raw.ahk2"
             },
-            "5": {
+            "6": {
               "name": "comment.inline.ahk2"
             }
           },
           "name": "hotstringline.ahk2"
         },
         {
-          "begin": "^\\s*(:[\\s\\w*]*:[\\x09\\x20-\\x7E]+?)(::)(\\s+;.*)?",
+          "begin": "^\\s*(:[^:]*:(`.|[^`])*?)(::)(\\s+;.*)?",
           "beginCaptures": {
             "1": {
               "name": "keyword.keys.ahk2"
             },
-            "2": {
+            "3": {
               "name": "punctuation.definition.colon"
             },
-            "3": {
+            "4": {
               "name": "comment.inline.ahk2"
             }
           },

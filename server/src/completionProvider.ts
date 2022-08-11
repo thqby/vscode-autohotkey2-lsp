@@ -197,7 +197,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					return items;
 				} else if (pre.match(/\s+;/))
 					return;
-				else if (pre.charAt(0).match(/['"<]/)) {
+				else if (pre.match(/^['"<]/)) {
 					if (pre.substring(1).match(/['">]/)) return;
 					else {
 						if ((lchar = pre.charAt(0)) === '<') {
