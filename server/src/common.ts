@@ -241,20 +241,17 @@ export async function loadahk2(filename = 'ahk2') {
 	}
 	function additem() {
 		const completionItem = CompletionItem.create(snip.prefix.replace('.', '')), hover: Hover = { contents: [] }, _low = snip.prefix.toLowerCase();
-		completionItem.kind = type;
-		if (type === CompletionItemKind.Keyword && snip.prefix.charAt(0) === '#')
-			t = 'sharp', snip.body = bodytostring(snip.body).replace(/^#/, '');
-		else if (type === CompletionItemKind.Constant)
-			t = 'constant'; else t = 'other';
-		if (type === CompletionItemKind.Function && snip.body.indexOf('|}') === -1 && snip.body.indexOf('(') !== -1)
+		completionItem.kind = type, completionItem.insertTextFormat = InsertTextFormat.Snippet;
+		if (type === CompletionItemKind.Constant)
+			completionItem.insertText = '${1:' + snip.prefix + ' := }' + snip.body + '$0', completionItem.detail = snip.description ?? snip.body, t = 'constant';
+		else if (snip.prefix.startsWith('#'))
+			t = 'sharp', snip.body = bodytostring(snip.body), completionItem.insertText = snip.body.replace(/^#/, ''), completionItem.detail = snip.description;
+		else if (t = 'other', type === CompletionItemKind.Function && snip.body.indexOf('|}') === -1 && snip.body.indexOf('(') !== -1)
 			completionItem.insertText = snip.prefix + '($0)', completionItem.command = cmd, completionItem.detail = snip.description;
-		else if (type === CompletionItemKind.Constant)
-			completionItem.insertText = '${1:' + snip.prefix + ' := }' + snip.body + '$0', completionItem.detail = snip.body;
 		else completionItem.insertText = snip.body.replace(/\$\{\d:\s*\[,[^\]\}]+\]\}/, () => {
 			completionItem.command = cmd;
 			return '';
 		}), completionItem.detail = snip.description;
-		completionItem.insertTextFormat = InsertTextFormat.Snippet;
 		snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => {
 			return m[2] ? m[3].replace(/,/g, '|') : m[3] || '';
 		});

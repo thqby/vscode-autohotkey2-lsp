@@ -5,24 +5,20 @@ import { lexers, hoverCache, Maybe, ahkvars } from './common';
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return undefined;
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
-	if (!doc || doc.instrorcomm(params.position)) return;
-	let context = doc.buildContext(params.position), t: any, hover: any[] = [];
+	let context = doc?.buildContext(params.position), t: any, hover: any[] = [];
 	if (context) {
 		let word = context.text.toLowerCase(), kind: SymbolKind = SymbolKind.Variable;
 		let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, node: DocumentSymbol | undefined, uri: string = '';
-		if (context.kind === SymbolKind.Null) {
-			if ((t = hoverCache[1]) && t[word])
-				return t[word][0];
+		if (!word || context.kind === SymbolKind.Null) {
+			if (context.token) {
+				if ((t = hoverCache[1]) && (t = t[word]))
+					return t[0];
+			} else if (context.pre === '#')
+				if ((t = hoverCache[1]) && (t = t['#' + word]))
+					return t[0];
 			return undefined;
 		}
-		if (context.pre === '#') {
-			if ((t = hoverCache[1]) && (t = t[word = '#' + word]))
-				return t[0];
-			else return undefined;
-		} else kind = context.kind;
-		if (word === '')
-			return undefined;
-		else if (undefined === (nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
+		if (undefined === (nodes = searchNode(doc, word, context.range.end, kind = context.kind)) && word.includes('.') && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
 			let ts: any = {};
 			nodes = <any>[], cleardetectcache(), detectExpType(doc, word.replace(/\.[^.]+$/, m => {
 				word = m.match(/^\.[^.]+$/) ? m : '';
@@ -39,14 +35,11 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		} else if (nodes === null)
 			return undefined;
 		if (!nodes) {
-			if (kind === SymbolKind.Method) {
+			if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
 			} else if (ahkvars[word])
 				nodes = [{ node: ahkvars[word], uri: '' }];
-			else if (kind === SymbolKind.Function && doc.tokens[doc.document.offsetAt(context.range.start)]?.semantic) {
-				if ((t = hoverCache[0]) && t[word])
-					return t[word][0];
-			} else if ((t = hoverCache[1]) && t[word])
-				return t[word][0];
+			else if ((t = hoverCache[kind === SymbolKind.Function ? 0 : 1]) && (t = t[word]))
+				return t[0];
 		}
 		if (nodes) {
 			if (nodes.length > 1) {

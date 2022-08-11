@@ -88,9 +88,7 @@ connection.onInitialize((params: InitializeParams) => {
 						'property',
 						'keyword',
 						'string',
-						'number',
-						'event',
-						'modifier'
+						'number'
 					],
 					tokenModifiers: [
 						'definition',

@@ -89,8 +89,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 					for (const k in p.global)
 						inherit[k] = p.global[k];
 					(<FuncNode>info).params?.map(it => {
-						ps[ll] = true, converttype(it, false, SymbolKind.TypeParameter);
-						inherit[ll = it.name.toLowerCase()] = it;
+						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true;
+						converttype(it, false, SymbolKind.TypeParameter);
 					});
 					for (const k in p.local)
 						if (k && !ps[k]) {

@@ -2,7 +2,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
+import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
 import { completionitem } from './localize';
 import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
 
@@ -10,10 +10,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
 	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, txs: any = {};
 	let scopenode: DocumentSymbol | undefined, other = true, triggerKind = params.context?.triggerKind;
-	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], content = doc.buildContext(position, false, true);
-	let quote = '', char = '', l = '', percent = false, lt = content.linetext, triggerchar = lt.charAt(content.range.start.character - 1);
+	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc.buildContext(position, false, true);
+	let quote = '', char = '', l = '', percent = false, lt = context.linetext, triggerchar = lt.charAt(context.range.start.character - 1);
 	let list = doc.relevance, cpitem: CompletionItem = { label: '' }, temp: any, path: string, { line, character } = position;
-	let expg = new RegExp(content.text.match(/[^\w]/) ? content.text.replace(/(.)/g, '$1.*') : '(' + content.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
+	let expg = new RegExp(context.text.match(/[^\w]/) ? context.text.replace(/(.)/g, '$1.*') : '(' + context.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	let istr = doc.instrorcomm(position);
 	if (istr === 1)
 		return;
@@ -21,7 +21,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 		if (triggerKind === 2)
 			return;
 		triggerchar = '';
-	} else if (content.pre.startsWith('#')) {
+	} else if (context.pre.startsWith('#')) {
 		for (let i = 0; i < position.character; i++) {
 			char = lt.charAt(i);
 			if (quote === char) {
@@ -34,7 +34,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				quote = char;
 		}
 	}
-	if (!percent && triggerchar === '.' && content.pre.match(/^\s*#(include|dllload)/i))
+	if (!percent && triggerchar === '.' && context.pre.match(/^#(include|dllload)/i))
 		triggerchar = '###';
 	if (temp = lt.match(/^\s*((class\s+(\w|[^\x00-\xff])+\s+)?(extends)|class)\s/i)) {
 		if (triggerchar === '.') {
@@ -74,15 +74,11 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			items.push(...completionItemCache.snippet);
 			return items;
 		case '.':
-			let c = doc.buildContext(position, true, true);
-			if (c.text.match(/\b\d+\.$/) || c.linetext.match(/(^|\s)\.$/))
+			context = doc.buildContext(position, true, true);
+			if (context.text.match(/^\d+(\.\d*)*\.$/))
 				return;
-			content.pre = c.text.slice(0, content.text === '' && content.pre.match(/\.$/) ? -1 : -content.text.length);
-			content.text = c.text, content.kind = c.kind, content.linetext = c.linetext;;
-			let p: any = content.pre.replace(/('|").*?(?<!`)\1/, `''`), t: any, unknown = true;
-			let props: any = {}, isstatic = true, tps: any = [], isclass = false, isfunc = false, isobj = false, hasparams = false;
-			let ts: any = {};
-			p = content.pre.toLowerCase();
+			let unknown = true, isstatic = true, isclass = false, isfunc = false, isobj = false, hasparams = false;
+			let props: any = {}, tps: any = [], ts: any = {}, p = context.text.replace(/\.\w*$/, '').toLowerCase();
 			cleardetectcache(), detectExpType(doc, p, position, ts);
 			if (ts['#any'] === undefined) {
 				for (const tp in ts) {
@@ -103,17 +99,14 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						tps.push(it.node);
 					});
 				}
-				if (ts['#object'] !== undefined) {
-					let n = searchNode(doc, p, position, SymbolKind.Variable), t: string[];
-					if (n && (t = (<any>n[0].node).property)) {
-						t.map(s => {
-							if (!props[l = s.toLowerCase()]) {
-								items.push(props[l] = CompletionItem.create(s));
-								props[l].kind = CompletionItemKind.Property;
-							}
-						})
+			}
+			if (ts['#object'] !== undefined) {
+				getcacheproperty().map(s => {
+					if (!props[l = s.toLowerCase()]) {
+						items.push(props[l] = CompletionItem.create(s));
+						props[l].kind = CompletionItemKind.Property;
 					}
-				}
+				});
 			}
 			if (ts = ahkvars['any'])
 				tps.push(ts);
@@ -143,7 +136,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						isobj = true; break;
 				}
 			}
-			if (!unknown && (triggerKind !== 1 || content.text.match(/\..{0,2}$/)))
+			if (!unknown && (triggerKind !== 1 || context.text.match(/\..{0,2}$/)))
 				return items;
 			let objs = [doc.object];
 			for (const uri in list)
@@ -409,7 +402,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								if (res.index === 1) {
 									let ns: any, funcs: { [key: string]: any } = {};
 									['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
-									if (temp = content.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,/i)) {
+									if (temp = context.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,/i)) {
 										let ts: any = {};
 										cleardetectcache(), detectExpType(doc, temp[1], position, ts);
 										if (ts['#any'] === undefined) {
@@ -591,7 +584,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	}
 	function addOther() {
 		items.push(...completionItemCache.snippet);
-		if (triggerKind === 1 && content.text.length > 2 && content.text.match(/^[a-z]+_/i)) {
+		if (triggerKind === 1 && context.text.length > 2 && context.text.match(/^[a-z]+_/i)) {
 			const constants = completionItemCache.constant;
 			for (const it of constants)
 				if (expg.test(it.label))

@@ -264,12 +264,12 @@
     },
     "class_block": {
       "name": "meta.block.class.ahk2",
-      "begin": "^\\s*((?i:class))\\s+(\\w+(\\.\\w+)*)",
+      "begin": "(^|(?<=^\\s*\\*/))\\s*((?i:class))\\s+(\\w+(\\.\\w+)*)",
       "beginCaptures": {
-        "1": {
+        "2": {
           "name": "storage.type.class.ahk2"
         },
-        "2": {
+        "3": {
           "name": "entity.name.type.class.ahk2"
         }
       },
@@ -1322,13 +1322,34 @@
     "hotkey_hotstring": {
       "patterns": [
         {
-          "begin": "^\\s*(:(?i:\\s|\\*|\\?0?|c[01]?|[pk]\\d+|s[ipe]|[brto]0?|x|z)*:(?<!^\\s*:[^xX]*:)[\\x09\\x20-\\x7E]+?)(::)",
+          "match": "^\\s*(:[^xX]*:[\\x09\\x20-\\x7E]+?)(::)((;|\\s*[^{;\\s]).*?)(\\s;.*)?$",
+          "captures": {
+            "1": {
+              "name": "keyword.keys.ahk2"
+            },
+            "2": {
+              "name": "punctuation.definition.colon"
+            },
+            "3": {
+              "name": "string.raw.ahk2"
+            },
+            "5": {
+              "name": "comment.inline.ahk2"
+            }
+          },
+          "name": "hotstringline.ahk2"
+        },
+        {
+          "begin": "^\\s*(:[\\s\\w*]*:[\\x09\\x20-\\x7E]+?)(::)(\\s+;.*)?",
           "beginCaptures": {
             "1": {
               "name": "keyword.keys.ahk2"
             },
-            "3": {
+            "2": {
               "name": "punctuation.definition.colon"
+            },
+            "3": {
+              "name": "comment.inline.ahk2"
             }
           },
           "end": "(?<=^\\s*)(})|(?<=::(;|\\s*[^;\\s])[^\\n]*)\\n|(?<=[\\w})\\]]\\s*)\\n",
@@ -1340,7 +1361,7 @@
           "name": "meta.block.hotstring.ahk2",
           "patterns": [
             {
-              "begin": "{",
+              "begin": "\\G{",
               "beginCaptures": {
                 "0": {
                   "name": "punctuation.definition.block.hotstring.begin.ahk2"
@@ -1366,24 +1387,6 @@
               ]
             }
           ]
-        },
-        {
-          "match": "^\\s*(:(?i:\\s|\\*|\\?0?|c[01]?|[pk]\\d+|s[ipe]|[brto]0?|x|z)*:[\\x09\\x20-\\x7E]+?)(::)\\s*((?:\\{\\s*)|(.*?))(\\s;.*)?$",
-          "captures": {
-            "1": {
-              "name": "keyword.keys.ahk2"
-            },
-            "3": {
-              "name": "punctuation.definition.colon"
-            },
-            "4": {
-              "name": "string.raw.ahk2"
-            },
-            "5": {
-              "name": "comment.inline.ahk2"
-            }
-          },
-          "name": "hotstringline.ahk2"
         },
         {
           "begin": "^\\s*(?i:((([<>$~*!+#^]*?)(`;|[\\x21-\\x3A\\x3C-\\x7E]|[a-z]\\w+|[^\\x00-\\x7f]))|(`;|[\\x21-\\x3A\\x3C-\\x7E]|[a-z]\\w+|[^\\x00-\\x7f])\\s+&\\s+~?(`;|[\\x21-\\x3A\\x3C-\\x7E]|[a-z]\\w+|[^\\x00-\\x7f]))(\\s+up)?)(::)",

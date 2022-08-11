@@ -8,7 +8,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 	let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, locas: Location[] = [];
 	if (context) {
 		let word = '', kind: SymbolKind = SymbolKind.Variable, t: any;
-		if (context.pre.match(/^\s*#/i)) {
+		if (context.pre.startsWith('#')) {
 			if ((m = context.linetext.match(/^(\s*#include(again)?\s+)(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)\s*(\s;.*)?$/i)) && m[3]) {
 				let line = context.range.start.line, file = m[3].trim();
 				for (let t in doc.include)
@@ -22,9 +22,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 			}
 			return undefined;
 		} else word = context.text.toLowerCase(), kind = context.kind;
-		if (kind === SymbolKind.Null)
-			return undefined;
-		if (word === '' || doc.instrorcomm(params.position))
+		if (!word || kind === SymbolKind.Null)
 			return undefined;
 		else if (undefined === (nodes = searchNode(doc, word, context.range.end, kind)) && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
 			let ts: any = {};
