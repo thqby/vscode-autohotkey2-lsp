@@ -1,3 +1,7 @@
+## 1.5.4
+- 修复[#145-#152]
+- 增加支持简单`延续部分`, `::abc::\n(\nstr\n)`
+
 ## 1.5.3
 - 修复[#143](https://github.com/thqby/vscode-autohotkey2-lsp/issues/143)
 - 修复[#144](https://github.com/thqby/vscode-autohotkey2-lsp/issues/144)

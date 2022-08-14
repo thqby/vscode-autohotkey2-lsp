@@ -784,7 +784,7 @@
     },
     "continuation_section": {
       "name": "meta.parens.continuation_section.ahk2",
-      "begin": "^\\s*(\\()([^)]*)$",
+      "begin": "(?<=^\\s*)(\\()(\\s+|(?i:\\bjoin\\S*)|\\S+)*?\\s*(\\s;.*)?$",
       "beginCaptures": {
         "1": {
           "name": "punctuation.section.parens.begin.ahk2"
@@ -1322,8 +1322,8 @@
     "hotkey_hotstring": {
       "patterns": [
         {
-          "match": "^\\s*(:)[^xX:]*(:)((`.|[^`])*?)(::)((;|\\s*[^{;\\s]).*?)(\\s;.*)?$",
-          "captures": {
+          "begin": "^\\s*(:)[^xX:]*(:)((`.|[^`])*?)(::)((;|\\s*[^{;\\s]).*?)?\\s*(\\s;.*)?$",
+          "beginCaptures": {
             "1": {
               "name": "punctuation.definition.colon"
             },
@@ -1343,7 +1343,39 @@
               "name": "comment.inline.ahk2"
             }
           },
-          "name": "hotstringline.ahk2"
+          "name": "hotstringline.ahk2",
+          "end": "(?<=^\\s*)(})|(?=^\\s*([^\\s;/({]|\/(?!\\*)|\\(.*\\)(?<!\\b(?i:join)\\S*\\))))",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.block.hotstring.end.ahk2"
+            }
+          },
+          "patterns": [
+            {
+              "begin": "(?<=\\G\\s*){",
+              "beginCaptures": {
+                "0": {
+                  "name": "punctuation.definition.block.hotstring.begin.ahk2"
+                }
+              },
+              "end": "(?=})",
+              "patterns": [
+                {
+                  "include": "$base"
+                }
+              ]
+            },
+            {
+              "include": "#comments"
+            },
+            {
+              "include": "#continuation_string"
+            },
+            {
+              "match": "(?<=^\\s*\\)).*$",
+              "name": "string.raw.ahk2"
+            }
+          ]
         },
         {
           "begin": "^\\s*(:)[^:]*(:)((`.|[^`])*?)(::)(\\s+;.*)?",
@@ -1996,7 +2028,7 @@
               "include": "#comments"
             },
             {
-              "include": "#continuation"
+              "include": "#continuation_string"
             },
             {
               "include": "#string_escaped_char"
@@ -2005,8 +2037,8 @@
         }
       ]
     },
-    "continuation": {
-      "begin": "(?<=^\\s*)(\\()(\\s+|(?i:\\bjoin\\S*)|\\S+)*?\\s*(\\s;.*)?$",
+    "continuation_string": {
+      "begin": "^\\s*(\\()(\\s+|(?i:\\bjoin\\S*)|\\S+)*?\\s*(\\s;.*)?$",
       "beginCaptures": {
         "1": {
           "name": "punctuation.section.parens.begin.bracket.round.ahk2"
