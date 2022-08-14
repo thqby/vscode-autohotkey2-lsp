@@ -68,7 +68,7 @@ export function set_Connection(conn: any, browser: boolean, getDll?:  (paths: st
 	if (getDll) getDllExport = getDll;
 }
 
-export function openFile(path: string): TextDocument | undefined {
+export function openFile(path: string, showError = true): TextDocument | undefined {
 	if (inBrowser) {
 		let data = getwebfile(path);
 		if (data)
@@ -85,7 +85,8 @@ export function openFile(path: string): TextDocument | undefined {
 			try {
 				buf = new TextDecoder('utf8', { fatal: true }).decode(buf);
 			} catch {
-				connection.window.showErrorMessage(diagnostic.invalidencoding(path));
+				if (showError)
+					connection.window.showErrorMessage(diagnostic.invalidencoding(path));
 				return undefined;
 			}
 		}
@@ -324,7 +325,7 @@ export async function parseWorkspaceFolders() {
 			let dir = URI.parse(uri).fsPath, t;
 			for (let file of getallahkfiles(dir)) {
 				l = URI.file(file).toString().toLowerCase();
-				if (!lexers[l] && (t = openFile(file))) {
+				if (!lexers[l] && (t = openFile(file, false))) {
 					let d = new Lexer(t);
 					d.parseScript(), lexers[l] = d;
 					await sleep(100);

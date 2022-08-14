@@ -246,7 +246,7 @@ async function compileScript() {
 		window.showErrorMessage(e.message);
 		return;
 	}
-	cmdop = cmdop.replace(/\$\{execPath\}/gi, executePath);
+	cmdop = cmdop.replace(/(['"]?)\$\{execPath\}\1/gi, `"${executePath}"`);
 	if (cmdop.match(/\bahk2exe\w*\.exe/i)) {
 		cmd = cmdop + ' /in ' + currentPath;
 		if (!cmd.toLowerCase().includes(' /out '))
