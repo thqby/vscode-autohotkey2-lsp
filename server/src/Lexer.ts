@@ -2160,7 +2160,7 @@ export class Lexer {
 			}
 
 			function parse_obj(must: boolean = false, tp: any = {}, ks: any = {}): boolean {
-				let l = lk, b = tk, rl = result.length, isobj = true, joinmode = false;
+				let l = lk, b = tk, rl = result.length, isobj = true;
 				let ts: any = {}, k: Token | undefined, nk: Token;
 				if (block_mode = false, !next && tk.type === 'TK_START_BLOCK')
 					next = true;
@@ -2246,13 +2246,6 @@ export class Lexer {
 									}
 								}
 							case 'TK_START_EXPR':
-								if (tk.ignore && !joinmode) {
-									let op = input.substring(tk.offset + 1, tk.offset + tk.length).replace(/\s;.*$/, '');
-									if ((' ' + op + ' ').match(/\sjoin\S*,/i)) {
-										joinmode = true;
-										return objkey();
-									}
-								}
 								return isobj = false;
 							case 'TK_COMMA':
 								if (lk.type === 'TK_COMMA' || lk.type === 'TK_START_BLOCK')
@@ -2265,7 +2258,7 @@ export class Lexer {
 				}
 
 				function objval(): boolean {
-					let exp = parse_expression(joinmode ? undefined : ',', ts = {});
+					let exp = parse_expression(',', ts = {});
 					result.push(...exp);
 					if (k) {
 						if (k.content.toLowerCase() === 'base') {
@@ -2274,12 +2267,6 @@ export class Lexer {
 								tp[t.slice(0, -10).trim().toLowerCase().replace(/([^.]+)$/, '@$1')] = true;
 						} else
 							addprop(k);
-					}
-					if (joinmode) {
-						if (tk.ignore && tk.content === ')') {
-							joinmode = false, next = true;
-							nexttoken();
-						} else return next = false;
 					}
 					if (tk.type === 'TK_COMMA')
 						return !(next = true);
