@@ -2239,8 +2239,9 @@ export class Lexer {
 									return false;
 							case 'TK_NUMBER':
 								if (allIdentifierChar.test(tk.content)) {
-									nexttoken;
+									nexttoken();
 									if (tk.content === ':') {
+										k = lk;
 										lk.semantic = { type: SemanticTokenTypes.property }, ks[lk.content.toLowerCase()] = lk.content;
 										return true;
 									}
