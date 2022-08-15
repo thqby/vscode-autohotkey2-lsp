@@ -784,7 +784,7 @@
     },
     "continuation_section": {
       "name": "meta.parens.continuation_section.ahk2",
-      "begin": "(?<=^\\s*)(\\()(\\s+|(?i:\\bjoin\\S*)|\\S+)*?\\s*(\\s;.*)?$",
+      "begin": "(?<=^\\s*)(\\()((?i:\\bjoin\\S*)|[^\\s()]+|\\s+)*?\\s*(\\s;.*)?$",
       "beginCaptures": {
         "1": {
           "name": "punctuation.section.parens.begin.ahk2"
@@ -2038,7 +2038,7 @@
       ]
     },
     "continuation_string": {
-      "begin": "^\\s*(\\()(\\s+|(?i:\\bjoin\\S*)|\\S+)*?\\s*(\\s;.*)?$",
+      "begin": "^\\s*(\\()((?i:\\bjoin\\S*)|[^\\s()]+|\\s+)*?\\s*(\\s;.*)?$",
       "beginCaptures": {
         "1": {
           "name": "punctuation.section.parens.begin.bracket.round.ahk2"
