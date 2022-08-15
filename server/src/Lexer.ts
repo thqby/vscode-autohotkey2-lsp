@@ -161,7 +161,7 @@ export namespace FuncNode {
 			full += ', ' + (param.ref ? (hasref = true, '&') : '') + param.name + (param.defaultVal ? ' := ' + param.defaultVal : param.arr ? '*' : param.defaultVal === null ? '?' : '');
 		});
 		full = (isstatic ? 'static ' : '') + name + '(' + full.substring(2) + ')', params = ps;
-		return { assume: FuncScope.DEFAULT, hasref, name, kind, range, selectionRange, params, full, children, funccall: [], declaration: {}, global: {}, local: {}, labels: {} };
+		return { assume: FuncScope.DEFAULT, static: isstatic, hasref, name, kind, range, selectionRange, params, full, children, funccall: [], declaration: {}, global: {}, local: {}, labels: {} };
 	}
 }
 
@@ -666,13 +666,16 @@ export class Lexer {
 				}
 				while (block_mode = true, nexttoken()) {
 					let _nk: Token | undefined;
-					if (tk.topofline && input.charAt(parser_pos) === ':' && whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content)) {
-						if (_nk = tokens[parser_pos]) {
-							if ((tk.next_token_offset = _nk.next_token_offset) > 0)
-								tokens[_nk.next_token_offset].previous_token = tk;
-							delete tokens[parser_pos];
+					if (tk.topofline && input.charAt(parser_pos) === ':') {
+						if ((whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content)) ||
+							(inswitch > -1 && tk.content.toLowerCase() === 'default')) {
+							if (_nk = tokens[parser_pos]) {
+								if ((tk.next_token_offset = _nk.next_token_offset) > 0)
+									tokens[_nk.next_token_offset].previous_token = tk;
+								delete tokens[parser_pos];
+							}
+							tk.content += ':', tk.length++, tk.type = 'TK_LABEL', parser_pos++;
 						}
-						tk.content += ':', tk.length++, tk.type = 'TK_LABEL', parser_pos++;
 					}
 
 					switch (tk.type) {
@@ -884,7 +887,7 @@ export class Lexer {
 										result.push(...parse_statement(''));
 									}
 								} else {
-									tk = lk, lk = EMPTY_TOKEN;
+									reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN;
 									parser_pos = tk.offset + tk.length;
 									parse_top_word();
 								}
@@ -894,7 +897,9 @@ export class Lexer {
 							if (mode === 2) {
 								result.push(...parse_statement(''));
 							} else {
-
+								if (tk.topofline)
+									parse_top_word();
+								else result.push(...parse_line());
 							}
 							break;
 
@@ -955,8 +960,11 @@ export class Lexer {
 							break;
 
 						case 'TK_LABEL':
-							if (inswitch > -1 && tk.content.toLowerCase() === 'default:')
+							if (inswitch > -1 && tk.content.toLowerCase() === 'default:') {
+								nexttoken(), next = false;
+								tk.topofline ||= -1;
 								break;
+							}
 							if (mode === 2) {
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
 								break;
@@ -1046,16 +1054,20 @@ export class Lexer {
 									break;
 								else if (tk.type as string !== 'TK_WORD' || !is_func_def())
 									_this.addDiagnostic(diagnostic.hotmissbrace(), lk.offset, lk.length);
+								next = false;
 							} else {
 								let tparent = _parent, tmode = mode, l = tk.content.toLowerCase();
 								_parent = tn, mode = 1;
 								if (l === 'return')
 									tn.children = parse_line(undefined, undefined, ['return']);
-								else if (['global', 'local', 'static'].includes(l))
-									tn.children = [], parse_reserved();
-								else if (tk.type as string === 'TK_WORD') {
+								else if (['global', 'local', 'static'].includes(l)) {
+									let _p = _parent, rl = result.length;
+									_parent = tn, parse_reserved();
+									tn.children = result.splice(rl);
+									_parent = _p;
+								} else if (tk.type as string === 'TK_WORD') {
 									let rl = result.length;
-									tk.topofline = 2, parse_body(null);
+									tk.topofline = -1, parse_body(null);
 									tn.children = result.splice(rl);
 								}
 								_parent = tparent, mode = tmode, adddeclaration(tn as FuncNode);
@@ -1467,6 +1479,11 @@ export class Lexer {
 				}
 			}
 
+			function reset_extra_index(tk: Token) {
+				let t = tk.previous_extra_tokens;
+				if (t) t.i = 0;
+			}
+
 			function parse_top_word() {
 				let c = '', add_once = undefined;
 				next = true, nexttoken(), next = false;
@@ -1492,7 +1509,7 @@ export class Lexer {
 					} else
 						addvariable(lk), parse_funccall(SymbolKind.Function, c);
 				} else {
-					tk = lk, lk = EMPTY_TOKEN, next = false;
+					reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN, next = false;
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
 					result.push(...parse_line());
 				}
@@ -1585,7 +1602,7 @@ export class Lexer {
 						break;
 					else if (t !== parser_pos)
 						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length), next = false;
-					if (t === parser_pos)
+					if (t === parser_pos && (!continuation_sections_mode || tk.length))
 						break;
 					t = parser_pos;
 				}
@@ -1678,7 +1695,7 @@ export class Lexer {
 										lk = EMPTY_TOKEN, next = false;
 										break loop;
 									}
-									if (!tk.topofline)
+									if (!tk.topofline && tk.type as string !== 'TK_COMMA')
 										parse_expression(',');
 									next = false;
 									break;
@@ -3205,7 +3222,8 @@ export class Lexer {
 		}
 
 		function get_next_token(): Token {
-			let resulting_string: string, c: string, m: RegExpMatchArray | null, bg = (parser_pos === 0) ? 1 : 0;
+			let resulting_string: string, c: string, m: RegExpMatchArray | null;
+			let bg = (parser_pos === 0) ? 1 : 0, _ppos = parser_pos;
 			n_newlines = 0;
 
 			while (whitespace.includes(c = input.charAt(parser_pos++))) {
@@ -3239,24 +3257,23 @@ export class Lexer {
 				if (!format_mode) {
 					let extra = _tk.previous_extra_tokens;
 					if (extra) {
-						let { i, len, tokens } = extra;
-						if (i < len) {
-							_tk = Object.assign({}, tokens[i]), extra.i++;
-							_tk.offset = last_LF, parser_pos = offset;
-						} else i = 0;
+						if (_ppos < offset)
+							extra.i = 0;
+						if (extra.i < extra.len) {
+							_tk = extra.tokens[extra.i++], parser_pos = offset;
+						} else extra.i = 0;
 					}
 				}
 				return _tk;
 			}
 			if (begin_line) {
 				begin_line = false, bg = 1;
-				if (block_mode) {
-					let next_LF = input.indexOf('\n', parser_pos);
-					if (next_LF < 0)
-						next_LF = input_length;
-					let line = input.substring(last_LF + 1, next_LF).trim();
-					if (line.indexOf('::') < 0) {
-					} else if (m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i)) {
+				let next_LF = input.indexOf('\n', parser_pos);
+				if (next_LF < 0)
+					next_LF = input_length;
+				let line = input.substring(last_LF + 1, next_LF).trim();
+				if (line.includes('::')&&(block_mode || !is_line_continue(lst, EMPTY_TOKEN) || !'"\''.includes(line[0]))) {
+					if (m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i)) {
 						let execute: any;
 						if ((execute = m[2].match(/[xX]/)) || m[4].match(/^\s*\{?\s*(;.*)?$/))
 							parser_pos += m[1].length - 1, lst = createToken(m[1], 'TK_HOT', offset, m[1].length, 1);
@@ -3391,8 +3408,8 @@ export class Lexer {
 									lst.data = { content, offset, length: parser_pos - offset };
 									lst.skip_pos = parser_pos;
 									let js = content.match(/(?<=(^|\s))join(\S*)/i), tk: Token;
-									let _lst = lst, lk = lst, optionend = false, _mode = format_mode;
-									let create_tokens: (n: number, parser_pos: number) => any = (n, pos) => undefined;
+									let _lst = lst, lk = lst, optionend = false, _mode = format_mode, llf = parser_pos;
+									let create_tokens: (n: number, LF: number) => any = (n, pos) => undefined;
 									if (js) {
 										let s = js[2].replace(/`[srn]/g, '  '), suffix_is_whitespace = false;
 										let tl = new Lexer(TextDocument.create('', 'ahk2', -10, s));
@@ -3402,14 +3419,17 @@ export class Lexer {
 										if (tks.length) {
 											suffix_is_whitespace = whitespace.includes(s.charAt(s.length - 1));
 											tks.map(tk => {
-												tk.offset = tk.length = 0;
+												tk.offset += offset, tk.length = 0;
 												tk.next_token_offset = -1;
 											});
-											create_tokens = (n, parser_pos) => {
+											create_tokens = (n, last_LF) => {
 												let tokens: Token[] = [];
-												for (let i = 0; i < n; i++)
-													tokens.push(...tks);
-												return { i: 0, len: tokens.length, tokens, parser_pos, suffix_is_whitespace };
+												for (let i = 0; i < n; i++) {
+													last_LF = input.indexOf('\n', last_LF + 1);
+													for (let tk of tks)
+														tk = Object.assign({}, tk), tk.offset = last_LF, tokens.push(tk);
+												}
+												return { i: 0, len: tokens.length, tokens, suffix_is_whitespace };
 											};
 											if (',)]}'.includes(tks[0].content))
 												optionend = true;
@@ -3417,22 +3437,22 @@ export class Lexer {
 									}
 									format_mode = true, tk = get_next_token();
 									if (continuation_sections_mode && tk.type !== 'TK_EOF') {
-										tk.topofline = top ? 1 : 0;
 										if (n_newlines > 1)
-											tk.previous_extra_tokens = create_tokens(n_newlines - 1, lk.skip_pos as number);
-										lk = tk, tk = get_next_token();
+											tk.previous_extra_tokens = create_tokens(n_newlines - 1, llf);
+										tk.topofline = top ? 1 : 0;
+										llf = last_LF, lk = tk, tk = get_next_token();
 									}
 									while (continuation_sections_mode && tk.type !== 'TK_EOF') {
 										if (tk.topofline) {
-											tk.previous_extra_tokens = create_tokens(n_newlines, lk.skip_pos ?? lk.offset + lk.length);
-											tk.topofline = 0;
+											tk.previous_extra_tokens = create_tokens(n_newlines, llf);
+											tk.topofline = 0, llf = last_LF;
 											if (optionend && lk.content === '?')
 												lk.ignore = true;
 										}
 										lk = tk, tk = get_next_token();
 									}
 									if (tk.ignore && tk.type === 'TK_END_EXPR' && n_newlines > 1)
-										tk.previous_extra_tokens = create_tokens(n_newlines - 1, lk.skip_pos ?? lk.offset + lk.length);
+										tk.previous_extra_tokens = create_tokens(n_newlines - 1, llf);
 									parser_pos = _lst.skip_pos as number;
 									return lst = (format_mode = _mode) ? _lst : get_next_token();
 								}
