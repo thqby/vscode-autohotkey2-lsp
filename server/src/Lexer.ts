@@ -625,6 +625,31 @@ export class Lexer {
 			if (tk.type === 'TK_EOF' && blocks > (mode === 0 ? 0 : -1)) _this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (mode === 0 ? 1 : 0)], 1);
 			return result;
 
+			function is_line_continue(lk: Token, tk: Token): boolean {
+				switch (tk.type) {
+					case 'TK_DOT':
+					case 'TK_COMMA':
+					case 'TK_EQUALS':
+						return true;
+					case 'TK_OPERATOR':
+						return lk.type === '' || !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!tk.content.match(/^\w/) || _parent.kind !== SymbolKind.Class);
+					case 'TK_END_BLOCK':
+					case 'TK_END_EXPR':
+						return false;
+					default:
+						switch (lk.type) {
+							case 'TK_COMMA':
+							case 'TK_EQUALS':
+							case '':
+								return true;
+							case 'TK_OPERATOR':
+								return lk.ignore ? false : !lk.content.match(/^(\+\+|--|%)$/);
+							default:
+								return false;
+						}
+				}
+			}
+
 			function is_func_def(fat = undefined) {
 				if (input.charAt(tk.offset + tk.length) !== '(')
 					return false;
@@ -2826,31 +2851,6 @@ export class Lexer {
 			return Range.create(_this.document.positionAt(offset), _this.document.positionAt(offset + length));
 		}
 
-		function is_line_continue(lk: Token, tk: Token): boolean {
-			switch (tk.type) {
-				case 'TK_DOT':
-				case 'TK_COMMA':
-				case 'TK_EQUALS':
-					return true;
-				case 'TK_OPERATOR':
-					return lk.type === '' || !tk.content.match(/^(!|~|not|%|\+\+|--)$/i);
-				case 'TK_END_BLOCK':
-				case 'TK_END_EXPR':
-					return false;
-				default:
-					switch (lk.type) {
-						case 'TK_COMMA':
-						case 'TK_EQUALS':
-						case '':
-							return true;
-						case 'TK_OPERATOR':
-							return lk.ignore ? false : !lk.content.match(/^(\+\+|--|%)$/);
-						default:
-							return false;
-					}
-			}
-		}
-
 		function createToken(content: string, type: string, offset: number, length: number, topofline: number): Token {
 			let tk: Token = { content, type, offset, length, topofline, previous_token: lst, next_token_offset: -1, prefix_is_whitespace: whitespace.includes(input.charAt(offset - 1)) };
 			_this.tokens[offset] = tk;
@@ -3272,7 +3272,7 @@ export class Lexer {
 				if (next_LF < 0)
 					next_LF = input_length;
 				let line = input.substring(last_LF + 1, next_LF).trim();
-				if (line.includes('::')&&(block_mode || !is_line_continue(lst, EMPTY_TOKEN) || !'"\''.includes(line[0]))) {
+				if (line.includes('::')&&(block_mode || !'"\''.includes(line[0]) || !['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lst.type))) {
 					if (m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i)) {
 						let execute: any;
 						if ((execute = m[2].match(/[xX]/)) || m[4].match(/^\s*\{?\s*(;.*)?$/))
