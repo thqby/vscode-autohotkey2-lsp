@@ -3390,7 +3390,7 @@ export class Lexer {
 									if (next_LF < 0)
 										next_LF = input_length;
 									resulting_string = input.substring(o, next_LF).trimRight();
-									lst = createToken(resulting_string, 'TK_STRING', offset, resulting_string.length, 1);
+									lst = createToken(resulting_string, 'TK_STRING', o, resulting_string.length, 1);
 									return lst.ignore = true, lst;
 								} else {
 									// continuation sections
