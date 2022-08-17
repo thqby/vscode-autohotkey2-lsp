@@ -1,3 +1,11 @@
+## 1.5.6
+- 修复[#158](https://github.com/thqby/vscode-autohotkey2-lsp/issues/158)
+- 修复[#159](https://github.com/thqby/vscode-autohotkey2-lsp/issues/159)
+- 修复[#160](https://github.com/thqby/vscode-autohotkey2-lsp/issues/160)
+- 修复[#161](https://github.com/thqby/vscode-autohotkey2-lsp/issues/161)
+- 修复[#162](https://github.com/thqby/vscode-autohotkey2-lsp/issues/162)
+- 修复延续片段字符串
+
 ## 1.5.5
 - 修复[#154](https://github.com/thqby/vscode-autohotkey2-lsp/issues/154)
 - 修复[#155](https://github.com/thqby/vscode-autohotkey2-lsp/issues/155)

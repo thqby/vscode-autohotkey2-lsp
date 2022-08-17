@@ -812,7 +812,7 @@
               "name": "punctuation.definition.string.begin.ahk2"
             }
           },
-          "end": "(\\1)",
+          "end": "(\\1)|(?=^\\s*\\))",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.string.end.ahk2"
@@ -1854,7 +1854,7 @@
           ]
         },
         {
-          "begin": "^\\s*((#)(?i:dllload|mapcasesense|requires|errorstdout|definedefault(array|map|object)value|windowclass(gui|main)))\\b",
+          "begin": "^\\s*((#)(?i:dllload|mapcasesense|requires|errorstdout|definedefault(array|map|object)value|windowclass(gui|main))|singleinstance)\\b",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
@@ -1878,6 +1878,32 @@
           ]
         },
         {
+          "begin": "^\\s*((#)(?i:warn))\\b",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.directive.ahk2"
+            },
+            "2": {
+              "name": "punctuation.definition.directive.ahk2"
+            }
+          },
+          "end": "(?=(?:;))|(?=\\n)",
+          "name": "meta.preprocessor.ahk2",
+          "patterns": [
+            {
+              "match": ",",
+              "name": "punctuation.separator.comma.ahk2"
+            },
+            {
+              "match": "\\w+",
+              "name": "string.raw.ahk2"
+            },
+            {
+              "include": "#comments"
+            }
+          ]
+        },
+        {
           "begin": "^\\s*((#)(?i:hotstring))\\b",
           "beginCaptures": {
             "1": {
@@ -1893,7 +1919,7 @@
             {
               "begin": "[^\\s;]",
               "end": "(?=(?:\\s+;))|(?=\\n)",
-              "name": "string.quoted.ahk2"
+              "name": "string.raw.ahk2"
             }
           ]
         },
@@ -1933,7 +1959,7 @@
             },
             {
               "match": "[^,\\n\\r]+",
-              "name": "string.quoted.ahk2"
+              "name": "string.raw.ahk2"
             }
           ]
         }
@@ -1973,6 +1999,10 @@
           "name": "constant.character.escape.ahk2"
         },
         {
+          "match": "(?<=^\\s*)`\\)",
+          "name": "constant.character.escape.ahk2"
+        },
+        {
           "match": "`.",
           "name": "invalid.illegal.unknown-escape.ahk2"
         }
@@ -1981,13 +2011,13 @@
     "strings": {
       "patterns": [
         {
-          "begin": "(['\"])(?=.*\\1)",
+          "begin": "(?<!\\w)(['\"])",
           "beginCaptures": {
             "1": {
               "name": "punctuation.definition.string.begin.ahk2"
             }
           },
-          "end": "(\\1)",
+          "end": "(?<=(^\\s*\\)|\\1)(`.|.)*)(\\1)|(?=^\\s*([^\\s;/(]|\/(?!\\*)|\\(.*\\)(?<!\\b(?i:join)\\S*\\))))",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.string.end.ahk2"
@@ -1999,39 +2029,10 @@
               "include": "#string_escaped_char"
             },
             {
-              "include": "#compiler_directive"
-            },
-            {
-              "include": "#comments"
-            }
-          ]
-        },
-        {
-          "begin": "(['\"])(?!.*\\1)",
-          "beginCaptures": {
-            "1": {
-              "name": "punctuation.definition.string.begin.ahk2"
-            }
-          },
-          "end": "(\\1)",
-          "endCaptures": {
-            "1": {
-              "name": "punctuation.definition.string.end.ahk2"
-            }
-          },
-          "name": "string.quoted.brack",
-          "patterns": [
-            {
-              "include": "#compiler_directive"
-            },
-            {
               "include": "#comments"
             },
             {
               "include": "#continuation_string"
-            },
-            {
-              "include": "#string_escaped_char"
             }
           ]
         }
