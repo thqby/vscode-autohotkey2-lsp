@@ -3282,7 +3282,7 @@ export class Lexer {
 				if (line.includes('::') && (block_mode || !'"\''.includes(line[0]) || !['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lst.type))) {
 					if (m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i)) {
 						let execute: any;
-						if ((execute = m[2].match(/[xX]/)) || m[4].match(/^\s*\{?\s*(;.*)?$/))
+						if ((execute = m[2].match(/[xX]/)) || m[4].match(/^\s*\{?\s*(\s;.*)?$/))
 							parser_pos += m[1].length - 1, lst = createToken(m[1], 'TK_HOT', offset, m[1].length, 1);
 						else {
 							last_LF = next_LF, parser_pos = offset + m[0].length, begin_line = true;
@@ -3294,7 +3294,7 @@ export class Lexer {
 						lst.ignore = true, add_sharp_foldingrange();
 						if (!m[3])
 							_this.addDiagnostic(diagnostic.invalidhotdef(), lst.offset, lst.length);
-						if (!execute && !m[4].trimLeft().startsWith('{')) {
+						if (lst.type === 'TK_HOTLINE' || (!execute && !m[4].match(/^\s*\{/))) {
 							string_mode = execute = true;
 							let _lst = lst, tk = get_token_ignore_comment(), t: number;
 							while (tk.ignore && tk.type === 'TK_STRING') {

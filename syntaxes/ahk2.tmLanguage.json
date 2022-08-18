@@ -18,7 +18,7 @@
       "include": "#object_property"
     },
     {
-      "match": "(?<!\\.)((?i:catch))(\\s+\\(?\\s*([^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+(\\s*,\\s*[^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+)*)?(\\s+((?i:as))\\s+([^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+))?)?\\s*\\)?",
+      "match": "(?<!\\.)((?i:catch))(\\s+\\(?\\s*(\\w+(\\s*,\\s*\\w+)*)?(\\s+((?i:as))\\s+(\\w+))?)?\\s*\\)?",
       "captures": {
         "1": {
           "name": "keyword.control.ahk2"
@@ -37,7 +37,7 @@
               "name": "punctuation.separator.comma.ahk2"
             },
             {
-              "match": "[^\\x00-\\x2f\\x3a-\\x40\\x5b\\x5c\\x5d\\x5e\\x60\\x7b-\\x7f]+",
+              "match": "\\w+",
               "name": "entity.name.type.class.ahk2"
             }
           ]
@@ -54,7 +54,7 @@
       "include": "#reserved"
     },
     {
-      "match": "(?<=^\\s*)(?i:macro)(?=\\s+(\\w|[^\\x00-\\x7f])+\\()",
+      "match": "(?<=^\\s*)(?i:macro)(?=\\s+\\w+\\()",
       "name": "storage.modifier.ahk2"
     },
     {
@@ -1322,7 +1322,7 @@
     "hotkey_hotstring": {
       "patterns": [
         {
-          "begin": "^\\s*(:)[^xX:]*(:)((`.|[^`])*?)(::)((;|\\s*[^{;\\s]).*?)?\\s*(\\s;.*)?$",
+          "begin": "^\\s*(:)[^xX:]*(:)((`.|[^`])*?)(::)(?!\\s*\\{\\s*(\\s;.*)?$)(.*?)(\\s;.*)?$",
           "beginCaptures": {
             "1": {
               "name": "punctuation.definition.colon"
@@ -1336,7 +1336,7 @@
             "5": {
               "name": "punctuation.definition.colon"
             },
-            "6": {
+            "7": {
               "name": "string.raw.ahk2"
             },
             "8": {
@@ -1443,7 +1443,7 @@
                   "name": "keyword.operator.ahk2"
                 },
                 {
-                  "match": "(?<=(&\\s+|^))([<>$~*!+#^]*?)(?i:shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|joy1|joy2|joy3|joy4|joy5|joy6|joy7|joy8|joy9|joy10|joy11|joy12|joy13|joy14|joy15|joy16|joy17|joy18|joy19|joy20|joy21|joy22|joy23|joy24|joy25|joy26|joy27|joy28|joy29|joy30|joy31|joy32|joyx|joyy|joyz|joyr|joyu|joyv|joypov|joyname|joybuttons|joyaxes|joyinfo|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\\d]{1,2}(sc[a-f\\d]+)?|sc[a-f\\d]+|`[;{]|[\\x21-\\x3A\\x3C-\\x7E])(?=(\\s|$))",
+                  "match": "(?<=(&\\s+|^\\s*))([<>$~*!+#^]*?)(?i:shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|joy1|joy2|joy3|joy4|joy5|joy6|joy7|joy8|joy9|joy10|joy11|joy12|joy13|joy14|joy15|joy16|joy17|joy18|joy19|joy20|joy21|joy22|joy23|joy24|joy25|joy26|joy27|joy28|joy29|joy30|joy31|joy32|joyx|joyy|joyz|joyr|joyu|joyv|joypov|joyname|joybuttons|joyaxes|joyinfo|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\\d]{1,2}(sc[a-f\\d]+)?|sc[a-f\\d]+|`[;{]|[\\x21-\\x3A\\x3C-\\x7E])(?=(\\s|$))",
                   "name": "keyword.keys.ahk2"
                 }
               ]
@@ -1854,7 +1854,7 @@
           ]
         },
         {
-          "begin": "^\\s*((#)(?i:dllload|mapcasesense|requires|errorstdout|definedefault(array|map|object)value|windowclass(gui|main))|singleinstance)\\b",
+          "begin": "^\\s*((#)(?i:dllload|mapcasesense|requires|errorstdout|definedefault(array|map|object)value|windowclass(gui|main)|singleinstance))\\b",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
@@ -1924,7 +1924,7 @@
           ]
         },
         {
-          "match": "^\\s*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|inputlevel|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|notrayicon|singleinstance|suspendexempt|usehook|warn|warncontinuableexception|winactivateforce))\\b",
+          "match": "^\\s*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|inputlevel|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|notrayicon|suspendexempt|usehook|warn|warncontinuableexception|winactivateforce))\\b",
           "captures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
