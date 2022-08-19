@@ -62,7 +62,10 @@
 			{
 				"language": "ahk2",
 				"scopeName": "source.ahk2",
-				"path": "./syntaxes/ahk2.tmLanguage.json"
+				"path": "./syntaxes/ahk2.tmLanguage.json",
+				"unbalancedBracketScopes": [
+					"keyword.keys.ahk2"
+				]
 			},
 			{
 				"language": "ahk2-output",
