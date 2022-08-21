@@ -766,7 +766,7 @@
           "name": "keyword.control.directive.ahk2",
           "captures": {
             "1": {
-              "name": "string.raw.ahk2"
+              "name": "string.literal.ahk2"
             }
           }
         }
@@ -1337,7 +1337,7 @@
               "name": "punctuation.definition.colon"
             },
             "7": {
-              "name": "string.raw.ahk2"
+              "name": "string.literal.ahk2"
             },
             "8": {
               "name": "comment.inline.ahk2"
@@ -1373,7 +1373,7 @@
             },
             {
               "match": "(?<=^\\s*\\)).*$",
-              "name": "string.raw.ahk2"
+              "name": "string.literal.ahk2"
             }
           ]
         },
@@ -1433,10 +1433,10 @@
           ]
         },
         {
-          "begin": "^\\s*(?i:((([<>$~*!+#^]*?)(`;|[\\x21-\\x3A\\x3C-\\x7E]|[a-z]\\w+|[^\\x00-\\x7f]))|(`;|[\\x21-\\x3A\\x3C-\\x7E]|[a-z]\\w+|[^\\x00-\\x7f])\\s+&\\s+~?(`;|[\\x21-\\x3A\\x3C-\\x7E]|[a-z]\\w+|[^\\x00-\\x7f]))(\\s+up)?)(::)",
+          "begin": "^\\s*(?i:((([<>$~*!+#^]*?)(`;|[\\x21-\\x3A\\x3C-\\x7E]|[a-z]\\w+|[^\\x00-\\x7f]))|~?(`;|[\\x21-\\x3A\\x3C-\\x7E]|[a-z]\\w+|[^\\x00-\\x7f])\\s+&\\s+~?(`;|[\\x21-\\x3A\\x3C-\\x7E]|[a-z]\\w+|[^\\x00-\\x7f]))(\\s+up)?)(::)",
           "beginCaptures": {
             "1": {
-              "name": "entity.name.function.hotkey.ahk2",
+              "name": "hotkey.ahk2",
               "patterns": [
                 {
                   "match": "(?<=\\s)&(?=\\s+\\S+(?i:\\s+up)?$)",
@@ -1607,7 +1607,7 @@
       ]
     },
     "keylist": {
-      "match": "(?i:shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|joy1|joy2|joy3|joy4|joy5|joy6|joy7|joy8|joy9|joy10|joy11|joy12|joy13|joy14|joy15|joy16|joy17|joy18|joy19|joy20|joy21|joy22|joy23|joy24|joy25|joy26|joy27|joy28|joy29|joy30|joy31|joy32|joyx|joyy|joyz|joyr|joyu|joyv|joypov|joyname|joybuttons|joyaxes|joyinfo|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\\d]{1,2}(sc[a-f\\d]+)?|sc[a-f\\d]+))",
+      "match": "\\b(?i:shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|joy1|joy2|joy3|joy4|joy5|joy6|joy7|joy8|joy9|joy10|joy11|joy12|joy13|joy14|joy15|joy16|joy17|joy18|joy19|joy20|joy21|joy22|joy23|joy24|joy25|joy26|joy27|joy28|joy29|joy30|joy31|joy32|joyx|joyy|joyz|joyr|joyu|joyv|joypov|joyname|joybuttons|joyaxes|joyinfo|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\\d]{1,2}(sc[a-f\\d]+)?|sc[a-f\\d]+))\\b",
       "name": "keyword.keys.ahk2"
     },
     "line_continue": {
@@ -1717,7 +1717,7 @@
           "name": "storage.type.function.arrow.ahk2"
         },
         {
-          "match": "\\.=|\\+=|-=|\\*=|(?<!\\()/=",
+          "match": "\\.=|\\+=|-=|\\*=|/?/=",
           "name": "keyword.operator.assignment.compound.ahk2"
         },
         {
@@ -1731,6 +1731,10 @@
         {
           "match": "!=|<=|>=|=?=|<|>",
           "name": "keyword.operator.comparison.ahk2"
+        },
+        {
+          "match": "~=",
+          "name": "keyword.operator.regexp.ahk2"
         },
         {
           "match": "\\?\\?|&&|!|\\|\\|",
@@ -1809,43 +1813,13 @@
               "name": "punctuation.definition.directive.ahk2"
             }
           },
-          "end": "(?=(?:;))|(?=\\n)",
+          "end": "(?=\\n)",
           "name": "meta.preprocessor.include.ahk2",
           "patterns": [
             {
-              "begin": "['\"]",
-              "beginCaptures": {
-                "0": {
-                  "name": "punctuation.definition.string.begin.ahk2"
-                }
-              },
-              "end": "\\0",
-              "endCaptures": {
-                "0": {
-                  "name": "punctuation.definition.string.end.ahk2"
-                }
-              },
-              "name": "string.quoted.include.ahk2"
-            },
-            {
-              "begin": "<",
-              "beginCaptures": {
-                "0": {
-                  "name": "punctuation.definition.string.begin.ahk2"
-                }
-              },
-              "end": ">",
-              "endCaptures": {
-                "0": {
-                  "name": "punctuation.definition.string.end.ahk2"
-                }
-              },
-              "name": "string.quoted.other.lt-gt.include.ahk2"
-            },
-            {
               "begin": "[^\\s;]",
               "end": "(?=(?:\\s+;))|(?=\\n)",
-              "name": "string.raw.include.ahk2"
+              "name": "string.literal.include.ahk2"
             },
             {
               "match": "(?:\\s+);.*",
@@ -1896,7 +1870,7 @@
             },
             {
               "match": "\\w+",
-              "name": "string.raw.ahk2"
+              "name": "string.literal.ahk2"
             },
             {
               "include": "#comments"
@@ -1919,7 +1893,7 @@
             {
               "begin": "[^\\s;]",
               "end": "(?=(?:\\s+;))|(?=\\n)",
-              "name": "string.raw.ahk2"
+              "name": "string.literal.ahk2"
             }
           ]
         },
@@ -1959,7 +1933,7 @@
             },
             {
               "match": "[^,\\n\\r]+",
-              "name": "string.raw.ahk2"
+              "name": "string.literal.ahk2"
             }
           ]
         }

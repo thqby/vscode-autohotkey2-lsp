@@ -187,7 +187,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			if (temp = lt.match(/^\s*#(include|(dllload))/i)) {
 				if (inBrowser)
 					return;
-				let tt = lt.replace(/^\s*#(include(again)?|dllload)\s+/i, '').replace(/\s*\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
+				lt = lt.replace(/\s+;.*/, '').trimRight();
+				let tt = lt.replace(/^\s*#(include(again)?|dllload)\s+/i, '').replace(/\*i\s/i, ''), paths: string[] = [], inlib = false, lchar = '';
 				let pre = lt.substring(lt.length - tt.length, position.character), xg = '\\', m: any, a_ = '', isdll = !!temp[2];
 				if (percent) {
 					completionItemCache.other.map(it => {
@@ -195,12 +196,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							items.push(it);
 					})
 					return items;
-				} else if (pre.match(/\s+;/))
+				} else if (!pre)
 					return;
 				else if (pre.match(/^['"<]/)) {
-					if (pre.substring(1).match(/['">]/)) return;
+					if (pre.substring(1).match(/[">]/)) return;
 					else {
-						if ((lchar = pre.charAt(0)) === '<') {
+						if ((lchar = pre[0]) === '<') {
 							if (isdll) return;
 							inlib = true, paths = doc.libdirs;
 						} else if (!isdll)
@@ -211,7 +212,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					}
 				} else if (!isdll)
 					paths = (temp = doc.includedir.get(position.line)) ? [temp] : [doc.scriptpath];
-				pre = pre.replace(/[^\\/]*$/, '');
+				
+				let extreg = isdll ? new RegExp(/\.(dll|ocx|cpl)$/i) : inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i), ts = '';
+				pre = pre.replace(/[^\\/]*$/, m => (ts = m, ''));
 				while (m = pre.match(/%a_(\w+)%/i))
 					if (pathenv[a_ = m[1].toLowerCase()])
 						pre = pre.replace(m[0], pathenv[a_]);
@@ -220,16 +223,16 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					else if (a_ === 'linefile')
 						pre = pre.replace(m[0], URI.parse(doc.uri).fsPath);
 					else return;
-				if (pre.charAt(pre.length - 1) === '/')
+				if (pre.endsWith('/'))
 					xg = '/';
-				let extreg = isdll ? new RegExp(/\.(dll|ocx|cpl)$/i) : inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i), ts = tt.replace(/['"<>]/g, '').replace(/^.*[\\/]/, '');
 				if (ts.includes('*'))
 					return undefined;
+				ts = ts.replace(/`;/g, ';');
 				let ep = new RegExp((ts.match(/[^\w]/) ? ts.replace(/(.)/g, '$1.*') : '(' + ts.replace(/(.)/g, '$1.*') + '|[^\\w])').replace(/\.\./, '\\..'), 'i');
 				let textedit: TextEdit | undefined;
 				if (isdll)
 					paths = [(temp = doc.dlldir.get(position.line)) ? temp : doc.scriptpath, 'C:\\Windows\\System32'];
-				if (ts.includes('.'))
+				if (ts.match(/[^\w]/))
 					textedit = TextEdit.replace({ start: { line: position.line, character: position.character - ts.length }, end: position }, '');
 				for (let path of paths) {
 					if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory())
@@ -238,7 +241,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						try {
 							if (statSync(path + it).isDirectory()) {
 								if (ep.test(it)) {
-									additem(it, CompletionItemKind.Folder);
+									additem(it.replace(/;/g, '`;'), CompletionItemKind.Folder);
 									cpitem.command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
 									if (textedit)
 										cpitem.textEdit = Object.assign({}, textedit, { newText: cpitem.label + xg });
@@ -246,7 +249,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 										cpitem.insertText = cpitem.label + xg;
 								}
 							} else if (extreg.test(it) && ep.test(inlib ? it = it.replace(extreg, '') : it)) {
-								additem(it, CompletionItemKind.File);
+								additem(it.replace(/;/g, '`;'), CompletionItemKind.File);
 								if (textedit)
 									cpitem.textEdit = Object.assign({}, textedit, { newText: cpitem.label + lchar });
 								else
@@ -524,7 +527,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					vars[l] = convertNodeCompletion(it);
 			});
 			for (const t in list) {
-				path = list[t].path;
+				path = list[t];
 				for (const n in (temp = lexers[t]?.declaration)) {
 					if (expg.test(n) && (!vars[n] || (vars[n].kind === CompletionItemKind.Variable && temp[n].kind !== SymbolKind.Variable))) {
 						cpitem = convertNodeCompletion(temp[n]), cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');

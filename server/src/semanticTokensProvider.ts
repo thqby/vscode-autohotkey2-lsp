@@ -1,6 +1,6 @@
 import { DocumentSymbol, SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaParams, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, FuncNode, getClassMembers, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token } from './Lexer';
-import { lexers } from './common';
+import { diagnostic, lexers } from './common';
 import { checkParams, globalsymbolcache, symbolProvider } from './symbolProvider';
 
 let curclass: ClassNode | undefined;
@@ -18,13 +18,14 @@ function resolve_sem(tk: Token, doc: Lexer) {
 					doc.STB.push(l++, 0, data[i], type, 0);
 			} else doc.STB.push(pos.line, pos.character, tk.length, type, 0);
 		} else {
-			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) || type === SemanticTokenTypes.class)
+			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) && tk.previous_token?.type === 'TK_DOT'
+				|| (curclass = undefined, type === SemanticTokenTypes.class))
 				type = resolveSemanticType(tk.content.toLowerCase(), tk, doc);
 			doc.STB.push(pos.line, pos.character, tk.length, type, tk.semantic.modifier ?? 0);
 		}
 	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 		curclass = undefined;
-	else if (tk.type === 'TK_WORD' && ['this', 'super'].includes(l = tk.content.toLowerCase())) {
+	else if (tk.type === 'TK_WORD' && ['this', 'super'].includes(l = tk.content.toLowerCase()) && tk.previous_token?.type !== 'TK_DOT') {
 		let r = doc.searchNode(l, doc.document.positionAt(tk.offset), SymbolKind.Variable);
 		if (r && r.ref === false)
 			curclass = r.node as ClassNode;
@@ -77,7 +78,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 		case SemanticTokenTypes.property:
 			if (curclass) {
 				let n = curclass.staticdeclaration[name], kind = n?.kind, temp: { [name: string]: DocumentSymbol };
-				if (!n) {
+				if (!n || (n as any).def === false) {
 					let t = (memscache.get(curclass) ?? (memscache.set(curclass, temp = getClassMembers(doc, curclass, true)), temp))[name];
 					if (t) n = t, kind = t.kind;
 				}
@@ -96,6 +97,12 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						if (t?.length === 1 && t[0].name === 'get')
 							sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly | 1 << SemanticTokenModifiers.static;
 						return sem.type = SemanticTokenTypes.property;
+					case undefined:
+						if ((<any>curclass).checkmember !== false) {
+							let tt = doc.tokens[tk.next_token_offset];
+							if (!tt || tt.content !== ':=')
+								doc.addDiagnostic(diagnostic.maybehavenotmember(curclass.name, tk.content), tk.offset, tk.length, 2);
+						}
 				}
 			}
 		default:

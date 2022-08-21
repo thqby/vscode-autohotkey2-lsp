@@ -1,3 +1,11 @@
+## 1.5.7
+- 修复[#164](https://github.com/thqby/vscode-autohotkey2-lsp/issues/164)
+- 修复[#165](https://github.com/thqby/vscode-autohotkey2-lsp/issues/165)
+- 修复[#166](https://github.com/thqby/vscode-autohotkey2-lsp/issues/166)
+- 修复[#167](https://github.com/thqby/vscode-autohotkey2-lsp/issues/167)
+- 修复[#168](https://github.com/thqby/vscode-autohotkey2-lsp/issues/168)
+- 当选择`AutoHotkeyUX.exe`时, 使用UX Launcher启动脚本 [#157](https://github.com/thqby/vscode-autohotkey2-lsp/issues/157)
+
 ## 1.5.6
 - 修复[#158](https://github.com/thqby/vscode-autohotkey2-lsp/issues/158)
 - 修复[#159](https://github.com/thqby/vscode-autohotkey2-lsp/issues/159)

@@ -42,6 +42,7 @@ export namespace diagnostic {
 	export const invalidprop = localize('diagnostic.invalidprop', 'Invalid dynamic property');
 	export const invalidpropname = localize('diagnostic.invalidpropname', 'Invalid property name in object literal');
 	export const invalidsymbolname = localize('diagnostic.invalidsymbolname', 'Invalid symbol naming \'{0}\'');
+	export const maybehavenotmember = localize('diagnostic.maybehavenotmember', 'Class \'{0}\' maybe have not member \'{1}\'');
 	export const missing = localize('diagnostic.missing', 'Missing \'{0}\'');
 	export const missingparam = localize('diagnostic.missingparam', 'Missing a required parameter');
 	export const objectliteralerr = localize('diagnostic.objectliteralerr', 'Error in object literal');

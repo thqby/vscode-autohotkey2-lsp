@@ -49,11 +49,12 @@
 	"diagnostic.invalidprop": "不是有效的getter/setter属性",
 	"diagnostic.invalidpropname": "对象字面量中的属性名无效",
 	"diagnostic.invalidsymbolname": "无效的符号命名 '{0}'",
+	"diagnostic.maybehavenotmember": "类'{0}'可能没有成员'{1}'",
 	"diagnostic.missing": "丢失对应的 '{0}'",
 	"diagnostic.missingparam": "缺少必需的参数",
 	"diagnostic.objectliteralerr": "对象字面量存在错误",
 	"diagnostic.pathinvalid": "无效的文件路径",
-	"diagnostic.paramcounterr": "应有 {0} 个参数，但获得 {1} 个",
+	"diagnostic.paramcounterr": "应有 {0} 个参数, 但获得 {1} 个",
 	"diagnostic.propdeclaraerr": "不是有效的方法, 类或属性定义",
 	"diagnostic.propemptyparams": "动态属性不允许使用空[]",
 	"diagnostic.propnotinit": "属性声明未初始化",
@@ -69,5 +70,5 @@
 	"diagnostic.unterminated": "未终止的字符串文本",
 	"setting.ahkpatherr": "AutoHotkey解释器不存在, 在'设置-AutoHotkey2.InterpreterPath'中重新指定",
 	"setting.getenverr": "获取环境变量失败 ",
-	"setting.versionerr": "当前AutoHotkey.exe不是v2版本，无法获得正确的语法解析、补全等功能"
+	"setting.versionerr": "当前AutoHotkey.exe不是v2版本, 无法获得正确的语法解析、补全等功能"
 }

@@ -185,7 +185,7 @@ documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument
 		libfuncs[uri].length = 0;
 		libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
 	}
-	if (Object.keys(Object.assign(initial, doc.include)).length === il) {
+	if (Object.keys(doc.include).length === il && Object.keys(Object.assign(initial, doc.include)).length === il) {
 		if (!doc.relevance)
 			doc.update_relevance();
 		sendDiagnostics();

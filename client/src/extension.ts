@@ -177,7 +177,14 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 	let startTime: Date;
 	await stopRunningScript(true);
 	outputchannel.show(true), outputchannel.clear();
-	if (selection || editor.document.isUntitled) selecttext = editor.document.getText(editor.selection);
+	if (selection || editor.document.isUntitled)
+		selecttext = editor.document.getText(editor.selection);
+	executePath.replace(/^(.+[\\/])AutoHotkeyUX\.exe$/i, (...m) => {
+		let lc = m[1] + 'launcher.ahk';
+		if (existsSync(lc))
+			command = `"${executePath}" "${lc}" `;
+		return '';
+	})
 	if (selecttext !== '') {
 		command += path, outputchannel.appendLine('[Running] ' + command), startTime = new Date();
 		ahkprocess = child_process.spawn(command, { cwd: `${resolve(editor.document.fileName, '..')}`, shell: true });

@@ -9,16 +9,16 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 	if (context) {
 		let word = '', kind: SymbolKind = SymbolKind.Variable, t: any;
 		if (context.pre.startsWith('#')) {
-			if ((m = context.linetext.match(/^(\s*#include(again)?\s+)(<.+>|(['"]?)(\s*\*i\s+)?.+?\4)\s*(\s;.*)?$/i)) && m[3]) {
-				let line = context.range.start.line, file = m[3].trim();
-				for (let t in doc.include)
-					if (doc.include[t].raw === file) {
-						let rg = Range.create(0, 0, 0, 0);
-						if (lexers[t])
-							rg = Range.create(0, 0, lexers[t].document.lineCount, 0);
-						uri = lexers[t]?.document.uri || (inBrowser || !t.match(/^file:/) ? t : URI.file(restorePath(URI.parse(t).fsPath)).toString());
-						return [LocationLink.create(uri, rg, rg, Range.create(line, m[1].length, line, m[1].length + m[3].length))];
-					}
+			let line = params.position.line, character = context.linetext.indexOf('#');
+			let t = doc.tokens[doc.document.offsetAt({line, character})];
+			if (t && t.content.match(/^#include/i)) {
+				let d = t.data, p = d?.data as string[];
+				if (p) {
+					character += d.offset - t.offset;
+					let rg = Range.create(0, 0, lexers[p[1]]?.document.lineCount ?? 0, 0);
+					let end = character + d.content.replace(/\s+;.*$/, '').length;
+					return [LocationLink.create(URI.file(restorePath(p[0])).toString(), rg, rg, Range.create(line, character, line, end))];
+				}
 			}
 			return undefined;
 		} else word = context.text.toLowerCase(), kind = context.kind;
