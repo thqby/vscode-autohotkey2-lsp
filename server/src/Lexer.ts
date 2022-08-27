@@ -4725,12 +4725,12 @@ export class Lexer {
 		return { text: '', range: Range.create(position, position) };
 	}
 
-	public searchNode(name: string, position?: Position, kind?: SymbolKind, root?: DocumentSymbol[])
+	public searchNode(name: string, position?: Position, kind?: SymbolKind)
 		: { node: DocumentSymbol, uri: string, ref?: boolean, scope?: DocumentSymbol, fn_is_static?: boolean } | undefined | false | null {
 		let node: DocumentSymbol | undefined, t: DocumentSymbol | undefined, uri = this.uri;
+		name = name.toLowerCase();
 		if (kind === SymbolKind.Variable || kind === SymbolKind.Class || kind === SymbolKind.Function) {
 			let scope: DocumentSymbol | undefined, bak: DocumentSymbol | undefined, ref = true, fn_is_static = false;
-			name = name.toLowerCase();
 			if (position) {
 				scope = this.searchScopedNode(position);
 				if (scope) {
@@ -4818,7 +4818,7 @@ export class Lexer {
 			if (lbs) {
 				if (name.slice(-1) === ':')
 					name = name.slice(0, -1);
-				let a = lbs[name.toLowerCase()];
+				let a = lbs[name];
 				if (a && a[0].def)
 					return { node: a[0], uri };
 			}
@@ -5629,13 +5629,14 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 			return undefined;
 		else if (res === false)
 			return null;
-		res = searchIncludeNode(doc.uri, name);
+		res = searchIncludeNode(doc.relevance ?? {}, name);
 	}
 	if (res) {
-		if (res.node.kind === SymbolKind.Variable && res.node === doc.declaration[name])
-			for (const u in doc.relevance)
-				if ((t = lexers[u].declaration[name]) && t.kind !== SymbolKind.Variable)
-					return [{ node: t, uri: u }];
+		if (res.node.kind === SymbolKind.Variable && res.node === doc.declaration[name]) {
+			let t = searchIncludeNode(doc.relevance ?? {}, name);
+			if (t && (t.node.kind !== SymbolKind.Variable || (t.node as any).def))
+				res = t;
+		}
 		if (res.fn_is_static) {
 			let nn = res.node, uu = res.uri;
 			for (const u in doc.relevance)
@@ -5653,8 +5654,8 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 	if (res)
 		return [res];
 	else return undefined;
-	function searchIncludeNode(fileuri: string, name: string): { node: DocumentSymbol, uri: string } | undefined {
-		let node: DocumentSymbol, list = lexers[fileuri].relevance;
+	function searchIncludeNode(list: { [uri: string]: string }, name: string) {
+		let ret = undefined;
 		for (const uri in list) {
 			let d = lexers[uri];
 			if (!d) {
@@ -5668,10 +5669,14 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 				} else
 					continue;
 			}
-			if (node = d.declaration[name])
-				return { node, uri };
+			let t = d.searchNode(name, undefined, kind);
+			if (t)
+				if (t.node.kind !== SymbolKind.Variable)
+					return t;
+				else if (!ret || (t.node as any).def)
+					ret = t;
 		}
-		return undefined;
+		return ret;
 	}
 }
 
