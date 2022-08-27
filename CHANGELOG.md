@@ -1,3 +1,8 @@
+## 1.5.8
+- 修复[#169](https://github.com/thqby/vscode-autohotkey2-lsp/issues/169)
+- 修复[#170](https://github.com/thqby/vscode-autohotkey2-lsp/issues/170)
+- 增加`代码格式化`、`类静态成员检查`选项
+
 ## 1.5.7
 - 修复[#164](https://github.com/thqby/vscode-autohotkey2-lsp/issues/164)
 - 修复[#165](https://github.com/thqby/vscode-autohotkey2-lsp/issues/165)

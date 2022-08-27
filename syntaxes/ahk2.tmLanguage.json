@@ -174,9 +174,6 @@
           ]
         },
         {
-          "include": "#parens-block"
-        },
-        {
           "include": "$base"
         }
       ]
@@ -784,10 +781,19 @@
     },
     "continuation_section": {
       "name": "meta.parens.continuation_section.ahk2",
-      "begin": "(?<=^\\s*)(\\()((?i:\\bjoin\\S*)|[^\\s()]+|\\s+)*?\\s*(\\s;.*)?$",
+      "begin": "(?<=^\\s*)(\\()((?i:join)\\S*(?=\\s|$)|[^()]+(?=\\s|$))*$",
       "beginCaptures": {
         "1": {
           "name": "punctuation.section.parens.begin.ahk2"
+        },
+        "2": {
+          "name": "source.options.ahk2",
+          "patterns": [
+            {
+              "match": "(?<=\\s);.*$",
+              "name": "comment.inline.ahk2"
+            }
+          ]
         }
       },
       "end": "^\\s*(\\))",
@@ -844,7 +850,7 @@
           "name": "punctuation.section.parens.end.ahk2"
         },
         {
-          "include": "#continuation_section"
+          "include": "#parens"
         },
         {
           "include": "$base"
@@ -1794,9 +1800,6 @@
       },
       "patterns": [
         {
-          "include": "$self"
-        },
-        {
           "include": "$base"
         }
       ]
@@ -2013,16 +2016,19 @@
       ]
     },
     "continuation_string": {
-      "begin": "^\\s*(\\()((?i:\\bjoin\\S*)|[^\\s()]+|\\s+)*?\\s*(\\s;.*)?$",
+      "begin": "^\\s*(\\()((?i:join)\\S*(?=\\s|$)|[^()]+(?=\\s|$))*$",
       "beginCaptures": {
         "1": {
           "name": "punctuation.section.parens.begin.bracket.round.ahk2"
         },
         "2": {
-          "name": "source.options.ahk2"
-        },
-        "3": {
-          "name": "comment.inline.ahk2"
+          "name": "source.options.ahk2",
+          "patterns": [
+            {
+              "match": "(?<=\\s);.*$",
+              "name": "comment.inline.ahk2"
+            }
+          ]
         }
       },
       "end": "(?<=^\\s*)(\\))",

@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.5.7",
+	"version": "1.5.8",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -104,7 +104,7 @@
 				"AutoHotkey2.InterpreterPath": {
 					"scope": "window",
 					"type": "string",
-					"default": "C:\\Program Files\\Autohotkey\\AutoHotkey.exe",
+					"default": "C:\\Program Files\\Autohotkey\\v2\\AutoHotkey.exe",
 					"description": "%ahk2.interpreterpath%"
 				},
 				"AutoHotkey2.CompleteFunctionParens": {
@@ -113,11 +113,77 @@
 					"default": false,
 					"description": "%ahk2.completefunctionparens%"
 				},
-				"AutoHotkey2.diagnostics.ParamsCheck": {
+				"AutoHotkey2.DisableV1Script": {
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "%ahk2.disablev1script%"
+				},
+				"AutoHotkey2.Diagnostics.ParamsCheck": {
 					"scope": "window",
 					"type": "boolean",
 					"default": true,
 					"description": "%ahk2.diagnostics.paramscheck%"
+				},
+				"AutoHotkey2.Diagnostics.ClassStaticMemberCheck": {
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "%ahk2.diagnostics.classstaticmembercheck%"
+				},
+				"AutoHotkey2.FormatOptions": {
+					"scope": "window",
+					"type": "object",
+					"properties": {
+						"break_chained_methods": {
+							"type": "boolean",
+							"default": false
+						},
+						"ignore_comment": {
+							"type": "boolean",
+							"default": false
+						},
+						"indent_string": {
+							"type": "string",
+							"default": "\t"
+						},
+						"keep_array_indentation": {
+							"type": "boolean",
+							"default": true
+						},
+						"max_preserve_newlines": {
+							"type": "number",
+							"default": 2
+						},
+						"preserve_newlines": {
+							"type": "boolean",
+							"default": true
+						},
+						"space_before_conditional": {
+							"type": "boolean",
+							"default": true
+						},
+						"space_in_empty_paren": {
+							"type": "boolean",
+							"default": false
+						},
+						"space_in_other": {
+							"type": "boolean",
+							"default": true
+						},
+						"space_in_paren": {
+							"type": "boolean",
+							"default": false
+						},
+						"wrap_line_length": {
+							"type": "number",
+							"default": 0
+						}
+					},
+					"additionalProperties": {
+						"type": "string"
+					},
+					"default": {}
 				},
 				"AutoHotkey2.SymbolFoldingFromOpenBrace": {
 					"scope": "window",

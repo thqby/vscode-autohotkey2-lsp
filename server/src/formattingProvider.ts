@@ -1,37 +1,27 @@
 import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, Range, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { FormatOptions, Lexer } from './Lexer';
-import { lexers } from './common';
-
-const default_format_options: FormatOptions = {
-	indent_size: 1,
-	indent_char: "\t",
-	max_preserve_newlines: 2,
-	preserve_newlines: true,
-	keep_array_indentation: true,
-	break_chained_methods: false,
-	indent_scripts: "keep",
-	brace_style: "collapse",
-	space_before_conditional: true,
-	wrap_line_length: 0,
-	space_after_anon_function: true
-};
+import { Lexer } from './Lexer';
+import { extsettings, lexers } from './common';
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, doc.document.lineCount, 0);
-	let opts = Object.assign({}, default_format_options);
-	if (params.options.insertSpaces)
-		opts.indent_char = " ", opts.indent_size = params.options.tabSize;
-	else opts.indent_char = "\t";
+	let opts = Object.assign({}, extsettings.FormatOptions);
+	if (opts.indent_string === undefined) {
+		if (params.options.insertSpaces)
+			opts.indent_string = " ".repeat(params.options.tabSize);
+		else opts.indent_string = "\t";
+	}
 	let newText = doc.beautify(opts);
 	return [{ range, newText }];
 }
 
 export async function rangeFormatting(params: DocumentRangeFormattingParams): Promise<TextEdit[] | undefined> {
-	let opts = Object.assign({}, default_format_options);
-	if (params.options.insertSpaces)
-		opts.indent_char = " ", opts.indent_size = params.options.tabSize;
-	else opts.indent_char = "\t";
+	let opts = Object.assign({}, extsettings.FormatOptions);
+	if (opts.indent_string === undefined) {
+		if (params.options.insertSpaces)
+			opts.indent_string = " ".repeat(params.options.tabSize);
+		else opts.indent_string = "\t";
+	}
 	let range = params.range, doc = lexers[params.textDocument.uri.toLowerCase()], document = doc.document, newText = document.getText(range);
 	if (doc.instrorcomm(range.start) || doc.instrorcomm(range.end))
 		return;

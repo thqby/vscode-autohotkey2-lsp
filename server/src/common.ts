@@ -3,7 +3,7 @@ import { Command, CompletionItem, CompletionItemKind, DocumentSymbol, Hover, Ins
 import { URI } from 'vscode-uri';
 import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { resolve } from 'path';
-import { FuncNode, Lexer } from './Lexer';
+import { FormatOptions, FuncNode, Lexer } from './Lexer';
 import { completionitem } from './localize';
 import { Connection } from 'vscode-languageserver';
 export * from './Lexer';
@@ -34,10 +34,13 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
 	AutoLibInclude: 0,
 	CompleteFunctionParens: false,
-	diagnostics: {
-		ParamsCheck: true
+	SymbolFoldingFromOpenBrace: false,
+	DisableV1Script: true,
+	Diagnostics: {
+		ParamsCheck: true,
+		ClassStaticMemberCheck: true
 	},
-	SymbolFoldingFromOpenBrace: false
+	FormatOptions: {}
 };
 export let winapis: string[] = [];
 export let getDllExport = (paths: string[], onlyone: boolean = false) => [] as string[];
@@ -56,10 +59,13 @@ export interface AHKLSSettings {
 	InterpreterPath: string
 	AutoLibInclude: LibIncludeType
 	CompleteFunctionParens: boolean
-	diagnostics: {
-		ParamsCheck: boolean
-	}
 	SymbolFoldingFromOpenBrace: boolean
+	DisableV1Script: boolean
+	Diagnostics: {
+		ParamsCheck: boolean
+		ClassStaticMemberCheck: boolean
+	}
+	FormatOptions: FormatOptions
 }
 
 export function set_Connection(conn: any, browser: boolean, getDll?:  (paths: string[]) => string[]) {

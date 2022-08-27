@@ -1,6 +1,6 @@
 import { DocumentSymbol, SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaParams, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, FuncNode, getClassMembers, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token } from './Lexer';
-import { diagnostic, lexers } from './common';
+import { diagnostic, extsettings, lexers } from './common';
 import { checkParams, globalsymbolcache, symbolProvider } from './symbolProvider';
 
 let curclass: ClassNode | undefined;
@@ -86,6 +86,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 					case SymbolKind.Method:
 						sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly | 1 << SemanticTokenModifiers.static;
 						if (tk.callinfo) checkParams(doc, n as FuncNode, tk.callinfo);
+						curclass = undefined;
 						return sem.type = SemanticTokenTypes.method;
 					case SymbolKind.Class:
 						sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly;
@@ -96,9 +97,10 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						let t = n.children;
 						if (t?.length === 1 && t[0].name === 'get')
 							sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly | 1 << SemanticTokenModifiers.static;
+						curclass = undefined;
 						return sem.type = SemanticTokenTypes.property;
 					case undefined:
-						if ((<any>curclass).checkmember !== false) {
+						if ((<any>curclass).checkmember !== false && extsettings.Diagnostics.ClassStaticMemberCheck) {
 							let tt = doc.tokens[tk.next_token_offset];
 							if (!tt || tt.content !== ':=')
 								doc.addDiagnostic(diagnostic.maybehavenotmember(curclass.name, tk.content), tk.offset, tk.length, 2);
@@ -106,6 +108,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 				}
 			}
 		default:
+			curclass = undefined;
 			return sem.type;
 	}
 }
