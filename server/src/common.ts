@@ -33,6 +33,7 @@ export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [
 export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
 	AutoLibInclude: 0,
+	CommentTags: '^;;\\s*(.*)',
 	CompleteFunctionParens: false,
 	SymbolFoldingFromOpenBrace: false,
 	DisableV1Script: true,
@@ -58,6 +59,7 @@ export enum LibIncludeType {
 export interface AHKLSSettings {
 	InterpreterPath: string
 	AutoLibInclude: LibIncludeType
+	CommentTags: string
 	CompleteFunctionParens: boolean
 	SymbolFoldingFromOpenBrace: boolean
 	DisableV1Script: boolean

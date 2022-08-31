@@ -15,7 +15,7 @@ import {
 	documentFormatting, extsettings, fixinclude, generateAuthor, generateComment, getallahkfiles, getincludetable, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
-	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workfolder, setting, signatureProvider, sleep,
+	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workfolder, setting, signatureProvider, sleep, update_commentTags,
 	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, LibIncludeType, workspaceSymbolProvider, inWorkspaceFolders, parseWorkspaceFolders, winapis
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
@@ -117,6 +117,27 @@ connection.onInitialize((params: InitializeParams) => {
 			}
 		};
 	}
+
+	let configs: AHKLSSettings = process.env.AHK2_LS_CONFIG ? JSON.parse(process.env.AHK2_LS_CONFIG) : params.initializationOptions;
+	if (configs) {
+		if (typeof configs.AutoLibInclude === 'string')
+			configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
+		else if (typeof configs.AutoLibInclude === 'boolean')
+			configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
+		Object.assign(extsettings, configs);
+		try {
+			update_commentTags(extsettings.CommentTags);
+		} catch (e: any) {
+			setTimeout(() => {
+				connection.console.error(e.message);
+			}, 1000);
+		}
+		if (existsSync(extsettings.InterpreterPath))
+			initpathenv();
+		else setTimeout(() => {
+			connection.window.showErrorMessage(setting.ahkpatherr());
+		}, 1000);
+	}
 	return result;
 });
 
@@ -133,35 +154,40 @@ connection.onInitialized(async () => {
 			parseWorkspaceFolders();
 		});
 	}
-	winapis.push(...getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)));
-	await initpathenv();
 	parseWorkspaceFolders();
+	winapis.push(...getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)));
 });
 
-connection.onDidChangeConfiguration(async (change) => {
-	if (hasConfigurationCapability) {
-		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		if (!newset) {
-			connection.window.showWarningMessage('Failed to obtain the configuration');
-			return;
-		}
-		let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
-		if (typeof newset.AutoLibInclude === 'string')
-			newset.AutoLibInclude = LibIncludeType[newset.AutoLibInclude] as unknown as LibIncludeType;
-		else if (typeof newset.AutoLibInclude === 'boolean')
-			newset.AutoLibInclude = newset.AutoLibInclude ? 3 : 0;
-		for (let k in extsettings)
-			if ((<any>extsettings)[k] !== (<any>newset)[k])
-				changes[k] = true;
-		Object.assign(extsettings, newset);
-		if (changes['InterpreterPath'] && !ahkpath_cur) {
-			changeInterpreter(oldpath, extsettings.InterpreterPath);
-		} else if (changes['AutoLibInclude']) {
-			if (extsettings.AutoLibInclude > 1)
-				parseuserlibs();
-			if (extsettings.AutoLibInclude & 1)
-				documents.all().forEach(async (e) => parseproject(e.uri.toLowerCase()));
-		}
+connection.onDidChangeConfiguration(async (change: any) => {
+	let newset: AHKLSSettings | undefined;
+	if (hasConfigurationCapability)
+		newset = await connection.workspace.getConfiguration('AutoHotkey2');
+	if (!newset) {
+		connection.window.showWarningMessage('Failed to obtain the configuration');
+		return;
+	}
+	let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
+	if (typeof newset.AutoLibInclude === 'string')
+		newset.AutoLibInclude = LibIncludeType[newset.AutoLibInclude] as unknown as LibIncludeType;
+	else if (typeof newset.AutoLibInclude === 'boolean')
+		newset.AutoLibInclude = newset.AutoLibInclude ? 3 : 0;
+	for (let k in extsettings)
+		if ((<any>extsettings)[k] !== (<any>newset)[k])
+			changes[k] = true;
+	Object.assign(extsettings, newset);
+	if (changes['CommentTags'])
+	try {
+		update_commentTags(extsettings.CommentTags);
+	} catch (e: any) {
+		connection.console.error(e.message);
+	}
+	if (changes['InterpreterPath'] && !ahkpath_cur)
+		changeInterpreter(oldpath, extsettings.InterpreterPath);
+	if (changes['AutoLibInclude']) {
+		if (extsettings.AutoLibInclude > 1)
+			parseuserlibs();
+		if (extsettings.AutoLibInclude & 1)
+			documents.all().forEach(async (e) => parseproject(e.uri.toLowerCase()));
 	}
 });
 
@@ -305,26 +331,16 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 		doc.initlibdirs();
 		if (doc.diagnostics.length)
 			doc.parseScript();
+		if (libfuncs[uri]) {
+			libfuncs[uri].length = 0;
+			libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
+		}
 	}
-	parseproject(uri);
-	if (libfuncs[uri]) {
-		libfuncs[uri].length = 0;
-		libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
-	}
+	if (extsettings.AutoLibInclude & 1)
+		parseproject(uri);
 }
 
-async function initpathenv(hasconfig = false, samefolder = false) {
-	if (!hasconfig) {
-		let t = await connection.workspace.getConfiguration('AutoHotkey2');
-		if (!t && process.env.AHK2_LS_CONFIG)
-			t = JSON.parse(process.env.AHK2_LS_CONFIG);
-		if (t) Object.assign(extsettings, t);
-		if (!extsettings.InterpreterPath && !ahkpath_cur) return false;
-		if (typeof extsettings.AutoLibInclude === 'string')
-			extsettings.AutoLibInclude = LibIncludeType[extsettings.AutoLibInclude] as unknown as LibIncludeType;
-		else if (typeof extsettings.AutoLibInclude === 'boolean')
-			extsettings.AutoLibInclude = extsettings.AutoLibInclude ? 3 : 0;
-	}
+function initpathenv(samefolder = false) {
 	let script = `
 	#NoTrayIcon
 	#Warn All, Off
@@ -336,8 +352,7 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 	FileAppend2(text, file) {
 		encode := "UTF-8"
 		FileAppend %text%, %file%, %encode%
-	}
-	`
+	}`
 	let ret = runscript(script, (data: string) => {
 		if (!(data = data.trim())) {
 			connection.window.showErrorMessage(setting.getenverr());
@@ -390,7 +405,7 @@ async function initpathenv(hasconfig = false, samefolder = false) {
 	else if (!pathenv.ahkpath) {
 		if (initnum < 3)
 			setTimeout(() => {
-				initnum++, initpathenv(true);
+				initnum++, initpathenv();
 			}, 1000);
 		return false;
 	}
@@ -437,7 +452,7 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 				delete libfuncs[u];
 		}
 	}
-	if (await initpathenv(true, samefolder))
+	if (initpathenv(samefolder))
 		documents.all().forEach(validateTextDocument);
 }
 

@@ -12,9 +12,8 @@ function resolve_sem(tk: Token, doc: Lexer) {
 		let pos = tk.pos ?? (tk.pos = doc.document.positionAt(tk.offset)), type = tk.semantic.type;
 		if (type === SemanticTokenTypes.string) {
 			if (tk.ignore) {
-				let l = pos.line, data = tk.data as number[];
-				doc.STB.push(l++, pos.character, data[0], type, 0);
-				for (let i = 1; i < data.length; i++)
+				let l = pos.line + 1, data = tk.data as number[];
+				for (let i = 0; i < data.length; i++)
 					doc.STB.push(l++, 0, data[i], type, 0);
 			} else doc.STB.push(pos.line, pos.character, tk.length, type, 0);
 		} else {

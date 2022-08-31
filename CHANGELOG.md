@@ -1,3 +1,12 @@
+## 1.5.9
+- 修复部分格式化错误
+- 修复符号搜索错误
+- 增加延续片段、热字串选项着色
+- 增加设置项[#173](https://github.com/thqby/vscode-autohotkey2-lsp/issues/173)
+- 修复[#171](https://github.com/thqby/vscode-autohotkey2-lsp/issues/171)
+- 修复[#172](https://github.com/thqby/vscode-autohotkey2-lsp/issues/172)
+- 修复[#174](https://github.com/thqby/vscode-autohotkey2-lsp/issues/174)
+
 ## 1.5.8
 - 修复[#169](https://github.com/thqby/vscode-autohotkey2-lsp/issues/169)
 - 修复[#170](https://github.com/thqby/vscode-autohotkey2-lsp/issues/170)

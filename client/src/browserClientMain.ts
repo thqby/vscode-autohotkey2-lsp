@@ -6,6 +6,8 @@
 import { commands, ExtensionContext, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 
+const ahkconfig = workspace.getConfiguration('AutoHotkey2');
+
 // this method is called when vs code is activated
 export function activate(context: ExtensionContext) {
 	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
@@ -13,7 +15,11 @@ export function activate(context: ExtensionContext) {
 	const client = new LanguageClient('ahk2', 'Autohotkey2 Server', {
 		documentSelector: [{ language: 'ahk2' }],
 		synchronize: {},
-		initializationOptions: {}
+		initializationOptions: {
+			AutoLibInclude: getConfig('AutoLibInclude'),
+			CommentTags: getConfig('CommentTags'),
+			InterpreterPath: getConfig('InterpreterPath')
+		}
 	}, worker);
 
 	const disposable = client.start();
@@ -89,4 +95,11 @@ export function activate(context: ExtensionContext) {
 		client.onRequest('ahk2.getWorkspaceFileContent', async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText());
 		commands.executeCommand('ahk2.set.extensionUri', context.extensionUri.toString());
 	});
+}
+
+function getConfig(key: string, defaultVal = '') {
+	let t = ahkconfig.inspect(key);
+	if (t)
+		return (t.workspaceFolderValue || t.workspaceValue || t.globalValue || t.defaultValue || defaultVal) as string;
+	return '';
 }

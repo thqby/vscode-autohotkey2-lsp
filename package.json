@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.5.8",
+	"version": "1.5.9",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -106,6 +106,12 @@
 					"type": "string",
 					"default": "C:\\Program Files\\Autohotkey\\v2\\AutoHotkey.exe",
 					"description": "%ahk2.interpreterpath%"
+				},
+				"AutoHotkey2.CommentTags": {
+					"scope": "window",
+					"type": "string",
+					"default": "^;;\\s*(?<tag>.+)",
+					"description": "%ahk2.commenttags%"
 				},
 				"AutoHotkey2.CompleteFunctionParens": {
 					"scope": "window",

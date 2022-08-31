@@ -10,10 +10,10 @@ import {
 } from 'vscode-languageserver/browser';
 import {
 	AHKLSSettings, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
-	extsettings, generateAuthor, generateComment, getincludetable, hoverProvider, initahk2cache, Lexer, lexers,
+	extsettings, generateAuthor, generateComment, getincludetable, hoverProvider, initahk2cache, Lexer, lexers, LibIncludeType,
 	libfuncs, loadahk2, loadlocalize, parseinclude, prepareRename, rangeFormatting, referenceProvider, renameProvider,
-	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, sendDiagnostics, set_ahk_h, set_Connection,
-	set_dirname, set_locale, set_Workfolder, signatureProvider,	symbolProvider, typeFormatting, workspaceFolders, workspaceSymbolProvider
+	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, sendDiagnostics, set_ahk_h, set_Connection, update_commentTags,
+	set_dirname, set_locale, set_Workfolder, signatureProvider, symbolProvider, typeFormatting, workspaceFolders, workspaceSymbolProvider
 } from './common';
 
 export const languageServer = 'ahk2-language-server';
@@ -113,6 +113,22 @@ connection.onInitialize((params: InitializeParams) => {
 			}
 		};
 	}
+
+	let configs: AHKLSSettings = params.initializationOptions;
+	if (configs) {
+		if (typeof configs.AutoLibInclude === 'string')
+			configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
+		else if (typeof configs.AutoLibInclude === 'boolean')
+			configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
+		Object.assign(extsettings, configs);
+		try {
+			update_commentTags(extsettings.CommentTags);
+		} catch (e: any) {
+			setTimeout(() => {
+				connection.console.error(e.message);
+			}, 1000);
+		}
+	}
 	return result;
 });
 
@@ -133,10 +149,12 @@ connection.onInitialized(async () => {
 connection.onDidChangeConfiguration(async change => {
 	if (hasConfigurationCapability) {
 		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
-		for (let k in extsettings)
-			if ((<any>extsettings)[k] !== (<any>newset)[k])
-				changes[k] = true;
+		if (newset.CommentTags !== extsettings.CommentTags)
+			try {
+				update_commentTags(newset.CommentTags);
+			} catch (e: any) {
+				connection.console.error(e.message);
+			}
 		Object.assign(extsettings, newset);
 	}
 });

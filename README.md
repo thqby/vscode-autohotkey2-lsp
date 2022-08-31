@@ -92,7 +92,7 @@ Semantic highlighting is an addition to syntax highlighting, resolves symbols in
 
 ### Blocks
 
-usage: Add `;;` or `; TODO ` to the comment code block.  
+usage: Add `;;`(default) or `; TODO ` to the comment code block.  
 
 ![codeSymbole](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/codeSymbol.png)
 
@@ -134,7 +134,7 @@ usage:
 
 Fold the part between `;#region` and `;#endregion`, `;{` and `;}`
 ```
-;#region
+;#region tag
 code
 ;#endregion
 ```
@@ -270,7 +270,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
 
 ### 代码标记
 
-用法: 在注释代码块中添加`;;`或`; TODO `  
+用法: 在注释代码块中添加`;;`(默认)或`; TODO `  
 ![codeSymbole](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/codeSymbol.png)
 
 ### 颜色提示
@@ -310,7 +310,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
 
 折叠`;#region`和`;#endregion`之间部分, `;{`和`;}`之间部分
 ```
-;#region
+;#region tag
 code
 ;#endregion
 ```

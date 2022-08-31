@@ -177,6 +177,7 @@ export function isIdentifierChar(code: number) {
 	return code > 127;
 }
 export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e\x60\x7b-\x7f]+$');
+let commentTags = new RegExp('^;;\\s*(?<tag>.+)');
 
 const colorregexp = new RegExp(/(?<=['"\s])(c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
@@ -267,7 +268,7 @@ export class Lexer {
 			'TK_INLINE_COMMENT': handle_inline_comment,
 			'TK_COMMENT': handle_comment,
 			'TK_DOT': handle_dot,
-			'TK_HOT': handle_word2,
+			'TK_HOT': handle_sharp,
 			'TK_SHARP': handle_sharp,
 			'TK_NUMBER': handle_word2,
 			'TK_LABEL': handle_label,
@@ -1080,22 +1081,6 @@ export class Lexer {
 							if (tk.content.match(/\s::$/) ||
 								(m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === ''))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
-							let k = tk.data.data as string;
-							if (k.match(allIdentifierChar) && !k.match(/^[$\d]/) && !k.match(KEYS_RE)) {
-								tk.type = 'TK_HOT', lst = tk, lk = _this.get_token(tk.offset + tk.length);
-								delete tk.data;
-								if (lk.type === 'TK_WORD') {
-									let ci = DocumentSymbol.create(lk.content, undefined,
-										SymbolKind.Function, make_range(lk.offset, parser_pos - 1),
-										make_range(lk.offset, lk.length)) as CallInfo;
-									ci.offset = lk.offset, ci.paraminfo = { count: 0, miss: [], comma: [], unknown: false };
-									addvariable(lk, 0, tn.children = []);
-									(<FuncNode>tn).funccall = [ci];
-								} else
-									_this.addDiagnostic(diagnostic.unexpected(lk.content), lk.offset, lk.length);
-								tk = _this.get_token(lk.offset + lk.length, true), lst = tk, next = false;
-								tk.previous_token = lk, lk.next_token_offset = tk.offset;
-							}
 							break;
 						}
 						case 'TK_HOT': {
@@ -3452,16 +3437,18 @@ export class Lexer {
 					} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`;|;(?<=\S)|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))|~?(`;|(?<=\S);|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*&\s*~?(`;|(?<=\S);|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))(\s+up)?\s*::)(.*)$/i)) {
 						let mm = m[9].match(/^(\s*)(([<>~*!+#^]*?)(`[{;]|[\x21-\x7A\x7C-\x7E]|[a-z]\w+|[^\x00-\x7f]))\s*(\s;.*)?$/i);
 						add_sharp_foldingrange();
-						if (mm && mm[2].toLowerCase() !== 'return') {
-							last_LF = next_LF, begin_line = true, parser_pos = offset + m[0].length;
-							lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, 1);
-							offset += lst.length + mm[1].length, lst.skip_pos = parser_pos;
-							lst.data = { content: m[9].trim(), offset, length: parser_pos - offset, data: mm[2] };
-							return lst;
-						} else {
-							parser_pos = input.indexOf('::', parser_pos) + 2;
-							return lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOT', offset, m[1].length, 1);
+						if (mm) {
+							let t = mm[2].toLowerCase();
+							if (!allIdentifierChar.test(t) || t.match(KEYS_RE)) {
+								last_LF = next_LF, begin_line = true, parser_pos = offset + m[0].length;
+								lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, 1);
+								offset += lst.length + mm[1].length, lst.skip_pos = parser_pos;
+								lst.data = { content: m[9].trim(), offset, length: parser_pos - offset, data: mm[2] };
+								return lst;
+							}
 						}
+						parser_pos = input.indexOf('::', parser_pos) + 2;
+						return lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOT', offset, m[1].length, 1);
 					}
 				}
 				if (c !== '#') add_sharp_foldingrange();
@@ -3531,13 +3518,13 @@ export class Lexer {
 									//   string
 									// )
 									let o = last_LF + 1, next_LF = input.indexOf('\n', i), m: RegExpMatchArray | null = null;
-									let data = [i - o - 1];
+									let data: number[] = [];
 									while (next_LF > 0 && !(m = input.substring(i, next_LF).match(/^\s*\)/)))
 										data.push(next_LF - i), next_LF = input.indexOf('\n', i = next_LF + 1);
 									if (next_LF < 0)
 										data.push(input_length - i), m = input.substring(i, input_length).match(/^\s*\)/);
 									parser_pos = m ? i + m[0].length : input_length;
-									data[data.length - 1] = parser_pos - i;
+									data.push(parser_pos - i);
 									resulting_string = input.substring(offset, parser_pos).trimRight();
 									lst = createToken(input.substring(o, offset) + resulting_string, 'TK_STRING', offset, resulting_string.length, 1);
 									_this.addFoldingRange(o, parser_pos, 'block');
@@ -3692,20 +3679,23 @@ export class Lexer {
 					let tk = get_token_ignore_comment();
 					stringend:
 					while (tk.ignore && tk.type === 'TK_STRING') {
-						let p = parser_pos;
+						let p = parser_pos, data = tk.data as number[];
+						if (nosep)
+							tk.semantic = se;
 						while (c = input.charAt(parser_pos++)) {
 							if (c === '`')
 								parser_pos++;
 							else if (c === sep) {
 								let s = input.substring(p, parser_pos);
-								tk.content += s, tk.length += s.length;
+								tk.content += s, tk.length += s.length, data[data.length - 1] += s.length;
 								_this.strcommpos.push({ start: tk.offset, end: tk.offset + tk.length, type: 2 });
 								break stringend;
 							} else if (c === '\n' || c === ';' && ' \t'.includes(input.charAt(parser_pos - 2))) {
 								let s = input.substring(p, parser_pos - (c === ';' ? 2 : 1)).trimRight();
 								if (s)
-									tk.content += s, tk.length += s.length;
+									tk.content += s, tk.length += s.length, data[data.length - 1] += s.length;
 								_this.strcommpos.push({ start: tk.offset, end: tk.offset + tk.length, type: 2 });
+								parser_pos--;
 								break;
 							}
 						}
@@ -3764,6 +3754,76 @@ export class Lexer {
 				return lst = createToken(c, !whitespace.includes(nextc) ? 'TK_DOT' : 'TK_UNKNOWN', offset, 1, bg);
 			}
 
+			if (c === ';') {
+				let comment = '', comment_type = bg ? 'TK_COMMENT' : 'TK_INLINE_COMMENT', t: any, rg: Range, ignore = undefined;
+				let next_LF = offset - 1, line: string, ln = 0;
+				while (true) {
+					parser_pos = next_LF, next_LF = input.indexOf('\n', parser_pos + 1);
+					line = input.substring(parser_pos + 1, next_LF = next_LF < 0 ? input_length : next_LF).trim();
+					if (line.startsWith(';')) {
+						ln++;
+						if (t = line.match(/^;+\s*([{}])/)) {
+							if (t[1] === '{')
+								customblocks.bracket.push(parser_pos + 1);
+							else if ((t = customblocks.bracket.pop()) !== undefined)
+								_this.addFoldingRange(t, parser_pos + 1, 'block');
+							if (ln === 1)
+								ignore = true;
+							if (bg)
+								continue;
+						} else if (t = line.match(/^;(\s*~?\s*)(todo|fixme)(:?\s*)(.*)/i)) {
+							_this.children.push(DocumentSymbol.create(`${t[2].toUpperCase()}: ${t[4].trim()}`, undefined, SymbolKind.Module, rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
+							if (bg)
+								continue;
+						} else if (bg) {
+							if (t = line.match(/^;\s*#(end)region\b/i)) {
+								ignore = true;
+								if (!t[1]) {
+									customblocks.region.push(parser_pos + 1);
+									if (line = line.substring(t[0].length).trim())
+										_this.children.push(DocumentSymbol.create(line, undefined, SymbolKind.Module, rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
+								} else if ((t = customblocks.region.pop()) !== undefined)
+									_this.addFoldingRange(t, parser_pos + 1, 'region');
+							} else if (t = line.match(/^;@include\s+(.*)/i)) {
+								ignore = true;
+								add_include_dllload(t[1].replace(/\s+;.*$/, '').trim());
+							} else if (t = line.match(commentTags)) {
+								let g = (t as RegExpMatchArray).groups;
+								if (!g)
+									t = t[1]?.trim();
+								else for (let tag in g)
+									if (tag.startsWith('tag') && (t = g[tag]?.trim()))
+										break;
+								if (t) {
+									_this.children.push(DocumentSymbol.create(t, undefined, SymbolKind.Module, rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
+									ignore = true;
+								}
+							}
+							continue;
+						}
+						parser_pos = next_LF;
+					}
+					break;
+				}
+				comment = input.substring(offset, parser_pos).trimRight();
+				_this.strcommpos.push({ start: offset, end: parser_pos, type: 1 });
+				if (ln > 1) _this.addFoldingRange(offset, parser_pos, 'comment');
+				let cmm: Token = _this.tokens[offset] = { type: comment_type, content: comment, offset, length: comment.length, next_token_offset: -1, topofline: bg, ignore };
+				cmm.skip_pos = parser_pos;
+				if (!bg) {
+					if (!whitespace.includes(input.charAt(offset - 1)))
+						_this.addDiagnostic(diagnostic.unexpected(cmm.content), offset, cmm.length);
+				} else if (!string_mode && !ignore) {
+					let tk = _this.get_token(parser_pos);
+					if (tk.length) {
+						cmm.next_token_offset = tk.offset;
+						if (n_newlines === 1)
+							comments[_this.document.positionAt(tk.offset).line] = cmm;
+					}
+				}
+				return cmm;
+			}
+
 			if (c === '/' && bg && input.charAt(parser_pos) === '*') {
 				let LF = input.indexOf('\n', --parser_pos), ln = 0, tk: Token;
 				while (!(m = input.substring(parser_pos, LF > 0 ? LF : input_length).match(/(^\s*\*\/)|(\*\/\s*$)/)) && LF > 0)
@@ -3803,51 +3863,6 @@ export class Lexer {
 					return lst = tk;
 				}
 				return lst = createToken(c, c.match(/([:.+\-*/|&^]|\/\/|>>|<<)=/) ? 'TK_EQUALS' : 'TK_OPERATOR', offset, c.length, bg);
-			}
-
-			if (c === ';') {
-				let comment = '', comment_type = bg ? 'TK_COMMENT' : 'TK_INLINE_COMMENT', t: any, rg: Range, ignore = undefined, ln = 0;
-				while (parser_pos <= input_length && (c != '\n' || (bg && is_next(';') && !is_next('\n') && (++ln))))
-					comment += c, c = input.charAt(parser_pos++);
-				if (c === '\n')
-					last_LF = --parser_pos;
-				comment = comment.trimRight();
-				if (bg && (t = comment.match(/^;(;|\s*#)((end)?region\b)?/i))) {
-					if (t[3]) {
-						if ((t = customblocks.region.pop()) !== undefined)
-							_this.addFoldingRange(t, offset, 'region');
-					} else {
-						if (t[2])
-							customblocks.region.push(offset);
-						_this.children.push(DocumentSymbol.create(comment.replace(/^;(;|\s*#)((end)?region\b)?\s*/i, '') || comment, undefined, SymbolKind.Module, rg = make_range(offset, comment.length), rg));
-					}
-					ignore = true;
-				} else if (t = comment.match(/^;+\s*([{}])/)) {
-					if (t[1] === '}') {
-						if ((t = customblocks.bracket.pop()) !== undefined)
-							_this.addFoldingRange(t, offset, 'block');
-					} else
-						customblocks.bracket.push(offset);
-					ignore = true;
-				} else if (t = comment.match(/^;(\s*~?\s*)todo(:?\s*)(.*)/i))
-					_this.children.push(DocumentSymbol.create('TODO: ' + t[3].trim(), undefined, SymbolKind.Module, rg = make_range(offset, comment.length), rg));
-				else if (comment.match(/^;@include\s/i) && (t = comment.match(/(?<=^[ \t]*;@include[ \t]+)(<.+>|(['"]?).+?\2)[ \t]*([ \t];.*)?$/img))) {
-					ignore = true;
-					for (c of t)
-						add_include_dllload(c.trim());
-				}
-				_this.strcommpos.push({ start: offset, end: parser_pos, type: 1 });
-				if (ln) _this.addFoldingRange(offset, parser_pos, 'comment');
-				let cmm = _this.tokens[offset] = { type: comment_type, content: comment, offset, length: comment.length, next_token_offset: -1, topofline: bg, ignore };
-				if (bg && !ignore && !string_mode) {
-					let tk = _this.get_token(parser_pos);
-					if (tk.length) {
-						cmm.next_token_offset = tk.offset;
-						if (n_newlines === 1)
-							comments[_this.document.positionAt(tk.offset).line] = cmm;
-					}
-				}
-				return cmm;
 			}
 
 			if (c === '#') {
@@ -3902,6 +3917,9 @@ export class Lexer {
 						break;
 				}
 			}
+
+			if (need_newline())
+				print_newline();
 
 			let next_mode = MODE.Expression;
 			if (token_text === '[') {
@@ -4196,7 +4214,7 @@ export class Lexer {
 					return;
 				}
 			}
-			if (last_type === 'TK_COMMA' || last_type === 'TK_START_EXPR' || flags.last_text === '::') {
+			if (last_type === 'TK_COMMA' || last_type === 'TK_START_EXPR') {
 				if (!start_of_object_property()) {
 					allow_wrap_or_preserved_newline();
 				}
@@ -4220,8 +4238,7 @@ export class Lexer {
 			} else if (last_type === 'TK_STRING' || last_type === 'TK_EQUALS') {
 				prefix = 'SPACE';
 			} else if (last_type === 'TK_RESERVED' || last_type === 'TK_WORD') {
-				if (!last_text.endsWith('::'))
-					prefix = 'SPACE';
+				prefix = 'SPACE';
 			} else if (last_type === 'TK_START_BLOCK') {
 				prefix = 'NEWLINE';
 			} else if (last_type === 'TK_END_EXPR') {
@@ -4432,7 +4449,9 @@ export class Lexer {
 				}
 			}
 
-			if (start_of_statement() && token_text === '%') {
+			let space_before = Boolean(space_in_other || token_text.match(/^\w/));
+			let space_after = space_before;
+			if (start_of_statement()) {
 				// The conditional starts the statement if appropriate.
 				switch (flags.last_word) {
 					case 'if':
@@ -4447,10 +4466,16 @@ export class Lexer {
 						flags.declaration_statement = true;
 						break;
 				}
+				if (input_wanted_newline && token_text_low.match(/^(\+\+|--|%|!|~|not)$/)) {
+					space_before = false;
+					space_after = token_text_low === 'not';
+				}
+			} else if (token_text_low.match(/^(\+\+|--|%|!|~|not)$/) && need_newline()) {
+				space_before = false;
+				space_after = token_text_low === 'not';
+				print_newline();
 			}
 
-			let space_before = Boolean(space_in_other || token_text.match(/^\w/));
-			let space_after = space_before;
 			if (last_type === 'TK_RESERVED' && is_special_word(flags.last_text)) {
 				// "return" had a special handling in TK_WORD. Now we need to return the favor
 				output_space_before_token = true;
@@ -4474,12 +4499,6 @@ export class Lexer {
 				} else output_space_before_token = true;
 				flags.in_case = false;
 				return;
-			}
-
-			if (input_wanted_newline && token_text_low.match(/^(\+\+|--|%|!|~|not)$/)) {
-				space_before = false;
-				space_after = token_text_low === 'not';
-				print_newline();
 			}
 
 			// Allow line wrapping between operators
@@ -4603,28 +4622,18 @@ export class Lexer {
 		function handle_inline_comment() {
 			if (opt.ignore_comment)
 				return token_text = '';
-			// print_newline(false, true);
-			output_space_before_token = false, output_lines[output_lines.length - 1].text.push('\t');
-			print_token();
+			output_space_before_token = false, output_lines[output_lines.length - 1].text.push('\t' + token_text);
 			print_newline(false, true);
-			output_space_before_token = true;
 		}
 
 		function handle_comment() {
 			if (opt.ignore_comment)
 				return token_text = '';
-			if (input_wanted_newline) {
-				print_newline();
-			}
-			if (token_type === 'TK_COMMENT' && token_text.includes('\n')) {
-				let c = token_text.split('\n');
-				print_token(c.shift()?.trim() || '');
-				c.map(s => {
-					print_newline(false, true);
-					print_token(s.trim());
-				});
-			} else
-				print_token();
+			token_text.split('\n').map(s => {
+				print_newline(false, true);
+				print_token(s.trim());
+			});
+			print_newline(false, true);
 		}
 
 		function handle_dot() {
@@ -4643,8 +4652,6 @@ export class Lexer {
 		}
 
 		function handle_word2() {
-			if (token_type === 'TK_HOT')
-				print_newline(n_newlines === 1);
 			token_type = 'TK_WORD';
 			handle_word();
 		}
@@ -4654,7 +4661,7 @@ export class Lexer {
 			print_token();
 			let t = ck.data?.content;
 			if (t)
-				print_token(' ' + t);
+				print_token(token_type === 'TK_HOTLINE' ? t : ' ' + t);
 		}
 
 		function handle_label() {
@@ -4683,6 +4690,13 @@ export class Lexer {
 		function handle_unknown() {
 			print_token();
 			print_newline();
+		}
+
+		function need_newline() {
+			return input_wanted_newline && previous_flags.mode === MODE.BlockStatement &&
+				['TK_END_EXPR', 'TK_START_BLOCK', 'TK_END_BLOCK', 'TK_WORD', 'TK_STRING'].includes(last_type) ||
+				(last_type === 'TK_OPERATOR' && last_text.match(/^(\+\+|--|%)$/) ||
+					(last_type === 'TK_RESERVED' && last_text.match(/^(break|continue|goto|global|local|loop|return|static|throw)$/)));
 		}
 	}
 
@@ -5890,5 +5904,14 @@ export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: 
 				}
 				break;
 		}
+	}
+}
+
+export function update_commentTags(regexp: string) {
+	try {
+		commentTags = new RegExp(regexp, 'i');
+	} catch (e: any) {
+		commentTags = new RegExp('^;;\\s*(?<tag>.*)');
+		throw e;
 	}
 }

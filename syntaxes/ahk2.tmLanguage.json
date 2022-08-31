@@ -781,17 +781,21 @@
     },
     "continuation_section": {
       "name": "meta.parens.continuation_section.ahk2",
-      "begin": "(?<=^\\s*)(\\()((?i:join)\\S*(?=\\s|$)|[^()]+(?=\\s|$))*$",
+      "begin": "(?<=^\\s*)(\\()(((?i:join)\\S*(?=\\s|$)|[^()]+(?=\\s|$))*)$",
       "beginCaptures": {
         "1": {
           "name": "punctuation.section.parens.begin.ahk2"
         },
         "2": {
-          "name": "source.options.ahk2",
+          "name": "string.options.ahk2 markup.italic",
           "patterns": [
             {
               "match": "(?<=\\s);.*$",
               "name": "comment.inline.ahk2"
+            },
+            {
+              "match": "(?<=(\\s|^\\s*\\())((?!(?i:(c(om(ments)?)?|[lr]trim0?|`|join(`s|\\S){0,15}))(?=(\\s|$)))(\\S+)(?=(\\s|$)))",
+              "name": "invalid.options.ahk2 markup.strikethrough"
             }
           ]
         }
@@ -811,9 +815,8 @@
     "continuation_section_innards": {
       "patterns": [
         {
-          "name": "string.in_closed_cycle.ahk2",
           "begin": "('|\")",
-          "beingCaptures": {
+          "beginCaptures": {
             "1": {
               "name": "punctuation.definition.string.begin.ahk2"
             }
@@ -824,6 +827,7 @@
               "name": "punctuation.definition.string.end.ahk2"
             }
           },
+          "name": "string.continuation_section_innards.ahk2",
           "patterns": [
             {
               "include": "#string_escaped_char"
@@ -1328,24 +1332,36 @@
     "hotkey_hotstring": {
       "patterns": [
         {
-          "begin": "^\\s*(:)[^xX:]*(:)((`.|[^`])*?)(::)(?!\\s*\\{\\s*(\\s;.*)?$)(.*?)(\\s;.*)?$",
+          "begin": "^\\s*(:)([^xX:]*)(:)((`.|[^`])*?)(::)(?!\\s*\\{\\s*(\\s;.*)?$)(.*?)(\\s;.*)?$",
           "beginCaptures": {
             "1": {
               "name": "punctuation.definition.colon"
             },
             "2": {
-              "name": "punctuation.definition.colon"
+              "patterns": [
+                {
+                  "match": "(?i:([*?borstz]0?|c[01]?|k-1|[kp]\\d+|s[ipe]|x))",
+                  "name": "string.options.ahk2 markup.italic"
+                },
+                {
+                  "match": ".",
+                  "name": "invalid.options.ahk2 markup.strikethrough"
+                }
+              ]
             },
             "3": {
-              "name": "keyword.keys.ahk2"
-            },
-            "5": {
               "name": "punctuation.definition.colon"
             },
-            "7": {
-              "name": "string.literal.ahk2"
+            "4": {
+              "name": "keyword.keys.ahk2 markup.underline"
+            },
+            "6": {
+              "name": "punctuation.definition.colon"
             },
             "8": {
+              "name": "string.literal.ahk2"
+            },
+            "9": {
               "name": "comment.inline.ahk2"
             }
           },
@@ -1378,27 +1394,39 @@
               "include": "#continuation_string"
             },
             {
-              "match": "(?<=^\\s*\\)).*$",
+              "match": "(?<=^\\s*\\)).+$",
               "name": "string.literal.ahk2"
             }
           ]
         },
         {
-          "begin": "^\\s*(:)[^:]*(:)((`.|[^`])*?)(::)(\\s+;.*)?",
+          "begin": "^\\s*(:)([^:]*)(:)((`.|[^`])*?)(::)(\\s+;.*)?",
           "beginCaptures": {
             "1": {
               "name": "punctuation.definition.colon"
             },
             "2": {
-              "name": "punctuation.definition.colon"
+              "patterns": [
+                {
+                  "match": "(?i:([*?borstz]0?|c[01]?|k-1|[kp]\\d+|s[ipe]|x))",
+                  "name": "string.options.ahk2 markup.italic"
+                },
+                {
+                  "match": ".",
+                  "name": "invalid.options.ahk2 markup.strikethrough"
+                }
+              ]
             },
             "3": {
-              "name": "keyword.keys.ahk2"
-            },
-            "5": {
               "name": "punctuation.definition.colon"
             },
+            "4": {
+              "name": "keyword.keys.ahk2 markup.underline"
+            },
             "6": {
+              "name": "punctuation.definition.colon"
+            },
+            "7": {
               "name": "comment.inline.ahk2"
             }
           },
@@ -1988,7 +2016,7 @@
     "strings": {
       "patterns": [
         {
-          "begin": "(?<!\\w)(['\"])",
+          "begin": "(?<![\\w)])(['\"])",
           "beginCaptures": {
             "1": {
               "name": "punctuation.definition.string.begin.ahk2"
@@ -1996,7 +2024,7 @@
           },
           "end": "(?<=(^\\s*\\)|\\1)(`.|.)*)(\\1)|(?=^\\s*([^\\s;/(]|\/(?!\\*)|\\(.*\\)(?<!\\b(?i:join)\\S*\\))))",
           "endCaptures": {
-            "1": {
+            "3": {
               "name": "punctuation.definition.string.end.ahk2"
             }
           },
@@ -2016,17 +2044,21 @@
       ]
     },
     "continuation_string": {
-      "begin": "^\\s*(\\()((?i:join)\\S*(?=\\s|$)|[^()]+(?=\\s|$))*$",
+      "begin": "(?<=^\\s*)(\\()(((?i:join)\\S*(?=\\s|$)|[^()]+(?=\\s|$))*)$",
       "beginCaptures": {
         "1": {
           "name": "punctuation.section.parens.begin.bracket.round.ahk2"
         },
         "2": {
-          "name": "source.options.ahk2",
+          "name": "string.options.ahk2 markup.italic",
           "patterns": [
             {
               "match": "(?<=\\s);.*$",
               "name": "comment.inline.ahk2"
+            },
+            {
+              "match": "(?<=(\\s|^\\s*\\())((?!(?i:(c(om(ments)?)?|[lr]trim0?|`|join(`s|\\S){0,15}))(?=(\\s|$)))(\\S+)(?=(\\s|$)))",
+              "name": "invalid.options.ahk2 markup.strikethrough"
             }
           ]
         }

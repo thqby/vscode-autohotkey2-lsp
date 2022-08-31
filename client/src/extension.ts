@@ -68,7 +68,12 @@ export async function activate(context: ExtensionContext) {
 			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
 		},
 		outputChannel: outputchannel,
-		outputChannelName: 'AutoHotkey2'
+		outputChannelName: 'AutoHotkey2',
+		initializationOptions: {
+			AutoLibInclude: getConfig('AutoLibInclude'),
+			CommentTags: getConfig('CommentTags'),
+			InterpreterPath: getConfig('InterpreterPath')
+		}
 	};
 
 	// Create the language client and start the client.
