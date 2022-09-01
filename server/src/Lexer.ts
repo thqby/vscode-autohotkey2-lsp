@@ -666,34 +666,6 @@ export class Lexer {
 				_this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (mode === 0 ? 1 : 0)], 1);
 			return result;
 
-			function is_line_continue(lk: Token, tk: Token): boolean {
-				switch (tk.type) {
-					case 'TK_DOT':
-					case 'TK_COMMA':
-					case 'TK_EQUALS':
-						return true;
-					case 'TK_OPERATOR':
-						return lk.type === '' || !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!tk.content.match(/^\w/) || _parent.kind !== SymbolKind.Class);
-					case 'TK_END_BLOCK':
-					case 'TK_END_EXPR':
-						return false;
-					case 'TK_STRING':
-						if (tk.ignore)
-							return true;
-					default:
-						switch (lk.type) {
-							case 'TK_COMMA':
-							case 'TK_EQUALS':
-							case '':
-								return true;
-							case 'TK_OPERATOR':
-								return lk.ignore ? false : !lk.content.match(/^(\+\+|--|%)$/);
-							default:
-								return false;
-						}
-				}
-			}
-
 			function is_func_def(fat = undefined) {
 				if (input.charAt(tk.offset + tk.length) !== '(')
 					return false;
@@ -1737,7 +1709,7 @@ export class Lexer {
 				block_mode = false;
 				loop:
 				while (nexttoken()) {
-					if (tk.topofline && !is_line_continue(lk, tk)) { next = false; break; }
+					if (tk.topofline && !is_line_continue(lk, tk, _parent)) { next = false; break; }
 					switch (tk.type) {
 						case 'TK_WORD':
 							bak = lk, nexttoken();
@@ -1804,7 +1776,7 @@ export class Lexer {
 				let pres = result.length, tpexp = '', byref = false, ternarys: number[] = [], t: any, objk: any;
 				block_mode = false;
 				while (nexttoken()) {
-					if (tk.topofline === 1 && !inpair && !is_line_continue(lk, tk)) {
+					if (tk.topofline === 1 && !inpair && !is_line_continue(lk, tk, _parent)) {
 						if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) === '.')
 							addprop(lk);
 						next = false; break;
@@ -3816,9 +3788,12 @@ export class Lexer {
 				} else if (!string_mode && !ignore) {
 					let tk = _this.get_token(parser_pos);
 					if (tk.length) {
-						cmm.next_token_offset = tk.offset;
 						if (n_newlines === 1)
 							comments[_this.document.positionAt(tk.offset).line] = cmm;
+						while (tk?.type.endsWith('COMMENT'))
+							tk = _this.tokens[tk.next_token_offset];
+						if (tk)
+							cmm.next_token_offset = tk.offset;
 					}
 				}
 				return cmm;
@@ -3835,11 +3810,14 @@ export class Lexer {
 				if (ln) _this.addFoldingRange(offset, parser_pos, 'comment');
 				let cmm = _this.tokens[offset] = { type: 'TK_BLOCK_COMMENT', content: input.substring(offset, parser_pos), offset, length: parser_pos - offset, next_token_offset: -1, previous_token: lst, topofline: bg };
 				if (!string_mode && (tk = _this.get_token(parser_pos)).length) {
-					cmm.next_token_offset = tk.offset;
 					if (n_newlines < 2) {
 						tk.topofline = 1, tk.prefix_is_whitespace ??= ' ';
 						comments[_this.document.positionAt(tk.offset).line] = cmm;
 					}
+					while (tk?.type.endsWith('COMMENT'))
+						tk = _this.tokens[tk.next_token_offset];
+					if (tk)
+						cmm.next_token_offset = tk.offset;
 				}
 				return cmm;
 			}
@@ -4593,7 +4571,12 @@ export class Lexer {
 				remove = new RegExp(`^${t[1]}{1,${t[0].length}}`);
 
 			// block comment starts with a new line
-			print_newline();
+			print_newline(false, true);
+			if (flags.mode === MODE.Statement && flags.declaration_statement) {
+				let nk = _this.tokens[ck.next_token_offset] ?? EMPTY_TOKEN;
+				if (!is_line_continue(nk.previous_token ?? EMPTY_TOKEN, nk))
+					print_newline();
+			}
 
 			// first line always indented
 			print_token(lines[0]);
@@ -4629,6 +4612,11 @@ export class Lexer {
 		function handle_comment() {
 			if (opt.ignore_comment)
 				return token_text = '';
+			if (flags.mode === MODE.Statement && flags.declaration_statement) {
+				let nk = _this.tokens[ck.next_token_offset] ?? EMPTY_TOKEN;
+				if (!is_line_continue(nk.previous_token ?? EMPTY_TOKEN, nk))
+					print_newline();
+			}
 			token_text.split('\n').map(s => {
 				print_newline(false, true);
 				print_token(s.trim());
@@ -4690,6 +4678,34 @@ export class Lexer {
 		function handle_unknown() {
 			print_token();
 			print_newline();
+		}
+
+		function is_line_continue(lk: Token, tk: Token, parent?: DocumentSymbol): boolean {
+			switch (tk.type) {
+				case 'TK_DOT':
+				case 'TK_COMMA':
+				case 'TK_EQUALS':
+					return true;
+				case 'TK_OPERATOR':
+					return lk.type === '' || !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!parent || !tk.content.match(/^\w/) || parent.kind !== SymbolKind.Class);
+				case 'TK_END_BLOCK':
+				case 'TK_END_EXPR':
+					return false;
+				case 'TK_STRING':
+					if (tk.ignore)
+						return true;
+				default:
+					switch (lk.type) {
+						case 'TK_COMMA':
+						case 'TK_EQUALS':
+						case '':
+							return true;
+						case 'TK_OPERATOR':
+							return lk.ignore ? false : !lk.content.match(/^(\+\+|--|%)$/);
+						default:
+							return false;
+					}
+			}
 		}
 
 		function need_newline() {
