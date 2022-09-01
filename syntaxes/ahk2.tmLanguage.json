@@ -2227,9 +2227,12 @@
       ]
     },
     "variables": {
-      "match": "(?<!\\.)\\b\\w+\\b(?!\\()",
+      "match": "(?<!\\.)\\b((\\w+(?=\\.))|(\\w+\\b(?!\\()))",
       "captures": {
-        "0": {
+        "2": {
+          "name": "variable.other.object.ahk2"
+        },
+        "3": {
           "patterns": [
             {
               "include": "#object_property"
