@@ -1732,7 +1732,7 @@
         },
         {
           "comment": "this will catch any parent object, without catching any child objects. while this is a simple solution, it's effective for the time being. if you'd be interested, you could add a better implementation later, I'm sure I'm not the only one who wants to color objects",
-          "match": "(?<!\\.)(\\w+)(?=\\.)",
+          "match": "(?<!\\.)(?!\\d)(\\w+)(?=\\.)",
           "name": "variable.other.object.ahk2"
         }
       ]
