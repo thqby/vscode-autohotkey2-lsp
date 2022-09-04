@@ -38,7 +38,7 @@ export interface AhkDoc {
 }
 
 export enum FuncScope {
-	DEFAULT = 0, GLOBAL = 1
+	DEFAULT = 0, STATIC = 1, GLOBAL = 2
 }
 
 export enum SemanticTokenTypes {
@@ -92,7 +92,7 @@ export interface ClassNode extends DocumentSymbol {
 
 export interface Variable extends DocumentSymbol {
 	ref?: boolean
-	static?: boolean
+	static?: boolean | null
 	def?: boolean
 	arr?: boolean
 	defaultVal?: string | false | null
@@ -1201,10 +1201,15 @@ export class Lexer {
 						if (tk.topofline) {
 							if (mode === 2 && _low !== 'static')
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
-							else if (_low === 'global' && _parent.assume !== undefined)
-								_parent.assume = FuncScope.GLOBAL;
 							else if (_low === 'local')
 								_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
+							else {
+								if (_parent.assume > 0)
+									_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
+								if (_low === 'static')
+									_parent.assume = FuncScope.STATIC;
+								else _parent.assume = FuncScope.GLOBAL;
+							}
 						} else if (tk.type === 'TK_WORD' || tk.type === 'TK_RESERVED') {
 							if (mode === 0) {
 								next = false;
@@ -2876,6 +2881,12 @@ export class Lexer {
 								delete node.declaration[n];
 						}
 					}
+					if ((<FuncNode>node).assume === FuncScope.STATIC) {
+						let loc = (node as FuncNode).local, it: Variable;
+						for (const n in dec)
+							if (!loc[n] && (it = dec[n] as Variable).def && it.kind === SymbolKind.Variable)
+								it.static = null;
+					}
 				}
 			}
 
@@ -3756,7 +3767,7 @@ export class Lexer {
 							if (bg)
 								continue;
 						} else if (bg) {
-							if (t = line.match(/^;\s*#(end)region\b/i)) {
+							if (t = line.match(/^;\s*#(end)?region\b/i)) {
 								ignore = true;
 								if (!t[1]) {
 									customblocks.region.push(parser_pos + 1);
@@ -4799,7 +4810,7 @@ export class Lexer {
 			if (scope) {
 				while (scope) {
 					let dec = (<FuncNode>scope).declaration, loc = (<FuncNode>scope).local, glo = (<FuncNode>scope).global;
-					if (loc && (t = loc[name]) && (!fn_is_static || (t.kind === SymbolKind.Variable && (<Variable>t).static))) {
+					if (loc && (t = loc[name]) && (!fn_is_static || (<Variable>t).static)) {
 						if (t.selectionRange.start.character === t.selectionRange.end.character)
 							return false;
 						return { node: t, uri };
@@ -4811,23 +4822,20 @@ export class Lexer {
 						return undefined;
 					} else if (dec && scope.kind !== SymbolKind.Class && (t = dec[name])) {
 						if (fn_is_static) {
-							if (!node) {
+							if ((<Variable>t).static)
+								return { node: t, uri };
+							if (bak === scope || (<Variable>t).static === null)
 								node = t;
-								if (node.kind !== SymbolKind.Variable || (<Variable>node).static)
-									return { node, uri };
-							} else {
-								if ((<Variable>t).static && (t.kind === SymbolKind.Function || t.kind === SymbolKind.Variable))
-									return { node: t, uri };
-								else if (t.kind !== SymbolKind.Variable)
-									return { node: (<Variable>node).def ? node : t, uri };
-							}
 						} else {
 							if (scope.kind === SymbolKind.Method || !(<FuncNode>scope).parent)
 								return { node: t, uri };
 							node = t;
 						}
-					} else if (fn_is_static && bak === scope && !node)
+					} else if (fn_is_static && bak === scope) {
 						node = scope.children?.find(it => it.name.toLowerCase() === name);
+						if (node && (<Variable>node).static)
+							return { node, uri };
+					}
 					scope = (<any>scope).parent;
 				}
 				if (node) {
@@ -5008,7 +5016,7 @@ export class Lexer {
 	public getScopeChildren(scopenode?: DocumentSymbol) {
 		let p: FuncNode | undefined, nodes: DocumentSymbol[] = [], it: DocumentSymbol, vars: { [key: string]: any } = {}, _l = '';
 		if (scopenode) {
-			let ff = scopenode as FuncNode;
+			let ff = scopenode as FuncNode, fn_is_static = ff.kind === SymbolKind.Function && ff.static;
 			for (const n in ff.local)
 				vars[n] = ff.local[n];
 			for (const n in ff.global)
@@ -5021,15 +5029,22 @@ export class Lexer {
 				scopenode = p;
 			} else {
 				while (p && p.children && (p.kind === SymbolKind.Function || p.kind === SymbolKind.Method || p.kind === SymbolKind.Property)) {
-					for (const n in p.local)
-						if (vars[n] === undefined)
-							vars[n] = p.local[n];
-					for (const n in p.global)
-						if (vars[n] === undefined)
-							vars[n] = null;
-					for (const n in p.declaration)
-						if (vars[n] === undefined)
-							vars[n] = p.declaration[n];
+					if (fn_is_static) {
+						let t: Variable;
+						for (const n in p.declaration)
+							if ((t = p.declaration[n] as Variable) && (t.static || t.static === null) && (!vars[n] || vars[n].static === null))
+								vars[n] = t;
+					} else {
+						for (const n in p.local)
+							if (vars[n] === undefined)
+								vars[n] = p.local[n];
+						for (const n in p.global)
+							if (vars[n] === undefined)
+								vars[n] = null;
+						for (const n in p.declaration)
+							if (vars[n] === undefined)
+								vars[n] = p.declaration[n];
+					}
 					scopenode = p, p = p.parent as FuncNode;
 				}
 				if (vars[_l = scopenode.name.toLowerCase()] === undefined && (scopenode.kind !== SymbolKind.Method && scopenode.kind !== SymbolKind.Property))

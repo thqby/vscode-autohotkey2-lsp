@@ -115,6 +115,8 @@ export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope
 	} else {
 		let node = scope ? scope as FuncNode : doc, gg = !scope, c: boolean | undefined = gg;
 		let not_static = !((<any>node)?.local?.[name]?.static);
+		if (not_static && scope && (<any>node)?.declaration?.[name]?.static === null)
+			not_static = false;
 		if (!c) {
 			let local = (<FuncNode>node).local, dec = (<FuncNode>node).declaration;
 			if (!((local && local[name]) || (dec && dec[name])))
@@ -132,19 +134,20 @@ export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope
 
 export function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[], assume_glo?: boolean, not_static?: boolean) {
 	let fn_is_static = node.kind === SymbolKind.Function && node.static, f = fn_is_static || node.closure;
+	let t: Variable;
 	if (fn_is_static && not_static && !global)
 		return;
-	if (node.assume === FuncScope.GLOBAL || (node.global && node.global[name])) {
+	if (node.assume === FuncScope.GLOBAL || node.global?.[name]) {
 		if (!global)
 			return;
 		assume_glo = true;
-	} else if ((f && node.local && node.local[name]) || (!f && node.declaration && node.declaration[name])) {
+	} else if ((f && node.local && node.local[name]) || (!f && node.declaration?.[name])) {
 		if (!global)
 			return;
 		assume_glo = false;
-	} else if (fn_is_static && global && !assume_glo && (!node.declaration || node.declaration[name].kind === SymbolKind.Variable && !(<Variable>node.declaration[name]).def))
+	} else if (fn_is_static && global && !assume_glo && (!(t = node.declaration?.[name]) || t.kind === SymbolKind.Variable && !t.def))
 		assume_glo = true;
-	else if (assume_glo && node.declaration && node.declaration[name])
+	else if (assume_glo && node.declaration?.[name])
 		assume_glo = false;
 	if (not_static)
 		not_static = !((<any>node)?.local?.[name]?.static);
