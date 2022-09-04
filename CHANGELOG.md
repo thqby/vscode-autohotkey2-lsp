@@ -1,3 +1,7 @@
+## 1.6.0
+- 修复[#176-#180](https://github.com/thqby/vscode-autohotkey2-lsp/issues/176)
+- 修复静态函数部分bug
+
 ## 1.5.9
 - 修复部分格式化错误
 - 修复符号搜索错误

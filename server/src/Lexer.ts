@@ -4597,7 +4597,7 @@ export class Lexer {
 
 			// block comment starts with a new line
 			print_newline(false, true);
-			if (flags.mode === MODE.Statement && flags.declaration_statement) {
+			if (flags.mode === MODE.Statement) {
 				let nk = _this.tokens[ck.next_token_offset] ?? EMPTY_TOKEN;
 				while (nk?.type.endsWith('COMMENT'))
 					nk = _this.tokens[nk.next_token_offset];
@@ -4632,14 +4632,14 @@ export class Lexer {
 		function handle_inline_comment() {
 			if (opt.ignore_comment)
 				return token_text = '';
-			output_space_before_token = false, output_lines[output_lines.length - 1].text.push('\t' + token_text);
+			output_space_before_token = false, output_lines[output_lines.length - 1].text.push((indent_string || '\t') + token_text);
 			print_newline(false, true);
 		}
 
 		function handle_comment() {
 			if (opt.ignore_comment)
 				return token_text = '';
-			if (flags.mode === MODE.Statement && flags.declaration_statement) {
+			if (flags.mode === MODE.Statement) {
 				let nk = _this.tokens[ck.next_token_offset] ?? EMPTY_TOKEN;
 				while (nk?.type.endsWith('COMMENT'))
 					nk = _this.tokens[nk.next_token_offset];
@@ -5230,7 +5230,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 				delete v['__new'];
 		} else {
 			for (let it of Object.values((node as ClassNode).declaration)) {
-				if (!v[l = it.name.toLowerCase()])
+				if (!v[l = it.name.toLowerCase()] || ((<any>v[l]).def === false && (<any>it).def !== false))
 					v[l] = it, (<any>it).uri = u;
 			}
 		}
