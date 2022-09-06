@@ -1671,7 +1671,7 @@ export class Lexer {
 						isdll = true;
 					case '#include':
 					case '#includeagain':
-						add_include_dllload(data.content.replace(/\s+;.*$/, '').replace(/`;/g, ';').trimRight(), data, mode, isdll);
+						add_include_dllload(data.content.replace(/`;/g, ';'), data, mode, isdll);
 						break;
 					case '#dllimport':
 						if (m = data.content.match(/^((\w|[^\x00-\x7f])+)/i)) {
@@ -3377,14 +3377,14 @@ export class Lexer {
 				let next_LF = input.indexOf('\n', parser_pos);
 				if (next_LF < 0)
 					next_LF = input_length;
-				let line = input.substring(last_LF + 1, next_LF).trim();
+				let line = input.substring(last_LF + 1, next_LF).trim().replace(/(^|\s+);.*$/, '');
 				if (line.includes('::') && (block_mode || !'"\''.includes(line[0]) || !['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lst.type))) {
 					if (m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i)) {
 						let execute: any;
-						if ((execute = m[2].match(/[xX]/)) || m[4].match(/^\s*\{?\s*(\s;.*)?$/))
+						if ((execute = m[2].match(/[xX]/)) || m[4].match(/^\s*\{?$/))
 							parser_pos += m[1].length - 1, lst = createToken(m[1], 'TK_HOT', offset, m[1].length, 1);
 						else {
-							last_LF = next_LF, parser_pos = offset + m[0].length, begin_line = true;
+							last_LF = next_LF, parser_pos = offset + m[0].length;
 							lst = createToken(m[1], 'TK_HOTLINE', offset, m[1].length, 1), offset += m[1].length;
 							lst.skip_pos = parser_pos;
 							lst.data = { content: input.substring(offset, parser_pos), offset, length: parser_pos - offset };
@@ -3420,13 +3420,13 @@ export class Lexer {
 								parser_pos = _lst.skip_pos ?? _lst.offset + _lst.length;
 						}
 						return lst;
-					} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`;|;(?<=\S)|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))|~?(`;|(?<=\S);|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*&\s*~?(`;|(?<=\S);|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))(\s+up)?\s*::)(.*)$/i)) {
-						let mm = m[9].match(/^(\s*)(([<>~*!+#^]*?)(`[{;]|[\x21-\x7A\x7C-\x7E]|[a-z]\w+|[^\x00-\x7f]))\s*(\s;.*)?$/i);
+					} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`?;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))|~?(`?;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f])\s*&\s*~?(`?;|[\x21-\x3A\x3C-\x7E]|[a-z]\w+|[^\x00-\x7f]))(\s+up)?\s*::)(.*)$/i)) {
+						let mm = m[9].match(/^(\s*)(([<>~*!+#^]*?)(`[{;]|[\x21-\x7A\x7C-\x7E]|[a-z]\w+|[^\x00-\x7f]))$/i);
 						add_sharp_foldingrange();
 						if (mm) {
 							let t = mm[2].toLowerCase();
 							if (!allIdentifierChar.test(t) || t.match(KEYS_RE)) {
-								last_LF = next_LF, begin_line = true, parser_pos = offset + m[0].length;
+								last_LF = next_LF, parser_pos = offset + m[0].length;
 								lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, 1);
 								offset += lst.length + mm[1].length, lst.skip_pos = parser_pos;
 								lst.data = { content: m[9].trim(), offset, length: parser_pos - offset, data: mm[2] };
@@ -3881,8 +3881,9 @@ export class Lexer {
 					if (c === ' ' || c === '\t') {
 						while (' \t'.includes(input.charAt(offset) || '\0'))
 							offset++;
-						lst.skip_pos = parser_pos;
-						lst.data = { content: input.substring(offset, parser_pos).trimRight(), offset, length: parser_pos - offset };
+						let content = input.substring(offset, parser_pos).trimRight().replace(/(^|\s+);.*$/, '');
+						lst.skip_pos = parser_pos = offset + content.length;
+						lst.data = { content, offset, length: content.length };
 					}
 				} else
 					lst.type = 'TK_UNKNOWN', lst.content += input.substring(offset, parser_pos).trimRight(), lst.length += parser_pos - offset;
