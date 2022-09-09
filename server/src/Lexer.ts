@@ -1930,7 +1930,7 @@ export class Lexer {
 											_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 										fc.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 									} else
-										fc = Object.assign({}, EMPTY_TOKEN);
+										fc = Object.assign({}, EMPTY_TOKEN, { offset: ttk.offset });
 									if (!par)
 										par = [], _this.addDiagnostic(diagnostic.invalidparam(), bbb, quoteend - bbb);
 									let tn = FuncNode.create(fc.content, SymbolKind.Function,
