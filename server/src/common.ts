@@ -43,6 +43,24 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	},
 	FormatOptions: {}
 };
+export const chinese_punctuations: { [c: string]: string } = {
+	'，': ',',
+	'。': '.',
+	'；': ';',
+	'‘': "'",
+	'’': "'",
+	'【': '[',
+	'】': ']',
+	'《': '<',
+	'》': '>',
+	'？': '?',
+	'：': ':',
+	'“': '"',
+	'”': '"',
+	'（': '(',
+	'）': ')',
+	'！': '!'
+};
 export let winapis: string[] = [];
 export let getDllExport = (paths: string[], onlyone: boolean = false) => [] as string[];
 

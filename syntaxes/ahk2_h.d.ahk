@@ -28,7 +28,7 @@ DynaCall(DllFunc, ParameterDefinition, Params*) => Number | String
 /**
  * Retrieve low-level pointers to variables.
  */
-GetVar(VarName, ResolveAlias ​​ := true) => Number
+GetVar(VarName, ResolveAlias := true) => Number
 
 MemoryCallEntryPoint(hModule [, cmdLine]) => Number
 

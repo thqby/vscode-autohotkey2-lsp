@@ -13,7 +13,7 @@ import {
 	extsettings, generateAuthor, generateComment, getincludetable, hoverProvider, initahk2cache, Lexer, lexers, LibIncludeType,
 	libfuncs, loadahk2, loadlocalize, parseinclude, prepareRename, rangeFormatting, referenceProvider, renameProvider,
 	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, sendDiagnostics, set_ahk_h, set_Connection, update_commentTags,
-	set_dirname, set_locale, set_Workfolder, signatureProvider, symbolProvider, typeFormatting, workspaceFolders, workspaceSymbolProvider
+	set_dirname, set_locale, set_Workfolder, signatureProvider, symbolProvider, typeFormatting, workspaceFolders, workspaceSymbolProvider, chinese_punctuations
 } from './common';
 
 export const languageServer = 'ahk2-language-server';
@@ -64,7 +64,7 @@ connection.onInitialize((params: InitializeParams) => {
 			definitionProvider: true,
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
-			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['{'] },
+			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['{', ...Object.keys(chinese_punctuations)] },
 			executeCommandProvider: {
 				commands: [
 					'ahk2.generate.comment',

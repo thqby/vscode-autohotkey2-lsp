@@ -1,7 +1,7 @@
 import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, Range, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Lexer } from './Lexer';
-import { extsettings, lexers } from './common';
+import { chinese_punctuations, extsettings, lexers } from './common';
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, doc.document.lineCount, 0);
@@ -54,5 +54,10 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 				textDocument: params.textDocument,
 				options: params.options
 			});
+	} else if (s = chinese_punctuations[params.ch]) {
+		let { line, character } = params.position;
+		if (doc.instrorcomm(params.position))
+			return;
+		return [TextEdit.replace(Range.create({ line, character: character - 1 }, params.position), s)];
 	}
 }

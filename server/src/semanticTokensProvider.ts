@@ -7,9 +7,9 @@ let curclass: ClassNode | undefined;
 let memscache = new Map<ClassNode, { [name: string]: DocumentSymbol }>();
 
 function resolve_sem(tk: Token, doc: Lexer) {
-	let l: string;
-	if (tk.semantic) {
-		let pos = tk.pos ?? (tk.pos = doc.document.positionAt(tk.offset)), type = tk.semantic.type;
+	let l: string, sem: SemanticToken | undefined;
+	if (sem = tk.semantic) {
+		let pos = tk.pos ?? (tk.pos = doc.document.positionAt(tk.offset)), type = sem.type;
 		if (type === SemanticTokenTypes.string) {
 			if (tk.ignore) {
 				let l = pos.line + 1, data = tk.data as number[];
@@ -20,7 +20,7 @@ function resolve_sem(tk: Token, doc: Lexer) {
 			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) && tk.previous_token?.type === 'TK_DOT'
 				|| (curclass = undefined, type === SemanticTokenTypes.class))
 				type = resolveSemanticType(tk.content.toLowerCase(), tk, doc);
-			doc.STB.push(pos.line, pos.character, tk.length, type, tk.semantic.modifier ?? 0);
+			doc.STB.push(pos.line, pos.character, tk.length, type, sem.modifier ?? 0);
 		}
 	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 		curclass = undefined;
