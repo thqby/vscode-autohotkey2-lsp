@@ -18,7 +18,12 @@ export function activate(context: ExtensionContext) {
 		initializationOptions: {
 			AutoLibInclude: getConfig('AutoLibInclude'),
 			CommentTags: getConfig('CommentTags'),
-			InterpreterPath: getConfig('InterpreterPath')
+			CompleteFunctionParens: getConfig('CompleteFunctionParens'),
+			Diagnostics: getConfig('Diagnostics'),
+			DisableV1Script: getConfig('DisableV1Script'),
+			FormatOptions: getConfig('FormatOptions'),
+			InterpreterPath: getConfig('InterpreterPath'),
+			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace')
 		}
 	}, worker);
 

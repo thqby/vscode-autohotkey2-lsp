@@ -176,11 +176,11 @@ connection.onDidChangeConfiguration(async (change: any) => {
 			changes[k] = true;
 	Object.assign(extsettings, newset);
 	if (changes['CommentTags'])
-	try {
-		update_commentTags(extsettings.CommentTags);
-	} catch (e: any) {
-		connection.console.error(e.message);
-	}
+		try {
+			update_commentTags(extsettings.CommentTags);
+		} catch (e: any) {
+			connection.console.error(e.message);
+		}
 	if (changes['InterpreterPath'] && !ahkpath_cur)
 		changeInterpreter(oldpath, extsettings.InterpreterPath);
 	if (changes['AutoLibInclude']) {

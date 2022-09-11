@@ -89,29 +89,17 @@
 					"default": "Disabled",
 					"description": "%ahk2.autolibinclude%"
 				},
-				"AutoHotkey2.CompilerCMD": {
-					"scope": "window",
-					"type": "string",
-					"default": "/compress 0 /base ${execPath}",
-					"description": "%ahk2.compilercmd%"
-				},
-				"AutoHotkey2.DefaultDebugger": {
-					"scope": "window",
-					"type": "string",
-					"default": "zero-plusplus.vscode-autohotkey-debug",
-					"description": "%ahk2.defaultdebugger%"
-				},
-				"AutoHotkey2.InterpreterPath": {
-					"scope": "window",
-					"type": "string",
-					"default": "C:\\Program Files\\Autohotkey\\v2\\AutoHotkey.exe",
-					"description": "%ahk2.interpreterpath%"
-				},
 				"AutoHotkey2.CommentTags": {
 					"scope": "window",
 					"type": "string",
 					"default": "^;;\\s*(?<tag>.+)",
 					"description": "%ahk2.commenttags%"
+				},
+				"AutoHotkey2.CompilerCMD": {
+					"scope": "window",
+					"type": "string",
+					"default": "/compress 0 /base ${execPath}",
+					"description": "%ahk2.compilercmd%"
 				},
 				"AutoHotkey2.CompleteFunctionParens": {
 					"scope": "window",
@@ -119,11 +107,17 @@
 					"default": false,
 					"description": "%ahk2.completefunctionparens%"
 				},
-				"AutoHotkey2.DisableV1Script": {
+				"AutoHotkey2.DefaultDebugger": {
+					"scope": "window",
+					"type": "string",
+					"default": "zero-plusplus.vscode-autohotkey-debug",
+					"description": "%ahk2.defaultdebugger%"
+				},
+				"AutoHotkey2.Diagnostics.ClassStaticMemberCheck": {
 					"scope": "window",
 					"type": "boolean",
 					"default": true,
-					"description": "%ahk2.disablev1script%"
+					"description": "%ahk2.diagnostics.classstaticmembercheck%"
 				},
 				"AutoHotkey2.Diagnostics.ParamsCheck": {
 					"scope": "window",
@@ -131,11 +125,11 @@
 					"default": true,
 					"description": "%ahk2.diagnostics.paramscheck%"
 				},
-				"AutoHotkey2.Diagnostics.ClassStaticMemberCheck": {
+				"AutoHotkey2.DisableV1Script": {
 					"scope": "window",
 					"type": "boolean",
 					"default": true,
-					"description": "%ahk2.diagnostics.classstaticmembercheck%"
+					"description": "%ahk2.disablev1script%"
 				},
 				"AutoHotkey2.FormatOptions": {
 					"scope": "window",
@@ -190,6 +184,12 @@
 						"type": "string"
 					},
 					"default": {}
+				},
+				"AutoHotkey2.InterpreterPath": {
+					"scope": "window",
+					"type": "string",
+					"default": "C:\\Program Files\\Autohotkey\\v2\\AutoHotkey.exe",
+					"description": "%ahk2.interpreterpath%"
 				},
 				"AutoHotkey2.SymbolFoldingFromOpenBrace": {
 					"scope": "window",

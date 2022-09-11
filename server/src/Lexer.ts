@@ -341,9 +341,7 @@ export class Lexer {
 					} else if (!is_conditional && ![MODE.ArrayLiteral, MODE.ObjectLiteral, MODE.Expression].includes(flags.parent.mode)) {
 						if ((ck.type.endsWith('COMMENT') || !is_line_continue(flags.mode === MODE.Statement ? ck.previous_token ?? EMPTY_TOKEN : {} as Token, ck)) &&
 							!(last_type === 'TK_RESERVED' && ['catch', 'else', 'finally', 'until'].includes(last_text))) {
-							if (opt.max_preserve_newlines as number < 0)
-								n_newlines = -(opt.max_preserve_newlines as number);
-							else if (opt.max_preserve_newlines && n_newlines > opt.max_preserve_newlines)
+							if (opt.max_preserve_newlines && n_newlines > opt.max_preserve_newlines)
 								n_newlines = opt.max_preserve_newlines;
 
 							if (!just_added_newline())
