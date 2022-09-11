@@ -108,8 +108,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					}
 				});
 			}
-			if (ts = ahkvars['any'])
-				tps.push(ts);
 			for (const node of tps) {
 				switch (node.kind) {
 					case SymbolKind.Class:

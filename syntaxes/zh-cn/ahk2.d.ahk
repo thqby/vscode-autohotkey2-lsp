@@ -2572,6 +2572,8 @@ class Any {
 	 */
 	HasProp(Name) => Number
 
+	__Init() => void
+
 	/**
 	 * 检索值的基对象.
 	 */

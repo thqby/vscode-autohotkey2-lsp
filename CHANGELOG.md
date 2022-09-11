@@ -1,5 +1,6 @@
 ## 1.6.1
 - 输入时替换中文标点
+- 优化代码格式化
 - 修复[#181](https://github.com/thqby/vscode-autohotkey2-lsp/issues/181)
 - 修复[#182](https://github.com/thqby/vscode-autohotkey2-lsp/issues/182)
 - 修复[#183](https://github.com/thqby/vscode-autohotkey2-lsp/issues/183)

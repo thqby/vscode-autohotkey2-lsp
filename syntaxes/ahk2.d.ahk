@@ -2572,6 +2572,8 @@ class Any {
 	 */
 	HasProp(Name) => Number
 
+	__Init() => void
+
 	/**
 	 * The base object to retrieve the value.
 	 */
