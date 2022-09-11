@@ -191,6 +191,7 @@ const FORMAT_DEFAULT_OPTS: FormatOptions = {
 	indent_string: '\t',
 	keep_array_indentation: true,
 	max_preserve_newlines: 2,
+	one_true_brace: true,
 	preserve_newlines: true,
 	space_before_conditional: true,
 	space_in_empty_paren: false,
@@ -305,6 +306,7 @@ export class Lexer {
 				indent_string: '\t',
 				keep_array_indentation: true,
 				max_preserve_newlines: 2,
+				one_true_brace: true,
 				preserve_newlines: true,
 				space_before_conditional: true,
 				space_in_empty_paren: false,
@@ -3042,11 +3044,11 @@ export class Lexer {
 				}
 			}
 			if (((opt.preserve_newlines && input_wanted_newline) || force_linewrap) && !just_added_newline()) {
-				print_newline(false, true);
+				print_newline(true);
 			}
 		}
 
-		function print_newline(force_newline = false, preserve_statement_flags = false): void {
+		function print_newline(preserve_statement_flags = false): void {
 			output_space_before_token = false;
 
 			if (!preserve_statement_flags) {
@@ -3056,11 +3058,7 @@ export class Lexer {
 				}
 			}
 
-			if (output_lines.length === 1 && just_added_newline()) {
-				return; // no newline on start of file
-			}
-
-			if (force_newline || !just_added_newline())
+			if (!just_added_newline())
 				output_lines.push(create_output_line());
 		}
 
@@ -3832,7 +3830,7 @@ export class Lexer {
 					case 'loop':
 					case 'while':
 					case 'catch':
-						print_newline(false, true);
+						print_newline(true);
 					case 'try':
 					case 'finally':
 					case 'else':
@@ -3873,7 +3871,7 @@ export class Lexer {
 				}
 			} else {
 				if (ck.ignore)
-					print_newline(false, true);
+					print_newline(true);
 				else if (last_type === 'TK_END_EXPR' || last_type === 'TK_WORD')
 					output_space_before_token = whitespace.includes(ck.prefix_is_whitespace || '\0');
 				else if (last_type === 'TK_STRING')
@@ -3884,7 +3882,7 @@ export class Lexer {
 					else if (line_starters.includes(last_text))
 						output_space_before_token = Boolean(opt.space_before_conditional);
 				if (input_wanted_newline && opt.preserve_newlines)
-					print_newline(false, true);
+					print_newline(true);
 			}
 
 			if (last_type === 'TK_EQUALS' || last_type === 'TK_COMMA' || last_type === 'TK_OPERATOR') {
@@ -3932,8 +3930,14 @@ export class Lexer {
 				flags.indentation_level = real_indentation_level();
 				if (previous_flags.mode !== MODE.Conditional)
 					previous_flags.indentation_level = flags.indentation_level;
-			} else
+			} else {
+				if (!['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally'].includes(flags.last_word))
+					while (flags.mode === MODE.Statement)
+						restore_mode();
 				set_mode(MODE.BlockStatement);
+				if (!opt.one_true_brace)
+					print_newline(true);
+			}
 
 			if (last_type !== 'TK_OPERATOR' && last_type !== 'TK_START_EXPR') {
 				if (input_wanted_newline && !(last_type === 'TK_RESERVED' &&
@@ -3957,7 +3961,8 @@ export class Lexer {
 			indent();
 			if (flags.mode === MODE.ObjectLiteral)
 				output_space_before_token = space_in_other;
-			else print_newline();
+			else if (opt.one_true_brace)
+				print_newline();
 		}
 
 		function handle_end_block() {
@@ -3965,8 +3970,8 @@ export class Lexer {
 			while (flags.mode === MODE.Statement)
 				restore_mode();
 
-			let end_of_object = flags.mode === MODE.ObjectLiteral;
-			if (end_of_object) {
+			let is_obj = flags.mode === MODE.ObjectLiteral;
+			if (is_obj) {
 				if (last_type === 'TK_START_BLOCK')
 					output_space_before_token = false;
 				else if (is_array(flags.mode) && opt.keep_array_indentation) {
@@ -3988,8 +3993,11 @@ export class Lexer {
 			print_token();
 			if (flags.in_case_statement && flags.last_text === ':')
 				output_lines[output_lines.length - 1].text.shift();
-			if (!end_of_object)
+			if (!is_obj) {
+				if (opt.one_true_brace)
+					print_newline(true);
 				output_space_before_token = space_in_other;
+			}
 		}
 
 		function handle_word() {
@@ -4005,7 +4013,7 @@ export class Lexer {
 					case 'loop':
 					case 'while':
 					case 'catch':
-						print_newline(false, true);
+						print_newline(true);
 						flags.declaration_statement = true;
 						preserve_statement_flags = true;
 						break;
@@ -4069,10 +4077,10 @@ export class Lexer {
 				}
 				if (maybe_need_newline) {
 					if (flags.last_text !== '}')
-						print_newline(false, true);
-					else trim_newlines(), output_space_before_token = space_in_other;
+						print_newline(true);
+					else opt.one_true_brace && trim_newlines(), output_space_before_token = space_in_other;
 				} else if (input_wanted_newline)
-					print_newline(false, preserve_statement_flags);
+					print_newline(preserve_statement_flags);
 
 				switch (token_text_low) {
 					case 'loop':
@@ -4089,25 +4097,26 @@ export class Lexer {
 						flags.try_block = true;
 						break;
 				}
+				flags.last_word = token_text_low;
 			} else {
 				if (input_wanted_newline && flags.mode === MODE.Statement &&
 					flags.parent.mode !== MODE.ObjectLiteral && !is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))
-					print_newline(false, preserve_statement_flags);
+					print_newline(preserve_statement_flags);
 				else if (input_wanted_newline && opt.preserve_newlines)
-					print_newline(false, true);
+					print_newline(true);
 				else if (['TK_COMMA', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR'].includes(last_type))
 					if (!start_of_object_property())
 						allow_wrap_or_preserved_newline();
+				flags.last_word = '_';
 			}
 
 			print_token();
-			flags.last_word = token_text_low;
 		}
 
 		function handle_string() {
 			if (start_of_statement()) {
 				if (input_wanted_newline)
-					print_newline(false, true);
+					print_newline(true);
 				else output_space_before_token = true;
 			} else if (last_type === 'TK_RESERVED' || last_type === 'TK_WORD') {
 				if (input_wanted_newline)
@@ -4125,7 +4134,7 @@ export class Lexer {
 				else output_space_before_token = true;
 			}
 			if (ck.ignore) {
-				print_newline(false, true);
+				print_newline(true);
 				output_lines[output_lines.length - 1].text = [token_text];
 				return;
 			}
@@ -4147,13 +4156,13 @@ export class Lexer {
 				set_mode(MODE.Statement), indent(), flags.declaration_statement = true;
 			if (last_type === 'TK_WORD' && whitespace.includes(ck.prefix_is_whitespace || '\0') &&
 				ck.previous_token?.callinfo)
-				input_wanted_newline && opt.preserve_newlines ? output_space_before_token = true : print_newline(false, true);
+				input_wanted_newline && opt.preserve_newlines ? output_space_before_token = true : print_newline(true);
 			else {
 				output_space_before_token = space_in_other && last_type === 'TK_COMMA';
 				if (flags.mode === MODE.Statement && flags.parent.mode === MODE.ObjectLiteral)
 					restore_mode();
 				if (input_wanted_newline && opt.preserve_newlines)
-					print_newline(false, true);
+					print_newline(true);
 				else if (!just_added_newline())
 					input_wanted_newline = false;
 			}
@@ -4176,7 +4185,7 @@ export class Lexer {
 					case 'loop':
 					case 'while':
 					case 'catch':
-						print_newline(false, true);
+						print_newline(true);
 					case 'try':
 					case 'finally':
 					case 'else':
@@ -4208,7 +4217,7 @@ export class Lexer {
 				output_space_before_token ||= Boolean(ck.next_pair_pos && ' \t'.includes(ck.prefix_is_whitespace || '\0'));
 				if (input_wanted_newline && opt.preserve_newlines)
 					if (flags.mode === MODE.Statement && is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))
-						print_newline(false, true);
+						print_newline(true);
 				print_token();
 				output_space_before_token = space_after;
 				return;
@@ -4229,7 +4238,7 @@ export class Lexer {
 			}
 
 			if (input_wanted_newline && opt.preserve_newlines)
-				print_newline(false, true);
+				print_newline(true);
 			else if (last_type === 'TK_OPERATOR' && !last_text.match(/^(--|\+\+|%|!|~|not)$/))
 				allow_wrap_or_preserved_newline();
 
@@ -4281,7 +4290,7 @@ export class Lexer {
 				remove = new RegExp(`^${t[1]}{1,${t[0].length}}`);
 
 			// block comment starts with a new line
-			print_newline(false, true);
+			print_newline(true);
 			if (flags.mode === MODE.Statement) {
 				let nk = _this.tokens[ck.next_token_offset];
 				while (nk?.type.endsWith('COMMENT'))
@@ -4295,7 +4304,7 @@ export class Lexer {
 			// first line always indented
 			print_token(lines[0].trimRight());
 			for (j = 1; j < lines.length - 1; j++) {
-				print_newline(false, true);
+				print_newline(true);
 				if (javadoc) {
 					print_token(' * ' + lines[j].replace(/^[\s\*]+|\s+$/g, ''));
 				} else {
@@ -4309,11 +4318,11 @@ export class Lexer {
 				}
 			}
 			if (lines.length > 1) {
-				print_newline(false, true);
+				print_newline(true);
 				print_token(' ' + lines[lines.length - 1].trim());
 			}
 			// for comments of more than one line, make sure there's a new line after
-			print_newline(false, true);
+			print_newline(true);
 			flags.had_comment = 3;
 		}
 
@@ -4323,14 +4332,14 @@ export class Lexer {
 			if (just_added_newline())
 				output_lines.pop();
 			output_lines[output_lines.length - 1].text.push((indent_string || '\t'), token_text);
-			print_newline(false, true);
+			print_newline(true);
 			flags.had_comment = 1;
 		}
 
 		function handle_comment() {
 			if (opt.ignore_comment)
 				return;
-			print_newline(false, true);
+			print_newline(true);
 			if (flags.mode === MODE.Statement) {
 				let nk = _this.tokens[ck.next_token_offset];
 				while (nk?.type.endsWith('COMMENT'))
@@ -4341,10 +4350,10 @@ export class Lexer {
 					trim_newlines();
 			}
 			token_text.split('\n').map(s => {
-				print_newline(false, true);
+				print_newline(true);
 				print_token(s.trim());
 			});
-			print_newline(false, true);
+			print_newline(true);
 			flags.had_comment = 2;
 		}
 

@@ -155,6 +155,10 @@
 							"type": "number",
 							"default": 2
 						},
+						"one_true_brace": {
+							"type": "boolean",
+							"default": true
+						},
 						"preserve_newlines": {
 							"type": "boolean",
 							"default": true
