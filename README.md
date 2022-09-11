@@ -236,26 +236,26 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
 
 作用域范围内的变量、函数名批量重命名.
 
-![rename](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/rename.gif)
+![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/rename.gif)
 ### 错误诊断
 
 简单语法错误诊断.
 
-![diagnostics](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/diagnostics.png)
+![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/diagnostics.png)
 
 ### 智能感知
 
 支持对作用域范围内的变量、函数、参数、类名、方法名智能补全(简单的类型推导)，支持对include文件和函数库补全.
 
-![snippet1](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/snippet.png)
+![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.png)
 
-![snippet2](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/snippet.gif)
+![snippet2](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.gif)
 
 ### 智能提示
 
 支持对函数、方法参数的智能提示.
 
-![signature](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/signature.gif)
+![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/signature.gif)
 
 ### 大纲
 
@@ -266,31 +266,31 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
 ### 语义高亮
 
 语义高亮显示是语法高亮显示的补充，改进和改进语法中的语法突出显示。编辑器在来自语法的高亮显示之上应用来自语义标记的高亮显示。
-![semanticTokens](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/semanticTokens.png)
+![semanticTokens](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/semanticTokens.png)
 
 ### 代码标记
 
 用法: 在注释代码块中添加`;;`(默认)或`; TODO `  
-![codeSymbole](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/codeSymbol.png)
+![codeSymbole](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeSymbol.png)
 
 ### 颜色提示
 
 计算并解析文档中的颜色，并提供颜色选择器更直观地修改颜色数据。
 
-![documentcolor](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/documentcolor.png)
+![documentcolor](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/documentcolor.png)
 
 ### 悬停提示  
 
 支持对作用域范围内变量、函数、全局类、标签的悬停提示并显示相关备注.  
 用法: 移动鼠标到相关符号上.  
-![hover](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/hover.png)
+![hover](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/hover.png)
 
 ### 转到定义
 
 1. 支持跳转到作用域范围内变量、函数、全局类、标签的声明位置.  
 2. 用法: 按住 ctrl 然后移动鼠标到代码处点击.  
 
-![gotoDefinition](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/gotoDefinition.png)
+![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/gotoDefinition.png)
 
 ### 查找所有引用
 
@@ -304,7 +304,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
 - 或按 `Shift+Alt+F`.  
 - 支持粘贴或键入函数或类的`}`时自动格式化。(需要开启`editor.format OnPaste`或`editor.format OnType`)  
 
-![codeFormat](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/codeFormat.gif)
+![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeFormat.gif)
 
 ### 自定义折叠
 
