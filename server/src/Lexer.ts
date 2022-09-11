@@ -3930,23 +3930,7 @@ export class Lexer {
 				flags.indentation_level = real_indentation_level();
 				if (previous_flags.mode !== MODE.Conditional)
 					previous_flags.indentation_level = flags.indentation_level;
-			} else {
-				if (!['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally'].includes(flags.last_word))
-					while (flags.mode === MODE.Statement)
-						restore_mode();
-				set_mode(MODE.BlockStatement);
-				if (!opt.one_true_brace)
-					print_newline(true);
-			}
 
-			if (last_type !== 'TK_OPERATOR' && last_type !== 'TK_START_EXPR') {
-				if (input_wanted_newline && !(last_type === 'TK_RESERVED' &&
-					(last_text === 'else' || last_text === 'finally')) || last_type === 'TK_START_BLOCK')
-					print_newline();
-				else
-					output_space_before_token = space_in_other;
-			} else {
-				// if TK_OPERATOR or TK_START_EXPR
 				if (is_array(previous_flags.mode) && flags.last_text === ',') {
 					if (last_last_text === '}') {
 						// }, { in array context
@@ -3955,6 +3939,21 @@ export class Lexer {
 						print_newline(); // [a, b, c, {
 					}
 				}
+			} else {
+				if (!['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally'].includes(flags.last_word))
+					while (flags.mode === MODE.Statement)
+						restore_mode();
+				set_mode(MODE.BlockStatement);
+				flags.had_comment = previous_flags.had_comment;
+				if (!opt.one_true_brace)
+					print_newline(true);
+				output_space_before_token = space_in_other;
+
+				if (previous_flags.in_case_statement && flags.last_text.endsWith(':'))
+					flags.indentation_level--, opt.one_true_brace && trim_newlines();
+				else if (input_wanted_newline && !(last_type === 'TK_RESERVED' &&
+					(last_text === 'else' || last_text === 'finally')) || last_type === 'TK_START_BLOCK')
+					print_newline();
 			}
 
 			print_token();
@@ -3991,9 +3990,9 @@ export class Lexer {
 			if (previous_flags.indentation_level === flags.indentation_level && just_added_newline())
 				deindent();
 			print_token();
-			if (flags.in_case_statement && flags.last_text === ':')
-				output_lines[output_lines.length - 1].text.shift();
 			if (!is_obj) {
+				if (flags.in_case_statement && flags.last_text.endsWith(':'))
+					flags.indentation_level++;
 				if (opt.one_true_brace)
 					print_newline(true);
 				output_space_before_token = space_in_other;
@@ -4390,7 +4389,7 @@ export class Lexer {
 				print_token(), indent();
 				flags.in_case = false;
 				flags.in_case_statement = true;
-				output_space_before_token = true;
+				output_space_before_token = space_in_other;
 				return;
 			}
 			print_token();
