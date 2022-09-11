@@ -133,6 +133,7 @@ export interface FormatOptions {
 	indent_string?: string
 	keep_array_indentation?: boolean
 	max_preserve_newlines?: number
+	one_true_brace?: boolean
 	preserve_newlines?: boolean
 	space_before_conditional?: boolean
 	space_in_empty_paren?: boolean
@@ -951,6 +952,8 @@ export class Lexer {
 								let p = blockpos.pop() as number;
 								_this.addFoldingRange(tk.previous_pair_pos = p, parser_pos - 1);
 								tokens[p].next_pair_pos = tk.offset;
+								if (tk.topofline === 1)
+									last_LF = tk.offset, begin_line = true;
 							}
 							if (blocks < level) {
 								if (mode === 0 && level === 0)
