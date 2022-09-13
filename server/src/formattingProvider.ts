@@ -1,59 +1,40 @@
 import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, Range, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Lexer } from './Lexer';
+import { FormatOptions, Lexer } from './Lexer';
 import { chinese_punctuations, extsettings, lexers } from './common';
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, doc.document.lineCount, 0);
 	let opts = Object.assign({}, extsettings.FormatOptions);
-	if (opts.indent_string === undefined) {
-		if (params.options.insertSpaces)
-			opts.indent_string = " ".repeat(params.options.tabSize);
-		else opts.indent_string = "\t";
-	}
+	opts.indent_string ??= params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
 	let newText = doc.beautify(opts);
 	return [{ range, newText }];
 }
 
 export async function rangeFormatting(params: DocumentRangeFormattingParams): Promise<TextEdit[] | undefined> {
+	let doc = lexers[params.textDocument.uri.toLowerCase()], range = params.range;
 	let opts = Object.assign({}, extsettings.FormatOptions);
-	if (opts.indent_string === undefined) {
-		if (params.options.insertSpaces)
-			opts.indent_string = " ".repeat(params.options.tabSize);
-		else opts.indent_string = "\t";
-	}
-	let range = params.range, doc = lexers[params.textDocument.uri.toLowerCase()], document = doc.document, newText = document.getText(range);
+	opts.indent_string = params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
 	if (doc.instrorcomm(range.start) || doc.instrorcomm(range.end))
 		return;
-	let t = '';
-	if (range.start.character > 0 && (t = document.getText(Range.create(range.start.line, 0, range.start.line, range.start.character))).trim() === '')
-		newText = t + newText, range.start.character = 0;
-	newText = new Lexer(TextDocument.create('', 'ahk2', -10, newText)).beautify(opts);
+	let newText = doc.beautify(opts, range).trimRight();
 	return [{ range, newText }];
 }
 
 export async function typeFormatting(params: DocumentOnTypeFormattingParams): Promise<TextEdit[] | undefined> {
-	let doc = lexers[params.textDocument.uri.toLowerCase()], pos = params.position, s = '', t = params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
-	if (params.ch === '{') {
-		if (new RegExp('^(' + t + ')+\\{').test(s = doc.document.getText(Range.create(pos.line, 0, pos.line, pos.character)))) {
-			if (doc.instrorcomm(pos))
-				return;
-			let line = pos.line, l = s.slice(0, -1), l1 = l.replace(t, ''), s1 = '', r = new RegExp('^' + l + '(?!' + t + ')');
-			while (line > 0 && r.test(s1 = doc.document.getText({ start: { line: line - 1, character: 0 }, end: { line, character: 0 } })) && !s1.match(/^\s*(\{|\}|(if|else|for|loop|while|try|catch|finally)\b|.*\{\s*(;.*)?$)/i))
-				line--;
-			if (new RegExp('^' + l1 + '(\\}\\s*)?(if|else|for|loop|while|try|catch|finally)\\b', 'i').test(s1) && !s1.match(/\{\s*(;.*)?$/))
-				return [{ newText: l1 + '{', range: Range.create(pos.line, 0, pos.line, pos.character) }];
+	let doc = lexers[params.textDocument.uri.toLowerCase()], pos = params.position, s = '';
+	let opts = Object.assign({}, extsettings.FormatOptions);
+	if ('}{'.includes(params.ch)) {
+		let tk = doc.tokens[doc.document.offsetAt({ line: pos.line, character: pos.character - 1 })];
+		let pp = tk?.previous_pair_pos;
+		if (pp !== undefined) {
+			while ((tk = doc.tokens[pp])?.previous_pair_pos !== undefined)
+				pp = tk.previous_pair_pos;
+			opts.indent_string = params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
+			let range = { start: doc.document.positionAt(pp), end: pos };
+			let newText = doc.beautify(opts, range).trimRight();
+			return [{ range, newText }];
 		}
-	} else if (params.ch === '}') {
-		if (doc.document.getText(Range.create(pos.line, 0, pos.line, pos.character - 1)).trim() !== '')
-			return;
-		let n = doc.searchScopedNode(pos);
-		if (n && n.range.end.line === pos.line && n.range.start.line < pos.line)
-			return rangeFormatting({
-				range: { start: { line: n.range.start.line, character: 0 }, end: pos },
-				textDocument: params.textDocument,
-				options: params.options
-			});
 	} else if (s = chinese_punctuations[params.ch]) {
 		let { line, character } = params.position;
 		if (doc.instrorcomm(params.position))
