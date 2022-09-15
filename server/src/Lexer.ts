@@ -965,7 +965,7 @@ export class Lexer {
 										blocks = 0, blockpos.length = 0;
 								else {
 									if (blockpos.length)
-										tokens[tk.previous_pair_pos = blockpos.pop() as number].next_pair_pos = tk.offset;
+										tokens[tk.previous_pair_pos = blockpos[blockpos.length - 1]].next_pair_pos = tk.offset;
 									inswitch = last_switch;
 									return;
 								}
