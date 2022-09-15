@@ -66,7 +66,7 @@ connection.onInitialize((params: InitializeParams) => {
 			definitionProvider: true,
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
-			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['{', ...Object.keys(chinese_punctuations)] },
+			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinese_punctuations)] },
 			executeCommandProvider: {
 				commands: [
 					'ahk2.fix.include',

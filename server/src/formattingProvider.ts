@@ -1,7 +1,5 @@
-import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, Range, TextEdit } from 'vscode-languageserver';
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { FormatOptions, Lexer } from './Lexer';
-import { chinese_punctuations, extsettings, lexers } from './common';
+import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, Position, Range, TextEdit } from 'vscode-languageserver';
+import { chinese_punctuations, extsettings, lexers, Token } from './common';
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, doc.document.lineCount, 0);
@@ -22,23 +20,57 @@ export async function rangeFormatting(params: DocumentRangeFormattingParams): Pr
 }
 
 export async function typeFormatting(params: DocumentOnTypeFormattingParams): Promise<TextEdit[] | undefined> {
-	let doc = lexers[params.textDocument.uri.toLowerCase()], pos = params.position, s = '';
-	let opts = Object.assign({}, extsettings.FormatOptions);
-	if ('}{'.includes(params.ch)) {
-		let tk = doc.tokens[doc.document.offsetAt({ line: pos.line, character: pos.character - 1 })];
-		let pp = tk?.previous_pair_pos;
+	let doc = lexers[params.textDocument.uri.toLowerCase()], { ch, position } = params, result: TextEdit[] | undefined;
+	let opts = Object.assign({}, extsettings.FormatOptions), tk: Token, s: string, pp: number | undefined;
+
+	if (ch === '\n') {
+		let { line, character } = position, linetexts = doc.document.getText({
+			start: { line: line - 1, character: 0 },
+			end: { line: line + 2, character: 0 }
+		}).split(/\r?\n/), s = linetexts[0].trimRight(), indent_string: string;
+
+		opts.indent_string = params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
+		if (!linetexts[1].trim())
+			character = linetexts[1].length;
+
+		if (s.endsWith('}') || s.endsWith('{')) {
+			if (result = format_end_with_brace({ line: line - 1, character: s.length })) {
+				indent_string = (result[0].range as any).indent_string ?? '';
+				if (linetexts[1].substring(0, character) !== indent_string)
+					result.push({
+						newText: indent_string,
+						range: {
+							start: { line: line, character: 0 },
+							end: { line: line, character }
+						}
+					});
+
+				if (s.endsWith('{') && (s = (linetexts[2] ??= '').trimLeft()).startsWith('}') &&
+					!linetexts[2].startsWith((indent_string = indent_string.replace(opts.indent_string, '')) + '}'))
+					result.push({
+						newText: indent_string,
+						range: {
+							start: { line: line + 1, character: 0 },
+							end: { line: line + 1, character: linetexts[2].length - s.length }
+						}
+					});
+			}
+		}
+		return result;
+	} else if (ch === '}')
+		return format_end_with_brace(position);
+	else if ((s = chinese_punctuations[ch]) && !doc.instrorcomm(position))
+		return [TextEdit.replace(Range.create({ line: position.line, character: position.character - 1 }, position), s)];
+
+	function format_end_with_brace(pos: Position): TextEdit[] | undefined {
+		tk = doc.tokens[doc.document.offsetAt({ line: pos.line, character: pos.character - 1 })];
+		pp = tk?.previous_pair_pos;
 		if (pp !== undefined) {
 			while ((tk = doc.tokens[pp])?.previous_pair_pos !== undefined)
 				pp = tk.previous_pair_pos;
-			opts.indent_string = params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
 			let range = { start: doc.document.positionAt(pp), end: pos };
 			let newText = doc.beautify(opts, range).trimRight();
 			return [{ range, newText }];
 		}
-	} else if (s = chinese_punctuations[params.ch]) {
-		let { line, character } = params.position;
-		if (doc.instrorcomm(params.position))
-			return;
-		return [TextEdit.replace(Range.create({ line, character: character - 1 }, params.position), s)];
 	}
 }

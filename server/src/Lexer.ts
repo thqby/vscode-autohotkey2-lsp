@@ -312,16 +312,7 @@ export class Lexer {
 				ck = _this.get_token(_this.document.offsetAt(range.start));
 				range.start = _this.document.positionAt(parser_pos = ck.offset);
 				preindent_string = input.substring(input.lastIndexOf('\n', parser_pos) + 1, parser_pos).replace(/\S.*$/, '');
-				if (ck.topofline !== 1)
-					output_lines[0].text.push('');
-				else {
-					let i = parser_pos - 1;
-					while (' \t'.includes(input.charAt(i) || '\0'))
-						i--;
-					if ((input.charAt(i) || '\n') !== '\n')
-						output_lines.push(create_output_line()), preindent_string += indent_string;
-					range.start.character -= parser_pos - i - 1;
-				}
+				output_lines[0].text.push('');
 			}
 
 			while (true) {
@@ -336,8 +327,13 @@ export class Lexer {
 								while ((ck = _this.get_token(pt.offset + pt.length)).offset < end_pos)
 									pt = ck;
 							end = pt.offset + pt.length;
+							while (just_added_newline())
+								output_lines.pop();
 						}
 						range.end = _this.document.positionAt(end);
+						(range as any).indent_string = preindent_string + indent_string.repeat(flags.indentation_level);
+						if (output_lines[0].text[1] === ' ')
+							output_lines[0].text.splice(0, 2);
 					}
 					while (flags.mode === MODE.Statement)
 						restore_mode();
@@ -3944,7 +3940,7 @@ export class Lexer {
 				if (!['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally'].includes(flags.last_word))
 					while (flags.mode === MODE.Statement)
 						restore_mode();
-				set_mode(MODE.BlockStatement);
+				set_mode(MODE.BlockStatement), flags.had_comment = previous_flags.had_comment;
 				output_space_before_token = space_in_other;
 
 				if (previous_flags.in_case_statement && flags.last_text.endsWith(':'))
@@ -4599,9 +4595,9 @@ export class Lexer {
 						case 'TK_END_EXPR':
 						case 'TK_END_BLOCK':
 							tk = lk, ps[lk.content]++;
-							if (lk = tokens[lk.previous_pair_pos as number])
+							if ((lk = tokens[lk.previous_pair_pos as number]) && (lk.content !== '}' || lk.data))
 								lk.next_pair_pos = tk.offset;
-							else tk = EMPTY_TOKEN;
+							else tk = EMPTY_TOKEN, lk = undefined;
 							break;
 						case 'TK_OPERATOR':
 							if (tk = lk, lk.content === '%') {
