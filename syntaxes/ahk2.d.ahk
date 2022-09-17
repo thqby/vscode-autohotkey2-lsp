@@ -2170,7 +2170,8 @@ StrLower(String) => String
 StrPtr(Value) => Number
 
 /**
- * Copy the string to the memory address, you can choose to convert it to the given code page. Or omit Target, Length, `StrPut(String, Encoding :='')`
+ * Copy the string to the memory address, you can choose to convert it to the given code page. 
+ * If Target, Length, and Encoding are omitted, this function returns the required buffer size in bytes, including space for the null-terminator.
  * @param Target class buffer object or memory address, the string will be written into it.
  * @param Length The maximum number of characters to be written, including the null terminator when necessary.
  * 
@@ -2180,7 +2181,7 @@ StrPtr(Value) => Number
  * @param Encoding "UTF-8", "UTF-16" or "CP936". For numeric identifiers, the prefix "CP" can be omitted only when Length is specified. Specify an empty string or "CP0" to use the system The default ANSI code.
  * @returns returns the number of bytes written. If Target is not specified, it returns the necessary buffer size in bytes. If Length is exactly equal to the length of the source string, then the string does not contain the null terminator; otherwise it returns The size includes the null terminator.
  */
-StrPut(String, Target [, Length], Encoding := '') => Number
+StrPut(String, [Target, Length, Encoding := '']) => Number
 
 /**
  * Replace the specified substring with a new string.
