@@ -2170,7 +2170,9 @@ StrLower(String) => String
 StrPtr(Value) => Number
 
 /**
- * 将字符串复制到内存地址,可以选择将其转换为给定的代码页.或省略Target, Length, `StrPut(String, Encoding := '')`
+ * 将字符串复制到内存地址,可以选择将其转换为给定的代码页.
+ * 如果省略了Target、Length和Encoding, 此函数将返回所需的缓冲区大小(以字节为单位)，包括空结束符的空间.
+ * @overload StrPut(String, Encoding := 'UTF-16') => Number
  * @param Target 类缓冲对象或内存地址, 字符串将写入其中.
  * @param Length 要写入的最大字符数, 需要时包含空终止符.
  * 
@@ -2180,7 +2182,7 @@ StrPtr(Value) => Number
  * @param Encoding "UTF-8", "UTF-16" 或 "CP936". 对于数字标识符, 只有在指定 Length 时, 才可以省略前缀 "CP". 指定空字符串或 "CP0" 则使用系统默认 ANSI 代码.
  * @returns 返回写入的字节数. 如果没有指定 Target, 则返回以字节数表示的必须的缓冲大小. 如果 Length 准确等于源字符串的长度, 那么字符串不包含空终止符; 否则返回的大小包含空终止符.
  */
-StrPut(String, Target [, Length], Encoding := '') => Number
+StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Number
 
 /**
  * 用新字符串替换指定的子字符串.

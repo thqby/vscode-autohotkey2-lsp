@@ -16,7 +16,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	let expg = new RegExp(context.text.match(/[^\w]/) ? context.text.replace(/(.)/g, '$1.*') : '(' + context.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	let istr = false;
 
-	if (doc.find_token(doc.document.offsetAt(position)).type === 'TK_STRING') {
+	if (doc.find_token(doc.document.offsetAt({ line, character: character - 1 })).type === 'TK_STRING') {
 		if (triggerKind === 2)
 			return;
 		triggerchar = '', istr = true;

@@ -225,8 +225,8 @@ export async function loadahk2(filename = 'ahk2') {
 		const file = dirname + `/syntaxes/<>/${filename}`;
 		let td = openFile(file + '.d.ahk');
 		if (td) {
-			let doc = new Lexer(td);
-			doc.parseScript(true), lexers[doc.uri] = doc;
+			let doc = new Lexer(td, undefined, 3);
+			doc.parseScript(), lexers[doc.uri] = doc;
 		}
 		let data = getwebfile(file + '.json');
 		if (data)
@@ -235,8 +235,8 @@ export async function loadahk2(filename = 'ahk2') {
 		const file = resolve(__dirname, `../../syntaxes/<>/${filename}`);
 		let td: TextDocument | undefined;
 		if ((path = getlocalefilepath(file + '.d.ahk')) && (td = openFile(path))) {
-			let doc = new Lexer(td);
-			doc.parseScript(true), lexers[doc.uri] = doc;
+			let doc = new Lexer(td, undefined, 3);
+			doc.parseScript(), lexers[doc.uri] = doc;
 		}
 		if (!(path = getlocalefilepath(file + '.json')))
 			return;

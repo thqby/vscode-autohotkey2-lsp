@@ -254,12 +254,9 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 	if (!node) return;
 	if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) {
 		let paramcount = node.params.length, isVariadic = false, pc = paraminfo.count, miss: { [index: number]: boolean } = {};
-		if (node.full.includes('*')) {
-			isVariadic = true;
+		if (isVariadic = node.full.includes('*')) {
 			if (paramcount > 0 && node.params[paramcount - 1].arr)
 				paramcount--;
-		}
-		if (isVariadic) {
 			while (paramcount > 0 && node.params[paramcount - 1].defaultVal !== undefined) --paramcount;
 			for (let i = 0; i < paramcount; ++i)
 				if (node.params[i].defaultVal === false)

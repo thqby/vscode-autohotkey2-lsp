@@ -1,5 +1,6 @@
 ## 1.6.3
 - `formatOnType`支持换行时格式化代码行并缩进
+- jsdoc支持重载函数提示
 - 修复[#185](https://github.com/thqby/vscode-autohotkey2-lsp/issues/185)
 - 修复[#186](https://github.com/thqby/vscode-autohotkey2-lsp/issues/186)
 - 修复[#188](https://github.com/thqby/vscode-autohotkey2-lsp/issues/188)

@@ -220,7 +220,7 @@ export class Lexer {
 	public labels: { [key: string]: DocumentSymbol[] } = {};
 	public libdirs: string[] = [];
 	public object: { method: { [key: string]: FuncNode[] }, property: { [key: string]: any }, userdef: { [key: string]: FuncNode } } = { method: {}, property: {}, userdef: {} };
-	public parseScript: (islib?: boolean) => void;
+	public parseScript: () => void;
 	public reflat = false;
 	public isparsed = false;
 	public relevance: { [uri: string]: string } | undefined;
@@ -232,7 +232,7 @@ export class Lexer {
 	public strcommpos: { start: number, end: number, type: 1 | 2 | 3 }[] = [];
 	public texts: { [key: string]: string } = {};
 	public uri = '';
-	constructor(document: TextDocument, scriptdir?: string) {
+	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let input: string, output_lines: { text: string[], indent: number }[], flags: any, opt: FormatOptions, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: string };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
 		let parser_pos: number, customblocks: { region: number[], bracket: number[] }, _this = this, h = isahk2_h, filepath = '', sharp_offsets: number[] = [];
@@ -486,9 +486,9 @@ export class Lexer {
 			format_mode = false, output_lines = [];
 		}
 
-		if (document.uri.match(/\.d\.(ahk2?|ah2)(?=(\?|$))/i)) {
-			this.d = 1;
-			this.parseScript = function (islib = false): void {
+		if (d || document.uri.match(/\.d\.(ahk2?|ah2)(?=(\?|$))/i)) {
+			this.d = d || 1;
+			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
 				lst = EMPTY_TOKEN, begin_line = true, parser_pos = 0, last_LF = -1;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
@@ -546,7 +546,7 @@ export class Lexer {
 										tn.returntypes = { [rets.length > 1 ? `[${rets.join(',')}]` : (rets.pop() ?? '#any')]: true };
 									}
 								} else if (tokens[j].content === '(') {
-									let params: Variable[] = [], byref = false, defVal = false;
+									let params: Variable[] = [], byref = false, defVal = 0;
 									while ((lk = tokens[++j]).content !== ')') {
 										let tn: Variable;
 										switch (lk.type) {
@@ -559,15 +559,17 @@ export class Lexer {
 														tn.defaultVal = lk.content + tokens[++j].content;
 													else
 														tn.defaultVal = lk.content;
-												} else if (lk.content === '*')
-													tn.arr = true, j++;
-												else if (lk.content === '?')
+												} else if (lk.content === '?')
 													tn.defaultVal = null, j++;
-												else if (lk.content === '[')
-													defVal = true;
 												else {
-													if (defVal) tn.defaultVal = false;
-													if (lk.content === ']') defVal = false;
+													if (defVal)
+														tn.defaultVal = false;
+													if (lk.content === '*')
+														tn.arr = true, j++;
+													else if (lk.content === '[')
+														defVal++, j++;
+													else if (lk.content === ']')
+														defVal--, j++;
 												}
 												break;
 											case 'TK_STRING':
@@ -581,9 +583,9 @@ export class Lexer {
 												else if (lk.content === '*')
 													params.push(Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length), rg)), lk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition };
 												else if (lk.content === '[')
-													defVal = true;
-												if (lk.content === ']')
-													defVal = false;
+													defVal++;
+												else if (lk.content === ']')
+													defVal--;
 												break;
 										}
 									}
@@ -656,8 +658,10 @@ export class Lexer {
 							break;
 					}
 				}
-				if ((this.d & 2) || (islib && !this.uri.includes('?'))) {
-					this.d = 3;
+				
+				if (this.d < 0)
+					return;
+				if (this.d & 2) {
 					this.children.map(it => {
 						switch (it.kind) {
 							case SymbolKind.Function:
@@ -677,7 +681,7 @@ export class Lexer {
 				customblocks.region.map(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 			}
 		} else {
-			this.parseScript = function (islib?: boolean): void {
+			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
 				begin_line = true, lst = EMPTY_TOKEN;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
@@ -3176,11 +3180,25 @@ export class Lexer {
 				(last_type === 'TK_WORD' && flags.mode === MODE.BlockStatement && (
 					(!input_wanted_newline && ck.previous_token?.callinfo) ||
 					!flags.in_case && !['TK_WORD', 'TK_RESERVED', 'TK_START_EXPR'].includes(token_type) && !['--', '++', '%'].includes(token_text)
-				)) || (flags.mode === MODE.ObjectLiteral && flags.last_text === ':' && flags.ternary_depth === 0)) {
+				)) || (flags.declaration_statement) ||
+				(flags.mode === MODE.ObjectLiteral && flags.last_text === ':' && flags.ternary_depth === 0)) {
 
 				set_mode(MODE.Statement);
 				indent();
 
+				switch (flags.last_word) {
+					case 'if':
+					case 'for':
+					case 'loop':
+					case 'while':
+					case 'catch':
+						print_newline(true);
+					case 'try':
+					case 'finally':
+					case 'else':
+						flags.declaration_statement = true;
+						break;
+				}
 				return true;
 			}
 			return false;
@@ -3798,20 +3816,7 @@ export class Lexer {
 
 		function handle_start_expr(): void {
 			if (start_of_statement()) {
-				// The conditional starts the statement if appropriate.
-				switch (flags.last_word) {
-					case 'if':
-					case 'for':
-					case 'loop':
-					case 'while':
-					case 'catch':
-						print_newline(true);
-					case 'try':
-					case 'finally':
-					case 'else':
-						flags.declaration_statement = true;
-						break;
-				}
+
 			} else if (need_newline())
 				print_newline();
 
@@ -3916,7 +3921,7 @@ export class Lexer {
 					previous_flags.indentation_level = flags.indentation_level;
 
 				if (is_array(previous_flags.mode) && flags.last_text === ',') {
-					if (input_wanted_newline && opt.preserve_newlines){
+					if (input_wanted_newline && opt.preserve_newlines) {
 						flags.indentation_level = ++previous_flags.indentation_level;
 						print_newline();
 					}
@@ -3988,25 +3993,10 @@ export class Lexer {
 
 			if (start_of_statement()) {
 				// The conditional starts the statement if appropriate.
-				switch (flags.last_word) {
-					case 'if':
-					case 'for':
-					case 'loop':
-					case 'while':
-					case 'catch':
-						print_newline(true);
-						flags.declaration_statement = true;
-						preserve_statement_flags = true;
-						break;
-					case 'finally':
-					case 'else':
-						if (!input_wanted_newline && ['if', 'while', 'loop', 'for', 'try', 'switch'].includes(token_text_low))
-							deindent();
-					case 'try':
-						flags.declaration_statement = true;
-						preserve_statement_flags = true;
-						break;
-				}
+				preserve_statement_flags = flags.declaration_statement;
+				if (!input_wanted_newline && ['else', 'finally'].includes(flags.last_word) &&
+					['if', 'while', 'loop', 'for', 'try', 'switch'].includes(token_text_low))
+					deindent();
 			}
 
 			if (token_type === 'TK_RESERVED') {
@@ -4049,7 +4039,7 @@ export class Lexer {
 									restore_mode();
 							break;
 					}
-			
+
 					if (flags.if_block) {
 						if (token_text_low === 'else')
 							flags.if_block = false, flags.else_block = true, maybe_need_newline = true;
@@ -4120,7 +4110,7 @@ export class Lexer {
 				}
 				flags.last_word = token_text_low;
 			} else {
-				if (input_wanted_newline && flags.mode === MODE.Statement && !flags.is_expression && 
+				if (input_wanted_newline && flags.mode === MODE.Statement && !flags.is_expression &&
 					!is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))
 					print_newline(preserve_statement_flags);
 				else if (input_wanted_newline && opt.preserve_newlines)
@@ -4136,7 +4126,7 @@ export class Lexer {
 
 		function handle_string() {
 			if (start_of_statement()) {
-				if (input_wanted_newline)
+				if (input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
 				else output_space_before_token = true;
 			} else if (last_type === 'TK_RESERVED' || last_type === 'TK_WORD') {
@@ -4173,8 +4163,8 @@ export class Lexer {
 		}
 
 		function handle_comma() {
-			if (flags.mode === MODE.BlockStatement)
-				set_mode(MODE.Statement), indent(), flags.declaration_statement = true;
+			if (flags.mode === MODE.BlockStatement || flags.declaration_statement)
+				set_mode(MODE.Statement), indent();
 			if (last_type === 'TK_WORD' && whitespace.includes(ck.prefix_is_whitespace || '\0') &&
 				ck.previous_token?.callinfo)
 				input_wanted_newline && opt.preserve_newlines ? print_newline(true) : output_space_before_token = true;
@@ -4200,19 +4190,6 @@ export class Lexer {
 				output_space_before_token = true;
 			if (start_of_statement()) {
 				// The conditional starts the statement if appropriate.
-				switch (flags.last_word) {
-					case 'if':
-					case 'for':
-					case 'loop':
-					case 'while':
-					case 'catch':
-						print_newline(true);
-					case 'try':
-					case 'finally':
-					case 'else':
-						flags.declaration_statement = true;
-						break;
-				}
 				if (token_text_low.match(/^(\+\+|--|%|!|~|not)$/)) {
 					output_space_before_token = true;
 					print_token();
@@ -4263,7 +4240,7 @@ export class Lexer {
 			else if (last_type === 'TK_OPERATOR' && !last_text.match(/^(--|\+\+|%|!|~|not)$/))
 				allow_wrap_or_preserved_newline();
 
-			if (['--', '++', '!', '~'].includes(token_text) || ('-+'.includes(token_text) && (['TK_START_BLOCK', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA', 'TK_RESERVED'].includes(last_type)))) {
+			if (['--', '++', '!', '~'].includes(token_text) || ('-+'.includes(token_text) && (['TK_START_BLOCK', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA', 'TK_RESERVED'].includes(last_type) || ck.previous_token?.callinfo))) {
 				space_after = false;
 				space_before = token_text === '!' && last_type === 'TK_WORD';
 
@@ -4898,12 +4875,12 @@ export function parseinclude(include: { [uri: string]: string }, dir: string) {
 export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boolean = true): { [name: string]: DocumentSymbol } {
 	if (node.kind !== SymbolKind.Class)
 		return {};
-	let v: { [name: string]: DocumentSymbol } = {}, l = node.name.toLowerCase(), _cls: any = node, cl: ClassNode, tn: DocumentSymbol;
+	let v: { [name: string]: DocumentSymbol } = {}, l = node.name.toLowerCase();
+	let _cls: any = node, cl: ClassNode, tn: DocumentSymbol;
 	let isobj = l === 'object' || l === 'comobjarray' || (!(node as ClassNode).extends && l !== 'any');
 	getmems(doc, node, staticmem);
-	if (!isobj) return v;
 	if (staticmem) {
-		if (!v['call'] && v['__new']) {
+		if (isobj && !v['call'] && v['__new']) {
 			tn = Object.assign({}, v['__new']), tn.name = 'Call', (<any>tn).def = false;
 			v['call'] = tn;
 		}
@@ -4912,7 +4889,14 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 				if (!v[l]) v[l] = cl.staticdeclaration[l], (<any>v[l]).uri = (<any>cl).uri;
 		}
 	}
-	for (let cls of ['object', 'any'])
+	let other: string[] = ['object', 'any'];
+	if (!isobj)
+		if (!staticmem) {
+			other.splice(0, 1);
+			if (node === ahkvars['comobject'])
+				other = [];
+		}
+	for (let cls of other)
 		if (cl = ahkvars[cls] as ClassNode) {
 			for (l in cl.declaration)
 				if (!v[l] || (v[l] as any).def === false) v[l] = cl.declaration[l], (<any>v[l]).uri = (<any>cl).uri;
@@ -5565,10 +5549,12 @@ export function getincludetable(fileuri: string): { count: number, list: { [uri:
 	}
 }
 
-export function formatMarkdowndetail(detail: string, name?: string): string {
+export function formatMarkdowndetail(detail: string, name?: string, overloads?: string[]): string {
 	let params: { [name: string]: string[] } = {}, details: string[] = [], lastparam = '', m: RegExpMatchArray | null;
-	if (name === undefined) {
-		return detail.replace(/^@((param|参数)\s+(\S+)|\S+):?/gm, (...m) => {
+	let ols = overloads ?? [];
+	detail = detail.replace(/^@overload\s+(.*)$/gm, (...m) => (ols.push(m[1].trimRight()), ''));
+	if (!name) {
+		detail = detail.replace(/^@((param|参数)\s+(\S+)|\S+):?/gm, (...m) => {
 			if (m[3])
 				return `\n*@param* \`${m[3]}\` — `;
 			else
@@ -5585,6 +5571,9 @@ export function formatMarkdowndetail(detail: string, name?: string): string {
 		});
 		return (params[name = name.toLowerCase()] ? params[name].join('\n') + '\n\n' : '') + details.join('\n');
 	}
+	if (!overloads && ols.length)
+		detail = '*@overload*\n```ahk2\n' + ols.join('\n') + '\n```\n' + (detail ? '---\n' + detail : '');
+	return detail;
 }
 
 export function samenameerr(a: DocumentSymbol, b: DocumentSymbol): string {

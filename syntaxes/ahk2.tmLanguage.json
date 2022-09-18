@@ -1001,7 +1001,7 @@
           }
         },
         {
-          "name": "meta.example.jsdoc",
+          "name": "meta.example.jsdoc meta.embedded.ahk2",
           "begin": "((@)example)\\s+",
           "end": "(?=@|\\*/)",
           "beginCaptures": {
@@ -1014,42 +1014,25 @@
           },
           "patterns": [
             {
-              "match": "^\\s\\*\\s+"
+              "include": "$base"
+            }
+          ]
+        },
+        {
+          "name": "meta.overload.ahk2 meta.embedded.ahk2",
+          "begin": "((@)overload)\\s+",
+          "end": "(?=\\n)",
+          "beginCaptures": {
+            "1": {
+              "name": "storage.type.class.jsdoc"
             },
+            "2": {
+              "name": "punctuation.definition.block.tag.jsdoc"
+            }
+          },
+          "patterns": [
             {
-              "contentName": "constant.other.description.jsdoc",
-              "begin": "\\G(<)caption(>)",
-              "beginCaptures": {
-                "0": {
-                  "name": "entity.name.tag.inline.jsdoc"
-                },
-                "1": {
-                  "name": "punctuation.definition.bracket.angle.begin.jsdoc"
-                },
-                "2": {
-                  "name": "punctuation.definition.bracket.angle.end.jsdoc"
-                }
-              },
-              "end": "(</)caption(>)|(?=\\*/)",
-              "endCaptures": {
-                "0": {
-                  "name": "entity.name.tag.inline.jsdoc"
-                },
-                "1": {
-                  "name": "punctuation.definition.bracket.angle.begin.jsdoc"
-                },
-                "2": {
-                  "name": "punctuation.definition.bracket.angle.end.jsdoc"
-                }
-              }
-            },
-            {
-              "match": "[^\\s@*](?:[^*]|\\*[^/])*",
-              "captures": {
-                "0": {
-                  "name": "source.embedded.ts"
-                }
-              }
+              "include": "$base"
             }
           ]
         },
@@ -1163,7 +1146,7 @@
                   "name": "keyword.operator.assignment.jsdoc"
                 },
                 "3": {
-                  "name": "source.embedded.ts"
+                  "name": "meta.embedded.ahk2"
                 },
                 "4": {
                   "name": "punctuation.definition.optional-value.end.bracket.square.jsdoc"

@@ -55,7 +55,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 				} else if (node.kind === SymbolKind.Class)
 					hover.push({ kind: 'ahk2', value: 'class ' + ((<ClassNode>node).full || node.name) });
 				if (node.detail)
-					hover.push({ kind: 'markdown', value: formatMarkdowndetail(node.detail) });
+					hover.push({ kind: 'markdown', value: '---\n' + formatMarkdowndetail(node.detail) });
 			}
 			if (hover.length)
 				return {

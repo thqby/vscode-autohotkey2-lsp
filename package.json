@@ -63,6 +63,9 @@
 				"language": "ahk2",
 				"scopeName": "source.ahk2",
 				"path": "./syntaxes/ahk2.tmLanguage.json",
+				"embeddedLanguages": {
+					"meta.embedded.ahk2": "ahk2"
+				},
 				"unbalancedBracketScopes": [
 					"keyword.keys.ahk2"
 				]

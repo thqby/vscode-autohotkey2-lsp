@@ -1,6 +1,7 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, cleardetectcache, detectExp, detectExpType, detectVariableType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, searchNode } from './Lexer';
+import { ClassNode, cleardetectcache, detectExp, detectExpType, detectVariableType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, Lexer, searchNode, Variable } from './Lexer';
 import { ahkvars, lexers, Maybe } from './common';
+import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export async function signatureProvider(params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (cancellation.isCancellationRequested) return undefined;
@@ -112,20 +113,38 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		} else return undefined;
 	}
 	nodes?.map((it: any) => {
-		const node = it.node as FuncNode;
-		if (node.params)
+		const node = it.node as FuncNode, overloads: string[] = [];
+		let params: Variable[] | undefined, name: string | undefined;
+		if (params = node.params)
 			signinfo.signatures.push({
 				label: node.full,
-				parameters: node.params.map(param => {
-					return {
-						label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...')
-					}
-				}),
+				parameters: params.map(param => ({
+					label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...')
+				})),
 				documentation: node.detail ? {
 					kind: 'markdown',
-					value: formatMarkdowndetail(node.detail, index < node.params.length ? node.params[index].name : undefined)
+					value: formatMarkdowndetail(node.detail, name = params[index]?.name, overloads)
 				} : undefined
 			});
+		if (overloads.length) {
+			let lex = new Lexer(TextDocument.create('', 'ahk2', -10, overloads.join('\n')), undefined, -1);
+			let { label, documentation } = signinfo.signatures[0], detail = node.detail as string;
+			label = label.replace(new RegExp(`(?<=\\b${node.name})\\(.+$`), '');
+			lex.parseScript();
+			lex.children.map((node: any) => {
+				if (params = node.params)
+					signinfo.signatures.push({
+						label: label + node.full.replace(/^[^(]+/, ''),
+						parameters: params.map((param: any) => ({
+							label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...')
+						})),
+						documentation: (name === params[index]?.name) ? documentation : {
+							kind: 'markdown',
+							value: formatMarkdowndetail(detail, params[index]?.name, [])
+						}
+					});
+			});
+		}
 	});
 	signinfo.activeParameter = index;
 	return signinfo;
