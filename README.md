@@ -126,13 +126,13 @@ usage:
 
 - Right-click the popup menu and click "Format document".  
 - Press `Shift+Alt+F`.  
-- Support automatic formatting when pasting or typing `}` of a function or class. (`editor.formatOnPaste` or `editor.formatOnType` needs to be enabled)
+- Supports formatting code blocks when typing'}', formatting lines and indenting lines when typing'\ n'. (`editor.formatOnType` needs to be enabled)
 
 ![codeFormat](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/codeFormat.gif)
 
 ### Custom folding
 
-Fold the part between `;#region` and `;#endregion`, `;{` and `;}`
+Fold the part between `;#region tag` and `;#endregion`, `;{` and `;}`
 ```
 ;#region tag
 code
@@ -202,7 +202,7 @@ Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configura
 
 # AutoHotkey2语言支持
 
-AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
+AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析。
 支持在`Chrome/Edge`等浏览器中使用 http://vscode.dev
 
 - [语言特性](#语言特性)
@@ -234,18 +234,18 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
 
 ### 重命名符号
 
-作用域范围内的变量、函数名批量重命名.
+作用域范围内的变量、函数名批量重命名。
 
 ![rename](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/rename.gif)
 ### 错误诊断
 
-简单语法错误诊断.
+简单语法错误诊断。
 
 ![diagnostics](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/diagnostics.png)
 
 ### 智能感知
 
-支持对作用域范围内的变量、函数、参数、类名、方法名智能补全(简单的类型推导)，支持对include文件和函数库补全.
+支持对作用域范围内的变量、函数、参数、类名、方法名智能补全(简单的类型推导)，支持对include文件和函数库补全。
 
 ![snippet1](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/snippet.png)
 
@@ -253,7 +253,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
 
 ### 智能提示
 
-支持对函数、方法参数的智能提示.
+支持对函数、方法参数的智能提示。
 
 ![signature](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/signature.gif)
 
@@ -281,14 +281,14 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
 
 ### 悬停提示  
 
-支持对作用域范围内变量、函数、全局类、标签的悬停提示并显示相关备注.  
-用法: 移动鼠标到相关符号上.  
+支持对作用域范围内变量、函数、全局类、标签的悬停提示并显示相关备注。  
+用法: 移动鼠标到相关符号上。  
 ![hover](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/hover.png)
 
 ### 转到定义
 
-1. 支持跳转到作用域范围内变量、函数、全局类、标签的声明位置.  
-2. 用法: 按住 ctrl 然后移动鼠标到代码处点击.  
+1. 支持跳转到作用域范围内变量、函数、全局类、标签的声明位置。  
+2. 用法: 按住 ctrl 然后移动鼠标到代码处点击。  
 
 ![gotoDefinition](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/gotoDefinition.png)
 
@@ -300,15 +300,15 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析.
 
 用法:  
 
-- 右键弹出菜单然后点击 格式化文档.  
-- 或按 `Shift+Alt+F`.  
-- 支持粘贴或键入函数或类的`}`时自动格式化。(需要开启`editor.format OnPaste`或`editor.format OnType`)  
+- 右键弹出菜单然后点击 格式化文档。  
+- 或按 `Shift+Alt+F`。  
+- 支持在键入`}`时设置代码块的格式，在键入`\n`时设置行的格式并缩进。支持在代码区输入中文标点时替换为英文标点。 (需要开启`editor.format OnType`)  
 
 ![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeFormat.gif)
 
 ### 自定义折叠
 
-折叠`;#region`和`;#endregion`之间部分, `;{`和`;}`之间部分
+折叠`;#region tag`和`;#endregion`之间部分, `;{`和`;}`之间部分
 ```
 ;#region tag
 code
@@ -331,15 +331,15 @@ code
 
 ### 编译脚本
 
-编译脚本生成可执行的 EXE 文件.
+编译脚本生成可执行的 EXE 文件。
 
 ### 调试脚本
 
-无需额外配置即可启动已安装的Debug扩展，支持带参数调试.
+无需额外配置即可启动已安装的Debug扩展，支持带参数调试。
 
 ### 生成注释
 
-为函数或方法生成 JSDOC 样式的注释文档.
+为函数或方法生成 JSDOC 样式的注释文档。
 
 ## 在Web浏览器中使用
 

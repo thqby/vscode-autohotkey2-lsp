@@ -1454,7 +1454,7 @@ MenuFromHandle(Handle) => Menu
  * 
  * Specify 0& to use the system menu of the window.
  */
-MenuSelect(WinTitle, [WinText], Menu [, SubMenu1, SubMenu2, SubMenu3, SubMenu4, SubMenu5, SubMenu6, ExcludeTitle, ExcludeText]) => void
+MenuSelect(WinTitle, WinText?, Menu [, SubMenu1, SubMenu2, SubMenu3, SubMenu4, SubMenu5, SubMenu6, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Returns the minimum value of one or more numbers.

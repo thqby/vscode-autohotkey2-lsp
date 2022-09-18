@@ -1,3 +1,9 @@
+## 1.6.3
+- `formatOnType`支持换行时格式化代码行并缩进
+- 修复[#185](https://github.com/thqby/vscode-autohotkey2-lsp/issues/185)
+- 修复[#186](https://github.com/thqby/vscode-autohotkey2-lsp/issues/186)
+- 修复[#188](https://github.com/thqby/vscode-autohotkey2-lsp/issues/188)
+
 ## 1.6.2
 - 优化局部格式化
 - 增加格式化选项`one_true_brace`

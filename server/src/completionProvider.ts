@@ -14,13 +14,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	let quote = '', char = '', l = '', percent = false, lt = context.linetext, triggerchar = lt.charAt(context.range.start.character - 1);
 	let list = doc.relevance, cpitem: CompletionItem = { label: '' }, temp: any, path: string, { line, character } = position;
 	let expg = new RegExp(context.text.match(/[^\w]/) ? context.text.replace(/(.)/g, '$1.*') : '(' + context.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
-	let istr = doc.instrorcomm(position);
-	if (istr === 1)
-		return;
-	if (istr) {
+	let istr = false;
+
+	if (doc.find_token(doc.document.offsetAt(position)).type === 'TK_STRING') {
 		if (triggerKind === 2)
 			return;
-		triggerchar = '';
+		triggerchar = '', istr = true;
 	} else if (context.pre.startsWith('#')) {
 		for (let i = 0; i < position.character; i++) {
 			char = lt.charAt(i);

@@ -20,7 +20,7 @@ export namespace codeaction {
 }
 
 export namespace diagnostic {
-	export const acceptparams = localize('diagnostic.acceptparams', '\'{0}\' accepts at most {1} parameter');
+	export const acceptparams = localize('diagnostic.acceptparams', '\'{0}\' accepts {1} parameter(s)');
 	export const assignerr = localize('diagnostic.assignerr', 'This {0} \'{1}\' cannot be used as an output variable');
 	export const classinfuncerr = localize('diagnostic.classinfuncerr', 'Functions cannot contain classes');
 	export const classuseerr = localize('diagnostic.classuseerr', 'This class cannot be used as an output variable');

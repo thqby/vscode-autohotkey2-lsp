@@ -78,11 +78,9 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 					for (let rg of rgs) {
 						let i = 0, offset = doc.document.offsetAt(rg.end), tk: Token | undefined;
 						while (i < c.length) {
-							tk = doc.get_token(offset);
-							while (tk && tk.type.endsWith('COMMENT'))
-								tk = doc.get_token(tk.offset + tk.length);
-							if (tk && tk.content === '.') {
-								if ((tk = doc.get_token(tk.offset + tk.length)) && tk.type === 'TK_WORD' && tk.content.toLowerCase() === c[i]) {
+							tk = doc.get_token(offset, true);
+							if (tk.type === 'TK_DOT') {
+								if ((tk = doc.find_token(tk.offset + tk.length)).type === 'TK_WORD' && tk.content.toLowerCase() === c[i]) {
 									offset = tk.offset + tk.length, i++;
 									continue;
 								}

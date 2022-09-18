@@ -31,7 +31,7 @@
 	"completionitem.this": "在类中, 通过 this 访问该类的其他实例变量和方法.",
 	"completionitem.thishotkey": "热键函数的隐藏参数.",
 	"completionitem.value": "在动态属性 set 中, Value 包含被分配的值.",
-	"diagnostic.acceptparams": "'{0}' 最多接受{1}个参数",
+	"diagnostic.acceptparams": "'{0}' 接受{1}个参数",
 	"diagnostic.assignerr": "{0} '{1}'不能用作输出变量",
 	"diagnostic.classinfuncerr": "函数不能包含类",
 	"diagnostic.classuseerr": "类不能用作输出变量",

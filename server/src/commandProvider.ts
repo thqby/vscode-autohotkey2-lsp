@@ -50,7 +50,7 @@ export async function fixinclude(libpath: string, docuri: string) {
 		if (line < doc.document.lineCount)
 			text += '\n';
 	}
-	let { pos } = await connection.sendRequest('ahk2.getpos'), char = doc.document.getText(Range.create(pos.line, pos.character - 1, pos.line, pos.character));
+	let { pos } = await connection.sendRequest('ahk2.getpos') as { pos: Position }, char = doc.document.getText(Range.create(pos.line, pos.character - 1, pos.line, pos.character));
 	if (pos.line < line) text = '\n' + text;
 	await connection.workspace.applyEdit({ changes: { [doc.document.uri]: [TextEdit.insert({ line, character: 0 }, text)] } });
 	if (char === '(')
@@ -68,7 +68,7 @@ export async function fixinclude(libpath: string, docuri: string) {
 export async function generateComment(args: string[]) {
 	if (args.length === 0)
 		await executeCommands([{ command: 'undo', wait: true }, { command: 'undo', wait: true }]);
-	let { uri, pos } = await connection.sendRequest('ahk2.getpos');
+	let { uri, pos } = await connection.sendRequest('ahk2.getpos') as { uri: string, pos: Position };
 	let doc = lexers[uri = uri.toLowerCase()], scope = doc.searchScopedNode(pos), ts = scope?.children || doc.children;
 	for (const it of ts) {
 		if ((it.kind === SymbolKind.Function || it.kind === SymbolKind.Method) && it.selectionRange.start.line === pos.line && it.selectionRange.start.character <= pos.character && pos.character <= it.selectionRange.end.character) {
@@ -161,7 +161,7 @@ export async function generateAuthor() {
 		"$0"
 	];
 	await executeCommands([{ command: 'undo', wait: true }, { command: 'undo', wait: true }]);
-	let { uri, pos } = await connection.sendRequest('ahk2.getpos'), doc = lexers[uri = uri.toLowerCase()];
+	let { uri, pos } = await connection.sendRequest('ahk2.getpos') as { uri: string, pos: Position }, doc = lexers[uri = uri.toLowerCase()];
 	let tk: { type: string, content: string, offset: number } = doc.get_token(0), range = Range.create(0, 0, 0, 0);
 	if (tk.type.endsWith('COMMENT')) {
 		if (tk.type === 'TK_BLOCK_COMMENT' && tk.content.match(/@(version|版本)\b/i))

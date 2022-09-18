@@ -203,12 +203,9 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			return true;
 		}
 		function err_extends(doc: Lexer, it: ClassNode, not_exist = true) {
-			let o = doc.document.offsetAt(it.selectionRange.end) + 1, tk: Token;
-			tk = doc.get_token(o);
-			if (tk.content.toLowerCase() === 'extends')
-				tk = doc.get_token(o = tk.offset + tk.length);
-			while (tk.type !== 'TK_WORD')
-				tk = doc.get_token(o = tk.offset + tk.length);
+			let o = doc.document.offsetAt(it.selectionRange.start), tks = doc.tokens, tk: Token;
+			tk = tks[tks[o].next_token_offset];
+			tk = tks[tk.next_token_offset];
 			o = tk.offset;
 			let rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
 			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Error });
@@ -297,7 +294,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 					if (index === 0)
 						o = info.offset as number + info.name.length + 1;
 					else o = paraminfo.comma[index - 1] + 1;
-					if ((t = doc.get_token(o)).content !== '&')
+					if ((t = doc.find_token(o)).content !== '&')
 						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset, t.length, 2);
 				}
 			});
