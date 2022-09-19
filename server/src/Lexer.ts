@@ -345,9 +345,9 @@ export class Lexer {
 				wrap_line_length: 0
 			} as FormatOptions, options);
 
-			last_type = last_last_text = last_text = '';
+			last_type = last_last_text = last_text = '', begin_line = true, lst = EMPTY_TOKEN;
 			last_LF = -1, end_pos = input_length, ck = _this.get_token(0);
-			preindent_string = input.substring(last_LF + 1, parser_pos = ck.offset);
+			preindent_string = input.substring(input.lastIndexOf('\n', parser_pos = ck.offset) + 1, parser_pos);
 			is_conditional = output_space_before_token = false, format_mode = true;
 			indent_string = opt.indent_string ?? '\t', space_in_other = opt.space_in_other ?? true;
 			output_lines = [create_output_line()], flag_store = [], flags = null, set_mode(MODE.BlockStatement);
