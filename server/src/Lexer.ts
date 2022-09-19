@@ -5551,28 +5551,46 @@ export function getincludetable(fileuri: string): { count: number, list: { [uri:
 
 export function formatMarkdowndetail(detail: string, name?: string, overloads?: string[]): string {
 	let params: { [name: string]: string[] } = {}, details: string[] = [], lastparam = '', m: RegExpMatchArray | null;
-	let ols = overloads ?? [];
-	detail = detail.replace(/^@overload\s+(.*)$/gm, (...m) => (ols.push(m[1].trimRight()), ''));
-	if (!name) {
-		detail = detail.replace(/^@((param|参数)\s+(\S+)|\S+):?/gm, (...m) => {
-			if (m[3])
-				return `\n*@param* \`${m[3]}\` — `;
-			else
-				return `\n*@${m[1]}* — `;
-		});
-	} else {
-		detail.split('\n').map(line => {
-			if (m = line.match(/^@(param|参数)\s+(\S+)([\s|:]\s*(.*))?$/i))
-				params[lastparam = m[2].toLowerCase()] = [m[4]];
-			else if (lastparam && line.charAt(0) !== '@')
-				params[lastparam].push(line);
-			else
-				lastparam = '', details.push(line.replace(/^(@\S+):?/, '\n*$1* — '));
-		});
-		return (params[name = name.toLowerCase()] ? params[name].join('\n') + '\n\n' : '') + details.join('\n');
-	}
-	if (!overloads && ols.length)
-		detail = '*@overload*\n```ahk2\n' + ols.join('\n') + '\n```\n' + (detail ? '---\n' + detail : '');
+	let ols = overloads ?? [], s, code = false;
+	detail.split(/\r?\n/).map(line => {
+		if (line.startsWith('@')) {
+			lastparam = '';
+			if (code)
+				code = false, details.push('```');
+			if (m = line.match(/^@(\S+)(.*)$/)) {
+				switch (m[1].toLowerCase()) {
+					case 'param':
+					case '参数':
+						m[2].replace(/^\s*({([^{}]*)}\s+)?(\S+)(.*)$/, (...m) => {
+							if (name === undefined)
+								details.push(`\n*@param* \`${m[3]}\`${m[2] ? `: *${m[2]}*` : ''} —` + m[4]);
+							else
+								(params[lastparam = m[3].toLowerCase()] ??= []).push(`\`${m[3]}\`${(m[2] ? `: *${m[2]}* —` : ' —')}` + m[4]);
+							return '';
+						});
+						break;
+					case 'overload': ols.push(m[2].trim()); break;
+					case 'example':
+						s = m[2].replace(/\s*<caption>(.*?)<\/caption>\s*/, (...m) => { details.push('\n*@example* ' + m[1]); return ''; });
+						details.push('```ahk2' + (s ? '\n' + s : '')), code = true;
+						break;
+					default:
+						details.push(`\n*@${m[1]}* —${m[2]}`);
+						break;
+				}
+			} else details.push(line);
+		} else if (lastparam)
+			params[lastparam].push(line);
+		else
+			details.push(line);
+	});
+	if (code)
+		details.push('```');
+	if (name !== undefined)
+		s = params[name.toLowerCase()]?.join('\n') ?? '', detail = s + '\n\n' + details.join('\n');
+	else if (!overloads && ols.length)
+		detail = '*@overload*\n```ahk2\n' + ols.join('\n') + '\n```\n' + (details.length ? '___\n' + details.join('\n') : '');
+	else detail = details.join('\n');
 	return detail;
 }
 

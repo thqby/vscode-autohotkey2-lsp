@@ -123,7 +123,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 				})),
 				documentation: node.detail ? {
 					kind: 'markdown',
-					value: formatMarkdowndetail(node.detail, name = params[index]?.name, overloads)
+					value: formatMarkdowndetail(node.detail, name = params[index]?.name ?? '', overloads)
 				} : undefined
 			});
 		if (overloads.length) {
@@ -140,7 +140,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 						})),
 						documentation: (name === params[index]?.name) ? documentation : {
 							kind: 'markdown',
-							value: formatMarkdowndetail(detail, params[index]?.name, [])
+							value: formatMarkdowndetail(detail, params[index]?.name ?? '', [])
 						}
 					});
 			});

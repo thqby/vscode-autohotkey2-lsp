@@ -1003,7 +1003,7 @@
         {
           "name": "meta.example.jsdoc meta.embedded.ahk2",
           "begin": "((@)example)\\s+",
-          "end": "(?=@|\\*/)",
+          "end": "(?=@|\\*+/)",
           "beginCaptures": {
             "1": {
               "name": "storage.type.class.jsdoc"
@@ -1014,6 +1014,37 @@
           },
           "patterns": [
             {
+              "match": "^\\s*\\*\\s",
+              "name": "comment.block.ahk2"
+            },
+            {
+              "contentName": "constant.other.description.jsdoc",
+              "begin": "\\G(<)caption(>)",
+              "beginCaptures": {
+                "0": {
+                  "name": "entity.name.tag.inline.jsdoc"
+                },
+                "1": {
+                  "name": "punctuation.definition.bracket.angle.begin.jsdoc"
+                },
+                "2": {
+                  "name": "punctuation.definition.bracket.angle.end.jsdoc"
+                }
+              },
+              "end": "(</)caption(>)|(?=\\*/)",
+              "endCaptures": {
+                "0": {
+                  "name": "entity.name.tag.inline.jsdoc"
+                },
+                "1": {
+                  "name": "punctuation.definition.bracket.angle.begin.jsdoc"
+                },
+                "2": {
+                  "name": "punctuation.definition.bracket.angle.end.jsdoc"
+                }
+              }
+            },
+            {
               "include": "$base"
             }
           ]
@@ -1021,7 +1052,7 @@
         {
           "name": "meta.overload.ahk2 meta.embedded.ahk2",
           "begin": "((@)overload)\\s+",
-          "end": "(?=\\n)",
+          "end": "(?=\\n|^\\s*\\*)",
           "beginCaptures": {
             "1": {
               "name": "storage.type.class.jsdoc"
@@ -1588,6 +1619,28 @@
                   "name": "punctuation.separator.pipe.jsdoc"
                 }
               }
+            }
+          ]
+        }
+      ]
+    },
+    "brackets": {
+      "patterns": [
+        {
+          "begin": "{",
+          "end": "}|(?=\\*/)",
+          "patterns": [
+            {
+              "include": "#brackets"
+            }
+          ]
+        },
+        {
+          "begin": "\\[",
+          "end": "\\]|(?=\\*/)",
+          "patterns": [
+            {
+              "include": "#brackets"
             }
           ]
         }
