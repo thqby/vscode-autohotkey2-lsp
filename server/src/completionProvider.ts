@@ -47,11 +47,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			return items;
 		}
-		if (!temp[3] && !temp[2]) {
-			cpitem = CompletionItem.create('extends');
-			cpitem.kind = CompletionItemKind.Keyword;
-			return [cpitem];
-		}
+		if (!temp[3] && !temp[2])
+			return [{ label: 'extends', kind: CompletionItemKind.Keyword }];
 		let glo = [doc.declaration];
 		for (const uri in list)
 			if (lexers[uri])
@@ -209,7 +206,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					}
 				} else if (!isdll)
 					paths = (temp = doc.includedir.get(position.line)) ? [temp] : [doc.scriptpath];
-				
+
 				let extreg = isdll ? new RegExp(/\.(dll|ocx|cpl)$/i) : inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i), ts = '';
 				pre = pre.replace(/[^\\/]*$/, m => (ts = m, ''));
 				while (m = pre.match(/%a_(\w+)%/i))
@@ -295,6 +292,18 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 									}
 								}
 								break;
+							case 'onevent':
+								if (res.index === 0) {
+									let n = searchNode(doc, doc.buildContext(res.pos, true).text.toLowerCase(), res.pos, SymbolKind.Method)?.[0].node as FuncNode;
+									if (n)
+										if (n.full.match(/\(gui\)\s+onevent\(/i))
+											return ['Close', 'ContextMenu', 'DropFiles', 'Escape', 'Size'].map(maptextitem);
+										else if (n.full.match(/\(gui\.control\)\s+onevent\(/i))
+											return ['Change', 'Click', 'DoubleClick', 'ColClick',
+												'ContextMenu', 'Focus', 'LoseFocus', 'ItemCheck',
+												'ItemEdit', 'ItemExpand', 'ItemFocus', 'ItemSelect'].map(maptextitem);;
+								}
+								break;
 							case 'bind':
 							case 'call': {
 								let t = doc.buildContext(res.pos, true).text.toLowerCase();
@@ -310,7 +319,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							}
 						}
 					}
-					if (!ismethod) {
+					if (!ismethod && isbuiltin(res.name, res.pos)) {
 						switch (res.name) {
 							case 'dynacall':
 								if (res.index !== 0)
@@ -374,7 +383,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								}
 								break;
 							case 'comcall':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index > 1 && res.index % 2 === 0) {
 									for (const name of ['cdecl'].concat(dllcalltpe))
 										additem(name, CompletionItemKind.TypeParameter), cpitem.commitCharacters = ['*'];
@@ -382,7 +390,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								}
 								break;
 							case 'numget':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 2 || res.index === 1) {
 									for (const name of dllcalltpe.filter(v => (v.match(/str$/i) ? false : true)))
 										additem(name, CompletionItemKind.TypeParameter);
@@ -390,7 +397,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								}
 								break;
 							case 'numput':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index % 2 === 0) {
 									for (const name of dllcalltpe.filter(v => (v.match(/str$/i) ? false : true)))
 										additem(name, CompletionItemKind.TypeParameter);
@@ -398,7 +404,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								}
 								break;
 							case 'objbindmethod':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 1) {
 									let ns: any, funcs: { [key: string]: any } = {};
 									['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
@@ -433,39 +438,32 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								}
 								break;
 							case 'processsetpriority':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 0)
 									return ['Low', 'BelowNormal', 'Normal', 'AboveNormal', 'High', 'Realtime'].map(maptextitem);
 								break;
 							case 'thread':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 0)
 									return ['NoTimers', 'Priority', 'Interrupt'].map(maptextitem);
 								break;
 							case 'settitlematchmode':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 0)
 									return ['Fast', 'Slow', 'RegEx'].map(maptextitem);
 								break;
 							case 'setnumlockstate':
 							case 'setcapslockstate':
 							case 'setscrolllockstate':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 0)
 									return ['On', 'Off', 'AlwaysOn', 'AlwaysOff'].map(maptextitem);
 								break;
 							case 'sendmode':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 0)
 									return ['Event', 'Input', 'InputThenPlay', 'Play'].map(maptextitem);
 								break;
 							case 'blockinput':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 0)
 									return ['On', 'Off', 'Send', 'Mouse', 'SendAndMouse', 'Default', 'MouseMove', 'MouseMoveOff'].map(maptextitem);
 								break;
 							case 'coordmode':
-								if (!isbuiltin(res.name, res.pos)) break;
 								if (res.index === 0)
 									return ['ToolTip', 'Pixel', 'Mouse', 'Caret', 'Menu'].map(maptextitem);
 								else if (res.index === 1)
@@ -491,28 +489,37 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				return items;
 			} else
 				other = !percent;
+			let c = extsettings.FormatOptions.one_true_brace === false ? '\n' : ' ';
+			if (!percent)
+				for (let [label, arr] of [
+					['switch', ['switch ${1:[SwitchValue, CaseSense]}', '{\n\tcase ${2:}:\n\t\t${3:}\n\tdefault:\n\t\t$0\n}']],
+					['trycatch', ['try', '{\n\t$1\n}', 'catch ${2:Error} as ${3:e}', '{\n\t$0\n}']],
+					['class', ['class $1', '{\n\t$0\n}']]
+				] as [string, string[]][])
+					items.push({ label, kind: CompletionItemKind.Keyword, insertTextFormat: InsertTextFormat.Snippet, insertText: arr.join(c) });
 			if (scopenode = doc.searchScopedNode(position)) {
 				if (scopenode.kind === SymbolKind.Class) {
 					let its: CompletionItem[] = [], t = lt.trim();
-					if (t.match(/^\S*$/)) {
-						completionItemCache.other.map(it => {
-							if (it.label.match(/\b(static|class)\b/))
-								its.push(it);
-							else if (it.label.match(/^__\w+/)) {
-								let t = Object.assign({}, it);
-								t.insertText = t.insertText?.replace('$0', '$1') + ' {\n\t$0\n}';
-								its.push(t);
-							}
+					for (let m of ['__Call(${1:Name}, ${2:Params})', '__Delete()',
+						'__Enum(${1:NumberOfVars})', '__Get(${1:Key}, ${2:Params})',
+						'__Item[$1]', '__New($1)', '__Init()', '__Set(${1:Key}, ${2:Params}, ${3:Value})'
+					])
+						its.push({
+							label: m.replace(/[(\[].*$/, ''),
+							kind: CompletionItemKind.Method,
+							insertTextFormat: InsertTextFormat.Snippet,
+							insertText: m + c + '{\n\t$0\n}'
 						});
+					if (t.match(/^(\w|[^\x00-\xff])*$/)) {
 						if (position.line === scopenode.range.end.line && position.character > scopenode.range.end.character)
 							return undefined;
-						return its;
+						return its.concat({
+							label: 'static',
+							kind: CompletionItemKind.Keyword,
+							insertText: 'static '
+						}, items.pop() as CompletionItem);
 					} else if (t.match(/^(static\s+)?(\w|[^\x00-\xff])+(\(|$)/i))
-						return completionItemCache.other.filter(it => it.label.match(/^__\w+/)).map(it => {
-							let t = Object.assign({}, it);
-							t.insertText = t.insertText?.replace('$0', '$1') + ' {\n\t$0\n}';
-							return t;
-						});
+						return its;
 				} else if (scopenode.kind === SymbolKind.Property && scopenode.children)
 					return [{ label: 'get', kind: CompletionItemKind.Function }, { label: 'set', kind: CompletionItemKind.Function }]
 			}
@@ -541,8 +548,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			completionItemCache.other.map(it => {
 				if (expg.test(it.label)) {
 					if (it.kind === CompletionItemKind.Text) {
-						if (!scopenode && !percent)
-							items.push(it);
 					} else if (it.kind === CompletionItemKind.Function) {
 						if (!vars[l = it.label.toLowerCase()])
 							vars[l] = it;
@@ -550,6 +555,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						items.push(it);
 				}
 			});
+			if (!scopenode && !percent) {
+				if (lt.includes('::'))
+					items.push(...completionItemCache.key);
+				else
+					items.push(...completionItemCache.key.filter(it => !it.label.toLowerCase().includes('alttab')));
+			}
 			let dir = inWorkspaceFolders(doc.document.uri) || doc.scriptdir, exportnum = 0;
 			if (extsettings.AutoLibInclude)
 				for (const u in libfuncs) {

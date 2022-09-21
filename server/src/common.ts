@@ -29,7 +29,7 @@ export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
 export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], libdirs: string[] = [];
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
-export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], other: [], constant: [], snippet: [] };
+export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], key: [], other: [], constant: [], snippet: [] };
 export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
 	AutoLibInclude: 0,
@@ -200,6 +200,7 @@ export function initahk2cache() {
 	completionItemCache = {
 		sharp: [],
 		method: [],
+		key: [],
 		other: [],
 		constant: [],
 		snippet: !inBrowser && process.env.AHK2_LS_CONFIG ? [] : [{
@@ -219,8 +220,6 @@ export function initahk2cache() {
 
 export async function loadahk2(filename = 'ahk2') {
 	let path: string | undefined;
-	const cmd: Command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
-	let type: CompletionItemKind, t = '', snip: { prefix: string, body: string, description?: string }, rg = Range.create(0, 0, 0, 0);
 	if (inBrowser) {
 		const file = dirname + `/syntaxes/<>/${filename}`;
 		let td = openFile(file + '.d.ahk');
@@ -228,9 +227,12 @@ export async function loadahk2(filename = 'ahk2') {
 			let doc = new Lexer(td, undefined, 3);
 			doc.parseScript(), lexers[doc.uri] = doc;
 		}
-		let data = getwebfile(file + '.json');
-		if (data)
-			build(JSON.parse(data.text));
+		let data;
+		if (filename === 'ahk2')
+			if (data = getwebfile(dirname + '/syntaxes/ahk2_common.json'))
+				build_item_cache(JSON.parse(data.text));
+		if (data = getwebfile(file + '.json'))
+			build_item_cache(JSON.parse(data.text));
 	} else {
 		const file = resolve(__dirname, `../../syntaxes/<>/${filename}`);
 		let td: TextDocument | undefined;
@@ -240,32 +242,46 @@ export async function loadahk2(filename = 'ahk2') {
 		}
 		if (!(path = getlocalefilepath(file + '.json')))
 			return;
-		build(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
+		if (filename === 'ahk2')
+			build_item_cache(JSON.parse(readFileSync(resolve(__dirname, '../../syntaxes/ahk2_common.json'), { encoding: 'utf8' })));
+		build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
 	}
-	function build(ahk2: any) {
-		for (const key in ahk2) {
-			if (key === 'snippet') {
-				for (snip of ahk2['snippet']) {
-					const completionItem = CompletionItem.create(snip.prefix);
-					completionItem.kind = CompletionItemKind.Snippet;
-					completionItem.insertText = bodytostring(snip.body);
-					completionItem.detail = snip.description;
-					completionItem.insertTextFormat = InsertTextFormat.Snippet;
-					completionItemCache.snippet.push(completionItem);
-				}
-			} else {
-				let arr: any[] = ahk2[key];
-				switch (key) {
-					case 'keywords': type = CompletionItemKind.Keyword; break;
-					case 'functions': type = CompletionItemKind.Function; break;
-					case 'variables': type = CompletionItemKind.Variable; break;
-					case 'constants': type = CompletionItemKind.Constant; break;
-					default: type = CompletionItemKind.Text; break;
-				}
-				for (snip of arr) additem();
+}
+
+function build_item_cache(ahk2: any) {
+	const cmd: Command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
+	let type: CompletionItemKind, t = '', snip: { prefix: string, body: string, description?: string }, rg = Range.create(0, 0, 0, 0);
+	for (const key in ahk2) {
+		if (key === 'snippet') {
+			for (snip of ahk2['snippet']) {
+				const completionItem = CompletionItem.create(snip.prefix);
+				completionItem.kind = CompletionItemKind.Snippet;
+				completionItem.insertText = bodytostring(snip.body);
+				completionItem.detail = snip.description;
+				completionItem.insertTextFormat = InsertTextFormat.Snippet;
+				completionItemCache.snippet.push(completionItem);
 			}
+		} else if (key === 'keys') {
+			for (snip of ahk2['keys']) {
+				const completionItem = CompletionItem.create(snip.prefix);
+				completionItem.kind = CompletionItemKind.Keyword;
+				completionItem.insertText = snip.body;
+				completionItem.detail = snip.description;
+				completionItemCache.key.push(completionItem);
+			}
+		} else {
+			let arr: any[] = ahk2[key];
+			switch (key) {
+				case 'keywords': type = CompletionItemKind.Keyword; break;
+				case 'functions': type = CompletionItemKind.Function; break;
+				case 'variables': type = CompletionItemKind.Variable; break;
+				case 'constants': type = CompletionItemKind.Constant; break;
+				default: type = CompletionItemKind.Text; break;
+			}
+			for (snip of arr) additem();
 		}
 	}
+
 	function additem() {
 		const completionItem = CompletionItem.create(snip.prefix.replace('.', '')), hover: Hover = { contents: [] }, _low = snip.prefix.toLowerCase();
 		completionItem.kind = type, completionItem.insertTextFormat = InsertTextFormat.Snippet;
