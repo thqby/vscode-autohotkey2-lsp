@@ -296,11 +296,13 @@ class Worker {
 	class Promise {
 		/**
 		 * Execute the callback after the asynchronous call completes.
+		 * @param {(result)=>void} Callback
 		 */
 		Then(Callback) => Worker.Promise
 
 		/**
 		 * An asynchronous call throws an exception and executes the callback.
+		 * @param {(exception)=>void} Callback
 		 */
 		Catch(Callback) => Worker.Promise
 	}

@@ -1,5 +1,5 @@
 import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, searchNode } from './Lexer';
+import { ClassNode, cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, searchNode, Variable } from './Lexer';
 import { lexers, hoverCache, Maybe, ahkvars } from './common';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
@@ -8,7 +8,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 	let context = doc?.buildContext(params.position), t: any, hover: any[] = [];
 	if (context) {
 		let word = context.text.toLowerCase(), kind: SymbolKind = SymbolKind.Variable;
-		let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, node: DocumentSymbol | undefined, uri: string = '';
+		let nodes: [{ node: DocumentSymbol, uri: string, scope?: DocumentSymbol }] | undefined | null, node: DocumentSymbol | undefined, uri: string = '';
 		if (!word || context.kind === SymbolKind.Null) {
 			if (context.token) {
 				if ((t = hoverCache[1]) && (t = t[word]))
@@ -48,14 +48,34 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 						hover.push({ kind: 'ahk2', value: (<any>(it.node)).full })
 				});
 			} else {
-				node = nodes[0].node, uri = nodes[0].uri;
+				let { node, scope } = nodes[0];
 				if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method || node.kind === SymbolKind.Property) {
 					if ((<FuncNode>node).full)
 						hover.push({ kind: 'ahk2', value: (<FuncNode>node).full });
 				} else if (node.kind === SymbolKind.Class)
 					hover.push({ kind: 'ahk2', value: 'class ' + ((<ClassNode>node).full || node.name) });
-				if (node.detail)
-					hover.push({ kind: 'markdown', value: '___\n' + formatMarkdowndetail(node.detail) });
+				else if (scope && node.kind === SymbolKind.TypeParameter) {
+					let p = (scope as any).parent;
+					if (p?.kind === SymbolKind.Property && p.parent?.kind === SymbolKind.Class)
+						scope = p as DocumentSymbol;
+					formatMarkdowndetail(scope);
+				}
+
+				if (node.detail) {
+					let md = formatMarkdowndetail(node);
+					if (node.kind === SymbolKind.Variable) {
+						let re = /^/;
+						if (md.startsWith('\n*@var* ')) {
+							md = md.replace(' — ', '\n___\n');
+							re = /^\n\*@var\*\s/;
+						} else if (md.startsWith('\n*@type* '))
+							md = md.replace(' — ', '\n___\n').replace(/^\n\*@type\*\s*/, `\`${node.name}\`: `);
+						else
+							md = `\`${node.name}\`\n___\n${md}`;
+						md = md.replace(re, !scope ? '*@global* ' : (node as Variable).static ? '*@static* ' : '*@local* ');
+					}
+					hover.push({ kind: 'markdown', value: (hover.length ? '___\n' : '') + md });
+				}
 			}
 			if (hover.length)
 				return {

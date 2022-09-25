@@ -296,11 +296,13 @@ class Worker {
 	class Promise {
 		/**
 		 * 异步调用完成后执行.
+		 * @param {(result)=>void} Callback
 		 */
 		Then(Callback) => Worker.Promise
 
 		/**
 		 * 异步调用抛出异常后执行.
+		 * @param {(exception)=>void} Callback
 		 */
 		Catch(Callback) => Worker.Promise
 	}

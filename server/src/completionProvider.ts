@@ -2,7 +2,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, searchNode, Variable } from './Lexer';
+import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, searchNode, Token, Variable } from './Lexer';
 import { completionitem } from './localize';
 import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
 
@@ -14,13 +14,16 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	let quote = '', char = '', l = '', percent = false, lt = context.linetext, triggerchar = lt.charAt(context.range.start.character - 1);
 	let list = doc.relevance, cpitem: CompletionItem = { label: '' }, temp: any, path: string, { line, character } = position;
 	let expg = new RegExp(context.text.match(/[^\w]/) ? context.text.replace(/(.)/g, '$1.*') : '(' + context.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
-	let istr = false;
+	let o = doc.document.offsetAt({ line, character: character - 1 }), tk = doc.find_token(o);
+	let istr = tk.type === 'TK_STRING';
 
-	if (doc.find_token(doc.document.offsetAt({ line, character: character - 1 })).type === 'TK_STRING') {
+	if (istr) {
 		if (triggerKind === 2)
 			return;
-		triggerchar = '', istr = true;
-	} else if (context.pre.startsWith('#')) {
+		triggerchar = '';
+	} else if (tk.type.endsWith('COMMENT'))
+		percent = true, tk.type === 'TK_COMMENT' && (lt = lt.replace(/^\s*;@include\b/i, '#include'));
+	else if (context.pre.startsWith('#')) {
 		for (let i = 0; i < position.character; i++) {
 			char = lt.charAt(i);
 			if (quote === char) {
@@ -32,10 +35,21 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			} else if (quote === '' && (char === '"' || char === "'") && (i === 0 || lt.charAt(i - 1).match(/[([%,\s]/)))
 				quote = char;
 		}
+	} else if (!tk.topofline) {
+		while ((tk = tk.previous_token as Token) && tk.type) {
+			if (tk.content === '%') {
+				if (tk.next_pair_pos)
+					percent = true;
+				break;
+			}
+			if (tk.topofline)
+				break;
+		}
 	}
+
 	if (!percent && triggerchar === '.' && context.pre.match(/^#(include|dllload)/i))
 		triggerchar = '###';
-	if (temp = lt.match(/^\s*((class\s+(\w|[^\x00-\xff])+\s+)?(extends)|class)\s/i)) {
+	if (temp = lt.match(/^\s*((class\s+(\w|[^\x00-\x7f])+\s+)?(extends)|class)\s/i)) {
 		if (triggerchar === '.') {
 			if (temp[3]) {
 				searchNode(doc, doc.buildContext(position, true, true).text.replace(/\.[^.]*$/, '').toLowerCase(), position, SymbolKind.Class)?.map(it => {
@@ -91,9 +105,11 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							}
 						}
 						tps.push(ts[tp].node);
-					} else searchNode(doc, tp, position, SymbolKind.Variable)?.map(it => {
-						tps.push(it.node);
-					});
+					} else if (tp.includes('=>')) {
+						if (isfunc = true, ahkvars['func'])
+							tps.push(ahkvars['func']), isstatic = false;
+					} else
+						searchNode(doc, tp, position, SymbolKind.Variable)?.map(it => tps.push(it.node));
 				}
 			}
 			if (ts['#object'] !== undefined) {
@@ -407,7 +423,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								if (res.index === 1) {
 									let ns: any, funcs: { [key: string]: any } = {};
 									['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
-									if (temp = context.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\xff])+)\s*,/i)) {
+									if (temp = context.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\x7f])+)\s*,/i)) {
 										let ts: any = {};
 										cleardetectcache(), detectExpType(doc, temp[1], position, ts);
 										if (ts['#any'] === undefined) {
@@ -487,10 +503,13 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						if (!txs[t] && expg.test(t))
 							txs[t] = true, additem(temp[t], CompletionItemKind.Text);
 				return items;
-			} else
-				other = !percent;
-			let c = extsettings.FormatOptions.one_true_brace === false ? '\n' : ' ';
-			if (!percent)
+			} else if (percent)
+				other = false;
+			else if (!tk.content)
+				return completionItemCache.other.filter(it => it.kind === CompletionItemKind.Text);
+
+			let c = extsettings.FormatOptions.one_true_brace === 0 ? '\n' : ' ';
+			if (other)
 				for (let [label, arr] of [
 					['switch', ['switch ${1:[SwitchValue, CaseSense]}', '{\n\tcase ${2:}:\n\t\t${3:}\n\tdefault:\n\t\t$0\n}']],
 					['trycatch', ['try', '{\n\t$1\n}', 'catch ${2:Error} as ${3:e}', '{\n\t$0\n}']],
@@ -510,7 +529,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							insertTextFormat: InsertTextFormat.Snippet,
 							insertText: m + c + '{\n\t$0\n}'
 						});
-					if (t.match(/^(\w|[^\x00-\xff])*$/)) {
+					if (t.match(/^(\w|[^\x00-\x7f])*$/)) {
 						if (position.line === scopenode.range.end.line && position.character > scopenode.range.end.character)
 							return undefined;
 						return its.concat({
@@ -518,7 +537,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							kind: CompletionItemKind.Keyword,
 							insertText: 'static '
 						}, items.pop() as CompletionItem);
-					} else if (t.match(/^(static\s+)?(\w|[^\x00-\xff])+(\(|$)/i))
+					} else if (t.match(/^(static\s+)?(\w|[^\x00-\x7f])+(\(|$)/i))
 						return its;
 				} else if (scopenode.kind === SymbolKind.Property && scopenode.children)
 					return [{ label: 'get', kind: CompletionItemKind.Function }, { label: 'set', kind: CompletionItemKind.Function }]
@@ -547,11 +566,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			completionItemCache.other.map(it => {
 				if (expg.test(it.label)) {
-					if (it.kind === CompletionItemKind.Text) {
-					} else if (it.kind === CompletionItemKind.Function) {
+					if (it.kind === CompletionItemKind.Variable)
+						vars[it.label.toLowerCase()] = it;
+					else if (it.kind === CompletionItemKind.Function) {
 						if (!vars[l = it.label.toLowerCase()])
 							vars[l] = it;
-					} else
+					} else if (other && it.kind !== CompletionItemKind.Text)
 						items.push(it);
 				}
 			});

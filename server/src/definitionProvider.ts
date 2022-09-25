@@ -1,5 +1,5 @@
 import { DefinitionParams, Definition, LocationLink, DocumentSymbol, Location, SymbolKind, Range } from 'vscode-languageserver';
-import { cleardetectcache, detectExpType, searchNode } from './Lexer';
+import { cleardetectcache, detectExpType, searchNode, Token } from './Lexer';
 import { inBrowser, lexers, restorePath } from './common';
 import { URI } from 'vscode-uri';
 
@@ -7,14 +7,14 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc.buildContext(params.position), m: any;
 	let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, locas: Location[] = [];
 	if (context) {
-		let word = '', kind: SymbolKind = SymbolKind.Variable, t: any;
+		let word = '', kind: SymbolKind = SymbolKind.Variable, tk: Token;
 		if (context.pre.startsWith('#')) {
 			let line = params.position.line, character = context.linetext.indexOf('#');
-			let t = doc.tokens[doc.document.offsetAt({line, character})];
-			if (t && t.content.match(/^#include/i)) {
-				let d = t.data, p = d?.data as string[];
+			tk = doc.tokens[doc.document.offsetAt({line, character})];
+			if (tk && tk.content.match(/^#include/i)) {
+				let d = tk.data, p = d?.data as string[];
 				if (p) {
-					character += d.offset - t.offset;
+					character += d.offset - tk.offset;
 					let rg = Range.create(0, 0, lexers[p[1]]?.document.lineCount ?? 0, 0);
 					let end = character + d.content.replace(/\s+;.*$/, '').length;
 					return [LocationLink.create(URI.file(restorePath(p[0])).toString(), rg, rg, Range.create(line, character, line, end))];

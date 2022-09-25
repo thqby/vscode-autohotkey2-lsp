@@ -1,3 +1,11 @@
+## 1.6.4
+- 增加jsdoc类型标注
+- 增加brace样式, `one_true_brace=-1`
+- 修复函数定义未应用`one_true_brace`样式
+- 代码块补全应用格式化设置指定的样式[#194](https://github.com/thqby/vscode-autohotkey2-lsp/issues/194)
+- 修复[#191](https://github.com/thqby/vscode-autohotkey2-lsp/issues/191)
+- 修复[#193](https://github.com/thqby/vscode-autohotkey2-lsp/issues/193)
+
 ## 1.6.3
 - `formatOnType`支持换行时格式化代码行并缩进
 - jsdoc支持重载函数提示

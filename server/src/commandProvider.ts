@@ -104,11 +104,11 @@ export async function generateComment(args: string[]) {
 				if (end.line >= start.line && start.line > -1)
 					range = { start, end };
 				comments.map(line => {
-					if (m = line.match(/^@(param|参数)\s+(\S+)([\s|:]\s*(.*))?$/i))
-						lastarr = params[m[2].toLowerCase()] = [m[4]];
-					else if (m = line.match(/^@(returns|返回值)([\s|:]\s*(.*))?$/i))
+					if (m = line.match(/^@(param|arg)\s+(({.+?}\s)?\s*(\S+).*)$/i))
+						lastarr = params[m[4].toLowerCase()] = [m[2].trim()];
+					else if (m = line.match(/^@(returns?)([\s|:]\s*(.*))?$/i))
 						lastarr = returns, returns.push(m[3]);
-					else if (lastarr && line.charAt(0) !== '@')
+					else if (lastarr && !line.startsWith('@'))
 						lastarr.push(line);
 					else
 						lastarr = undefined, details.push(line);
@@ -120,24 +120,28 @@ export async function generateComment(args: string[]) {
 				ss.push(' * $1'), i++;
 			n.params.map(it => {
 				if (lastarr = params[it.name.toLowerCase()]) {
-					ss.push(` * @param ${it.name} ${lastarr.shift()}`);
+					ss.push(` * @param ${lastarr.shift()}`);
 					lastarr.map(s => ss.push(' * ' + s));
-				} else
-					ss.push(` * @param ${it.name} $${(++i).toString()}`);
-			});
-			if (Object.keys(n.returntypes || {}).length) {
-				if (returns.length) {
-					ss.push(` * @returns ${returns.shift()}`);
-					returns.map(s => ss.push(' * ' + s));
 				} else {
 					let rets: string[] = [], o: any = {}, p: Position;
-					for (const ret in n.returntypes)
-						cleardetectcache(), detectExp(doc, ret, Position.is(p = n.returntypes[ret]) ? p : pos).map(tp => o[tp.replace(/^\s*[@#]/, '')] = true);
-					rets = Object.keys(o);
-					if (o['any'] && rets.length > 1)
-						delete o['any'], rets = Object.keys(o);
-					ss.push(` * @returns $\{${(++i).toString() + ':' + (rets.length ? rets.join(', ') : '')}\}`);
+					for (const ret in it.returntypes)
+						cleardetectcache(), detectExp(doc, ret, Position.is(p = it.returntypes[ret]) ? p : pos).map(tp => o[trim(tp)] = true);
+					rets = o['any'] ? ['any'] : Object.keys(o);
+					if (!rets.length)
+						rets = ['any'];
+					ss.push(` * @param $\{${(++i).toString() + `:{${rets.join('|')}\\}`}} ${it.name} $${(++i).toString()}`);
 				}
+			});
+			if (returns.length) {
+				ss.push(` * @returns ${returns.shift()}`);
+				returns.map(s => ss.push(' * ' + s));
+			} else {
+				let rets: string[] = [], o: any = {}, p: Position;
+				for (const ret in n.returntypes)
+					cleardetectcache(), detectExp(doc, ret, Position.is(p = n.returntypes[ret]) ? p : pos).map(tp => o[trim(tp)] = true);
+				rets = o['any'] ? ['any'] : Object.keys(o);
+				if (rets.length)
+					ss.push(` * @returns $\{${(++i).toString() + ':' + (rets.length ? '{' + rets.join('|') + '\\}' : '')}}`);
 			}
 			if (i === 0)
 				return;
@@ -146,6 +150,11 @@ export async function generateComment(args: string[]) {
 				range = Range.create(line, character, line, character), ss.push('');
 			insertSnippet(ss.join('\n'), range);
 		}
+	}
+
+	function trim(tp: string) {
+		tp = tp.trim().replace(/([^.]+)$/, '\\$$$1').replace(/\\\$[@#]/, '');
+		return tp;
 	}
 }
 

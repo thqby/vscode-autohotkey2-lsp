@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.6.3",
+	"version": "1.6.4",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -159,7 +159,8 @@
 							"default": 2
 						},
 						"one_true_brace": {
-							"type": "boolean"
+							"type": "string",
+							"enum": ["-1","0","1"]
 						},
 						"preserve_newlines": {
 							"type": "boolean",

@@ -17,7 +17,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		let context: any, t = res.full;
 		if (t === '')
 			context = doc.buildContext(pos), t = context.text.toLowerCase();
-		if (t.match(/^(((\w|[^\x00-\xff])+\.)+(\w|[^\x00-\xff])+)$/)) {
+		if (t.match(/^(((\w|[^\x00-\x7f])+\.)+(\w|[^\x00-\x7f])+)$/)) {
 			nodes = searchNode(doc, t, pos, SymbolKind.Method);
 			if (!nodes) {
 				let word: string = t, ts: any = {};
@@ -29,15 +29,15 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 				if (word && ts['#any'] === undefined)
 					for (const tp in ts)
 						searchNode(doc, tp + word, t ? res.pos : context.range.end, kind)?.map(it => {
-							if (!nodes?.map((i: any) => i.node).includes(it.node))
-								nodes?.push(it);
+							if (!nodes.map((i: any) => i.node).includes(it.node))
+								nodes.push(it);
 						});
 				if (!nodes.length)
 					nodes = undefined;
 			}
 		} else {
 			let ts: any = {};
-			t = t.replace(/\.(\w|[^\x00-\xff])+$/, '');
+			t = t.replace(/\.(\w|[^\x00-\x7f])+$/, '');
 			nodes = [], cleardetectcache(), detectExpType(doc, t, params.position, ts);
 			if (ts['#any'] === undefined)
 				for (const tp in ts)
@@ -65,31 +65,51 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 			} else if (kind === SymbolKind.Function || kind === SymbolKind.Method)
 				nodes.push(it);
 			else if (it.uri) {
+				function gen(def: string) {
+					if (def.startsWith('(('))
+						def = def.slice(1, -1);
+					let m = def.match(/^\(([^)]*)\)=>(.*)$/);
+					if (m) {
+						let d = new Lexer(TextDocument.create('', 'ahk2', 0, `${nn.name}(${m[1]})=>${m[2].includes('=>') ? 'void' : m[2]}`), undefined, -1);
+						d.parseScript();
+						let node = d.declaration[nn.name.toLowerCase()];
+						if (node?.kind === SymbolKind.Function) {
+							if (m[2].includes('=>'))
+								node.returntypes = { [m[2]]: true };
+							nodes.push({ node });
+							if (nn.kind === SymbolKind.TypeParameter) {
+								let scope = it.scope, p = scope.parent;
+								if (p?.parent?.kind === SymbolKind.Property && p.parent.parent?.kind === SymbolKind.Class)
+									scope = p.parent;
+								formatMarkdowndetail(scope);
+							} else formatMarkdowndetail(nn);
+							let detail = nn.detail?.split('\n___\n').pop();
+							if (detail)
+								node.detail = detail.trim();
+						}
+					}
+				}
 				if (kind === SymbolKind.Property) {
 					let s = Object.keys(nn.returntypes || {}).pop() || '';
 					if (s) {
 						cleardetectcache(), detectExp(lexers[it.uri], s, Position.is(nn.returntypes[s]) ? nn.returntypes[s] : pos).map(tp => {
-							searchNode(doc, tp, pos, SymbolKind.Function)?.map(it => {
+							if (tp.includes('=>')) {
+								gen(tp);
+							} else searchNode(doc, tp, pos, SymbolKind.Function)?.map(it => {
 								if (it.node.kind === SymbolKind.Function || it.node.kind === SymbolKind.Method || (it.node.kind === SymbolKind.Class && (<ClassNode>it.node).extends !== 'Primitive'))
 									nodes.push(it);
 							});
 						});
 					}
-				} else if (kind === SymbolKind.Variable)
-					cleardetectcache(), detectVariableType(lexers[it.uri], it.node.name.toLowerCase(), it.uri === doc.uri ? pos : undefined).map(tp => {
-						searchNode(doc, tp, pos, SymbolKind.Function)?.map(it => {
+				} else if (kind === SymbolKind.Variable || kind === SymbolKind.TypeParameter)
+					cleardetectcache(), detectVariableType(lexers[it.uri], it, it.uri === doc.uri ? pos : it.node.selectionRange.end).map(tp => {
+						if (tp.includes('=>')) {
+							gen(tp);
+						} else searchNode(doc, tp, pos, SymbolKind.Function)?.map(it => {
 							if (it.node.kind === SymbolKind.Function || it.node.kind === SymbolKind.Method || (it.node.kind === SymbolKind.Class && (<ClassNode>it.node).extends !== 'Primitive'))
 								nodes.push(it);
 						});
 					});
-				else
-					return;
-				if (tns.length === 1 && !nodes.length && nn.detail && (m = new RegExp('\\b' + nn.name + '\\([^)]*\\)').exec(nn.detail))) {
-					let params: any = [], rg = Range.create(0, 0, 0, 0), node: FuncNode;
-					m[0].match(/(?<=[(,]\s*)(\w|[^\x00-\xff])+/g)?.map(name => params.push({ name }));
-					node = FuncNode.create(nn.name, SymbolKind.Function, rg, rg, params);
-					node.full = nn.detail, nodes.push({ node });
-				}
 			}
 		});
 	} while (nodes.length > 0 && (nodes[0].node.kind !== SymbolKind.Function && nodes[0].node.kind !== SymbolKind.Method && nodes[0].node.kind !== SymbolKind.Class));
@@ -123,12 +143,12 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 				})),
 				documentation: node.detail ? {
 					kind: 'markdown',
-					value: formatMarkdowndetail(node.detail, name = params[index]?.name ?? '', overloads)
+					value: formatMarkdowndetail(node, name = params[index]?.name ?? '', overloads)
 				} : undefined
 			});
 		if (overloads.length) {
 			let lex = new Lexer(TextDocument.create('', 'ahk2', -10, overloads.join('\n')), undefined, -1);
-			let { label, documentation } = signinfo.signatures[0], detail = node.detail as string;
+			let { label, documentation } = signinfo.signatures[0], n = node;
 			label = label.replace(new RegExp(`(?<=\\b${node.name})\\(.+$`), '');
 			lex.parseScript();
 			lex.children.map((node: any) => {
@@ -140,7 +160,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 						})),
 						documentation: (name === params[index]?.name) ? documentation : {
 							kind: 'markdown',
-							value: formatMarkdowndetail(detail, params[index]?.name ?? '', [])
+							value: formatMarkdowndetail(n, params[index]?.name ?? '', [])
 						}
 					});
 			});

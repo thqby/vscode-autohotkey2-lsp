@@ -111,21 +111,33 @@ export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope
 	if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
 
 	} else {
-		let node = scope ? scope as FuncNode : doc, gg = !scope, c: boolean | undefined = gg;
+		let node = (scope ?? doc) as FuncNode, gg = !scope, c: boolean | undefined = gg;
 		let not_static = !((<any>node)?.local?.[name]?.static);
 		if (not_static && scope && (<any>node)?.declaration?.[name]?.static === null)
 			not_static = false;
-		if (!c) {
-			let local = (<FuncNode>node).local, dec = (<FuncNode>node).declaration;
-			if (!((local && local[name]) || (dec && dec[name])))
-				c = undefined;
+		if (node.kind === SymbolKind.Property && node.parent?.kind === SymbolKind.Class) {
+			node.children?.map(it => {
+				if (it.kind === SymbolKind.Function)
+					it.children?.map(it => {
+						if (it.name.toLowerCase() === name)
+							ranges.push(it.selectionRange);
+						if (it.children)
+							findAllVar(it as FuncNode, name, gg, ranges, gg, not_static);
+					});
+			});
+		} else {
+			if (!c) {
+				let local = (<FuncNode>node).local, dec = (<FuncNode>node).declaration;
+				if (!((local && local[name]) || (dec && dec[name])))
+					c = undefined;
+			}
+			node.children?.map(it => {
+				if (it.name.toLowerCase() === name)
+					ranges.push(it.selectionRange);
+				if (it.children)
+					findAllVar(it as FuncNode, name, gg, ranges, gg || it.kind === SymbolKind.Function ? c : undefined, not_static);
+			});
 		}
-		node.children?.map(it => {
-			if (it.name.toLowerCase() === name)
-				ranges.push(it.selectionRange);
-			if (it.children)
-				findAllVar(it as FuncNode, name, gg, ranges, gg || it.kind === SymbolKind.Function ? c : undefined, not_static);
-		});
 	}
 	return ranges;
 }

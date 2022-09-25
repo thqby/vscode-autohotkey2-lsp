@@ -33,7 +33,7 @@ Supports running on the Web, such as `Chrome/Edge`.
   - [Signature](#signature)
   - [Document Symbol](#document-symbol)
   - [Semantic Highlight](#semantic-highlight)
-  - [Blocks](#blocks)
+  - [Tags](#tags)
   - [Document Color](#document-color)
   - [Hover](#hover)
   - [Goto Definition](#goto-definition)
@@ -83,16 +83,16 @@ Support for intelligent prompts for function parameters.
 
 1. Displays class, method, function, variable, label, hotkey, hot string, block information in the left outline column.  
 2. press Ctrl + P, Input @symbol_name to retrieve and jump  
-3. You can comment a method with a semicolon or /* */ on the top line of a function, variable.  
+3. You can comment a method with a semicolon or /* */ on the top line of a function, variable. Jsdoc-style annotations can mark variable types.  
 
 ### Semantic Highlight
 Semantic highlighting is an addition to syntax highlighting, resolves symbols in the context of a project. The editor applies the highlighting from semantic tokens on top of the highlighting from grammars.
 
 ![semanticTokens](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/semanticTokens.png)
 
-### Blocks
+### Tags
 
-usage: Add `;;`(default) or `; TODO ` to the comment code block.  
+usage: Add `;;`(default) or `; TODO ` to the comment code Tags.  
 
 ![codeSymbole](https://github.com/thqby/vscode-autohotkey2-lsp/raw/main/pic/codeSymbol.png)
 
@@ -261,7 +261,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析。
 
 1. 在左侧大纲栏目显示类、方法、函数、变量、标签、热键、热字串、区块信息  
 2. 按Ctrl + P, 输入@符号名检索并跳转  
-3. 您可以在函数、变量的上一行使用分号或/* */向方法添加注释  
+3. 您可以在函数、变量的上一行使用分号或/* */向方法添加注释, jsdoc样式的注释可以标记变量类型  
 
 ### 语义高亮
 

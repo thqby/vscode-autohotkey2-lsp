@@ -766,6 +766,30 @@
               "name": "string.literal.ahk2"
             }
           }
+        },
+        {
+          "begin": "^\\s*((;@)(?i:include))\\b",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.directive.ahk2"
+            },
+            "2": {
+              "name": "punctuation.definition.directive.ahk2"
+            }
+          },
+          "end": "(?=\\n)",
+          "name": "meta.preprocessor.include.ahk2",
+          "patterns": [
+            {
+              "begin": "[^\\s;]",
+              "end": "(?=(?:\\s+;))|(?=\\n)",
+              "name": "meta.embedded.ahk2 string.literal.include.ahk2"
+            },
+            {
+              "match": "(?:\\s+);.*",
+              "name": "comment.line.ahk2"
+            }
+          ]
         }
       ]
     },
@@ -1001,7 +1025,7 @@
           }
         },
         {
-          "name": "meta.example.jsdoc meta.embedded.ahk2",
+          "name": "meta.embedded.ahk2 meta.example.jsdoc",
           "begin": "((@)example)\\s+",
           "end": "(?=@|\\*+/)",
           "beginCaptures": {
@@ -1050,7 +1074,7 @@
           ]
         },
         {
-          "name": "meta.overload.ahk2 meta.embedded.ahk2",
+          "name": "meta.embedded.ahk2 meta.overload.ahk2",
           "begin": "((@)overload)\\s+",
           "end": "(?=\\n|^\\s*\\*)",
           "beginCaptures": {
@@ -1649,7 +1673,7 @@
     "jsdoctype": {
       "patterns": [
         {
-          "contentName": "entity.name.type.instance.jsdoc",
+          "contentName": "meta.embedded.ahk2 entity.name.type.instance.jsdoc",
           "begin": "\\G({)",
           "beginCaptures": {
             "0": {
