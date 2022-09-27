@@ -3841,10 +3841,11 @@ export class Lexer {
 					sharp += c, parser_pos++;
 				sharp_offsets.push(offset);
 				lst = createToken(sharp, 'TK_SHARP', offset, sharp.length, bg);
+				if (sharp.toLowerCase() === '#hotif' && bg && whitespace.includes(c))
+					return lst;
 				last_LF = input.indexOf('\n', offset = parser_pos);
 				parser_pos = last_LF < 0 ? input_length : last_LF;
 				if (bg && whitespace.includes(c)) {
-					sharp_offsets.push(offset);
 					if (c === ' ' || c === '\t') {
 						while (' \t'.includes(input.charAt(offset) || '\0'))
 							offset++;
