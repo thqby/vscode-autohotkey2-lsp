@@ -5132,12 +5132,12 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 	if (types['#any'])
 		return [];
 	return Object.keys(types);
+}
 
-	function get_comment_types(it: DocumentSymbol) {
-		if (it.detail) {
-			return cvt_types((it.detail.match(new RegExp(`^\\s*@var\\s+{(.*?)}\\s+${it.name}\\b`, 'mi')) ??
-				it.detail.match(/^\s*@type\s+{(.*?)}(?=\s|$)/mi))?.[1] ?? '');
-		}
+function get_comment_types(it: DocumentSymbol, prop = false) {
+	if (it.detail) {
+		return cvt_types((it.detail.match(new RegExp(`^\\s*@${prop ? 'prop(erty)?' : '(var)'}\\s+{(.*?)}\\s+${it.name}\\b`, 'mi')) ??
+			it.detail.match(/^\s*@(type)\s+{(.*?)}(?=\s|$)/mi))?.[2] ?? '');
 	}
 }
 
@@ -5232,30 +5232,33 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 							case SymbolKind.Variable:
 								if (lexers[uri])
 									detectVariableType(lexers[uri], it, uri === doc.uri ? pos : it.node.selectionRange.end).map(tp => {
-										if (searchcache[tp]) {
-											n = searchcache[tp].node;
+										tp.includes('=>') && (searchcache[tp] ??= gen(tp, uri, it.node, it.scope));
+										if (n = searchcache[tp]?.node) {
 											if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
 												for (const e in n.returntypes)
 													detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
 										}
 									});
 								break;
-							case SymbolKind.Property:
-								if (uri && lexers[uri] && (s = Object.keys(n.returntypes || {}).pop() || '')) {
-									let tps: any = {};
-									detectExpType(lexers[uri], s, n.range.end, tps);
-									if (tps['#any'])
-										return '#any';
-									for (const tp in tps)
-										if (searchcache[tp]) {
-											n = searchcache[tp].node;
-											if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
-												for (const e in n.returntypes)
-													detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
-										} else
-											return '#any';
+							case SymbolKind.Property: {
+								let tps: any = {};
+								if (get_comment_types(n, true)?.map(tp => tps[tp] = true)) {
+								} else if (lexers[uri]) {
+									for (s in n.returntypes)
+										detectExpType(lexers[uri], s, n.range.end, tps);
+								}
+								if (tps['#any'])
+									return '#any';
+								for (const tp in tps) {
+									tp.includes('=>') && (searchcache[tp] ??= gen(tp, uri, n, it.scope));
+									if (n = searchcache[tp]?.node) {
+										if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
+											for (const e in n.returntypes)
+												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => ts[tp] = true);
+									}
 								}
 								break;
+							}
 							case SymbolKind.Class:
 								if ((uri = (<any>n).uri || uri) && lexers[uri])
 									for (const i of Object.values(getClassMembers(lexers[uri], n, true)))
@@ -5300,23 +5303,29 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 					switch (n.node.kind) {
 						case SymbolKind.TypeParameter:
 						case SymbolKind.Variable:
-							detectVariableType(lexers[n.uri], n, n.uri === doc.uri ? pos : n.node.selectionRange.end).map(tp => ts[tp] = true);
+							detectVariableType(lexers[n.uri], n, n.uri === doc.uri ? pos : n.node.selectionRange.end)
+								.map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
 							break;
 						case SymbolKind.Property:
-							if ((<Variable>n.node).returntypes) {
-								let s = Object.keys((<Variable>n.node).returntypes || {}).pop();
-								if (s === ' #object') {
-									ts['#object'] = true;
-									let p = (n.node as any).property;
-									if (p?.length) (hasdetectcache['##object'] ??= []).push(...p);
-								} else if (s)
-									detect(lexers[n.uri] ?? doc, s, n.node.range.end).map(tp => ts[tp] = true);
+							if (ttt = get_comment_types(n.node, true)) {
+								(ttt as string[]).map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
+							} else if ((<Variable>n.node).returntypes) {
+								for (let s in (n.node as Variable).returntypes) {
+									if (s === ' #object') {
+										ts['#object'] = true;
+										let p = (n.node as any).property;
+										if (p?.length) (hasdetectcache['##object'] ??= []).push(...p);
+									} else if (s)
+										detect(lexers[n.uri] ?? doc, s, n.node.range.end)
+											.map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
+								}
 							} else if (n.node.children) {
 								for (const it of n.node.children) {
 									let rets = (<FuncNode>it).returntypes;
 									if (it.name.toLowerCase() === 'get' && it.kind === SymbolKind.Function) {
 										for (const ret in rets)
-											detect(lexers[n.uri] ?? doc, ret.toLowerCase(), Position.is(rets[ret]) ? rets[ret] : pos).map(tp => ts[tp] = true);
+											detect(lexers[n.uri] ?? doc, ret.toLowerCase(), Position.is(rets[ret]) ? rets[ret] : pos)
+												.map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
 										break;
 									}
 								}
@@ -5345,6 +5354,31 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 		}
 		ts = Object.keys(ts);
 		return ts.length ? ts : ['#any'];
+	}
+
+	function gen(def: string, uri: string, node: DocumentSymbol, scope?: DocumentSymbol) {
+		if (def.startsWith('(('))
+			def = def.slice(1, -1);
+		let m = def.match(/^\(([^)]*)\)=>(.*)$/);
+		if (m) {
+			let d = new Lexer(TextDocument.create('', 'ahk2', 0, `${node.name}(${m[1]})=>${m[2].includes('=>') ? 'void' : m[2]}`), undefined, -1);
+			d.parseScript();
+			let n = d.declaration[node.name.toLowerCase()];
+			if (n?.kind === SymbolKind.Function) {
+				if (m[2].includes('=>'))
+					n.returntypes = { [m[2]]: true };
+				if (node.kind === SymbolKind.TypeParameter && scope) {
+					let p = (scope as any).parent;
+					if (p?.parent?.kind === SymbolKind.Property && p.parent.parent?.kind === SymbolKind.Class)
+						scope = p.parent as DocumentSymbol;
+					formatMarkdowndetail(scope);
+				} else formatMarkdowndetail(node);
+				let detail = node.detail?.split('\n___\n').pop();
+				if (detail)
+					n.detail = detail.trim();
+				return { node: n, uri };
+			}
+		}
 	}
 }
 
@@ -5635,7 +5669,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 							return '';
 						});
 						break;
-					case 'overload': ols.push(m[2].trim()); break;
+					case 'overload': ols.push('_' + m[2].trim()); break;
 					case 'example':
 						s = m[2].replace(/\s*<caption>(.*?)<\/caption>\s*/, (...m) => { details.push('\n*@example* ' + m[1]); return ''; });
 						if (code = 1, s === m[2]) {
@@ -5780,7 +5814,7 @@ function cvt_types(tps: string) {
 		let t: string, o: any = {};
 		while ((t = tps.replace(/\(([^)]*)\)(?!\s*=>)/g, '$1')) !== tps)
 			tps = t;
-		tps.split(/(?<!=>\s*[^)]*)\|/)
+		tps.toLowerCase().split(/(?<!=>\s*[^)]*)\|/)
 			.map(tp => o[tp === 'void' ? '#void' : tp.includes('=>') ? tp :
 				tp.replace(/(?<=(^|\.))([^.$@#]+)$/, '@$2').replace('$', '')] = true);
 		delete o[''];
