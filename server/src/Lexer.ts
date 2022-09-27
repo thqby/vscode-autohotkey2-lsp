@@ -5614,14 +5614,14 @@ export function getincludetable(fileuri: string): { count: number, list: { [uri:
 
 export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overloads?: string[]): string {
 	let params: { [name: string]: string[] } = {}, details: string[] = [], lastparam = '', m: RegExpMatchArray | null;
-	let detail = node.detail, ols = overloads ?? [], s, code = false;
+	let detail = node.detail, ols = overloads ?? [], s, code = 0;
 	if (!detail)
 		return '';
 	detail.split(/\r?\n/).map(line => {
 		if (line.startsWith('@')) {
 			lastparam = '';
 			if (code)
-				code = false, details.push('```');
+				code === 2 && details.push('```'), code = 0;
 			if (m = line.match(/^@(\S+)(.*)$/)) {
 				switch (m[1].toLowerCase()) {
 					case 'param':
@@ -5638,7 +5638,12 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 					case 'overload': ols.push(m[2].trim()); break;
 					case 'example':
 						s = m[2].replace(/\s*<caption>(.*?)<\/caption>\s*/, (...m) => { details.push('\n*@example* ' + m[1]); return ''; });
-						details.push('```ahk2' + (s ? '\n' + s : '')), code = true;
+						if (code = 1, s === m[2]) {
+							s = m[2].replace(/\s*<caption>(.*)/, (...m) => { details.push('\n*@example* ' + m[1]); return ''; });
+							if (s !== m[2])
+								break;
+						}
+						details.push('```ahk2' + (s ? '\n' + s : '')), code = 2;
 						break;
 					case 'var':
 					case 'prop':
@@ -5664,10 +5669,12 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 			} else details.push(line);
 		} else if (lastparam)
 			params[lastparam].push(line), name ?? details.push(line);
+		else if (code === 1 && (s = line.indexOf('</caption>')) > -1)
+			details.push(line.substring(0, s), '```ahk2' + ((s = line.substring(s + 10).trimLeft()) ? '\n' + s : '')), code = 2;
 		else
 			details.push(line);
 	});
-	if (code)
+	if (code === 2)
 		details.push('```');
 	(node as FuncNode).params?.map(it => {
 		let p = params[it.name.toLowerCase()];

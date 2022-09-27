@@ -1066,7 +1066,13 @@
                 "2": {
                   "name": "punctuation.definition.bracket.angle.end.jsdoc"
                 }
-              }
+              },
+              "patterns": [
+                {
+                  "match": "^\\s*\\*\\s",
+                  "name": "comment.block.ahk2"
+                }
+              ]
             },
             {
               "include": "$base"
