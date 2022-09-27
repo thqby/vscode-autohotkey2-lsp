@@ -96,17 +96,16 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					if (ts[tp]) {
 						let kind = ts[tp].node.kind;
 						if (kind === SymbolKind.Function || kind === SymbolKind.Method) {
-							if (isfunc)
-								continue;
-							else {
+							if (!isfunc) {
 								isfunc = true;
 								if (ahkvars['func'])
 									tps.push(ahkvars['func']), isstatic = false;
 							}
+							continue;
 						}
 						tps.push(ts[tp].node);
 					} else if (tp.includes('=>')) {
-						if (isfunc = true, ahkvars['func'])
+						if (!isfunc && (isfunc = true, ahkvars['func']))
 							tps.push(ahkvars['func']), isstatic = false;
 					} else
 						searchNode(doc, tp, position, SymbolKind.Variable)?.map(it => tps.push(it.node));
@@ -505,7 +504,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				return items;
 			} else if (percent)
 				other = false;
-			else if (!tk.content)
+			else if (!tk.content && !lt.includes('::'))
 				return completionItemCache.other.filter(it => it.kind === CompletionItemKind.Text);
 
 			let c = extsettings.FormatOptions.one_true_brace === 0 ? '\n' : ' ';
