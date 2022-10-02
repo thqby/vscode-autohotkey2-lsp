@@ -4944,7 +4944,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 	if (node.kind !== SymbolKind.Class)
 		return {};
 	let v: { [name: string]: DocumentSymbol } = {}, l = node.name.toLowerCase();
-	let _cls: any = node, cl: ClassNode, tn: DocumentSymbol;
+	let _cls: any = node, cl: ClassNode, tn: DocumentSymbol, hasget: any = {};
 	let isobj = l === 'object' || l === 'comobjarray' || (!(node as ClassNode).extends && l !== 'any');
 	getmems(doc, node, staticmem);
 	if (staticmem) {
@@ -4972,7 +4972,10 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 	return v;
 
 	function getmems(doc: Lexer, node: DocumentSymbol, staticmem: boolean) {
-		let u = (<any>node).uri, l2 = '';
+		let u = (<any>node).uri, l2: string;
+		if (hasget[l2 = `${u},${(node as ClassNode).full}`.toLowerCase()])
+			return;
+		hasget[l2] = true;
 		if (staticmem) {
 			if (!v['__new']) {
 				let it = (node as ClassNode).declaration['__new'];
