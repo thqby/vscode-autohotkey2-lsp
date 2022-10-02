@@ -208,7 +208,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			tk = tks[tk.next_token_offset];
 			o = tk.offset;
 			let rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
-			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Error });
+			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Warning });
 		}
 	}
 	function converttype(it: DocumentSymbol, islib: boolean = false, kind?: number) {

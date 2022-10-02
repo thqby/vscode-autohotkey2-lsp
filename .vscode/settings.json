@@ -3,5 +3,6 @@
 	"typescript.tsc.autoDetect": "off",
 	"typescript.preferences.quoteStyle": "single",
 	"git.ignoreLimitWarning": true,
-	"typescript.tsdk": "node_modules\\typescript\\lib"
+	"typescript.tsdk": "node_modules\\typescript\\lib",
+	"AutoHotkey2.InterpreterPath": "d:\\source\\repos\\AutoHotkey_H\\bin\\x64w_MT\\AutoHotkey.exe"
 }

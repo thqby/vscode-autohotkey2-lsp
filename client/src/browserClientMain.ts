@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, ExtensionContext, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
+import { commands, env, ExtensionContext, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
@@ -23,7 +23,8 @@ export function activate(context: ExtensionContext) {
 			DisableV1Script: getConfig('DisableV1Script'),
 			FormatOptions: getConfig('FormatOptions'),
 			InterpreterPath: getConfig('InterpreterPath'),
-			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace')
+			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace'),
+			locale: env.language
 		}
 	}, worker);
 

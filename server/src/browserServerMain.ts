@@ -28,8 +28,6 @@ let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), ha
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
 
 connection.onInitialize((params: InitializeParams) => {
-	if (params.locale)
-		set_locale(params.locale);
 	let capabilities = params.capabilities;
 	set_Workfolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
 	hasConfigurationCapability = !!(
@@ -114,8 +112,10 @@ connection.onInitialize((params: InitializeParams) => {
 		};
 	}
 
+	let locale = params.locale;
 	let configs: AHKLSSettings = params.initializationOptions;
 	if (configs) {
+		locale ??= (configs as any).locale;
 		if (typeof configs.AutoLibInclude === 'string')
 			configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 		else if (typeof configs.AutoLibInclude === 'boolean')
@@ -129,6 +129,7 @@ connection.onInitialize((params: InitializeParams) => {
 			}, 1000);
 		}
 	}
+	if (locale) set_locale(locale);
 	return result;
 });
 

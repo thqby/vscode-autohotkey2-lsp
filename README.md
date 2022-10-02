@@ -2,7 +2,7 @@
 
 [![installs](https://img.shields.io/visual-studio-marketplace/i/thqby.vscode-autohotkey2-lsp?label=Extension%20Install&style=for-the-badge&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
 [![version](https://img.shields.io/visual-studio-marketplace/v/thqby.vscode-autohotkey2-lsp?label=Extension%20Version&style=for-the-badge&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
-[![](https://img.shields.io/badge/Compatibility-autohotkey%20v2.0--beta.7-green?style=for-the-badge&logo=autohotkey)](https://www.autohotkey.com/)
+[![](https://img.shields.io/badge/Compatibility-autohotkey%20v2.0--beta.10-green?style=for-the-badge&logo=autohotkey)](https://www.autohotkey.com/)
 
 
 [中文版 README](#AutoHotkey2语言支持)往下翻页
@@ -302,7 +302,7 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析。
 
 - 右键弹出菜单然后点击 格式化文档。  
 - 或按 `Shift+Alt+F`。  
-- 支持在键入`}`时设置代码块的格式，在键入`\n`时设置行的格式并缩进。支持在代码区输入中文标点时替换为英文标点。 (需要开启`editor.format OnType`)  
+- 支持在键入`}`时格式化代码块，在代码行结束处键入`\n`时格式化行并缩进。支持在代码区(非注释、字符串)输入中文标点时替换为英文标点。 (需要开启`editor.format OnType`)  
 
 ![codeFormat](https://gitee.com/orz707/vscode-autohotkey2-lsp/raw/main/pic/codeFormat.gif)
 

@@ -2971,9 +2971,9 @@ class File extends Object {
 
 class Float extends Number {
 	/**
-	 * 将数字字符串或整数值转换为浮点数.
+	 * 将数字字符串或数值转换为浮点数.
 	 */
-	static Call(Value) => Number
+	static Call(Value) => Float
 }
 
 class Func extends Object {
@@ -3768,9 +3768,9 @@ class InputHook extends Object {
 
 class Integer extends Number {
 	/**
-	 * 将数字字符串或浮点值转换为整数.
+	 * 将数字字符串或数值转换为整数.
 	 */
-	static Call(Value) => Number
+	static Call(Value) => Integer
 }
 
 class Map extends Object {
@@ -3935,6 +3935,10 @@ class MethodError extends MemberError {
 }
 
 class Number extends Primitive {
+	/**
+	 * 将数字字符串或数值转换为整数或浮点数.
+	 */
+	static Call(Value) => Integer | Float
 }
 
 class Object extends Any {

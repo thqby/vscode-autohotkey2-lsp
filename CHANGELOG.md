@@ -1,3 +1,10 @@
+## 1.6.5
+- 增强jsdoc类型标注
+- 修复热键定义处补全丢失
+- 修复[#195](https://github.com/thqby/vscode-autohotkey2-lsp/issues/195)
+- 修复[#196](https://github.com/thqby/vscode-autohotkey2-lsp/issues/196)
+- 修复递归超出最大调用栈[#197](https://github.com/thqby/vscode-autohotkey2-lsp/issues/197)
+
 ## 1.6.4
 - 增加jsdoc类型标注
 - 增加brace样式, `one_true_brace=-1`

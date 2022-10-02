@@ -2921,9 +2921,9 @@ class File extends Object {
 
 class Float extends Number {
 	/**
-	 * Convert a numeric string or integer value to a floating point number.
+	 * Convert a numeric string or numerical to a floating point number.
 	 */
-	static Call(Value) => Number
+	static Call(Value) => Float
 }
 
 class Func extends Object {
@@ -3784,9 +3784,9 @@ class InputHook extends Object {
 
 class Integer extends Number {
 	/**
-	 * Convert a numeric string or floating point value to an integer.
+	 * Convert a numeric string or numerical to an integer.
 	 */
-	static Call(Value) => Number
+	static Call(Value) => Integer
 }
 
 class Map extends Object {
@@ -3951,6 +3951,10 @@ class MethodError extends MemberError {
 }
 
 class Number extends Primitive {
+	/**
+	 * Convert a numeric string or numerical to integer or floating point number.
+	 */
+	static Call(Value) => Integer | Float
 }
 
 class Object extends Any {
