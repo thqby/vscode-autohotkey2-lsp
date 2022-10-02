@@ -112,10 +112,9 @@ connection.onInitialize((params: InitializeParams) => {
 		};
 	}
 
-	let locale = params.locale;
-	let configs: AHKLSSettings = params.initializationOptions;
+	let locale, configs: AHKLSSettings = params.initializationOptions;
 	if (configs) {
-		locale ??= (configs as any).locale;
+		locale = (configs as any).locale;
 		if (typeof configs.AutoLibInclude === 'string')
 			configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 		else if (typeof configs.AutoLibInclude === 'boolean')
@@ -129,7 +128,7 @@ connection.onInitialize((params: InitializeParams) => {
 			}, 1000);
 		}
 	}
-	if (locale) set_locale(locale);
+	if (locale ??= params.locale) set_locale(locale);
 	return result;
 });
 

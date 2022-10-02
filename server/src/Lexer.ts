@@ -5699,7 +5699,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 							return '';
 						});
 					default:
-						s = m[2].replace(/^\s*({(.*?)}(?=\s|$))?(\s*[-—])?\s*/, '*$2* — ').replace(/\s*—\s*$/, '');
+						s = m[2].replace(/^\s*({(.*?)}(?=\s|$))?(\s*[-—])?\s*/, '*$2* — ').replace(/\*\*(?= — )|\s*—\s*$/g, '');
 						details.push(`\n*@${m[1].toLowerCase()}* ${s}`);
 						break;
 				}
