@@ -1701,13 +1701,13 @@ export class Lexer {
 					b = t.content ? t.offset : parser_pos + 1;
 					if (t.type === 'TK_COMMA')
 						info.miss.push(info.count++);
-					else if (!t.topofline)
+					else if (!t.topofline || is_line_continue(tk, t))
 						++info.count, nk = t;
 				} else {
 					b = tk.content ? tk.offset : lk.offset + lk.length + 1;
 					if (tk.type === 'TK_COMMA')
 						info.miss.push(info.count++);
-					else if (!tk.topofline)
+					else if (!tk.topofline || is_line_continue(lk, tk))
 						++info.count, nk = tk;
 				}
 				while (true) {

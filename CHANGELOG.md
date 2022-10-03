@@ -1,6 +1,7 @@
 ## 1.6.6
 - 增加了对在资源文件中的库的读取支持, `#include *libname`
 - 在ahk.exe选取列表移除有UIAccess特权的exe
+- 修复[#198](https://github.com/thqby/vscode-autohotkey2-lsp/issues/198)
 
 ## 1.6.5
 - 增强jsdoc类型标注
