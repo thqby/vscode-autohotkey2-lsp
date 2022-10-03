@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.6.5",
+	"version": "1.6.6",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -16,7 +16,10 @@
 		"autohotkey2",
 		"AutoHotkey2"
 	],
-	"repository": "https://github.com/thqby/vscode-autohotkey2-lsp",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/thqby/vscode-autohotkey2-lsp"
+	},
 	"homepage": "https://github.com/thqby/vscode-autohotkey2-lsp/blob/main/README.md",
 	"icon": "icon.png",
 	"bugs": {
@@ -160,7 +163,11 @@
 						},
 						"one_true_brace": {
 							"type": "string",
-							"enum": ["-1","0","1"]
+							"enum": [
+								"-1",
+								"0",
+								"1"
+							]
 						},
 						"preserve_newlines": {
 							"type": "boolean",

@@ -61,8 +61,21 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 					range: { start: { line, character: 0 }, end: { line, character } }
 				});
 		} else if (!s) {
-			if (linetexts[0] !== linetexts[1].substring(0, character))
+			if (linetexts[0] !== (linetexts[1] = linetexts[1].substring(0, character))) {
+				if (!linetexts[0]) {
+					tk = doc.find_token(doc.document.offsetAt(position));
+					if (tk.type === 'TK_STRING' || tk.type.endsWith('COMMENT'))
+						return undefined;
+					let b = ['TK_START_EXPR', 'TK_START_BLOCK', ''];
+					while (tk = tk.previous_token as Token) {
+						if (b.includes(tk.type))
+							break;
+					}
+					if (b.pop(), b.includes(tk?.type))
+						return undefined;
+				}
 				result = [{ newText: linetexts[0], range: { start: { line, character: 0 }, end: { line, character } } }];
+			}
 		}
 		return result;
 	} else if (ch === '}')

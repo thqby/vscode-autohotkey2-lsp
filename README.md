@@ -84,6 +84,28 @@ Support for intelligent prompts for function parameters.
 1. Displays class, method, function, variable, label, hotkey, hot string, block information in the left outline column.  
 2. press Ctrl + P, Input @symbol_name to retrieve and jump  
 3. You can comment a method with a semicolon or /* */ on the top line of a function, variable. Jsdoc-style annotations can mark variable types.  
+```
+/**
+ * @param {Array} a - a param
+ * @return {Integer}
+ */
+fn(a*) {
+  /** @type {Map} */
+  d := Map()
+  /**
+   * @var {Map} e
+   * @var {Object} f
+   */
+  e := Map(), f := {}
+  /** @type {(a,b)=>Integer} */
+  cb := (a, b) => a + b
+  return a[1] + a[2]
+}
+class abc {
+  /** @prop {Map} p */
+  p := dosomethingandreturnmap()
+}
+```
 
 ### Semantic Highlight
 Semantic highlighting is an addition to syntax highlighting, resolves symbols in the context of a project. The editor applies the highlighting from semantic tokens on top of the highlighting from grammars.
@@ -262,6 +284,28 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析。
 1. 在左侧大纲栏目显示类、方法、函数、变量、标签、热键、热字串、区块信息  
 2. 按Ctrl + P, 输入@符号名检索并跳转  
 3. 您可以在函数、变量的上一行使用分号或/* */向方法添加注释, jsdoc样式的注释可以标记变量类型  
+```
+/**
+ * @param {Array} a - a param
+ * @return {Integer}
+ */
+fn(a*) {
+  /** @type {Map} */
+  d := Map()
+  /**
+   * @var {Map} e
+   * @var {Object} f
+   */
+  e := Map(), f := {}
+  /** @type {(a,b)=>Integer} */
+  cb := (a, b) => a + b
+  return a[1] + a[2]
+}
+class abc {
+  /** @prop {Map} p */
+  p := dosomethingandreturnmap()
+}
+```
 
 ### 语义高亮
 
