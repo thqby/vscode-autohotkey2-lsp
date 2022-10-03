@@ -28,7 +28,7 @@ import {
 } from 'vscode-languageclient/node';
 import * as child_process from 'child_process';
 import { resolve } from 'path';
-import { existsSync, readdirSync, statSync, unlinkSync } from 'fs';
+import { existsSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'fs';
 
 let client: LanguageClient;
 let outputchannel = window.createOutputChannel('AutoHotkey2');
@@ -134,7 +134,6 @@ export async function activate(context: ExtensionContext) {
 		ahkStatusBarItem.show();
 		server_is_ready = true;
 	});
-	const disposable = client.start();
 
 	let extlist: string[] = [], debugexts: { [type: string]: string } = {};
 	for (const ext of extensions.all) {
@@ -149,7 +148,7 @@ export async function activate(context: ExtensionContext) {
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 	ahkStatusBarItem.command = 'ahk2.setinterpreter';
 	context.subscriptions.push(
-		disposable,
+		client.start(),
 		commands.registerCommand('ahk2.run', () => runCurrentScriptFile()),
 		commands.registerCommand('ahk2.selection.run', () => runCurrentScriptFile(true)),
 		commands.registerCommand('ahk2.stop', () => stopRunningScript()),
@@ -201,14 +200,21 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 		return '';
 	})
 	if (selecttext !== '') {
-		command += path, outputchannel.appendLine('[Running] ' + command), startTime = new Date();
-		ahkprocess = child_process.spawn(command, { cwd: `${resolve(editor.document.fileName, '..')}`, shell: true });
-		ahkprocess.stdin?.write(selecttext), ahkprocess.stdin?.end();
+		if (ahkStatusBarItem.text.endsWith('[UIAccess]')) {
+			path = resolve(__dirname, 'temp.ahk');
+			writeFileSync(path, selecttext);
+			command += `"${path}"`, outputchannel.appendLine('[Running] ' + command), startTime = new Date();
+			ahkprocess = child_process.spawn(command, { cwd: `${resolve(editor.document.fileName, '..')}`, shell: true });
+		} else {
+			command += path, outputchannel.appendLine('[Running] ' + command), startTime = new Date();
+			ahkprocess = child_process.spawn(command, { cwd: `${resolve(editor.document.fileName, '..')}`, shell: true });
+			ahkprocess.stdin?.write(selecttext), ahkprocess.stdin?.end(), path = '';
+		}
 	} else {
 		commands.executeCommand('workbench.action.files.save');
 		path = editor.document.fileName, command += `"${path}"`;
 		outputchannel.appendLine('[Running] ' + command), startTime = new Date();
-		ahkprocess = child_process.spawn(command, { cwd: resolve(path, '..'), shell: true });
+		ahkprocess = child_process.spawn(command, { cwd: resolve(path, '..'), shell: true }), path = '';
 	}
 	if (ahkprocess) {
 		commands.executeCommand('setContext', 'ahk2:isRunning', true);
@@ -222,10 +228,12 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 			outputchannel.append(decode(data));
 		});
 		ahkprocess.on('exit', (code) => {
-			ahkprocess = undefined;
-			commands.executeCommand('setContext', 'ahk2:isRunning', false);
 			outputchannel.appendLine('');
 			outputchannel.appendLine('[Done] exited with code=' + code + ' in ' + ((new Date()).getTime() - startTime.getTime()) / 1000 + ' seconds');
+			ahkprocess = undefined;
+			commands.executeCommand('setContext', 'ahk2:isRunning', false);
+			if (path)
+				unlinkSync(path);
 		});
 	} else
 		commands.executeCommand('setContext', 'ahk2:isRunning', false);
@@ -326,8 +334,7 @@ async function quickHelp() {
 		ahkhelp.on('close', () => { ahkhelp = undefined; })
 	}
 	if (word !== '' && executePath !== '' && existsSync(executePath)) {
-		let ahkpro = child_process.exec(`\"${executePath}\" /ErrorStdOut *`, { cwd: `${resolve(editor.document.fileName, '..')}` });
-		ahkpro.stdin?.write(`
+		let script = `
 		DllCall("LoadLibrary", "Str", "oleacc", "Ptr")
 		DetectHiddenWindows(true)
 		if !(WinGetExStyle(top := WinExist("A")) && 8)
@@ -356,9 +363,17 @@ async function quickHelp() {
 					searchinput.dispatchEvent(keyevent)
 				)")
 			}
+		}`;
+		if (ahkStatusBarItem.text.endsWith('[UIAccess]')) {
+			let file = resolve(__dirname, 'temp.ahk');
+			writeFileSync(file, script, { encoding: 'utf-8' });
+			child_process.execSync(`"${executePath}" /ErrorStdOut ${file}`);
+			unlinkSync(file);
+		} else {
+			let ahkpro = child_process.exec(`"${executePath}" /ErrorStdOut *`, { cwd: `${resolve(editor.document.fileName, '..')}` });
+			ahkpro.stdin?.write(script);
+			ahkpro.stdin?.end();
 		}
-		`);
-		ahkpro.stdin?.end();
 	}
 }
 
@@ -373,7 +388,7 @@ async function begindebug(extlist: string[], debugexts: any, params = false, att
 		}
 	} else if (extlist.length === 0) {
 		window.showErrorMessage(zhcn ? '未找到debug扩展, 请先安装debug扩展!' : 'The debug extension was not found, please install the debug extension first!');
-		extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'cweijan.vscode-autohotkey-plus']);
+		extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'mark-wiemer.vscode-autohotkey-plus-plus', 'cweijan.vscode-autohotkey-plus']);
 		if (extname)
 			commands.executeCommand('workbench.extensions.installExtension', extname);
 		return;
@@ -401,6 +416,8 @@ async function begindebug(extlist: string[], debugexts: any, params = false, att
 			if (debugexts[t] === extname) {
 				config.type = t;
 				if (extname === 'zero-plusplus.vscode-autohotkey-debug')
+					if (ahkStatusBarItem.text.endsWith('[UIAccess]'))
+						config.useUIAVersion = true;
 					if (params) {
 						let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
 						if (input === undefined)
@@ -504,7 +521,7 @@ async function setInterpreter() {
 			} catch { }
 		}
 		(await getAHKversion(paths)).map((label, i) => {
-			if (label.match(/\bautohotkey.*?2\./i))
+			if (label.match(/\bautohotkey.*?2\./i) && !label.endsWith('[UIAccess]'))
 				list.push({ label, detail: paths[i] });
 		});
 	}

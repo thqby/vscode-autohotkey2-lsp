@@ -5,11 +5,10 @@ import { existsSync } from 'fs';
 export function runscript(script: string, out?: Function): boolean {
 	let executePath = ahkpath_cur || extsettings.InterpreterPath;
 	if (existsSync(executePath)) {
-		const process = spawnSync(`\"${executePath}\" /CP65001 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
+		const process = spawnSync(`\"${executePath}\" /CP65001 /ErrorStdOut=utf-8 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
 		if (process) {
-			if (!process.stdout) return true;
 			if (out)
-				out(process.stdout.toString());
+				out((process.stdout ?? '').toString());
 			return true;
 		}
 	}

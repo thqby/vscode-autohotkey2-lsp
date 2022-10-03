@@ -353,11 +353,26 @@ function initpathenv(samefolder = false) {
 	FileAppend2(text, file) {
 		encode := "UTF-8"
 		FileAppend %text%, %file%, %encode%
-	}`
+	}`;
+	let fail = 0;
 	let ret = runscript(script, (data: string) => {
 		if (!(data = data.trim())) {
-			connection.window.showErrorMessage(setting.getenverr());
-			ret = false;
+			let path = ahkpath_cur || extsettings.InterpreterPath;
+			if (getAHKversion([path])[0].endsWith('[UIAccess]')) {
+				let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
+				fail = 2;
+				if (path !== n && existsSync(n) && !getAHKversion([n])[0].endsWith('[UIAccess]')) {
+					set_ahkpath(n);
+					if (ret = initpathenv(samefolder))
+						fail = 0;
+					set_ahkpath(path);
+				}
+				connection.window.showWarningMessage(setting.uialimit());
+				if (ret)
+					return;
+			} else fail = 1;
+			if (!pathenv.mydocuments)
+				connection.window.showErrorMessage(setting.getenverr());
 			return;
 		}
 		let paths = data.split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '';
@@ -402,15 +417,16 @@ function initpathenv(samefolder = false) {
 		if (extsettings.AutoLibInclude > 1)
 			parseuserlibs();
 	});
-	if (!ret) connection.window.showErrorMessage(setting.ahkpatherr());
-	else if (!pathenv.ahkpath) {
+	if (!ret)
+		connection.window.showErrorMessage(setting.ahkpatherr());
+	else if (!pathenv.ahkpath && fail !== 2) {
 		if (initnum < 3)
 			setTimeout(() => {
 				initnum++, initpathenv();
 			}, 1000);
 		return false;
 	}
-	return ret;
+	return ret && !fail;
 }
 
 async function parseuserlibs() {
@@ -495,9 +511,15 @@ async function parseproject(uri: string) {
 function getAHKversion(params: string[]) {
 	return params.map(path => {
 		try {
-			let props = new PEFile(path).getResource(RESOURCE_TYPE.VERSION)[0].StringTable[0];
-			if (props.ProductName?.toLowerCase().startsWith('autohotkey'))
-				return (props.ProductName + ' ') + (props.ProductVersion || '') + (props.FileDescription?.replace(/^.*?(\d+-bit).*$/i, ' $1') || '');
+			let pe = new PEFile(path);
+			let props = pe.getResource(RESOURCE_TYPE.VERSION)[0].StringTable[0];
+			if (props.ProductName?.toLowerCase().startsWith('autohotkey')) {
+				let m = pe.getResource(RESOURCE_TYPE.MANIFEST)[0]?.replace(/<!--[\s\S]*?-->/g, '') ?? '';
+				let version = `${props.ProductName} ${props.ProductVersion ?? 'unknown version'} ${pe.isBit64 ? '64' : '32'} bit`;
+				if (m.includes('uiAccess="true"'))
+					version += ' [UIAccess]';
+				return version;
+			}
 		} catch (e) { }
 		return '';
 	});
@@ -516,15 +538,17 @@ function getDllExport(paths: string[], onlyone = false) {
 	return Object.keys(funcs);
 }
 
-function getRCDATA(path: string) {
+function getRCDATA(path: string | undefined) {
 	let exe = ahkpath_cur || extsettings.InterpreterPath;
-	let uri = URI.from({ scheme: 'ahkres', path: exe + '.ahk', query: path }).toString().toLowerCase();
+	let uri = URI.from({ scheme: 'ahkres', path: `${exe}@${path}.ahk` }).toString().toLowerCase();
 	if (lexers[uri])
 		return { uri, path: `${exe}?${path}`, data: lexers[uri] };
 	if (!existsSync(exe))
 		return undefined;
-	let pe = new PEFile(exe);
-	let data = pe.getResource(RESOURCE_TYPE.RCDATA)?.get(path.startsWith('#') ? parseInt(path.substring(1)) : path);
+	let rc = new PEFile(exe).getResource(RESOURCE_TYPE.RCDATA);
+	if (path === undefined)
+		return rc;
+	let data = rc?.get(path.startsWith('#') ? parseInt(path.substring(1)) : path);
 	if (data) {
 		let doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, data));
 		doc.parseScript();

@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, searchNode, Token, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
+import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, getRCDATA, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
@@ -197,7 +197,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (inBrowser)
 					return;
 				lt = lt.replace(/\s+;.*/, '').trimRight();
-				let tt = lt.replace(/^\s*#(include(again)?|dllload)\s+/i, '').replace(/\*i\s/i, ''), paths: string[] = [], inlib = false, lchar = '';
+				let tt = lt.replace(/^\s*#(include(again)?|dllload)\s+/i, '').replace(/\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
 				let pre = lt.substring(lt.length - tt.length, position.character), xg = '\\', m: any, a_ = '', isdll = !!temp[2];
 				if (percent) {
 					completionItemCache.other.map(it => {
@@ -234,8 +234,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					else return;
 				if (pre.endsWith('/'))
 					xg = '/';
-				if (ts.includes('*'))
-					return undefined;
+				if (ts.startsWith('*')) {
+					if (inBrowser)
+						return undefined;
+					(getRCDATA() as Map<string | number, string>)?.forEach((v, k) => additem(typeof k === 'string' ? k : `#${k}`, CompletionItemKind.File));
+					return items;
+				}
 				ts = ts.replace(/`;/g, ';');
 				let ep = new RegExp((ts.match(/[^\w]/) ? ts.replace(/(.)/g, '$1.*') : '(' + ts.replace(/(.)/g, '$1.*') + '|[^\\w])').replace(/\.\./, '\\..'), 'i');
 				let textedit: TextEdit | undefined;

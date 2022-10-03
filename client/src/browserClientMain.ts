@@ -28,8 +28,7 @@ export function activate(context: ExtensionContext) {
 		}
 	}, worker);
 
-	const disposable = client.start();
-	context.subscriptions.push(disposable,
+	context.subscriptions.push(client.start(),
 		commands.registerCommand('ahk2.updateversioninfo', async () => {
 			const editor = window.activeTextEditor;
 			if(editor) {

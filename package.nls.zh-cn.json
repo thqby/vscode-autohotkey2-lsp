@@ -72,6 +72,7 @@
 	"diagnostic.unsupportinclude": "函数、类中的#include无法正确地推导作用域和代码补全",
 	"diagnostic.unterminated": "未终止的字符串文本",
 	"setting.ahkpatherr": "AutoHotkey解释器不存在, 在'设置-AutoHotkey2.InterpreterPath'中重新指定",
-	"setting.getenverr": "获取环境变量失败 ",
+	"setting.getenverr": "获取环境变量失败",
+	"setting.uialimit": "由于安全限制, UIA可执行文件不允许重定向stdin/stdout, 因此依赖于此的一些功能将无法工作",
 	"setting.versionerr": "当前AutoHotkey.exe不是v2版本, 无法获得正确的语法解析、补全等功能"
 }
