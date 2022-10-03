@@ -26,7 +26,7 @@ let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: b
 let initnum = 0;
 
 connection = createConnection(ProposedFeatures.all);
-set_Connection(connection, false, getDllExport);
+set_Connection(connection, false, getDllExport, getRCDATA);
 set_dirname(__dirname);
 set_locale(JSON.parse(process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFIG || '{}').locale);
 
@@ -301,6 +301,7 @@ connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
 	}
 	return null;
 });
+connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
 documents.listen(connection);
 connection.listen();
 loadlocalize();
@@ -513,4 +514,21 @@ function getDllExport(paths: string[], onlyone = false) {
 	}
 	delete funcs[''];
 	return Object.keys(funcs);
+}
+
+function getRCDATA(path: string) {
+	let exe = ahkpath_cur || extsettings.InterpreterPath;
+	let uri = URI.from({ scheme: 'ahkres', path: exe + '.ahk', query: path }).toString().toLowerCase();
+	if (lexers[uri])
+		return { uri, path: `${exe}?${path}`, data: lexers[uri] };
+	if (!existsSync(exe))
+		return undefined;
+	let pe = new PEFile(exe);
+	let data = pe.getResource(RESOURCE_TYPE.RCDATA)?.get(path.startsWith('#') ? parseInt(path.substring(1)) : path);
+	if (data) {
+		let doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, data));
+		doc.parseScript();
+		return { uri, path: `${exe}?${path}`, data: doc };
+	}
+	return undefined;
 }

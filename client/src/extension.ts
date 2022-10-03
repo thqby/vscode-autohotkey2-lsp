@@ -160,6 +160,11 @@ export async function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.debug.params', async () => begindebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk2.setinterpreter', () => setInterpreter()),
 		commands.registerCommand('ahk2.updateversioninfo', () => updateVersionInfo()),
+		workspace.registerTextDocumentContentProvider('ahkres', {
+			async provideTextDocumentContent(uri: Uri, token) {
+				return await client.sendRequest('ahk2.getContent', uri.toString()) as string;
+			}
+		}),
 		ahkStatusBarItem
 	);
 }

@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { ahkvars, extsettings, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv } from './common';
+import { ahkvars, extsettings, getRCDATA, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv } from './common';
 
 export interface ParamInfo {
 	count: number
@@ -713,6 +713,9 @@ export class Lexer {
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), this.reflat = true, includetable = this.include, comments = {};
 				try {
+					let rs = getRCDATA('#2');
+					if (rs)
+						includetable[rs.uri] = rs.path;
 					this.children.push(...parse_block());
 				} catch (e: any) {
 					if (e instanceof ParseStopError) {
@@ -3038,9 +3041,14 @@ export class Lexer {
 						}
 					} else {
 						if (tk) {
-							if (m.startsWith('*'))
-								_this.addDiagnostic(diagnostic.unsupportresinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-							else if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir)) || !existsSync(m.path)) {
+							if (m.startsWith('*')) {
+								let rs = getRCDATA(tk.content.substring(1));
+								if (rs) {
+									includetable[rs.uri] = rs.path, tk.data = [undefined, rs.uri];
+									return;
+								}
+								_this.addDiagnostic(diagnostic.resourcenotfound(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+							} else if (!(m = pathanalyze(m.toLowerCase(), _this.libdirs, includedir)) || !existsSync(m.path)) {
 								if (!ignore)
 									_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length);
 							} else if (statSync(m.path).isDirectory())

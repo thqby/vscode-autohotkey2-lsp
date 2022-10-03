@@ -8,7 +8,7 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 	let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, locas: Location[] = [];
 	if (context) {
 		let word = '', kind: SymbolKind = SymbolKind.Variable, tk: Token;
-		if (context.pre.startsWith('#')) {
+		if (context.pre.startsWith('#') && !context.token) {
 			let line = params.position.line, character = context.linetext.indexOf('#');
 			tk = doc.tokens[doc.document.offsetAt({line, character})];
 			if (tk && tk.content.match(/^#include/i)) {
@@ -17,7 +17,8 @@ export async function defintionProvider(params: DefinitionParams): Promise<Defin
 					character += d.offset - tk.offset;
 					let rg = Range.create(0, 0, lexers[p[1]]?.document.lineCount ?? 0, 0);
 					let end = character + d.content.replace(/\s+;.*$/, '').length;
-					return [LocationLink.create(URI.file(restorePath(p[0])).toString(), rg, rg, Range.create(line, character, line, end))];
+					let uri = p[0] ? URI.file(restorePath(p[0])).toString() : p[1];
+					return [LocationLink.create(uri, rg, rg, Range.create(line, character, line, end))];
 				}
 			}
 			return undefined;

@@ -163,14 +163,32 @@ export class PEFile {
 					dirEntries.push({ struct: entry, id: entryId, name: entryName, data: entryData });
 				}
 				if (level === 0) {
-					if (entry.id === 16) {
-						const lastEntry = dirEntries[dirEntries.length - 1];
+					const lastEntry = dirEntries[dirEntries.length - 1];
+					if (entry.id === RESOURCE_TYPE.VERSION) {
 						const versionEntries = lastEntry.directory?.entries[0].directory?.entries ?? [];
 						for (const versionEntry of versionEntries) {
 							const rtVersionStruct = versionEntry.data?.struct;
 							if (rtVersionStruct)
 								parseVersionInformation(resources[16], rtVersionStruct);
 						}
+					} else if (entry.id === RESOURCE_TYPE.MANIFEST) {
+						const manifestEntries = lastEntry.directory?.entries[0].directory?.entries ?? [];
+						for (const manifestEntrie of manifestEntries) {
+							const manifestStruct = manifestEntrie.data?.struct;
+							if (manifestStruct?.size)
+								resources[24].push(parseUTF8String(manifestStruct));
+						}
+					} else if (entry.id === RESOURCE_TYPE.RCDATA) {
+						if (resources[10] instanceof Array)
+							resources[10] = new Map();
+						let resource: Map<string | number, string> = resources[10];
+						lastEntry.directory?.entries.map((entrie: any) => {
+							const name: number | string = entrie.id ?? entrie.name.toLowerCase();
+							const rcdata = entrie.directory?.entries?.pop()?.data?.struct;
+							let data = undefined;
+							if (rcdata && (data = parseUTF8String(rcdata)) !== undefined)
+								resource.set(name, data);
+						});
 					}
 				}
 			}
@@ -224,6 +242,9 @@ export class PEFile {
 				nullindex = ((rawData.indexOf(Buffer.alloc(2), offset) + 1) >> 1) * 2;
 				return { ...info, Key: rawData.slice(offset, nullindex).toString('utf16le') };
 			}
+		}
+		function parseUTF8String(dataStruct: any) {
+			return imageData.slice(dataStruct.offsetToData, dataStruct.offsetToData + dataStruct.size).toString();
 		}
 		function alignDword(offset: number, base: number) { return ((offset + base + 3) & 0xfffffffc) - (base & 0xfffffffc); }
 	}

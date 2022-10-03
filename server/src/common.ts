@@ -63,6 +63,7 @@ export const chinese_punctuations: { [c: string]: string } = {
 };
 export let winapis: string[] = [];
 export let getDllExport = (paths: string[], onlyone: boolean = false) => [] as string[];
+export let getRCDATA: (path: string) => any = (path: string) => undefined;
 
 export let locale = 'en-us';
 export type Maybe<T> = T | undefined;
@@ -88,10 +89,13 @@ export interface AHKLSSettings {
 	FormatOptions: FormatOptions
 }
 
-export function set_Connection(conn: any, browser: boolean, getDll?:  (paths: string[]) => string[]) {
+export function set_Connection(conn: any, browser: boolean, getDll?: (paths: string[]) => string[], getRC?: (path: string) => any) {
 	connection = conn;
 	inBrowser = browser;
-	if (getDll) getDllExport = getDll;
+	if (getDll)
+		getDllExport = getDll;
+	if (getRC)
+		getRCDATA = getRC;
 }
 
 export function openFile(path: string, showError = true): TextDocument | undefined {
