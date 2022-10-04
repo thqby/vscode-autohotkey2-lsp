@@ -11,11 +11,9 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		let nodes: [{ node: DocumentSymbol, uri: string, scope?: DocumentSymbol }] | undefined | null, node: DocumentSymbol | undefined, uri: string = '';
 		if (!word || context.kind === SymbolKind.Null) {
 			if (context.token) {
-				if ((t = hoverCache[1]) && (t = t[word]))
+				if ((t = hoverCache[1]) && (t = t[context.token.content.toLowerCase()]))
 					return t[0];
-			} else if (context.pre === '#')
-				if ((t = hoverCache[1]) && (t = t['#' + word]))
-					return t[0];
+			}
 			return undefined;
 		}
 		if (undefined === (nodes = searchNode(doc, word, context.range.end, kind = context.kind)) && word.includes('.') && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {

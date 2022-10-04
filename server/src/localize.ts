@@ -53,7 +53,7 @@ export namespace diagnostic {
 	export const propnotinit = localize('diagnostic.propnotinit', 'Property declaration is not initialized');
 	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name');
 	export const typemaybenot = localize('diagnostic.typemaybenot', 'Type maybe not \'{0}\'');
-	export const resourcenotfound = localize('diagnostic.resourcenotfound', 'The resource was not found');
+	export const resourcenotfound = localize('diagnostic.resourcenotfound', 'No resource found or could not be resolved');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');
 	export const unknown = localize('diagnostic.unknown', 'Unknown {0}');
 	export const invalidencoding = localize('diagnostic.invalidencoding', '\'{0}\' invalid file encoding');

@@ -180,14 +180,13 @@ export class PEFile {
 						}
 					} else if (entry.id === RESOURCE_TYPE.RCDATA) {
 						if (resources[10] instanceof Array)
-							resources[10] = new Map();
-						let resource: Map<string | number, string> = resources[10];
+							resources[10] = {};
+						let resource = resources[10];
 						lastEntry.directory?.entries.map((entrie: any) => {
-							const name: number | string = entrie.id ?? entrie.name.toLowerCase();
+							const name = entrie.id !== undefined ? `#${entrie.id}` : entrie.name.toLowerCase();
 							const rcdata = entrie.directory?.entries?.pop()?.data?.struct;
-							let data = undefined;
-							if (rcdata && (data = parseUTF8String(rcdata)) !== undefined)
-								resource.set(name, data);
+							if (rcdata)
+								resource[name] = imageData.slice(rcdata.offsetToData, rcdata.offsetToData + rcdata.size);
 						});
 					}
 				}

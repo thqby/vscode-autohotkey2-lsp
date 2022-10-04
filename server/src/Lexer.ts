@@ -311,7 +311,7 @@ export class Lexer {
 						if (isIdentifierChar(c.charCodeAt(0)))
 							break;
 				}
-				if (tk = tks[++i]) {
+				if (tk = tks[++i] ?? tks[i - 1]) {
 					if (offset >= tk.offset && offset < tk.offset + tk.length)
 						return tk;
 					while (tk = tks[tk.next_token_offset]) {
@@ -4509,36 +4509,6 @@ export class Lexer {
 		this.includedir = new Map(), this.dlldir = new Map();
 	}
 
-	public getWordAtPosition(position: Position, full: boolean = false, ignoreright = false): { text: string, range: Range } {
-		let { line, character: start } = position;
-		let text = this.document.getText(Range.create(Position.create(line, 0),
-			ignoreright ? position : Position.create(line + 1, 0)));
-		let len = text.length, end = start, c: number, dot = false;
-		while (end < len && isIdentifierChar(text.charCodeAt(end)))
-			end++;
-		for (start = position.character - 1; start >= 0; start--) {
-			c = text.charCodeAt(start);
-			if (c === 46) {
-				if (full) {
-					dot = true
-				} else
-					break;
-			} else {
-				if (dot) {
-					if (c === 9 || c === 32)
-						continue;
-					else
-						dot = false;
-				}
-				if (!isIdentifierChar(c))
-					break;
-			}
-		}
-		if (start + 1 < end)
-			return { text: text.substring(start + 1, end).replace(/\s/g, ''), range: Range.create(Position.create(line, start + 1), Position.create(line, end)) };
-		return { text: '', range: Range.create(position, position) };
-	}
-
 	public searchNode(name: string, position?: Position, kind?: SymbolKind)
 		: { node: DocumentSymbol, uri: string, ref?: boolean, scope?: DocumentSymbol, fn_is_static?: boolean } | undefined | false | null {
 		let node: DocumentSymbol | undefined, t: DocumentSymbol | undefined, uri = this.uri;
@@ -4641,13 +4611,19 @@ export class Lexer {
 	}
 
 	public buildContext(position: Position, full = true, ignoreright = false) {
-		let word = this.getWordAtPosition(position, full, ignoreright), linetext = '', pre = '', suf = '';
-		let kind: SymbolKind = SymbolKind.Null, document = this.document, tokens = this.tokens;
-		linetext = document.getText(Range.create(word.range.start.line, 0, word.range.end.line + 1, 0)).trimRight();
-		let ttk: Token | undefined = tokens[document.offsetAt(word.range.start)];
-		if (full && ttk) {
-			if (ttk.content === '.' && ttk.type !== 'TK_OPERATOR') {
-				let text = '', end = ttk.offset, tk = ttk, lk = ttk.previous_token;
+		let kind: SymbolKind = SymbolKind.Null, document = this.document, tokens = this.tokens, { line, character } = position;
+		let linetext = document.getText(Range.create(line, 0, line + 1, 0)).trimRight(), pre = '', suf = '';
+		let start = character;
+		for (; --start >= 0 && isIdentifierChar(linetext.charCodeAt(start)););
+		if (!ignoreright)
+			while (isIdentifierChar(linetext.charCodeAt(character)))
+				character++;
+		let text = linetext.substring(++start, character), range = Range.create(line, start, line, character);
+		let off = document.offsetAt(range.start), token = tokens[off];
+		if (full) {
+			let pt = token ? token.previous_token : tokens[off - 1];
+			if (pt?.content === '.' && pt.type !== 'TK_OPERATOR') {
+				let s = '', end = pt.offset, tk = pt, lk = pt.previous_token;
 				let ps: any = { ')': 0, ']': 0, '}': 0 };
 				while (lk) {
 					switch (lk.type) {
@@ -4685,41 +4661,41 @@ export class Lexer {
 				if (ps[')'] > 0 || ps[']'] > 0 || ps['}'] > 0) tk = EMPTY_TOKEN;
 				if (tk.type === 'TK_WORD' || tk.type.startsWith('TK_START_') || (tk.content === '%' && tk.next_pair_pos)) {
 					let ttk = tk;
-					text = tk.content, tk = tokens[tk.next_token_offset];
+					s = tk.content, tk = tokens[tk.next_token_offset];
 					while (tk.offset < end) {
 						switch (tk.type) {
-							case 'TK_DOT': text += '.', tk = tokens[tk.next_token_offset]; break;
-							case 'TK_STRING': text += '""', tk = tokens[tk.next_token_offset]; break;
-							case 'TK_START_BLOCK': text += ' {}', tk = tokens[tk.next_pair_pos as number]; break;
+							case 'TK_DOT': s += '.', tk = tokens[tk.next_token_offset]; break;
+							case 'TK_STRING': s += '""', tk = tokens[tk.next_token_offset]; break;
+							case 'TK_START_BLOCK': s += ' {}', tk = tokens[tk.next_pair_pos as number]; break;
 							case 'TK_START_EXPR':
 								if (!tk.prefix_is_whitespace) {
-									text += tk.content === '[' ? '[]' : '()';
+									s += tk.content === '[' ? '[]' : '()';
 									tk = tokens[tk.next_pair_pos as number];
 									tk = tokens[tk.next_token_offset as number];
 									break;
 								}
-							default: text += (tk.prefix_is_whitespace ? ' ' : '') + tk.content, tk = tokens[tk.next_token_offset]; break;
+							default: s += (tk.prefix_is_whitespace ? ' ' : '') + tk.content, tk = tokens[tk.next_token_offset]; break;
 						}
 					}
-				} else text = '#any';
-				word.range.start = document.positionAt(ttk.offset);
-				word.text = text + word.text;
+					range.start = document.positionAt(ttk.offset);
+				} else s = '#any';
+				text = s + '.' + text;
 			}
-			if (word.text.includes('.'))
-				ttk = tokens[document.offsetAt(this.getWordAtPosition(position, false, true).range.start)];
 		}
-		if (word.range.start.character > 0)
-			pre = this.document.getText(Range.create(word.range.start.line, 0, word.range.start.line, word.range.start.character)).trimLeft();
-		suf = this.document.getText(Range.create(word.range.end.line, word.range.end.character, word.range.end.line + 1, 0)).trimRight();
-		if (ttk) {
-			if (ttk.type === 'TK_WORD') {
-				let sk = ttk.semantic, symbol = ttk.symbol, fc: FuncNode;
+		if (!token && linetext.charAt(start - 1) === '#')
+			token = tokens[--off];
+		if (range.start.character > 0)
+			pre = this.document.getText(Range.create(range.start.line, 0, range.start.line, range.start.character)).trimLeft();
+		suf = this.document.getText(Range.create(range.end.line, range.end.character, range.end.line + 1, 0)).trimRight();
+		if (token) {
+			if (token.type === 'TK_WORD') {
+				let sk = token.semantic, symbol = token.symbol, fc: FuncNode;
 				if (symbol) {
 					kind = symbol.kind;
 					if (kind === SymbolKind.Class)
-						word.text = (symbol as ClassNode).full;
+						text = (symbol as ClassNode).full;
 					else if (kind === SymbolKind.Property || kind === SymbolKind.Method)
-						word.text = (fc = symbol as FuncNode).full.replace(/^\((\S+)\).*$/i, m =>
+						text = (fc = symbol as FuncNode).full.replace(/^\((\S+)\).*$/i, (...m) =>
 							`${fc.static ? m[1] : m[1].replace(/([^.]+)$/, '@$1')}.${fc.name}`);
 				} else if (sk) {
 					switch (sk.type) {
@@ -4731,21 +4707,20 @@ export class Lexer {
 						case SemanticTokenTypes.variable: kind = SymbolKind.Variable; break;
 					}
 				} else
-					kind = ttk.previous_token?.type === 'TK_DOT' ? SymbolKind.Property : SymbolKind.Variable;
-			} else if (ttk.type === 'TK_LABEL')
+					kind = token.previous_token?.type === 'TK_DOT' ? SymbolKind.Property : SymbolKind.Variable;
+			} else if (token.type === 'TK_LABEL')
 				kind = SymbolKind.Field;
 		}
-		return { text: word.text, range: word.range, kind, pre, suf, linetext, token: ttk };
+		return { text, range, kind, pre, suf, linetext, token };
 	}
 
 	public getNodeAtPosition(position: Position): DocumentSymbol | undefined {
-		let node: DocumentSymbol | undefined, context = this.buildContext(position);
+		let context = this.buildContext(position);
 		if (context) {
 			let t = this.searchNode(context.text.toLowerCase(), context.range.end, context.kind);
 			if (t)
-				node = t.node;
+				return t.node;
 		}
-		return node;
 	}
 
 	public searchScopedNode(position: Position, root?: DocumentSymbol[]): DocumentSymbol | undefined {

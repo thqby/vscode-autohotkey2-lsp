@@ -538,21 +538,28 @@ function getDllExport(paths: string[], onlyone = false) {
 	return Object.keys(funcs);
 }
 
-function getRCDATA(path: string | undefined) {
-	let exe = ahkpath_cur || extsettings.InterpreterPath;
-	let uri = URI.from({ scheme: 'ahkres', path: `${exe}@${path}.ahk` }).toString().toLowerCase();
+let curPERCDATA: { exe: string, data: Map<number | string, Buffer> } | undefined = undefined;
+function getRCDATA(name: string | undefined) {
+	let exe = ahkpath_cur || extsettings.InterpreterPath, path = `${exe}:${name}`;
+	let uri = URI.from({ scheme: 'ahkres', path }).toString().toLowerCase();
 	if (lexers[uri])
-		return { uri, path: `${exe}?${path}`, data: lexers[uri] };
+		return { uri, path };
 	if (!existsSync(exe))
 		return undefined;
-	let rc = new PEFile(exe).getResource(RESOURCE_TYPE.RCDATA);
-	if (path === undefined)
+	exe = exe.toLowerCase();
+	let rc: { [name: string]: Buffer } = curPERCDATA?.exe === exe ? curPERCDATA.data :
+		(curPERCDATA = { exe, data: new PEFile(exe).getResource(RESOURCE_TYPE.RCDATA) }).data;
+	if (!name || !rc)
 		return rc;
-	let data = rc?.get(path.startsWith('#') ? parseInt(path.substring(1)) : path);
+	let data = rc[name];
 	if (data) {
-		let doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, data));
-		doc.parseScript();
-		return { uri, path: `${exe}?${path}`, data: doc };
+		try {
+			let doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
+			doc.parseScript();
+			return { uri, path };
+		} catch {
+			delete rc[name];
+		}
 	}
 	return undefined;
 }

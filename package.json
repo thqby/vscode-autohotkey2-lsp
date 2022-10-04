@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.6.6",
+	"version": "1.6.7",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -225,56 +225,67 @@
 		},
 		"commands": [
 			{
+				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
 				"command": "ahk2.debug",
 				"title": "%ahk2.debug%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "!isWeb",
 				"command": "ahk2.debug.attach",
 				"title": "%ahk2.debug.attach%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
 				"command": "ahk2.debug.params",
 				"title": "%ahk2.debug.params%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
 				"command": "ahk2.run",
 				"title": "%ahk2.run%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
 				"command": "ahk2.selection.run",
 				"title": "%ahk2.selection.run%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
 				"command": "ahk2.stop",
 				"title": "%ahk2.stop%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
 				"command": "ahk2.compile",
 				"title": "%ahk2.compile%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
 				"command": "ahk2.help",
 				"title": "%ahk2.help%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "editorLangId == ahk2",
 				"command": "ahk2.generate.comment",
 				"title": "%ahk2.generatecomment%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "!isWeb",
 				"command": "ahk2.setinterpreter",
 				"title": "%ahk2.setinterpreter%",
 				"category": "ahk2"
 			},
 			{
+				"enablement": "editorLangId == ahk2",
 				"command": "ahk2.updateversioninfo",
 				"title": "%ahk2.updateversioninfo%",
 				"category": "ahk2"
@@ -283,7 +294,7 @@
 		"menus": {
 			"editor/context": [
 				{
-					"when": "editorLangId == ahk2 && !isWeb",
+					"when": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
 					"command": "ahk2.debug",
 					"group": "navigation@1"
 				},
@@ -293,7 +304,7 @@
 					"group": "navigation@2"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb",
+					"when": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
 					"command": "ahk2.debug.params",
 					"group": "navigation@2"
 				},
@@ -303,12 +314,12 @@
 					"group": "navigation@0"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection",
+					"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection && resourceScheme == file",
 					"command": "ahk2.run",
 					"group": "navigation@0"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb",
+					"when": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
 					"command": "ahk2.compile",
 					"group": "navigation@2"
 				},
@@ -391,8 +402,8 @@
 		"mocha": "^8.3.2",
 		"ts-loader": "^9.2.3",
 		"typescript": "^4.4.3",
-		"webpack": "^5.44.0",
-		"webpack-cli": "^4.7.2",
+		"webpack": "^5.74.0",
+		"webpack-cli": "^4.10.0",
 		"vsce": "^1.91.0"
 	},
 	"dependencies": {

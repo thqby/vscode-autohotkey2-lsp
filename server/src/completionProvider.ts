@@ -237,7 +237,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (ts.startsWith('*')) {
 					if (inBrowser)
 						return undefined;
-					(getRCDATA() as Map<string | number, string>)?.forEach((v, k) => additem(typeof k === 'string' ? k : `#${k}`, CompletionItemKind.File));
+					for (let k in getRCDATA() ?? {})
+						additem(k, CompletionItemKind.File);
 					return items;
 				}
 				ts = ts.replace(/`;/g, ';');
@@ -268,7 +269,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								else
 									cpitem.insertText = cpitem.label + lchar;
 							}
-						} catch (err) { };
+						} catch { };
 					}
 					if (pre.includes(':'))
 						break;

@@ -15,7 +15,7 @@ export async function codeActionProvider(params: CodeActionParams): Promise<Mayb
 			for (const it of readdirSync(path)) {
 				try {
 					if (reg.test(it)) includes.push(`#Include '${path}${it}'`);
-				} catch (err) { };
+				} catch { };
 			}
 			let textEdit: TextEdit = { range: rg, newText: includes.join('\n') };
 			let act: any = { title: codeaction.include(path + '*' + t[2]), edit: { changes: {} }, kind: CodeActionKind.QuickFix };

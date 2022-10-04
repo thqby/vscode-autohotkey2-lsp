@@ -385,7 +385,7 @@ export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
 export function set_ahkpath(path: string) { ahkpath_cur = path; }
 export function set_dirname(dir: string) { dirname = dir.replace(/[/\\]$/, ''); }
-export function set_locale(str?: string) { if (str) locale = str; }
+export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }
 export function set_Workfolder(folders?: string[]) { workspaceFolders = folders || []; }
 
 export async function sleep(ms: number) {

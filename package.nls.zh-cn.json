@@ -62,7 +62,7 @@
 	"diagnostic.propemptyparams": "动态属性不允许使用空[]",
 	"diagnostic.propnotinit": "属性声明未初始化",
 	"diagnostic.reservedworderr": "保留字'{0}'不得用作变量名",
-	"diagnostic.resourcenotfound": "未找到该资源",
+	"diagnostic.resourcenotfound": "未找到或无法解析资源",
 	"diagnostic.typemaybenot": "类型可能不是 '{0}'",
 	"diagnostic.unexpected": "意外的'{0}'",
 	"diagnostic.unknown": "未知的{0}",

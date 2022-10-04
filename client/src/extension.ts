@@ -6,19 +6,20 @@
 import {
 	commands,
 	debug,
-	extensions,
+	DebugConfiguration,
 	ExtensionContext,
-	workspace,
-	window,
+	extensions,
+	languages,
 	QuickPickItem,
 	Range,
+	RelativePattern,
 	SnippetString,
 	StatusBarAlignment,
 	TextEditor,
-	RelativePattern,
 	Uri,
-	WorkspaceEdit,
-	DebugConfiguration
+	window,
+	workspace,
+	WorkspaceEdit
 } from 'vscode';
 import {
 	LanguageClient,
@@ -61,7 +62,6 @@ export async function activate(context: ExtensionContext) {
 
 	// Options to control the language client
 	let clientOptions: LanguageClientOptions = {
-		// Register the server for plain text documents
 		documentSelector: [{ language: 'ahk2' }],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
@@ -161,6 +161,10 @@ export async function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.updateversioninfo', () => updateVersionInfo()),
 		workspace.registerTextDocumentContentProvider('ahkres', {
 			async provideTextDocumentContent(uri: Uri, token) {
+				setTimeout(() => {
+					let it = workspace.textDocuments.find(it => it.uri.scheme === 'ahkres' && it.uri.path === uri.path);
+					it && languages.setTextDocumentLanguage(it, 'ahk2');
+				}, 100);
 				return await client.sendRequest('ahk2.getContent', uri.toString()) as string;
 			}
 		}),
@@ -418,23 +422,23 @@ async function begindebug(extlist: string[], debugexts: any, params = false, att
 				if (extname === 'zero-plusplus.vscode-autohotkey-debug')
 					if (ahkStatusBarItem.text.endsWith('[UIAccess]'))
 						config.useUIAVersion = true;
-					if (params) {
-						let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
-						if (input === undefined)
-							return;
-						if (input = input.trim()) {
-							let args: string[] = [];
-							input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
-								args.push(m[4] || m[2]);
-								return '';
-							});
-							config.args = args;
-						}
-					} else if (attach) {
-						config.request = 'attach';
-						config.name = 'AutoHotkey2 Attach';
-						delete config.program;
+				if (params) {
+					let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
+					if (input === undefined)
+						return;
+					if (input = input.trim()) {
+						let args: string[] = [];
+						input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
+							args.push(m[4] || m[2]);
+							return '';
+						});
+						config.args = args;
 					}
+				} else if (attach) {
+					config.request = 'attach';
+					config.name = 'AutoHotkey2 Attach';
+					delete config.program;
+				}
 				break;
 			}
 		debug.startDebugging(workspace.getWorkspaceFolder(editor.document.uri), config);
