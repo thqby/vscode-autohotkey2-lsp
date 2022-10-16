@@ -18,7 +18,7 @@
       "include": "#object_property"
     },
     {
-      "match": "(?<!\\.)((?i:catch))(\\s+\\(?\\s*(\\w+(\\s*,\\s*\\w+)*)?(\\s+((?i:as))\\s+(\\w+))?)?\\s*\\)?",
+      "match": "(?<!\\.)((?i:catch))(\\s+\\(?\\s*([\\w.]+(\\s*,\\s*[\\w.]+)*)?(\\s+((?i:as))\\s+(\\w+))?)?\\s*\\)?",
       "captures": {
         "1": {
           "name": "keyword.control.ahk2"
@@ -37,7 +37,7 @@
               "name": "punctuation.separator.comma.ahk2"
             },
             {
-              "match": "\\w+",
+              "match": "(?<!\\.)\\b\\w+\\b",
               "name": "entity.name.type.class.ahk2"
             }
           ]

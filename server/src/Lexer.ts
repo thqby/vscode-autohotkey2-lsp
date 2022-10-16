@@ -1532,6 +1532,23 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 							else addvariable(tk);
 							lk = tk, tk = get_token_ignore_comment();
+							if (tk.type === 'TK_DOT') {
+								nexttoken();
+								while (true) {
+									if (tk.type as string === 'TK_WORD') {
+										addprop(tk);
+										nexttoken();
+									} else if (tk.content === '%') {
+										_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+										parse_pair('%', '%');
+										nexttoken();
+									} else
+										break;
+									if (tk.type !== 'TK_DOT')
+										break;
+									else nexttoken();
+								}
+							}
 							if (tk.content === ',') {
 								lk = tk, tk = get_token_ignore_comment();
 								if (!allIdentifierChar.test(tk.content))
