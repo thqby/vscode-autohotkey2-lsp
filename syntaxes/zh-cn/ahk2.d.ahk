@@ -2628,7 +2628,7 @@ class Array extends Object {
 	Push(Values*) => void
 
 	/**
-	 * 追加值到数组的末尾.
+	 * 从数组中移除项目.
 	 */
 	RemoveAt(Index, Length := 1) => Any
 

@@ -2628,7 +2628,7 @@ class Array extends Object {
 	Push(Values*) => void
 
 	/**
-	 * Append the value to the end of the array.
+	 * Removes items from the array.
 	 */
 	RemoveAt(Index, Length := 1) => Any
 
