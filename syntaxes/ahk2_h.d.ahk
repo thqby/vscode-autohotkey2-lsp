@@ -173,6 +173,43 @@ ZipOptions(ZipHandle, Options) => Number
  */
 ZipRawMemory(AddOrBuf [, Size, Password]) => Buffer
 
+; dll/exe export functions
+; https://hotkeyit.github.io/v2/docs/commands/NewThread.htm
+NewThread(Script, CmdLine := '', Title := 'AutoHotkey') => Integer
+addScript(Script, WaitToExecute := 0, ThreadID := 0) => Integer
+ahkAssign(VarName, Value, ThreadID := 0) => Integer
+ahkExec(Script, ThreadID := 0) => Integer
+ahkExecuteLine(LinePtr, Mode, Wait, ThreadID := 0) => Integer
+ahkFindFunc(FuncName, ThreadID := 0) => Integer
+ahkFindLabel(LabelName, ThreadID := 0) => Integer
+ahkFunction(FuncName, Param1?, Param2?, Param3?, Param4?, Param5?, Param6?, Param7?, Param8?, Param9?, Param10?, ThreadID := 0) => Integer
+ahkGetVar(VarName, GetVar := 0, ThreadID := 0) => Integer
+ahkLabel(LabelName, NoWait := 0, ThreadID := 0) => Integer
+ahkPause(ChangeTo, ThreadID := 0) => Integer
+ahkPostFunction(FuncName, Param1?, Param2?, Param3?, Param4?, Param5?, Param6?, Param7?, Param8?, Param9?, Param10?, ThreadID := 0) => Integer
+ahkReady(ThreadID := 0) => Integer
+MinHookDisable(pHook) => Integer
+MinHookEnable(Target, Detour, &Original?) => Integer
+
+class Decimal {
+	/**
+	 * Sets the computation precision and tostring() precision
+	 * @param prec Significant digits, greater than zero only affects division
+	 * @param outputprec tostring() If it is greater than 0, it is reserved to n decimal places. If less than 0, retain n significant digits
+	 * @return Returns the old prec value
+	 */
+	static SetPrecision(prec := 20, outputprec := 0) => Integer
+
+	; Converts integer, float, and numeric strings to Decimal object
+	; Add, subtract, multiply and divide as with numbers
+	static Call(val?) => Decimal
+
+	ToString() => String
+
+	; Convert to ahk value, integers outside the __int64 range are converted to double
+	; Number(decimal_obj) => Integer | Float
+}
+
 class JSON {
 	static null => ComValue
 	static true => ComValue

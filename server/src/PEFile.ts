@@ -108,16 +108,13 @@ export class PEFile {
 		const imageData = this.imageData, resinfo = this.directoryEntry[DIRECTORY_ENTRY.IMAGE_DIRECTORY_ENTRY_RESOURCE];
 		if (!resinfo?.addr)
 			return;
-		const baseRva = resinfo.addr, dirs = [baseRva], resources: any = {};
 		if (types.length === 1 && this.resource[types[0]])
 			return this.resource[types[0]];
-		for (let type of types)
-			if (!this.resource[type])
-				resources[type] = this.resource[type] = [];
+		const baseRva = resinfo.addr, dirs = [baseRva], resources: any = {};
+		types.map(type => this.resource[type] ??= resources[type] = []);
+		resources[RESOURCE_TYPE.RCDATA] &&= this.resource[RESOURCE_TYPE.RCDATA] = {};
 		parseResourcesDirectory(baseRva);
-		for (let type of types)
-			if (!resources[type])
-				resources[type] = this.resource[type];
+		types.map(type => resources[type] ??= this.resource[type]);
 		return types.length === 1 ? resources[types[0]] : resources;
 
 		function parseResourcesDirectory(rva: number, level = 0): any {
@@ -132,14 +129,15 @@ export class PEFile {
 			const dirEntries = [], numberOfEntries = resourceDir.NumberOfIdEntries + resourceDir.NumberOfNamedEntries;
 			rva += 16
 			for (let i = 0; i < numberOfEntries; i++, rva += 8) {
-				let name = imageData.readUInt32LE(rva), offsetToData = imageData.readUInt32LE(rva + 4), entryName, entryId;
-				let entry = {
-					name, id: name & 0x0000ffff, pad: name & 0xffff0000, nameOffset: name & 0x7fffffff, offsetToData: offsetToData, dataIsDirectory: Boolean((offsetToData & 0x80000000) >> 31), offsetToDirectory: offsetToData & 0x7fffffff
-				};
-				if (level === 0 && !resources[entry.id])
+				let name = imageData.readUInt32LE(rva)
+				if (level === 0 && !resources[name & 0x0000ffff])
 					continue;
-				const nameIsString = Boolean((name & 0x80000000) >> 31);
-				if (nameIsString) {
+				let offsetToData = imageData.readUInt32LE(rva + 4), entry = {
+					name, id: name & 0x0000ffff, pad: name & 0xffff0000, nameOffset: name & 0x7fffffff,
+					offsetToData, dataIsDirectory: Boolean((offsetToData & 0x80000000) >> 31),
+					offsetToDirectory: offsetToData & 0x7fffffff
+				}, entryName, entryId;
+				if ((name & 0x80000000) >> 31) {	// nameIsString
 					const offset = baseRva + entry.nameOffset, length = imageData.readUInt16LE(offset);
 					entryName = imageData.slice(offset + 2, length * 2 + offset + 2).toString('utf16le');
 				} else
@@ -183,10 +181,10 @@ export class PEFile {
 							resources[10] = {};
 						let resource = resources[10];
 						lastEntry.directory?.entries.map((entrie: any) => {
-							const name = entrie.id !== undefined ? `#${entrie.id}` : entrie.name.toLowerCase();
+							const name = entrie.name ?? `#${entrie.id}`;
 							const rcdata = entrie.directory?.entries?.pop()?.data?.struct;
 							if (rcdata)
-								resource[name] = imageData.slice(rcdata.offsetToData, rcdata.offsetToData + rcdata.size);
+								resource[name.toLowerCase()] = imageData.slice(rcdata.offsetToData, rcdata.offsetToData + rcdata.size);
 						});
 					}
 				}

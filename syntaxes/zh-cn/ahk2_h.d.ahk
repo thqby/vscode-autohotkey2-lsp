@@ -173,6 +173,43 @@ ZipOptions(ZipHandle, Options) => Number
  */
 ZipRawMemory(AddOrBuf [, Size , Password]) => Buffer
 
+; dll/exe export functions
+; https://hotkeyit.github.io/v2/docs/commands/NewThread.htm
+NewThread(Script, CmdLine := '', Title := 'AutoHotkey') => Integer
+addScript(Script, WaitToExecute := 0, ThreadID := 0) => Integer
+ahkAssign(VarName, Value, ThreadID := 0) => Integer
+ahkExec(Script, ThreadID := 0) => Integer
+ahkExecuteLine(LinePtr, Mode, Wait, ThreadID := 0) => Integer
+ahkFindFunc(FuncName, ThreadID := 0) => Integer
+ahkFindLabel(LabelName, ThreadID := 0) => Integer
+ahkFunction(FuncName, Param1?, Param2?, Param3?, Param4?, Param5?, Param6?, Param7?, Param8?, Param9?, Param10?, ThreadID := 0) => Integer
+ahkGetVar(VarName, GetVar := 0, ThreadID := 0) => Integer
+ahkLabel(LabelName, NoWait := 0, ThreadID := 0) => Integer
+ahkPause(ChangeTo, ThreadID := 0) => Integer
+ahkPostFunction(FuncName, Param1?, Param2?, Param3?, Param4?, Param5?, Param6?, Param7?, Param8?, Param9?, Param10?, ThreadID := 0) => Integer
+ahkReady(ThreadID := 0) => Integer
+MinHookDisable(pHook) => Integer
+MinHookEnable(Target, Detour, &Original?) => Integer
+
+class Decimal {
+	/**
+	 * 设置计算精度和tostring()精度
+	 * @param prec 有效数字位数, 大于零只影响除法
+	 * @param outputprec tostring() 如果大于0, 则保留到小数点后n位. 如果小于0, 则保留n位有效数字
+	 * @return 返回旧的prec值
+	 */
+	static SetPrecision(prec := 20, outputprec := 0) => Integer
+
+	; 将整数、浮点数和数字字符串转换为Decimal对象
+	; 像数字一样加、减、乘、除
+	static Call(val?) => Decimal
+
+	ToString() => String
+
+	; 转换为ahk值, 在__int64范围之外的整数被转换为double
+	; Number(decimal_obj) => Integer | Float
+}
+
 class JSON {
 	static null => ComValue
 	static true => ComValue

@@ -77,6 +77,7 @@ export interface FuncNode extends DocumentSymbol {
 	labels: { [key: string]: DocumentSymbol[] }
 	declaration: { [name: string]: FuncNode | ClassNode | Variable };
 	returntypes?: { [exp: string]: any }
+	overwrite?: number
 }
 
 export interface ClassNode extends DocumentSymbol {
@@ -88,6 +89,7 @@ export interface ClassNode extends DocumentSymbol {
 	staticdeclaration: { [name: string]: FuncNode | ClassNode | Variable };
 	cache: DocumentSymbol[]
 	returntypes?: { [exp: string]: any }
+	overwrite?: number
 }
 
 export interface Variable extends DocumentSymbol {
@@ -688,12 +690,15 @@ export class Lexer {
 				if (this.d < 0)
 					return;
 				if (this.d & 2) {
+					let overwrite = this.uri.endsWith('/ahk2_h.d.ahk') ? 1 : 0, t: any;
 					this.children.map(it => {
 						switch (it.kind) {
 							case SymbolKind.Function:
 							case SymbolKind.Class:
+								(<FuncNode>it).overwrite = overwrite;
 								(<any>it).uri = this.uri;
-								ahkvars[it.name.toLowerCase()] = it as ClassNode;
+								if (!(t = ahkvars[_low = it.name.toLowerCase()]) || overwrite >= (t.overwrite ?? 0))
+									ahkvars[_low] = it;
 								break;
 						}
 					});
@@ -3908,16 +3913,20 @@ export class Lexer {
 			let next_mode = MODE.Expression;
 			if (token_text === '[') {
 
-				if (!input_wanted_newline && ['TK_WORD', 'TK_STRING', 'TK_END_EXPR'].includes(last_type)) {
-					set_mode(next_mode);
-					previous_flags.indentation_level = real_indentation_level();
-					print_token();
-					// indent();
-					flags.indentation_level = previous_flags.indentation_level + 1;
-					if (opt.space_in_paren) {
+				if (!input_wanted_newline) {
+					if (ck.previous_token?.callinfo)
 						output_space_before_token = true;
+					else if (['TK_WORD', 'TK_STRING', 'TK_END_EXPR'].includes(last_type)) {
+						set_mode(next_mode);
+						previous_flags.indentation_level = real_indentation_level();
+						print_token();
+						// indent();
+						flags.indentation_level = previous_flags.indentation_level + 1;
+						if (opt.space_in_paren) {
+							output_space_before_token = true;
+						}
+						return;
 					}
-					return;
 				}
 
 				if (last_type === 'TK_RESERVED')

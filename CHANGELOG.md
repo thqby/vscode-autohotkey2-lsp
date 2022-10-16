@@ -1,3 +1,9 @@
+## 1.6.8
+- 修复[#200](https://github.com/thqby/vscode-autohotkey2-lsp/issues/200)
+- 修复[#202](https://github.com/thqby/vscode-autohotkey2-lsp/issues/202)
+- 修复[#203](https://github.com/thqby/vscode-autohotkey2-lsp/issues/203)
+- 修复`MsgBox []`格式化错误
+
 ## 1.6.6
 - 增加了对在资源文件中的库的读取支持, `#include *libname`
 - 在ahk.exe选取列表移除有UIAccess特权的exe
