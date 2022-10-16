@@ -5663,8 +5663,10 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 				switch (m[1].toLowerCase()) {
 					case 'param':
 					case 'arg':
-						m[2].replace(/^\s*({(.*?)}\s+)?(\S+)(.*)$/, (...m) => {
+						m[2].replace(/^\s*({(.*?)}\s+)?(\[.*?\]|\S+)(.*)$/, (...m) => {
 							let t = m[4].replace(/^\s*[-—]\s*|\s*$/g, '');
+							if (m[3].startsWith('['))
+								m[3] = m[3].substring(1).replace(/\W.*$/, '');
 							s = `\`${m[3]}\`${m[2] ? `: *${m[2]}*` : ''}` + (t ? ' — ' + t : '');
 							name ?? details.push(`\n*@param* ${s}`);
 							(params[lastparam = m[3].toLowerCase()] ??= []).push(s);
