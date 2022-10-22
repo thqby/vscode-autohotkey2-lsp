@@ -114,7 +114,7 @@ connection.onInitialize((params: InitializeParams) => {
 
 	let locale, configs: AHKLSSettings = params.initializationOptions;
 	if (configs) {
-		locale = (configs as any).locale;
+		locale = configs.locale;
 		if (typeof configs.AutoLibInclude === 'string')
 			configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 		else if (typeof configs.AutoLibInclude === 'boolean')
@@ -147,16 +147,20 @@ connection.onInitialized(async () => {
 });
 
 connection.onDidChangeConfiguration(async change => {
-	if (hasConfigurationCapability) {
-		let newset: AHKLSSettings = await connection.workspace.getConfiguration('AutoHotkey2');
-		if (newset.CommentTags !== extsettings.CommentTags)
-			try {
-				update_commentTags(newset.CommentTags);
-			} catch (e: any) {
-				connection.console.error(e.message);
-			}
-		Object.assign(extsettings, newset);
+	let newset: AHKLSSettings | undefined = change?.settings;
+	if (hasConfigurationCapability && !newset)
+		newset = await connection.workspace.getConfiguration('AutoHotkey2');
+	if (!newset) {
+		connection.window.showWarningMessage('Failed to obtain the configuration');
+		return;
 	}
+	if (newset.CommentTags !== extsettings.CommentTags)
+		try {
+			update_commentTags(newset.CommentTags);
+		} catch (e: any) {
+			connection.console.error(e.message);
+		}
+	Object.assign(extsettings, newset);
 });
 
 documents.onDidOpen(async e => {

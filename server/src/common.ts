@@ -76,6 +76,7 @@ export enum LibIncludeType {
 }
 
 export interface AHKLSSettings {
+	locale?: string
 	InterpreterPath: string
 	AutoLibInclude: LibIncludeType
 	CommentTags: string

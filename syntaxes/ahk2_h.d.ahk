@@ -191,7 +191,7 @@ ahkReady(ThreadID := 0) => Integer
 MinHookDisable(pHook) => Integer
 MinHookEnable(Target, Detour, &Original?) => Integer
 
-class Decimal {
+class Decimal extends Number {
 	/**
 	 * Sets the computation precision and tostring() precision
 	 * @param prec Significant digits, greater than zero only affects division

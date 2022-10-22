@@ -191,7 +191,7 @@ ahkReady(ThreadID := 0) => Integer
 MinHookDisable(pHook) => Integer
 MinHookEnable(Target, Detour, &Original?) => Integer
 
-class Decimal {
+class Decimal extends Number {
 	/**
 	 * 设置计算精度和tostring()精度
 	 * @param prec 有效数字位数, 大于零只影响除法

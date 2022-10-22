@@ -49,7 +49,8 @@ Supports running on the Web, such as `Chrome/Edge`.
   - [Generate Comment](#generate-comment)
 - [Use in Web browser](#use-in-web-browser)
 - [Use in other editors](#use-in-other-editors)
-  - [(n)vim](#vim-and-neovim)
+  - [Vim and Neovim](#vim-and-neovim)
+  - [Sublime Text4](#sublime-text4)
 
 ## Language Features
 
@@ -193,17 +194,19 @@ visit https://github.dev or https://vscode.dev in `Chrome/Edge`, and install `th
 
 ## Use in other editors
 
+**Install [Node.js](https://nodejs.org/en/download/)**
+
 ### Vim and Neovim
 
-Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim)
+- Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim)
 ```bat
 cd $VIMRUNTIME\plugin
 git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 ```
 
-[Download lsp-server](#lsp-server-download)
+- [Download lsp-server](#lsp-server-download)
 
-Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
+- Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
 ```json
 {
 	"languageserver": {
@@ -214,11 +217,63 @@ Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configura
 				"autohotkey2"
 			],
 			"args": ["--node-ipc"],
-			"env": {
-				"AHK2_LS_CONFIG": "{\"locale\":\"en-us\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":0}"
+			"initializationOptions": {
+				"locale": "en-us", // or "zh-cn"
+				"AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
+				"CommentTags": "^;;\\s*(?<tag>.+)",
+				"CompleteFunctionParens": false,
+				"Diagnostics": {
+					"ClassStaticMemberCheck": true,
+					"ParamsCheck": true
+				},
+				"DisableV1Script": true,
+				"FormatOptions": {
+					"break_chained_methods": false,
+					"ignore_comment": false,
+					"indent_string": "\t",
+					"keep_array_indentation": true,
+					"max_preserve_newlines": 2,
+					"one_true_brace": "1", // or "0" or "-1"
+					"preserve_newlines": true,
+					"space_before_conditional": true,
+					"space_in_empty_paren": false,
+					"space_in_other": true,
+					"space_in_paren": false,
+					"wrap_line_length": 0
+				},
+				"InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+				"SymbolFoldingFromOpenBrace": false
 			}
 		}
 	}
+}
+```
+
+### Sublime Text4
+
+- `Package Control: Install Package`, and install [Sublime LSP](https://github.com/sublimelsp/LSP) plug-in
+
+- [Download lsp-server](#lsp-server-download)
+
+- `Preferences: LSP Settings`, add configuration information
+```json
+{
+	"clients": {
+		"lsp-ahk2": {
+			"enabled": true,
+			"command": [
+				"node",
+				"ahk2-lsp folder/server/dist/server.js",
+				"--stdio"
+			], // Update the PATH of nodejs and lsp-ahk2
+			"selector": "source.ahk2",
+			"schemes": ["file", "buffer", "res"],
+			"initializationOptions": {
+				// Same as initializationOptions for nvim
+			}
+		}
+	},
+	"semantic_highlighting": true
 }
 ```
 
@@ -250,7 +305,8 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析。
   - [生成注释](#生成注释)
 - [在Web浏览器中使用](#在web浏览器中使用)
 - [在其他编辑器中使用](#在其他编辑器中使用)
-  - [(n)vim](#nvim)
+  - [Vim和Neovim](#vim和neovim)
+  - [Sublime Text 4](#sublime-text-4)
 
 ## 语言特性
 
@@ -391,31 +447,85 @@ code
 
 ## 在其他编辑器中使用
 
-### (n)vim
+**安装[Node.js](https://nodejs.org/en/download/)**
 
-下载[coc.nvim插件](https://github.com/neoclide/coc.nvim)
+### Vim和Neovim
+
+- 下载[coc.nvim插件](https://github.com/neoclide/coc.nvim)
 ```bat
 cd $VIMRUNTIME\plugin
 git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 ```
 
-[下载lsp-server](#lsp-server-download)
+- [下载lsp-server](#lsp-server-download)
 
-打开(n)vim, 输入命令 `:CocConfig` 进入`coc.nvim`配置文件增加配置信息
+- 打开(n)vim, 输入命令 `:CocConfig` 进入`coc.nvim`配置文件增加配置信息
 ```json
 {
 	"languageserver": {
 		"autohotkey": {
-			"module": "plugin/coc.nvim/plugin/ahk2-lsp文件夹/server/dist/server.js",
+			"module": "plugin/coc.nvim/plugin/ahk2-lsp folder/server/dist/server.js",
 			"filetypes": [
 				"autohotkey",
 				"autohotkey2"
 			],
 			"args": ["--node-ipc"],
-			"env": {
-				"AHK2_LS_CONFIG": "{\"locale\":\"zh-cn\",\"InterpreterPath\":\"C:\\\\Program Files\\\\Autohotkey\\\\AutoHotkey.exe\",\"AutoLibInclude\":0}"
+			"initializationOptions": {
+				"locale": "zh-cn", // or "en-us"
+				"AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
+				"CommentTags": "^;;\\s*(?<tag>.+)",
+				"CompleteFunctionParens": false,
+				"Diagnostics": {
+					"ClassStaticMemberCheck": true,
+					"ParamsCheck": true
+				},
+				"DisableV1Script": true,
+				"FormatOptions": {
+					"break_chained_methods": false,
+					"ignore_comment": false,
+					"indent_string": "\t",
+					"keep_array_indentation": true,
+					"max_preserve_newlines": 2,
+					"one_true_brace": "1", // or "0" or "-1"
+					"preserve_newlines": true,
+					"space_before_conditional": true,
+					"space_in_empty_paren": false,
+					"space_in_other": true,
+					"space_in_paren": false,
+					"wrap_line_length": 0
+				},
+				"InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+				"SymbolFoldingFromOpenBrace": false
 			}
 		}
 	}
+}
+```
+
+### Sublime Text 4
+
+- `Package Control: Install Package`, 安装[Sublime LSP](https://github.com/sublimelsp/LSP)插件
+
+- [下载lsp-server](#lsp-server-download)
+
+- `Preferences: LSP Settings`, 增加lsp配置
+```json
+{
+	"clients": {
+		"lsp-ahk2": {
+			"enabled": true,
+			"command": [
+				"node",
+				"ahk2-lsp folder/server/dist/server.js",
+				"--stdio"
+			], // Update the PATH of nodejs and lsp-ahk2
+			"selector": "source.ahk2",
+			"schemes": ["file", "buffer", "res"],
+			"initializationOptions": {
+				// Same as initializationOptions for nvim
+			}
+		}
+	},
+	"semantic_highlighting": true
 }
 ```

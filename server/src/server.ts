@@ -32,8 +32,6 @@ set_locale(JSON.parse(process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFI
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
-	if (params.locale)
-		set_locale(params.locale);
 	set_Workfolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
@@ -118,8 +116,13 @@ connection.onInitialize((params: InitializeParams) => {
 		};
 	}
 
-	let configs: AHKLSSettings = process.env.AHK2_LS_CONFIG ? JSON.parse(process.env.AHK2_LS_CONFIG) : params.initializationOptions;
+	let locale, configs: AHKLSSettings | undefined;
+	if (process.env.AHK2_LS_CONFIG)
+		try { configs = JSON.parse(process.env.AHK2_LS_CONFIG); } catch { }
+	if (params.initializationOptions)
+		configs = Object.assign(configs ?? {}, params.initializationOptions);
 	if (configs) {
+		locale = configs.locale;
 		if (typeof configs.AutoLibInclude === 'string')
 			configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 		else if (typeof configs.AutoLibInclude === 'boolean')
@@ -138,6 +141,7 @@ connection.onInitialize((params: InitializeParams) => {
 			connection.window.showErrorMessage(setting.ahkpatherr());
 		}, 1000);
 	}
+	if (locale ??= params.locale) set_locale(locale);
 	return result;
 });
 
@@ -159,8 +163,8 @@ connection.onInitialized(async () => {
 });
 
 connection.onDidChangeConfiguration(async (change: any) => {
-	let newset: AHKLSSettings | undefined;
-	if (hasConfigurationCapability)
+	let newset: AHKLSSettings | undefined = change?.settings;
+	if (hasConfigurationCapability && !newset)
 		newset = await connection.workspace.getConfiguration('AutoHotkey2');
 	if (!newset) {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
