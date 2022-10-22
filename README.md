@@ -255,7 +255,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 
 - [Download lsp-server](#lsp-server-download)
 
-- `Preferences: LSP Settings`, add configuration information
+- `Preferences: LSP Settings`, add lsp configuration, language selector, and syntax highlighting. This is a simple example [syntax highlighting](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), save the file in a similar path `C:\Users\username\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
 ```json
 {
 	"clients": {
@@ -508,7 +508,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 
 - [下载lsp-server](#lsp-server-download)
 
-- `Preferences: LSP Settings`, 增加lsp配置
+- `Preferences: LSP Settings`, 增加lsp配置、语言选择器和语法高亮. 这是一个简单的[语法高亮示例](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), 存放在类似路径下 `C:\Users\username\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
 ```json
 {
 	"clients": {

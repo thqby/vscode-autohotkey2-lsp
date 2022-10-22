@@ -142,6 +142,9 @@ connection.onInitialize((params: InitializeParams) => {
 		}, 1000);
 	}
 	if (locale ??= params.locale) set_locale(locale);
+	loadlocalize();
+	initahk2cache();
+	loadahk2();
 	return result;
 });
 
@@ -308,9 +311,6 @@ connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
 connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
 documents.listen(connection);
 connection.listen();
-loadlocalize();
-initahk2cache();
-loadahk2();
 
 async function executeCommandProvider(params: ExecuteCommandParams) {
 	let args = params.arguments || [];
