@@ -995,7 +995,7 @@ export class Lexer {
 											(fc.semantic as SemanticToken).modifier = ((fc.semantic as SemanticToken).modifier || 0) | 1 << SemanticTokenModifiers.readonly;
 										break;
 									}
-									if (tk.content !== ':=') {
+									if (tk.content !== ':=' && tk.type as string !== 'TK_DOT') {
 										_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
 										if (next = false, !tk.topofline) {
 											tk = lk, lk = EMPTY_TOKEN;
