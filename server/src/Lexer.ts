@@ -4286,8 +4286,8 @@ export class Lexer {
 				output_space_before_token = true;
 			if (start_of_statement()) {
 				// The conditional starts the statement if appropriate.
-				if (token_text_low.match(/^(\+\+|--|%|!|~|not)$/)) {
-					output_space_before_token = true;
+				if (flags.declaration_statement && token_text_low.match(/^(\+\+|--|%|!|~|not)$/)) {
+					output_space_before_token = true, flags.last_word = '_';
 					print_token();
 					output_space_before_token = token_text_low === 'not';
 					return;
@@ -4295,6 +4295,8 @@ export class Lexer {
 			} else if (token_text === '=>') {
 				if (flags.mode === MODE.BlockStatement)
 					set_mode(MODE.Statement);
+				else if (is_conditional && flags.parent.mode === MODE.BlockStatement)
+					is_conditional = false;
 				indent();
 			} else if (token_text_low.match(/^(\+\+|--|%|!|~|not)$/) && need_newline()) {
 				print_newline(), print_token();

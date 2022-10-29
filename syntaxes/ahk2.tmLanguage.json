@@ -366,11 +366,15 @@
               "match": "(?<=(^\\s*(?i:static\\s+)?|,\\s*))\\w+(?=\\s*:=)",
               "captures": {
                 "0": {
-                  "match": "\\b(?i:__item)\\b",
-                  "name": "storage.type.metafunction.ahk2"
+                  "patterns": [
+                    {
+                      "match": "\\b(?i:__item)\\b",
+                      "name": "storage.type.metafunction.ahk2"
+                    }
+                  ],
+                  "name": "variable.other.property.ahk2"
                 }
-              },
-              "name": "variable.other.property.ahk2"
+              }
             },
             {
               "begin": "(?<=^\\s*(?i:static\\s+)?)(\\w+)(?=\\()",
