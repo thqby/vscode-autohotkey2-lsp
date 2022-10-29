@@ -1351,7 +1351,7 @@ export class Lexer {
 							next = true, line_begin_pos = tk.offset, result.push(...parse_line(undefined, undefined, 'until', 1));
 						break;
 					case 'for':
-						let nq = is_next('(');
+						let nq = is_next_char('(');
 						if (nq) nk = get_next_token();
 						while (nexttoken()) {
 							switch (tk.type) {
@@ -2655,7 +2655,7 @@ export class Lexer {
 					} else if (tk.type === 'TK_STRING') {
 						tpexp += ' #string';
 						strs?.push(tk);
-						if (b === '[' && is_next(']') && !tk.content.match(/\n|`n/))
+						if (b === '[' && is_next_char(']') && !tk.content.match(/\n|`n/))
 							addtext(tk.content.substring(1, tk.content.length - 1));
 					} else if (tk.content === '[') {
 						let pre = !!input.charAt(tk.offset - 1).match(/^(\w|\)|%|[^\x00-\x7f])$/);
@@ -3018,7 +3018,7 @@ export class Lexer {
 
 			function stop_parse(tk: Token, message = 'This might be a v1 script, and the lexer stops parsing.') {
 				if (!extsettings.DisableV1Script) {
-					if (tk.type === 'TK_WORD') {
+					if (tk.type === 'TK_WORD') do {
 						nexttoken();
 						while (' \t'.includes(input.charAt(parser_pos) || '\0'))
 							parser_pos++;
@@ -3027,7 +3027,7 @@ export class Lexer {
 							next_LF = input_length;
 						lk = tk, tk = createToken(input.substring(parser_pos, next_LF), 'TK_STRING', parser_pos, next_LF - parser_pos, 0);
 						parser_pos = next_LF;
-					}
+					} while (is_next_char(','));
 					return;
 				}
 				_this.clear(), parser_pos = input_length;
@@ -3306,16 +3306,11 @@ export class Lexer {
 			return ['break', 'continue', 'global', 'goto', 'local', 'return', 'static', 'throw'].includes(word);
 		}
 
-		function is_next(find: string): boolean {
-			let local_pos = parser_pos, l = find.length;
-			let s = input.substr(local_pos, l);
-			while (s !== find && whitespace.includes(s.charAt(0))) {
-				local_pos++;
-				if (local_pos >= input_length)
-					return false;
-				s = input.substr(local_pos, l);
-			}
-			return s === find;
+		function is_next_char(find_char: string): boolean {
+			let local_pos = parser_pos, c = input.charAt(local_pos);
+			while (c !== find_char && whitespace.includes(c) && ++local_pos < input_length)
+				c = input.charAt(local_pos);
+			return c === find_char;
 		}
 
 		function get_token_ignore_comment(depth = 0): Token {
@@ -4325,7 +4320,7 @@ export class Lexer {
 				if (!flags.in_case)
 					restore_mode();
 				indent(), print_token();
-				if (is_next('\n'))
+				if (is_next_char('\n'))
 					print_newline();
 				else output_space_before_token = space_in_other;
 				flags.in_case = false;
@@ -4367,7 +4362,7 @@ export class Lexer {
 				if (last_type === 'TK_COMMA' || last_type === 'TK_START_EXPR')
 					space_before = false;
 			} else if (token_text === '*') {
-				if (last_text === '(' || (last_type === 'TK_WORD' && (is_next(')') || is_next(']'))))
+				if (last_text === '(' || (last_type === 'TK_WORD' && (is_next_char(')') || is_next_char(']'))))
 					space_before = space_after = false;
 				else if (last_text === ',')
 					space_after = false;

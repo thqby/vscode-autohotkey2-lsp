@@ -1,3 +1,7 @@
+## 1.7.1
+- 修复[#205](https://github.com/thqby/vscode-autohotkey2-lsp/issues/205)
+- 修复[#206](https://github.com/thqby/vscode-autohotkey2-lsp/issues/206)
+
 ## 1.7.0
 - 更新lsp for sublime text4设置
 
