@@ -3339,7 +3339,8 @@ export class Lexer {
 
 			let offset = parser_pos - 1, _tk = _this.tokens[offset];
 			if (_tk && _tk.length) {
-				begin_line = false;
+				if (begin_line = Boolean(_tk.topofline && _tk.type.endsWith('_BLOCK')))
+					last_LF = offset;
 				parser_pos = _tk.skip_pos ?? offset + _tk.length;
 				if (lst = _tk, _tk.ignore) {
 					if (_tk.type === 'TK_START_EXPR') {
@@ -3741,7 +3742,7 @@ export class Lexer {
 			}
 
 			if (c === ';') {
-				let comment = '', comment_type = bg ? 'TK_COMMENT' : 'TK_INLINE_COMMENT', t: any, rg: Range, ignore = undefined;
+				let comment = '', comment_type = bg && '\n'.includes(input.charAt(last_LF)) ? 'TK_COMMENT' : 'TK_INLINE_COMMENT', t: any, rg: Range, ignore = undefined;
 				let next_LF = offset - 1, line: string, ln = 0;
 				while (true) {
 					parser_pos = next_LF, next_LF = input.indexOf('\n', parser_pos + 1);
