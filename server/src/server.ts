@@ -116,11 +116,17 @@ connection.onInitialize((params: InitializeParams) => {
 		};
 	}
 
-	let locale, configs: AHKLSSettings | undefined;
+	let configs: AHKLSSettings | undefined;
 	if (process.env.AHK2_LS_CONFIG)
 		try { configs = JSON.parse(process.env.AHK2_LS_CONFIG); } catch { }
 	if (params.initializationOptions)
 		configs = Object.assign(configs ?? {}, params.initializationOptions);
+	let locale = configs?.locale ?? params.locale;
+	if (locale)
+		set_locale(locale);
+	loadlocalize();
+	initahk2cache();
+	loadahk2();
 	if (configs) {
 		locale = configs.locale;
 		if (typeof configs.AutoLibInclude === 'string')
@@ -141,10 +147,6 @@ connection.onInitialize((params: InitializeParams) => {
 			connection.window.showErrorMessage(setting.ahkpatherr());
 		}, 1000);
 	}
-	if (locale ??= params.locale) set_locale(locale);
-	loadlocalize();
-	initahk2cache();
-	loadahk2();
 	return result;
 });
 
