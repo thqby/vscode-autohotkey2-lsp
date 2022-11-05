@@ -737,7 +737,7 @@ export class Lexer {
 		function parse_block(mode = 0, scopevar = new Map<string, any>(), classfullname: string = ''): DocumentSymbol[] {
 			const result: DocumentSymbol[] = [], document = _this.document, tokens = _this.tokens;
 			let _parent = scopevar.get('#parent') || _this, tk = _this.tokens[parser_pos - 1] ?? EMPTY_TOKEN, lk = tk.previous_token ?? EMPTY_TOKEN;
-			let blocks = 0, inswitch = 0, next = true, _low = '', _cm: Token | undefined, line_begin_pos: number | undefined;
+			let blocks = 0, next = true, _low = '', case_pos: number[] = [], _cm: Token | undefined, line_begin_pos: number | undefined;
 			let blockpos: number[] = [], tn: DocumentSymbol | undefined, m: RegExpMatchArray | string | null, o: any;
 			if (block_mode = true, mode !== 0)
 				blockpos.push(parser_pos - 1), delete tk.data;
@@ -765,9 +765,7 @@ export class Lexer {
 				return e === '=>' || (tp && e === '{');
 			}
 
-			function parse_brace(level = 0, _inswitch = 0) {
-				let last_switch = inswitch;
-				inswitch = _inswitch;
+			function parse_brace(level = 0) {
 				if (tk.type === 'TK_START_BLOCK') {
 					delete tk.data;
 					nexttoken(), next = false;
@@ -783,7 +781,7 @@ export class Lexer {
 								tk.type = 'TK_WORD', delete tk.semantic;
 						} else if (input.charAt(parser_pos) === ':') {
 							if ((whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content)) ||
-								(inswitch && tk.content.toLowerCase() === 'default')) {
+								(case_pos.length && tk.content.toLowerCase() === 'default')) {
 								if (_nk = tokens[parser_pos]) {
 									if ((tk.next_token_offset = _nk.next_token_offset) > 0)
 										tokens[_nk.next_token_offset].previous_token = tk;
@@ -1055,7 +1053,6 @@ export class Lexer {
 								else {
 									if (blockpos.length)
 										tokens[tk.previous_pair_pos = blockpos[blockpos.length - 1]].next_pair_pos = tk.offset;
-									inswitch = last_switch;
 									return;
 								}
 							}
@@ -1068,7 +1065,10 @@ export class Lexer {
 							break;
 
 						case 'TK_LABEL':
-							if (inswitch && tk.content.toLowerCase() === 'default:') {
+							if (case_pos.length && tk.content.toLowerCase() === 'default:') {
+								let last_case = case_pos.pop();
+								if (case_pos.push(tk.offset), last_case)
+									_this.addFoldingRange(last_case, lk.offset, 'case');
 								nexttoken(), next = false;
 								tk.topofline ||= -1;
 								break;
@@ -1437,10 +1437,13 @@ export class Lexer {
 						tk.type = 'TK_WORD', next = false
 						break;
 					case 'case':
-						if (inswitch && tk.topofline) {
+						if (case_pos.length && tk.topofline) {
+							let last_case = case_pos.pop();
+							if (case_pos.push(tk.offset), last_case)
+								_this.addFoldingRange(last_case, lk.offset, 'case');
 							nexttoken(), next = false;
 							if (tk.content !== ':' && !tk.topofline) {
-								inswitch = 2, result.push(...parse_line(undefined, ':', 'case', 1, 20)), inswitch = 1;
+								result.push(...parse_line(undefined, ':', 'case', 1, 20));
 								if (tk.content !== ':')
 									_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length), next = false;
 								else {
@@ -1489,9 +1492,16 @@ export class Lexer {
 								}
 							} else if (_low === 'switch') {
 								result.push(...parse_line(undefined, '{', _low, 0, 2));
-								if (tk.content === '{')
-									tk.previous_pair_pos = beginpos, next = true, blockpos.push(parser_pos - 1), parse_brace(++blocks, 1), nexttoken(), next = false;
-								else _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+								if (tk.content === '{') {
+									tk.previous_pair_pos = beginpos, next = true;
+									blockpos.push(parser_pos - 1);
+									case_pos.push(0);
+									parse_brace(++blocks);
+									let last_case = case_pos.pop();
+									if (last_case)
+										_this.addFoldingRange(last_case, lk.offset, 'case');
+									nexttoken(), next = false;
+								} else _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 							} else if (_low === 'if' || _low === 'while') {
 								result.push(...parse_line(undefined, '{', _low, 1));
 								parse_body(undefined, beginpos);
@@ -2189,7 +2199,7 @@ export class Lexer {
 										ternarys.push(tk.offset);
 								} else if (tk.content === ':')
 									if (ternarys.pop() === undefined) {
-										if (end === ':' || inswitch === 2) {
+										if (end === ':') {
 											next = false, tpexp = tpexp.slice(0, -2);
 											types[tpexp] = true;
 											if (tpexp === ' #object' && objk)
