@@ -3752,7 +3752,7 @@ export class Lexer {
 			}
 
 			if (c === ';') {
-				let comment = '', comment_type = bg && '\n'.includes(input.charAt(last_LF)) ? 'TK_COMMENT' : 'TK_INLINE_COMMENT', t: any, rg: Range, ignore = undefined;
+				let comment = '', comment_type = bg && '\n'.includes(input.charAt(last_LF)) ? 'TK_COMMENT' : (bg = 0, 'TK_INLINE_COMMENT'), t: any, rg: Range, ignore = undefined;
 				let next_LF = offset - 1, line: string, ln = 0;
 				while (true) {
 					parser_pos = next_LF, next_LF = input.indexOf('\n', parser_pos + 1);

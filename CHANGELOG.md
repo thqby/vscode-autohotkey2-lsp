@@ -1,3 +1,8 @@
+## 1.7.2
+- 修复[#208](https://github.com/thqby/vscode-autohotkey2-lsp/issues/208)
+- 修复[#210](https://github.com/thqby/vscode-autohotkey2-lsp/issues/210)
+- 支持`case`和`default`块折叠[#209](https://github.com/thqby/vscode-autohotkey2-lsp/issues/209)
+
 ## 1.7.1
 - 修复[#205](https://github.com/thqby/vscode-autohotkey2-lsp/issues/205)
 - 修复[#206](https://github.com/thqby/vscode-autohotkey2-lsp/issues/206)

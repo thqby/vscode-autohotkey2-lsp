@@ -52,7 +52,11 @@
 					".ah2",
 					".ahk2"
 				],
-				"configuration": "./ahk2.configuration.json"
+				"configuration": "./ahk2.configuration.json",
+				"icon": {
+					"dark": "icon_filetype.png",
+					"light": "icon_filetype.png"
+				}
 			},
 			{
 				"id": "ahk2-output",
