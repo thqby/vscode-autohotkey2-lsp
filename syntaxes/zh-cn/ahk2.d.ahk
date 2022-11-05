@@ -61,14 +61,14 @@ Chr(Number) => String
 
 /**
  * 指定零个或多个以下项目: Coords, WhichButton, ClickCount, DownOrUp 和/或 Relative. 每个项目之间至少用一个空格, 制表符和/或逗号隔开. 各项可以以任何顺序出现, 除了 ClickCount 必须出现在 Coords 的右边(如果存在).
- * Coords: 在点击前, 鼠标光标要移动到的 X 和 Y 坐标. 例如, Click "100 200" 在特定位置点击鼠标左键. 坐标相对于活动窗口, 除非曾使用 CoordMode 更改了这个设置. 如果省略, 则使用光标的当前位置.
- * WhichButton: Left(默认), Right, Middle(或只是这些名称的第一个字母); 或鼠标第四或第五个按钮(X1 或 X2). 例如, Click "Right" 在鼠标光标的当前位置点击鼠标右键. Left 和 Right 对应鼠标的主按钮和次按钮. 如果用户通过系统设置交换了按钮, 按钮的物理位置被替换, 但效果保持不变.
- * WhichButton 也可以是 WheelUp 或 WU 来向上转动滚轮(远离你), 或 WheelDown 或 WD 来向下转动滚轮(朝向你). 也可以指定 WheelLeft(或 WL) 或 WheelRight(或 WR). 对于 ClickCount, 指定滚轮要转动的格数. 然而, 有些程序不接受鼠标滚轮转动的格数 ClickCount 大于 1 的情况. 对于这些程序, 可以通过 Loop 等方法多次使用 Click 函数.
- * ClickCount: 鼠标要点击的次数. 例如, Click 2 在鼠标光标位置双击. 如果省略, 那么点击鼠标一次. 如果指定了 Coords, 那么 ClickCount 必须放在坐标后面. 指定零(0) 来移动鼠标而不进行点击; 例如, Click "100 200 0".
- * DownOrUp: 这部分通常省略, 此时每次点击包括按下事件和接着的弹起事件. 否则, 指定单词 Down(或字母 D) 来按下鼠标按钮不放. 之后, 使用单词 Up(或字母 U) 来释放鼠标按钮. 例如, Click "Down" 按下鼠标左键不放.
- * Relative: 单词 Rel 或 Relative 会把指定的 X 和 Y 坐标视为距离当前鼠标位置的偏移. 换句话说, 会把光标从当前位置往右移动 X 像素(负值则往左) 且往下移动 Y 像素(负值则往上).
+ * - Coords: 在点击前, 鼠标光标要移动到的 X 和 Y 坐标. 例如, Click "100 200" 在特定位置点击鼠标左键. 坐标相对于活动窗口, 除非曾使用 CoordMode 更改了这个设置. 如果省略, 则使用光标的当前位置.
+ * - WhichButton: Left(默认), Right, Middle(或只是这些名称的第一个字母); 或鼠标第四或第五个按钮(X1 或 X2). 例如, Click "Right" 在鼠标光标的当前位置点击鼠标右键. Left 和 Right 对应鼠标的主按钮和次按钮. 如果用户通过系统设置交换了按钮, 按钮的物理位置被替换, 但效果保持不变.
+ * - WhichButton 也可以是 WheelUp 或 WU 来向上转动滚轮(远离你), 或 WheelDown 或 WD 来向下转动滚轮(朝向你). 也可以指定 WheelLeft(或 WL) 或 WheelRight(或 WR). 对于 ClickCount, 指定滚轮要转动的格数. 然而, 有些程序不接受鼠标滚轮转动的格数 ClickCount 大于 1 的情况. 对于这些程序, 可以通过 Loop 等方法多次使用 Click 函数.
+ * - ClickCount: 鼠标要点击的次数. 例如, Click 2 在鼠标光标位置双击. 如果省略, 那么点击鼠标一次. 如果指定了 Coords, 那么 ClickCount 必须放在坐标后面. 指定零(0) 来移动鼠标而不进行点击; 例如, Click "100 200 0".
+ * - DownOrUp: 这部分通常省略, 此时每次点击包括按下事件和接着的弹起事件. 否则, 指定单词 Down(或字母 D) 来按下鼠标按钮不放. 之后, 使用单词 Up(或字母 U) 来释放鼠标按钮. 例如, Click "Down" 按下鼠标左键不放.
+ * - Relative: 单词 Rel 或 Relative 会把指定的 X 和 Y 坐标视为距离当前鼠标位置的偏移. 换句话说, 会把光标从当前位置往右移动 X 像素(负值则往左) 且往下移动 Y 像素(负值则往上).
  */
-Click([Options]) => void
+Click(Options*) => void
 
 /**
  * 等待直到剪贴板包含数据.

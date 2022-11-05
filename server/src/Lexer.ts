@@ -5735,7 +5735,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 	if (name !== undefined)
 		s = params[name.toLowerCase()]?.join('\n') ?? '', detail = s + '\n\n' + details.join('\n');
 	else if (!overloads && ols.length)
-		detail = '*@overload*\n```ahk2\n' + ols.join('\n') + '\n```\n' + (details.length ? '___\n' + details.join('\n') : '');
+		detail = '*@overload*\n```ahk2\n' + ols.map(it => it.replace(/^_[^\W]*/, node.name)).join('\n') + '\n```\n' + (details.length ? '___\n' + details.join('\n') : '');
 	else detail = details.join('\n');
 	return detail;
 }
