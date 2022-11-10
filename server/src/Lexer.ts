@@ -1230,10 +1230,10 @@ export class Lexer {
 									ex = tk.content;
 									result.push(Variable.create(tk.content, SymbolKind.Variable, rg = make_range(tk.offset, tk.length)));
 									while (parser_pos < input_length && input.charAt(parser_pos) === '.') {
-										parser_pos++;
+										get_next_token();
 										tk = get_next_token();
 										if (tk.type === 'TK_WORD')
-											ex += '.' + tk.content;
+											ex += '.' + tk.content, addprop(tk);
 										else
 											break;
 									}
@@ -5036,13 +5036,13 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 						getmems(dc, nd, staticmem);
 						break;
 					} else {
-						let bak = v;
+						let bak = v, bakhasget = Object.assign({}, hasget);
 						v = {};
 						getmems(dc, nd, true);
 						p.splice(0, 1);
 						if ((nd = v[p[0]]) && nd.kind !== SymbolKind.Class)
 							nd = undefined;
-						v = bak;
+						v = bak, hasget = bakhasget;
 					}
 				}
 			}
