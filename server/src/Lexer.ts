@@ -141,6 +141,7 @@ export interface FormatOptions {
 	space_in_empty_paren?: boolean
 	space_in_other?: boolean
 	space_in_paren?: boolean
+	white_space_before_inline_comment?: string
 	wrap_line_length?: number
 }
 
@@ -345,10 +346,12 @@ export class Lexer {
 				space_in_empty_paren: false,
 				space_in_other: true,
 				space_in_paren: false,
-				wrap_line_length: 0
+				wrap_line_length: 0,
+				white_space_before_inline_comment: options?.indent_string
 			} as FormatOptions, options);
 			if (isNaN(opt.one_true_brace = Number(opt.one_true_brace)))
 				delete opt.one_true_brace;
+			opt.white_space_before_inline_comment ||= '\t';
 
 			last_type = last_last_text = last_text = '', begin_line = true, lst = EMPTY_TOKEN;
 			last_LF = -1, end_pos = input_length, ck = _this.get_token(0);
@@ -1656,11 +1659,20 @@ export class Lexer {
 					} else
 						addvariable(lk), parse_funccall(SymbolKind.Function, c);
 				} else {
-					// if (tk.type === 'TK_UNKNOWN')
-					// 	_this.addDiagnostic(diagnostic.unknown(tk.content), tk.offset, tk.length);
+					let bak = tk.content === '=' ? tk : undefined, tp: any = bak ? {} : undefined;
 					reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN, next = false;
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
-					result.push(...parse_line());
+					result.push(...parse_line(tp));
+					if (bak) {
+						for (let [expr, i] of Object.entries(tp)) {
+							if (i === 1) {
+								let q = expr.indexOf('?');
+								if (q === -1 || expr.indexOf(':', q) === -1)
+									_this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=').toLowerCase()}`, bak.offset, bak.length);
+								break;
+							}
+						}
+					}
 				}
 			}
 
@@ -1671,6 +1683,8 @@ export class Lexer {
 						return stop_parse(fc);
 					_this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
 				}
+				if (tk.type === 'TK_OPERATOR' && !tk.content.match(/^(not|\+\+?|--?|!|~|%|&)$/i))
+					_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 				sub = parse_line();
 				result.push(...sub);
 				fc.semantic = { type: type === SymbolKind.Function ? SemanticTokenTypes.function : SemanticTokenTypes.method };
@@ -1756,7 +1770,7 @@ export class Lexer {
 						next = false;
 						if (types)
 							if (o = Object.keys(o).pop()?.toLowerCase())
-								types[o] = true;
+								types[o] = info.count;
 						break;
 					} else if (end === tk.content)
 						break;
@@ -4425,7 +4439,7 @@ export class Lexer {
 				return token_text = '';
 			if (just_added_newline())
 				output_lines.pop();
-			output_lines[output_lines.length - 1].text.push((indent_string || '\t'), token_text);
+			output_lines[output_lines.length - 1].text.push(opt.white_space_before_inline_comment as string, token_text);
 			print_newline(true);
 			flags.had_comment = 1;
 		}
@@ -5763,7 +5777,7 @@ export function samenameerr(a: DocumentSymbol, b: DocumentSymbol): string {
 				return diagnostic.assignerr(a.kind === SymbolKind.Function ? 'Func' : 'Class', a.name);
 			case SymbolKind.Function:
 				if (a.kind === SymbolKind.Variable)
-					return diagnostic.funcassignerr();
+					return diagnostic.assignerr('Func', a.name);
 				return diagnostic.conflictserr('function', 'Class', a.name);
 			case SymbolKind.Class:
 				if (a.kind === SymbolKind.Function)

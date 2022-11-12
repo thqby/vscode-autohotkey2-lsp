@@ -229,7 +229,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 			if ((stk = tk.semantic) === undefined) {
 				tk.semantic = stk = { type: st };
 				if (it.kind === SymbolKind.Variable && (<Variable>it).def && (kind === SymbolKind.Class || kind === SymbolKind.Function))
-					doc.addDiagnostic(samenameerr(it, { kind } as DocumentSymbol), offset, it.name.length);
+					doc.addDiagnostic(samenameerr(it, { kind } as DocumentSymbol), offset, it.name.length), delete (<Variable>it).def;
 			} else if (kind !== undefined)
 				stk.type = st;
 			if (st < 3)

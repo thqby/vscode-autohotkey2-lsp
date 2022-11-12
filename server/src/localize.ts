@@ -28,10 +28,10 @@ export namespace diagnostic {
 	export const declarationerr = localize('diagnostic.declarationerr', 'Unexpected declaration');
 	export const defaultvalmissing = localize('diagnostic.defaultvalmissing', 'Parameter default required. Specifically: \'{0}\'');
 	export const deprecated = localize('diagnostic.deprecated', 'Using \'{0}\' instead of \'{1}\'');
+	export const didyoumean = localize('diagnostic.didyoumean', 'Did you mean to use \'{0}\'?');
 	export const dupdeclaration = localize('diagnostic.dupdeclaration', 'Duplicate declaration');
 	export const duplabel = localize('diagnostic.duplabel', 'Duplicate label');
 	export const filenotexist = localize('diagnostic.filenotexist', '\'{0}\' not exist');
-	export const funcassignerr = localize('diagnostic.funcassignerr', 'This Func cannot be assigned a value');
 	export const funccallerr = localize('diagnostic.funccallerr', 'Function calls require a space or \'(\',  use comma only between parameters');
 	export const globalconflicts = localize('diagnostic.globalconflicts', 'This global declaration conflicts with an existing {0}');
 	export const hotdeferr = localize('diagnostic.hotdeferr', 'Hotkeys/hotstrings cannot be defined in functions/classes');
@@ -81,7 +81,7 @@ export function loadlocalize() {
 	}
 }
 
-function localize(key: string, defValue: string): Function {
+function localize(key: string, defValue: string): (...args: any[]) => string {
 	return (...args: string[]) => {
 		if (args.length)
 			return format(getString(key, defValue), ...args);
