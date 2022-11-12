@@ -1873,8 +1873,8 @@
           "name": "punctuation.square.end.ahk2"
         },
         {
-          "match": "\\?(?=\\s*([,)\\]}]|$))",
-          "name": "punctuation.optional.ahk2"
+          "match": "\\?(?=\\s*[,)\\]}])",
+          "name": "keyword.operator.optional.ahk2"
         },
         {
           "match": "\\?|:(?!\\:)",
