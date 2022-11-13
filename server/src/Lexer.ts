@@ -5008,7 +5008,10 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 				path = path.replace(m[0], <string>pathenv[a_]);
 			else return;
 		}
-		if (path.indexOf(':') < 0) path = resolve(workdir, path);
+		if (path.indexOf(':') < 0)
+			path = resolve(workdir, path);
+		else if (path.includes('..'))
+			path = resolve(path);
 		uri = URI.file(path).toString().toLowerCase();
 		return { uri, path };
 	}

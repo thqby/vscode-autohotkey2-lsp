@@ -131,6 +131,8 @@ export function openFile(path: string, showError = true): TextDocument | undefin
 export function restorePath(path: string): string {
 	if (!existsSync(path))
 		return path;
+	if (path.includes('..'))
+		path = resolve(path);
 	let dirs = path.toUpperCase().split('\\'), i = 1, s = dirs[0];
 	while (i < dirs.length) {
 		for (const d of readdirSync(s + '\\')) {
