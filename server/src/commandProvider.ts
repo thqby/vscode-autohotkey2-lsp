@@ -1,19 +1,35 @@
 import { basename, extname, relative, resolve } from 'path';
 import { Position, Range, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { cleardetectcache, detectExp, FuncNode } from './Lexer';
-import { connection, lexers, pathenv, restorePath } from './common';
+import { connection, extsettings, lexers, pathenv, restorePath } from './common';
 
-export var noparammoveright: boolean = false;
+function checkCommand(cmd: string) {
+	if (extsettings.commands?.includes(cmd))
+		return true;
+	connection.console.warn(`Command '${cmd}' is not implemented!`);
+	return false;
+}
 
 export async function executeCommands(cmds: { command: string, args?: any[], wait?: boolean }[]) {
-	return connection.sendRequest('ahk2.executeCommands', [cmds]);
+	if (!checkCommand('ahk2.executeCommands'))
+		return;
+	return connection.sendRequest('ahk2.executeCommands', cmds);
 }
 
 export function insertSnippet(value: string, range?: Range) {
+	if (!checkCommand('ahk2.insertSnippet'))
+		return;
 	connection.sendRequest('ahk2.insertSnippet', [value, range]);
 }
 
+export function setTextDocumentLanguage(uri: string, lang?: string) {
+	if (extsettings.commands?.includes('ahk2.setTextDocumentLanguage'))
+		connection.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
+}
+
 export async function fixinclude(libpath: string, docuri: string) {
+	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+		return;
 	let doc = lexers[docuri], text = '', line = -1, curdir = '';
 	for (const p of doc.libdirs.slice(1)) {
 		if (libpath.startsWith(p + '\\')) {
@@ -50,15 +66,15 @@ export async function fixinclude(libpath: string, docuri: string) {
 		if (line < doc.document.lineCount)
 			text += '\n';
 	}
-	let { pos } = await connection.sendRequest('ahk2.getpos') as { pos: Position }, char = doc.document.getText(Range.create(pos.line, pos.character - 1, pos.line, pos.character));
-	if (pos.line < line) text = '\n' + text;
+	let { position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { position: Position }, char = doc.document.getText(Range.create(position.line, position.character - 1, position.line, position.character));
+	if (position.line < line) text = '\n' + text;
 	await connection.workspace.applyEdit({ changes: { [doc.document.uri]: [TextEdit.insert({ line, character: 0 }, text)] } });
 	if (char === '(')
 		executeCommands([{ command: 'editor.action.triggerParameterHints' }]);
 	else {
-		if (line <= pos.line)
-			pos.line++;
-		insertSnippet('$0', Range.create(pos, pos));
+		if (line <= position.line)
+			position.line++;
+		insertSnippet('$0', Range.create(position, position));
 		if (char === '.')
 			executeCommands([{ command: 'editor.action.triggerSuggest' }]);
 	}
@@ -66,12 +82,14 @@ export async function fixinclude(libpath: string, docuri: string) {
 }
 
 export async function generateComment(args: string[]) {
+	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+		return;
 	if (args.length === 0)
 		await executeCommands([{ command: 'undo', wait: true }, { command: 'undo', wait: true }]);
-	let { uri, pos } = await connection.sendRequest('ahk2.getpos') as { uri: string, pos: Position };
-	let doc = lexers[uri = uri.toLowerCase()], scope = doc.searchScopedNode(pos), ts = scope?.children || doc.children;
+	let { uri, position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
+	let doc = lexers[uri = uri.toLowerCase()], scope = doc.searchScopedNode(position), ts = scope?.children || doc.children;
 	for (const it of ts) {
-		if ((it.kind === SymbolKind.Function || it.kind === SymbolKind.Method) && it.selectionRange.start.line === pos.line && it.selectionRange.start.character <= pos.character && pos.character <= it.selectionRange.end.character) {
+		if ((it.kind === SymbolKind.Function || it.kind === SymbolKind.Method) && it.selectionRange.start.line === position.line && it.selectionRange.start.character <= position.character && position.character <= it.selectionRange.end.character) {
 			scope = it;
 			break;
 		}
@@ -125,7 +143,7 @@ export async function generateComment(args: string[]) {
 				} else {
 					let rets: string[] = [], o: any = {}, p: Position;
 					for (const ret in it.returntypes)
-						cleardetectcache(), detectExp(doc, ret, Position.is(p = it.returntypes[ret]) ? p : pos).map(tp => o[trim(tp)] = true);
+						cleardetectcache(), detectExp(doc, ret, Position.is(p = it.returntypes[ret]) ? p : position).map(tp => o[trim(tp)] = true);
 					rets = o['any'] ? ['any'] : Object.keys(o);
 					if (!rets.length)
 						rets = ['any'];
@@ -138,7 +156,7 @@ export async function generateComment(args: string[]) {
 			} else {
 				let rets: string[] = [], o: any = {}, p: Position;
 				for (const ret in n.returntypes)
-					cleardetectcache(), detectExp(doc, ret, Position.is(p = n.returntypes[ret]) ? p : pos).map(tp => o[trim(tp)] = true);
+					cleardetectcache(), detectExp(doc, ret, Position.is(p = n.returntypes[ret]) ? p : position).map(tp => o[trim(tp)] = true);
 				rets = o['any'] ? ['any'] : Object.keys(o);
 				if (rets.length)
 					ss.push(` * @returns $\{${(++i).toString() + ':' + (rets.length ? '{' + rets.join('|') + '\\}' : '')}}`);
@@ -159,6 +177,8 @@ export async function generateComment(args: string[]) {
 }
 
 export async function generateAuthor() {
+	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+		return;
 	let info: string[] = [
 		"/************************************************************************",
 		" * @description ${1:}",
@@ -170,7 +190,7 @@ export async function generateAuthor() {
 		"$0"
 	];
 	await executeCommands([{ command: 'undo', wait: true }, { command: 'undo', wait: true }]);
-	let { uri, pos } = await connection.sendRequest('ahk2.getpos') as { uri: string, pos: Position }, doc = lexers[uri = uri.toLowerCase()];
+	let { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string }, doc = lexers[uri = uri.toLowerCase()];
 	let tk: { type: string, content: string, offset: number } = doc.get_token(0), range = Range.create(0, 0, 0, 0);
 	if (tk.type.endsWith('COMMENT')) {
 		if (tk.type === 'TK_BLOCK_COMMENT' && tk.content.match(/@(version|版本)\b/i))

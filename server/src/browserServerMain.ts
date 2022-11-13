@@ -171,33 +171,7 @@ documents.onDidOpen(async e => {
 });
 
 // Only keep settings for open documents
-documents.onDidClose(async e => {
-	let uri = e.document.uri.toLowerCase();
-	if (!lexers[uri] || lexers[uri].d)
-		return;
-	lexers[uri].actived = false;
-	for (let u in lexers)
-		if (lexers[u].actived)
-			for (let f in lexers[u].relevance)
-				if (f === uri) return;
-	delete lexers[uri];
-	connection.sendDiagnostics({ uri, diagnostics: [] });
-	let deldocs: string[] = [];
-	for (let u in lexers)
-		if (!lexers[u].actived && !lexers[u].d) {
-			let del = true;
-			for (let f in lexers[u].relevance)
-				if (lexers[f] && lexers[f].actived) {
-					del = false; break;
-				}
-			if (del)
-				deldocs.push(u);
-		}
-	for (let u of deldocs) {
-		connection.sendDiagnostics({ uri: lexers[u].document.uri, diagnostics: [] });
-		delete lexers[u];
-	}
-});
+documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
 
 documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
 	let uri = change.document.uri.toLowerCase(), doc = lexers[uri];

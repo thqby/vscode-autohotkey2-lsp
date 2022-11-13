@@ -32,11 +32,11 @@ export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: stri
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], key: [], other: [], constant: [], snippet: [] };
 export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
+	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
 	CommentTags: '^;;\\s*(.*)',
 	CompleteFunctionParens: false,
 	SymbolFoldingFromOpenBrace: false,
-	DisableV1Script: true,
 	Diagnostics: {
 		ParamsCheck: true,
 		ClassStaticMemberCheck: true
@@ -77,17 +77,18 @@ export enum LibIncludeType {
 
 export interface AHKLSSettings {
 	locale?: string
-	InterpreterPath: string
+	commands?: string[]
+	ActionWhenV1IsDetected: 'Warn' | 'SkipLine'
 	AutoLibInclude: LibIncludeType
 	CommentTags: string
 	CompleteFunctionParens: boolean
 	SymbolFoldingFromOpenBrace: boolean
-	DisableV1Script: boolean
 	Diagnostics: {
 		ParamsCheck: boolean
 		ClassStaticMemberCheck: boolean
 	}
 	FormatOptions: FormatOptions
+	InterpreterPath: string
 }
 
 export function set_Connection(conn: any, browser: boolean, getDll?: (paths: string[]) => string[], getRC?: (path?: string) => any) {

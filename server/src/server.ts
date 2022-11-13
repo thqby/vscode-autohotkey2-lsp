@@ -28,7 +28,6 @@ let initnum = 0;
 connection = createConnection(ProposedFeatures.all);
 set_Connection(connection, false, getDllExport, getRCDATA);
 set_dirname(__dirname);
-set_locale(JSON.parse(process.env.VSCODE_NLS_CONFIG || process.env.AHK2_LS_CONFIG || '{}').locale);
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
@@ -172,7 +171,7 @@ connection.onDidChangeConfiguration(async (change: any) => {
 	if (hasConfigurationCapability && !newset)
 		newset = await connection.workspace.getConfiguration('AutoHotkey2');
 	if (!newset) {
-		connection.window.showWarningMessage('Failed to obtain the configuration');
+		connection.window.showWarningMessage('Failed to obtain the configuration', );
 		return;
 	}
 	let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
@@ -210,33 +209,7 @@ documents.onDidOpen(async e => {
 });
 
 // Only keep settings for open documents
-documents.onDidClose(async e => {
-	let uri = e.document.uri.toLowerCase();
-	if (!lexers[uri] || (lexers[uri].d && !uri.includes('?')))
-		return;
-	lexers[uri].actived = false;
-	for (let u in lexers)
-		if (lexers[u].actived)
-			for (let f in lexers[u].relevance)
-				if (f === uri) return;
-	connection.sendDiagnostics({ uri: lexers[uri].document.uri, diagnostics: [] });
-	delete lexers[uri];
-	let deldocs: string[] = [];
-	for (let u in lexers)
-		if (!lexers[u].actived && !(lexers[u].d && !u.includes('?'))) {
-			let del = true;
-			for (let f in lexers[u].relevance)
-				if (lexers[f] && lexers[f].actived) {
-					del = false; break;
-				}
-			if (del)
-				deldocs.push(u);
-		}
-	for (let u of deldocs) {
-		connection.sendDiagnostics({ uri: lexers[u].document.uri, diagnostics: [] });
-		delete lexers[u];
-	}
-});
+documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
 
 documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
 	let uri = change.document.uri.toLowerCase(), doc = lexers[uri];

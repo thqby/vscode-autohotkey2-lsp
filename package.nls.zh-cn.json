@@ -1,4 +1,7 @@
 {
+	"action.switchtov1": "切换到ahk v1",
+	"action.skipline": "跳过当前行",
+	"action.stopparsing": "停止解析",
 	"ahk2.autolibinclude": "对用户库和标准库, 本地库提供补全和自动include",
 	"ahk2.commenttags": "用来从注释中提取命名标记的正则表达式, 并生成模块符号",
 	"ahk2.compile": "编译脚本",
@@ -10,7 +13,7 @@
 	"ahk2.defaultdebugger": "设置默认调试器",
 	"ahk2.interpreterpath": "AutoHotkey.exe可执行文件的路径. 如果没有为工作区选择解释器, 则使用此默认设置. 扩展也不会设置或更改此设置的值, 它只会从中读取. 如果选择AutoHotkeyUX.exe, 将使用UX Launcher启动脚本.",
 	"ahk2.description": "基于 vscode-lsp 协议的 Autohotkey2 语言支持",
-	"ahk2.disablev1script": "检测到v1脚本时停止解析, 否则跳过这一行",
+	"ahk2.actionwhenv1isdetected": "检测到v1脚本时的行为",
 	"ahk2.generatecomment": "生成注释模板",
 	"ahk2.help": "快捷帮助",
 	"ahk2.run": "运行脚本",

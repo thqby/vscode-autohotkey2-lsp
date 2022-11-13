@@ -60,6 +60,34 @@ export async function activate(context: ExtensionContext) {
 		}
 	};
 
+	const request_handlers: { [cmd: string]: any } = {
+		'ahk2.executeCommands': async (params: { command: string, args?: string[], wait?: boolean }[]) => {
+			let result: any[] = [];
+			for (const cmd of params)
+				result.push(cmd.wait ? await commands.executeCommand(cmd.command, cmd.args) : commands.executeCommand(cmd.command, cmd.args));
+			return result;
+		},
+		'ahk2.getActiveTextEditorUriAndPosition': () => {
+			const editor = window.activeTextEditor;
+			if (!editor) return;
+			const uri = editor.document.uri.toString(), position = editor.selection.end;
+			return { uri, position };
+		},
+		'ahk2.insertSnippet': async (params: [string, Range?]) => {
+			let editor = window.activeTextEditor;
+			if (!editor) return;
+			if (params[1]) {
+				let { start, end } = params[1];
+				await editor.insertSnippet(new SnippetString(params[0]), new Range(start.line, start.character, end.line, end.character));
+			} else
+				editor.insertSnippet(new SnippetString(params[0]));
+		},
+		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
+			let uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
+			it && languages.setTextDocumentLanguage(it, params[1] || 'ahk');
+		}
+	};
+
 	// Options to control the language client
 	let clientOptions: LanguageClientOptions = {
 		documentSelector: [{ language: 'ahk2' }],
@@ -70,6 +98,8 @@ export async function activate(context: ExtensionContext) {
 		outputChannel: outputchannel,
 		outputChannelName: 'AutoHotkey2',
 		initializationOptions: {
+			commands: Object.keys(request_handlers),
+			ActionWhenV1IsDetected: getConfig('ActionWhenV1IsDetected'),
 			AutoLibInclude: getConfig('AutoLibInclude'),
 			CommentTags: getConfig('CommentTags'),
 			CompleteFunctionParens: getConfig('CompleteFunctionParens'),
@@ -77,7 +107,7 @@ export async function activate(context: ExtensionContext) {
 			DisableV1Script: getConfig('DisableV1Script'),
 			FormatOptions: getConfig('FormatOptions'),
 			InterpreterPath: getConfig('InterpreterPath'),
-			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace')
+			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace'),
 		}
 	};
 
@@ -93,43 +123,8 @@ export async function activate(context: ExtensionContext) {
 
 	// Start the client. This will also launch the server
 	client.onReady().then(ready => {
-		client.onRequest('ahk2.executeCommands', async (params: any[]) => {
-			let result: any[] = [], cmds: { command: string, args?: string[], wait?: boolean }[] = params[0];
-			for (const cmd of cmds)
-				result.push(cmd.wait ? await commands.executeCommand(cmd.command, cmd.args) : commands.executeCommand(cmd.command, cmd.args));
-			return result;
-		});
-		client.onRequest('ahk2.getpos', () => {
-			const editor = window.activeTextEditor;
-			if (!editor) return;
-			const uri = editor.document.uri.toString(), pos = editor.selection.end;
-			return { uri, pos };
-		});
-		client.onRequest('ahk2.insertSnippet', async (params: any[]) => {
-			let editor = window.activeTextEditor;
-			if (!editor) return;
-			if (params[1]) {
-				let { start, end } = params[1];
-				await editor.insertSnippet(new SnippetString(params[0]), new Range(start.line, start.character, end.line, end.character));
-			} else
-				editor.insertSnippet(new SnippetString(params[0]));
-		});
-		client.onRequest('ahk2.getWorkspaceFiles', async (params: string[]) => {
-			let all = !params.length;
-			if (workspace.workspaceFolders) {
-				if (all)
-					return (await workspace.findFiles('**/*.{ahk,ah2,ahk2}')).map(it => it.toString());
-				else {
-					let files: string[] = [];
-					for (let folder of workspace.workspaceFolders)
-						if (params.includes(folder.uri.toString().toLowerCase()))
-							files.push(...(await workspace.findFiles(new RelativePattern(folder, '*.{ahk,ah2,ahk2}'))).map(it => it.toString()));
-					return files;
-				}
-			}
-		});
-		client.onRequest('ahk2.getWorkspaceFileContent', async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText());
-		window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor);
+		Object.entries(request_handlers).map(handler => client.onRequest(...handler));
+		window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor, null, context.subscriptions);
 		onDidChangeActiveTextEditor(window.activeTextEditor);
 		ahkStatusBarItem.show();
 		server_is_ready = true;

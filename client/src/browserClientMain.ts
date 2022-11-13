@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, env, ExtensionContext, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
+import { commands, env, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
@@ -12,10 +12,57 @@ const ahkconfig = workspace.getConfiguration('AutoHotkey2');
 export function activate(context: ExtensionContext) {
 	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
 	const worker = new Worker(serverMain.toString());
+
+	const request_handlers: { [cmd: string]: any } = {
+		'ahk2.executeCommands': async (params: { command: string, args?: string[], wait?: boolean }[]) => {
+			let result: any[] = [];
+			for (const cmd of params)
+				result.push(cmd.wait ? await commands.executeCommand(cmd.command, cmd.args) : commands.executeCommand(cmd.command, cmd.args));
+			return result;
+		},
+		'ahk2.getActiveTextEditorUriAndPosition': () => {
+			const editor = window.activeTextEditor;
+			if (!editor) return;
+			const uri = editor.document.uri.toString(), position = editor.selection.end;
+			return { uri, position };
+		},
+		'ahk2.insertSnippet': async (params: [string, Range?]) => {
+			let editor = window.activeTextEditor;
+			if (!editor) return;
+			if (params[1]) {
+				let { start, end } = params[1];
+				await editor.insertSnippet(new SnippetString(params[0]), new Range(start.line, start.character, end.line, end.character));
+			} else
+				editor.insertSnippet(new SnippetString(params[0]));
+		},
+		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
+			let uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
+			it && languages.setTextDocumentLanguage(it, params[1] || 'ahk');
+		},
+		'ahk2.getWorkspaceFiles': async (params: string[]) => {
+			let all = !params.length;
+			if (workspace.workspaceFolders) {
+				if (all)
+					return (await workspace.findFiles('**/*.{ahk,ah2,ahk2}')).map(it => it.toString());
+				else {
+					let files: string[] = [];
+					for (let folder of workspace.workspaceFolders)
+						if (params.includes(folder.uri.toString().toLowerCase()))
+							files.push(...(await workspace.findFiles(new RelativePattern(folder, '*.{ahk,ah2,ahk2}'))).map(it => it.toString()));
+					return files;
+				}
+			}
+		},
+		'ahk2.getWorkspaceFileContent': async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText()
+	};
+
 	const client = new LanguageClient('ahk2', 'Autohotkey2 Server', {
 		documentSelector: [{ language: 'ahk2' }],
 		synchronize: {},
 		initializationOptions: {
+			locale: env.language,
+			commands: Object.keys(request_handlers),
+			ActionWhenV1IsDetected: getConfig('ActionWhenV1IsDetected'),
 			AutoLibInclude: getConfig('AutoLibInclude'),
 			CommentTags: getConfig('CommentTags'),
 			CompleteFunctionParens: getConfig('CompleteFunctionParens'),
@@ -24,7 +71,6 @@ export function activate(context: ExtensionContext) {
 			FormatOptions: getConfig('FormatOptions'),
 			InterpreterPath: getConfig('InterpreterPath'),
 			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace'),
-			locale: env.language
 		}
 	}, worker);
 
@@ -62,42 +108,7 @@ export function activate(context: ExtensionContext) {
 	);
 
 	client.onReady().then(() => {
-		client.onRequest('ahk2.executeCommands', async (params: any[]) => {
-			let result: any[] = [], cmds: { command: string, args?: string[], wait?: boolean }[] = params[0];
-			for (const cmd of cmds)
-				result.push(cmd.wait ? await commands.executeCommand(cmd.command, cmd.args) : commands.executeCommand(cmd.command, cmd.args));
-			return result;
-		});
-		client.onRequest('ahk2.getpos', () => {
-			const editor = window.activeTextEditor;
-			if (!editor) return;
-			const uri = editor.document.uri.toString(), pos = editor.selection.end;
-			return { uri, pos };
-		});
-		client.onRequest('ahk2.insertSnippet', async (params: any[]) => {
-			let editor = window.activeTextEditor;
-			if (!editor) return;
-			if (params[1]) {
-				let { start, end } = params[1];
-				await editor.insertSnippet(new SnippetString(params[0]), new Range(start.line, start.character, end.line, end.character));
-			} else
-				editor.insertSnippet(new SnippetString(params[0]));
-		});
-		client.onRequest('ahk2.getWorkspaceFiles', async (params: string[]) => {
-			let all = !params.length;
-			if (workspace.workspaceFolders) {
-				if (all)
-					return (await workspace.findFiles('**/*.{ahk,ah2,ahk2}')).map(it => it.toString());
-				else {
-					let files: string[] = [];
-					for (let folder of workspace.workspaceFolders)
-						if (params.includes(folder.uri.toString().toLowerCase()))
-							files.push(...(await workspace.findFiles(new RelativePattern(folder, '*.{ahk,ah2,ahk2}'))).map(it => it.toString()));
-					return files;
-				}
-			}
-		});
-		client.onRequest('ahk2.getWorkspaceFileContent', async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText());
+		Object.entries(request_handlers).map(handler => client.onRequest(...handler));
 		commands.executeCommand('ahk2.set.extensionUri', context.extensionUri.toString());
 	});
 }

@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { ahkvars, extsettings, getRCDATA, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv } from './common';
+import { action, ahkvars, connection, extsettings, getRCDATA, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv, setTextDocumentLanguage } from './common';
 
 export interface ParamInfo {
 	count: number
@@ -193,6 +193,7 @@ const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofl
 
 let searchcache: { [name: string]: any } = {};
 let hasdetectcache: { [exp: string]: any } = {};
+let last_switch_uri = '';
 
 class ParseStopError {
 	public message: string;
@@ -236,6 +237,7 @@ export class Lexer {
 	public texts: { [key: string]: string } = {};
 	public uri = '';
 	private anonymous: FuncNode[] = [];
+	private actionwhenv1: any;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let input: string, output_lines: { text: string[], indent: number }[], flags: any, opt: FormatOptions, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: string };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
@@ -727,7 +729,7 @@ export class Lexer {
 					this.children.push(...parse_block());
 				} catch (e: any) {
 					if (e instanceof ParseStopError) {
-						this.addDiagnostic(e.message, e.token.offset, e.token.length, DiagnosticSeverity.Warning);
+						e.message && this.addDiagnostic(e.message, e.token.offset, e.token.length, DiagnosticSeverity.Warning);
 					} else
 						throw e;
 				}
@@ -3041,18 +3043,40 @@ export class Lexer {
 			}
 
 			function stop_parse(tk: Token, message = 'This might be a v1 script, and the lexer stops parsing.') {
-				if (!extsettings.DisableV1Script) {
-					if (tk.type === 'TK_WORD') do {
-						nexttoken();
-						while (' \t'.includes(input.charAt(parser_pos) || '\0'))
-							parser_pos++;
-						let next_LF = input.indexOf('\n', parser_pos);
-						if (next_LF < 0)
-							next_LF = input_length;
-						lk = tk, tk = createToken(input.substring(parser_pos, next_LF), 'TK_STRING', parser_pos, next_LF - parser_pos, 0);
-						parser_pos = next_LF;
-					} while (is_next_char(','));
-					return;
+				switch (_this.actionwhenv1 ?? extsettings.ActionWhenV1IsDetected) {
+					case 'SkipLine':
+						if (tk.type === 'TK_WORD') do {
+							nexttoken();
+							while (' \t'.includes(input.charAt(parser_pos) || '\0'))
+								parser_pos++;
+							let next_LF = input.indexOf('\n', parser_pos);
+							if (next_LF < 0)
+								next_LF = input_length;
+							lk = tk, tk = createToken(input.substring(parser_pos, next_LF), 'TK_STRING', parser_pos, next_LF - parser_pos, 0);
+							parser_pos = next_LF;
+						} while (is_next_char(','));
+						return;
+					case 'SwitchToV1':
+						if (last_switch_uri !== _this.document.uri) {
+							connection.console.info(message + ' Try switching to ahk v1.');
+							setTextDocumentLanguage(last_switch_uri = _this.document.uri), message = '';
+						} else _this.actionwhenv1 = '';
+						break;
+					case 'Warn': {
+						if (!_this.actived)
+							break;
+						let skip = { title: action.skipline() }, switchtov1 = { title: action.switchtov1() }, stop = { title: action.stopparsing() };
+						connection.window.showWarningMessage(message, switchtov1, skip, stop)
+							.then(reason => {
+								if (!reason || reason.title === stop.title) {
+									_this.actionwhenv1 = 'Stop';
+								} else if (reason.title === skip.title)
+									_this.actionwhenv1 = 'SkipLine', _this.parseScript();
+								else if (reason.title === switchtov1.title)
+									setTextDocumentLanguage(last_switch_uri = _this.document.uri), _this.actionwhenv1 = '';
+							});
+						break;
+					}
 				}
 				_this.clear(), parser_pos = input_length;
 				throw new ParseStopError(message, tk);
@@ -4926,6 +4950,37 @@ export class Lexer {
 		let l1 = extsettings.SymbolFoldingFromOpenBrace ? this.document.positionAt(first_brace).line : symbol.range.start.line;
 		let l2 = symbol.range.end.line - 1;
 		if (l1 < l2) this.foldingranges.push(FoldingRange.create(l1, l2, undefined, undefined, 'block'));
+	}
+
+	public close() {
+		let uri = this.uri;
+		this.actived = false;
+		if (uri === last_switch_uri)
+			last_switch_uri = '';
+		if (!lexers[uri]) {
+			connection.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
+			return;
+		}
+		if (lexers[uri].d > 2 && !uri.includes('?'))
+			return;
+		let lexs = Object.values(lexers);
+		for (let lex of lexs)
+			if (lex.actived && lex.relevance?.[uri])
+				return;
+		connection.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
+		delete lexers[uri];
+		let dels: string[] = [];
+		lexs.map(lex => {
+			if (!lex.actived && !(lex.d > 2 && !lex.uri.includes('?'))) {
+				let del = true;
+				for (let u in lex.relevance)
+					if (lexers[u]?.actived) {
+						del = false; break;
+					}
+				del && dels.push(lex.uri);
+			}
+		});
+		dels.map(u => lexers[u]?.close());
 	}
 }
 

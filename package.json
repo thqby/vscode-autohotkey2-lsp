@@ -135,11 +135,17 @@
 					"default": true,
 					"description": "%ahk2.diagnostics.paramscheck%"
 				},
-				"AutoHotkey2.DisableV1Script": {
+				"AutoHotkey2.ActionWhenV1IsDetected": {
 					"scope": "window",
-					"type": "boolean",
-					"default": true,
-					"description": "%ahk2.disablev1script%"
+					"type": "string",
+					"default": "Warn",
+					"enum": [
+						"Warn",
+						"StopParsing",
+						"SwitchToV1",
+						"SkipLine"
+					],
+					"description": "%ahk2.actionwhenv1isdetected%"
 				},
 				"AutoHotkey2.FormatOptions": {
 					"scope": "window",
