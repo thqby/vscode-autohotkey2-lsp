@@ -20,7 +20,7 @@ export function activate(context: ExtensionContext) {
 				result.push(cmd.wait ? await commands.executeCommand(cmd.command, cmd.args) : commands.executeCommand(cmd.command, cmd.args));
 			return result;
 		},
-		'ahk2.getActiveTextEditorUriAndPosition': () => {
+		'ahk2.getActiveTextEditorUriAndPosition': (params: any) => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			const uri = editor.document.uri.toString(), position = editor.selection.end;

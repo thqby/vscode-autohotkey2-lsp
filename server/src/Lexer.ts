@@ -4228,7 +4228,10 @@ export class Lexer {
 							print_newline(true);
 						else output_space_before_token = space_in_other;
 					} else if (input_wanted_newline)
-						print_newline(preserve_statement_flags);
+						if (last_text === 'else' && !opt.preserve_newlines && ['if', 'for', 'loop', 'while', 'try', 'switch'].includes(token_text_low))
+							deindent();
+						else
+							print_newline(preserve_statement_flags);
 
 					switch (token_text_low) {
 						case 'loop':
