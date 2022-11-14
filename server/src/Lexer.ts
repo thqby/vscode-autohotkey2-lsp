@@ -1828,7 +1828,7 @@ export class Lexer {
 						break;
 					case '#requires':
 						if (data.content.match(/^AutoHotkey\s+v1/i))
-							_this.maybev1 = 3, stop_parse(data, 'This script requires AutoHotkey v1, and the lexer stops parsing.');
+							_this.maybev1 = 3, stop_parse(data, diagnostic.requirev1());
 						break;
 					default:
 						if (l.match(/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i))
@@ -3043,27 +3043,32 @@ export class Lexer {
 				else return next = tk.type !== 'TK_EOF';
 			}
 
-			function stop_parse(tk: Token, message = 'This might be a v1 script, and the lexer stops parsing.') {
+			function stop_parse(tk: Token, message = diagnostic.maybev1()) {
 				_this.maybev1 ??= 1;
 				switch (_this.actionwhenv1 ?? extsettings.ActionWhenV1IsDetected) {
 					case 'SkipLine':
-						if (tk.type === 'TK_WORD') do {
-							nexttoken();
-							while (' \t'.includes(input.charAt(parser_pos) || '\0'))
-								parser_pos++;
-							let next_LF = input.indexOf('\n', parser_pos);
-							if (next_LF < 0)
-								next_LF = input_length;
-							lk = tk, tk = createToken(input.substring(parser_pos, next_LF), 'TK_STRING', parser_pos, next_LF - parser_pos, 0);
-							parser_pos = next_LF;
-						} while (is_next_char(','));
+						if (tk.type === 'TK_WORD') {
+							_this.addDiagnostic(diagnostic.skipline(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+							do {
+								nexttoken();
+								while (' \t'.includes(input.charAt(parser_pos) || '\0'))
+									parser_pos++;
+								let next_LF = input.indexOf('\n', parser_pos);
+								if (next_LF < 0)
+									next_LF = input_length;
+								lk = tk, tk = createToken(input.substring(parser_pos, next_LF), 'TK_STRING', parser_pos, next_LF - parser_pos, 0);
+								parser_pos = next_LF;
+							} while (is_next_char(','));
+						}
 						return;
 					case 'SwitchToV1':
+						if (!_this.actived)
+							break;
 						if (last_switch_uri !== _this.document.uri) {
-							connection.console.info(message + ' Try switching to ahk v1.');
+							connection.console.info([_this.uri, message, diagnostic.tryswitchtov1()].join(' '));
 							setTextDocumentLanguage(last_switch_uri = _this.document.uri), message = '';
+							break;
 						} else _this.actionwhenv1 = '';
-						break;
 					case 'Warn': {
 						if (!_this.actived)
 							break;

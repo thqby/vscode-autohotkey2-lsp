@@ -43,6 +43,7 @@ export namespace diagnostic {
 	export const invalidpropname = localize('diagnostic.invalidpropname', 'Invalid property name in object literal');
 	export const invalidsymbolname = localize('diagnostic.invalidsymbolname', 'Invalid symbol naming \'{0}\'');
 	export const maybehavenotmember = localize('diagnostic.maybehavenotmember', 'Class \'{0}\' maybe have not member \'{1}\'');
+	export const maybev1 = localize('diagnostic.maybev1', 'This might be a v1 script, and the lexer stops parsing.');
 	export const missing = localize('diagnostic.missing', 'Missing \'{0}\'');
 	export const missingparam = localize('diagnostic.missingparam', 'Missing a required parameter');
 	export const objectliteralerr = localize('diagnostic.objectliteralerr', 'Error in object literal');
@@ -51,7 +52,10 @@ export namespace diagnostic {
 	export const propdeclaraerr = localize('diagnostic.propdeclaraerr', 'Not a valid method, class or property definition');
 	export const propemptyparams = localize('diagnostic.propemptyparams', 'Empty [] not permitted');
 	export const propnotinit = localize('diagnostic.propnotinit', 'Property declaration is not initialized');
+	export const requirev1 = localize('diagnostic.requirev1', 'This script requires AutoHotkey v1, and the lexer stops parsing.');
 	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name');
+	export const skipline = localize('diagnostic.skipline', 'The line is skipped and not resolved');
+	export const tryswitchtov1 = localize('diagnostic.tryswitchtov1', 'Try switching to AutoHotkey v1.');
 	export const typemaybenot = localize('diagnostic.typemaybenot', 'Type maybe not \'{0}\'');
 	export const resourcenotfound = localize('diagnostic.resourcenotfound', 'No resource found or could not be resolved');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');
@@ -71,7 +75,7 @@ export namespace setting {
 
 export namespace action {
 	export const switchtov1 = localize('action.switchtov1', 'Switch to ahk v1');
-	export const skipline = localize('action.skipline', 'Skip the current line');
+	export const skipline = localize('action.skipline', 'Skip the line');
 	export const stopparsing = localize('action.stopparsing', 'Stop parsing');
 }
 

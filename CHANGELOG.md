@@ -1,3 +1,8 @@
+## 1.7.4
+- 支持指定在检测到v1脚本时触发的行为(切换至v1, 跳过触发行, 停止解析, 警告选择框)[#214](https://github.com/thqby/vscode-autohotkey2-lsp/issues/214)
+- 修复[#217](https://github.com/thqby/vscode-autohotkey2-lsp/issues/217)
+- 关闭未被引用的v1缓存
+
 ## 1.7.3
 - 修复[#212](https://github.com/thqby/vscode-autohotkey2-lsp/issues/212)
 - 修复[#213](https://github.com/thqby/vscode-autohotkey2-lsp/issues/213)
