@@ -4,10 +4,13 @@ import { codeaction, diagnostic } from './localize';
 import { Maybe, lexers, restorePath } from './common';
 
 export async function codeActionProvider(params: CodeActionParams): Promise<Maybe<CodeAction[]>> {
-	let doc = lexers[params.textDocument.uri.toLowerCase()], diagnostics = doc.diagnostics;
+	let uri = params.textDocument.uri, doc = lexers[uri.toLowerCase()], diagnostics = doc.diagnostics;
 	let rg = new RegExp(diagnostic.filenotexist().replace('{0}', '(.+?)\\*(\\.\\w+)')), t: RegExpExecArray | null, r = '';
+	let asserrtes: TextEdit[] = [], acts: CodeAction[] = [], asserr = diagnostic.didyoumean(':=').toLowerCase();
 	for (const it of diagnostics) {
-		if (t = rg.exec(it.message)) {
+		if (it.message.endsWith(asserr)) {
+			asserrtes.push({ range: it.range, newText: ':=' });
+		} else if (t = rg.exec(it.message)) {
 			r = doc.document.getText(it.range);
 			let path = restorePath(t[1]), reg = new RegExp(t[2] + '$', 'i'), includes = [];
 			let rg = Object.assign({}, it.range);
@@ -18,10 +21,12 @@ export async function codeActionProvider(params: CodeActionParams): Promise<Mayb
 				} catch { };
 			}
 			let textEdit: TextEdit = { range: rg, newText: includes.join('\n') };
-			let act: any = { title: codeaction.include(path + '*' + t[2]), edit: { changes: {} }, kind: CodeActionKind.QuickFix };
-			act.edit.changes[params.textDocument.uri] = [textEdit];
-			return [act];
+			let act: CodeAction = { title: codeaction.include(path + '*' + t[2]), kind: CodeActionKind.QuickFix };
+			act.edit = { changes: { [uri]: [textEdit] } };
+			acts.push(act);
 		}
 	}
-	return undefined;
+	if (asserrtes.length)
+		acts.push({ title: "Replace '=' with ':='", edit: { changes: { [uri]: asserrtes } }, kind: CodeActionKind.QuickFix });
+	return acts.length ? acts : undefined;
 }
