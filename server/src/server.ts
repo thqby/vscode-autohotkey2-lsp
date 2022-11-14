@@ -163,8 +163,10 @@ connection.onInitialized(async () => {
 			parseWorkspaceFolders();
 		});
 	}
-	parseWorkspaceFolders();
-	winapis.push(...getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)));
+	setTimeout(() => {
+		parseWorkspaceFolders();
+		winapis.push(...getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)));
+	}, 500);
 });
 
 connection.onDidChangeConfiguration(async (change: any) => {
