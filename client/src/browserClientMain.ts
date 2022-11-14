@@ -36,8 +36,13 @@ export function activate(context: ExtensionContext) {
 				editor.insertSnippet(new SnippetString(params[0]));
 		},
 		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
+			let lang = params[1] || 'ahk';
+			if (!(await languages.getLanguages()).includes(lang)) {
+				window.showErrorMessage(`Unknown language id: ${lang}`);
+				return;
+			}
 			let uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
-			it && languages.setTextDocumentLanguage(it, params[1] || 'ahk');
+			it && languages.setTextDocumentLanguage(it, lang);
 		},
 		'ahk2.getWorkspaceFiles': async (params: string[]) => {
 			let all = !params.length;
@@ -71,6 +76,7 @@ export function activate(context: ExtensionContext) {
 			FormatOptions: getConfig('FormatOptions'),
 			InterpreterPath: getConfig('InterpreterPath'),
 			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace'),
+			extensionUri: context.extensionUri.toString(),
 		}
 	}, worker);
 
@@ -109,7 +115,6 @@ export function activate(context: ExtensionContext) {
 
 	client.onReady().then(() => {
 		Object.entries(request_handlers).map(handler => client.onRequest(...handler));
-		commands.executeCommand('ahk2.set.extensionUri', context.extensionUri.toString());
 	});
 }
 

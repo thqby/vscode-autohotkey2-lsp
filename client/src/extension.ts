@@ -83,8 +83,13 @@ export async function activate(context: ExtensionContext) {
 				editor.insertSnippet(new SnippetString(params[0]));
 		},
 		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
+			let lang = params[1] || 'ahk';
+			if (!(await languages.getLanguages()).includes(lang)) {
+				window.showErrorMessage(`Unknown language id: ${lang}`);
+				return;
+			}
 			let uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
-			it && languages.setTextDocumentLanguage(it, params[1] || 'ahk');
+			it && languages.setTextDocumentLanguage(it, lang);
 		}
 	};
 

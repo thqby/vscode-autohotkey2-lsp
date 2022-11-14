@@ -78,7 +78,7 @@ export enum LibIncludeType {
 export interface AHKLSSettings {
 	locale?: string
 	commands?: string[]
-	ActionWhenV1IsDetected: 'Warn' | 'SkipLine'
+	ActionWhenV1IsDetected: 'Warn' | 'SkipLine' | 'SwitchToV1'
 	AutoLibInclude: LibIncludeType
 	CommentTags: string
 	CompleteFunctionParens: boolean
@@ -366,7 +366,12 @@ export async function parseWorkspaceFolders() {
 				let v = await connection.sendRequest('ahk2.getWorkspaceFileContent', [uri]) as string;
 				if (v) {
 					let d = new Lexer(TextDocument.create(uri, 'ahk2', -10, v));
-					d.parseScript(), lexers[l] = d;
+					d.parseScript();
+					if (d.maybev1) {
+						d.close();
+						continue;
+					}
+					lexers[l] = d;
 					await sleep(100);
 				}
 			}
@@ -377,7 +382,12 @@ export async function parseWorkspaceFolders() {
 				l = URI.file(file).toString().toLowerCase();
 				if (!lexers[l] && (t = openFile(file, false))) {
 					let d = new Lexer(t);
-					d.parseScript(), lexers[l] = d;
+					d.parseScript();
+					if (d.maybev1) {
+						d.close();
+						continue;
+					}
+					lexers[l] = d;
 					await sleep(100);
 				}
 			}

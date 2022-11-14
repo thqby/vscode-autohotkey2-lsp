@@ -43,6 +43,7 @@ connection.onInitialize((params: InitializeParams) => {
 		capabilities.textDocument.publishDiagnostics &&
 		capabilities.textDocument.publishDiagnostics.relatedInformation
 	);
+
 	const result: InitializeResult = {
 		serverInfo: {
 			name: languageServer,
@@ -211,34 +212,7 @@ documents.onDidOpen(async e => {
 // Only keep settings for open documents
 documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
 
-documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => {
-	let uri = change.document.uri.toLowerCase(), doc = lexers[uri];
-	let initial = doc.include, il = Object.keys(initial).length;
-	doc.isparsed = false, doc.parseScript();
-	if (libfuncs[uri]) {
-		libfuncs[uri].length = 0;
-		libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
-	}
-	if (Object.keys(doc.include).length === il && Object.keys(Object.assign(initial, doc.include)).length === il) {
-		if (!doc.relevance)
-			doc.update_relevance();
-		sendDiagnostics();
-		return;
-	}
-	parseinclude(doc.include, doc.scriptdir);
-	for (const t in initial)
-		if (!doc.include[t] && lexers[t]?.diagnostics.length)
-			lexers[t].parseScript();
-	resetrelevance();
-	doc.update_relevance();
-	sendDiagnostics();
-
-	function resetrelevance() {
-		for (const u in initial)
-			if (lexers[u])
-				lexers[u].relevance = getincludetable(u).list;
-	}
-});
+documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => lexers[change.document.uri.toLowerCase()].update());
 
 connection.onDidChangeWatchedFiles((change) => {
 	// Monitored files have change in VSCode
@@ -477,6 +451,10 @@ async function parseproject(uri: string) {
 				if (!(d = lexers[u])) {
 					if (!(t = openFile(path))) continue;
 					d = new Lexer(t), d.parseScript();
+					if (d.maybev1) {
+						d.close();
+						continue;
+					}
 					if (workspace)
 						lexers[u] = d;
 				}

@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { action, ahkvars, connection, extsettings, getRCDATA, inBrowser, isahk2_h, lexers, libdirs, openFile, pathenv, setTextDocumentLanguage } from './common';
+import { action, ahkvars, connection, extsettings, getRCDATA, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openFile, pathenv, sendDiagnostics, setTextDocumentLanguage } from './common';
 
 export interface ParamInfo {
 	count: number
@@ -236,6 +236,7 @@ export class Lexer {
 	public strcommpos: { start: number, end: number, type: 1 | 2 | 3 }[] = [];
 	public texts: { [key: string]: string } = {};
 	public uri = '';
+	public maybev1?: number
 	private anonymous: FuncNode[] = [];
 	private actionwhenv1: any;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
@@ -502,7 +503,7 @@ export class Lexer {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
 				lst = EMPTY_TOKEN, begin_line = true, parser_pos = 0, last_LF = -1;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
-				this.clear(), this.reflat = true, customblocks = { region: [], bracket: [] };
+				this.clear(), this.reflat = true, customblocks = { region: [], bracket: [] }, this.maybev1 = undefined;
 				let blocks = 0, rg: Range, tokens: Token[] = [], cls: string[] = [];
 				let p: DocumentSymbol[] = [DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg = make_range(0, 0), rg, this.children)];
 				includetable = this.include, (<FuncNode>p[0]).declaration = this.declaration, comments = {};
@@ -721,7 +722,7 @@ export class Lexer {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
 				begin_line = true, lst = EMPTY_TOKEN;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
-				this.clear(), this.reflat = true, includetable = this.include, comments = {};
+				this.clear(), this.reflat = true, includetable = this.include, comments = {}, this.maybev1 = undefined;
 				try {
 					let rs = getRCDATA('#2');
 					if (rs)
@@ -1827,7 +1828,7 @@ export class Lexer {
 						break;
 					case '#requires':
 						if (data.content.match(/^AutoHotkey\s+v1/i))
-							stop_parse(data, 'This script requires AutoHotkey v1, and the lexer stops parsing.');
+							_this.maybev1 = 3, stop_parse(data, 'This script requires AutoHotkey v1, and the lexer stops parsing.');
 						break;
 					default:
 						if (l.match(/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i))
@@ -3043,6 +3044,7 @@ export class Lexer {
 			}
 
 			function stop_parse(tk: Token, message = 'This might be a v1 script, and the lexer stops parsing.') {
+				_this.maybev1 ??= 1;
 				switch (_this.actionwhenv1 ?? extsettings.ActionWhenV1IsDetected) {
 					case 'SkipLine':
 						if (tk.type === 'TK_WORD') do {
@@ -3065,16 +3067,19 @@ export class Lexer {
 					case 'Warn': {
 						if (!_this.actived)
 							break;
-						let skip = { title: action.skipline() }, switchtov1 = { title: action.switchtov1() }, stop = { title: action.stopparsing() };
-						connection.window.showWarningMessage(message, switchtov1, skip, stop)
-							.then(reason => {
-								if (!reason || reason.title === stop.title) {
-									_this.actionwhenv1 = 'Stop';
-								} else if (reason.title === skip.title)
-									_this.actionwhenv1 = 'SkipLine', _this.parseScript();
-								else if (reason.title === switchtov1.title)
-									setTextDocumentLanguage(last_switch_uri = _this.document.uri), _this.actionwhenv1 = '';
-							});
+						connection.window.showWarningMessage(
+							message,
+							{ title: action.switchtov1(), action: '' },
+							{ title: action.skipline(), action: 'SkipLine' },
+							{ title: action.stopparsing(), action: 'Stop' }
+						).then((reason?: { action: string }) => {
+							if (!reason || reason.action === 'Stop') {
+								_this.actionwhenv1 = 'Stop';
+							} else if (!(_this.actionwhenv1 = reason.action))
+								setTextDocumentLanguage(last_switch_uri = _this.document.uri);
+							else
+								_this.update();
+						});
 						break;
 					}
 				}
@@ -4953,6 +4958,35 @@ export class Lexer {
 		let l1 = extsettings.SymbolFoldingFromOpenBrace ? this.document.positionAt(first_brace).line : symbol.range.start.line;
 		let l2 = symbol.range.end.line - 1;
 		if (l1 < l2) this.foldingranges.push(FoldingRange.create(l1, l2, undefined, undefined, 'block'));
+	}
+
+	public update() {
+		let uri = this.uri;
+		let initial = this.include, il = Object.keys(initial).length;
+		this.isparsed = false, this.parseScript();
+		if (libfuncs[uri]) {
+			libfuncs[uri].length = 0;
+			libfuncs[uri].push(...Object.values(this.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
+		}
+		if (Object.keys(this.include).length === il && Object.keys(Object.assign(initial, this.include)).length === il) {
+			if (!this.relevance)
+				this.update_relevance();
+			sendDiagnostics();
+			return;
+		}
+		parseinclude(this.include, this.scriptdir);
+		for (const t in initial)
+			if (!this.include[t] && lexers[t]?.diagnostics.length)
+				lexers[t].parseScript();
+		resetrelevance();
+		this.update_relevance();
+		sendDiagnostics();
+
+		function resetrelevance() {
+			for (const u in initial)
+				if (lexers[u])
+					lexers[u].relevance = getincludetable(u).list;
+		}
 	}
 
 	public close() {
