@@ -5,11 +5,12 @@ import { Maybe, lexers, restorePath } from './common';
 
 export async function codeActionProvider(params: CodeActionParams): Promise<Maybe<CodeAction[]>> {
 	let uri = params.textDocument.uri, doc = lexers[uri.toLowerCase()], diagnostics = doc.diagnostics;
-	let rg = new RegExp(diagnostic.filenotexist().replace('{0}', '(.+?)\\*(\\.\\w+)')), t: RegExpExecArray | null, r = '';
-	let asserrtes: TextEdit[] = [], acts: CodeAction[] = [], asserr = diagnostic.didyoumean(':=').toLowerCase();
+	let rg = new RegExp('^' + diagnostic.filenotexist().replace('{0}', '(.+?)\\*(\\.\\w+)')), t: RegExpExecArray | null, r = '';
+	let matchexpr = new RegExp(diagnostic.didyoumean('(:=)').replace('?', '\\?').toLowerCase() + '$|^' + diagnostic.deprecated('([^\'"]+)', '([^\'"]+)'));
+	let acts: CodeAction[] = [], replaces: { [k: string]: TextEdit[] } = {};
 	for (const it of diagnostics) {
-		if (it.message.endsWith(asserr)) {
-			asserrtes.push({ range: it.range, newText: ':=' });
+		if (t = matchexpr.exec(it.message)) {
+			(replaces[t[3] ? t[3] + ' ' + (r = t[2]) : '= ' + (r = ':=')] ??= []).push({ range: it.range, newText: r });
 		} else if (t = rg.exec(it.message)) {
 			r = doc.document.getText(it.range);
 			let path = restorePath(t[1]), reg = new RegExp(t[2] + '$', 'i'), includes = [];
@@ -26,7 +27,7 @@ export async function codeActionProvider(params: CodeActionParams): Promise<Mayb
 			acts.push(act);
 		}
 	}
-	if (asserrtes.length)
-		acts.push({ title: "Replace '=' with ':='", edit: { changes: { [uri]: asserrtes } }, kind: CodeActionKind.QuickFix });
+	for (let [k, v] of Object.entries(replaces))
+		acts.push({ title: k.replace(/(\S+) (\S+)/, "Replace '$1' with '$2'"), edit: { changes: { [uri]: v } }, kind: CodeActionKind.QuickFix });
 	return acts.length ? acts : undefined;
 }

@@ -163,7 +163,7 @@ connection.onInitialized(async () => {
 			parseWorkspaceFolders();
 		});
 	}
-	setTimeout(() => {
+	setTimeout(async () => {
 		parseWorkspaceFolders();
 		winapis.push(...getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)));
 	}, 500);
@@ -392,6 +392,10 @@ async function parseuserlibs() {
 				if (!(d = lexers[uri])) {
 					if (!(t = openFile(path))) continue;
 					d = new Lexer(t), d.parseScript();
+					if (d.maybev1) {
+						d.close();
+						continue;
+					}
 				}
 				libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
 				Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
@@ -449,7 +453,6 @@ async function parseproject(uri: string) {
 		for (let path of getallahkfiles(searchdir)) {
 			let u = URI.file(path).toString().toLowerCase(), d: Lexer, t: TextDocument | undefined;
 			if (u !== uri && !libfuncs[u]) {
-				libfuncs[u] = [], Object.defineProperty(libfuncs[u], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
 				if (!(d = lexers[u])) {
 					if (!(t = openFile(path))) continue;
 					d = new Lexer(t), d.parseScript();
@@ -460,7 +463,8 @@ async function parseproject(uri: string) {
 					if (workspace)
 						lexers[u] = d;
 				}
-				libfuncs[u].push(...Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
+				libfuncs[u] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
+				Object.defineProperty(libfuncs[u], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
 				await sleep(50);
 			}
 		}

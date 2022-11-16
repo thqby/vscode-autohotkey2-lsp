@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { action, ahkvars, connection, extsettings, getRCDATA, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openFile, pathenv, sendDiagnostics, setTextDocumentLanguage } from './common';
+import { action, ActionType, ahkvars, connection, extsettings, getRCDATA, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openFile, pathenv, sendDiagnostics, setTextDocumentLanguage } from './common';
 
 export interface ParamInfo {
 	count: number
@@ -238,7 +238,7 @@ export class Lexer {
 	public uri = '';
 	public maybev1?: number
 	private anonymous: FuncNode[] = [];
-	private actionwhenv1: any;
+	private actionwhenv1?: ActionType;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let input: string, output_lines: { text: string[], indent: number }[], flags: any, opt: FormatOptions, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: string };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
@@ -737,6 +737,8 @@ export class Lexer {
 				checksamenameerr(this.declaration, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length, this.isparsed = true;
 				customblocks.region.map(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
+				if (this.actived)
+					this.actionwhenv1 ??= 'Continue';
 			}
 		}
 
@@ -816,7 +818,7 @@ export class Lexer {
 								if (isfuncdef) {
 									let tn: FuncNode | undefined, cm: Token | undefined, fc = lk, rl = result.length, quoteend = parser_pos;
 									let se: SemanticToken = lk.semantic = { type: mode === 2 ? SemanticTokenTypes.method : SemanticTokenTypes.function };
-									let par = parse_params(), isstatic = fc.topofline === 2;
+									let par = parse_params(undefined, true), isstatic = fc.topofline === 2;
 									let oo = isstatic ? fc.previous_token?.offset as number : fc.offset;
 									line_begin_pos = undefined;
 									if ((_low = fc.content.toLowerCase()).match(/^\d/))
@@ -872,7 +874,7 @@ export class Lexer {
 										let fc = lk, rl = result.length, par: any = [], rg: Range;
 										line_begin_pos = undefined;
 										if (tk.content === '[') {
-											par = parse_params(undefined, ']') ?? [];
+											par = parse_params(undefined, true, ']') ?? [];
 											nexttoken();
 											if (par.length === 0)
 												_this.addDiagnostic(diagnostic.propemptyparams(), fc.offset, lk.offset - fc.offset + 1);
@@ -1138,6 +1140,8 @@ export class Lexer {
 							let ht = lk, v: Variable, vars = new Map<string, any>([['#parent', tn]]);
 							tn.funccall = [], tn.declaration = {}, result.push(tn);
 							tn.global = {}, tn.local = {};
+							while (tk.type as string === 'TK_SHARP')
+								parse_sharp(), nexttoken();
 							if (tk.content === '{') {
 								tk.previous_pair_pos = ht.offset;
 								tn.params = [v = Variable.create('ThisHotkey', SymbolKind.Variable,
@@ -1147,14 +1151,13 @@ export class Lexer {
 								tn.range = make_range(ht.offset, parser_pos - ht.offset);
 								_this.addSymbolFolding(tn, tk.offset), adddeclaration(tn);
 							} else if (tk.topofline) {
-								adddeclaration(tn);
-								while (tk.type as string === 'TK_SHARP')
-									parse_sharp(), nexttoken();
-								next = false;
+								adddeclaration(tn), next = false;
 								if (tk.type.startsWith('TK_HOT'))
 									break;
-								else if (tk.type as string !== 'TK_WORD' || !is_func_def())
-									_this.addDiagnostic(diagnostic.hotmissbrace(), lk.offset, lk.length);
+								if (tk.type as string !== 'TK_WORD' || !is_func_def()) {
+									stop_parse(ht);
+									_this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
+								}
 								next = false;
 							} else {
 								let tparent = _parent, tmode = mode, l = tk.content.toLowerCase();
@@ -1340,17 +1343,28 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
 							break;
 						}
-						lk = tk, tk = get_next_token();
+						nexttoken();
+						if (tk.type === 'TK_COMMA')
+							stop_parse(lk);
+						let min = 0, max = 1, act = 'loop', sub;
 						if (tk.type === 'TK_EQUALS') {
 							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
 							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
+							break;
 						} else if (mode === 2) {
 							_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
 							break;
-						} else if (next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(tk.content.toLowerCase())))
-							tk.type = 'TK_RESERVED';
-						if (!tk.topofline && tk.type !== 'TK_START_BLOCK')
-							result.push(...parse_line(undefined, '{'));
+						} else if (next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(sub = tk.content.toLowerCase()))) {
+							min = 1, max = sub === 'parse' ? 3 : 2;
+							tk.type = 'TK_RESERVED', act += ' ' + sub, nexttoken();
+							if (tk.type === 'TK_COMMA' && nexttoken())
+								tk.topofline = 0;
+							next = false;
+						}
+						if ((!tk.topofline || tk.type === 'TK_COMMA') && tk.type !== 'TK_START_BLOCK')
+							result.push(...parse_line(undefined, '{', act, min, max));
+						else if (min)
+							_this.addDiagnostic(diagnostic.acceptparams(act, `${min}~${max}`), bak.offset, bak.length);
 						if (parse_body(undefined, beginpos))
 							return;
 						if (tk.type === 'TK_RESERVED' && tk.content.toLowerCase() === 'until')
@@ -1408,26 +1422,36 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
 							break;
 						}
-						lk = tk, tk = get_next_token(), next = false;
+						nexttoken();
+						if (tk.type === 'TK_COMMA') {
+							stop_parse(lk);
+							_this.addDiagnostic(diagnostic.unexpected(','), tk.offset, 1);
+						}
 						if (!tk.topofline) {
 							if (allIdentifierChar.test(tk.content)) {
-								tk.ignore = true, tk.type = 'TK_WORD', addlabel(tk);
-							} else if (tk.type.endsWith('COMMENT')) {
-								if (_low === 'goto')
-									_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+								if (tk.type === 'TK_NUMBER' && _low !== 'goto') {
+									if (tk.content.match(/[^\d]/))
+										_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+								} else
+									tk.ignore = true, tk.type = 'TK_WORD', addlabel(tk), delete tk.semantic;
+								nexttoken(), next = false;
 							} else if (input.charAt(lk.offset + lk.length) !== '(') {
 								parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
 								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
+								break;
 							} else {
 								let s: Token[] = [];
-								next = true, parse_pair('(', ')', undefined, {}, s);
+								parse_pair('(', ')', undefined, {}, s);
 								s.map(i => {
 									if (i.content.indexOf('\n') < 0)
 										addlabel({ content: i.content.slice(1, -1), offset: i.offset + 1, length: i.length - 2, type: '', topofline: 0, next_token_offset: -1 });
 								});
 								nexttoken(), next = false;
 							}
-						}
+							if (!tk.topofline)
+								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+						} else if (next = false, _low === 'goto')
+							_this.addDiagnostic(diagnostic.acceptparams(_low, 1), lk.offset, lk.length);
 						break;
 					case 'as':
 					case 'catch':
@@ -1465,6 +1489,8 @@ export class Lexer {
 						break;
 					case 'try':
 						nexttoken(), next = false;
+						if (tk.type === 'TK_COMMA')
+							stop_parse(lk);
 						parse_body(true, beginpos);
 						if (tk.type === 'TK_RESERVED' && tk.content.toLowerCase() !== 'else') {
 							while (tk.content.toLowerCase() === 'catch')
@@ -1488,6 +1514,8 @@ export class Lexer {
 							let tps: any = {};
 							lk = tk, tk = nk, next = false;
 							if (_low === 'return') {
+								if (tk.type === 'TK_COMMA')
+									stop_parse(lk);
 								result.push(...parse_line(tps, undefined, _low));
 								if (mode & 1) {
 									let rg = document.positionAt(lk.offset + lk.length);
@@ -1509,6 +1537,8 @@ export class Lexer {
 									nexttoken(), next = false;
 								} else _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 							} else if (_low === 'if' || _low === 'while') {
+								if (tk.type === 'TK_COMMA')
+									stop_parse(lk);
 								result.push(...parse_line(undefined, '{', _low, 1));
 								parse_body(undefined, beginpos);
 							}
@@ -1682,8 +1712,8 @@ export class Lexer {
 			function parse_funccall(type: SymbolKind, nextc: string) {
 				let tn: CallInfo, sub: DocumentSymbol[], fc = lk;
 				if (nextc === ',') {
-					if (type === SymbolKind.Function && builtin_ahkv1_commands.includes(fc.content.toLowerCase()))
-						return stop_parse(fc);
+					if (type === SymbolKind.Function && builtin_ahkv1_commands.includes(fc.content.toLowerCase()) && stop_parse(fc, true))
+						return;
 					_this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
 				}
 				if (tk.type === 'TK_OPERATOR' && !tk.content.match(/^(not|\+\+?|--?|!|~|%|&)$/i))
@@ -1827,18 +1857,21 @@ export class Lexer {
 						}
 						break;
 					case '#requires':
-						if (data.content.match(/^AutoHotkey\s+v1/i))
-							_this.maybev1 = 3, stop_parse(data, diagnostic.requirev1());
+						if (data.content.match(/^AutoHotkey\s+v1/i)) {
+							_this.maybev1 = 3;
+							if (!stop_parse(data, true, diagnostic.requirev1()))
+								_this.addDiagnostic(diagnostic.unexpected(data.content), data.offset, data.length);
+						}
 						break;
 					default:
-						if (l.match(/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i))
-							stop_parse(tk);
+						if (l.match(/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i) && !stop_parse(tk, true))
+							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 						break;
 				}
 			}
 
 			function parse_statement(local: string) {
-				let sta: DocumentSymbol[] | Variable[] = [], bak: Token, pc: Token | undefined, last_comm = '';
+				let sta: DocumentSymbol[] | Variable[] = [], bak: Token, pc: Token | undefined;
 				block_mode = false;
 				loop:
 				while (nexttoken()) {
@@ -2244,7 +2277,7 @@ export class Lexer {
 				}
 			}
 
-			function parse_params(types: any = {}, endc = ')') {
+			function parse_params(types: any = {}, must = false, endc = ')') {
 				let paramsdef = true, beg = parser_pos - 1, cache: Variable[] = [], rg, la = [',', endc === ')' ? '(' : '['];
 				let byref = false, tpexp = '', info: ParamInfo = { count: 0, comma: [], miss: [], unknown: false }, cmm;
 				let bb = parser_pos, bak = tk, hasexpr = false;
@@ -2252,6 +2285,10 @@ export class Lexer {
 				while (nexttoken()) {
 					if (tk.content === endc) {
 						if (lk.type === 'TK_COMMA') {
+							if (must) {
+								_this.addDiagnostic(diagnostic.unexpected(endc), tk.offset, tk.length);
+								break;
+							}
 							types['#void'] = true, tk.previous_pair_pos = beg;;
 							info.miss.push(info.count++);
 							Object.defineProperty(types, 'paraminfo', { value: info, configurable: true });
@@ -2264,7 +2301,7 @@ export class Lexer {
 							paramsdef = false; break;
 						}
 						info.count++;
-						if (la.includes(lk.content)) {
+						if (la.includes(lk.content) || lk === EMPTY_TOKEN) {
 							nexttoken();
 							if (tk.content === ',' || tk.content === endc) {
 								if (lk.content.match(/^\d/))
@@ -2279,7 +2316,11 @@ export class Lexer {
 								if (tk.content === ',')
 									info.comma.push(tk.offset);
 								else break;
-							} else if (tk.content === ':=') {
+							} else if (tk.content === ':=' || must && tk.content === '=') {
+								if (tk.content === '=') {
+									stop_parse(lk);
+									_this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=').toLowerCase()}`, tk.offset, tk.length);
+								}
 								let ek = tk, o: any;
 								if (lk.content.match(/^\d/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
@@ -2342,7 +2383,16 @@ export class Lexer {
 										break;
 									}
 								} else { paramsdef = false, info.count--; break; }
-							} else { paramsdef = false, info.count--; break; }
+							} else {
+								if (must && lk.type === 'TK_WORD' && lk.content.toLowerCase() === 'byref' && tk.type === 'TK_WORD') {
+									stop_parse(lk);
+									_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), lk.offset, lk.length);
+									next = false, lk = EMPTY_TOKEN;
+									continue;
+								}
+								paramsdef = false, info.count--;
+								break;
+							}
 						} else { paramsdef = false, info.count--; break; }
 					} else if (la.includes(lk.content)) {
 						if (tk.content === '*') {
@@ -2530,6 +2580,7 @@ export class Lexer {
 				}
 				while (nexttoken()) {
 					if (b === '%' && tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
+						stop_parse(_this.tokens[pairpos[0]]);
 						_this.addDiagnostic(diagnostic.missing('%'), pairpos[0], 1);
 						next = false, tpexp = '#any'; break;
 					}
@@ -3043,12 +3094,14 @@ export class Lexer {
 				else return next = tk.type !== 'TK_EOF';
 			}
 
-			function stop_parse(tk: Token, message = diagnostic.maybev1()) {
+			function stop_parse(tk: Token, allow_skip = false, message = diagnostic.maybev1()) {
 				_this.maybev1 ??= 1;
 				switch (_this.actionwhenv1 ?? extsettings.ActionWhenV1IsDetected) {
 					case 'SkipLine':
+						if (!allow_skip)
+							return false;
+						_this.addDiagnostic(diagnostic.skipline(), tk.offset, tk.length, DiagnosticSeverity.Warning);
 						if (tk.type === 'TK_WORD') {
-							_this.addDiagnostic(diagnostic.skipline(), tk.offset, tk.length, DiagnosticSeverity.Warning);
 							do {
 								nexttoken();
 								while (' \t'.includes(input.charAt(parser_pos) || '\0'))
@@ -3060,30 +3113,31 @@ export class Lexer {
 								parser_pos = next_LF;
 							} while (is_next_char(','));
 						}
-						return;
+						return true;
 					case 'SwitchToV1':
-						if (!_this.actived)
+						if (!_this.actived || _this.actionwhenv1 !== undefined)
 							break;
 						if (last_switch_uri !== _this.document.uri) {
 							connection.console.info([_this.uri, message, diagnostic.tryswitchtov1()].join(' '));
 							setTextDocumentLanguage(last_switch_uri = _this.document.uri), message = '';
+							_this.actionwhenv1 = 'SwitchToV1';
 							break;
-						} else _this.actionwhenv1 = '';
+						} else _this.actionwhenv1 = 'Continue';
+					case 'Continue':
+						return false;
 					case 'Warn': {
 						if (!_this.actived)
 							break;
 						connection.window.showWarningMessage(
 							message,
-							{ title: action.switchtov1(), action: '' },
+							{ title: action.switchtov1(), action: 'SwitchToV1' },
 							{ title: action.skipline(), action: 'SkipLine' },
 							{ title: action.stopparsing(), action: 'Stop' }
-						).then((reason?: { action: string }) => {
-							if (!reason || reason.action === 'Stop') {
-								_this.actionwhenv1 = 'Stop';
-							} else if (!(_this.actionwhenv1 = reason.action))
-								setTextDocumentLanguage(last_switch_uri = _this.document.uri);
-							else
-								_this.update();
+						).then((reason?: { action: any }) => {
+							if ((_this.actionwhenv1 = reason?.action ?? 'Continue') !== 'Stop')
+								if (_this.actionwhenv1 === 'SwitchToV1')
+									setTextDocumentLanguage(last_switch_uri = _this.document.uri);
+								else _this.update();
 						});
 						break;
 					}
@@ -4997,7 +5051,7 @@ export class Lexer {
 	public close() {
 		let uri = this.uri;
 		this.actived = false;
-		if (uri === last_switch_uri)
+		if (uri === last_switch_uri.toLowerCase() && this.actionwhenv1 !== 'SwitchToV1')
 			last_switch_uri = '';
 		if (!lexers[uri]) {
 			connection.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });

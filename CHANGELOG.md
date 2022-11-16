@@ -1,3 +1,6 @@
+## 1.7.5
+- 优化v1脚本识别并切换
+
 ## 1.7.4
 - 支持指定在检测到v1脚本时触发的行为(切换至v1, 跳过触发行, 停止解析, 警告选择框)[#214](https://github.com/thqby/vscode-autohotkey2-lsp/issues/214)
 - 修复[#217](https://github.com/thqby/vscode-autohotkey2-lsp/issues/217)

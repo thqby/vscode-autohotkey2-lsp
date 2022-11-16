@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.7.4",
+	"version": "1.7.5",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -140,6 +140,7 @@
 					"type": "string",
 					"default": "Warn",
 					"enum": [
+						"Continue",
 						"Warn",
 						"StopParsing",
 						"SwitchToV1",

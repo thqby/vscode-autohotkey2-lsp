@@ -75,10 +75,11 @@ export enum LibIncludeType {
 	'All'
 }
 
+export type ActionType = 'Continue' | 'Warn' | 'SkipLine' | 'SwitchToV1' | 'Stop';
 export interface AHKLSSettings {
 	locale?: string
 	commands?: string[]
-	ActionWhenV1IsDetected: 'Warn' | 'SkipLine' | 'SwitchToV1'
+	ActionWhenV1IsDetected: ActionType
 	AutoLibInclude: LibIncludeType
 	CommentTags: string
 	CompleteFunctionParens: boolean
