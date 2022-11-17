@@ -110,7 +110,11 @@ export function activate(context: ExtensionContext) {
 					}
 				}
 			}
-		})
+		}),
+		commands.registerCommand('ahk2.switch', () => {
+			const doc = window.activeTextEditor?.document;
+			if (doc) languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
+		}),
 	);
 
 	client.onReady().then(() => {

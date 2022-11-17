@@ -304,6 +304,12 @@
 				"command": "ahk2.updateversioninfo",
 				"title": "%ahk2.updateversioninfo%",
 				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 || editorLangId == ahk",
+				"command": "ahk2.switch",
+				"title": "Switch v1/v2",
+				"category": "ahk2"
 			}
 		],
 		"menus": {

@@ -12,7 +12,6 @@ import {
 	languages,
 	QuickPickItem,
 	Range,
-	RelativePattern,
 	SnippetString,
 	StatusBarAlignment,
 	TextEditor,
@@ -84,7 +83,7 @@ export async function activate(context: ExtensionContext) {
 		},
 		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
 			let lang = params[1] || 'ahk';
-			if (!(await languages.getLanguages()).includes(lang)) {
+			if (!langs.includes(lang)) {
 				window.showErrorMessage(`Unknown language id: ${lang}`);
 				return;
 			}
@@ -135,15 +134,21 @@ export async function activate(context: ExtensionContext) {
 		server_is_ready = true;
 	});
 
-	let extlist: string[] = [], debugexts: { [type: string]: string } = {};
-	for (const ext of extensions.all) {
-		if (ext.id.match(/ahk|autohotkey/i) && ext.packageJSON?.contributes?.debuggers) {
-			for (const debuger of ext.packageJSON.contributes.debuggers)
-				if (debuger.type)
-					debugexts[debuger.type] = ext.id;
+	let extlist: string[], debugexts: { [type: string]: string }, langs: string[] = [];
+	function update_extensions_info() {
+		debugexts = {};
+		for (const ext of extensions.all) {
+			if (ext.id.match(/ahk|autohotkey/i) && ext.packageJSON?.contributes?.debuggers) {
+				for (const debuger of ext.packageJSON.contributes.debuggers)
+					if (debuger.type)
+						debugexts[debuger.type] = ext.id;
+			}
 		}
+		extlist = Object.values(debugexts);
+		languages.getLanguages().then(all => langs = all);
 	}
-	extlist = Object.values(debugexts);
+	update_extensions_info();
+	extensions.onDidChange(e => update_extensions_info());
 
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 	ahkStatusBarItem.command = 'ahk2.setinterpreter';
@@ -159,6 +164,10 @@ export async function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.debug.params', async () => begindebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk2.setinterpreter', () => setInterpreter()),
 		commands.registerCommand('ahk2.updateversioninfo', () => updateVersionInfo()),
+		commands.registerCommand('ahk2.switch', () => {
+			const doc = window.activeTextEditor?.document;
+			if (doc) languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
+		}),
 		workspace.registerTextDocumentContentProvider('ahkres', {
 			async provideTextDocumentContent(uri: Uri, token) {
 				setTimeout(() => {
