@@ -2807,7 +2807,7 @@ export class Lexer {
 				}
 				types[b + tpexp + e] = true;
 				if (tk.type === 'TK_EOF' && pairnum > -1)
-					pairMiss();
+					e === '%' && stop_parse(_this.tokens[pairpos[0]]), pairMiss();
 				else if (b === '(') {
 					if (lk.content === ',')
 						info.miss.push(info.count++);
@@ -4605,27 +4605,28 @@ export class Lexer {
 		}
 
 		function is_line_continue(lk: Token, tk: Token, parent?: DocumentSymbol): boolean {
-			switch (tk.type) {
-				case 'TK_DOT':
+			switch (lk.type) {
+				case '':
 				case 'TK_COMMA':
 				case 'TK_EQUALS':
+				case 'TK_START_EXPR':
 					return true;
 				case 'TK_OPERATOR':
-					return lk.type === '' || !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!parent || !tk.content.match(/^\w/) || parent.kind !== SymbolKind.Class);
-				case 'TK_END_BLOCK':
-				case 'TK_END_EXPR':
-					return false;
-				case 'TK_STRING':
-					if (tk.ignore)
-						return true;
+					return lk.ignore ? false : !lk.content.match(/^(%|\+\+|--)$/);
 				default:
-					switch (lk.type) {
+					switch (tk.type) {
+						case 'TK_DOT':
 						case 'TK_COMMA':
 						case 'TK_EQUALS':
-						case '':
 							return true;
 						case 'TK_OPERATOR':
-							return lk.ignore ? false : !lk.content.match(/^(\+\+|--|%)$/);
+							return !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!parent || !tk.content.match(/^\w/) || parent.kind !== SymbolKind.Class);
+						case 'TK_END_BLOCK':
+						case 'TK_END_EXPR':
+							return false;
+						case 'TK_STRING':
+							if (tk.ignore)
+								return true;
 						default:
 							return false;
 					}
