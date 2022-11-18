@@ -132,6 +132,10 @@ export async function activate(context: ExtensionContext) {
 		onDidChangeActiveTextEditor(window.activeTextEditor);
 		ahkStatusBarItem.show();
 		server_is_ready = true;
+		workspace.onDidCloseTextDocument(e => {
+			client.sendNotification('onDidCloseTextDocument', e.isClosed ?
+				{ uri: '', id: '' } : { uri: e.uri.toString(), id: e.languageId });
+		});
 	});
 
 	let extlist: string[], debugexts: { [type: string]: string }, langs: string[] = [];

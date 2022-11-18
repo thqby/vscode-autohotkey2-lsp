@@ -23,7 +23,7 @@ import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 const languageServer = 'ahk2-language-server';
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false, connection: Connection;
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
-let initnum = 0;
+let initnum = 0, uri_switch_to_ahk2 = '';
 
 connection = createConnection(ProposedFeatures.all);
 set_Connection(connection, false, getDllExport, getRCDATA);
@@ -174,7 +174,7 @@ connection.onDidChangeConfiguration(async (change: any) => {
 	if (hasConfigurationCapability && !newset)
 		newset = await connection.workspace.getConfiguration('AutoHotkey2');
 	if (!newset) {
-		connection.window.showWarningMessage('Failed to obtain the configuration', );
+		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
 	let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
@@ -203,10 +203,13 @@ connection.onDidChangeConfiguration(async (change: any) => {
 });
 
 documents.onDidOpen(async e => {
+	let to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
 	let uri = e.document.uri.toLowerCase(), doc = lexers[uri];
 	if (doc) doc.document = e.document;
 	else lexers[uri] = doc = new Lexer(e.document);
 	doc.actived = true;
+	if (to_ahk2)
+		doc.actionwhenv1 = 'Continue';
 	if (extsettings.AutoLibInclude & 1)
 		parseproject(uri);
 });
@@ -260,6 +263,13 @@ connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
 	return null;
 });
 connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
+connection.onNotification('onDidCloseTextDocument',
+	(params: { uri: string, id: string }) => {
+		if (params.id === 'ahk2')
+			lexers[params.uri.toLowerCase()]?.close(true);
+		else uri_switch_to_ahk2 = params.uri;
+	});
+	connection.onDidCloseTextDocument
 documents.listen(connection);
 connection.listen();
 

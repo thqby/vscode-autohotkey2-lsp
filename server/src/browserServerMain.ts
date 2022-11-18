@@ -6,13 +6,13 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, BrowserMessageReader, BrowserMessageWriter, DidChangeConfigurationNotification,
 	FoldingRange, FoldingRangeParams, InitializeParams, InitializeResult, ExecuteCommandParams,
-	SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, WorkspaceFoldersChangeEvent
+	TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, WorkspaceFoldersChangeEvent
 } from 'vscode-languageserver/browser';
 import {
 	AHKLSSettings, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
-	extsettings, generateAuthor, generateComment, getincludetable, hoverProvider, initahk2cache, Lexer, lexers, LibIncludeType,
-	libfuncs, loadahk2, loadlocalize, parseinclude, prepareRename, rangeFormatting, referenceProvider, renameProvider,
-	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, sendDiagnostics, set_ahk_h, set_Connection, update_commentTags,
+	extsettings, generateAuthor, generateComment, hoverProvider, initahk2cache, Lexer, lexers, LibIncludeType,
+	loadahk2, loadlocalize, prepareRename, rangeFormatting, referenceProvider, renameProvider,
+	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, set_ahk_h, set_Connection, update_commentTags,
 	set_dirname, set_locale, set_Workfolder, signatureProvider, symbolProvider, typeFormatting, workspaceFolders, workspaceSymbolProvider, chinese_punctuations
 } from './common';
 
@@ -24,8 +24,9 @@ const connection = createConnection(messageReader, messageWriter);
 set_Connection(connection, true);
 set_ahk_h(true);
 
-let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument), hasahk2_hcache = false;
+let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
+let uri_switch_to_ahk2 = '';
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
@@ -168,10 +169,13 @@ connection.onDidChangeConfiguration(async change => {
 });
 
 documents.onDidOpen(async e => {
+	let to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
 	let uri = e.document.uri.toLowerCase(), doc = lexers[uri];
 	if (doc) doc.document = e.document;
 	else lexers[uri] = doc = new Lexer(e.document);
 	doc.actived = true;
+	if (to_ahk2)
+		doc.actionwhenv1 = 'Continue';
 });
 
 // Only keep settings for open documents
@@ -220,6 +224,12 @@ connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
 	}
 	return null;
 });
+connection.onNotification('onDidCloseTextDocument',
+	(params: { uri: string, id: string }) => {
+		if (params.id === 'ahk2')
+			lexers[params.uri.toLowerCase()]?.close(true);
+		else uri_switch_to_ahk2 = params.uri;
+	});
 documents.listen(connection);
 connection.listen();
 

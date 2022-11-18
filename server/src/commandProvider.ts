@@ -24,7 +24,7 @@ export function insertSnippet(value: string, range?: Range) {
 
 export function setTextDocumentLanguage(uri: string, lang?: string) {
 	if (extsettings.commands?.includes('ahk2.setTextDocumentLanguage'))
-		connection.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
+		return connection.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
 }
 
 export async function fixinclude(libpath: string, docuri: string) {

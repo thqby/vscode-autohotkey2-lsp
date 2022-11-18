@@ -119,6 +119,10 @@ export function activate(context: ExtensionContext) {
 
 	client.onReady().then(() => {
 		Object.entries(request_handlers).map(handler => client.onRequest(...handler));
+		workspace.onDidCloseTextDocument(e => {
+			client.sendNotification('onDidCloseTextDocument', e.isClosed ?
+				{ uri: '', id: '' } : { uri: e.uri.toString(), id: e.languageId });
+		});
 	});
 }
 

@@ -193,7 +193,6 @@ const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofl
 
 let searchcache: { [name: string]: any } = {};
 let hasdetectcache: { [exp: string]: any } = {};
-let last_switch_uri = '';
 
 class ParseStopError {
 	public message: string;
@@ -236,15 +235,15 @@ export class Lexer {
 	public strcommpos: { start: number, end: number, type: 1 | 2 | 3 }[] = [];
 	public texts: { [key: string]: string } = {};
 	public uri = '';
-	public maybev1?: number
+	public maybev1?: number;
+	public actionwhenv1?: ActionType;
 	private anonymous: FuncNode[] = [];
-	private actionwhenv1?: ActionType;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let input: string, output_lines: { text: string[], indent: number }[], flags: any, opt: FormatOptions, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: string };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
 		let parser_pos: number, customblocks: { region: number[], bracket: number[] }, _this = this, h = isahk2_h, filepath = '', sharp_offsets: number[] = [];
 		let input_wanted_newline: boolean, output_space_before_token: boolean, is_conditional: boolean, keep_object_line: boolean, begin_line: boolean;
-		let continuation_sections_mode: boolean, space_in_other: boolean;
+		let continuation_sections_mode: boolean, space_in_other: boolean, requirev2 = false;
 		let input_length: number, n_newlines: number, last_LF: number, preindent_string: string, lst: Token, ck: Token;
 		let comments: { [line: number]: Token } = {}, block_mode = true, format_mode = false, string_mode = false;
 		let handlers: { [index: string]: () => void } = {
@@ -720,7 +719,7 @@ export class Lexer {
 		} else {
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
-				begin_line = true, lst = EMPTY_TOKEN;
+				begin_line = true, requirev2 = false, lst = EMPTY_TOKEN;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), this.reflat = true, includetable = this.include, comments = {}, this.maybev1 = undefined;
 				try {
@@ -1857,9 +1856,10 @@ export class Lexer {
 						}
 						break;
 					case '#requires':
-						if (data.content.match(/^AutoHotkey\s+v1/i)) {
-							_this.maybev1 = 3;
-							if (!stop_parse(data, true, diagnostic.requirev1()))
+						if (m = data.content.match(/^AutoHotkey\s+v(1|2)/i)) {
+							if (m[1] === '2')
+								requirev2 = true;
+							else if (_this.maybev1 = 3, !stop_parse(data, true, diagnostic.requirev1()))
 								_this.addDiagnostic(diagnostic.unexpected(data.content), data.offset, data.length);
 						}
 						break;
@@ -3095,6 +3095,8 @@ export class Lexer {
 			}
 
 			function stop_parse(tk: Token, allow_skip = false, message = diagnostic.maybev1()) {
+				if (requirev2)
+					return false;
 				_this.maybev1 ??= 1;
 				switch (_this.actionwhenv1 ?? extsettings.ActionWhenV1IsDetected) {
 					case 'SkipLine':
@@ -3115,14 +3117,12 @@ export class Lexer {
 						}
 						return true;
 					case 'SwitchToV1':
-						if (!_this.actived || _this.actionwhenv1 !== undefined)
+						if (!_this.actived)
 							break;
-						if (last_switch_uri !== _this.document.uri) {
-							connection.console.info([_this.uri, message, diagnostic.tryswitchtov1()].join(' '));
-							setTextDocumentLanguage(last_switch_uri = _this.document.uri), message = '';
+						connection.console.info([_this.uri, message, diagnostic.tryswitchtov1()].join(' '));
+						if (message = '', setTextDocumentLanguage(_this.document.uri))
 							_this.actionwhenv1 = 'SwitchToV1';
-							break;
-						} else _this.actionwhenv1 = 'Continue';
+						break;
 					case 'Continue':
 						return false;
 					case 'Warn': {
@@ -3136,7 +3136,7 @@ export class Lexer {
 						).then((reason?: { action: any }) => {
 							if ((_this.actionwhenv1 = reason?.action ?? 'Continue') !== 'Stop')
 								if (_this.actionwhenv1 === 'SwitchToV1')
-									setTextDocumentLanguage(last_switch_uri = _this.document.uri);
+									setTextDocumentLanguage(_this.document.uri);
 								else _this.update();
 						});
 						break;
@@ -5049,21 +5049,21 @@ export class Lexer {
 		}
 	}
 
-	public close() {
+	public close(force = false) {
 		let uri = this.uri;
 		this.actived = false;
-		if (uri === last_switch_uri.toLowerCase() && this.actionwhenv1 !== 'SwitchToV1')
-			last_switch_uri = '';
 		if (!lexers[uri]) {
 			connection.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
 			return;
 		}
-		if (lexers[uri].d > 2 && !uri.includes('?'))
-			return;
 		let lexs = Object.values(lexers);
-		for (let lex of lexs)
-			if (lex.actived && lex.relevance?.[uri])
+		if (!force) {
+			if (lexers[uri].d > 2 && !uri.includes('?'))
 				return;
+			for (let lex of lexs)
+				if (lex.actived && lex.relevance?.[uri])
+					return;
+		}
 		connection.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
 		delete lexers[uri];
 		let dels: string[] = [];
@@ -5077,7 +5077,7 @@ export class Lexer {
 				del && dels.push(lex.uri);
 			}
 		});
-		dels.map(u => lexers[u]?.close());
+		dels.map(u => lexers[u]?.close(force));
 	}
 }
 
