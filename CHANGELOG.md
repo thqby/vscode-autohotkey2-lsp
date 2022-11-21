@@ -1,3 +1,9 @@
+## 1.7.6
+- 增加v1/v2切换命令`ahk2.switch`
+- 从其他语言切换到ahk2将不触发SwitchToV1
+- 修复格式化和查找所有引用的错误
+- 减少类似警告[#220](https://github.com/thqby/vscode-autohotkey2-lsp/issues/220)
+
 ## 1.7.5
 - 优化v1脚本识别并切换
 
