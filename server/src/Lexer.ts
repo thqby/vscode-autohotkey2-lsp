@@ -2909,7 +2909,8 @@ export class Lexer {
 				if (md === 2) {
 					tn.kind = SymbolKind.Property;
 					addprop(token);
-					if (classfullname) tn.full = `(${classfullname.slice(0, -1)}) ${tn.name}`;
+					if (classfullname)
+						tn.full = `(${classfullname.slice(0, -1)}) ${tn.name}`, token.symbol = tn;
 					// tn.def = true;
 				} else if (_low.match(/^\d/))
 					_this.addDiagnostic(diagnostic.invalidsymbolname(token.content), token.offset, token.length);

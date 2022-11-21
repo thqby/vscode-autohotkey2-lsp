@@ -93,10 +93,9 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 					if (tt.length)
 						references[doc.document.uri] = tt;
 				}
-				let u = lexers[uri].document.uri;
-				if (references[u])
-					references[u].unshift(node.selectionRange);
-				else references[u] = [node.selectionRange];
+				let t = references[lexers[uri].document.uri] ??= [], ns = node.selectionRange;
+				if ((node as any).full)
+					t.unshift(node.selectionRange);
 				break;
 			}
 			return undefined;
