@@ -4203,7 +4203,7 @@ export class Lexer {
 
 			if (token_type === 'TK_RESERVED') {
 				if (is_special_word(token_text_low)) {
-					if (input_wanted_newline && opt.preserve_newlines)
+					if (input_wanted_newline)
 						print_newline(preserve_statement_flags);
 				} else {
 					let maybe_need_newline = false;

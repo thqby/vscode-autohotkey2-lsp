@@ -203,7 +203,11 @@ function decode(buf: Buffer) {
 
 async function runCurrentScriptFile(selection = false): Promise<void> {
 	const editor = window.activeTextEditor, executePath = ahkpath_cur || getConfig('InterpreterPath');
-	if (!editor || !executePath) return;
+	if (!editor) return;
+	if (!executePath || !existsSync(executePath)) {
+		window.showErrorMessage(zhcn ? `"${executePath}"未找到!` : `"${executePath}" not find!`);
+		return;
+	}
 	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
 	let startTime: Date;
 	await stopRunningScript(true);
