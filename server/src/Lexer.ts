@@ -4319,8 +4319,8 @@ export class Lexer {
 				if (input_wanted_newline && flags.mode === MODE.Statement && !flags.is_expression &&
 					!is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))
 					print_newline(preserve_statement_flags);
-				else if (input_wanted_newline && opt.preserve_newlines)
-					print_newline(true);
+				else if (input_wanted_newline && (opt.preserve_newlines || ck.symbol))
+					print_newline(!ck.symbol);
 				else if (['TK_COMMA', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR'].includes(last_type))
 					if (!start_of_object_property())
 						allow_wrap_or_preserved_newline();
