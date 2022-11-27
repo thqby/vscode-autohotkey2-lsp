@@ -561,7 +561,8 @@ export class Lexer {
 													else j--;
 												tokens[j + 1].type === 'TK_END_EXPR' && (lk = tokens[++j]);
 												tt.range.end = this.document.positionAt(lk.offset + lk.length);
-												tt.returntypes = { [rets.length > 1 ? `[${rets.join(',')}]` : (rets.pop() ?? '#any')]: true };
+												if (rets[0] !== '#void')
+													tt.returntypes = { [rets.length > 1 ? `[${rets.join(',')}]` : (rets.pop() ?? '#any')]: true };
 												tn.children?.push(tt);
 											} else lk = tk;
 										}
@@ -576,7 +577,8 @@ export class Lexer {
 												else j--;
 											tokens[j + 1].type === 'TK_END_EXPR' && (lk = tokens[++j]);
 										}
-										tn.returntypes = { [rets.length > 1 ? `[${rets.join(',')}]` : (rets.pop() ?? '#any')]: true };
+										if (rets[0] !== '#void')
+											tn.returntypes = { [rets.length > 1 ? `[${rets.join(',')}]` : (rets.pop() ?? '#any')]: true };
 									}
 								} else if (tokens[j].content === '(') {
 									let params: Variable[] = [], byref = false, defVal = 0;
@@ -630,7 +632,8 @@ export class Lexer {
 											j = j + 1, r = '', lt = '';
 											while ((lk = tokens[j + 1]) && (lk.type === 'TK_WORD' || lk.type === 'TK_DOT') && (!lk.topofline && lt !== lk.type))
 												r += lk.content, j++, lt = lk.type, lk.semantic = { type: SemanticTokenTypes.class };
-											r && rets.push(r.replace(/(?<=(^|\.))([^.$@#]+)$/, '@$2').replace('$', ''));
+											if (r)
+												rets.push(r = r.replace(/(?<=(^|\.))([^.$@#]+)$/, '@$2').replace('$', '').toLowerCase()), r === '@void' && rets.pop();
 										} while (tokens[j + 1]?.content === '|');
 										lk?.type !== 'TK_END_EXPR' && (lk = tokens[j]);
 									}
@@ -639,9 +642,9 @@ export class Lexer {
 									tk.semantic = { type: blocks ? SemanticTokenTypes.method : SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
 									if (blocks)
 										tn.full = `(${cls.join('.')}) ` + tn.full;
-									if (rets) {
+									if (rets?.length) {
 										let o: any = {};
-										rets.map((tp: string) => o[tp.toLowerCase()] = true);
+										rets.map((tp: string) => o[tp] = true);
 										tn.returntypes = o;
 									}
 									if ((i -= (isstatic ? 2 : 1)) >= 0 && tokens[i].type.endsWith('COMMENT'))
@@ -832,7 +835,7 @@ export class Lexer {
 									if (nexttoken() && tk.content === '=>') {
 										let rs = result.splice(rl), storemode = mode, pp = _parent;
 										mode |= 1, _parent = tn;
-										let sub = parse_line(o, undefined, 'return', 1);
+										let sub = parse_line(o = {}, undefined, 'return', 1);
 										result.push(tn), _parent = pp, mode = storemode;
 										tn.range.end = document.positionAt(lk.offset + lk.length);
 										_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
@@ -1665,7 +1668,7 @@ export class Lexer {
 			function parse_top_word() {
 				let c = '';
 				next = true, nexttoken(), next = false;
-				if (tk.type !== 'TK_EQUALS' && !'=?'.includes(tk.content || ' ') &&
+				if (tk.type !== 'TK_EQUALS' && !'=??'.includes(tk.content || ' ') &&
 					(tk.type === 'TK_DOT' || ', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))) {
 					if (tk.type === 'TK_DOT') {
 						next = true, addvariable(lk);
@@ -1679,7 +1682,7 @@ export class Lexer {
 								else if (tk.content === '%' && lk.offset + lk.length === tk.offset)
 									maybeclassprop(lk, null);
 								next = false;
-								if (tk.type as string !== 'TK_EQUALS' && !'=?'.includes(tk.content || ' ') &&
+								if (tk.type as string !== 'TK_EQUALS' && !'=??'.includes(tk.content || ' ') &&
 									', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))
 									parse_funccall(SymbolKind.Method, c);
 								else
@@ -4605,35 +4608,6 @@ export class Lexer {
 			print_newline();
 		}
 
-		function is_line_continue(lk: Token, tk: Token, parent?: DocumentSymbol): boolean {
-			switch (lk.type) {
-				case '':
-				case 'TK_COMMA':
-				case 'TK_EQUALS':
-				case 'TK_START_EXPR':
-					return true;
-				case 'TK_OPERATOR':
-					return lk.ignore ? false : !lk.content.match(/^(%|\+\+|--)$/);
-				default:
-					switch (tk.type) {
-						case 'TK_DOT':
-						case 'TK_COMMA':
-						case 'TK_EQUALS':
-							return true;
-						case 'TK_OPERATOR':
-							return !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!parent || !tk.content.match(/^\w/) || parent.kind !== SymbolKind.Class);
-						case 'TK_END_BLOCK':
-						case 'TK_END_EXPR':
-							return false;
-						case 'TK_STRING':
-							if (tk.ignore)
-								return true;
-						default:
-							return false;
-					}
-			}
-		}
-
 		function need_newline() {
 			return input_wanted_newline && (flags.parent.mode === MODE.BlockStatement &&
 				['TK_END_EXPR', 'TK_START_BLOCK', 'TK_END_BLOCK', 'TK_WORD', 'TK_STRING'].includes(last_type) ||
@@ -5989,6 +5963,35 @@ export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: 
 				}
 				break;
 		}
+	}
+}
+
+export function is_line_continue(lk: Token, tk: Token, parent?: DocumentSymbol): boolean {
+	switch (lk.type) {
+		case '':
+		case 'TK_COMMA':
+		case 'TK_EQUALS':
+		case 'TK_START_EXPR':
+			return true;
+		case 'TK_OPERATOR':
+			return lk.ignore ? false : !lk.content.match(/^(%|\+\+|--)$/);
+		default:
+			switch (tk.type) {
+				case 'TK_DOT':
+				case 'TK_COMMA':
+				case 'TK_EQUALS':
+					return true;
+				case 'TK_OPERATOR':
+					return !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!parent || !tk.content.match(/^\w/) || parent.kind !== SymbolKind.Class);
+				case 'TK_END_BLOCK':
+				case 'TK_END_EXPR':
+					return false;
+				case 'TK_STRING':
+					if (tk.ignore)
+						return true;
+				default:
+					return false;
+			}
 	}
 }
 

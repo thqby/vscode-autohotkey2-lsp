@@ -46,6 +46,7 @@ export namespace diagnostic {
 	export const maybev1 = localize('diagnostic.maybev1', 'This might be a v1 script, and the lexer stops parsing.');
 	export const missing = localize('diagnostic.missing', 'Missing \'{0}\'');
 	export const missingparam = localize('diagnostic.missingparam', 'Missing a required parameter');
+	export const missingretval = localize('diagnostic.missingretval', 'The function missing a return value');
 	export const objectliteralerr = localize('diagnostic.objectliteralerr', 'Error in object literal');
 	export const pathinvalid = localize('diagnostic.pathinvalid', 'Invalid file path');
 	export const paramcounterr = localize('diagnostic.paramcounterr', 'Expected {0} parameters, but got {1}');

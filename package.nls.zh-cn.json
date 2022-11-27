@@ -59,6 +59,7 @@
 	"diagnostic.maybev1": "这可能是一个v1脚本, lexer停止解析.",
 	"diagnostic.missing": "丢失对应的 '{0}'",
 	"diagnostic.missingparam": "缺少必需的参数",
+	"diagnostic.missingretval": "函数缺少返回值",
 	"diagnostic.objectliteralerr": "对象字面量存在错误",
 	"diagnostic.pathinvalid": "无效的文件路径",
 	"diagnostic.paramcounterr": "应有 {0} 个参数, 但获得 {1} 个",

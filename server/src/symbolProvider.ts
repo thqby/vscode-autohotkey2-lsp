@@ -1,7 +1,7 @@
 import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, getClassMembers, ParamInfo, samenameerr } from './Lexer';
 import { diagnostic } from './localize';
-import { ahkvars, connection, extsettings, getallahkfiles, inBrowser, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
+import { ahkvars, connection, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
 import { URI } from 'vscode-uri';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
@@ -295,6 +295,14 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset, t.length, 2);
 				}
 			});
+		}
+		if (!node.returntypes) {
+			let tk = doc.tokens[info.offset as number];
+			if (tk?.previous_token?.type === 'TK_EQUALS') {
+				let nt = doc.get_token(doc.document.offsetAt(info.range.end), true);
+				if (!nt || !is_line_continue(nt.previous_token as Token, nt) || nt.content !== '??')
+					doc.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, 2);
+			}
 		}
 	}
 }
