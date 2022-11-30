@@ -109,7 +109,11 @@ export function openFile(path: string, showError = true): TextDocument | undefin
 		return undefined;
 	} else {
 		let buf: Buffer | string;
-		buf = readFileSync(path);
+		try { buf = readFileSync(path); }
+		catch (e: any) {
+			connection.window.showErrorMessage(e.message);
+			return undefined;
+		}
 		if (buf[0] === 0xff && buf[1] === 0xfe)
 			buf = buf.toString('utf16le');
 		else if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)

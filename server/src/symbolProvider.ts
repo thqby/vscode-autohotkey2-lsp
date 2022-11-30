@@ -204,8 +204,8 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		}
 		function err_extends(doc: Lexer, it: ClassNode, not_exist = true) {
 			let o = doc.document.offsetAt(it.selectionRange.start), tks = doc.tokens, tk: Token;
-			tk = tks[tks[o].next_token_offset];
-			tk = tks[tk.next_token_offset];
+			if (!(tk = tks[tks[o].next_token_offset]) || !(tk = tks[tk.next_token_offset]))
+				return;
 			o = tk.offset;
 			let rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
 			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Warning });
@@ -230,6 +230,11 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 				tk.semantic = stk = { type: st };
 				if (it.kind === SymbolKind.Variable && (<Variable>it).def && (kind === SymbolKind.Class || kind === SymbolKind.Function))
 					doc.addDiagnostic(samenameerr(it, { kind } as DocumentSymbol), offset, it.name.length), delete (<Variable>it).def;
+				if (!tk.callinfo && st === SemanticTokenTypes.function) {
+					let nk = doc.tokens[tk.next_token_offset];
+					if (nk && nk.topofline < 1 && !':?.+-*/=%<>,)]}'.includes(nk.content.charAt(0)))
+						doc.addDiagnostic(diagnostic.funccallerr2(), tk.offset, tk.length, 2);
+				}
 			} else if (kind !== undefined)
 				stk.type = st;
 			if (st < 3)

@@ -33,6 +33,7 @@ export namespace diagnostic {
 	export const duplabel = localize('diagnostic.duplabel', 'Duplicate label');
 	export const filenotexist = localize('diagnostic.filenotexist', '\'{0}\' not exist');
 	export const funccallerr = localize('diagnostic.funccallerr', 'Function calls require a space or \'(\',  use comma only between parameters');
+	export const funccallerr2 = localize('diagnostic.funccallerr2', 'In the expression, the function call requires parentheses');
 	export const globalconflicts = localize('diagnostic.globalconflicts', 'This global declaration conflicts with an existing {0}');
 	export const hotdeferr = localize('diagnostic.hotdeferr', 'Hotkeys/hotstrings cannot be defined in functions/classes');
 	export const hotmissbrace = localize('diagnostic.hotmissbrace', 'Hotkey or hotstring is missing its opening brace');
@@ -47,6 +48,7 @@ export namespace diagnostic {
 	export const missing = localize('diagnostic.missing', 'Missing \'{0}\'');
 	export const missingparam = localize('diagnostic.missingparam', 'Missing a required parameter');
 	export const missingretval = localize('diagnostic.missingretval', 'The function missing a return value');
+	export const missingspace = localize('diagnostic.missingspace', 'Missing space or operator before this');
 	export const objectliteralerr = localize('diagnostic.objectliteralerr', 'Error in object literal');
 	export const pathinvalid = localize('diagnostic.pathinvalid', 'Invalid file path');
 	export const paramcounterr = localize('diagnostic.paramcounterr', 'Expected {0} parameters, but got {1}');

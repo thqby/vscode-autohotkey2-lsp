@@ -1694,20 +1694,11 @@ export class Lexer {
 					} else
 						addvariable(lk), parse_funccall(SymbolKind.Function, c);
 				} else {
-					let bak = tk.content === '=' ? tk : undefined, tp: any = bak ? {} : undefined;
+					let act, offset;
+					tk.content === '=' && (act = '=', offset = tk.offset);
 					reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN, next = false;
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
-					result.push(...parse_line(tp));
-					if (bak) {
-						for (let [expr, i] of Object.entries(tp)) {
-							if (i === 1) {
-								let q = expr.indexOf('?');
-								if (q === -1 || expr.indexOf(':', q) === -1)
-									_this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=').toLowerCase()}`, bak.offset, bak.length);
-								break;
-							}
-						}
-					}
+					result.push(...parse_line(undefined, undefined, act, offset));
 				}
 			}
 
@@ -1775,7 +1766,7 @@ export class Lexer {
 			}
 
 			function parse_line(types?: any, end?: string, act?: string, min = 0, max = 1): DocumentSymbol[] {
-				let b: number, res: DocumentSymbol[] = [], hascomma = 0, t = 0, nk: Token | undefined;
+				let b: number, res: DocumentSymbol[] = [], hascomma = 0, t = 0, nk: Token | undefined, tps: string[] = [];
 				let info: ParamInfo = { count: 0, comma: [], miss: [], unknown: false };
 				if (block_mode = false, next) {
 					let t = _this.get_token(parser_pos, true);
@@ -1794,6 +1785,8 @@ export class Lexer {
 				while (true) {
 					let o: any = {};
 					res.push(...parse_expression(undefined, o, 0, end));
+					if (o = Object.keys(o).pop()?.toLowerCase())
+						tps.push(o);
 					if (tk.type === 'TK_COMMA') {
 						next = true, ++hascomma, ++info.count;
 						if (lk.type === 'TK_COMMA' || lk.content === '(')
@@ -1803,9 +1796,6 @@ export class Lexer {
 						info.comma.push(tk.offset);
 					} else if (tk.topofline) {
 						next = false;
-						if (types)
-							if (o = Object.keys(o).pop()?.toLowerCase())
-								types[o] = info.count;
 						break;
 					} else if (end === tk.content)
 						break;
@@ -1815,9 +1805,14 @@ export class Lexer {
 						break;
 					t = parser_pos;
 				}
-				if (act)
-					if (hascomma >= max || (info.count - (tk === nk ? 1 : 0) < min))
-						_this.addDiagnostic(diagnostic.acceptparams(act, max === min ? min : `${min}~${max}`), b, lk.offset + lk.length - b);
+				if (types)
+					types[tps.pop() ?? '#void'] = true;
+				if (act === '=') {
+					let expr = tps[0], q: number;
+					if (expr && ((q = expr.indexOf('?')) === -1 || expr.indexOf(':', q) === -1))
+						_this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=').toLowerCase()}`, min, 1);
+				} else if (act && (hascomma >= max || (info.count - (tk === nk ? 1 : 0) < min)))
+					_this.addDiagnostic(diagnostic.acceptparams(act, max === min ? min : `${min}~${max}`), b, lk.offset + lk.length - b);
 				if (lk.content === '*')
 					info.unknown = true;
 				Object.defineProperty(res, 'paraminfo', { value: info, configurable: true });
@@ -1945,11 +1940,12 @@ export class Lexer {
 				let pres = result.length, tpexp = '', byref = false, ternarys: number[] = [], t: any, objk: any;
 				block_mode = false;
 				while (nexttoken()) {
-					if (tk.topofline === 1 && !inpair && !is_line_continue(lk, tk, _parent)) {
-						if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) === '.')
-							addprop(lk);
-						next = false; break;
-					}
+					if (tk.topofline === 1)
+						if (!inpair && !is_line_continue(lk, tk, _parent)) {
+							if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) === '.')
+								addprop(lk);
+							next = false; break;
+						} else tk.topofline = -1;
 					switch (tk.type) {
 						case 'TK_WORD':
 							let predot = (input.charAt(tk.offset - 1) === '.');
@@ -2286,6 +2282,8 @@ export class Lexer {
 				let bb = parser_pos, bak = tk, hasexpr = false;
 				block_mode = false;
 				while (nexttoken()) {
+					if (tk.topofline === 1)
+						tk.topofline = -1;
 					if (tk.content === endc) {
 						if (lk.type === 'TK_COMMA') {
 							if (must) {
@@ -2464,6 +2462,7 @@ export class Lexer {
 				function objkey(): boolean {
 					while (nexttoken()) {
 						k = undefined;
+						tk.topofline === 1 && (tk.topofline = -1);
 						switch (tk.type) {
 							case 'TK_RESERVED':
 							case 'TK_WORD':
@@ -2582,10 +2581,15 @@ export class Lexer {
 					delete types.paraminfo;
 				}
 				while (nexttoken()) {
-					if (b === '%' && tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
-						stop_parse(_this.tokens[pairpos[0]]);
-						_this.addDiagnostic(diagnostic.missing('%'), pairpos[0], 1);
-						next = false, tpexp = '#any'; break;
+					if (tk.topofline) {
+						if (b === '%' && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
+							stop_parse(_this.tokens[pairpos[0]]);
+							_this.tokens[pairpos[0]].next_pair_pos = -1;
+							_this.addDiagnostic(diagnostic.missing('%'), pairpos[0], 1);
+							next = false, tpexp = '#any'; break;
+						}
+						if (tk.topofline === 1)
+							tk.topofline = -1;
 					}
 					if (b !== '(' && tk.content === '(') {
 						apos = result.length, tp = parser_pos, rpair = 1, llk = lk;
@@ -3726,6 +3730,8 @@ export class Lexer {
 			if (c === '"' || c === "'") {
 				let sep = c, o = offset, nosep = false, se = { type: SemanticTokenTypes.string }, _lst: Token | undefined, pt: Token | undefined;
 				resulting_string = '';
+				if (!/^[\s+\-*/%:?~!&|=[({,.]$/.test(c = input.charAt(offset - 1)))
+					_this.addDiagnostic(diagnostic.missingspace(), offset, 1);
 				while (c = input.charAt(parser_pos++)) {
 					if (c === '`')
 						parser_pos++;
@@ -4019,7 +4025,7 @@ export class Lexer {
 		function handle_start_expr(): void {
 			if (start_of_statement()) {
 
-			} else if (need_newline())
+			} else if (need_newline() || (input_wanted_newline && !is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck)))
 				print_newline();
 
 			let next_mode = MODE.Expression;
@@ -4092,7 +4098,7 @@ export class Lexer {
 			// In all cases, if we newline while inside an expression it should be indented.
 			indent();
 
-			if (token_text === '[' && !opt.keep_array_indentation)
+			if (token_text === '[' && !opt.keep_array_indentation && opt.preserve_newlines)
 				print_newline(true);
 		}
 
@@ -4105,7 +4111,7 @@ export class Lexer {
 			if ((last_type === 'TK_END_EXPR' || last_type === 'TK_END_BLOCK') && flags.indentation_level < flags.parent.indentation_level)
 				trim_newlines();
 			else
-				allow_wrap_or_preserved_newline(token_text === ']' && is_array(flags.mode) && !opt.keep_array_indentation);
+				allow_wrap_or_preserved_newline(token_text === ']' && is_array(flags.mode) && !opt.keep_array_indentation && opt.preserve_newlines);
 
 			output_space_before_token = Boolean(opt.space_in_paren && !(last_type === 'TK_START_EXPR' && !opt.space_in_empty_paren));
 			restore_mode();
@@ -4134,7 +4140,10 @@ export class Lexer {
 				}
 				output_space_before_token ||= last_type !== 'TK_START_EXPR' && space_in_other;
 				print_token(), indent();
-				output_space_before_token = space_in_other;
+				if (!keep_object_line)
+					print_newline(true);
+				else
+					output_space_before_token = space_in_other;
 			} else {
 				if (!['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally'].includes(flags.last_word))
 					while (flags.mode === MODE.Statement)
