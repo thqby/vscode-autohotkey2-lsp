@@ -3730,7 +3730,7 @@ export class Lexer {
 			if (c === '"' || c === "'") {
 				let sep = c, o = offset, nosep = false, se = { type: SemanticTokenTypes.string }, _lst: Token | undefined, pt: Token | undefined;
 				resulting_string = '';
-				if (!/^[\s+\-*/%:?~!&|=[({,.]$/.test(c = input.charAt(offset - 1)))
+				if (!/^[\s+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1)))
 					_this.addDiagnostic(diagnostic.missingspace(), offset, 1);
 				while (c = input.charAt(parser_pos++)) {
 					if (c === '`')
@@ -4110,7 +4110,7 @@ export class Lexer {
 
 			if ((last_type === 'TK_END_EXPR' || last_type === 'TK_END_BLOCK') && flags.indentation_level < flags.parent.indentation_level)
 				trim_newlines();
-			else
+			else if (last_type !== 'TK_START_EXPR')
 				allow_wrap_or_preserved_newline(token_text === ']' && is_array(flags.mode) && !opt.keep_array_indentation && opt.preserve_newlines);
 
 			output_space_before_token = Boolean(opt.space_in_paren && !(last_type === 'TK_START_EXPR' && !opt.space_in_empty_paren));
