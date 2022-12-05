@@ -5983,7 +5983,10 @@ export function is_line_continue(lk: Token, tk: Token, parent?: DocumentSymbol):
 		case 'TK_START_EXPR':
 			return true;
 		case 'TK_OPERATOR':
-			return lk.ignore ? false : !lk.content.match(/^(%|\+\+|--)$/);
+			if (lk.ignore)
+				return false;
+			if (!lk.content.match(/^(%|\+\+|--)$/))
+				return true;
 		default:
 			switch (tk.type) {
 				case 'TK_DOT':
@@ -5992,9 +5995,9 @@ export function is_line_continue(lk: Token, tk: Token, parent?: DocumentSymbol):
 					return true;
 				case 'TK_OPERATOR':
 					return !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!parent || !tk.content.match(/^\w/) || parent.kind !== SymbolKind.Class);
-				case 'TK_END_BLOCK':
-				case 'TK_END_EXPR':
-					return false;
+				// case 'TK_END_BLOCK':
+				// case 'TK_END_EXPR':
+				// 	return false;
 				case 'TK_STRING':
 					if (tk.ignore)
 						return true;
