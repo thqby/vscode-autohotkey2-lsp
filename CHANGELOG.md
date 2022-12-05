@@ -1,3 +1,8 @@
+## 1.7.8
+- 修复格式化错误
+- 修复[#224](https://github.com/thqby/vscode-autohotkey2-lsp/issues/224)
+- 修复[#225](https://github.com/thqby/vscode-autohotkey2-lsp/issues/225)
+
 ## 1.7.7
 - 修复格式化错误
 - 加入简单返回值检查[#221](https://github.com/thqby/vscode-autohotkey2-lsp/issues/221)

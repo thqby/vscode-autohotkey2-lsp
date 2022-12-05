@@ -20,14 +20,16 @@ export async function rangeFormatting(params: DocumentRangeFormattingParams): Pr
 export async function typeFormatting(params: DocumentOnTypeFormattingParams): Promise<TextEdit[] | undefined> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], { ch, position } = params, result: TextEdit[] | undefined;
 	let opts = Object.assign({}, extsettings.FormatOptions), tk: Token, s: string, pp: number | undefined;
-
+	opts.indent_string = ' '.repeat(params.options.tabSize);
+	s = doc.document.getText({ start: { line: 0, character: 0 }, end: { line: 0, character: 1 } });
+	if (s === '\t' || !params.options.insertSpaces && /\S/.test(s))
+		opts.indent_string = '\t';
 	if (ch === '\n') {
 		let { line, character } = position, linetexts = doc.document.getText({
 			start: { line: line - 1, character: 0 },
 			end: { line: line + 2, character: 0 }
 		}).split(/\r?\n/), s = linetexts[0].trimRight(), indent_string: string;
 
-		opts.indent_string = params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
 		if (!linetexts[1].trim())
 			character = linetexts[1].length;
 
