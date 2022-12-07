@@ -132,11 +132,11 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 			let p = DocumentSymbol.create(name, undefined, SymbolKind.Property, rg, rg) as Variable;
 			p.static = p.def = true, name = name.toLowerCase();
 			if (d === doc && d.d < 2)
-				cls.staticdeclaration[name] = p, cls.children?.push(p);
+				cls.staticdeclaration[name] ??= (cls.children?.push(p), p);
 			else {
 				let t = memscache.get(cls);
 				if (t)
-					t[name] = p;
+					t[name] ??= p;
 			}
 		} else if (d && d.d < 2)
 			(<any>cls).checkmember = false;

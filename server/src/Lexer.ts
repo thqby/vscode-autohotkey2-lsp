@@ -2865,10 +2865,14 @@ export class Lexer {
 								(<any>p).checkmember = false;
 							else {
 								let o = tokens[tokens[end].next_token_offset], prop = nk.content.slice(1, -1);
-								let t = Variable.create(prop, SymbolKind.Property, rg = make_range(nk.offset + 1, prop.length));
-								p.cache.push(t), t.static = s;
-								if (o.type === 'TK_START_BLOCK' && o.data?.call)
-									t.kind = SymbolKind.Method;
+								let t: Variable | FuncNode;
+								rg = make_range(nk.offset + 1, prop.length);
+								if (o.type === 'TK_START_BLOCK' && o.data?.call) {
+									t = FuncNode.create(prop, SymbolKind.Method, rg, rg, [Variable.create('*', SymbolKind.Variable, make_range(0, 0))], undefined, s);
+									t.full = `(${classfullname.slice(0, -1)}) ` + t.full;
+								} else
+									t = Variable.create(prop, SymbolKind.Property, rg), t.static = s;
+								p.cache.push(t);
 								return t;
 							}
 						}
