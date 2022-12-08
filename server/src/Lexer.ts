@@ -4028,7 +4028,7 @@ export class Lexer {
 
 		function handle_start_expr(): void {
 			if (start_of_statement()) {
-
+				flags.last_word = '_';
 			} else if (need_newline() || (input_wanted_newline && !is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck)))
 				print_newline();
 
