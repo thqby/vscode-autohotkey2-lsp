@@ -702,6 +702,7 @@ export class Lexer {
 					this.children.map(it => {
 						switch (it.kind) {
 							case SymbolKind.Function:
+								(<Variable>it).def = false;
 							case SymbolKind.Class:
 								(<FuncNode>it).overwrite = overwrite;
 								(<any>it).uri = this.uri;
@@ -2539,8 +2540,12 @@ export class Lexer {
 					if (k) {
 						if (k.content.toLowerCase() === 'base') {
 							let t = Object.keys(ts).pop();
-							if (t && t.match(/\.prototype$/i))
-								tp[t.slice(0, -10).trim().toLowerCase().replace(/([^.]+)$/, '@$1')] = true;
+							if (t && t.match(/\.prototype$/i)) {
+								t = t.slice(0, -10).trim().toLowerCase();
+								if (classfullname && t === 'this' && _parent.static && _parent.kind === SymbolKind.Method)
+									t = classfullname.slice(0, -1).toLowerCase();
+								tp[t.replace(/([^.]+)$/, '@$1')] = true;
+							}
 						} else
 							addprop(k);
 					}
@@ -4702,7 +4707,7 @@ export class Lexer {
 				else if (['this', 'super'].includes(name)) {
 					scope = bak;
 					while (scope && scope.kind !== SymbolKind.Class) {
-						if (scope.kind === SymbolKind.Method && (<FuncNode>scope).static)
+						if ((<FuncNode>scope).static && (scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Property))
 							ref = false;
 						scope = (<FuncNode>scope).parent;
 					}
@@ -4955,11 +4960,11 @@ export class Lexer {
 		const workfolder = resolve().toLowerCase();
 		if (dir)
 			this.scriptdir = dir;
-		else if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder) && !this.scriptpath.endsWith('\\lib')) {
+		else if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder) && !/\\lib(\\.+)?$/.test(this.scriptpath)) {
 			if (existsSync(this.scriptpath + '\\lib') && statSync(this.scriptpath + '\\lib').isDirectory())
 				this.scriptdir = this.scriptpath;
-			else this.scriptdir = workfolder.replace(/\\lib$/, '');
-		} else this.scriptdir = this.scriptpath.replace(/\\lib$/, '');
+			else this.scriptdir = workfolder;
+		} else this.scriptdir = this.scriptpath.replace(/\\lib(\\.+)?$/, '');
 		this.libdirs = [this.scriptdir + '\\lib'];
 		for (const t of libdirs) if (this.libdirs[0] !== t) this.libdirs.push(t);
 	}
@@ -5973,6 +5978,8 @@ export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: 
 						decs[_low] = it;
 					} else if ((<Variable>decs[_low]).def !== false)
 						diags.push({ message: samenameerr(decs[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+					else if ((it as Variable).def !== false)
+						decs[_low] = it;
 				}
 				break;
 		}

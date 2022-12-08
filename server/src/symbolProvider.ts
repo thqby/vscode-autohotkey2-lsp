@@ -16,12 +16,14 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 	let list = doc.relevance;
 	for (const uri in list) {
 		const gg = lexers[uri]?.declaration;
-		for (let key in gg)
-			if (!gvar[key] || gg[key].kind !== SymbolKind.Variable)
+		for (let key in gg) {
+			let t = gvar[key];
+			if (!t || t.def === false || gg[key].kind !== SymbolKind.Variable)
 				gvar[key] = gg[key], (<any>gg[key]).uri = uri;
+		}
 	}
 	for (const key in glo) {
-		if (!gvar[key] || gvar[key].kind === SymbolKind.Variable || (gvar[key] === ahkvars[key] && glo[key].kind !== SymbolKind.Variable && (gvar[key].kind === SymbolKind.Function || gvar[key].def === false)))
+		if (!gvar[key] || gvar[key].kind === SymbolKind.Variable || (gvar[key] === ahkvars[key] && glo[key].kind !== SymbolKind.Variable && gvar[key].def === false))
 			gvar[key] = glo[key], (<any>glo[key]).uri = uri;
 	}
 	doc.reflat = false, globalsymbolcache = gvar;
@@ -145,16 +147,10 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		return result;
 	}
 	function checksamename(doc: Lexer) {
-		let dec: any = {}, dd: Lexer, lbs: any = {};
 		if (doc.d)
 			return;
+		let dec: any = { ...ahkvars }, dd: Lexer, lbs: any = {};
 		Object.keys(doc.labels).map(lb => lbs[lb] = true);
-		for (const k in ahkvars) {
-			let t = ahkvars[k];
-			dec[k] = t;
-			if (t.kind === SymbolKind.Function || t.name.toLowerCase() === 'struct')
-				(<Variable>t).def = false;
-		}
 		for (const uri in doc.relevance) {
 			if (dd = lexers[uri]) {
 				dd.diagnostics.splice(dd.diags);
@@ -194,9 +190,9 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		}
 
 		function checkextendsclassexist(name: string) {
-			let n = name.toLowerCase().split('.'), l = n.length, c: ClassNode | undefined;
-			for (let i = 0; i < l; i++) {
-				c = c ? c.staticdeclaration[n[i]] : dec[n[i]];
+			let n = name.toLowerCase().split('.'), c: ClassNode | undefined;
+			for (let t of n) {
+				c = c ? c.staticdeclaration[t] : dec[t];
 				if (!c || c.kind !== SymbolKind.Class || (<any>c).def === false)
 					return false;
 			}
