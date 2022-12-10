@@ -5,7 +5,7 @@
 [![](https://img.shields.io/badge/Compatibility-autohotkey%20v2.0--rc.2-green?style=for-the-badge&logo=autohotkey)](https://www.autohotkey.com/)
 
 
-[中文版 README](#AutoHotkey2语言支持)往下翻页
+[中文版 README](#readme-cn)往下翻页
 
 ## repositories:
 
@@ -14,6 +14,7 @@
 [Gitee](https://gitee.com/orz707/vscode-autohotkey2-lsp)
 
 ## lsp-server download
+*[Use in other editors](#use-in-other-editors)*
 
 ```shell
 # git
@@ -277,6 +278,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 }
 ```
 
+<span id = "readme-cn"></span>
 # AutoHotkey2语言支持
 
 AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析。

@@ -38,6 +38,7 @@ let ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 let ahkpath_cur = '', server_is_ready = false, zhcn = false;
 let textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
+let ahk_is_not_exist: boolean | null = true;
 
 export async function activate(context: ExtensionContext) {
 	// The server is implemented in node
@@ -187,10 +188,7 @@ export async function activate(context: ExtensionContext) {
 }
 
 export function deactivate(): Thenable<void> | undefined {
-	if (!client) {
-		return undefined;
-	}
-	return client.stop();
+	return client?.stop();
 }
 
 function decode(buf: Buffer) {
@@ -520,7 +518,7 @@ async function setInterpreter() {
 			ahkpath_cur = sel.detail;
 			if (server_is_ready)
 				commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur);
-			ahkconfig.update('InterpreterPath', ahkpath_cur);
+			ahkconfig.update('InterpreterPath', ahkpath_cur, ahk_is_not_exist);
 		}
 	});
 	pick.onDidHide(e => pick.dispose());
@@ -567,6 +565,7 @@ async function onDidChangeActiveTextEditor(e?: TextEditor) {
 	if (!path.match(/\.exe$/i) || !existsSync(path))
 		path = getConfig('InterpreterPath');
 	if (path.match(/\.exe$/i) && existsSync(path)) {
+		ahk_is_not_exist = null;
 		if (path !== ahkStatusBarItem.tooltip) {
 			ahkStatusBarItem.tooltip = path;
 			ahkStatusBarItem.text = (await getAHKversion([path]))[0] || (zhcn ? '未知版本' : 'Unknown version');

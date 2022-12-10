@@ -15,7 +15,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	let list = doc.relevance, cpitem: CompletionItem = { label: '' }, temp: any, path: string, { line, character } = position;
 	let expg = new RegExp(context.text.match(/[^\w]/) ? context.text.replace(/(.)/g, '$1.*') : '(' + context.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	let o = doc.document.offsetAt({ line, character: character - 1 }), tk = doc.find_token(o);
-	let istr = tk.type === 'TK_STRING';
+	let istr = tk.type === 'TK_STRING', right_is_paren = '(['.includes(context.suf.charAt(0) || '\0');
 
 	if (istr) {
 		if (triggerKind === 2)
@@ -638,47 +638,48 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 		cpitem.kind = CompletionItemKind.Text, cpitem.command = { title: 'cursorRight', command: 'cursorRight' };
 		return cpitem
 	}
-}
-
-function convertNodeCompletion(info: any): CompletionItem {
-	let ci = CompletionItem.create(info.name);
-	switch (info.kind) {
-		case SymbolKind.Function:
-		case SymbolKind.Method:
-			ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
-			if (extsettings.CompleteFunctionParens) {
-				if ((<FuncNode>info).params.length) {
-					ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
-					if ((<FuncNode>info).params[0].name.includes('|')) {
-						ci.insertText = ci.label + '(${1|' + (<FuncNode>info).params[0].name.replace(/\|/g, ',') + '|})';
+	function convertNodeCompletion(info: any): CompletionItem {
+		let ci = CompletionItem.create(info.name);
+		switch (info.kind) {
+			case SymbolKind.Function:
+			case SymbolKind.Method:
+				ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
+				if (extsettings.CompleteFunctionParens) {
+					if (right_is_paren)
+						ci.commitCharacters = ['\t'], ci.command = { title: 'cursorRight', command: 'cursorRight' };
+					else if ((<FuncNode>info).params.length) {
+						ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
+						if ((<FuncNode>info).params[0].name.includes('|')) {
+							ci.insertText = ci.label + '(${1|' + (<FuncNode>info).params[0].name.replace(/\|/g, ',') + '|})';
+							ci.insertTextFormat = InsertTextFormat.Snippet;
+						} else ci.insertText = ci.label + '($0)', ci.insertTextFormat = InsertTextFormat.Snippet;
+					} else ci.insertText = ci.label + '()';
+				} else
+					ci.commitCharacters = ['\t', '('];
+				ci.detail = info.full, ci.documentation = info.detail; break;
+			case SymbolKind.Variable:
+			case SymbolKind.TypeParameter:
+				ci.kind = CompletionItemKind.Variable, ci.detail = info.detail; break;
+			case SymbolKind.Class:
+				ci.kind = CompletionItemKind.Class, ci.commitCharacters = ['.', '('];
+				ci.detail = 'class ' + ci.label, ci.documentation = info.detail; break;
+			case SymbolKind.Event:
+				ci.kind = CompletionItemKind.Event; break;
+			case SymbolKind.Field:
+				ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.replace(/:$/, ''); break;
+			case SymbolKind.Property:
+				ci.kind = CompletionItemKind.Property, ci.detail = (info.full || ci.label), ci.documentation = (info.detail || '');
+				if (info.children) for (const it of info.children) {
+					if (it.kind === SymbolKind.Function && it.name.toLowerCase() === 'get' && it.params.length) {
 						ci.insertTextFormat = InsertTextFormat.Snippet;
-					} else ci.insertText = ci.label + '($0)', ci.insertTextFormat = InsertTextFormat.Snippet;
-				} else ci.insertText = ci.label + '()';
-			} else
-				ci.commitCharacters = ['\t', '('];
-			ci.detail = info.full, ci.documentation = info.detail; break;
-		case SymbolKind.Variable:
-		case SymbolKind.TypeParameter:
-			ci.kind = CompletionItemKind.Variable, ci.detail = info.detail; break;
-		case SymbolKind.Class:
-			ci.kind = CompletionItemKind.Class, ci.commitCharacters = ['.', '('];
-			ci.detail = 'class ' + ci.label, ci.documentation = info.detail; break;
-		case SymbolKind.Event:
-			ci.kind = CompletionItemKind.Event; break;
-		case SymbolKind.Field:
-			ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.replace(/:$/, ''); break;
-		case SymbolKind.Property:
-			ci.kind = CompletionItemKind.Property, ci.detail = (info.full || ci.label), ci.documentation = (info.detail || '');
-			if (info.children) for (const it of info.children) {
-				if (it.kind === SymbolKind.Function && it.name.toLowerCase() === 'get' && it.params.length) {
-					ci.insertTextFormat = InsertTextFormat.Snippet;
-					ci.insertText = ci.label + '[$0]';
-					break;
+						ci.insertText = ci.label + '[$0]';
+						break;
+					}
 				}
-			}
-			break;
-		default:
-			ci.kind = CompletionItemKind.Text; break;
+				break;
+			default:
+				ci.kind = CompletionItemKind.Text; break;
+		}
+		return ci;
 	}
-	return ci;
 }
