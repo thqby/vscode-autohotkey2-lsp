@@ -24,6 +24,7 @@
 	"ahk2.diagnostics.paramscheck": "检查函数调用参数个数是否正确",
 	"ahk2.symbolfoldingfromopenbrace": "强制符号折叠从大括号处开始",
 	"ahk2.updateversioninfo": "更新文件版本信息",
+	"ahk2.workingdirs": "设置脚本的工作目录",
 	"codeaction.include": "导入 '{0}'",
 	"completionitem.author": "添加作者, 描述, 日期, 版本等文件信息.",
 	"completionitem.generatecomment": "生成当前作用域函数/方法的注释模板.",

@@ -112,6 +112,7 @@ export async function activate(context: ExtensionContext) {
 			FormatOptions: getConfig('FormatOptions'),
 			InterpreterPath: getConfig('InterpreterPath'),
 			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace'),
+			WorkingDirs: getConfig('WorkingDirs'),
 		}
 	};
 

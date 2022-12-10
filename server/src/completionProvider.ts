@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, searchNode, Token, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, getRCDATA, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis, workspaceFolders } from './common';
+import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, getRCDATA, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;

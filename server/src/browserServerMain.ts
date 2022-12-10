@@ -9,11 +9,12 @@ import {
 	TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, WorkspaceFoldersChangeEvent
 } from 'vscode-languageserver/browser';
 import {
-	AHKLSSettings, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
-	extsettings, generateAuthor, generateComment, hoverProvider, initahk2cache, Lexer, lexers, LibIncludeType,
+	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
+	generateAuthor, generateComment, hoverProvider, initahk2cache, Lexer, lexers,
 	loadahk2, loadlocalize, prepareRename, rangeFormatting, referenceProvider, renameProvider,
-	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, set_ahk_h, set_Connection, update_commentTags,
-	set_dirname, set_locale, set_Workfolder, signatureProvider, symbolProvider, typeFormatting, workspaceFolders, workspaceSymbolProvider, chinese_punctuations
+	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, set_ahk_h, set_Connection,
+	set_dirname, set_locale, set_Workspacefolder, signatureProvider, symbolProvider, typeFormatting,
+	workspaceFolders, workspaceSymbolProvider, update_settings
 } from './common';
 
 export const languageServer = 'ahk2-language-server';
@@ -30,7 +31,7 @@ let uri_switch_to_ahk2 = '';
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
-	set_Workfolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
+	set_Workspacefolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
 	);
@@ -113,24 +114,11 @@ connection.onInitialize((params: InitializeParams) => {
 	}
 
 	let locale, configs: AHKLSSettings = params.initializationOptions;
-	if (configs) {
-		locale = configs.locale;
-		if (typeof configs.AutoLibInclude === 'string')
-			configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
-		else if (typeof configs.AutoLibInclude === 'boolean')
-			configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
-		Object.assign(extsettings, configs);
-		try {
-			update_commentTags(extsettings.CommentTags);
-		} catch (e: any) {
-			setTimeout(() => {
-				connection.console.error(e.message);
-			}, 1000);
-		}
-	}
-	if (locale ??= params.locale) set_locale(locale);
+	if (locale = configs.locale ?? params.locale)
+		set_locale(locale);
 	set_dirname((configs as any).extensionUri);
 	loadlocalize();
+	update_settings(configs);
 	initahk2cache();
 	loadahk2();
 	loadahk2('ahk2_h');
@@ -145,7 +133,7 @@ connection.onInitialized(async () => {
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders((event: WorkspaceFoldersChangeEvent) => {
 			let del = event.removed.map(it => it.uri.toLowerCase() + '/') || [];
-			set_Workfolder(workspaceFolders.filter(it => !del.includes(it)));
+			set_Workspacefolder(workspaceFolders.filter(it => !del.includes(it)));
 			event.added.map(it => workspaceFolders.push(it.uri.toLowerCase() + '/'));
 		});
 	}
@@ -159,13 +147,7 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	if (newset.CommentTags !== extsettings.CommentTags)
-		try {
-			update_commentTags(newset.CommentTags);
-		} catch (e: any) {
-			connection.console.error(e.message);
-		}
-	Object.assign(extsettings, newset);
+	update_settings(newset);
 });
 
 documents.onDidOpen(async e => {

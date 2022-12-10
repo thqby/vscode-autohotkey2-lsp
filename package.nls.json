@@ -19,6 +19,7 @@
 	"ahk2.stop": "Stop Running Script",
 	"ahk2.diagnostics.classstaticmembercheck": "Check whether static members of class exist",
 	"ahk2.diagnostics.paramscheck": "Check that the function call has the correct number of arguments",
-	"ahk2.symbolfoldingfromopenbrace": "Force symbol folding from open brace",
-	"ahk2.updateversioninfo": "Update File Version Info"
+	"ahk2.symbolfoldingfromopenbrace": "Forced symbol folding starts at open brace",
+	"ahk2.updateversioninfo": "Update File Version Info",
+	"ahk2.workingdirs": "Sets the working directory for the script"
 }

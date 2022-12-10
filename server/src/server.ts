@@ -11,12 +11,13 @@ import {
 	InitializeResult, ProposedFeatures, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, WorkspaceFoldersChangeEvent
 } from 'vscode-languageserver/node';
 import {
-	AHKLSSettings, clearLibfuns, codeActionProvider, colorPresentation, colorProvider, completionProvider, defintionProvider,
+	AHKLSSettings, chinese_punctuations, clearLibfuns, codeActionProvider, colorPresentation, colorProvider, completionProvider, defintionProvider,
 	documentFormatting, extsettings, fixinclude, generateAuthor, generateComment, getallahkfiles, getincludetable, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
-	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workfolder, setting, signatureProvider, sleep, update_commentTags,
-	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, LibIncludeType, workspaceSymbolProvider, inWorkspaceFolders, parseWorkspaceFolders, winapis, chinese_punctuations
+	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workspacefolder, setting, signatureProvider, sleep,
+	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, workspaceSymbolProvider, inWorkspaceFolders,
+	parseWorkspaceFolders, winapis, update_settings
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
@@ -31,7 +32,7 @@ set_dirname(__dirname);
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
-	set_Workfolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
+	set_Workspacefolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
 	);
@@ -129,23 +130,10 @@ connection.onInitialize((params: InitializeParams) => {
 	loadahk2();
 	if (configs) {
 		locale = configs.locale;
-		if (typeof configs.AutoLibInclude === 'string')
-			configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
-		else if (typeof configs.AutoLibInclude === 'boolean')
-			configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
-		Object.assign(extsettings, configs);
-		try {
-			update_commentTags(extsettings.CommentTags);
-		} catch (e: any) {
-			setTimeout(() => {
-				connection.console.error(e.message);
-			}, 1000);
-		}
+		update_settings(configs);
 		if (existsSync(extsettings.InterpreterPath))
 			initpathenv();
-		else setTimeout(() => {
-			connection.window.showErrorMessage(setting.ahkpatherr());
-		}, 1000);
+		else connection.window.showErrorMessage(setting.ahkpatherr());;
 	}
 	return result;
 });
@@ -158,7 +146,7 @@ connection.onInitialized(async () => {
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders((event: WorkspaceFoldersChangeEvent) => {
 			let del = event.removed.map(it => it.uri.toLowerCase() + '/') || [];
-			set_Workfolder(workspaceFolders.filter(it => !del.includes(it)));
+			set_Workspacefolder(workspaceFolders.filter(it => !del.includes(it)));
 			event.added.map(it => workspaceFolders.push(it.uri.toLowerCase() + '/'));
 			parseWorkspaceFolders();
 		});
@@ -178,20 +166,10 @@ connection.onDidChangeConfiguration(async (change: any) => {
 		return;
 	}
 	let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
-	if (typeof newset.AutoLibInclude === 'string')
-		newset.AutoLibInclude = LibIncludeType[newset.AutoLibInclude] as unknown as LibIncludeType;
-	else if (typeof newset.AutoLibInclude === 'boolean')
-		newset.AutoLibInclude = newset.AutoLibInclude ? 3 : 0;
-	for (let k in extsettings)
+	for (let k in changes)
 		if ((<any>extsettings)[k] !== (<any>newset)[k])
 			changes[k] = true;
-	Object.assign(extsettings, newset);
-	if (changes['CommentTags'])
-		try {
-			update_commentTags(extsettings.CommentTags);
-		} catch (e: any) {
-			connection.console.error(e.message);
-		}
+	update_settings(newset);
 	if (changes['InterpreterPath'] && !ahkpath_cur)
 		changeInterpreter(oldpath, extsettings.InterpreterPath);
 	if (changes['AutoLibInclude']) {

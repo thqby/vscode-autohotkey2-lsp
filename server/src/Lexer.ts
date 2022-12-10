@@ -4957,10 +4957,15 @@ export class Lexer {
 	public initlibdirs(dir?: string) {
 		if (inBrowser)
 			return;
-		const workfolder = resolve().toLowerCase();
+		let workfolder: string;
+		for (workfolder of extsettings.WorkingDirs)
+			if (this.uri.startsWith(workfolder)) {
+				dir = URI.parse(workfolder).fsPath.replace(/\\$/, '');
+				break;
+			}
 		if (dir)
 			this.scriptdir = dir;
-		else if (workfolder !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder) && !/\\lib(\\.+)?$/.test(this.scriptpath)) {
+		else if ((workfolder = resolve().toLowerCase()) !== this.scriptpath && workfolder !== argv0.toLowerCase() && this.scriptpath.startsWith(workfolder) && !/\\lib(\\.+)?$/.test(this.scriptpath)) {
 			if (existsSync(this.scriptpath + '\\lib') && statSync(this.scriptpath + '\\lib').isDirectory())
 				this.scriptdir = this.scriptpath;
 			else this.scriptdir = workfolder;
@@ -6019,10 +6024,11 @@ export function is_line_continue(lk: Token, tk: Token, parent?: DocumentSymbol):
 }
 
 export function update_commentTags(regexp: string) {
+	let old = commentTags;
 	try {
 		commentTags = new RegExp(regexp, 'i');
 	} catch (e: any) {
-		commentTags = new RegExp('^;;\\s*(?<tag>.*)');
+		commentTags = old;
 		throw e;
 	}
 }

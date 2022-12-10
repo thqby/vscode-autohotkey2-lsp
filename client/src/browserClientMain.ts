@@ -77,6 +77,7 @@ export function activate(context: ExtensionContext) {
 			InterpreterPath: getConfig('InterpreterPath'),
 			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace'),
 			extensionUri: context.extensionUri.toString(),
+			WorkingDirs: getConfig('WorkingDirs'),
 		}
 	}, worker);
 

@@ -225,6 +225,12 @@
 					"type": "boolean",
 					"default": false,
 					"description": "%ahk2.symbolfoldingfromopenbrace%"
+				},
+				"AutoHotkey2.WorkingDirs": {
+					"scope": "window",
+					"type": "array",
+					"default": [],
+					"description": "%ahk2.workingdirs%"
 				}
 			}
 		},

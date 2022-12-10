@@ -3,7 +3,7 @@ import { Command, CompletionItem, CompletionItemKind, DocumentSymbol, Hover, Ins
 import { URI } from 'vscode-uri';
 import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { resolve } from 'path';
-import { FormatOptions, FuncNode, Lexer } from './Lexer';
+import { FormatOptions, FuncNode, Lexer, update_commentTags } from './Lexer';
 import { completionitem } from './localize';
 import { Connection } from 'vscode-languageserver';
 export * from './Lexer';
@@ -41,7 +41,8 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 		ParamsCheck: true,
 		ClassStaticMemberCheck: true
 	},
-	FormatOptions: {}
+	FormatOptions: {},
+	WorkingDirs: []
 };
 export const chinese_punctuations: { [c: string]: string } = {
 	'，': ',',
@@ -90,6 +91,7 @@ export interface AHKLSSettings {
 	}
 	FormatOptions: FormatOptions
 	InterpreterPath: string
+	WorkingDirs: string[]
 }
 
 export function set_Connection(conn: any, browser: boolean, getDll?: (paths: string[]) => string[], getRC?: (path?: string) => any) {
@@ -356,7 +358,7 @@ export function getallahkfiles(dirpath: string, maxdeep = 3): string[] {
 
 export function inWorkspaceFolders(uri: string) {
 	uri = uri.toLowerCase();
-	for (let f of workspaceFolders)
+	for (let f of extsettings.WorkingDirs.concat(workspaceFolders))
 		if (uri.startsWith(f))
 			return f;
 	return '';
@@ -400,12 +402,26 @@ export async function parseWorkspaceFolders() {
 	}
 }
 
+export function update_settings(configs: AHKLSSettings) {
+	if (typeof configs.AutoLibInclude === 'string')
+		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
+	else if (typeof configs.AutoLibInclude === 'boolean')
+		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
+	try {
+		update_commentTags(configs.CommentTags);
+	} catch (e: any) {
+		connection.console.error(e.message);
+		configs.CommentTags = extsettings.CommentTags;
+	}
+	configs.WorkingDirs = configs.WorkingDirs.map(dir => (dir = URI.file(dir).toString().toLowerCase()).endsWith('/') ? dir : dir + '/');
+	Object.assign(extsettings, configs);
+}
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
 export function set_ahkpath(path: string) { ahkpath_cur = path; }
 export function set_dirname(dir: string) { dirname = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }
-export function set_Workfolder(folders?: string[]) { workspaceFolders = folders || []; }
+export function set_Workspacefolder(folders?: string[]) { workspaceFolders = folders || []; }
 
 export async function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
