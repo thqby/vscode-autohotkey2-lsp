@@ -477,11 +477,11 @@ async function setInterpreter() {
 		it = { label: 'Find...', detail: 'Browse your file system to find a AutoHotkey2 interpreter.' };
 	}
 	if (ahkpath)
-		await addpath(resolve(ahkpath, '..'));
+		await addpath(resolve(ahkpath, '..'), _.includes('autohotkey') ? 20 : 5);
 	if (!_.includes('c:\\program files\\autohotkey\\'))
-		await addpath('C:\\Program Files\\AutoHotkey\\');
-	if (ahkpath_cur.toLowerCase() !== ahkpath.toLowerCase() && !ahkpath_cur.toLowerCase().includes('c:\\program files\\autohotkey\\'))
-		await addpath(resolve(ahkpath_cur, '..'));
+		await addpath('C:\\Program Files\\AutoHotkey\\', 20);
+	if ((_ = ahkpath_cur.toLowerCase()) !== ahkpath.toLowerCase() && !ahkpath_cur.toLowerCase().includes('c:\\program files\\autohotkey\\'))
+		await addpath(resolve(ahkpath_cur, '..'), _.includes('autohotkey') ? 20 : 5);
 	index = list.map(it => it.detail?.toLowerCase()).indexOf((ahkpath_cur || ahkpath).toLowerCase());
 	if (index !== -1)
 		active = list[index];
@@ -523,7 +523,7 @@ async function setInterpreter() {
 	});
 	pick.onDidHide(e => pick.dispose());
 
-	async function addpath(dirpath: string) {
+	async function addpath(dirpath: string, max: number) {
 		let paths: string[] = [];
 		if (!existsSync(dirpath))
 			return;
@@ -538,6 +538,8 @@ async function setInterpreter() {
 					}
 				} else if (file.toLowerCase().endsWith('.exe'))
 					paths.push(path);
+				if (paths.length >= max)
+					break;
 			} catch { }
 		}
 		(await getAHKversion(paths)).map((label, i) => {
