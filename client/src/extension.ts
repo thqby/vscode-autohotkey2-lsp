@@ -109,7 +109,6 @@ export async function activate(context: ExtensionContext) {
 			CommentTags: getConfig('CommentTags'),
 			CompleteFunctionParens: getConfig('CompleteFunctionParens'),
 			Diagnostics: getConfig('Diagnostics'),
-			DisableV1Script: getConfig('DisableV1Script'),
 			FormatOptions: getConfig('FormatOptions'),
 			InterpreterPath: getConfig('InterpreterPath'),
 			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace'),
@@ -128,7 +127,7 @@ export async function activate(context: ExtensionContext) {
 	textdecoders.push(new TextDecoder(zhcn ? 'gbk' : 'windows-1252'));
 
 	// Start the client. This will also launch the server
-	client.onReady().then(ready => {
+	client.start().then(() => {
 		Object.entries(request_handlers).map(handler => client.onRequest(...handler));
 		window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor, null, context.subscriptions);
 		onDidChangeActiveTextEditor(window.activeTextEditor);
@@ -154,12 +153,11 @@ export async function activate(context: ExtensionContext) {
 		languages.getLanguages().then(all => langs = all);
 	}
 	update_extensions_info();
-	extensions.onDidChange(e => update_extensions_info());
 
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 	ahkStatusBarItem.command = 'ahk2.setinterpreter';
 	context.subscriptions.push(
-		client.start(),
+		extensions.onDidChange(e => update_extensions_info()),
 		commands.registerCommand('ahk2.run', () => runCurrentScriptFile()),
 		commands.registerCommand('ahk2.selection.run', () => runCurrentScriptFile(true)),
 		commands.registerCommand('ahk2.stop', () => stopRunningScript()),

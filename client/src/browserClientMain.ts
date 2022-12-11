@@ -72,7 +72,6 @@ export function activate(context: ExtensionContext) {
 			CommentTags: getConfig('CommentTags'),
 			CompleteFunctionParens: getConfig('CompleteFunctionParens'),
 			Diagnostics: getConfig('Diagnostics'),
-			DisableV1Script: getConfig('DisableV1Script'),
 			FormatOptions: getConfig('FormatOptions'),
 			InterpreterPath: getConfig('InterpreterPath'),
 			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace'),
@@ -81,7 +80,7 @@ export function activate(context: ExtensionContext) {
 		}
 	}, worker);
 
-	context.subscriptions.push(client.start(),
+	context.subscriptions.push(
 		commands.registerCommand('ahk2.updateversioninfo', async () => {
 			const editor = window.activeTextEditor;
 			if(editor) {
@@ -118,7 +117,7 @@ export function activate(context: ExtensionContext) {
 		}),
 	);
 
-	client.onReady().then(() => {
+	client.start().then(() => {
 		Object.entries(request_handlers).map(handler => client.onRequest(...handler));
 		workspace.onDidCloseTextDocument(e => {
 			client.sendNotification('onDidCloseTextDocument', e.isClosed ?
