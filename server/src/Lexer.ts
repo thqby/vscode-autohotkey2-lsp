@@ -1811,7 +1811,7 @@ export class Lexer {
 				if (act === '=') {
 					let expr = tps[0], q: number;
 					if (expr && ((q = expr.indexOf('?')) === -1 || expr.indexOf(':', q) === -1))
-						_this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=').toLowerCase()}`, min, 1);
+						stop_parse(_this.tokens[(nk as Token).next_token_offset]), _this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=').toLowerCase()}`, min, 1);
 				} else if (act && (hascomma >= max || (info.count - (tk === nk ? 1 : 0) < min)))
 					_this.addDiagnostic(diagnostic.acceptparams(act, max === min ? min : `${min}~${max}`), b, lk.offset + lk.length - b);
 				if (lk.content === '*')
@@ -4157,6 +4157,7 @@ export class Lexer {
 				if (!['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally'].includes(flags.last_word))
 					while (flags.mode === MODE.Statement)
 						restore_mode();
+				flags.declaration_statement = false;
 				set_mode(MODE.BlockStatement), flags.had_comment = previous_flags.had_comment;
 				output_space_before_token = space_in_other;
 

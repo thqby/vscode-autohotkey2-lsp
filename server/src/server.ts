@@ -133,7 +133,7 @@ connection.onInitialize((params: InitializeParams) => {
 		update_settings(configs);
 		if (existsSync(extsettings.InterpreterPath))
 			initpathenv();
-		else connection.window.showErrorMessage(setting.ahkpatherr());;
+		else connection.window.showErrorMessage(setting.ahkpatherr());
 	}
 	return result;
 });
@@ -165,14 +165,13 @@ connection.onDidChangeConfiguration(async (change: any) => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	let changes: any = { InterpreterPath: false, AutoLibInclude: false }, oldpath = extsettings.InterpreterPath;
-	for (let k in changes)
-		if ((<any>extsettings)[k] !== (<any>newset)[k])
-			changes[k] = true;
+	let old = extsettings.AutoLibInclude;
+	if (newset.InterpreterPath !== extsettings.InterpreterPath) {
+		setInterpreter(newset.InterpreterPath);
+		connection.sendRequest('ahk2.updateStatusBar', [newset.InterpreterPath]);
+	}
 	update_settings(newset);
-	if (changes['InterpreterPath'] && !ahkpath_cur)
-		changeInterpreter(oldpath, extsettings.InterpreterPath);
-	if (changes['AutoLibInclude']) {
+	if (old !== extsettings.AutoLibInclude) {
 		if (extsettings.AutoLibInclude > 1)
 			parseuserlibs();
 		if (extsettings.AutoLibInclude & 1)

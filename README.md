@@ -227,7 +227,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 					"ClassStaticMemberCheck": true,
 					"ParamsCheck": true
 				},
-				"DisableV1Script": true,
+				"ActionWhenV1IsDetected": "Continue",
 				"FormatOptions": {
 					"break_chained_methods": false,
 					"ignore_comment": false,
@@ -481,7 +481,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 					"ClassStaticMemberCheck": true,
 					"ParamsCheck": true
 				},
-				"DisableV1Script": true,
+				"ActionWhenV1IsDetected": "Continue",
 				"FormatOptions": {
 					"break_chained_methods": false,
 					"ignore_comment": false,
