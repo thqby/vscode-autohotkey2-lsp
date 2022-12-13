@@ -360,7 +360,7 @@ ControlShowDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) =>
 /**
  * Set the coordinate mode for multiple built-in functions, relative to the active window or the screen.
  */
-CoordMode(TargetType, RelativeTo := 'Screen')
+CoordMode(TargetType, RelativeTo := 'Screen') => String
 
 /**
  * Returns the cosine value of Number.
@@ -371,7 +371,7 @@ Cos(Number) => Number
  * Prevent the current thread from being interrupted by other threads, or enable it to be interrupted.
  * @param OnOffNumeric
  */
-Critical(OnOffNumeric := 'On') => void
+Critical(OnOffNumeric := 'On') => Integer
 
 /**
  * Add or subtract time from the date-time value.
@@ -390,12 +390,12 @@ DateDiff(DateTime1, DateTime2, TimeUnits) => Number
 /**
  * Set whether to'see' hidden text when searching for windows. This will affect built-in functions such as WinExist and Winactivate.
  */
-DetectHiddenText(Mode) => void
+DetectHiddenText(Mode) => Integer
 
 /**
  * Set whether the script can'see' the hidden window.
  */
-DetectHiddenWindows(Mode) => void
+DetectHiddenWindows(Mode) => Integer
 
 /**
  * Copy the folder, and all its subfolders and files (similar to xcopy).
@@ -704,7 +704,7 @@ FileDelete(FilePattern) => void
  * 
  * nnn: Number code page identifier.
  */
-FileEncoding(Encoding := 'CP0') => void
+FileEncoding(Encoding := 'CP0') => String
 
 /**
  * Check if the file or directory exists and return its attributes.
@@ -1233,12 +1233,12 @@ InputBox([Prompt, Title, Options, Default]) => Object
 /**
  * Install mouse hook
  */
-InstallMouseHook(Install := true, Force := false)
+InstallMouseHook(Install := true, Force := false) => void
 
 /**
  * Install keyboard hook
  */
-InstallKeybdHook(Install := true, Force := false)
+InstallKeybdHook(Install := true, Force := false) => void
 
 /**
  * Search the specified content to the right or left in a character string.
@@ -1376,7 +1376,7 @@ ListHotkeys() => void
 /**
  * Enable or disable line logging or display the most recently executed script line.
  */
-ListLines([Mode]) => void
+ListLines([Mode]) => Integer
 
 /**
  * Displays the script's variables: their names and current contents.
@@ -1728,7 +1728,7 @@ Pause([Newstate]) => void
  * @param Persist If true or omitted, even if the other conditions of the exit script are not met, the script will continue to run after all threads exit.
  * If false, the default behavior will be restored.
  */
-Persistent(Persist := true) => void
+Persistent(Persist := true) => Integer
 
 /**
  * Retrieve the color of the pixel at the specified x and y coordinates.
@@ -1898,7 +1898,7 @@ SendInput(Keys) => void
 /**
  * Controls whether hotkeys and hotstrings ignore simulated keyboard and mouse events.
  */
-SendLevel(Level) => void
+SendLevel(Level) => Integer
 
 /**
  * Send the message to the window or control, and then wait for confirmation.
@@ -1908,7 +1908,7 @@ SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, Exclude
 /**
  * Make Send equal to SendEvent or SendPlay, instead of the default (SendInput). Also make Click and MouseMove/Click/Drag use specified methods.
  */
-SendMode(Mode) => void
+SendMode(Mode) => String
 
 /**
  * SendInput and SendPlay use the same syntax as Send, but are generally faster and more reliable. In addition, they buffer any physical keyboard or mouse activity during the sending process, thus preventing the user's keystrokes from being scattered in the sending.
@@ -1928,12 +1928,12 @@ SendText(Keys) => void
 /**
  * Set the delay that will occur after each control changes the function.
  */
-SetControlDelay(Delay) => void
+SetControlDelay(Delay) => Integer
 
 /**
  * Set the speed used when the mouse speed is not specified in click and MouseMove/click/Drag.
  */
-SetDefaultMouseSpeed(Speed) => void
+SetDefaultMouseSpeed(Speed) => Integer
 
 /**
  * Set the delay that will occur after each keystroke sent by send and controlsend.
@@ -1943,7 +1943,7 @@ SetKeyDelay([Delay, PressDuration, 'Play']) => void
 /**
  * Set the delay that occurs after each mouse move or click.
  */
-SetMouseDelay(Delay [, 'Play']) => void
+SetMouseDelay(Delay [, 'Play']) => Integer
 
 /**
  * Set the state of the caps Lock key. You can also force the key to stay on or off.
@@ -1956,6 +1956,11 @@ SetCapsLockState(State) => void
 SetNumLockState(State) => void
 
 /**
+ * Set RegRead, RegWrite, RegDelete, RegDeleteKey and the registry view used by the registry cycle.
+ */
+SetRegView(RegView) => Integer
+
+/**
  * Set the state of the scroll lock key. You can also force the key to stay on or off.
  */
 SetScrollLockState(State) => void
@@ -1963,12 +1968,7 @@ SetScrollLockState(State) => void
 /**
  * Whether to restore the capsLock state after send.
  */
-SetStoreCapsLockMode(State) => void
-
-/**
- * Set RegRead, RegWrite, RegDelete, RegDeleteKey and the registry view used by the registry cycle.
- */
-SetRegView(RegView) => void
+SetStoreCapsLockMode(State) => Integer
 
 /**
  * Automatically call the function repeatedly at the specified time interval.
@@ -1987,12 +1987,12 @@ SetTimer([Callback, Period := 250, Priority := 0]) => void
 /**
  * Set the matching behavior of WinTitle parameters in commands such as WinWait.
  */
-SetTitleMatchMode(MatchModeOrspeed) => void
+SetTitleMatchMode(MatchModeOrspeed) => Integer | String
 
 /**
  * Set the delay after each execution of a window function (such as Winactivate).
  */
-SetWinDelay(Delay) => void
+SetWinDelay(Delay) => Integer
 
 /**
  * change the current working directory of the script.
@@ -2224,7 +2224,7 @@ SubStr(String, StartingPos [, Length]) => String
 /**
  * Disable or enable all or selected hotkeys and hotstrings.
  */
-Suspend(Mode := -1)
+Suspend(Mode := -1) => void
 
 /**
  * Convert string to title case.
@@ -2671,7 +2671,7 @@ class Class extends Object {
 	/**
 	 * Construct a new instance of the class.
 	 */
-	static Call()
+	static Call() => Class
 
 	/**
 	 * Retrieve or set the object on which all instances of the class are based.
@@ -2955,12 +2955,12 @@ class Func extends Object {
 	/**
 	 * call function.
 	 */
-	Call(Params*)
+	Call(Params*) => Any
 
 	/**
 	 * Bind parameters to the function and return the bound function object.
 	 */
-	Bind(Params*)
+	Bind(Params*) => BoundFunc
 
 	/**
 	 * Determine whether the parameter is of the ByRef type (if the parameter is omitted, it means whether the function contains a ByRef parameter).
@@ -3032,7 +3032,7 @@ class Gui extends Object {
 	 *         VScroll HScroll -Tabstop -Wrap
 	 *         BackgroundColor Border Theme Disabled Hidden
 	 */
-	Add(ControlType [, Options, Text])
+	Add(ControlType [, Options, Text]) => Gui.Control
 
 	/**
 	 * Create a text control that the user cannot edit. Often used to label other controls.

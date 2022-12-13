@@ -360,7 +360,7 @@ ControlShowDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) =>
 /**
  * 为多个内置函数设置坐标模式, 相对于活动窗口还是屏幕.
  */
-CoordMode(TargetType, RelativeTo := 'Screen')
+CoordMode(TargetType, RelativeTo := 'Screen') => String
 
 /**
  * 返回 Number 的余弦值.
@@ -371,7 +371,7 @@ Cos(Number) => Number
  * 防止当前线程被其他线程中断, 或使其能够被中断.
  * @param OnOffNumeric
  */
-Critical(OnOffNumeric := 'On') => void
+Critical(OnOffNumeric := 'On') => Integer
 
 /**
  * 从日期-时间值中添加或减去时间.
@@ -390,12 +390,12 @@ DateDiff(DateTime1, DateTime2, TimeUnits) => Number
 /**
  * 设置在查找窗口时是否 '看见' 隐藏的文本. 这将影响 WinExist 和 WinActivate 等内置函数.
  */
-DetectHiddenText(Mode) => void
+DetectHiddenText(Mode) => Integer
 
 /**
  * 设置脚本是否可以'看见'隐藏的窗口.
  */
-DetectHiddenWindows(Mode) => void
+DetectHiddenWindows(Mode) => Integer
 
 /**
  * 复制文件夹, 及其所有子文件夹和文件(类似于 xcopy).
@@ -704,7 +704,7 @@ FileDelete(FilePattern) => void
  * 
  * nnn: 数字代码页标识符.
  */
-FileEncoding(Encoding := 'CP0') => void
+FileEncoding(Encoding := 'CP0') => String
 
 /**
  * 检查文件或目录是否存在并返回它的属性.
@@ -1233,12 +1233,12 @@ InputBox([Prompt, Title, Options, Default]) => Object
 /**
  * 安装鼠标钩子
  */
-InstallMouseHook(Install := true, Force := false)
+InstallMouseHook(Install := true, Force := false) => void
 
 /**
  * 安装键盘钩子
  */
-InstallKeybdHook(Install := true, Force := false)
+InstallKeybdHook(Install := true, Force := false) => void
 
 /**
  * 在一个字符串中向右或向左搜索指定内容.
@@ -1376,7 +1376,7 @@ ListHotkeys() => void
 /**
  * 启用或禁用行日志记录或显示最近执行的脚本行.
  */
-ListLines([Mode]) => void
+ListLines([Mode]) => Integer
 
 /**
  * 显示脚本的变量: 它们的名称和当前的内容.
@@ -1728,7 +1728,7 @@ Pause([NewState]) => void
  * @param Persist 如果为true或忽略, 则即使退出脚本的其他条件均不满足, 在所有线程退出后脚本仍将保持运行.
  * 如果为false, 将恢复默认行为.
  */
-Persistent(Persist := true) => void
+Persistent(Persist := true) => Integer
 
 /**
  * 检索指定x,y坐标处像素的颜色.
@@ -1898,7 +1898,7 @@ SendInput(Keys) => void
 /**
  * 控制热键和热字串是否忽略模拟的键盘和鼠标事件.
  */
-SendLevel(Level) => void
+SendLevel(Level) => Integer
 
 /**
  * 将消息发送到窗口或控件,然后等待确认.
@@ -1908,7 +1908,7 @@ SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, Exclude
 /**
  * 使 Send 等同于 SendEvent 或 SendPlay, 而不是默认的(SendInput). 也使 Click 和 MouseMove/Click/Drag 使用指定的方法.
  */
-SendMode(Mode) => void
+SendMode(Mode) => String
 
 /**
  * SendInput和SendPlay使用与Send相同的语法,但通常更快,更可靠.此外,它们在发送过程中缓冲了任何物理键盘或鼠标活动,从而防止了用户的击键被散布在发送中.
@@ -1928,12 +1928,12 @@ SendText(Keys) => void
 /**
  * 设置每个控件改动函数后将发生的延迟.
  */
-SetControlDelay(Delay) => void
+SetControlDelay(Delay) => Integer
 
 /**
  * 设置在 Click 和 MouseMove/Click/Drag 中没有指定鼠标速度时使用的速度.
  */
-SetDefaultMouseSpeed(Speed) => void
+SetDefaultMouseSpeed(Speed) => Integer
 
 /**
  * 设置由Send和ControlSend发送的每次击键之后将发生的延迟.
@@ -1943,7 +1943,7 @@ SetKeyDelay([Delay, PressDuration, 'Play']) => void
 /**
  * 设置每次鼠标移动或单击后发生的延迟.
  */
-SetMouseDelay(Delay [, 'Play']) => void
+SetMouseDelay(Delay [, 'Play']) => Integer
 
 /**
  * 设置Caps Lock键的状态.还可以强制按键保持打开或关闭状态.
@@ -1956,6 +1956,11 @@ SetCapsLockState(State) => void
 SetNumLockState(State) => void
 
 /**
+ * 设置RegRead,RegWrite,RegDelete,RegDeleteKey和注册表循环使用的注册表视图.
+ */
+SetRegView(RegView) => Integer
+
+/**
  * 设置滚动锁定键的状态. 也可以强制按键保持打开或关闭状态.
  */
 SetScrollLockState(State) => void
@@ -1963,12 +1968,7 @@ SetScrollLockState(State) => void
 /**
  * 在 Send 之后是否恢复 CapsLock 的状态.
  */
-SetStoreCapsLockMode(State) => void
-
-/**
- * 设置RegRead,RegWrite,RegDelete,RegDeleteKey和注册表循环使用的注册表视图.
- */
-SetRegView(RegView) => void
+SetStoreCapsLockMode(State) => Integer
 
 /**
  * 在指定的时间间隔自动重复调用函数.
@@ -1987,12 +1987,12 @@ SetTimer([Callback, Period := 250, Priority := 0]) => void
 /**
  * 在诸如WinWait之类的命令中设置WinTitle参数的匹配行为.
  */
-SetTitleMatchMode(MatchModeOrSpeed) => void
+SetTitleMatchMode(MatchModeOrSpeed) => Integer | String
 
 /**
  * 设置在每次执行窗口函数(例如 WinActivate) 后的延时.
  */
-SetWinDelay(Delay) => void
+SetWinDelay(Delay) => Integer
 
 /**
  * 更改脚本当前的工作目录.
@@ -2224,7 +2224,7 @@ SubStr(String, StartingPos [, Length]) => String
 /**
  * 禁用或启用所有的或选择的热键和热字串.
  */
-Suspend(Mode := -1)
+Suspend(Mode := -1) => void
 
 /**
  * 将字符串转换为标题大小写.
@@ -2671,7 +2671,7 @@ class Class extends Object {
 	/**
 	 * 构造类的新实例.
 	 */
-	static Call()
+	static Call() => Class
 
 	/**
 	 * 检索或设置类的所有实例所基于的对象.
@@ -3005,12 +3005,12 @@ class Func extends Object {
 	/**
 	 * 调用函数.
 	 */
-	Call(Params*)
+	Call(Params*) => Any
 
 	/**
 	 * 绑定参数到函数并返回绑定函数对象.
 	 */
-	Bind(Params*)
+	Bind(Params*) => BoundFunc
 
 	/**
 	 * 确定参数是否为 ByRef 类型(如果省略参数, 表示此函数是否含有 ByRef 参数).
@@ -3072,7 +3072,7 @@ class Gui extends Object {
 	/**
 	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
 	 */
-	Add(ControlType [, Options, Text])
+	Add(ControlType [, Options, Text]) => Gui.Control
 
 	/**
 	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
