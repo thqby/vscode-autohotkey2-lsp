@@ -37,21 +37,16 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 	});
 	if (!nodes.length) {
 		if (kind === SymbolKind.Method) {
-			nodes = [];
 			for (const key in ahkvars)
 				ahkvars[key].children?.map(node => {
 					if (node.kind === SymbolKind.Method && node.name.toLowerCase() === name &&
 						!nodes.map((it: any) => it.node).includes(node))
 						nodes.push({ node, uri: '' });
 				});
-			doc.object.method[name]?.map(node => {
-				nodes?.push({ node, uri: '' })
-			});
+			doc.object.method[name]?.map(node => nodes.push({ node, uri: '' }));
 			for (const u in doc.relevance)
-				lexers[u].object.method[name]?.map(node => {
-					nodes?.push({ node, uri: '' })
-				});
-			if (!nodes?.length) return undefined;
+				lexers[u].object.method[name]?.map(node => nodes.push({ node, uri: '' }));
+			if (!nodes.length) return undefined;
 		} else return undefined;
 	}
 	nodes.map((it: any) => {
@@ -87,6 +82,8 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 					});
 			});
 		}
+		if (kind === SymbolKind.Function && node.kind === SymbolKind.Method)
+			signinfo.signatures.map(it => (it.parameters?.unshift({ label: '@this' }), it.label = it.label.replace(/(?<=(\w|[^\x00-\x7f])+)\(/, '(@this, ')));
 	});
 	signinfo.activeParameter = index;
 	return signinfo;

@@ -819,12 +819,12 @@ export class Lexer {
 								}
 
 								if (isfuncdef) {
-									let tn: FuncNode | undefined, cm: Token | undefined, fc = lk, rl = result.length, quoteend = parser_pos;
+									let tn: FuncNode | undefined, cm: Token | undefined, name_l: string, fc = lk, rl = result.length;
 									let se: SemanticToken = lk.semantic = { type: mode === 2 ? SemanticTokenTypes.method : SemanticTokenTypes.function };
 									let par = parse_params(undefined, true), isstatic = fc.topofline === 2;
 									let oo = isstatic ? fc.previous_token?.offset as number : fc.offset;
 									line_begin_pos = undefined;
-									if ((_low = fc.content.toLowerCase()).match(/^\d/))
+									if ((name_l = fc.content.toLowerCase()).match(/^\d/))
 										_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									if (!par)
 										par = [], _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset + 1 - fc.offset);
@@ -865,9 +865,9 @@ export class Lexer {
 										tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
 										if (!isstatic && tn.name.toLowerCase() === '__new')
 											tn.returntypes = { [classfullname.replace(/([^.]+)\.?$/, '@$1')]: tn.range.end };
-										if (!_this.object.method[_low])
-											_this.object.method[_low] = [];
-										_this.object.method[_low].push(tn);
+										if (!_this.object.method[name_l])
+											_this.object.method[name_l] = [];
+										_this.object.method[name_l].push(tn);
 									}
 									break;
 								}
@@ -2935,10 +2935,10 @@ export class Lexer {
 			}
 
 			function addprop(tk: Token) {
-				let l = tk.content.toLowerCase(), rg: Range;
+				let l = tk.content.toLowerCase();
 				tk.semantic = { type: SemanticTokenTypes.property };
 				if (!_this.object.property[l])
-					_this.object.property[l] = Variable.create(tk.content, SymbolKind.Property, rg = make_range(tk.offset, tk.length));
+					_this.object.property[l] = Variable.create(tk.content, SymbolKind.Property, make_range(tk.offset, tk.length));
 			}
 
 			function addtext(text: string) {
@@ -5763,7 +5763,7 @@ export function getFuncCallInfo(doc: Lexer, position: Position) {
 				}
 			}
 			if (w === 0 && e === 0 && q <= 0 && position.character < t[1].length + i + (q === 0 ? 2 : 1)) {
-				pos.line = position.line, pos.character = offset;
+				pos.line = position.line, pos.character = line.indexOf(t[2]);
 				text = t[2] + '(' + t[4].substring(0, i) + (q === 0 ? ')' : ''), name = full = t[2].toLowerCase();
 				len = text.length - name.length, offset += name.length, name = name.split('.').pop() || '';
 				if (name === full)
