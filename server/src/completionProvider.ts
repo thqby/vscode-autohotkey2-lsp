@@ -87,7 +87,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			context = doc.buildContext(position, true, true);
 			if (context.text.match(/^\d+(\.\d*)*\.$/))
 				return;
-			let unknown = true, isstatic = true, isclass = false, isfunc = false, isobj = false, hasparams = false;
+			let unknown = true, isstatic = true, isfunc = false, isobj = false;
 			let props: any = {}, tps: any = [], ts: any = {}, p = context.text.replace(/\.\w*$/, '').toLowerCase();
 			cleardetectcache(), detectExpType(doc, p, position, ts);
 			if (ts['#any'] === undefined) {
@@ -172,7 +172,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							props[n].detail = '(...) ' + props[n].label;
 			}
 			for (const cl in ahkvars) {
-				if ((isobj && cl === 'object') || (isfunc && cl === 'func') || (isclass && cl === 'class') || cl === 'any' || !ahkvars[cl].children)
+				if ((isobj && cl === 'object') || (isfunc && cl === 'func') || cl === 'any' || !ahkvars[cl].children)
 					continue;
 				let cls: DocumentSymbol[] = [];
 				ahkvars[cl].children?.map((it: any) => {
@@ -191,6 +191,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							props[l].detail = '(...) ' + it.name, props[l].insertText = it.name, props[l].documentation = undefined;
 				});
 			}
+			for (const it of ahkvars['any']?.children ?? [])
+				if (!props[l = it.name.toLowerCase()] && expg.test(l))
+					items.push(props[l] = convertNodeCompletion(it));
 			return items;
 		default:
 			if (temp = lt.match(/^\s*#(include|(dllload))/i)) {
