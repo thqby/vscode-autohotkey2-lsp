@@ -18,6 +18,24 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		let t = res.full;
 		t ||= doc.buildContext(pos).text.toLowerCase();
 		detectExpType(doc, t, pos, ts);
+		if (kind === SymbolKind.Method) {
+			if ((res.name === 'call' && ts['func.call']) || (res.name === 'bind' && ts['func.bind'])) {
+				let tt: any = {};
+				detectExpType(doc, t.replace(new RegExp(`\.${res.name}$`, 'i'), ''), pos, tt);
+				if (Object.keys(tt).length) {
+					if (res.name === 'bind') {
+						let t = ts['func.bind'].node = Object.assign({}, ts['func.bind'].node) as FuncNode;
+						let f = (Object.values(tt).pop() as any).node as FuncNode;
+						t.params = f.params;
+						t.detail = t.detail && f.detail ? t.detail + '\n___\n' + f.detail : (t.detail ?? '') + (f.detail ?? '');
+						let rp = f.full.lastIndexOf(')'), lp = f.full.indexOf('(', 1);
+						t.full = t.full.replace(/Bind\([^)]*\)/i, `Bind(${f.full.slice(lp + 1, rp)})`);
+						if (f.kind === SymbolKind.Method)
+							kind = SymbolKind.Function;
+					} else ts = tt;
+				}
+			}
+		}
 	} else
 		detectExpType(doc, name, pos, ts);
 	nodes = Object.values(ts).filter((it: any) => it?.node);
@@ -83,7 +101,7 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 			});
 		}
 		if (kind === SymbolKind.Function && node.kind === SymbolKind.Method)
-			signinfo.signatures.map(it => (it.parameters?.unshift({ label: '@this' }), it.label = it.label.replace(/(?<=(\w|[^\x00-\x7f])+)\(/, '(@this, ')));
+			signinfo.signatures.map(it => it.parameters && (it.parameters.unshift({ label: '@this' }), it.label = it.label.replace(/(?<=(\w|[^\x00-\x7f])+)\(/, '(@this' + (it.parameters.length > 1 ? ', ' : ''))));
 	});
 	signinfo.activeParameter = index;
 	return signinfo;

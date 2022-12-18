@@ -5597,7 +5597,8 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 				if (n.kind === SymbolKind.Function || n.kind === SymbolKind.Method) {
 					fc = n as FuncNode;
 					if (i <= p.length && p[i] === 'call') {
-						node = n;
+						if (!(node = (ahkvars['func'] as ClassNode)?.declaration['call']))
+							(node = Object.assign({}, n)).kind = SymbolKind.Method;
 						continue;
 					} else if (ahkvars['func'])
 						n = ahkvars['func'], p[i - 1] = '@' + p[i - 1].replace(/^[@#]/, '');
