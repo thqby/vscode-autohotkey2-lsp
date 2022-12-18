@@ -78,8 +78,14 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 			if (curclass) {
 				let n = curclass.staticdeclaration[name], kind = n?.kind, temp: { [name: string]: DocumentSymbol };
 				if (!n || (n as any).def === false) {
-					let t = (memscache.get(curclass) ?? (memscache.set(curclass, temp = getClassMembers(doc, curclass, true)), temp))[name];
-					if (t) n = t, kind = t.kind;
+					let t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = getClassMembers(doc, curclass, true)), temp))[name];
+					if (t)
+						n = t, kind = t.kind;
+					else if (sem.type === SemanticTokenTypes.method) {
+						if (temp['__call'])
+							kind = SymbolKind.Null;
+					} else if (temp['__get'])
+						kind = SymbolKind.Null;
 				}
 				switch (kind) {
 					case SymbolKind.Method:

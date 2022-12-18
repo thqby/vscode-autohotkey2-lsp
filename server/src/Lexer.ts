@@ -5635,8 +5635,9 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 							if (_ === 'prototype')
 								node = Object.assign({}, it), node.kind = SymbolKind.Object;
 						}
-						if (!node && _ !== 'clone' && (it = mems['__call']))
-							node = it, uri = (<any>it).uri || '';
+						if (!node && _ !== 'clone')
+							if (kind !== SymbolKind.Property && (it = mems['__call']) || (kind === SymbolKind.Property && (it = mems['__get'] ?? mems['__set'])))
+								node = it, uri = (<any>it).uri || '';
 					} else if (it = mems[_])
 						node = it, uri = (<any>it).uri || '';
 					if (_ === 'clone') {
