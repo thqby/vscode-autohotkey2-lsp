@@ -57,7 +57,8 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 					if (p?.kind === SymbolKind.Property && p.parent?.kind === SymbolKind.Class)
 						scope = p as DocumentSymbol;
 					formatMarkdowndetail(scope);
-				}
+				} else if ((<FuncNode>node).full)
+					hover.push({ kind: 'ahk2', value: (<FuncNode>node).full });
 
 				if (node.detail) {
 					let md = formatMarkdowndetail(node);

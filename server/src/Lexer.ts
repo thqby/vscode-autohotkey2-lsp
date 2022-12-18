@@ -517,7 +517,7 @@ export class Lexer {
 								if (blocks && ((lk = tokens[j]).topofline || lk.content === '=>' || lk.content === '[')) {
 									let tn = Variable.create(tk.content, SymbolKind.Property, rg = make_range(tk.offset, tk.length));
 									tk.symbol = tn, tk.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
-									p[blocks].children?.push(tn), tn.static = isstatic, tn.full = `(${cls.join('.')}) ` + tn.name;
+									p[blocks].children?.push(tn), tn.static = isstatic, tn.full = `(${cls.join('.')}) ${isstatic ? 'static ' : ''}` + tn.name;
 									if (isstatic && blocks)
 										(<ClassNode>p[blocks]).staticdeclaration[tn.name.toLowerCase()] = tn;
 									else
@@ -541,7 +541,6 @@ export class Lexer {
 											}
 										lk = tokens[++j];
 									}
-									tn.full = `(${cls.join('.')}) ` + tn.name;
 									if (lk.content === '{') {
 										tn.children = [];
 										while ((tk = tokens[++j]).content !== '}') {
@@ -638,7 +637,7 @@ export class Lexer {
 										lk?.type !== 'TK_END_EXPR' && (lk = tokens[j]);
 									}
 									let tn = FuncNode.create(tk.content, blocks ? SymbolKind.Method : SymbolKind.Function, make_range(tk.offset, lk.offset + lk.length - tk.offset), make_range(tk.offset, tk.length), params, [], isstatic);
-									tk.symbol = tn, tn.full = this.document.getText(tn.range), tn.static = isstatic, tn.declaration = {};
+									tk.symbol = tn, tn.full = (isstatic ? 'static ' : '') + this.document.getText(tn.range), tn.static = isstatic, tn.declaration = {};
 									tk.semantic = { type: blocks ? SemanticTokenTypes.method : SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
 									if (blocks)
 										tn.full = `(${cls.join('.')}) ` + tn.full;
@@ -1321,7 +1320,7 @@ export class Lexer {
 									if (mode === 2) {
 										for (const it of sta)
 											if (it.kind === SymbolKind.Property)
-												it.static = true;
+												it.static = true, it.full = it.full.replace(') ', ') static ');
 									} else {
 										let s = _low === 'static';
 										sta.map(it => {
@@ -5603,7 +5602,9 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 					} else if (ahkvars['func'])
 						n = ahkvars['func'], p[i - 1] = '@' + p[i - 1].replace(/^[@#]/, '');
 				} else if (n.kind === SymbolKind.Property || n.kind === SymbolKind.Variable) {
-					if (t = (<Variable>n).returntypes) {
+					if (cc?.kind === SymbolKind.Class && (n as any).full === '(Class) static Prototype')
+						p[i - 1] = '@prototype', n = cc;
+					else if (t = (<Variable>n).returntypes) {
 						let tps: any = {}, r = Object.keys(t).pop(), rs: any = [];
 						if (r) {
 							detectExpType(lexers[(<any>n).uri || uri], r, Position.is(t[r]) ? t[r] : n.selectionRange.end, tps);
@@ -5619,11 +5620,8 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 							else return undefined;
 						}
 					}
-				} else if (n.kind === SymbolKind.Object && (<Variable>n).static && n.name.toLowerCase() === 'prototype') {
-					p[i - 1] = '@prototype';
-					if (cc)
-						n = cc;
-				}
+				} else if (cc && n.kind === SymbolKind.Object && (<Variable>n).static && n.name.toLowerCase() === 'prototype')
+					p[i - 1] = '@prototype', n = cc;
 				if (n.kind === SymbolKind.Class) {
 					cc = n;
 					if (u && !(<any>n).uri) (<any>n).uri = u;

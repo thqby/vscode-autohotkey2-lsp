@@ -1,3 +1,8 @@
+## 1.8.1
+- 修复[#234](https://github.com/thqby/vscode-autohotkey2-lsp/issues/234)
+- 修复[#235](https://github.com/thqby/vscode-autohotkey2-lsp/issues/235)
+- 增强[#233](https://github.com/thqby/vscode-autohotkey2-lsp/issues/233)
+
 ## 1.8.0
 - 修复[#231](https://github.com/thqby/vscode-autohotkey2-lsp/issues/231)
 - 增强[#230](https://github.com/thqby/vscode-autohotkey2-lsp/issues/230) 在工作区中, 解释器路径可以设置为相对路径
