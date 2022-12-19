@@ -212,7 +212,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 {
 	"languageserver": {
 		"autohotkey": {
-			"module": "plugin/coc.nvim/plugin/ahk2-lsp folder/server/dist/server.js",
+			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
 			"filetypes": [
 				"autohotkey",
 				"autohotkey2"
@@ -243,6 +243,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 					"wrap_line_length": 0
 				},
 				"InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+				"WorkingDirs": [],
 				"SymbolFoldingFromOpenBrace": false
 			}
 		}
@@ -256,7 +257,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 
 - [Download lsp-server](#lsp-server-download)
 
-- `Preferences: LSP Settings`, add lsp configuration, language selector, and syntax highlighting. This is a simple example [syntax highlighting](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), save the file in a similar path `C:\Users\username\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
+- `Preferences: LSP Settings`, add lsp configuration, language selector, and syntax highlighting. This is a simple example [syntax highlighting](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), save the file in a similar path `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
 ```json
 {
 	"clients": {
@@ -264,9 +265,9 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 			"enabled": true,
 			"command": [
 				"node",
-				"ahk2-lsp folder/server/dist/server.js",
+				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
 				"--stdio"
-			], // Update the PATH of nodejs and lsp-ahk2
+			], // Update the PATH of node.exe(maybe not) and vscode-autohotkey2-lsp
 			"selector": "source.ahk2",
 			"schemes": ["file", "buffer", "res"],
 			"initializationOptions": {
@@ -466,7 +467,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 {
 	"languageserver": {
 		"autohotkey": {
-			"module": "plugin/coc.nvim/plugin/ahk2-lsp folder/server/dist/server.js",
+			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
 			"filetypes": [
 				"autohotkey",
 				"autohotkey2"
@@ -510,7 +511,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 
 - [下载lsp-server](#lsp-server-download)
 
-- `Preferences: LSP Settings`, 增加lsp配置、语言选择器和语法高亮. 这是一个简单的[语法高亮示例](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), 存放在类似路径下 `C:\Users\username\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
+- `Preferences: LSP Settings`, 增加lsp配置、语言选择器和语法高亮. 这是一个简单的[语法高亮示例](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), 存放在类似路径下 `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
 ```json
 {
 	"clients": {
@@ -518,9 +519,9 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 			"enabled": true,
 			"command": [
 				"node",
-				"ahk2-lsp folder/server/dist/server.js",
+				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
 				"--stdio"
-			], // Update the PATH of nodejs and lsp-ahk2
+			], // Update the PATH of node.exe(maybe not) and vscode-autohotkey2-lsp
 			"selector": "source.ahk2",
 			"schemes": ["file", "buffer", "res"],
 			"initializationOptions": {
