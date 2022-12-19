@@ -243,7 +243,7 @@ export class Lexer {
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
 		let parser_pos: number, customblocks: { region: number[], bracket: number[] }, _this = this, h = isahk2_h, filepath = '', sharp_offsets: number[] = [];
 		let input_wanted_newline: boolean, output_space_before_token: boolean, is_conditional: boolean, keep_object_line: boolean, begin_line: boolean;
-		let continuation_sections_mode: boolean, space_in_other: boolean, requirev2 = false;
+		let continuation_sections_mode: boolean, space_in_other: boolean, requirev2 = false, currsymbol: DocumentSymbol | undefined;
 		let input_length: number, n_newlines: number, last_LF: number, preindent_string: string, lst: Token, ck: Token;
 		let comments: { [line: number]: Token } = {}, block_mode = true, format_mode = false, string_mode = false;
 		let handlers: { [index: string]: () => void } = {
@@ -500,7 +500,7 @@ export class Lexer {
 			this.d = d || 1;
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
-				lst = EMPTY_TOKEN, begin_line = true, parser_pos = 0, last_LF = -1;
+				lst = EMPTY_TOKEN, begin_line = true, parser_pos = 0, last_LF = -1, currsymbol = undefined;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
 				this.clear(), this.reflat = true, customblocks = { region: [], bracket: [] }, this.maybev1 = undefined;
 				let blocks = 0, rg: Range, tokens: Token[] = [], cls: string[] = [];
@@ -722,7 +722,7 @@ export class Lexer {
 		} else {
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
-				begin_line = true, requirev2 = false, lst = EMPTY_TOKEN;
+				begin_line = true, requirev2 = false, lst = EMPTY_TOKEN, currsymbol = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), this.reflat = true, includetable = this.include, comments = {}, this.maybev1 = undefined;
 				try {
@@ -749,9 +749,12 @@ export class Lexer {
 			let _parent = scopevar.get('#parent') || _this, tk = _this.tokens[parser_pos - 1] ?? EMPTY_TOKEN, lk = tk.previous_token ?? EMPTY_TOKEN;
 			let blocks = 0, next = true, _low = '', case_pos: number[] = [], _cm: Token | undefined, line_begin_pos: number | undefined;
 			let blockpos: number[] = [], tn: DocumentSymbol | undefined, m: RegExpMatchArray | string | null, o: any;
+			let baksym = currsymbol;
 			if (block_mode = true, mode !== 0)
 				blockpos.push(parser_pos - 1), delete tk.data;
+			currsymbol = _parent;
 			parse_brace();
+			currsymbol = baksym;
 			if (tk.type === 'TK_EOF' && blocks > (mode === 0 ? 0 : -1))
 				_this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (mode === 0 ? 1 : 0)], 1);
 			return result;
@@ -3879,7 +3882,17 @@ export class Lexer {
 					line = input.substring(parser_pos + 1, next_LF = next_LF < 0 ? input_length : next_LF).trim();
 					if (line.startsWith(';')) {
 						ln++;
-						if (t = line.match(/^;+\s*([{}])/)) {
+						if (t = line.match(/^;\s*@/)) {
+							let s = line.substring(t[0].length).toLowerCase();
+							if (s.startsWith('lint-disable')) {
+								if (currsymbol && s.includes('class-static-member-check'))
+									(currsymbol as any).checkmember = false;
+							} else if (s.startsWith('lint-enable')) {
+								if (currsymbol && s.includes('class-static-member-check'))
+									delete (currsymbol as any).checkmember;
+							}
+							ignore = true;
+						} else if (t = line.match(/^;+\s*([{}])/)) {
 							if (t[1] === '{')
 								customblocks.bracket.push(parser_pos + 1);
 							else if ((t = customblocks.bracket.pop()) !== undefined)
@@ -4640,6 +4653,7 @@ export class Lexer {
 		this.funccall.length = this.diagnostics.length = this.foldingranges.length = 0;
 		this.children.length = this.dllpaths.length = this.strcommpos.length = this.anonymous.length = 0;
 		this.includedir = new Map(), this.dlldir = new Map();
+		delete (<any>this).checkmember;
 	}
 
 	public searchNode(name: string, position?: Position, kind?: SymbolKind)
