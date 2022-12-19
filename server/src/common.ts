@@ -413,7 +413,9 @@ export function update_settings(configs: AHKLSSettings) {
 		connection.console.error(e.message);
 		configs.CommentTags = extsettings.CommentTags;
 	}
-	configs.WorkingDirs = configs.WorkingDirs.map(dir => (dir = URI.file(dir).toString().toLowerCase()).endsWith('/') ? dir : dir + '/');
+	if (configs.WorkingDirs instanceof Array)
+		configs.WorkingDirs = configs.WorkingDirs.map(dir => (dir = URI.file(dir).toString().toLowerCase()).endsWith('/') ? dir : dir + '/');
+	else delete (configs as any).WorkingDirs;
 	Object.assign(extsettings, configs);
 }
 export function clearLibfuns() { libfuncs = {}; }
