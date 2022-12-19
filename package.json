@@ -413,6 +413,7 @@
 	"scripts": {
 		"vscode:prepublish": "webpack --mode production --devtool hidden-source-map",
 		"compile": "webpack",
+		"compile-cli": "webpack --config webpack.config.cli.js --mode production --devtool hidden-source-map",
 		"watch": "tsc -b -w",
 		"watch-web": "webpack --watch",
 		"patch": "npm version patch",
