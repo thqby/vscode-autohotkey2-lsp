@@ -4345,7 +4345,7 @@ export class Lexer {
 				else if (['TK_COMMA', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR'].includes(last_type))
 					if (!start_of_object_property())
 						allow_wrap_or_preserved_newline();
-				if (!is_conditional && ck.symbol && flags.mode === MODE.BlockStatement)
+				if (!is_conditional && flags.mode === MODE.BlockStatement && ck.symbol?.children)
 					set_mode(MODE.Statement), is_conditional = true;
 				flags.last_word = '_';
 			}
