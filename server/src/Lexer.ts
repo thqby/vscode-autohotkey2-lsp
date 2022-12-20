@@ -3149,7 +3149,7 @@ export class Lexer {
 						if (!_this.actived)
 							break;
 						connection.window.showWarningMessage(
-							message,
+							`file: '${filepath}', ${message}`,
 							{ title: action.switchtov1(), action: 'SwitchToV1' },
 							{ title: action.skipline(), action: 'SkipLine' },
 							{ title: action.stopparsing(), action: 'Stop' }
