@@ -1948,7 +1948,8 @@ export class Lexer {
 							if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) === '.')
 								addprop(lk);
 							next = false; break;
-						} else tk.topofline = -1;
+						} else if (lk !== EMPTY_TOKEN)
+							tk.topofline = -1;
 					switch (tk.type) {
 						case 'TK_WORD':
 							let predot = (input.charAt(tk.offset - 1) === '.');
