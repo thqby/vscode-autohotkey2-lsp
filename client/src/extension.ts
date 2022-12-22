@@ -585,7 +585,7 @@ function getInterpreterPath() {
 }
 
 function findfile(files: string[], workspace: string) {
-	let paths: string[] = [];
+	let paths: string[] = [], s: string;
 	let t = ahkconfig.inspect('InterpreterPath');
 	if (add(ahkpath_cur), t) {
 		add(t.workspaceFolderValue as string);
@@ -593,10 +593,10 @@ function findfile(files: string[], workspace: string) {
 		add(t.globalValue as string);
 		add(t.defaultValue as string);
 	}
-	for (let path of paths)
-		for (let file of files)
-			if (existsSync(path = resolve(path, '..', file)))
-				return path;
+	for (const path of paths)
+		for (const file of files)
+			if (existsSync(s = resolve(path, '..', file)))
+				return s;
 	return '';
 
 	function add(path: string) {
