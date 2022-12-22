@@ -22,7 +22,7 @@ const messageReader = new BrowserMessageReader(self);
 const messageWriter = new BrowserMessageWriter(self);
 
 const connection = createConnection(messageReader, messageWriter);
-set_Connection(connection, true);
+set_Connection(connection);
 set_ahk_h(true);
 
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);

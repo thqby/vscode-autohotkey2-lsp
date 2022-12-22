@@ -27,7 +27,7 @@ let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: b
 let initnum = 0, uri_switch_to_ahk2 = '';
 
 connection = createConnection(ProposedFeatures.all);
-set_Connection(connection, false, getDllExport, getRCDATA);
+set_Connection(connection, getDllExport, getRCDATA);
 set_dirname(__dirname);
 
 connection.onInitialize((params: InitializeParams) => {

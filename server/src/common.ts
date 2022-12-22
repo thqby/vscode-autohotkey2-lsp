@@ -23,7 +23,8 @@ export * from './signatureProvider';
 export * from './symbolProvider';
 import { diagnostic } from './localize';
 
-export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false, inBrowser = false;
+export const inBrowser = typeof process === 'undefined';
+export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false;
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
@@ -31,7 +32,7 @@ export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], libdirs: string[
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], key: [], other: [], constant: [], snippet: [] };
 export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
-	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\AutoHotkey32.exe',
+	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe',
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
 	CommentTags: '^;;\\s*(.*)',
@@ -94,9 +95,8 @@ export interface AHKLSSettings {
 	WorkingDirs: string[]
 }
 
-export function set_Connection(conn: any, browser: boolean, getDll?: (paths: string[]) => string[], getRC?: (path?: string) => any) {
+export function set_Connection(conn: any, getDll?: (paths: string[]) => string[], getRC?: (path?: string) => any) {
 	connection = conn;
-	inBrowser = browser;
 	if (getDll)
 		getDllExport = getDll;
 	if (getRC)

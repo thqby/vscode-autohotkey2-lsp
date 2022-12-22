@@ -1,8 +1,8 @@
-# AutoHotkey2 Language Support
+# AutoHotkey v2 Language Support
 
 [![installs](https://img.shields.io/visual-studio-marketplace/i/thqby.vscode-autohotkey2-lsp?label=Extension%20Install&style=for-the-badge&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
 [![version](https://img.shields.io/visual-studio-marketplace/v/thqby.vscode-autohotkey2-lsp?label=Extension%20Version&style=for-the-badge&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
-[![](https://img.shields.io/badge/Compatibility-autohotkey%20v2.0--rc.2-green?style=for-the-badge&logo=autohotkey)](https://www.autohotkey.com/)
+[![](https://img.shields.io/badge/Compatibility-autohotkey%20v2.0.0+-green?style=for-the-badge&logo=autohotkey)](https://www.autohotkey.com/)
 
 
 [中文版 README](#readme-cn)往下翻页
@@ -13,20 +13,13 @@
 
 [Gitee](https://gitee.com/orz707/vscode-autohotkey2-lsp)
 
-## lsp-server download
-*[Use in other editors](#use-in-other-editors)*
+AutoHotkey v2 Language support for VS Code, features realization based on v2 syntax analysis.
+Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https://github.dev/github/dev
 
-```shell
-# git
-git clone --depth=1 -b server https://github.com/thqby/vscode-autohotkey2-lsp
-
-# curl (windows)
-mkdir vscode-autohotkey2-lsp & cd vscode-autohotkey2-lsp & curl.exe -L -o ahk2-lsp-update.exe https://github.com/thqby/vscode-autohotkey2-lsp/releases/download/v1.3.9/ahk2-lsp-update.exe & ahk2-lsp-update.exe
-```
-
-AutoHotkey V2 Language support for VS Code, Function realization based on v2 syntax analysis.
-Supports running on the Web, such as `Chrome/Edge`.
-
+- [Use in other editors](#use-in-other-editors)
+  - [Vim and Neovim](#vim-and-neovim)
+  - [Sublime Text4](#sublime-text4)
+- [Use in Web browser](#use-in-web-browser)
 - [Language Features](#language-features)
   - [Rename Symbol](#rename-symbol)
   - [Diagnostics](#diagnostics)
@@ -48,10 +41,6 @@ Supports running on the Web, such as `Chrome/Edge`.
   - [Compile Script](#compile-script)
   - [Debug Script](#debug-script)
   - [Generate Comment](#generate-comment)
-- [Use in Web browser](#use-in-web-browser)
-- [Use in other editors](#use-in-other-editors)
-  - [Vim and Neovim](#vim-and-neovim)
-  - [Sublime Text4](#sublime-text4)
 
 ## Language Features
 
@@ -195,29 +184,33 @@ visit https://github.dev or https://vscode.dev in `Chrome/Edge`, and install `th
 
 ## Use in other editors
 
-**Install [Node.js](https://nodejs.org/en/download/)**
-
-### Vim and Neovim
-
-- Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim)
-```bat
-cd $VIMRUNTIME\plugin
-git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
+1. Install [Node.js](https://nodejs.org/en/download/).
+2. Download vscode-autohotkey2-lsp server using command line, or download and unpack through [vscode marketplace](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp).
+```shell
+mkdir vscode-autohotkey2-lsp
+cd vscode-autohotkey2-lsp
+curl -L -o install.js https://raw.githubusercontent.com/thqby/vscode-autohotkey2-lsp/main/tools/install.js
+node install.js
 ```
+3. Set the LSP configuration of the editor that support [LSP(Language Server Protocol)](https://microsoft.github.io/language-server-protocol/), such as Sublime Text4, Vim, Neovim, Emacs, [etc](https://microsoft.github.io/language-server-protocol/implementors/tools/).
 
-- [Download lsp-server](#lsp-server-download)
+### Sublime Text4
 
-- Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
+- `Package Control: Install Package`, and install [Sublime LSP](https://github.com/sublimelsp/LSP) plug-in.
+
+- `Preferences: LSP Settings`, add lsp configuration, language selector, and syntax highlighting. This is a simple example [syntax highlighting](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), save the file in a similar path `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`.
 ```json
 {
-	"languageserver": {
-		"autohotkey": {
-			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-			"filetypes": [
-				"autohotkey",
-				"autohotkey2"
-			],
-			"args": ["--node-ipc"],
+	"clients": {
+		"lsp-ahk2": {
+			"enabled": true,
+			"command": [
+				"node",
+				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+				"--stdio"
+			], // Update the path of node.exe(maybe it's already in PATH, so you don't need to set it) and the folder of vscode-autohotkey2-lsp
+			"selector": "source.ahk2",	// Same as scope in AutoHotkey2.sublime-syntax
+			"schemes": ["file", "buffer", "res"],
 			"initializationOptions": {
 				"locale": "en-us", // or "zh-cn"
 				"AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
@@ -247,44 +240,45 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 				"SymbolFoldingFromOpenBrace": false
 			}
 		}
-	}
-}
-```
-
-### Sublime Text4
-
-- `Package Control: Install Package`, and install [Sublime LSP](https://github.com/sublimelsp/LSP) plug-in
-
-- [Download lsp-server](#lsp-server-download)
-
-- `Preferences: LSP Settings`, add lsp configuration, language selector, and syntax highlighting. This is a simple example [syntax highlighting](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), save the file in a similar path `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
-```json
-{
-	"clients": {
-		"lsp-ahk2": {
-			"enabled": true,
-			"command": [
-				"node",
-				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-				"--stdio"
-			], // Update the PATH of node.exe(maybe not) and vscode-autohotkey2-lsp
-			"selector": "source.ahk2",
-			"schemes": ["file", "buffer", "res"],
-			"initializationOptions": {
-				// Same as initializationOptions for nvim
-			}
-		}
 	},
 	"semantic_highlighting": true
 }
 ```
 
+### Vim and Neovim
+
+- Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim) or [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig).
+```bat
+cd $VIMRUNTIME\plugin
+git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
+```
+
+- Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
+```json
+{
+	"languageserver": {
+		"lsp-ahk2": {
+			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+			"filetypes": ["autohotkey"],
+			"args": ["--node-ipc"],
+			"initializationOptions": {
+				// Same as initializationOptions for Sublime Text4
+			}
+		}
+	}
+}
+```
+
 <span id = "readme-cn"></span>
-# AutoHotkey2语言支持
+# AutoHotkey v2语言支持
 
-AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析。
-支持在`Chrome/Edge`等浏览器中使用 http://vscode.dev
+AutoHotkey v2 语言支持 for VS Code, 功能实现基于v2语法分析。
+支持在`Chrome/Edge`等浏览器中使用 https://vscode.dev 或 https://github.dev/github/dev
 
+- [在其他编辑器中使用](#在其他编辑器中使用)
+  - [Vim和Neovim](#vim和neovim)
+  - [Sublime Text 4](#sublime-text-4)
+- [在Web浏览器中使用](#在web浏览器中使用)
 - [语言特性](#语言特性)
   - [重命名符号](#重命名符号)
   - [错误诊断](#错误诊断)
@@ -306,10 +300,6 @@ AutoHotKey V2 语言支持 for VS Code, 功能实现基于v2语法分析。
   - [编译脚本](#编译脚本)
   - [调试脚本](#调试脚本)
   - [生成注释](#生成注释)
-- [在Web浏览器中使用](#在web浏览器中使用)
-- [在其他编辑器中使用](#在其他编辑器中使用)
-  - [Vim和Neovim](#vim和neovim)
-  - [Sublime Text 4](#sublime-text-4)
 
 ## 语言特性
 
@@ -438,43 +428,45 @@ code
 
 ### 调试脚本
 
-无需额外配置即可启动已安装的Debug扩展，支持带参数调试。
+无需额外配置即可启动已安装的调试扩展，支持带参数调试。
 
 ### 生成注释
 
 为函数或方法生成 JSDOC 样式的注释文档。
 
-## 在Web浏览器中使用
-
-在`Chrome/Edge`中打开 https://github.dev 或 https://vscode.dev, 然后安装`thqby.vscode-autohotkey2-lsp`
-
 ## 在其他编辑器中使用
 
-**安装[Node.js](https://nodejs.org/en/download/)**
-
-### Vim和Neovim
-
-- 下载[coc.nvim插件](https://github.com/neoclide/coc.nvim)
-```bat
-cd $VIMRUNTIME\plugin
-git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
+1. 安装[Node.js](https://nodejs.org/en/download/)。
+2. 用命令行下载vscode-autohotkey2-lsp服务端, 或通过[vscode marketplace](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)下载并解包。
+```shell
+mkdir vscode-autohotkey2-lsp
+cd vscode-autohotkey2-lsp
+curl -L -o install.js https://raw.githubusercontent.com/thqby/vscode-autohotkey2-lsp/main/tools/install.js
+node install.js
 ```
+3. 设置支持[LSP(语言服务器协议)](https://microsoft.github.io/language-server-protocol/)的编辑器的LSP配置, 例如Sublime Text4, Vim, Neovim, Emacs, [等](https://microsoft.github.io/language-server-protocol/implementors/tools/)。
+
+### Sublime Text 4
+
+- `Package Control: Install Package`, 安装[Sublime LSP](https://github.com/sublimelsp/LSP)插件
 
 - [下载lsp-server](#lsp-server-download)
 
-- 打开(n)vim, 输入命令 `:CocConfig` 进入`coc.nvim`配置文件增加配置信息
+- `Preferences: LSP Settings`, 增加lsp配置、语言选择器和语法高亮. 这是一个简单的[语法高亮示例](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), 存放在类似路径下 `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
 ```json
 {
-	"languageserver": {
-		"autohotkey": {
-			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-			"filetypes": [
-				"autohotkey",
-				"autohotkey2"
-			],
-			"args": ["--node-ipc"],
+	"clients": {
+		"lsp-ahk2": {
+			"enabled": true,
+			"command": [
+				"node",
+				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+				"--stdio"
+			], // 更新node.exe的路径(可能已经在环境变量中，所以你不需要设置)和vscode-autohotkey2-lsp的文件夹
+			"selector": "source.ahk2", // 与AutoHotkey2.sublime-syntax中的scope相同
+			"schemes": ["file", "buffer", "res"],
 			"initializationOptions": {
-				"locale": "zh-cn", // or "en-us"
+				"locale": "en-us", // or "zh-cn"
 				"AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
 				"CommentTags": "^;;\\s*(?<tag>.+)",
 				"CompleteFunctionParens": false,
@@ -498,37 +490,38 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 					"wrap_line_length": 0
 				},
 				"InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+				"WorkingDirs": [],
 				"SymbolFoldingFromOpenBrace": false
-			}
-		}
-	}
-}
-```
-
-### Sublime Text 4
-
-- `Package Control: Install Package`, 安装[Sublime LSP](https://github.com/sublimelsp/LSP)插件
-
-- [下载lsp-server](#lsp-server-download)
-
-- `Preferences: LSP Settings`, 增加lsp配置、语言选择器和语法高亮. 这是一个简单的[语法高亮示例](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), 存放在类似路径下 `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
-```json
-{
-	"clients": {
-		"lsp-ahk2": {
-			"enabled": true,
-			"command": [
-				"node",
-				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-				"--stdio"
-			], // Update the PATH of node.exe(maybe not) and vscode-autohotkey2-lsp
-			"selector": "source.ahk2",
-			"schemes": ["file", "buffer", "res"],
-			"initializationOptions": {
-				// Same as initializationOptions for nvim
 			}
 		}
 	},
 	"semantic_highlighting": true
 }
 ```
+
+### Vim和Neovim
+
+- 下载[coc.nvim插件](https://github.com/neoclide/coc.nvim)或[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)。
+```bat
+cd $VIMRUNTIME\plugin
+git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
+```
+- 打开(n)vim, 输入命令 `:CocConfig` 进入`coc.nvim`配置文件增加配置信息。
+```json
+{
+	"languageserver": {
+		"lsp-ahk2": {
+			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+			"filetypes": ["autohotkey"],
+			"args": ["--node-ipc"],
+			"initializationOptions": {
+				// Same as initializationOptions for Sublime Text4
+			}
+		}
+	}
+}
+```
+
+## 在Web浏览器中使用
+
+在`Chrome/Edge`中打开 https://github.dev 或 https://vscode.dev, 然后安装`thqby.vscode-autohotkey2-lsp`。

@@ -1,3 +1,10 @@
+## 1.8.2
+- 修复[#236](https://github.com/thqby/vscode-autohotkey2-lsp/issues/236)
+- 修复[#238](https://github.com/thqby/vscode-autohotkey2-lsp/issues/238)
+- 修复[#239](https://github.com/thqby/vscode-autohotkey2-lsp/issues/239)
+- 修复[#240](https://github.com/thqby/vscode-autohotkey2-lsp/issues/240)
+- 增加注释开关`;@lint-disable class-static-member-check`
+
 ## 1.8.1
 - 修复[#234](https://github.com/thqby/vscode-autohotkey2-lsp/issues/234)
 - 修复[#235](https://github.com/thqby/vscode-autohotkey2-lsp/issues/235)
