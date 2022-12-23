@@ -42,16 +42,24 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 	let tns: any;
 	tns = nodes ?? [], nodes = [];
 	tns.map((it: any) => {
-		let nn = it.node, kind = nn.kind, m: RegExpExecArray | null;
-		if (kind === SymbolKind.Class) {
-			let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, !it.ref);
-			let n: FuncNode | undefined = (it.ref ? mems['call'] : mems['__new'] ?? mems['call']) as FuncNode;
-			if (mems['call'] && (<any>mems['call']).def !== false)
-				n = mems['call'] as FuncNode;
-			if (n)
-				nodes.push({ node: n, uri: '' });
-		} else if (kind === SymbolKind.Function || kind === SymbolKind.Method)
-			nodes.push(it);
+		let nn = it.node;
+		switch (nn.kind) {
+			case SymbolKind.Class: {
+				let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, !it.ref);
+				let n: FuncNode | undefined = (it.ref ? mems['call'] : mems['__new'] ?? mems['call']) as FuncNode;
+				if (mems['call'] && (<any>mems['call']).def !== false)
+					n = mems['call'] as FuncNode;
+				if (n)
+					nodes.push({ node: n, uri: '' });
+				break;
+			}
+			case SymbolKind.Method:
+				if (kind === SymbolKind.Function)
+					it.needthis = 1;
+			case SymbolKind.Function:
+				nodes.push(it);
+				break;
+		}
 	});
 	if (!nodes.length) {
 		if (kind === SymbolKind.Method) {
@@ -68,40 +76,48 @@ export async function signatureProvider(params: SignatureHelpParams, cancellatio
 		} else return undefined;
 	}
 	nodes.map((it: any) => {
-		const node = it.node as FuncNode, overloads: string[] = [];
-		let params: Variable[] | undefined, name: string | undefined;
-		if (params = node.params)
+		const node = it.node as FuncNode, overloads: string[] = [], needthis = it.needthis ?? 0;
+		let params: Variable[] | undefined, name: string | undefined, paramindex: number;
+		if (params = node.params) {
+			let label = node.full, parameters = params.map(param =>
+				({ label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...') }));
+			if (needthis)
+				label = label.replace(/(?<=(\w|[^\x00-\x7f])+)\(/, '(@this' + (params.length ? ', ' : '')),
+					parameters.unshift({ label: '@this' });
+			paramindex = index - needthis;
 			signinfo.signatures.push({
-				label: node.full,
-				parameters: params.map(param => ({
-					label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...')
-				})),
+				label,
+				parameters,
 				documentation: node.detail ? {
 					kind: 'markdown',
-					value: formatMarkdowndetail(node, name = params[index]?.name ?? '', overloads)
+					value: formatMarkdowndetail(node, name = params[paramindex]?.name ?? '', overloads)
 				} : undefined
 			});
-		if (overloads.length) {
-			let lex = new Lexer(TextDocument.create('', 'ahk2', -10, overloads.join('\n')), undefined, -1);
-			let { label, documentation } = signinfo.signatures[0], n = node;
-			label = label.replace(new RegExp(`(?<=\\b${node.name})\\(.+$`), '');
-			lex.parseScript();
-			lex.children.map((node: any) => {
-				if (params = node.params)
-					signinfo.signatures.push({
-						label: label + node.full.replace(/^[^(]+/, ''),
-						parameters: params.map((param: any) => ({
-							label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...')
-						})),
-						documentation: (name === params[index]?.name) ? documentation : {
-							kind: 'markdown',
-							value: formatMarkdowndetail(n, params[index]?.name ?? '', [])
-						}
-					});
-			});
+			if (overloads.length) {
+				let lex = new Lexer(TextDocument.create('', 'ahk2', -10, overloads.join('\n')), undefined, -1);
+				let { label, documentation } = signinfo.signatures[0], n = node;
+				let fn = label.replace(new RegExp(`(?<=\\b${node.name})\\(.+$`), '');
+				lex.parseScript();
+				lex.children.map((node: any) => {
+					if (params = node.params) {
+						parameters = params.map(param => ({ label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...') }));
+						if (needthis)
+							label = fn + node.full.replace(/^[^(]+/, '').replace('(', '(@this' + (params.length ? ', ' : '')),
+								parameters.unshift({ label: '@this' });
+						else
+							label = fn + node.full.replace(/^[^(]+/, '');
+						signinfo.signatures.push({
+							label,
+							parameters,
+							documentation: (name === params[paramindex]?.name) ? documentation : {
+								kind: 'markdown',
+								value: formatMarkdowndetail(n, params[paramindex]?.name ?? '', [])
+							}
+						});
+					}
+				});
+			}
 		}
-		if (kind === SymbolKind.Function && node.kind === SymbolKind.Method)
-			signinfo.signatures.map(it => it.parameters && (it.parameters.unshift({ label: '@this' }), it.label = it.label.replace(/(?<=(\w|[^\x00-\x7f])+)\(/, '(@this' + (it.parameters.length > 1 ? ', ' : ''))));
 	});
 	signinfo.activeParameter = index;
 	return signinfo;
