@@ -197,7 +197,6 @@ node install.js
 ### Sublime Text4
 
 - `Package Control: Install Package`, and install [Sublime LSP](https://github.com/sublimelsp/LSP) plug-in.
-
 - `Preferences: LSP Settings`, add lsp configuration, language selector, and syntax highlighting. This is a simple example [syntax highlighting](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), save the file in a similar path `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`.
 ```json
 {
@@ -252,7 +251,6 @@ node install.js
 cd $VIMRUNTIME\plugin
 git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 ```
-
 - Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
 ```json
 {
@@ -449,9 +447,6 @@ node install.js
 ### Sublime Text 4
 
 - `Package Control: Install Package`, 安装[Sublime LSP](https://github.com/sublimelsp/LSP)插件
-
-- [下载lsp-server](#lsp-server-download)
-
 - `Preferences: LSP Settings`, 增加lsp配置、语言选择器和语法高亮. 这是一个简单的[语法高亮示例](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), 存放在类似路径下 `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
 ```json
 {

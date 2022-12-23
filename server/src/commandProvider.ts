@@ -40,18 +40,17 @@ export async function fixinclude(libpath: string, docuri: string) {
 				text = `#Include '%A_MyDocuments%\\AutoHotkey\\Lib\\${basename(restorePath(libpath))}'`;
 			else
 				text = `#Include '${restorePath(libpath)}'`;
-			for (const l of doc.includedir)
-				line = l[0] + 1;
+			doc.includedir.forEach((v, k) => line = k + 1);
 		}
 	}
 	if (text === '') {
-		for (const l of doc.includedir) {
-			if (libpath.startsWith(l[1] + '\\')) {
-				if (l[1].length > curdir.length)
-					line = l[0] + 1, curdir = l[1];
-			} else if (!curdir && libpath.startsWith(resolve(l[1], '..') + '\\'))
-				line = l[0] + 1, curdir = l[1];
-		}
+		doc.includedir.forEach((v, k) => {
+			if (libpath.startsWith(v + '\\')) {
+				if (v.length > curdir.length)
+					line = k + 1, curdir = v;
+			} else if (!curdir && libpath.startsWith(resolve(v, '..') + '\\'))
+				line = k + 1, curdir = v;
+		});
 		curdir = curdir || doc.scriptpath;
 		if (curdir.charAt(0) !== libpath.charAt(0))
 			text = `#Include '${restorePath(libpath)}'`;

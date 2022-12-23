@@ -18,7 +18,7 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 		const gg = lexers[uri]?.declaration;
 		for (let key in gg) {
 			let t = gvar[key];
-			if (!t || t.def === false || gg[key].kind !== SymbolKind.Variable)
+			if (!t || gg[key].kind !== SymbolKind.Variable && (t !== ahkvars[key] || t.def === false))
 				gvar[key] = gg[key], (<any>gg[key]).uri = uri;
 		}
 	}
