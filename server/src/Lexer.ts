@@ -2391,7 +2391,7 @@ export class Lexer {
 							} else {
 								if (must && lk.type === 'TK_WORD' && lk.content.toLowerCase() === 'byref' && tk.type === 'TK_WORD') {
 									stop_parse(lk);
-									_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), lk.offset, lk.length);
+									_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), lk.offset, tk.topofline ? lk.length : tk.offset - lk.offset);
 									next = false, lk = EMPTY_TOKEN;
 									continue;
 								}
@@ -4154,12 +4154,6 @@ export class Lexer {
 				if (previous_flags.mode !== MODE.Conditional)
 					previous_flags.indentation_level = flags.indentation_level;
 
-				if (is_array(previous_flags.mode) && flags.last_text === ',') {
-					if (input_wanted_newline && opt.preserve_newlines) {
-						flags.indentation_level = ++previous_flags.indentation_level;
-						print_newline();
-					}
-				}
 				output_space_before_token ||= last_type !== 'TK_START_EXPR' && space_in_other;
 				print_token(), indent();
 				if (!keep_object_line)
