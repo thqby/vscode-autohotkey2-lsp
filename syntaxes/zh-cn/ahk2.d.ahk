@@ -2260,7 +2260,7 @@ Thread(SubFunction [, Value1, Value2]) => void
 /**
  * 在屏幕的任意位置创建置顶的窗口.
  */
-ToolTip([Text, X, Y, WhichToolTip]) => void
+ToolTip([Text, X, Y, WhichToolTip]) => Integer
 
 /**
  * 更改脚本的托盘图标.

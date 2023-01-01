@@ -3139,7 +3139,7 @@ export class Lexer {
 					case 'SwitchToV1':
 						if (!_this.actived)
 							break;
-						connection.console.info([_this.uri, message, diagnostic.tryswitchtov1()].join(' '));
+						connection.console.info([_this.document.uri, message, diagnostic.tryswitchtov1()].join(' '));
 						if (message = '', setTextDocumentLanguage(_this.document.uri))
 							_this.actionwhenv1 = 'SwitchToV1';
 						break;

@@ -2260,7 +2260,7 @@ Thread(SubFunction [, Value1, Value2]) => void
 /**
  * Create a top window anywhere on the screen.
  */
-ToolTip([Text, X, Y, WhichToolTip]) => Number
+ToolTip([Text, X, Y, WhichToolTip]) => Integer
 
 /**
  * Change the tray icon of the script.
