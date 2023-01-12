@@ -292,7 +292,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 					if (index === 0)
 						o = info.offset as number + info.name.length + 1;
 					else o = paraminfo.comma[index - 1] + 1;
-					if ((t = doc.find_token(o)).content !== '&')
+					if ((t = doc.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined))
 						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset, t.length, 2);
 				}
 			});

@@ -2120,7 +2120,7 @@ export class Lexer {
 									types[tpexp] = true;
 								} else {
 									if (fc) {
-										if (input.charAt(fc.offset - 1) !== '%') {
+										if (input.charAt(fc.offset - 1) !== '%' || fc.previous_token?.previous_pair_pos === undefined) {
 											let tn: CallInfo;
 											tpexp += ' ' + fc.content + '()', addvariable(fc);
 											fc.semantic = { type: SemanticTokenTypes.function };
@@ -2294,7 +2294,7 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.unexpected(endc), tk.offset, tk.length);
 								break;
 							}
-							types['#void'] = true, tk.previous_pair_pos = beg;;
+							types['#void'] = true, tk.previous_pair_pos = beg;
 							info.miss.push(info.count++);
 							Object.defineProperty(types, 'paraminfo', { value: info, configurable: true });
 							result.push(...cache);
@@ -2709,7 +2709,7 @@ export class Lexer {
 									else
 										tpexp += ` $${_this.anonymous.push(tn) - 1}`;
 								} else {
-									if (input.charAt(fc.offset - 1) !== '%') {
+									if (input.charAt(fc.offset - 1) !== '%' || fc.previous_token?.previous_pair_pos === undefined) {
 										let tn: CallInfo;
 										addvariable(fc), _parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, make_range(fc.offset, quoteend - fc.offset), make_range(fc.offset, fc.length)));
 										tn.paraminfo = o.paraminfo, tn.offset = fc.offset, fc.callinfo = tn;
@@ -4735,6 +4735,9 @@ export class Lexer {
 				}
 				if (!scope && this.declaration[name])
 					return { node: this.declaration[name], uri };
+				if (!scope && (scope = bak))
+					if (node = scope.children?.find(it => it.name.toLowerCase() === name))
+						return { node, uri, scope };
 			} else if (node = this.declaration[name])
 				return { node, uri, scope };
 		} else if (kind === SymbolKind.Field) {

@@ -281,7 +281,7 @@ async function compileScript() {
 	let cmd = '', cmdop = getConfig('CompilerCMD') as string;
 	let ws = workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath ?? '';
 	let compilePath = findfile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
-	let executePath = getInterpreterPath().path;
+	let executePath = ahkpath_cur || getInterpreterPath().path;
 	if (!compilePath) {
 		window.showErrorMessage(zhcn ? `"Ahk2Exe.exe"未找到!` : `"Ahk2Exe.exe" was not found!`);
 		return;
@@ -315,7 +315,10 @@ async function compileScript() {
 		if (!cmdop.toLowerCase().includes(' /out '))
 			cmd += '/out "' + exePath + '"';
 	}
-	if (child_process.exec(cmd, { cwd: resolve(currentPath, '..') })) {
+	let process = child_process.exec(cmd, { cwd: resolve(currentPath, '..') });
+	if (process) {
+		outputchannel.show(true);
+		outputchannel.clear();
 		let start = new Date().getTime();
 		let timer = setInterval(() => {
 			let end = new Date().getTime();
@@ -334,6 +337,8 @@ async function compileScript() {
 				return false;
 			}
 		}, 1000);
+		process.stderr?.on('data', (error) => outputchannel.appendLine(error));
+		process.stdout?.on('data', (msg) => outputchannel.appendLine(msg));
 	} else
 		window.showErrorMessage(zhcn ? '编译失败!' : 'Compilation failed!');
 }
@@ -478,7 +483,7 @@ async function sleep(ms: number) {
 
 async function setInterpreter() {
 	let index = -1, { path: ahkpath, from } = getInterpreterPath();
-	let list: QuickPickItem[] = [], it: QuickPickItem, _ = ahkpath.toLowerCase();
+	let list: QuickPickItem[] = [], it: QuickPickItem, _ = (ahkpath = ahkpath_cur || ahkpath).toLowerCase();
 	let pick = window.createQuickPick(), active: QuickPickItem | undefined, sel: QuickPickItem = { label: '' };
 	if (zhcn) {
 		list.push({ alwaysShow: true, label: '输入解释器路径...', detail: '输入路径或选择一个现有的解释器' });
