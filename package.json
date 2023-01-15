@@ -188,6 +188,10 @@
 							"type": "boolean",
 							"default": true
 						},
+						"space_after_double_colon": {
+							"type": "boolean",
+							"default": true
+						},
 						"space_in_empty_paren": {
 							"type": "boolean",
 							"default": false

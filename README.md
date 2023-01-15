@@ -228,6 +228,7 @@ node install.js
 					"max_preserve_newlines": 2,
 					"one_true_brace": "1", // or "0" or "-1"
 					"preserve_newlines": true,
+					"space_after_double_colon": true,
 					"space_before_conditional": true,
 					"space_in_empty_paren": false,
 					"space_in_other": true,
@@ -478,6 +479,7 @@ node install.js
 					"max_preserve_newlines": 2,
 					"one_true_brace": "1", // or "0" or "-1"
 					"preserve_newlines": true,
+					"space_after_double_colon": true,
 					"space_before_conditional": true,
 					"space_in_empty_paren": false,
 					"space_in_other": true,

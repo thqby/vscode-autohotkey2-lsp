@@ -138,6 +138,7 @@ export interface FormatOptions {
 	one_true_brace?: number
 	preserve_newlines?: boolean
 	space_before_conditional?: boolean
+	space_after_double_colon?: boolean
 	space_in_empty_paren?: boolean
 	space_in_other?: boolean
 	space_in_paren?: boolean
@@ -242,7 +243,7 @@ export class Lexer {
 		let input: string, output_lines: { text: string[], indent: number }[], flags: any, opt: FormatOptions, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: string };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
 		let parser_pos: number, customblocks: { region: number[], bracket: number[] }, _this = this, h = isahk2_h, filepath = '', sharp_offsets: number[] = [];
-		let input_wanted_newline: boolean, output_space_before_token: boolean, is_conditional: boolean, keep_object_line: boolean, begin_line: boolean;
+		let input_wanted_newline: boolean, output_space_before_token: boolean | undefined, is_conditional: boolean, keep_object_line: boolean, begin_line: boolean;
 		let continuation_sections_mode: boolean, space_in_other: boolean, requirev2 = false, currsymbol: DocumentSymbol | undefined;
 		let input_length: number, n_newlines: number, last_LF: number, preindent_string: string, lst: Token, ck: Token;
 		let comments: { [line: number]: Token } = {}, block_mode = true, format_mode = false, string_mode = false;
@@ -345,6 +346,7 @@ export class Lexer {
 				max_preserve_newlines: 3,
 				preserve_newlines: true,
 				space_before_conditional: true,
+				space_after_double_colon: true,
 				space_in_empty_paren: false,
 				space_in_other: true,
 				space_in_paren: false,
@@ -3345,7 +3347,7 @@ export class Lexer {
 				}
 			} else if (output_space_before_token)
 				line.text.push(' ');
-			output_space_before_token = false;
+			output_space_before_token = undefined;
 			line.text.push(printable_token ?? token_text);
 
 			function print_indent_string(level: number) {
@@ -4167,7 +4169,7 @@ export class Lexer {
 						restore_mode();
 				flags.declaration_statement = false;
 				set_mode(MODE.BlockStatement), flags.had_comment = previous_flags.had_comment;
-				output_space_before_token = space_in_other;
+				output_space_before_token ??= space_in_other;
 
 				if (previous_flags.in_case_statement && flags.last_text.endsWith(':'))
 					flags.indentation_level--, trim_newlines();
@@ -4607,7 +4609,7 @@ export class Lexer {
 			let t = ck.data?.content;
 			if (t)
 				print_token(token_type === 'TK_HOTLINE' ? t : ' ' + t);
-			else output_space_before_token = space_in_other;
+			else output_space_before_token = token_type === 'TK_HOT' ? !!opt.space_after_double_colon : space_in_other;
 		}
 
 		function handle_label() {
