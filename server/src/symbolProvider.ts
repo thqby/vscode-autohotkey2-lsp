@@ -242,10 +242,10 @@ export async function symbolProvider(params: DocumentSymbolParams): Promise<Symb
 export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 	let paraminfo = info.paraminfo as ParamInfo;
 	if (!extsettings.Diagnostics.ParamsCheck || !paraminfo) return;
-	if (node && node.kind === SymbolKind.Class) {
+	if (node?.kind === SymbolKind.Class) {
 		let cl = node as unknown as ClassNode;
 		node = (cl.staticdeclaration['call'] ?? cl.declaration['__new']) as FuncNode;
-		if (!node && cl.extends) {
+		if (cl.extends && (!node || node !== cl.staticdeclaration['call'])) {
 			let t = getClassMembers(doc, cl, true);
 			if (t['call'] && (<any>t['call']).def !== false)
 				node = t['call'] as FuncNode;
