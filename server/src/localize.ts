@@ -7,16 +7,16 @@ export namespace completionitem {
 	export const author = localize('completionitem.author', 'Add file infos about author, description, date, version.');
 	export const comment = localize('completionitem.generatecomment', 'Generate comment template of current function/method.');
 	export const include = localize('completionitem.include', 'Auto import from \'{0}\'');
-	export const prototype = localize("completionitem.prototype", "Retrieve or set the object on which all instances of the class are based.");
-	export const thishotkey = localize("completionitem.thishotkey", "The hidden parameter to the hotkey function.");
-	export const value = localize("completionitem.value", "Within the dynamic property 'set', 'Value' contains the value being assigned.");
-	export const _new = localize("completionitem.new", "export construct a new instance of the class.");
-	export const _this = localize("completionitem.this", "In the class, access other instance variables and methods of the class through \'this\'.");
-	export const _super = localize("completionitem.super", "In the inherited class, \'super\' can replace \'this\' to access the superclass version of the method or property that is overridden in the derived class.");
+	export const prototype = localize('completionitem.prototype', 'Retrieve or set the object on which all instances of the class are based.');
+	export const thishotkey = localize('completionitem.thishotkey', 'The hidden parameter to the hotkey function.');
+	export const value = localize('completionitem.value', 'Within the dynamic property \'set\', \'Value\' contains the value being assigned.');
+	export const _new = localize('completionitem.new', 'export construct a new instance of the class.');
+	export const _this = localize('completionitem.this', 'In the class, access other instance variables and methods of the class through \'this\'.');
+	export const _super = localize('completionitem.super', 'In the inherited class, \'super\' can replace \'this\' to access the superclass version of the method or property that is overridden in the derived class.');
 }
 
 export namespace codeaction {
-	export const include = localize("codeaction.include", "Import '{0}'");
+	export const include = localize('codeaction.include', 'Import \'{0}\'');
 }
 
 export namespace diagnostic {
@@ -80,6 +80,11 @@ export namespace action {
 	export const switchtov1 = localize('action.switchtov1', 'Switch to ahk v1');
 	export const skipline = localize('action.skipline', 'Skip the line');
 	export const stopparsing = localize('action.stopparsing', 'Stop parsing');
+}
+
+export namespace response {
+	export const cannotrename = localize('response.cannotrename', 'The element can\'t be renamed.');
+	export const cannotrenamestdlib = localize('response.cannotrenamestdlib', 'Elements defined in the standard AutoHotkey library can\'t be renamed.');
 }
 
 export function loadlocalize() {

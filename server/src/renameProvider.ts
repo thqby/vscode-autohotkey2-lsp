@@ -1,13 +1,15 @@
 import { PrepareRenameParams, Range, RenameParams, WorkspaceEdit } from 'vscode-languageserver';
+import { ResponseError } from 'vscode-jsonrpc';
 import { getAllReferences } from './referencesProvider';
-import { Maybe, lexers } from './common';
+import { Maybe, lexers, response } from './common';
 
-let renameranges: { [uri: string]: Range[] } | undefined;
+let renameranges: { [uri: string]: Range[] } | null | undefined;
 
-export async function prepareRename(params: PrepareRenameParams): Promise<Maybe<{ range: Range, placeholder: string }>> {
+export async function prepareRename(params: PrepareRenameParams): Promise<Maybe<{ range: Range, placeholder: string } | ResponseError>> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()], context = doc.buildContext(params.position);
-	if (renameranges = getAllReferences(doc, context))
+	if (renameranges = getAllReferences(doc, context, false))
 		return { range: context.range, placeholder: context.text.split('.').pop() || '' };
+	return new ResponseError(0, renameranges === null ? response.cannotrenamestdlib() : response.cannotrename());
 }
 
 export async function renameProvider(params: RenameParams): Promise<Maybe<WorkspaceEdit>> {

@@ -1,3 +1,8 @@
+## 1.8.4
+- 增加`FormatOptions.space_after_double_colon`选项[#252](https://github.com/thqby/vscode-autohotkey2-lsp/issues/252)
+- 修复[#253](https://github.com/thqby/vscode-autohotkey2-lsp/issues/253)
+- 修复一些bug
+
 ## 1.8.3
 - 修复[#242](https://github.com/thqby/vscode-autohotkey2-lsp/issues/242)
 - 修复[#245](https://github.com/thqby/vscode-autohotkey2-lsp/issues/245)

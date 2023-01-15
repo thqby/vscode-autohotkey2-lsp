@@ -10,16 +10,18 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 	return result;
 }
 
-export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string]: Range[] }> {
+export function getAllReferences(doc: Lexer, context: any, allow_builtin = true): { [uri: string]: Range[] } | null | undefined {
 	let name: string = context.text.toLowerCase(), references: { [uri: string]: Range[] } = {};
 	if (!context.text) return undefined;
 	let nodes = searchNode(doc, name, context.range.end, context.kind);
 	if (!nodes || nodes.length > 1)
 		return undefined;
 	let { node, uri } = nodes[0];
-	if (!uri || node === ahkvars[name] || (name.match(/^(this|super)$/) && node.kind === SymbolKind.Class && !node.name.match(/^(this|super)$/i)))
+	if (!uri || (name.match(/^(this|super)$/) && node.kind === SymbolKind.Class && !node.name.match(/^(this|super)$/i)))
 		return undefined;
 	let scope = node === doc.declaration[name] ? undefined : doc.searchScopedNode(node.selectionRange.start);
+	if (!allow_builtin && node === ahkvars[name])
+		return null;
 	switch (node.kind) {
 		case SymbolKind.Field:
 			if (scope) {
@@ -48,16 +50,16 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 							scope = undefined;
 					}
 				}
-				doc = lexers[uri];
-				let rgs = findAllFromDoc(doc, name, SymbolKind.Variable, scope);
-				if (rgs.length)
-					references[doc.document.uri] = rgs;
-				if (!scope) {
-					for (const uri in doc.relevance) {
-						let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, undefined);
-						if (rgs.length)
-							references[lexers[uri].document.uri] = rgs;
-					}
+				let all_uris: any = { [doc.uri]: scope };
+				if (uri !== doc.uri)
+					all_uris[uri] = undefined;
+				if (!scope)
+					for (const uri in doc.relevance)
+						all_uris[uri] = undefined;
+				for (const uri in all_uris) {
+					let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, all_uris[uri]);
+					if (rgs.length)
+						references[lexers[uri].document.uri] = rgs;
 				}
 				break;
 			}
@@ -71,7 +73,7 @@ export function getAllReferences(doc: Lexer, context: any): Maybe<{ [uri: string
 				for (const uri in doc.relevance) {
 					let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, undefined);
 					if (rgs.length)
-					refs[lexers[uri].document.uri] = rgs;
+						refs[lexers[uri].document.uri] = rgs;
 				}
 				for (const uri in refs) {
 					let rgs = refs[uri], doc = lexers[uri.toLowerCase()], tt: Range[] = [];

@@ -211,7 +211,7 @@ export function sendDiagnostics() {
 
 export function initahk2cache() {
 	ahkvars = {};
-	dllcalltpe = ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'HRESULT'];
+	dllcalltpe = ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'hresult'];
 	completionItemCache = {
 		sharp: [],
 		method: [],

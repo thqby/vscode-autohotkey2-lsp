@@ -5619,21 +5619,25 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 				} else if (n.kind === SymbolKind.Property || n.kind === SymbolKind.Variable) {
 					if (cc?.kind === SymbolKind.Class && (n as any).full === '(Class) static Prototype')
 						p[i - 1] = '@prototype', n = cc;
-					else if (t = (<Variable>n).returntypes) {
-						let tps: any = {}, r = Object.keys(t).pop(), rs: any = [];
-						if (r) {
-							detectExpType(lexers[(<any>n).uri || uri], r, Position.is(t[r]) ? t[r] : n.selectionRange.end, tps);
-							let nm = p.slice(i).join('.');
-							for (const tp in tps) {
-								searchNode(lexers[uri], tp + '.' + nm, undefined, kind)?.map(it => {
-									if (!rs.map((i: any) => i.node).includes(it.node))
-										rs.push(it);
-								});
-							}
-							if (rs.length)
-								return rs;
-							else return undefined;
+					else {
+						let tps: any = {}, rs: any = [];
+						if (t = get_comment_types(n, true))
+							(t as string[]).map(tp => tps[tp.includes('=>') ? '@func' : tp] = true);
+						else if (t = (<Variable>n).returntypes) {
+							let r = Object.keys(t).pop();
+							if (r)
+								detectExpType(lexers[(<any>n).uri || uri], r, Position.is(t[r]) ? t[r] : n.selectionRange.end, tps);
 						}
+						let nm = p.slice(i).join('.');
+						for (const tp in tps) {
+							searchNode(lexers[uri], tp + '.' + nm, undefined, kind)?.map(it => {
+								if (!rs.map((i: any) => i.node).includes(it.node))
+									rs.push(it);
+							});
+						}
+						if (rs.length)
+							return rs;
+						else return undefined;
 					}
 				} else if (cc && n.kind === SymbolKind.Object && (<Variable>n).static && n.name.toLowerCase() === 'prototype')
 					p[i - 1] = '@prototype', n = cc;
