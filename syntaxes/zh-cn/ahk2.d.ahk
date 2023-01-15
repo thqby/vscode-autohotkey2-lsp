@@ -1778,6 +1778,11 @@ ProcessExist(PIDOrName?) => Number
 ProcessGetName(PIDOrName?) => String
 
 /**
+ * 返回创建指定进程的进程ID (PID).
+ */
+ProcessGetParent(PIDOrName?) => Integer
+
+/**
  * 返回指定进程的路径.
  */
 ProcessGetPath(PIDOrName?) => String

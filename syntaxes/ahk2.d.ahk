@@ -1778,6 +1778,11 @@ ProcessExist(PIDOrName?) => Number
 ProcessGetName(PIDOrName?) => String
 
 /**
+ * Returns the process ID (PID) of the process which created the specified process.
+ */
+ProcessGetParent(PIDOrName?) => Integer
+
+/**
  * Returns the path of the specified process.
  */
 ProcessGetPath(PIDOrName?) => String
