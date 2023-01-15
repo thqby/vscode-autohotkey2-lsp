@@ -2064,6 +2064,10 @@
         {
           "match": "(?<!\\.)\\b(?i:global|local|static)\\b",
           "name": "storage.modifier.ahk2"
+        },
+        {
+          "match": "(?<!\\.)\\b(?i:isset)\\b",
+          "name": "keyword.other.operator.ahk2"
         }
       ]
     },

@@ -1506,8 +1506,9 @@ export class Lexer {
 						}
 						break;
 					case 'isset':
+						tk.semantic = { type: SemanticTokenTypes.keyword };
 						if (input.charAt(tk.offset + 5) === '(') {
-							tk.type = 'TK_WORD', next = false;
+							tk.type = 'TK_WORD', tk.ignore = true, next = false;
 						} else
 							_this.addDiagnostic(diagnostic.missing('('), tk.offset, 5);
 						break;
@@ -2123,7 +2124,7 @@ export class Lexer {
 										if (input.charAt(fc.offset - 1) !== '%' || fc.previous_token?.previous_pair_pos === undefined) {
 											let tn: CallInfo;
 											tpexp += ' ' + fc.content + '()', addvariable(fc);
-											fc.semantic = { type: SemanticTokenTypes.function };
+											fc.semantic ??= { type: SemanticTokenTypes.function };
 											_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function,
 												make_range(fc.offset, quoteend - fc.offset), make_range(fc.offset, fc.length)));
 											tn.paraminfo = tpe.paraminfo, tn.offset = fc.offset, fc.callinfo = tn;
@@ -2193,7 +2194,7 @@ export class Lexer {
 							}
 							if (tk.content.match(/^(class|super|isset)$/i)) {
 								if (tk.content.toLowerCase() === 'isset') {
-									tk.ignore = true;
+									tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.keyword };
 									if (c !== '(')
 										_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
 								}
@@ -2685,7 +2686,7 @@ export class Lexer {
 										tpexp += ' ' + tk.content;
 								} else tk.ignore = true;
 							} else {
-								lk = tk, tk = get_next_token(), lk.semantic = { type: SemanticTokenTypes.function };
+								lk = tk, tk = get_next_token();
 								let fc = lk, rl = result.length, o: any = {}, par = parse_params(o), quoteend = parser_pos;
 								nexttoken();
 								if (tk.content === '=>') {
@@ -2696,7 +2697,7 @@ export class Lexer {
 									if (fc.content.match(/^\d/))
 										_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									fc.symbol = _parent = tn, tn.children = result.splice(rl).concat(parse_expression(e, o, 2, ternarys.length ? ':' : undefined));
-									(fc.semantic as SemanticToken).modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly;
+									fc.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 									_parent = pp, tn.range.end = document.positionAt(lk.offset + lk.length), tn.closure = !!(mode & 1);
 									tn.returntypes = o, adddeclaration(tn);
 									for (const t in o)
@@ -2713,7 +2714,7 @@ export class Lexer {
 										let tn: CallInfo;
 										addvariable(fc), _parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function, make_range(fc.offset, quoteend - fc.offset), make_range(fc.offset, fc.length)));
 										tn.paraminfo = o.paraminfo, tn.offset = fc.offset, fc.callinfo = tn;
-										tpexp += ' ' + fc.content + '()', fc.semantic = { type: SemanticTokenTypes.function };
+										tpexp += ' ' + fc.content + '()', fc.semantic ??= { type: SemanticTokenTypes.function };
 									} else
 										fc.semantic = { type: SemanticTokenTypes.variable }, fc.ignore = true;
 									next = false;
@@ -2776,7 +2777,7 @@ export class Lexer {
 						}
 						if (tk.content.match(/^(class|super|isset)$/i)) {
 							if (tk.content.toLowerCase() === 'isset') {
-								tk.ignore = true;
+								tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.keyword };
 								if (c !== '(')
 									_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
 							}
@@ -2919,7 +2920,7 @@ export class Lexer {
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
 				let _low = token.content.toLowerCase();
 				if (token.ignore || is_builtinvar(_low, md)) {
-					if (token.semantic)
+					if (token.semantic && token.semantic.type !== SemanticTokenTypes.keyword)
 						delete token.semantic;
 					token.ignore = true;
 					return false;
