@@ -5685,7 +5685,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 		res = searchIncludeNode(doc.relevance ?? {}, name);
 	}
 	if (res) {
-		if (res.node.kind === SymbolKind.Variable && res.node === doc.declaration[name]) {
+		if (res.node.kind === SymbolKind.Variable && (res.node === doc.declaration[name] || !(res.node as Variable).def)) {
 			let t = searchIncludeNode(doc.relevance ?? {}, name);
 			if (t && (t.node.kind !== SymbolKind.Variable || (t.node as any).def))
 				res = t;
