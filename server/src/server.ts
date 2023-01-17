@@ -8,7 +8,7 @@ import { basename, resolve } from 'path';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, Connection, DidChangeConfigurationNotification, ExecuteCommandParams, FoldingRange, FoldingRangeParams, InitializeParams,
-	InitializeResult, ProposedFeatures, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, WorkspaceFoldersChangeEvent
+	InitializeResult, ProposedFeatures, SymbolKind, TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, WorkspaceFoldersChangeEvent, CancellationToken
 } from 'vscode-languageserver/node';
 import {
 	AHKLSSettings, chinese_punctuations, clearLibfuns, codeActionProvider, colorPresentation, colorProvider, completionProvider, defintionProvider,
@@ -250,7 +250,8 @@ connection.onNotification('onDidCloseTextDocument',
 documents.listen(connection);
 connection.listen();
 
-async function executeCommandProvider(params: ExecuteCommandParams) {
+async function executeCommandProvider(params: ExecuteCommandParams, token: CancellationToken) {
+	if (token.isCancellationRequested) return;
 	let args = params.arguments || [];
 	switch (params.command) {
 		case 'ahk2.fix.include':

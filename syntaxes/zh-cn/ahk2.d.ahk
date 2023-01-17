@@ -2792,7 +2792,8 @@ class Error extends Object {
 	Message => String
 
 	/**
-	 * 引起异常的原因. 这通常是一个函数的名称, 但对于因表达式错误而引发的异常(例如对非数字值使用数学运算符),则为空白.
+	 * 
+	 * 引起异常的原因. 这通常是一个函数的名称, 但对于因表达式错误而引发的异常(例如对非数字值使用数学运算符), 则为空.
 	 */
 	What => String
 
@@ -2802,17 +2803,22 @@ class Error extends Object {
 	Extra => String
 
 	/**
-	 * 自动设置为包含发生错误的语句的脚本文件的完整路径.
+	 * 脚本文件的完整路径, 其中包含发生错误的行或构造Error对象的行.
 	 */
 	File => String
 
 	/**
-	 * 自动设置为发生错误的语句行号.
+	 * 发生错误的行号, 或构造Error对象的行号.
 	 */
 	Line => Number
 
 	/**
-	 * 创建 Error 对象.
+	 * 表示构造Error对象时的调用堆栈的字符串.
+	 */
+	Stack => String
+
+	/**
+	 * 构造 Error 对象.
 	 */
 	__New([Message, What, Extra]) => Error
 }
@@ -3984,7 +3990,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	__New([code, What, Extra]) => OSError
+	__New(code := A_LastError, What?, Extra?) => OSError
 }
 
 class Primitive extends Any {

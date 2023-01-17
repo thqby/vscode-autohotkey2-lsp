@@ -1,9 +1,10 @@
-import { DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
 import { Lexer, FuncScope, FuncNode, searchNode, Token, Variable } from './Lexer';
 import { Maybe, lexers, ahkvars } from './common';
 
-export async function referenceProvider(params: ReferenceParams): Promise<Location[]> {
+export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
 	let result: any = [], doc = lexers[params.textDocument.uri.toLowerCase()];
+	if (!doc || token.isCancellationRequested) return;
 	let refs = getAllReferences(doc, doc.buildContext(params.position));
 	for (const uri in refs)
 		result.push(...refs[uri].map(range => { return { uri, range } }));
@@ -107,7 +108,7 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 	return undefined
 }
 
-export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: DocumentSymbol) {
+function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: DocumentSymbol) {
 	let ranges: Range[] = [];
 	if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
 
@@ -143,7 +144,7 @@ export function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope
 	return ranges;
 }
 
-export function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[], assume_glo?: boolean, not_static?: boolean) {
+function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[], assume_glo?: boolean, not_static?: boolean) {
 	let fn_is_static = node.kind === SymbolKind.Function && node.static, f = fn_is_static || node.closure;
 	let t: Variable;
 	if (fn_is_static && not_static && !global)

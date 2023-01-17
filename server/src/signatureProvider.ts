@@ -3,8 +3,8 @@ import { cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, getCla
 import { ahkvars, lexers, Maybe } from './common';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
-export async function signatureProvider(params: SignatureHelpParams, cancellation: CancellationToken): Promise<Maybe<SignatureHelp>> {
-	if (cancellation.isCancellationRequested) return undefined;
+export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
+	if (token.isCancellationRequested) return undefined;
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], kind: SymbolKind = SymbolKind.Function, nodes: any;
 	let res: any, name: string, pos: Position, index: number, signinfo: SignatureHelp = { activeSignature: 0, signatures: [], activeParameter: 0 };
 	if (!(res = getFuncCallInfo(doc, params.position)) || res.index < 0)

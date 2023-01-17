@@ -317,6 +317,8 @@ async function compileScript() {
 	}
 	let process = child_process.exec(cmd, { cwd: resolve(currentPath, '..') });
 	if (process) {
+		if ((cmd += ' ').toLowerCase().includes(' /gui '))
+			return;
 		outputchannel.show(true);
 		outputchannel.clear();
 		let start = new Date().getTime();

@@ -746,6 +746,56 @@ export class Lexer {
 			}
 		}
 
+		function stop_parse(tk: Token, allow_skip = false, message = diagnostic.maybev1()) {
+			if (requirev2)
+				return false;
+			_this.maybev1 ??= 1;
+			switch (_this.actionwhenv1 ?? extsettings.ActionWhenV1IsDetected) {
+				case 'SkipLine':
+					if (!allow_skip)
+						return false;
+					_this.addDiagnostic(diagnostic.skipline(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+					if (tk.type === 'TK_WORD') {
+						do {
+							let next_LF = input.indexOf('\n', parser_pos);
+							if (next_LF < 0)
+								next_LF = input_length;
+							let s = input.substring(parser_pos, next_LF).trimLeft();
+							s.length && createToken(s, 'TK_STRING', next_LF - s.length, s.length, 0);
+							parser_pos = next_LF;
+						} while (is_next_char(','));
+					}
+					return true;
+				case 'SwitchToV1':
+					if (!_this.actived)
+						break;
+					connection.console.info([_this.document.uri, message, diagnostic.tryswitchtov1()].join(' '));
+					if (message = '', setTextDocumentLanguage(_this.document.uri))
+						_this.actionwhenv1 = 'SwitchToV1';
+					break;
+				case 'Continue':
+					return false;
+				case 'Warn': {
+					if (!_this.actived)
+						break;
+					connection.window.showWarningMessage(
+						`file: '${filepath}', ${message}`,
+						{ title: action.switchtov1(), action: 'SwitchToV1' },
+						{ title: action.skipline(), action: 'SkipLine' },
+						{ title: action.stopparsing(), action: 'Stop' }
+					).then((reason?: { action: any }) => {
+						if ((_this.actionwhenv1 = reason?.action ?? 'Continue') !== 'Stop')
+							if (_this.actionwhenv1 === 'SwitchToV1')
+								setTextDocumentLanguage(_this.document.uri);
+							else _this.update();
+					});
+					break;
+				}
+			}
+			_this.clear(), parser_pos = input_length;
+			throw new ParseStopError(message, tk);
+		}
+
 		function parse_block(mode = 0, scopevar = new Map<string, any>(), classfullname: string = ''): DocumentSymbol[] {
 			const result: DocumentSymbol[] = [], document = _this.document, tokens = _this.tokens;
 			let _parent = scopevar.get('#parent') || _this, tk = _this.tokens[parser_pos - 1] ?? EMPTY_TOKEN, lk = tk.previous_token ?? EMPTY_TOKEN;
@@ -2106,7 +2156,7 @@ export class Lexer {
 									if (!par)
 										par = [], _this.addDiagnostic(diagnostic.invalidparam(), bbb, quoteend - bbb);
 									let tn = FuncNode.create(fc.content, SymbolKind.Function,
-										make_range(fc.offset, parser_pos - fc.offset),
+										make_range(fc.offset, lk.offset + lk.length - fc.offset),
 										make_range(fc.offset, fc.length), par, rs.concat(sub));
 									result.push(fc.symbol = tn);
 									tn.returntypes = o, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
@@ -3116,58 +3166,6 @@ export class Lexer {
 				if (next) return lk = tk, next = (tk = get_token_ignore_comment()).type !== 'TK_EOF';
 				else return next = tk.type !== 'TK_EOF';
 			}
-
-			function stop_parse(tk: Token, allow_skip = false, message = diagnostic.maybev1()) {
-				if (requirev2)
-					return false;
-				_this.maybev1 ??= 1;
-				switch (_this.actionwhenv1 ?? extsettings.ActionWhenV1IsDetected) {
-					case 'SkipLine':
-						if (!allow_skip)
-							return false;
-						_this.addDiagnostic(diagnostic.skipline(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-						if (tk.type === 'TK_WORD') {
-							do {
-								nexttoken();
-								while (' \t'.includes(input.charAt(parser_pos) || '\0'))
-									parser_pos++;
-								let next_LF = input.indexOf('\n', parser_pos);
-								if (next_LF < 0)
-									next_LF = input_length;
-								lk = tk, tk = createToken(input.substring(parser_pos, next_LF), 'TK_STRING', parser_pos, next_LF - parser_pos, 0);
-								parser_pos = next_LF;
-							} while (is_next_char(','));
-						}
-						return true;
-					case 'SwitchToV1':
-						if (!_this.actived)
-							break;
-						connection.console.info([_this.document.uri, message, diagnostic.tryswitchtov1()].join(' '));
-						if (message = '', setTextDocumentLanguage(_this.document.uri))
-							_this.actionwhenv1 = 'SwitchToV1';
-						break;
-					case 'Continue':
-						return false;
-					case 'Warn': {
-						if (!_this.actived)
-							break;
-						connection.window.showWarningMessage(
-							`file: '${filepath}', ${message}`,
-							{ title: action.switchtov1(), action: 'SwitchToV1' },
-							{ title: action.skipline(), action: 'SkipLine' },
-							{ title: action.stopparsing(), action: 'Stop' }
-						).then((reason?: { action: any }) => {
-							if ((_this.actionwhenv1 = reason?.action ?? 'Continue') !== 'Stop')
-								if (_this.actionwhenv1 === 'SwitchToV1')
-									setTextDocumentLanguage(_this.document.uri);
-								else _this.update();
-						});
-						break;
-					}
-				}
-				_this.clear(), parser_pos = input_length;
-				throw new ParseStopError(message, tk);
-			}
 		}
 
 		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
@@ -3745,8 +3743,10 @@ export class Lexer {
 			if (c === '"' || c === "'") {
 				let sep = c, o = offset, nosep = false, se = { type: SemanticTokenTypes.string }, _lst: Token | undefined, pt: Token | undefined;
 				resulting_string = '';
-				if (!/^[\s+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1)))
+				if (!/^[\s+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1))) {
+					sep === c && c === '"' && stop_parse(lst);
 					_this.addDiagnostic(diagnostic.missingspace(), offset, 1);
+				}
 				while (c = input.charAt(parser_pos++)) {
 					if (c === '`')
 						parser_pos++;
@@ -4876,19 +4876,12 @@ export class Lexer {
 		if (!root)
 			root = this.children;
 		for (const item of root) {
-			if (line > item.range.end.line || line < item.selectionRange.start.line)
+			if (!(its = item.children) || line > item.range.end.line || line < item.selectionRange.start.line ||
+				(line === item.selectionRange.start.line && character < item.selectionRange.start.character) ||
+				(line === item.range.end.line && character > item.range.end.character))
 				continue;
-			else if (line === item.selectionRange.start.line && character < item.selectionRange.start.character)
-				continue;
-			else if (line === item.range.end.line && character > item.range.end.character)
-				continue;
-			if (item.kind !== SymbolKind.Variable && (its = item.children))
-				if (it = this.searchScopedNode(position, its))
-					return it;
-				else {
-					if (position.line > item.selectionRange.start.line || position.character > item.selectionRange.end.character)
-						return item;
-				}
+			if (position.line > item.selectionRange.start.line || position.character > item.selectionRange.end.character)
+				return this.searchScopedNode(position, its) ?? item;
 			return undefined;
 		}
 		return undefined;

@@ -2737,29 +2737,34 @@ class Enumerator extends Func {
 
 class Error extends Object {
 	/**
-	 * wrong information.
+	 * An error message.
 	 */
 	Message => String
 
 	/**
-	 * The reason for the exception. This is usually the name of a function, but for exceptions caused by expression errors (such as using mathematical operators for non-numeric values), it is blank.
+	 * What threw the exception. This is usually the name of a function, but is blank for exceptions thrown due to an error in an expression (such as using a math operator on a non-numeric value).
 	 */
 	What => String
 
 	/**
-	 * If found, wrong additional information.
+	 * A string value relating to the error, if available. If this value can be converted to a non-empty string, the standard error dialog displays a line with "Specifically:" followed by this string.
 	 */
 	Extra => String
 
 	/**
-	 * Automatically set to the full path of the script file containing the statement where the error occurred.
+	 * The full path of the script file which contains the line at which the error occurred, or at which the Error object was constructed.
 	 */
 	File => String
 
 	/**
-	 * Automatically set to the line number of the statement where the error occurred.
+	 * The line number at which the error occurred, or at which the Error object was constructed.
 	 */
 	Line => Number
+
+	/**
+	 * A string representing the call stack at the time the Error object was constructed.
+	 */
+	Stack => String
 
 	/**
 	 * Create an Error object.
@@ -4000,7 +4005,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	__New([code, What, Extra]) => OSError
+	__New(code := A_LastError, What?, Extra?) => OSError
 }
 
 class Primitive extends Any {

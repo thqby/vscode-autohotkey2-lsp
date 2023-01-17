@@ -1,4 +1,4 @@
-import { DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
+import { CancellationToken, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, getClassMembers, ParamInfo, samenameerr } from './Lexer';
 import { diagnostic } from './localize';
 import { ahkvars, connection, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
@@ -7,9 +7,9 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
 
-export async function symbolProvider(params: DocumentSymbolParams): Promise<SymbolInformation[]> {
+export async function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken): Promise<SymbolInformation[]> {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
-	if (!doc || (!doc.reflat && symbolcache[uri])) return symbolcache[uri];
+	if (!doc || token?.isCancellationRequested || (!doc.reflat && symbolcache[uri])) return symbolcache[uri];
 	let gvar: any = {}, glo = doc.declaration;
 	for (const key in ahkvars)
 		gvar[key] = ahkvars[key];
@@ -308,9 +308,9 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 	}
 }
 
-export async function workspaceSymbolProvider(params: WorkspaceSymbolParams): Promise<SymbolInformation[]> {
+export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, token: CancellationToken): Promise<SymbolInformation[]> {
 	let symbols: SymbolInformation[] = [], n = 0, query = params.query;
-	if (!query || !query.match(/^(\w|[^\x00-\x7f])+$/))
+	if (token.isCancellationRequested || !query || !query.match(/^(\w|[^\x00-\x7f])+$/))
 		return symbols;
 	let reg = new RegExp(query.replace(/(?<=[^A-Z])([A-Z])/g, '.*$1'), 'i');
 	for (let uri in lexers)

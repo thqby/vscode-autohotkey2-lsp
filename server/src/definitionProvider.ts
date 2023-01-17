@@ -1,10 +1,11 @@
-import { DefinitionParams, Definition, LocationLink, DocumentSymbol, SymbolKind, Range } from 'vscode-languageserver';
+import { DefinitionParams, Definition, LocationLink, DocumentSymbol, SymbolKind, Range, CancellationToken } from 'vscode-languageserver';
 import { cleardetectcache, detectExpType, searchNode, Token } from './Lexer';
 import { lexers, restorePath } from './common';
 import { URI } from 'vscode-uri';
 
-export async function defintionProvider(params: DefinitionParams): Promise<Definition | LocationLink[] | undefined> {
-	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc.buildContext(params.position), m: any;
+export async function defintionProvider(params: DefinitionParams, token: CancellationToken): Promise<Definition | LocationLink[] | undefined> {
+	if (token.isCancellationRequested) return;
+	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc?.buildContext(params.position), m: any;
 	let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, locas: LocationLink[] = [];
 	if (context) {
 		let word = '', kind: SymbolKind = SymbolKind.Variable, tk: Token;

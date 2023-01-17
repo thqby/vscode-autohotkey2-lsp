@@ -7,10 +7,11 @@ import { completionitem } from './localize';
 import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, getRCDATA, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
-	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return undefined;
+	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return;
 	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, txs: any = {};
 	let scopenode: DocumentSymbol | undefined, other = true, triggerKind = params.context?.triggerKind;
-	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc.buildContext(position, false, true);
+	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc?.buildContext(position, false, true);
+	if (!context) return;
 	let quote = '', char = '', l = '', percent = false, lt = context.linetext, triggerchar = lt.charAt(context.range.start.character - 1);
 	let list = doc.relevance, cpitem: CompletionItem = { label: '' }, temp: any, path: string, { line, character } = position;
 	let expg = new RegExp(context.text.match(/[^\w]/) ? context.text.replace(/(.)/g, '$1.*') : '(' + context.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');

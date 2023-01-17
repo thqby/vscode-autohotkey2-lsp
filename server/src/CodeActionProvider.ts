@@ -1,14 +1,15 @@
 import { readdirSync } from 'fs';
-import { CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
+import { CancellationToken, CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
 import { codeaction, diagnostic } from './localize';
 import { Maybe, lexers, restorePath } from './common';
 
-export async function codeActionProvider(params: CodeActionParams): Promise<Maybe<CodeAction[]>> {
-	let uri = params.textDocument.uri, doc = lexers[uri.toLowerCase()], diagnostics = doc.diagnostics;
+export async function codeActionProvider(params: CodeActionParams, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
+	let uri = params.textDocument.uri, doc = lexers[uri.toLowerCase()];
+	if (!doc || token.isCancellationRequested) return;
 	let rg = new RegExp('^' + diagnostic.filenotexist().replace('{0}', '(.+?)\\*(\\.\\w+)')), t: RegExpExecArray | null, r = '';
 	let matchexpr = new RegExp(diagnostic.didyoumean('(:=)').replace('?', '\\?').toLowerCase() + '$|^' + diagnostic.deprecated('([^\'"]+)', '([^\'"]+)'));
 	let acts: CodeAction[] = [], replaces: { [k: string]: TextEdit[] } = {};
-	for (const it of diagnostics) {
+	for (const it of doc.diagnostics) {
 		if (t = matchexpr.exec(it.message)) {
 			(replaces[t[3] ? t[3] + ' ' + (r = t[2]) : '= ' + (r = ':=')] ??= []).push({ range: it.range, newText: r });
 		} else if (t = rg.exec(it.message)) {

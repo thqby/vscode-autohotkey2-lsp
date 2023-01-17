@@ -3,7 +3,7 @@ import { ClassNode, cleardetectcache, detectExpType, formatMarkdowndetail, FuncN
 import { lexers, hoverCache, Maybe, ahkvars } from './common';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
-	if (token.isCancellationRequested) return undefined;
+	if (token.isCancellationRequested) return;
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
 	let context = doc?.buildContext(params.position), t: any, hover: any[] = [];
 	if (context) {
@@ -89,5 +89,4 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 				};
 		}
 	}
-	return undefined;
 }

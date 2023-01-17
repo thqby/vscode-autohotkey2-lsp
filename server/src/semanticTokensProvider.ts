@@ -1,4 +1,4 @@
-import { DocumentSymbol, Range, SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaParams, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaParams, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, FuncNode, getClassMembers, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token } from './Lexer';
 import { diagnostic, extsettings, lexers, Variable } from './common';
 import { checkParams, globalsymbolcache, symbolProvider } from './symbolProvider';
@@ -31,8 +31,9 @@ function resolve_sem(tk: Token, doc: Lexer) {
 	}
 }
 
-export async function semanticTokensOnFull(params: SemanticTokensParams): Promise<SemanticTokens> {
+export async function semanticTokensOnFull(params: SemanticTokensParams, token: CancellationToken): Promise<SemanticTokens> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()];
+	if (!doc || token.isCancellationRequested) return { data: [] };
 	doc.STB.previousResult(''), curclass = undefined, memscache.clear();
 	await symbolProvider({ textDocument: params.textDocument });
 	Object.values(doc.tokens).forEach(tk => resolve_sem(tk, doc));
@@ -40,8 +41,9 @@ export async function semanticTokensOnFull(params: SemanticTokensParams): Promis
 	return doc.STB.build();
 }
 
-export async function semanticTokensOnDelta(params: SemanticTokensDeltaParams): Promise<SemanticTokensDelta | SemanticTokens> {
+export async function semanticTokensOnDelta(params: SemanticTokensDeltaParams, token: CancellationToken): Promise<SemanticTokensDelta | SemanticTokens> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()];
+	if (!doc || token.isCancellationRequested) return { data: [] };
 	doc.STB.previousResult(''), curclass = undefined, memscache.clear();
 	await symbolProvider({ textDocument: params.textDocument });
 	Object.values(doc.tokens).forEach(tk => resolve_sem(tk, doc));
@@ -49,8 +51,9 @@ export async function semanticTokensOnDelta(params: SemanticTokensDeltaParams): 
 	return doc.STB.buildEdits();
 }
 
-export async function semanticTokensOnRange(params: SemanticTokensRangeParams): Promise<SemanticTokens> {
+export async function semanticTokensOnRange(params: SemanticTokensRangeParams, token: CancellationToken): Promise<SemanticTokens> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()];
+	if (!doc || token.isCancellationRequested) return { data: [] };
 	let start = doc.document.offsetAt(params.range.start), end = doc.document.offsetAt(params.range.end);
 	doc.STB.previousResult(''), curclass = undefined, memscache.clear();
 	await symbolProvider({ textDocument: params.textDocument });
