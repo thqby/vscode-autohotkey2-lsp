@@ -12,9 +12,10 @@
 		"Snippets"
 	],
 	"keywords": [
+		"ahk",
 		"ahk2",
-		"autohotkey2",
-		"AutoHotkey2"
+		"autohotkey",
+		"autohotkey2"
 	],
 	"repository": {
 		"type": "git",

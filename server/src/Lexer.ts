@@ -953,7 +953,8 @@ export class Lexer {
 										}).join(', ')}]` : '');
 										prop.static = isstatic, prop.children = result.splice(rl);
 										result.push(prop), addprop(fc), prop.funccall = [];
-										fc.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
+										if (fc.content.toLowerCase() !== '__item')
+											fc.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
 										if (tk.content === '{') {
 											let nk: Token, sk: Token, tn: FuncNode | undefined, mmm = mode, brace = tk.offset;
 											tk.previous_pair_pos = oo;
@@ -2856,7 +2857,7 @@ export class Lexer {
 						tpexp += ' #number';
 					else if (tk.type === 'TK_OPERATOR') {
 						tpexp += ' ' + tk.content;
-						if (tk.content === '&') {
+						if (tk.content === '&' && (lk.content === '=>' || ['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lk.type))) {
 							byref = true;
 							continue;
 						} else if (tk.content === '?') {
