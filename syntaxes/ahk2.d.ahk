@@ -2592,6 +2592,12 @@ class Array extends Object {
 	 * An array object contains a list or sequence of values.
 	 */
 	__New(Values*) => Array
+
+	/**
+	 * Enumerates array elements.
+	 */
+	__Enum(NumberOfVars?) => Enumerator
+
 	/**
 	 * Return a shallow copy of the object.
 	 */
@@ -2703,6 +2709,11 @@ class ComObjArray extends ComValue {
 	 */
 	static Call(VarType, Counts*) => ComObjArray
 
+	/**
+	 * Enumerates array elements.
+	 */
+	__Enum(NumberOfVars?) => Enumerator
+
 	MaxIndex(n) => Number
 
 	MinIndex(n) => Number
@@ -2733,6 +2744,10 @@ class ComValueRef extends ComValue {
 }
 
 class Enumerator extends Func {
+	/**
+	 * Retrieves the next item or items in an enumeration.
+	 */
+	Call(&OutputVar1?, &OutputVar2?, *) => Integer
 }
 
 class Error extends Object {
@@ -2984,6 +2999,11 @@ class Func extends Object {
 }
 
 class Gui extends Object {
+	/**
+	 * Enumerates the GUI's controls.
+	 */
+	__Enum(NumberOfVars?) => Enumerator
+
 	/**
 	 * Retrieve or set the background color of the window.
 	 */
@@ -3804,6 +3824,11 @@ class Map extends Object {
 	 * The Map object associates or maps a set of values called keys to another set of values.
 	 */
 	__New([Key1, Value1, * ]) => Map
+
+	/**
+	 * Enumerates key-value pairs.
+	 */
+	__Enum(NumberOfVars?) => Enumerator
 
 	/**
 	 * Remove all key-value pairs from the map.

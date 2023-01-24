@@ -2592,6 +2592,12 @@ class Array extends Object {
 	 * 数组对象包含值的列表或序列.
 	 */
 	__New(Values*) => Array
+
+	/**
+	 * 枚举数组元素.
+	 */
+	__Enum(NumberOfVars?) => Enumerator
+
 	/**
 	 * 返回对象的一个浅拷贝.
 	 */
@@ -2703,6 +2709,11 @@ class ComObjArray extends ComValue {
 	 */
 	static Call(VarType, Counts*) => ComObjArray
 
+	/**
+	 * 枚举数组元素.
+	 */
+	__Enum(NumberOfVars?) => Enumerator
+
 	MaxIndex(n) => Number
 
 	MinIndex(n) => Number
@@ -2783,6 +2794,10 @@ class ComValueRef extends ComValue {
 }
 
 class Enumerator extends Func {
+	/**
+	 * 检索枚举中的下一个或多个项目.
+	 */
+	Call(&OutputVar1?, &OutputVar2?, *) => Integer
 }
 
 class Error extends Object {
@@ -3035,6 +3050,11 @@ class Func extends Object {
 }
 
 class Gui extends Object {
+	/**
+	 * 枚举 GUI 的控件.
+	 */
+	__Enum(NumberOfVars?) => Enumerator
+
 	/**
 	 * 检索或设置窗口的背景色.
 	 */
@@ -3789,6 +3809,11 @@ class Map extends Object {
 	 * Map对象将一组称为键的值关联或映射到另一组值.
 	 */
 	__New([Key1, Value1, * ]) => Map
+
+	/**
+	 * 枚举键-值对.
+	 */
+	__Enum(NumberOfVars?) => Enumerator
 
 	/**
 	 * 从映射中删除所有键-值对.
