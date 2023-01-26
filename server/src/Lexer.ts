@@ -2022,6 +2022,24 @@ export class Lexer {
 								} else lk.ignore = true;
 								types[tpexp] = true, next = false;
 								return result.splice(pres);
+							} else if (tk.content === '=>') {
+								let o: any = {}, rl = result.length, fl = _parent.funccall.length, p = lk, _mode = mode;
+								mode = 1;
+								let rg = make_range(p.offset, p.length);
+								let sub = parse_expression(inpair, o, mustexp || 1, end ?? (ternarys.length ? ':' : undefined));
+								mode = _mode;
+								let tn = FuncNode.create('', SymbolKind.Function, make_range(p.offset, lk.offset + lk.length - p.offset),
+									make_range(p.offset, 0), [Variable.create(p.content, SymbolKind.Variable, rg)],
+									result.splice(rl).concat(sub));
+								tn.funccall = _parent.funccall.splice(fl);
+								tn.returntypes = o;
+								for (const t in o)
+									o[t] = tn.range.end;
+								if (mode !== 0)
+									tn.parent = _parent;
+								adddeclaration(tn), result.push(tn);
+								tpexp += ` $${_this.anonymous.push(tn) - 1}`;
+								break;
 							} else if (tk.type as string === 'TK_OPERATOR' && (!tk.topofline || !tk.content.match(/^(!|~|not|\+\+|--)$/i))) {
 								if (input.charAt(lk.offset - 1) !== '%' && input.charAt(lk.offset + lk.length) !== '%') {
 									if (predot) {
@@ -2059,24 +2077,6 @@ export class Lexer {
 									types['#any'] = true, lk.ignore = true;
 								ternaryMiss();
 								return result.splice(pres);
-							} else if (tk.content === '=>') {
-								let o: any = {}, rl = result.length, fl = _parent.funccall.length, p = lk, _mode = mode;
-								mode = 1;
-								let rg = make_range(p.offset, p.length);
-								let sub = parse_expression(inpair, o, mustexp || 1, end ?? (ternarys.length ? ':' : undefined));
-								mode = _mode;
-								let tn = FuncNode.create('', SymbolKind.Function, make_range(p.offset, lk.offset + lk.length),
-									make_range(p.offset, 0), [Variable.create(p.content, SymbolKind.Variable, rg)],
-									result.splice(rl).concat(sub));
-								tn.funccall = _parent.funccall.splice(fl);
-								tn.returntypes = o;
-								for (const t in o)
-									o[t] = tn.range.end;
-								if (mode !== 0)
-									tn.parent = _parent;
-								adddeclaration(tn), result.push(tn);
-								tpexp += ` $${_this.anonymous.push(tn) - 1}`;
-								break;
 							}
 							if (!predot) {
 								if (input.charAt(lk.offset - 1) !== '%' && addvariable(lk)) {

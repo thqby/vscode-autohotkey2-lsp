@@ -17,10 +17,13 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 	let nodes = searchNode(doc, name, context.range.end, context.kind);
 	if (!nodes || nodes.length > 1)
 		return undefined;
-	let { node, uri } = nodes[0];
+	let { node, uri, scope } = nodes[0];
 	if (!uri || (name.match(/^(this|super)$/) && node.kind === SymbolKind.Class && !node.name.match(/^(this|super)$/i)))
 		return undefined;
-	let scope = node === doc.declaration[name] ? undefined : doc.searchScopedNode(node.selectionRange.start);
+	if (node === doc.declaration[name])
+		scope = undefined;
+	else if (!scope)
+		scope = doc.searchScopedNode(node.selectionRange.start);
 	if (!allow_builtin && node === ahkvars[name])
 		return null;
 	switch (node.kind) {
