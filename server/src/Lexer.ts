@@ -1572,11 +1572,11 @@ export class Lexer {
 						else {
 							let tps: any = {};
 							lk = tk, tk = nk, next = false;
-							if (_low === 'return') {
+							if (_low === 'return' || _low === 'throw') {
 								if (tk.type === 'TK_COMMA')
 									stop_parse(lk);
 								result.push(...parse_line(tps, undefined, _low));
-								if (mode & 1) {
+								if ((mode & 1) && _low === 'return') {
 									let rg = document.positionAt(lk.offset + lk.length);
 									if (!_parent.returntypes)
 										_parent.returntypes = {};
