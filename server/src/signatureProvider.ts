@@ -1,5 +1,5 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
-import { cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, Lexer, Variable } from './Lexer';
+import { cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, Lexer, searchNode, Variable } from './Lexer';
 import { ahkvars, lexers, Maybe } from './common';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
@@ -25,10 +25,17 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				if (Object.keys(tt).length) {
 					if (res.name === 'bind') {
 						let t = ts['func.bind'].node = Object.assign({}, ts['func.bind'].node) as FuncNode;
-						let f = (Object.values(tt).pop() as any).node as FuncNode;
+						let f = t;
+						for (let n in tt) {
+							if (!(f = tt[n]?.node) && n.startsWith('$'))
+								f = searchNode(doc, n, pos, SymbolKind.Variable)?.pop()?.node as FuncNode;
+							if (!f) return undefined;
+							break;
+						}
 						t.params = f.params;
 						t.detail = t.detail && f.detail ? t.detail + '\n___\n' + f.detail : (t.detail ?? '') + (f.detail ?? '');
 						let rp = f.full.lastIndexOf(')'), lp = f.full.indexOf('(', 1);
+						lp === -1 && f.full.startsWith('(') && lp++;
 						t.full = t.full.replace(/Bind\([^)]*\)/i, `Bind(${f.full.slice(lp + 1, rp)})`);
 						if (f.kind === SymbolKind.Method)
 							kind = SymbolKind.Function;

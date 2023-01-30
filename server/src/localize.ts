@@ -36,6 +36,7 @@ export namespace diagnostic {
 	export const funccallerr2 = localize('diagnostic.funccallerr2', 'In the expression, the function call requires parentheses');
 	export const globalconflicts = localize('diagnostic.globalconflicts', 'This global declaration conflicts with an existing {0}');
 	export const hotdeferr = localize('diagnostic.hotdeferr', 'Hotkeys/hotstrings cannot be defined in functions/classes');
+	export const invalidusage = localize('diagnostic.invalidusage', '\'{0}\' cannot be used in functions/classes');
 	export const hotmissbrace = localize('diagnostic.hotmissbrace', 'Hotkey or hotstring is missing its opening brace');
 	export const invaliddefinition = localize('diagnostic.invaliddefinition', 'Invalid {0} definition');
 	export const invalidhotdef = localize('diagnostic.invalidhotdef', 'Invalid hotkey definition');

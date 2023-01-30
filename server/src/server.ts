@@ -153,7 +153,9 @@ connection.onInitialized(async () => {
 	}
 	setTimeout(async () => {
 		parseWorkspaceFolders();
-		winapis.push(...getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(it => `C:\\Windows\\System32\\${it}.dll`)));
+		['user32', 'kernel32', 'comctl32', 'gdi32'].map(name => setTimeout(() => {
+			winapis.push(...getDllExport([`C:\\Windows\\System32\\${name}.dll`]));
+		}, 200));
 	}, 500);
 });
 
