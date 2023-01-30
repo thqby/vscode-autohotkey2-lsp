@@ -1731,13 +1731,11 @@ export class Lexer {
 						next = true, addvariable(lk);
 						while (nexttoken()) {
 							if (tk.type as string === 'TK_WORD') {
-								addprop(tk), nexttoken();
-								if (tk.content === ':=')
+								if (input.charAt(parser_pos) === '%') {
+								} else if (addprop(tk), nexttoken(), tk.content === ':=')
 									maybeclassprop(lk);
 								else if (tk.type === 'TK_DOT')
 									continue;
-								else if (tk.content === '%' && lk.offset + lk.length === tk.offset)
-									maybeclassprop(lk, null);
 								next = false;
 								if (tk.type as string !== 'TK_EQUALS' && !'=??'.includes(tk.content || ' ') &&
 									', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))
@@ -2052,9 +2050,11 @@ export class Lexer {
 										}
 										tpexp += ' ' + lk.content;
 									}
-								} else if (predot)
+								} else if (predot) {
 									tpexp += '.#any', maybeclassprop(lk, null);
-								else
+									tk = lk, lk = tk.previous_token ?? EMPTY_TOKEN;
+									parse_prop(), nexttoken();
+								} else
 									tpexp += ' #any', lk.ignore = true;
 								next = false;
 								continue;
@@ -2259,19 +2259,17 @@ export class Lexer {
 						}
 						case 'TK_OPERATOR':
 							if (tk.content === '%') {
-								if (input.charAt(tk.offset - 1).match(/\w|[^\x00-\x7f]/))
-									tpexp = tpexp.replace(/\S+$/, '#any');
-								else if (lk.type === 'TK_DOT')
-									tpexp += '.#any', maybeclassprop(tk, null);
-								else tpexp += ' #any';
+								let prec = input.charAt(tk.offset - 1);
 								if (inpair === '%') {
 									next = false, types[tpexp] = true;
 									if (tpexp === ' #object' && objk)
 										types[tpexp] = objk;
 									ternaryMiss();
 									return result.splice(pres);
-								}
-								parse_pair('%', '%');
+								} else if (prec.match(/\w|\.|[^\x00-\x7f]/))
+									tpexp = tpexp.replace(/\S+$/, '#any');
+								else tpexp += ' #any';
+								prec === '.' ? (maybeclassprop(tk, null), parse_prop()) : parse_pair('%', '%');
 							} else if (tk.content === '=>' && lk.type === 'TK_WORD') {
 								if (result.length && result[result.length - 1].name === lk.content)
 									result.pop();
@@ -2492,13 +2490,49 @@ export class Lexer {
 				}
 			}
 
+			function parse_prop() {
+				next = false, parser_pos = tk.offset + tk.length;
+				while (nexttoken()) {
+					switch (tk.type) {
+						case 'TK_OPERATOR':
+							if (tk.content === '%') {
+								parse_pair('%', '%');
+								if (isIdentifierChar(input.charCodeAt(parser_pos)))
+									continue;
+								break;
+							}
+						case 'TK_NUMBER':
+							if (!allIdentifierChar.test(tk.content)) {
+								next = false;
+								break;
+							}
+						case 'TK_RESERVED':
+						case 'TK_WORD':
+							tk.type = 'TK_WORD';
+							tk.semantic = { type: SemanticTokenTypes.property };
+							if (input.charAt(parser_pos) === '%')
+								continue;
+							break;
+						default:
+							next = false;
+							break;
+					}
+					break;
+				}
+			}
+
 			function parse_obj(must: boolean = false, tp: any = {}, ks: any = {}): boolean {
 				let l = lk, b = tk, rl = result.length, isobj = true;
-				let ts: any = {}, k: Token | undefined, nk: Token;
+				let ts: any = {}, k: Token | undefined, mark: number[] = [];
 				block_mode = false, next = true, tk.data = ks;
 				while (objkey())
 					if (objval())
 						break;
+				if (isobj || must)
+					mark.map(o => {
+						if (k = tokens[o])
+							k.type = 'TK_WORD', k.semantic = { type: SemanticTokenTypes.property };
+					});
 				if (!isobj) {
 					let e = tk;
 					lk = l, tk = b, result.splice(rl);
@@ -2522,24 +2556,6 @@ export class Lexer {
 						k = undefined;
 						tk.topofline === 1 && (tk.topofline = -1);
 						switch (tk.type) {
-							case 'TK_RESERVED':
-							case 'TK_WORD':
-								if (input.charAt(parser_pos) === '%')
-									break;
-								nexttoken();
-								if (tk.content === ':') {
-									lk.semantic = { type: SemanticTokenTypes.property };
-									k = lk, ks[lk.content.toLowerCase()] = lk.content;
-									return true;
-								}
-								return isobj = false;
-							case 'TK_STRING':
-								nexttoken();
-								if (tk.content === ':') {
-									_this.addDiagnostic(diagnostic.invalidpropname(), lk.offset, lk.length);
-									return true;
-								}
-								return isobj = false;
 							case 'TK_OPERATOR':
 								if (tk.content === '%') {
 									parse_pair('%', '%');
@@ -2549,14 +2565,30 @@ export class Lexer {
 										nexttoken();
 										if (tk.content as string === ':')
 											return true;
+										return isobj = false;
 									}
-								} else if (allIdentifierChar.test(tk.content)) {
-									nexttoken();
-									if (tk.content === ':') {
-										lk.semantic = { type: SemanticTokenTypes.property };
-										lk.type = 'TK_WORD', k = lk, ks[lk.content.toLowerCase()] = lk.content;
-										return true;
-									}
+								}
+							case 'TK_NUMBER':
+								if (!allIdentifierChar.test(tk.content))
+									return isobj = false;
+							case 'TK_RESERVED':
+							case 'TK_WORD':
+								if (input.charAt(parser_pos) === '%' && mark.push(tk.offset))
+									break;
+								let t = lk;
+								nexttoken();
+								if (tk.content === ':') {
+									mark.push(lk.offset);
+									if (t.content !== '%')
+									k = lk, ks[lk.content.toLowerCase()] = lk.content;
+									return true;
+								}
+								return isobj = false;
+							case 'TK_STRING':
+								nexttoken();
+								if (tk.content === ':') {
+									_this.addDiagnostic(diagnostic.invalidpropname(), lk.offset, lk.length);
+									return true;
 								}
 								return isobj = false;
 							case 'TK_LABEL':
@@ -2570,15 +2602,6 @@ export class Lexer {
 							case 'TK_END_BLOCK':
 								if (lk.type === 'TK_START_BLOCK' || lk.type === 'TK_COMMA')
 									return false;
-							case 'TK_NUMBER':
-								if (allIdentifierChar.test(tk.content)) {
-									nexttoken();
-									if (tk.content === ':') {
-										lk.type = 'TK_WORD', k = lk, ks[lk.content.toLowerCase()] = lk.content;
-										lk.semantic = { type: SemanticTokenTypes.property };
-										return true;
-									}
-								}
 							case 'TK_START_EXPR':
 								return isobj = false;
 							case 'TK_COMMA':
@@ -2787,10 +2810,12 @@ export class Lexer {
 							_parent.funccall.push(tn = DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, make_range(ptk.offset, parser_pos - ptk.offset), make_range(ptk.offset, ptk.length)));
 							tn.paraminfo = o.paraminfo, tn.offset = ptk.offset, ptk.callinfo = tn;
 							maybeclassprop(ptk, true);
-						} else {
-							addprop(tk);
+						} else if (input.charAt(parser_pos) === '%') {
+							maybeclassprop(tk, null), parse_prop();
 							nexttoken(), next = false;
-							if (tk.content === ':=')
+						} else {
+							addprop(tk), nexttoken(), next = false;
+							if (tk.type as string === 'TK_EQUALS')
 								maybeclassprop(lk);
 						}
 					} else if (tk.type === 'TK_START_BLOCK') {
@@ -2812,11 +2837,12 @@ export class Lexer {
 						else
 							tpexp += ' #array';
 					} else if (tk.content === '%') {
-						if (input.charAt(tk.offset - 1).match(/\w|[^\x00-\x7f]/))
+						let prec = input.charAt(tk.offset - 1);
+						if (prec.match(/\w|\.|[^\x00-\x7f]/))
 							tpexp = tpexp.replace(/\S+$/, '#any');
 						else
 							tpexp += ' #any';
-						parse_pair('%', '%');
+						prec === '.' ? (maybeclassprop(tk, null), parse_prop()) : parse_pair('%', '%');
 					} else if (tk.content.match(/^[)}]$/)) {
 						pairMiss(), next = false;
 						types[tpexp.indexOf('#any') < 0 ? '(' + tpexp + ')' : '#any'] = true;
