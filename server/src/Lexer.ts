@@ -2824,7 +2824,7 @@ export class Lexer {
 							_parent.funccall.push(tn = DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method, make_range(ptk.offset, parser_pos - ptk.offset), make_range(ptk.offset, ptk.length)));
 							tn.paraminfo = o.paraminfo, tn.offset = ptk.offset, ptk.callinfo = tn;
 							maybeclassprop(ptk, true);
-						} else if (input.charAt(parser_pos) === '%') {
+						} else if (b !== '%' && input.charAt(parser_pos) === '%') {
 							maybeclassprop(tk, null), parse_prop();
 							nexttoken(), next = false;
 						} else {
