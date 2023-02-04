@@ -4215,7 +4215,7 @@ export class Lexer {
 				else
 					output_space_before_token = space_in_other;
 			} else {
-				if (!['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally'].includes(flags.last_word))
+				if (!['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally', 'switch'].includes(flags.last_word))
 					while (flags.mode === MODE.Statement)
 						restore_mode();
 				flags.declaration_statement = false;
