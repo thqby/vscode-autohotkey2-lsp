@@ -2192,7 +2192,7 @@ export class Lexer {
 											_parent.funccall.push(tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function,
 												make_range(fc.offset, quoteend - fc.offset), make_range(fc.offset, fc.length)));
 											tn.paraminfo = tpe.paraminfo, tn.offset = fc.offset, fc.callinfo = tn;
-										} else fc.semantic = { type: SemanticTokenTypes.variable }, fc.ignore = true;
+										} else fc.ignore = true;
 									} else {
 										let s = Object.keys(tpe).pop() || '';
 										if (input.charAt(quoteend) === '(') {
@@ -2520,7 +2520,7 @@ export class Lexer {
 						case 'TK_RESERVED':
 						case 'TK_WORD':
 							tk.type = 'TK_WORD';
-							tk.semantic = { type: SemanticTokenTypes.property };
+							tk.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.modification };
 							if (input.charAt(parser_pos) === '%')
 								continue;
 							break;
@@ -2542,7 +2542,7 @@ export class Lexer {
 				if (isobj || must)
 					mark.map(o => {
 						if (k = tokens[o])
-							k.type = 'TK_WORD', k.semantic = { type: SemanticTokenTypes.property };
+							k.type = 'TK_WORD', k.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.modification };
 					});
 				if (!isobj) {
 					let e = tk;
@@ -2806,7 +2806,7 @@ export class Lexer {
 										tn.paraminfo = o.paraminfo, tn.offset = fc.offset, fc.callinfo = tn;
 										tpexp += ' ' + fc.content + '()', fc.semantic ??= { type: SemanticTokenTypes.function };
 									} else
-										fc.semantic = { type: SemanticTokenTypes.variable }, fc.ignore = true;
+										fc.ignore = true;
 									next = false;
 									if (par) for (const it of par) if (!is_builtinvar(it.name.toLowerCase())) {
 										result.push(it);

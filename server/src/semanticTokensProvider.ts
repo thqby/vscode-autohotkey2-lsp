@@ -78,7 +78,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 			return SemanticTokenTypes.class;
 		case SemanticTokenTypes.method:
 		case SemanticTokenTypes.property:
-			if (curclass) {
+			if (curclass && sem.modifier !== 1 << SemanticTokenModifiers.modification) {
 				let n = curclass.staticdeclaration[name], kind = n?.kind, temp: { [name: string]: DocumentSymbol };
 				if (!n || (n as any).def === false) {
 					let t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = getClassMembers(doc, curclass, true)), temp))[name];
