@@ -78,6 +78,7 @@ export interface FuncNode extends DocumentSymbol {
 	declaration: { [name: string]: FuncNode | ClassNode | Variable };
 	returntypes?: { [exp: string]: any }
 	overwrite?: number
+	has_this_param?: boolean
 }
 
 export interface ClassNode extends DocumentSymbol {
@@ -195,6 +196,7 @@ const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofl
 
 let searchcache: { [name: string]: any } = {};
 let hasdetectcache: { [exp: string]: any } = {};
+export let last_full_exp = '';
 
 class ParseStopError {
 	public message: string;
@@ -2857,7 +2859,8 @@ export class Lexer {
 						else
 							tpexp += ' #any';
 						prec === '.' ? (maybeclassprop(tk, null), parse_prop()) : parse_pair('%', '%');
-					} else if (tk.content.match(/^[)}]$/)) {
+					} else if (tk.type.startsWith('TK_END_')) {
+						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1);
 						pairMiss(), next = false;
 						types[tpexp.indexOf('#any') < 0 ? '(' + tpexp + ')' : '#any'] = true;
 						ternaryMiss();
@@ -2878,9 +2881,7 @@ export class Lexer {
 							continue;
 						}
 						_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
-					} else if (tk.type === 'TK_END_BLOCK' || tk.type === 'TK_END_EXPR')
-						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1);
-					else if (tk.type === 'TK_COMMA') {
+					} else if (tk.type === 'TK_COMMA') {
 						if (b !== '(') tpexp += ' ,';
 						else if (pairnum === 0) {
 							tpexp = '', ++info.count;
@@ -3077,40 +3078,40 @@ export class Lexer {
 					});
 					(<ClassNode>node).cache?.splice(0);
 				} else {
+					let has_this_param = node.kind === SymbolKind.Method || node.parent?.kind === SymbolKind.Property && node.kind === SymbolKind.Function;
+					if (has_this_param)
+						(node as FuncNode).has_this_param = true, pars['this'] = pars['super'] = dec['this'] = dec['super'] = null as any;
 					if ((<FuncNode>node).assume === FuncScope.GLOBAL) {
-						node.children?.map(it => {
-							if (it.kind === SymbolKind.Function) {
-								if (!(_low = it.name.toLowerCase()))
-									return;
-								if (!dec[_low]) {
-									dec[_low] = it;
-								} else
-									_diags.push({ message: samenameerr(dec[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-								funcs[_low] = it;
-							}
-						});
 						(<FuncNode>node).params?.map(it => {
 							node.children?.unshift(it), it.def = true, it.kind = SymbolKind.TypeParameter;
-							if (!dec[_low = it.name.toLowerCase()] || dec[_low].kind !== SymbolKind.Function)
+							if (dec[_low = it.name.toLowerCase()] === undefined)
 								dec[_low] = it;
-							else
-								_diags.push({ message: samenameerr(it, dec[_low]), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 							if (it.defaultVal !== undefined || it.arr)
 								lpv = true;
 							else if (lpv)
 								_diags.push({ message: diagnostic.defaultvalmissing(it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							if (pars[_low])
+							if (pars[_low] !== undefined)
 								_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 							else pars[_low] = it;
 						});
+						node.children?.map(it => {
+							if (it.kind === SymbolKind.Function) {
+								if (!(_low = it.name.toLowerCase()))
+									return;
+								if (dec[_low] === undefined) {
+									dec[_low] = it, funcs[_low] = it;
+								} else
+									_diags.push({ message: diagnostic.conflictserr('function', pars[_low] !== undefined ? 'parameter' : 'Func', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+							}
+						});
 						for (const n in (<FuncNode>node).local) {
-							if (!dec[n])
+							if (dec[n] === undefined)
 								dec[n] = (<FuncNode>node).local[n];
-							else if (pars[n])
+							else if (pars[n] !== undefined)
 								_diags.push({ message: diagnostic.conflictserr('local', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
 						}
 						for (const n in (<FuncNode>node).global) {
-							if (pars[n])
+							if (pars[n] !== undefined)
 								_diags.push({ message: diagnostic.conflictserr('global', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
 							else {
 								if (dec[n]) {
@@ -3124,7 +3125,7 @@ export class Lexer {
 						let gdec = _this.declaration;
 						node.children?.map(it => {
 							if (it.kind === SymbolKind.Variable) {
-								if (!dec[_low = it.name.toLowerCase()]) {
+								if (dec[_low = it.name.toLowerCase()] === undefined) {
 									if (!gdec[_low]) {
 										gdec[_low] = it;
 										(<any>it).infunc = true;
@@ -3134,12 +3135,27 @@ export class Lexer {
 							}
 						});
 					} else {
+						(<FuncNode>node).params?.map(it => {
+							node.children?.unshift(it), it.def = true, it.kind = SymbolKind.TypeParameter;
+							if (dec[_low = it.name.toLowerCase()] === undefined)
+								dec[_low] = it;
+							if (it.defaultVal !== undefined || it.arr)
+								lpv = true;
+							else if (lpv)
+								_diags.push({ message: diagnostic.defaultvalmissing(it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+							if (pars[_low] !== undefined)
+								_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+							else pars[_low] = it;
+						});
 						node.children?.map(it => {
 							if (it.kind === SymbolKind.Function || (<Variable>it).def) {
 								if (!(_low = it.name.toLowerCase()))
 									return;
-								if (!dec[_low]) {
+								if (dec[_low] === undefined) {
 									dec[_low] = it;
+								} else if (pars[_low] !== undefined) {
+									if (it.kind === SymbolKind.Function)
+										return _diags.push({ message: diagnostic.conflictserr('function', 'parameter', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 								} else if (!(it.kind === SymbolKind.Variable && dec[_low].kind === SymbolKind.Variable)) {
 									if (dec[_low].kind === SymbolKind.Variable) {
 										_diags.push({ message: samenameerr(it, dec[_low]), range: dec[_low].selectionRange, severity: DiagnosticSeverity.Error });
@@ -3151,28 +3167,14 @@ export class Lexer {
 									funcs[_low] = it;
 							}
 						});
-						(<FuncNode>node).params?.map(it => {
-							node.children?.unshift(it), it.def = true, it.kind = SymbolKind.TypeParameter;
-							if (!dec[_low = it.name.toLowerCase()] || dec[_low].kind !== SymbolKind.Function)
-								dec[_low] = it;
-							else
-								_diags.push({ message: samenameerr(it, dec[_low]), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							if (it.defaultVal !== undefined || it.arr)
-								lpv = true;
-							else if (lpv)
-								_diags.push({ message: diagnostic.defaultvalmissing(it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							if (pars[_low])
-								_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							else pars[_low] = it;
-						});
 						for (const n in (<FuncNode>node).local) {
-							if (!dec[n])
+							if (dec[n] === undefined)
 								dec[n] = (<FuncNode>node).local[n];
-							else if (pars[n])
+							else if (pars[n] !== undefined)
 								_diags.push({ message: diagnostic.conflictserr('local', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
 						}
 						for (const n in (<FuncNode>node).global) {
-							if (pars[n])
+							if (pars[n] !== undefined)
 								_diags.push({ message: diagnostic.conflictserr('global', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
 							else {
 								if (dec[n]) {
@@ -3186,24 +3188,14 @@ export class Lexer {
 							}
 						}
 					}
+					if (pars['this'] === null)
+						delete pars['this'], delete pars['super'], delete dec['this'], delete dec['super'];
 					for (const n in pars)
 						(<FuncNode>node).local[n] = pars[n];
 					for (const n in funcs)
 						(<FuncNode>node).local[n] = funcs[n];
 					if (node.kind === SymbolKind.Method && pars['this'])
 						_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', 'this'), range: pars['this'].selectionRange, severity: DiagnosticSeverity.Error });
-					for (const n of ['this', 'super']) {
-						if (node.declaration[n]) {
-							let t: FuncNode | undefined = node as FuncNode;
-							while (t && (t.kind === SymbolKind.Method || t.kind === SymbolKind.Function)) {
-								if (t.local[n] || t.global[n])
-									t = undefined;
-								else t = t.parent as FuncNode;
-							}
-							if (t && t.kind === SymbolKind.Class)
-								delete node.declaration[n];
-						}
-					}
 					if ((<FuncNode>node).assume === FuncScope.STATIC) {
 						let loc = (node as FuncNode).local, it: Variable;
 						for (const n in dec)
@@ -4744,6 +4736,10 @@ export class Lexer {
 					} else if (glo && glo[name])
 						return { node: this.declaration[name] || glo[name], uri, scope };
 					else if ((<FuncNode>scope).assume === FuncScope.GLOBAL) {
+						if ((scope as FuncNode).has_this_param && ['this', 'super'].includes(name)) {
+							node = undefined;
+							break;
+						}
 						if (node = this.declaration[name])
 							return { node, uri, scope };
 						return undefined;
@@ -4762,6 +4758,9 @@ export class Lexer {
 						node = scope.children?.find(it => it.name.toLowerCase() === name);
 						if (node && (<Variable>node).static)
 							return { node, uri, scope };
+					} else if ((scope as FuncNode).has_this_param && ['this', 'super'].includes(name)) {
+						node = undefined;
+						break;
 					}
 					scope = (<any>scope).parent;
 				}
@@ -4770,8 +4769,7 @@ export class Lexer {
 						return { node: t, uri, scope };
 					else
 						return { node, uri, fn_is_static, scope };
-				}
-				else if (['this', 'super'].includes(name)) {
+				} else if (['this', 'super'].includes(name)) {
 					scope = bak;
 					while (scope && scope.kind !== SymbolKind.Class) {
 						if ((<FuncNode>scope).static && (scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Property))
@@ -5291,7 +5289,7 @@ export function getcacheproperty(): string[] {
 
 export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [type: string]: DocumentSymbol | boolean }) {
 	let nd = new Lexer(TextDocument.create('', 'ahk2', -10, '_:=' + exp));
-	searchcache = {}, nd.parseScript();
+	last_full_exp = '', searchcache = {}, nd.parseScript();
 	let it = nd.children.shift() as Variable, s = Object.keys(it?.returntypes || {}).pop();
 	if (s)
 		detectExp(doc, s, pos, nd.document.getText(Range.create(it.selectionRange.end, it.range.end))).map(tp => types[tp] = searchcache[tp] ?? false);
@@ -5519,6 +5517,8 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 												m.map(s => o[s] = true), n.returntypes = o;
 											for (const e in n.returntypes)
 												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
+											if (ts['@comobject'])
+												last_full_exp = fullexp?.replace(/^\s*:=\s*/, '') ?? '';
 											if (n.returntypes)
 												break swlb;
 											break;

@@ -152,7 +152,9 @@ function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[
 	let t: Variable;
 	if (fn_is_static && not_static && !global)
 		return;
-	if (node.assume === FuncScope.GLOBAL || node.global?.[name]) {
+	if (global && node.has_this_param && ['this', 'super'].includes(name))
+		assume_glo = false;
+	else if (node.assume === FuncScope.GLOBAL || node.global?.[name]) {
 		if (!global)
 			return;
 		assume_glo = true;

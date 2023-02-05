@@ -2,9 +2,10 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, searchNode, Token, Variable } from './Lexer';
+import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, last_full_exp, searchNode, Token, Variable } from './Lexer';
 import { completionitem } from './localize';
 import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, getRCDATA, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis } from './common';
+// import { send_ahk_Request } from './ahk_server';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return;
@@ -111,14 +112,21 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					} else
 						searchNode(doc, tp, position, SymbolKind.Variable)?.map(it => tps.push(it.node));
 				}
-			}
-			if (ts['#object'] !== undefined) {
-				getcacheproperty().map(s => {
-					if (!props[l = s.toLowerCase()]) {
-						items.push(props[l] = CompletionItem.create(s));
-						props[l].kind = CompletionItemKind.Property;
-					}
-				});
+				if (ts['#object'] !== undefined) {
+					getcacheproperty().map(s => {
+						if (!props[l = s.toLowerCase()]) {
+							items.push(props[l] = CompletionItem.create(s));
+							props[l].kind = CompletionItemKind.Property;
+						}
+					});
+				}
+				// else if (ts['@comobject'] !== undefined && (temp = last_full_exp.match(/^comobject\(\s*('|")([^'"]+)\1\s*(,\s*('|")([^'"]+)\4)?\s*\)$/i))) {
+				// 	let result = (await send_ahk_Request('ExportComTypeLib', temp[5] ? [temp[2], temp[5]] : [temp[2]]) ?? []) as any[];
+				// 	result.map(it => expg.test(it[0]) && additem(it[0], it[1] === '1' ? CompletionItemKind.Method : CompletionItemKind.Property));
+				// 	let n = Object.keys(ts).length;
+				// 	if (n === 1 || n === 2 && ts['@comvalue'] !== undefined)
+				// 		return items;
+				// }
 			}
 			for (const node of tps) {
 				switch (node.kind) {

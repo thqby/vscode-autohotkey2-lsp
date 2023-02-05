@@ -59,7 +59,7 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 							converttype(info, ahkvars[_l] && gvar[_l] === ahkvars[_l], gvar[_l]?.kind || info.kind);
 					}
 				} else if (info.kind === SymbolKind.Variable) {
-					if (info !== vars[_l])
+					if (info !== vars[_l] || (info as any).infunc)
 						if (vars[_l].kind !== SymbolKind.TypeParameter || vars[_l].selectionRange.start.character !== vars[_l].selectionRange.end.character)
 							converttype(info, vars[_l] === ahkvars[_l], vars[_l].kind);
 						else if (tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]) {
@@ -88,8 +88,10 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 				let inherit: { [key: string]: DocumentSymbol } = {}, gg = false;
 				if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Method || info.kind === SymbolKind.Event) {
 					let p = info as FuncNode, ps: any = {}, ll = '', fn_is_static = info.kind === SymbolKind.Function && (<FuncNode>info).static;
-					for (const k in p.global)
-						inherit[k] = p.global[k];
+					for (const k in p.global) {
+						let it = p.global[k];
+						inherit[k] = gvar[k] ?? it, converttype(it, !!ahkvars[k], inherit[k].kind);
+					}
 					(<FuncNode>info).params?.map(it => {
 						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true;
 						converttype(it, false, SymbolKind.TypeParameter);
@@ -102,18 +104,16 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 						}
 					if (p.assume === FuncScope.GLOBAL || global) {
 						gg = true;
+						if (p.has_this_param)
+							inherit['this'] = vars['this'], inherit['super'] = vars['super'];
 					} else {
 						gg = false;
 						let kk = (<FuncNode>info).parent, tt = p.declaration;
 						if (kk) {
 							if (kk.kind === SymbolKind.Property && kk.children?.length && (<FuncNode>kk).parent?.kind === SymbolKind.Class)
 								kk = (<FuncNode>kk).parent as DocumentSymbol;
-							if (kk.kind === SymbolKind.Class) {
-								let rg = Range.create(0, 0, 0, 0);
-								inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg);
-								if ((<ClassNode>kk).extends)
-									inherit['super'] = DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg);
-							}
+							if (kk.kind === SymbolKind.Class)
+								inherit['this'] = vars['this'], inherit['super'] = vars['super'];
 							if (kk.kind === SymbolKind.Function || kk.kind === SymbolKind.Method || kk.kind === SymbolKind.Event)
 								if (fn_is_static) {
 									for (const k in vars)
@@ -140,7 +140,8 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 					inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg);
 					if ((<ClassNode>info).extends)
 						inherit['super'] = DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg);
-				}
+				} else if (info.kind === SymbolKind.Property && (info as FuncNode).parent?.kind === SymbolKind.Class)
+					inherit['this'] = vars['this'], inherit['super'] = vars['super'];
 				result.push(...flatTree(info, inherit, gg));
 			}
 		});
@@ -294,7 +295,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 					else o = paraminfo.comma[index - 1] + 1;
 					if ((t = doc.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined))
 						if (doc.tokens[t.next_token_offset]?.type !== 'TK_DOT')
-						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset, t.length, 2);
+							doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset, t.length, 2);
 				}
 			});
 		}
