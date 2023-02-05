@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.8.6",
+	"version": "1.8.7",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -148,6 +148,26 @@
 						"SkipLine"
 					],
 					"description": "%ahk2.actionwhenv1isdetected%"
+				},
+				"AutoHotkey2.CompletionCommitCharacters": {
+					"scope": "window",
+					"type": "object",
+					"properties": {
+						"Class": {
+							"type": "string"
+						},
+						"Function": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": {
+						"type": "string"
+					},
+					"default": {
+						"Class": ".(",
+						"Function": "("
+					},
+					"description": "%ahk2.completioncommitcharacters%"
 				},
 				"AutoHotkey2.FormatOptions": {
 					"scope": "window",

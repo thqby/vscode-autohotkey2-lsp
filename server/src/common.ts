@@ -37,6 +37,10 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	AutoLibInclude: 0,
 	CommentTags: '^;;\\s*(.*)',
 	CompleteFunctionParens: false,
+	CompletionCommitCharacters: {
+		Class: '.(',
+		Function: '('
+	},
 	SymbolFoldingFromOpenBrace: false,
 	Diagnostics: {
 		ParamsCheck: true,
@@ -85,6 +89,10 @@ export interface AHKLSSettings {
 	AutoLibInclude: LibIncludeType
 	CommentTags: string
 	CompleteFunctionParens: boolean
+	CompletionCommitCharacters?: {
+		Class: string
+		Function: string
+	}
 	SymbolFoldingFromOpenBrace: boolean
 	Diagnostics: {
 		ParamsCheck: boolean

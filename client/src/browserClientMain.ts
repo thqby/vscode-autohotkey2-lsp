@@ -71,6 +71,7 @@ export function activate(context: ExtensionContext) {
 			AutoLibInclude: getConfig('AutoLibInclude'),
 			CommentTags: getConfig('CommentTags'),
 			CompleteFunctionParens: getConfig('CompleteFunctionParens'),
+			CompletionCommitCharacters: getConfig('CompletionCommitCharacters'),
 			Diagnostics: getConfig('Diagnostics'),
 			FormatOptions: getConfig('FormatOptions'),
 			InterpreterPath: getConfig('InterpreterPath'),

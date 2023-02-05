@@ -4,6 +4,7 @@
 	"ahk2.compile": "Compile Script",
 	"ahk2.compilercmd": "Compiler command line options. If ahk2exe.exe is not specified, the default path will be used. ${execPath} is equal to the currently selected AutoHotkey.exe",
 	"ahk2.completefunctionparens": "Parentheses are added to function completion when there is no '(' or '[' on the right; otherwise move the cursor to the right",
+	"ahk2.completioncommitcharacters": "Characters which commit auto completion",
 	"ahk2.debug": "Debug Script",
 	"ahk2.debug.attach": "Attach Running Script",
 	"ahk2.debug.params": "Debug Script with Params",

@@ -4,6 +4,7 @@
 - 修复[#268](https://github.com/thqby/vscode-autohotkey2-lsp/issues/268)
 - 修复[#269](https://github.com/thqby/vscode-autohotkey2-lsp/issues/269)
 - 修复[#270](https://github.com/thqby/vscode-autohotkey2-lsp/issues/270)
+- 增加`CompletionCommitCharacters`设置项
 
 ## 1.8.6
 - 修复[#260](https://github.com/thqby/vscode-autohotkey2-lsp/issues/260)

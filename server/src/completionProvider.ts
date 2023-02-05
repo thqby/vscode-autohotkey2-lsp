@@ -18,6 +18,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	let expg = new RegExp(context.text.match(/[^\w]/) ? context.text.replace(/(.)/g, '$1.*') : '(' + context.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	let o = doc.document.offsetAt({ line, character: character - 1 }), tk = doc.find_token(o);
 	let istr = tk.type === 'TK_STRING', right_is_paren = '(['.includes(context.suf.charAt(0) || '\0');
+	let commitCharacters = {
+		Class: extsettings.CompletionCommitCharacters?.Class.split(''),
+		Function: extsettings.CompletionCommitCharacters?.Function.split(''),
+	};
 
 	if (istr) {
 		if (triggerKind === 2)
@@ -658,7 +662,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
 				if (extsettings.CompleteFunctionParens) {
 					if (right_is_paren)
-						ci.commitCharacters = ['\t'], ci.command = { title: 'cursorRight', command: 'cursorRight' };
+						ci.command = { title: 'cursorRight', command: 'cursorRight' };
 					else if ((<FuncNode>info).params.length) {
 						ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
 						if ((<FuncNode>info).params[0].name.includes('|')) {
@@ -667,13 +671,13 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						} else ci.insertText = ci.label + '($0)', ci.insertTextFormat = InsertTextFormat.Snippet;
 					} else ci.insertText = ci.label + '()';
 				} else
-					ci.commitCharacters = ['\t', '('];
+					ci.commitCharacters = commitCharacters.Function;
 				ci.detail = info.full, ci.documentation = info.detail; break;
 			case SymbolKind.Variable:
 			case SymbolKind.TypeParameter:
 				ci.kind = CompletionItemKind.Variable, ci.detail = info.detail; break;
 			case SymbolKind.Class:
-				ci.kind = CompletionItemKind.Class, ci.commitCharacters = ['.', '('];
+				ci.kind = CompletionItemKind.Class, ci.commitCharacters = commitCharacters.Class;
 				ci.detail = 'class ' + ci.label, ci.documentation = info.detail; break;
 			case SymbolKind.Event:
 				ci.kind = CompletionItemKind.Event; break;
