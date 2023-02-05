@@ -255,6 +255,9 @@
           "name": "punctuation.section.parens.end.ahk2"
         },
         {
+          "include": "#operators"
+        },
+        {
           "include": "#variables"
         }
       ]
@@ -930,7 +933,7 @@
       ]
     },
     "default_statement": {
-      "name": "meta.conditional.case.ahk2",
+      "name": "meta.conditional.default.ahk2",
       "match": "((?>(?:(?:(?>(?<!\\s)\\s+)|(\\/\\*)((?>(?:[^\\*]|(?>\\*+)[^\\/])*)((?>\\*+)\\/)))+|(?:(?:(?:(?:\\b|(?<=\\W))|(?=\\W))|\\A)|\\Z))))((?<!\\w)(?i:default))(:)",
       "captures": {
         "1": {
