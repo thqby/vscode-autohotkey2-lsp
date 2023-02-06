@@ -3095,7 +3095,7 @@ class Gui extends Object {
 	/**
 	 * Create Picture control and return a GuiControl object.
 	 */
-	AddPicture([Options, Text]) => Gui.Pic
+	AddPicture([Options, Filename]) => Gui.Pic
 
 	/**
 	 * Adds a Button control and returns a GuiControl object.
