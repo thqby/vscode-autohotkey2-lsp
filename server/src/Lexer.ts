@@ -3288,7 +3288,7 @@ export class Lexer {
 		}
 
 		function create_flags(flags_base: any, mode: any) {
-			let indentation_level = 0, had_comment = 0;
+			let indentation_level = 0, had_comment = 0, indent_line_index, ternary_depth;
 			let last_text = '', last_word = '', in_expression = [MODE.ArrayLiteral, MODE.Expression, MODE.ObjectLiteral].includes(mode);
 			if (flags_base) {
 				indentation_level = flags_base.indentation_level;
@@ -3296,6 +3296,8 @@ export class Lexer {
 				last_text = flags_base.last_text;
 				last_word = flags_base.last_word;
 				in_expression ||= flags_base.in_expression;
+				ternary_depth = flags_base.ternary_depth;
+				indent_line_index = flags_base.indent_line_index;
 			}
 
 			let next_flags = {
@@ -3313,10 +3315,11 @@ export class Lexer {
 				last_text,
 				last_word,
 				loop_block: 0,
+				indent_line_index,
 				mode,
 				parent: flags_base,
 				start_line_index: output_lines.length,
-				ternary_depth: 0,
+				ternary_depth,
 				try_block: false
 			};
 			return next_flags;
@@ -3398,6 +3401,7 @@ export class Lexer {
 		}
 
 		function indent(): void {
+			flags.indent_line_index = output_lines.length;
 			flags.indentation_level += 1;
 		}
 
@@ -3434,8 +3438,8 @@ export class Lexer {
 		}
 
 		function start_of_object_property(): boolean {
-			return flags.parent.mode === MODE.ObjectLiteral && flags.mode === MODE.Statement && flags.last_text === ':' &&
-				flags.ternary_depth === 0;
+			return flags.parent.mode === MODE.ObjectLiteral && flags.mode === MODE.Statement &&
+				flags.last_text === ':' && !flags.ternary_depth;
 		}
 
 		function start_of_statement(): boolean {
@@ -3445,7 +3449,7 @@ export class Lexer {
 					(!input_wanted_newline && ck.previous_token?.callinfo) ||
 					!flags.in_case && !['TK_WORD', 'TK_RESERVED', 'TK_START_EXPR'].includes(token_type) && !['--', '++', '%'].includes(token_text)
 				)) || (flags.declaration_statement) ||
-				(flags.mode === MODE.ObjectLiteral && flags.last_text === ':' && flags.ternary_depth === 0)) {
+				(flags.mode === MODE.ObjectLiteral && flags.last_text === ':' && !flags.ternary_depth)) {
 
 				set_mode(MODE.Statement);
 				indent();
@@ -4521,6 +4525,7 @@ export class Lexer {
 				else output_space_before_token = space_in_other;
 				flags.in_case = false;
 				flags.case_body = true;
+				set_mode(MODE.Statement);
 				return;
 			}
 
@@ -4537,18 +4542,18 @@ export class Lexer {
 					space_after = true;
 			} else if (token_text === ':') {
 				if (flags.ternary_depth)
-					flags.ternary_depth--;
+					restore_mode(), flags.ternary_depth--;
 				else space_before = false;
 			} else if (token_text === '?') {
 				if (!ck.ignore) {
-					flags.ternary_depth += 1;
-					if (!flags.indentation_level)
-						indent();
-					else if (output_lines.length) {
-						let line = output_lines[output_lines.length - 1].text;
-						if (line[flags.indentation_level - (line[0] === preindent_string ? 0 : 1)] === indent_string)
+					if (flags.ternary_depth === undefined)
+						flags.ternary_depth = 1;
+					else {
+						flags.ternary_depth++;
+						if (previous_flags.indent_line_index !== output_lines.length - (just_added_newline() ? 1 : 0))
 							indent();
 					}
+					set_mode(MODE.Expression);
 				} else space_before = space_after = false;
 			} else if (token_text === '.')
 				space_after = space_before = true;
