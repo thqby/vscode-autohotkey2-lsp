@@ -1329,7 +1329,8 @@ export class Lexer {
 							tn.staticdeclaration = {}, tn.declaration = {};
 							tn.returntypes = { [(classfullname + '@' + cl.content).toLowerCase()]: true };
 							if (_cm = comments[tn.selectionRange.start.line])
-								tn.detail = trim_comment(_cm.content);
+								if (m = (tn.detail = trim_comment(_cm.content)).match(/^\s*@extends\s+(\S+)/m))
+									ex = m[1].replace(/^{([^}]+)}$/, '$1');
 							if (ex)
 								tn.extends = ex;
 							tn.children.push(...parse_block(2, sv, classfullname + cl.content + '.')), tn.range = make_range(beginpos, parser_pos - beginpos);
