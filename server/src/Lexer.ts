@@ -3308,7 +3308,7 @@ export class Lexer {
 		}
 
 		function create_flags(flags_base: any, mode: any) {
-			let indentation_level = 0, had_comment = 0, indent_line_index, ternary_depth;
+			let indentation_level = 0, had_comment = 0, ternary_depth;
 			let last_text = '', last_word = '', in_expression = [MODE.ArrayLiteral, MODE.Expression, MODE.ObjectLiteral].includes(mode);
 			if (flags_base) {
 				indentation_level = flags_base.indentation_level;
@@ -3317,7 +3317,6 @@ export class Lexer {
 				last_word = flags_base.last_word;
 				in_expression ||= flags_base.in_expression;
 				ternary_depth = flags_base.ternary_depth;
-				indent_line_index = flags_base.indent_line_index;
 			}
 
 			let next_flags = {
@@ -3335,7 +3334,6 @@ export class Lexer {
 				last_text,
 				last_word,
 				loop_block: 0,
-				indent_line_index,
 				mode,
 				parent: flags_base,
 				start_line_index: output_lines.length,
@@ -3415,13 +3413,15 @@ export class Lexer {
 			line.text.push(printable_token ?? token_text);
 
 			function print_indent_string(level: number) {
-				if (level)
+				if (level) {
+					if (output_lines.length > 1)
+						level = Math.min(output_lines[output_lines.length - 2].indent + 1, level);
 					line.text.push(indent_string.repeat(line.indent = level));
+				}
 			}
 		}
 
 		function indent(): void {
-			flags.indent_line_index = output_lines.length;
 			flags.indentation_level += 1;
 		}
 
@@ -4576,8 +4576,7 @@ export class Lexer {
 						flags.ternary_depth = 1;
 					else {
 						flags.ternary_depth++;
-						if (previous_flags.indent_line_index !== output_lines.length - (just_added_newline() ? 1 : 0))
-							indent();
+						indent();
 					}
 					set_mode(MODE.Expression);
 				} else space_before = space_after = false;
