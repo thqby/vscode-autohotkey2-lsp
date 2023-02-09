@@ -7,7 +7,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
 
-export async function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken): Promise<SymbolInformation[]> {
+export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
 	if (!doc || token?.isCancellationRequested || (!doc.reflat && symbolcache[uri])) return symbolcache[uri];
 	let gvar: any = {}, glo = doc.declaration;
@@ -46,30 +46,30 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 			if (!info.name)
 				return;
 			if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Variable || info.kind === SymbolKind.Class) {
-				let _l = info.name.toLowerCase();
+				let _l = info.name.toLowerCase(), sym = gvar[_l];
 				if (!vars[_l]) {
-					if (info.kind === SymbolKind.Variable && !(<Variable>info).def && gvar[_l]) {
-						vars[_l] = gvar[_l];
-						if (info === gvar[_l])
+					if (info.kind === SymbolKind.Variable && !(<Variable>info).def && sym) {
+						vars[_l] = sym;
+						if (info === sym)
 							result.push(info);
-						converttype(info, gvar[_l] === ahkvars[_l], gvar[_l].kind);
+						converttype(info, sym === ahkvars[_l], sym.kind).definition = sym;
 					} else {
 						vars[_l] = info, result.push(info);
 						if (info.kind !== SymbolKind.Class || !(<any>info).parent)
-							converttype(info, ahkvars[_l] && gvar[_l] === ahkvars[_l], gvar[_l]?.kind || info.kind);
+							converttype(info, ahkvars[_l] && sym === ahkvars[_l], sym?.kind || info.kind).definition = sym ?? info;
 					}
 				} else if (info.kind === SymbolKind.Variable) {
 					if (info !== vars[_l] || (info as any).infunc)
 						if (vars[_l].kind !== SymbolKind.TypeParameter || vars[_l].selectionRange.start.character !== vars[_l].selectionRange.end.character)
-							converttype(info, vars[_l] === ahkvars[_l], vars[_l].kind);
+							converttype(info, vars[_l] === ahkvars[_l], vars[_l].kind).definition = vars[_l];
 						else if (tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]) {
 							if (tk.semantic)
 								delete tk.semantic;
 						}
 				} else if (info !== vars[_l])
-					result.push(info), vars[_l] = info, converttype(info, info === ahkvars[_l]);
-				else if (info === gvar[_l])
-					result.push(info), converttype(info, info === ahkvars[_l]);
+					result.push(info), vars[_l] = info, converttype(info, info === ahkvars[_l]).definition = info;
+				else if (info === sym)
+					result.push(info), converttype(info, info === ahkvars[_l]).definition = sym;
 			} else if (info.kind !== SymbolKind.TypeParameter) {
 				result.push(info);
 				if ((info.kind === SymbolKind.Method || info.kind === SymbolKind.Property) && info.name.match(/^__(new|init|enum|get|call|set|delete)$/i))
@@ -90,16 +90,16 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 					let p = info as FuncNode, ps: any = {}, ll = '', fn_is_static = info.kind === SymbolKind.Function && (<FuncNode>info).static;
 					for (const k in p.global) {
 						let it = p.global[k];
-						inherit[k] = gvar[k] ?? it, converttype(it, !!ahkvars[k], inherit[k].kind);
+						inherit[k] = gvar[k] ?? it, converttype(it, !!ahkvars[k], inherit[k].kind).definition = inherit[k];
 					}
 					(<FuncNode>info).params?.map(it => {
 						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true;
-						converttype(it, false, SymbolKind.TypeParameter);
+						converttype(it, false, SymbolKind.TypeParameter).definition = it;
 					});
 					for (const k in p.local)
 						if (k && !ps[k]) {
 							let it = p.local[k];
-							result.push(it), converttype(it);
+							result.push(it), converttype(it).definition = it;
 							inherit[k] = it;
 						}
 					if (p.assume === FuncScope.GLOBAL || global) {
@@ -127,12 +127,13 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 							if (!k)
 								continue;
 							if (!inherit[k]) {
-								inherit[k] = tt[k], result.push(inherit[k]), converttype(tt[k]);
+								inherit[k] = tt[k], result.push(inherit[k]), converttype(tt[k]).definition = tt[k];
 							} else if (tt[k] !== inherit[k]) {
 								if (tt[k].kind !== SymbolKind.Variable || (inherit[k] === gvar[k] && (<Variable>tt[k]).def))
-									inherit[k] = tt[k], result.push(tt[k]), converttype(tt[k]);
-								else converttype(tt[k], false, inherit[k].kind);
-							} else if (!ps[k]) converttype(tt[k]);
+									inherit[k] = tt[k], result.push(tt[k]), converttype(tt[k]).definition = tt[k];
+								else converttype(tt[k], false, inherit[k].kind).definition = inherit[k];
+							} else if (!ps[k])
+								converttype(tt[k]).definition = tt[k];
 						}
 					}
 				} else if (info.kind === SymbolKind.Class) {
@@ -208,12 +209,12 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Warning });
 		}
 	}
-	function converttype(it: DocumentSymbol, islib: boolean = false, kind?: number) {
+	function converttype(it: DocumentSymbol, islib: boolean = false, kind?: number): Token {
 		let tk: Token, stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined, offset: number;
-		switch (kind || it.kind) {
+		switch (kind ?? it.kind) {
 			case SymbolKind.TypeParameter:
 				if (it.range.start.line === 0 && it.range.start.character === 0)
-					return;
+					return {} as Token;
 				st = SemanticTokenTypes.parameter; break;
 			case SymbolKind.Variable:
 				st = SemanticTokenTypes.variable; break;
@@ -222,7 +223,7 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 			case SymbolKind.Function:
 				st = SemanticTokenTypes.function; break;
 		}
-		if (st !== undefined && (tk = doc.tokens[offset = doc.document.offsetAt(it.selectionRange.start)])) {
+		if ((tk = doc.tokens[offset = doc.document.offsetAt(it.selectionRange.start)]) && st !== undefined) {
 			if ((stk = tk.semantic) === undefined) {
 				tk.semantic = stk = { type: st };
 				if (it.kind === SymbolKind.Variable && (<Variable>it).def && (kind === SymbolKind.Class || kind === SymbolKind.Function))
@@ -237,6 +238,7 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 			if (st < 3)
 				stk.modifier = (stk.modifier || 0) | (1 << SemanticTokenModifiers.readonly) | (islib ? 1 << SemanticTokenModifiers.defaultLibrary : 0);
 		}
+		return tk ?? {};
 	}
 }
 
@@ -344,7 +346,7 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 	}
 	return symbols;
 	async function filterSymbols(uri: string) {
-		for (let it of await symbolProvider({ textDocument: { uri } })) {
+		for (let it of symbolProvider({ textDocument: { uri } })) {
 			if (reg.test(it.name)) {
 				symbols.push(it);
 				if (++n >= 1000)

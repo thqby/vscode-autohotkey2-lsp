@@ -189,6 +189,9 @@
 							"type": "boolean",
 							"default": true
 						},
+						"keyword_start_with_uppercase": {
+							"type": "boolean"
+						},
 						"max_preserve_newlines": {
 							"type": "number",
 							"default": 2
@@ -222,6 +225,10 @@
 							"default": true
 						},
 						"space_in_paren": {
+							"type": "boolean",
+							"default": false
+						},
+						"symbol_with_same_case": {
 							"type": "boolean",
 							"default": false
 						},
