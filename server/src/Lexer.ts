@@ -4461,7 +4461,7 @@ export class Lexer {
 				ck.previous_token?.callinfo)
 				input_wanted_newline && opt.preserve_newlines ? print_newline(true) : output_space_before_token = true;
 			else {
-				output_space_before_token = space_in_other && last_type === 'TK_COMMA';
+				output_space_before_token = space_in_other && last_type === 'TK_COMMA' || last_text === 'for' && last_type === 'TK_RESERVED';
 				if (flags.mode === MODE.Statement && flags.parent.mode === MODE.ObjectLiteral)
 					restore_mode();
 				if (input_wanted_newline && opt.preserve_newlines)
