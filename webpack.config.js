@@ -152,8 +152,7 @@ const browserServerConfig = /** @type WebpackConfig */ {
 			fs: false,
 			child_process: false,
 			path: require.resolve("path-browserify"),
-			process: false,
-			'./ahkProvider': false
+			process: false
 		},
 	},
 	module: {

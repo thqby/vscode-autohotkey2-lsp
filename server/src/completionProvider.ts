@@ -4,7 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, last_full_exp, searchNode, Token, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, getRCDATA, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, sendAhkRequest, winapis } from './common';
+import { ahkvars, completionItemCache, dllcalltpe, extsettings, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, sendAhkRequest, utils, winapis } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return;
@@ -260,7 +260,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (ts.startsWith('*')) {
 					if (inBrowser)
 						return undefined;
-					for (let k in getRCDATA() ?? {})
+					for (let k in utils.get_RCDATA() ?? {})
 						additem(k, CompletionItemKind.File);
 					return items;
 				}
@@ -415,7 +415,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 														dlls[l] = dlls[d.scriptpath + '/' + l] = 1;
 												});
 											}
-											getDllExport(Object.keys(dlls), true).map(it => additem(it, CompletionItemKind.Function));
+											utils.get_DllExport(Object.keys(dlls), true).map(it => additem(it, CompletionItemKind.Function));
 											return items;
 										}
 									}

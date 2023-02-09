@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { action, ActionType, ahkvars, connection, extsettings, getRCDATA, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openFile, pathenv, sendDiagnostics, setTextDocumentLanguage, symbolProvider } from './common';
+import { action, ActionType, ahkvars, connection, extsettings, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openFile, pathenv, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
 
 export interface ParamInfo {
 	count: number
@@ -754,7 +754,7 @@ export class Lexer {
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), this.reflat = true, includetable = this.include, comments = {}, this.maybev1 = undefined;
 				try {
-					let rs = getRCDATA('#2');
+					let rs = utils.get_RCDATA('#2');
 					if (rs)
 						includetable[rs.uri] = rs.path;
 					this.children.push(...parse_block());
@@ -3260,7 +3260,7 @@ export class Lexer {
 					} else {
 						if (tk) {
 							if (m.startsWith('*')) {
-								let rs = getRCDATA(tk.content.substring(1));
+								let rs = utils.get_RCDATA(tk.content.substring(1));
 								if (rs) {
 									includetable[rs.uri] = rs.path, tk.data = [undefined, rs.uri];
 									return;

@@ -1,5 +1,9 @@
 ## 1.8.8
 - 增加Com对象成员补全
+- 修复[#272](https://github.com/thqby/vscode-autohotkey2-lsp/issues/272)
+- 修复[#278](https://github.com/thqby/vscode-autohotkey2-lsp/issues/278)
+- 增加格式化选项`keyword_start_with_uppercase`,`symbol_with_same_case`
+- 增加支持Com对象成员补全, ProgID补全
 
 ## 1.8.7
 - 修复[#265](https://github.com/thqby/vscode-autohotkey2-lsp/issues/265)

@@ -17,8 +17,9 @@ import {
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workspacefolder, setting, signatureProvider, sleep,
 	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, workspaceSymbolProvider, inWorkspaceFolders,
-	parseWorkspaceFolders, winapis, update_settings
+	parseWorkspaceFolders, winapis, update_settings, utils
 } from './common';
+import { get_ahkProvider } from './ahkProvider';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
 const languageServer = 'ahk2-language-server';
@@ -27,8 +28,11 @@ let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: b
 let initnum = 0, uri_switch_to_ahk2 = '';
 
 connection = createConnection(ProposedFeatures.all);
-set_Connection(connection, getDllExport, getRCDATA);
 set_dirname(__dirname);
+set_Connection(connection);
+utils.get_RCDATA = getRCDATA;
+utils.get_DllExport = getDllExport;
+utils.get_ahkProvider = get_ahkProvider;
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
@@ -503,7 +507,7 @@ function getRCDATA(name: string | undefined) {
 	let rc: { [name: string]: Buffer } = curPERCDATA?.exe === exe ? curPERCDATA.data :
 		(curPERCDATA = { exe, data: new PEFile(exe).getResource(RESOURCE_TYPE.RCDATA) }).data;
 	if (!name || !rc)
-		return rc;
+		return undefined;
 	let data = rc[name];
 	if (data) {
 		try {

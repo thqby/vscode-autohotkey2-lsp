@@ -22,7 +22,6 @@ export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
 import { diagnostic } from './localize';
-import { get_ahkProvider } from './ahkProvider';
 
 export const inBrowser = typeof process === 'undefined';
 export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false;
@@ -69,8 +68,11 @@ export const chinese_punctuations: { [c: string]: string } = {
 	'！': '!'
 };
 export let winapis: string[] = [];
-export let getDllExport = (paths: string[], onlyone: boolean = false) => [] as string[];
-export let getRCDATA: (path?: string) => any = (path?: string) => undefined;
+export let utils = {
+	get_DllExport: (paths: string[], onlyone: boolean = false) => [] as string[],
+	get_RCDATA: (path?: string) => (0 ? { uri: '', path: '' } : undefined),
+	get_ahkProvider: async () => null as any
+};
 
 export let locale = 'en-us';
 export type Maybe<T> = T | undefined;
@@ -102,14 +104,6 @@ export interface AHKLSSettings {
 	FormatOptions: FormatOptions
 	InterpreterPath: string
 	WorkingDirs: string[]
-}
-
-export function set_Connection(conn: any, getDll?: (paths: string[]) => string[], getRC?: (path?: string) => any) {
-	connection = conn;
-	if (getDll)
-		getDllExport = getDll;
-	if (getRC)
-		getRCDATA = getRC;
 }
 
 export function openFile(path: string, showError = true): TextDocument | undefined {
@@ -431,12 +425,13 @@ export function update_settings(configs: AHKLSSettings) {
 export async function sendAhkRequest(method: string, params: any[]) {
 	if (inBrowser)
 		return undefined;
-	return get_ahkProvider().then(server => server?.sendRequest(method, ...params));
+	return utils.get_ahkProvider().then((server: any) => server?.sendRequest(method, ...params));
 }
 
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
 export function set_ahkpath(path: string) { ahkpath_cur = path; }
+export function set_Connection(conn: Connection) { connection = conn; }
 export function set_dirname(dir: string) { dirname = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }
 export function set_Workspacefolder(folders?: string[]) { workspaceFolders = folders || []; }
