@@ -4,6 +4,7 @@
 # !pic/**
 !client/dist/*.js
 !server/dist/*.js
+!server/dist/*.ahk
 !syntaxes/**
 !ahk2.configuration.json
 !icon.png

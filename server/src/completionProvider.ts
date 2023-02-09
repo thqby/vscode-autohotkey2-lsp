@@ -4,8 +4,7 @@ import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams
 import { URI } from 'vscode-uri';
 import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, last_full_exp, searchNode, Token, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, getRCDATA, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, winapis } from './common';
-// import { send_ahk_Request } from './ahk_server';
+import { ahkvars, completionItemCache, dllcalltpe, extsettings, getDllExport, getRCDATA, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, sendAhkRequest, winapis } from './common';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return;
@@ -96,6 +95,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			let unknown = true, isstatic = true, isfunc = false, isobj = false;
 			let props: any = {}, tps: any = [], ts: any = {}, p = context.text.replace(/\.\w*$/, '').toLowerCase();
 			cleardetectcache(), detectExpType(doc, p, position, ts);
+			delete ts['@comvalue'];
+			let tsn = Object.keys(ts).length;
 			if (ts['#any'] === undefined) {
 				for (const tp in ts) {
 					unknown = false, isstatic = !tp.match(/[@#][^.]+$/);
@@ -110,6 +111,19 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							continue;
 						}
 						tps.push(ts[tp].node);
+					} else if (tp.match(/^@comobject\b/)) {
+						let p: string[] = [];
+						if (temp = tp.substring(10).match(/<([\w.{}-]+)(,([\w{}-]+))?>/))
+							p.push(temp[1]), temp[3] && p.push(temp[3]);
+						else if (tp === '@comobject' && (temp = last_full_exp.match(/^comobject\(\s*('|")([^'"]+)\1\s*\)$/i)))
+						// else if (tp === '@comobject' && (temp = last_full_exp.match(/^comobject\(\s*('|")([^'"]+)\1\s*(,\s*('|")([^'"]+)\4\s*)?\)$/i)))
+							p.push(temp[2]);
+						if (p.length) {
+							let result = (await sendAhkRequest('GetDispMember', p) ?? {}) as { [func: string]: number };
+							Object.entries(result).map(it => expg.test(it[0]) && additem(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
+						}
+						if (tsn === 1)
+							return items;
 					} else if (tp.includes('=>')) {
 						if (!isfunc && (isfunc = true, ahkvars['func']))
 							tps.push(ahkvars['func']), isstatic = false;
@@ -124,13 +138,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						}
 					});
 				}
-				// else if (ts['@comobject'] !== undefined && (temp = last_full_exp.match(/^comobject\(\s*('|")([^'"]+)\1\s*(,\s*('|")([^'"]+)\4)?\s*\)$/i))) {
-				// 	let result = (await send_ahk_Request('ExportComTypeLib', temp[5] ? [temp[2], temp[5]] : [temp[2]]) ?? []) as any[];
-				// 	result.map(it => expg.test(it[0]) && additem(it[0], it[1] === '1' ? CompletionItemKind.Method : CompletionItemKind.Property));
-				// 	let n = Object.keys(ts).length;
-				// 	if (n === 1 || n === 2 && ts['@comvalue'] !== undefined)
-				// 		return items;
-				// }
 			}
 			for (const node of tps) {
 				switch (node.kind) {
@@ -422,6 +429,13 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								if (res.index > 1 && res.index % 2 === 0) {
 									for (const name of ['cdecl'].concat(dllcalltpe))
 										additem(name, CompletionItemKind.TypeParameter), cpitem.commitCharacters = ['*'];
+									return items;
+								}
+								break;
+							case 'comobject':
+								if (res.index === 0) {
+									let ids = (await sendAhkRequest('GetProgID', []) ?? []) as string[];
+									ids.map(s => additem(s, CompletionItemKind.Unit));
 									return items;
 								}
 								break;

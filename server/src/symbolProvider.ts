@@ -117,7 +117,7 @@ export async function symbolProvider(params: DocumentSymbolParams, token?: Cance
 							if (kk.kind === SymbolKind.Function || kk.kind === SymbolKind.Method || kk.kind === SymbolKind.Event)
 								if (fn_is_static) {
 									for (const k in vars)
-										if (!inherit[k] && ((<Variable>vars[k]).static || vars[k] === gvar[k]))
+										if (!inherit[k] && ((<Variable>vars[k])?.static || vars[k] === gvar[k]))
 											inherit[k] = vars[k];
 								} else for (const k in vars)
 									if (!inherit[k])

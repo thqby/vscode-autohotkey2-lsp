@@ -90,6 +90,8 @@ fn(a*) {
   e := Map(), f := {}
   /** @type {(a,b)=>Integer} */
   cb := (a, b) => a + b
+  /** @type {ComObject<Excel.Sheet.12,Workbook>} */
+  wb := ComObject('Excel.Sheet.12')
   return a[1] + a[2]
 }
 class abc {
@@ -347,6 +349,8 @@ fn(a*) {
   e := Map(), f := {}
   /** @type {(a,b)=>Integer} */
   cb := (a, b) => a + b
+  /** @type {ComObject<Excel.Sheet.12,Workbook>} */
+  wb := ComObject('Excel.Sheet.12')
   return a[1] + a[2]
 }
 class abc {

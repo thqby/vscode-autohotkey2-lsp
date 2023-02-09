@@ -6116,7 +6116,7 @@ function cvt_types(tps: string) {
 			tps = t;
 		tps.toLowerCase().split(/(?<!=>\s*[^)]*)\|/)
 			.map(tp => o[tp === 'void' ? '#void' : tp.includes('=>') ? tp :
-				tp.replace(/(?<=(^|\.))([^.$@#]+)$/, '@$2').replace('$', '')] = true);
+				tp.replace(/(?<=(^|\.))([^.$@#]+(<[^>]+>)?)$/, '@$2').replace('$', '')] = true);
 		delete o[''];
 		let a = Object.keys(o);
 		if (a.length)

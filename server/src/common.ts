@@ -22,6 +22,7 @@ export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
 import { diagnostic } from './localize';
+import { get_ahkProvider } from './ahkProvider';
 
 export const inBrowser = typeof process === 'undefined';
 export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false;
@@ -426,6 +427,13 @@ export function update_settings(configs: AHKLSSettings) {
 	else delete (configs as any).WorkingDirs;
 	Object.assign(extsettings, configs);
 }
+
+export async function sendAhkRequest(method: string, params: any[]) {
+	if (inBrowser)
+		return undefined;
+	return get_ahkProvider().then(server => server?.sendRequest(method, ...params));
+}
+
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
 export function set_ahkpath(path: string) { ahkpath_cur = path; }

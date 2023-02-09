@@ -1,3 +1,6 @@
+## 1.8.8
+- 增加Com对象成员补全
+
 ## 1.8.7
 - 修复[#265](https://github.com/thqby/vscode-autohotkey2-lsp/issues/265)
 - 修复[#266](https://github.com/thqby/vscode-autohotkey2-lsp/issues/266)
