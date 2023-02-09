@@ -3106,129 +3106,129 @@ class Gui extends Object {
 	Add(ControlType [, Options, Text]) => Gui.Control
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建文本控件, 返回一个GuiControl对象.
 	 */
 	AddText([Options, Text]) => Gui.Text
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建编辑框控件, 返回一个GuiControl对象.
 	 */
 	AddEdit([Options, Text]) => Gui.Edit
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建上下按钮控件, 返回一个GuiControl对象.
 	 */
 	AddUpDown([Options, Text]) => Gui.UpDown
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建图片控件, 返回一个GuiControl对象.
 	 */
-	AddPicture([Options, Text]) => Gui.Pic
+	AddPicture([Options, Filename]) => Gui.Pic
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建按钮控件, 返回一个GuiControl对象.
 	 */
 	AddButton([Options, Text]) => Gui.Button
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建选择框控件, 返回一个GuiControl对象.
 	 */
 	AddCheckbox([Options, Text]) => Gui.Checkbox
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建组合框控件, 返回一个GuiControl对象.
 	 */
 	AddRadio([Options, Text]) => Gui.Radio
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建下拉列表控件, 返回一个GuiControl对象.
 	 */
-	AddDropDownList([Options, Text]) => Gui.DDL
+	AddDropDownList([Options, Items]) => Gui.DDL
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建复选框控件, 返回一个GuiControl对象.
 	 */
-	AddComboBox([Options, Text]) => Gui.ComboBox
+	AddComboBox([Options, Items]) => Gui.ComboBox
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建列表框控件, 返回一个GuiControl对象.
 	 */
-	AddListBox([Options, Text]) => Gui.ListBox
+	AddListBox([Options, Items]) => Gui.ListBox
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建表格控件, 返回一个GuiControl对象.
 	 */
-	AddListView([Options, Text]) => Gui.ListView
+	AddListView([Options, Titles]) => Gui.ListView
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建树控件, 返回一个GuiControl对象.
 	 */
 	AddTreeView([Options, Text]) => Gui.TreeView
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建链接控件, 返回一个GuiControl对象.
 	 */
 	AddLink([Options, Text]) => Gui.Link
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建热键控件, 返回一个GuiControl对象.
 	 */
 	AddHotkey([Options, Text]) => Gui.Hotkey
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建日期时间控件, 返回一个GuiControl对象.
 	 */
-	AddDateTime([Options, Text]) => Gui.DateTime
+	AddDateTime([Options, DateTime]) => Gui.DateTime
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建日历控件, 返回一个GuiControl对象.
 	 */
-	AddMonthCal([Options, Text]) => Gui.MonthCal
+	AddMonthCal([Options, YYYYMMDD]) => Gui.MonthCal
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建滑块控件, 返回一个GuiControl对象.
 	 */
-	AddSlider([Options, Text]) => Gui.Slider
+	AddSlider([Options, Value]) => Gui.Slider
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建进度条控件, 返回一个GuiControl对象.
 	 */
-	AddProgress([Options, Text]) => Gui.Progress
+	AddProgress([Options, Value]) => Gui.Progress
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建GroupBox控件, 返回一个GuiControl对象.
 	 */
 	AddGroupBox([Options, Text]) => Gui.GroupBox
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建Tab控件, 返回一个GuiControl对象.
 	 */
-	AddTab([Options, Text]) => Gui.Tab
+	AddTab([Options, Pages]) => Gui.Tab
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建Tab2控件, 返回一个GuiControl对象.
 	 */
-	AddTab2([Options, Text]) => Gui.Tab
+	AddTab2([Options, Pages]) => Gui.Tab
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建Tab3控件, 返回一个GuiControl对象.
 	 */
-	AddTab3([Options, Text]) => Gui.Tab
+	AddTab3([Options, Pages]) => Gui.Tab
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建状态栏控件, 返回一个GuiControl对象.
 	 */
 	AddStatusBar([Options, Text]) => Gui.StatusBar
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建ActiveX控件, 返回一个GuiControl对象.
 	 */
-	AddActiveX([Options, Text]) => Gui.ActiveX
+	AddActiveX([Options, Component]) => Gui.ActiveX
 
 	/**
-	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * 创建自定义控件, 返回一个GuiControl对象.
 	 */
-	AddCustom([Options, Text]) => Gui.Custom
+	AddCustom([Win32Class, Text]) => Gui.Custom
 
 	/**
 	 * 删除窗口.

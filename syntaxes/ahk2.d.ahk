@@ -3095,7 +3095,7 @@ class Gui extends Object {
 	/**
 	 * Create Picture control and return a GuiControl object.
 	 */
-	AddPicture([Options, Text]) => Gui.Pic
+	AddPicture([Options, Filename]) => Gui.Pic
 
 	/**
 	 * Adds a Button control and returns a GuiControl object.
@@ -3142,22 +3142,22 @@ class Gui extends Object {
 	/**
 	 * Create DropDownList control and return a GuiControl object.
 	 */
-	AddDropDownList([Options, Text]) => Gui.DDL
+	AddDropDownList([Options, Items]) => Gui.DDL
 
 	/**
 	 * Create ComboBox control and return a GuiControl object.
 	 */
-	AddComboBox([Options, Text]) => Gui.ComboBox
+	AddComboBox([Options, Items]) => Gui.ComboBox
 
 	/**
 	 * Create ListBox control and return a GuiControl object.
 	 */
-	AddListBox([Options, Text]) => Gui.ListBox
+	AddListBox([Options, Items]) => Gui.ListBox
 
 	/**
 	 * Create ListView control and return a GuiControl object.
 	 */
-	AddListView([Options, Text]) => Gui.ListView
+	AddListView([Options, Titles]) => Gui.ListView
 
 	/**
 	 * Create TreeView control and return a GuiControl object.
@@ -3177,22 +3177,22 @@ class Gui extends Object {
 	/**
 	 * Create DateTime control and return a GuiControl object.
 	 */
-	AddDateTime([Options, Text]) => Gui.DateTime
+	AddDateTime([Options, DateTime]) => Gui.DateTime
 
 	/**
 	 * Create MonthCal control and return a GuiControl object.
 	 */
-	AddMonthCal([Options, Text]) => Gui.MonthCal
+	AddMonthCal([Options, YYYYMMDD]) => Gui.MonthCal
 
 	/**
 	 * Create Slider control and return a GuiControl object.
 	 */
-	AddSlider([Options, Text]) => Gui.Slider
+	AddSlider([Options, Value]) => Gui.Slider
 
 	/**
 	 * Create Progress control and return a GuiControl object.
 	 */
-	AddProgress([Options, Text]) => Gui.Progress
+	AddProgress([Options, Value]) => Gui.Progress
 
 	/**
 	 * Create GroupBox control and return a GuiControl object.
@@ -3202,17 +3202,17 @@ class Gui extends Object {
 	/**
 	 * Create Tab control and return a GuiControl object.
 	 */
-	AddTab([Options, Text]) => Gui.Tab
+	AddTab([Options, Pages]) => Gui.Tab
 
 	/**
 	 * Create Tab2 control and return a GuiControl object.
 	 */
-	AddTab2([Options, Text]) => Gui.Tab
+	AddTab2([Options, Pages]) => Gui.Tab
 
 	/**
 	 * Create Tab3 control and return a GuiControl object.
 	 */
-	AddTab3([Options, Text]) => Gui.Tab
+	AddTab3([Options, Pages]) => Gui.Tab
 
 	/**
 	 * Create StatusBar control and return a GuiControl object.
@@ -3222,12 +3222,12 @@ class Gui extends Object {
 	/**
 	 * Create ActiveX control and return a GuiControl object.
 	 */
-	AddActiveX([Options, Text]) => Gui.ActiveX
+	AddActiveX([Options, Component]) => Gui.ActiveX
 
 	/**
 	 * Create Custom controls and return a GuiControl object.
 	 */
-	AddCustom([Options, Text]) => Gui.Custom
+	AddCustom([Win32Class, Text]) => Gui.Custom
 
 	/**
 	 * Delete window.
