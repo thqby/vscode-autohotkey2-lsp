@@ -3426,8 +3426,11 @@ export class Lexer {
 
 			function print_indent_string(level: number) {
 				if (level) {
-					if (output_lines.length > 1)
-						level = Math.min(output_lines[output_lines.length - 2].indent + 1, level);
+					for (let i = output_lines.length - 2; i >= 0; i--)
+						if (output_lines[i].text.length) {
+							level = Math.min(output_lines[i].indent + 1, level);
+							break;
+						}
 					line.text.push(indent_string.repeat(line.indent = level));
 				}
 			}
