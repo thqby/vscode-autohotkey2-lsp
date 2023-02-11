@@ -34,7 +34,6 @@ import { existsSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'fs
 let client: LanguageClient;
 let outputchannel = window.createOutputChannel('AutoHotkey2');
 let ahkprocess: child_process.ChildProcess | undefined;
-let ahkhelp: child_process.ChildProcessWithoutNullStreams | undefined;
 let ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 let ahkpath_cur = '', server_is_ready = false, zhcn = false;
 let textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
@@ -351,66 +350,56 @@ async function quickHelp() {
 	if (!editor) return;
 	const document = editor.document, position = editor.selection.active;
 	const range = document.getWordRangeAtPosition(position), line = position.line;
+	let helpPath = findfile(['AutoHotkey.chm'], workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath ?? '');
 	let word = '';
 	if (range && (word = document.getText(range)).match(/^[a-z_]+$/i)) {
 		if (range.start.character > 0 && document.getText(new Range(line, range.start.character - 1, line, range.start.character)) === '#')
 			word = '#' + word;
 	}
-	if (!ahkhelp) {
-		let helpPath = findfile(['AutoHotkey.chm'], workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath ?? '');
-		if (!helpPath) {
-			window.showErrorMessage(zhcn ? `"AutoHotkey.chm"未找到!` : `"AutoHotkey.chm" was not found!`);
-			return;
-		}
-		ahkhelp = child_process.spawn('C:/Windows/hh.exe', [helpPath]);
-		if (!ahkhelp.pid) {
-			window.showWarningMessage(zhcn ? '打开帮助文件失败!' : 'Failed to open the help file!'), ahkhelp = undefined;
-			return;
-		}
-		ahkhelp.on('close', () => { ahkhelp = undefined; })
+	if (!helpPath) {
+		window.showErrorMessage(zhcn ? `"AutoHotkey.chm"未找到!` : `"AutoHotkey.chm" was not found!`);
+		return;
 	}
 	const executePath = getConfig('InterpreterPath') as string;
-	if (word !== '' && executePath && existsSync(executePath)) {
+	if (executePath && existsSync(executePath)) {
 		let script = `
-		DllCall("LoadLibrary", "Str", "oleacc", "Ptr")
-		DetectHiddenWindows(true)
-		if !(WinGetExStyle(top := WinExist("A")) && 8)
-			top := 0
-		if !WinExist("AutoHotkey ahk_class HH Parent ahk_pid ${ahkhelp.pid}")
-			ExitApp
-		if top
-			WinSetAlwaysOnTop(0, top)
-		WinShow(), WinActivate(), WinWaitActive()
-		ctl := ControlGetHwnd("Internet Explorer_Server1")
-		NumPut("int64", 0x11CF3C3D618736E0, "int64", 0x719B3800AA000C81, IID_IAccessible := Buffer(16))	; {618736E0-3C3D-11CF-810C-00AA00389B71}
-		if !DllCall("oleacc\\AccessibleObjectFromWindow", "ptr", ctl, "uint", 0, "ptr", IID_IAccessible, "ptr*", IAccessible := ComValue(9, 0)) {
-			try {
-				IServiceProvider := ComObjQuery(IAccessible, IID_IServiceProvider := "{6D5140C1-7436-11CE-8034-00AA006009FA}")
-				NumPut("int64", 0x11D026CB332C4427, "int64", 0x1901D94FC00083B4, IID_IHTMLWindow2 := Buffer(16))	; {332C4427-26CB-11D0-B483-00C04FD90119}
-				ComCall(3, IServiceProvider, "ptr", IID_IHTMLWindow2, "ptr", IID_IHTMLWindow2, "ptr*", IHTMLWindow2 := ComValue(9, 0))	; IServiceProvider.QueryService
-				IHTMLWindow2.execScript("
-				(
-					document.querySelector('#head > div > div.h-tabs > ul > li:nth-child(3) > button').click()
-					searchinput = document.querySelector('#left > div.search > div.input > input[type=search]')
-					keyevent = document.createEvent('KeyboardEvent')
-					keyevent.initKeyboardEvent('keyup', false, true, document.defaultView, 13, null, false, false, false, false)
-					searchinput.value = '${word}'
-					searchinput.dispatchEvent(keyevent)
-					Object.defineProperties(keyevent, { type: { get: function() { return 'keydown' } }, which: { get: function() { return 13 } } })
-					searchinput.dispatchEvent(keyevent)
-				)")
-			}
-		}`;
+#DllLoad oleacc.dll
+chm_hwnd := 0, chm_path := '${helpPath}', DetectHiddenWindows(true), !(WinGetExStyle(top := WinExist('A')) & 8) && (top := 0)
+for hwnd in WinGetList('AutoHotkey ahk_class HH Parent')
+	for item in ComObjGet('winmgmts:').ExecQuery('SELECT CommandLine FROM Win32_Process WHERE ProcessID=' WinGetPID(hwnd))
+		if InStr(item.CommandLine, chm_path) {
+			chm_hwnd := WinExist(hwnd)
+			break 2
+		}
+if top && top != chm_hwnd
+	WinSetAlwaysOnTop(0, top)
+if !chm_hwnd
+	Run(chm_path, , , &pid), chm_hwnd := WinWait('AutoHotkey ahk_class HH Parent ahk_pid' pid)
+WinShow(), WinActivate(), WinWaitActive(), ctl := ControlGetHwnd('Internet Explorer_Server1')
+NumPut('int64', 0x11CF3C3D618736E0, 'int64', 0x719B3800AA000C81, IID_IAccessible := Buffer(16))
+if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint', 0, 'ptr', IID_IAccessible, 'ptr*', IAccessible := ComValue(13, 0)) {
+	IServiceProvider := ComObjQuery(IAccessible, IID_IServiceProvider := '{6D5140C1-7436-11CE-8034-00AA006009FA}')
+	NumPut('int64', 0x11D026CB332C4427, 'int64', 0x1901D94FC00083B4, IID_IHTMLWindow2 := Buffer(16))
+	ComCall(3, IServiceProvider, 'ptr', IID_IHTMLWindow2, 'ptr', IID_IHTMLWindow2, 'ptr*', IHTMLWindow2 := ComValue(9, 0))
+	IHTMLWindow2.execScript('
+	(
+		document.querySelector('#head > div > div.h-tabs > ul > li:nth-child(3) > button').click()
+		searchinput = document.querySelector('#left > div.search > div.input > input[type=search]')
+		keyevent = document.createEvent('KeyboardEvent')
+		keyevent.initKeyboardEvent('keyup', false, true, document.defaultView, 13, null, false, false, false, false)
+		searchinput.value = '${word}'
+		searchinput.dispatchEvent(keyevent)
+		Object.defineProperties(keyevent, { type: { get: function() { return 'keydown' } }, which: { get: function() { return 13 } } })
+		searchinput.dispatchEvent(keyevent)
+	)')
+}`;
 		if (ahkStatusBarItem.text.endsWith('[UIAccess]')) {
 			let file = resolve(__dirname, 'temp.ahk');
 			writeFileSync(file, script, { encoding: 'utf-8' });
 			child_process.execSync(`"${executePath}" /ErrorStdOut ${file}`);
 			unlinkSync(file);
-		} else {
-			let ahkpro = child_process.exec(`"${executePath}" /ErrorStdOut *`, { cwd: `${resolve(editor.document.fileName, '..')}` });
-			ahkpro.stdin?.write(script);
-			ahkpro.stdin?.end();
-		}
+		} else
+			child_process.execSync(`"${executePath}" /ErrorStdOut *`, { input: script });
 	}
 }
 
