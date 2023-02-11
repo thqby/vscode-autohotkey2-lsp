@@ -17,8 +17,8 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 	let nodes = searchNode(doc, name, context.range.end, context.kind);
 	if (!nodes || nodes.length > 1)
 		return undefined;
-	let { node, uri, scope } = nodes[0];
-	if (!uri || (name.match(/^(this|super)$/) && node.kind === SymbolKind.Class && !node.name.match(/^(this|super)$/i)))
+	let { node, uri, scope, ref } = nodes[0];
+	if (!uri || !node.selectionRange.end.character || ref && name.match(/^(this|super)$/))
 		return undefined;
 	if (node === doc.declaration[name])
 		scope = undefined;

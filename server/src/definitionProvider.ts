@@ -57,7 +57,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 		if (nodes) {
 			let uri = '';
 			nodes.map(it => {
-				if (uri = (<any>it.node).uri || it.uri)
+				if (it.node.selectionRange.end.character && (uri = (<any>it.node).uri || it.uri))
 					locas.push(LocationLink.create(lexers[uri].document.uri, it.node.range, it.node.selectionRange));
 			});
 			if (locas.length)

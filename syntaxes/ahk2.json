@@ -307,7 +307,6 @@
 			"prefix": "while"
 		}
 	],
-	"functions": [],
 	"variables": [
 		{
 			"body": "A_AhkPath",

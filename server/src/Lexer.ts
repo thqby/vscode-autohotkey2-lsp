@@ -1587,6 +1587,7 @@ export class Lexer {
 						}
 						break;
 					case 'isset':
+						tk.definition = ahkvars['isset'];
 						tk.semantic = { type: SemanticTokenTypes.keyword };
 						if (input.charAt(tk.offset + 5) === '(') {
 							tk.type = 'TK_WORD', tk.ignore = true, next = false;
@@ -2279,6 +2280,7 @@ export class Lexer {
 							}
 							if (tk.content.match(/^(class|super|isset)$/i)) {
 								if (tk.content.toLowerCase() === 'isset') {
+									tk.definition = ahkvars['isset'];
 									tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.keyword };
 									if (c !== '(')
 										_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
@@ -2893,6 +2895,7 @@ export class Lexer {
 						}
 						if (tk.content.match(/^(class|super|isset)$/i)) {
 							if (tk.content.toLowerCase() === 'isset') {
+								tk.definition = ahkvars['isset'];
 								tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.keyword };
 								if (c !== '(')
 									_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
@@ -3046,6 +3049,7 @@ export class Lexer {
 				if (token.ignore || is_builtinvar(_low, md)) {
 					if (token.semantic && token.semantic.type !== SemanticTokenTypes.keyword)
 						delete token.semantic;
+					token.definition = ahkvars[_low];
 					token.ignore = true;
 					return false;
 				}
@@ -3101,6 +3105,11 @@ export class Lexer {
 					let has_this_param = node.kind === SymbolKind.Method || node.parent?.kind === SymbolKind.Property && node.kind === SymbolKind.Function;
 					if (has_this_param)
 						(node as FuncNode).has_this_param = true, pars['this'] = pars['super'] = dec['this'] = dec['super'] = null as any;
+					if (node.kind === SymbolKind.Function && node.name.toLowerCase() === 'isset') {
+						let offset = _this.document.offsetAt(node.selectionRange.start);
+						_this.addDiagnostic(diagnostic.reservedworderr('IsSet'), offset, 5);
+						_this.tokens[offset].semantic = { type: SemanticTokenTypes.keyword };
+					}
 					if ((<FuncNode>node).assume === FuncScope.GLOBAL) {
 						(<FuncNode>node).params?.map(it => {
 							node.children?.unshift(it), it.def = true, it.kind = SymbolKind.TypeParameter;
@@ -4304,8 +4313,7 @@ export class Lexer {
 			if (token_type === 'TK_RESERVED') {
 				if (opt.keyword_start_with_uppercase !== undefined)
 					token_text = opt.keyword_start_with_uppercase ?
-						token_text.replace(/^(.)(.+)$/, (...m) => m[1].toUpperCase() + m[2].toLowerCase()) :
-						token_text.toLowerCase();
+						token_text_low.replace(/^./, s => s.toUpperCase()) : token_text_low;
 				if (is_special_word(token_text_low)) {
 					if (input_wanted_newline)
 						print_newline(preserve_statement_flags);
@@ -4760,8 +4768,6 @@ export class Lexer {
 				while (scope) {
 					let dec = (<FuncNode>scope).declaration, loc = (<FuncNode>scope).local, glo = (<FuncNode>scope).global;
 					if (loc && (t = loc[name]) && (!fn_is_static || (<Variable>t).static)) {
-						if (t.selectionRange.start.character === t.selectionRange.end.character)
-							return false;
 						return { node: t, uri, scope };
 					} else if (glo && glo[name])
 						return { node: this.declaration[name] || glo[name], uri, scope };

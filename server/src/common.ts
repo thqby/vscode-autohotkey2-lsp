@@ -291,8 +291,16 @@ function build_item_cache(ahk2: any) {
 			let arr: any[] = ahk2[key];
 			switch (key) {
 				case 'keywords': type = CompletionItemKind.Keyword; break;
-				case 'functions': type = CompletionItemKind.Function; break;
-				case 'variables': type = CompletionItemKind.Variable; break;
+				case 'variables':
+					for (snip of arr) {
+						ahkvars[snip.prefix.toLowerCase()] = {
+							name: snip.prefix,
+							kind: SymbolKind.Variable,
+							range: rg, selectionRange: rg,
+							detail: snip.description
+						};
+					}
+					continue;
 				case 'constants': type = CompletionItemKind.Constant; break;
 				default: type = CompletionItemKind.Text; break;
 			}
@@ -317,26 +325,11 @@ function build_item_cache(ahk2: any) {
 			return m[2] ? m[3].replace(/,/g, '|') : m[3] || '';
 		});
 		completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' };
-		if (type !== CompletionItemKind.Function)
-			completionItemCache[t].push(completionItem);
-		if (type === CompletionItemKind.Constant || type === CompletionItemKind.Text)
+		completionItemCache[t].push(completionItem);
+		if (type === CompletionItemKind.Constant || type === CompletionItemKind.Text || !snip.description)
 			return;
 		hover.contents = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```\n\n' + snip.description };
-		let n = type === CompletionItemKind.Function ? 0 : 1;
-		if (!hoverCache[n][_low]) hoverCache[n][_low] = [];
-		if (!n) {
-			let it = FuncNode.create(snip.prefix, SymbolKind.Function, rg, rg,
-				snip.body.replace(/^\w+[(\s]?|\)/g, '').split(',').map(param => {
-					return DocumentSymbol.create(param.replace(/[\[\]\s]/g, ''), undefined, SymbolKind.Variable, rg, rg);
-				}));
-			it.full = it.full.replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, (...m) => {
-				snip.body = snip.body.replace(m[0], m[1] + '|...');
-				return m[1] + '|...';
-			});
-			it.detail = snip.description, ahkvars[_low] = it;
-		}
-		if (snip.description)
-			hoverCache[n][_low].push(hover);
+		(hoverCache[1][_low] ??= []).push(hover);
 	}
 	function bodytostring(body: any) { return (typeof body === 'object' ? body.join('\n') : body) };
 }
