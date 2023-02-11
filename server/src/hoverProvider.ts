@@ -11,8 +11,8 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		let nodes: [{ node: DocumentSymbol, uri: string, scope?: DocumentSymbol }] | undefined | null, node: DocumentSymbol | undefined, uri: string = '';
 		if (!word || context.kind === SymbolKind.Null) {
 			if (context.token) {
-				if ((t = hoverCache[1]) && (t = t[context.token.content.toLowerCase()]))
-					return t[0];
+				if (t = hoverCache[context.token.content.toLowerCase()])
+					return t[1];
 			}
 			return undefined;
 		}
@@ -36,8 +36,8 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
 			} else if (ahkvars[word])
 				nodes = [{ node: ahkvars[word], uri: '' }];
-			else if ((t = hoverCache[kind === SymbolKind.Function ? 0 : 1]) && (t = t[word]))
-				return t[0];
+			else if (kind !== SymbolKind.Function && (t = hoverCache[word]))
+				return t[1];
 		}
 		if (nodes) {
 			if (nodes.length > 1) {

@@ -558,10 +558,11 @@ GetDispMember(clsid, iid := '') {
 		if guids.Has(guid)
 			return
 		guids[guid] := 1
-		ComCall(12, pti, 'Int', -1, 'Ptr*', &Name := 0, 'Ptr', 0, 'Ptr', 0, 'Ptr', 0), Name := BSTR(Name)
+		ComCall(12, pti, 'Int', -1, 'Ptr*', &Name := 0, 'Ptr', 0, 'Ptr', 0, 'Ptr', 0), typeName := BSTR(Name)
 		loop (typekind == 5) && cImplTypes {
 			ComCall(8, pti, 'Int', A_Index - 1, 'UInt*', &RefType := 0), ComCall(14, pti, 'UInt', RefType, 'Ptr*', pti2 := ComValue(0xd, 0))
-			GetTypeInfo(pti2)
+			if GetTypeInfo(pti2) ~= typeName '$'
+				break
 		}
 		loop cFuncs {
 			ComCall(5, pti, 'Int', A_Index - 1, 'Ptr*', &FuncDesc := 0), invkind := NumGet(FuncDesc, 4 + 3 * A_PtrSize, 'Int')
@@ -569,6 +570,7 @@ GetDispMember(clsid, iid := '') {
 				members[Name] := invkind
 			ComCall(20, pti, 'ptr', FuncDesc)
 		}
+		return typeName
 	}
 }
 

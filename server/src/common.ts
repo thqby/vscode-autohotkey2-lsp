@@ -28,7 +28,7 @@ export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] 
 export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
-export let hoverCache: { [key: string]: Hover[] }[] = [{}, {}], libdirs: string[] = [];
+export let hoverCache: { [key: string]: [string, Hover] } = {}, libdirs: string[] = [];
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
 export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], key: [], other: [], constant: [], snippet: [] };
 export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
@@ -329,7 +329,7 @@ function build_item_cache(ahk2: any) {
 		if (type === CompletionItemKind.Constant || type === CompletionItemKind.Text || !snip.description)
 			return;
 		hover.contents = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```\n\n' + snip.description };
-		(hoverCache[1][_low] ??= []).push(hover);
+		hoverCache[_low] = [snip.prefix, hover];
 	}
 	function bodytostring(body: any) { return (typeof body === 'object' ? body.join('\n') : body) };
 }

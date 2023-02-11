@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { action, ActionType, ahkvars, connection, extsettings, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openFile, pathenv, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
+import { action, ActionType, ahkvars, connection, extsettings, hoverCache, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openFile, pathenv, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
 
 export interface ParamInfo {
 	count: number
@@ -4693,6 +4693,8 @@ export class Lexer {
 
 		function handle_sharp() {
 			print_newline();
+			if (opt.symbol_with_same_case && token_type === 'TK_SHARP')
+				token_text = hoverCache[token_text_low]?.[0] || token_text;
 			print_token();
 			let t = ck.data?.content;
 			if (t)
