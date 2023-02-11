@@ -130,14 +130,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					} else
 						searchNode(doc, tp, position, SymbolKind.Variable)?.map(it => tps.push(it.node));
 				}
-				if (ts['#object'] !== undefined) {
-					getcacheproperty().map(s => {
-						if (!props[l = s.toLowerCase()]) {
-							items.push(props[l] = CompletionItem.create(s));
-							props[l].kind = CompletionItemKind.Property;
-						}
-					});
-				}
 			}
 			for (const node of tps) {
 				switch (node.kind) {
@@ -165,6 +157,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						isobj = true; break;
 				}
 			}
+			getcacheproperty().map(s => {
+				if (!props[l = s.toLowerCase()]) {
+					items.push(props[l] = CompletionItem.create(s));
+					props[l].kind = CompletionItemKind.Property;
+				}
+			});
 			if (!unknown && (triggerKind !== 1 || context.text.match(/\..{0,2}$/)))
 				return items;
 			let objs = [doc.object];

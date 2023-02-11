@@ -1890,7 +1890,7 @@ export class Lexer {
 					t = parser_pos;
 				}
 				if (types)
-					types[tps.pop() ?? '#void'] = true;
+					types[tps.pop() ?? '#void'] = 0;
 				if (act === '=') {
 					let expr = tps[0], q: number;
 					if (expr && ((q = expr.indexOf('?')) === -1 || expr.indexOf(':', q) === -1))
@@ -2051,7 +2051,7 @@ export class Lexer {
 									}
 									tpexp += ' ' + lk.content;
 								} else lk.ignore = true;
-								types[tpexp] = true, next = false;
+								types[tpexp] = 0, next = false;
 								return result.splice(pres);
 							} else if (tk.content === '=>') {
 								let o: any = {}, rl = result.length, fl = _parent.funccall.length, p = lk, _mode = mode;
@@ -2102,12 +2102,12 @@ export class Lexer {
 										} else
 											tpexp += ' ' + lk.content;
 									} else lk.ignore = true;
-									types[tpexp] = true;
+									types[tpexp] = 0;
 								} else if (input.charAt(lk.offset - 1) !== '%') {
 									addprop(lk);
-									types[tpexp + '.' + lk.content] = true;
+									types[tpexp + '.' + lk.content] = 0;
 								} else
-									types['#any'] = true, lk.ignore = true;
+									types['#any'] = 0, lk.ignore = true;
 								ternaryMiss();
 								return result.splice(pres);
 							}
@@ -2204,7 +2204,7 @@ export class Lexer {
 										tpexp += ' ' + fc.content.toLowerCase();
 									else
 										tpexp += ` $${_this.anonymous.push(tn) - 1}`;
-									types[tpexp] = true;
+									types[tpexp] = 0;
 								} else {
 									if (fc) {
 										if (input.charAt(fc.offset - 1) !== '%' || fc.previous_token?.previous_pair_pos === undefined) {
@@ -2252,11 +2252,13 @@ export class Lexer {
 										mustexp = 0;
 								}
 								if (parse_obj(mustexp > 0 || isobj, t = {}, objk = {})) {
+									if (objk && tokens[tk.previous_pair_pos as number]?.previous_token?.content === ':=')
+										Object.assign(types[' #object'] ||= {}, objk);
 									tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
 								} else {
-									types[tpexp] = true, _this.diagnostics.splice(l);
+									types[tpexp] = 0, _this.diagnostics.splice(l);
 									if (tpexp === ' #object' && objk)
-										types[tpexp] = objk;
+										Object.assign(types[tpexp] ||= {}, objk);
 									ternaryMiss(), next = false; return result.splice(pres);
 								}
 							}
@@ -2265,7 +2267,7 @@ export class Lexer {
 						case 'TK_END_BLOCK':
 						case 'TK_END_EXPR':
 						case 'TK_COMMA':
-							next = false, types[tpexp] = true;
+							next = false, types[tpexp] = 0;
 							if (tpexp === ' #object' && objk)
 								types[tpexp] = objk;
 							ternaryMiss();
@@ -2295,9 +2297,9 @@ export class Lexer {
 							if (tk.content === '%') {
 								let prec = input.charAt(tk.offset - 1);
 								if (inpair === '%') {
-									next = false, types[tpexp] = true;
+									next = false, types[tpexp] = 0;
 									if (tpexp === ' #object' && objk)
-										types[tpexp] = objk;
+										Object.assign(types[tpexp] ||= {}, objk);
 									ternaryMiss();
 									return result.splice(pres);
 								} else if (prec.match(/\w|\.|[^\x00-\x7f]/))
@@ -2340,9 +2342,9 @@ export class Lexer {
 									if (ternarys.pop() === undefined) {
 										if (end === ':') {
 											next = false, tpexp = tpexp.slice(0, -2);
-											types[tpexp] = true;
+											types[tpexp] = 0;
 											if (tpexp === ' #object' && objk)
-												types[tpexp] = objk;
+												Object.assign(types[tpexp] ||= {}, objk);
 											return result.splice(pres);
 										}
 										_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
@@ -2353,9 +2355,9 @@ export class Lexer {
 					}
 					byref = false;
 				}
-				types[tpexp] = true;
+				types[tpexp] = 0;
 				if (tpexp === ' #object' && objk)
-					types[tpexp] = objk;
+					Object.assign(types[tpexp] ||= {}, objk);
 				ternaryMiss();
 				return result.splice(pres);
 
@@ -2380,7 +2382,7 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.unexpected(endc), tk.offset, tk.length);
 								break;
 							}
-							types['#void'] = true, tk.previous_pair_pos = beg;
+							types['#void'] = 0, tk.previous_pair_pos = beg;
 							info.miss.push(info.count++);
 							Object.defineProperty(types, 'paraminfo', { value: info, configurable: true });
 							result.push(...cache);
@@ -2507,7 +2509,7 @@ export class Lexer {
 				}
 				if (paramsdef) {
 					if (endc === ')') {
-						types[tpexp.toLowerCase()] = true;
+						types[tpexp.toLowerCase()] = 0;
 						Object.defineProperty(types, 'paraminfo', { value: info, configurable: true });
 					}
 					if (hasexpr)
@@ -2583,6 +2585,7 @@ export class Lexer {
 					_this.addFoldingRange(tk.previous_pair_pos = b.offset, tk.offset), b.next_pair_pos = tk.offset;
 				else
 					_this.addDiagnostic(diagnostic.missing('}'), b.offset, 1);
+				delete ks.base;
 				return true;
 
 				function objkey(): boolean {
@@ -2884,7 +2887,7 @@ export class Lexer {
 					} else if (tk.type.startsWith('TK_END_')) {
 						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1);
 						pairMiss(), next = false;
-						types[tpexp.indexOf('#any') < 0 ? '(' + tpexp + ')' : '#any'] = true;
+						types[tpexp.indexOf('#any') < 0 ? '(' + tpexp + ')' : '#any'] = 0;
 						ternaryMiss();
 						return;
 					} else if (tk.type === 'TK_RESERVED') {
@@ -2943,7 +2946,7 @@ export class Lexer {
 					}
 					byref = false;
 				}
-				types[b + tpexp + e] = true;
+				types[b + tpexp + e] = 0;
 				if (tk.type === 'TK_EOF' && pairnum > -1)
 					e === '%' && stop_parse(_this.tokens[pairpos[0]]), pairMiss();
 				else if (b === '(') {
@@ -5405,12 +5408,8 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 			let fullexp = doc.document.getText(Range.create(ite.selectionRange.end, ite.range.end));
 			for (let s in (<Variable>ite).returntypes)
 				detectExp(doc, s.toLowerCase(), ite.range.end, fullexp).map(tp => types[tp] = true);
-			// if (types['#func'])
-			// 	searchcache['#return'] = { exp: fullexp, pos: ite.range.end, doc };
-			if (types['#object'] === true) {
-				let p = (ite as any).property;
-				if (p?.length) (hasdetectcache['##object'] ??= []).push(...p);
-			}
+			let p = (ite as any).property;
+			if (p?.length) (hasdetectcache['##object'] ??= []).push(...p);
 		}
 	}
 	if (types['#any'])
