@@ -4241,7 +4241,7 @@ export class Lexer {
 				set_mode(MODE.BlockStatement), flags.had_comment = previous_flags.had_comment;
 				output_space_before_token ??= space_in_other;
 
-				if (previous_flags.in_case_statement && flags.last_text.endsWith(':'))
+				if (previous_flags.in_case_statement && last_text.endsWith(':'))
 					flags.indentation_level--, trim_newlines();
 				if (opt.one_true_brace === 0 || input_wanted_newline && opt.preserve_newlines && !opt.one_true_brace)
 					print_newline(true);
@@ -4282,6 +4282,8 @@ export class Lexer {
 			if (previous_flags.indentation_level === flags.indentation_level && just_added_newline())
 				deindent();
 			print_token();
+			if (flags.case_body)
+				indent();
 			if (!is_obj) {
 				if (flags.in_case_statement && flags.last_text.endsWith(':'))
 					flags.indentation_level++;
@@ -4447,7 +4449,7 @@ export class Lexer {
 			if (start_of_statement()) {
 				if (input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
-				else output_space_before_token = true;
+				else output_space_before_token = flags.declaration_statement ? last_type !== 'TK_OPERATOR' : space_in_other;
 			} else if (last_type === 'TK_RESERVED' || last_type === 'TK_WORD') {
 				if (input_wanted_newline)
 					print_newline();
@@ -4512,7 +4514,8 @@ export class Lexer {
 				if (flags.declaration_statement && token_text_low.match(/^(\+\+|--|%|!|~|not)$/)) {
 					output_space_before_token = true, flags.last_word = '_';
 					print_token();
-					output_space_before_token = token_text_low === 'not';
+					if (token_text_low === 'not')
+						output_space_before_token = true;
 					return;
 				}
 			} else if (token_text === '=>') {
@@ -4523,7 +4526,8 @@ export class Lexer {
 				indent(), flags.in_fat_arrow = true;
 			} else if (token_text_low.match(/^(\+\+|--|%|!|~|not)$/) && need_newline()) {
 				print_newline(), print_token();
-				output_space_before_token = token_text_low === 'not';
+				if (token_text_low === 'not')
+					output_space_before_token = true;
 				return;
 			}
 
@@ -4554,6 +4558,8 @@ export class Lexer {
 				flags.in_case = false;
 				flags.case_body = true;
 				set_mode(MODE.Statement);
+				flags.case_body = true;
+				token_type = 'TK_LABEL';
 				return;
 			}
 
@@ -4703,6 +4709,8 @@ export class Lexer {
 				flags.in_case = false;
 				flags.in_case_statement = true;
 				output_space_before_token = space_in_other;
+				set_mode(MODE.Statement);
+				flags.case_body = true;
 				return;
 			}
 			print_token();
@@ -4857,7 +4865,7 @@ export class Lexer {
 			let pt = token ? token.previous_token : tokens[off - 1];
 			if (pt?.content === '.' && pt.type !== 'TK_OPERATOR') {
 				let s = '', end = pt.offset, tk = pt, lk = pt.previous_token;
-				let ps: any = { ')': 0, ']': 0, '}': 0 };
+				let ps: any = { ')': 0, ']': 0, '}': 0 }, psn = 0;
 				while (lk) {
 					switch (lk.type) {
 						case 'TK_DOT': tk = lk, lk = lk.previous_token; break;
@@ -4866,9 +4874,9 @@ export class Lexer {
 								if (lk.type !== 'TK_DOT')
 									lk = undefined;
 							break;
-						case 'TK_START_BLOCK': tk = lk, lk = (--ps['}'] < 0) ? undefined : lk.previous_token; break;
+						case 'TK_START_BLOCK': tk = lk, lk = (--ps['}'] < 0 || !--psn) ? undefined : lk.previous_token; break;
 						case 'TK_START_EXPR':
-							if (tk = lk, --ps[lk.content === '[' ? ']' : ')'] < 0)
+							if (tk = lk, --ps[lk.content === '[' ? ']' : ')'] < 0 || !--psn)
 								lk = undefined;
 							else if (lk = lk.previous_token)
 								if (lk.type !== 'TK_WORD' || lk.offset + lk.length !== tk.offset)
@@ -4876,7 +4884,7 @@ export class Lexer {
 							break;
 						case 'TK_END_EXPR':
 						case 'TK_END_BLOCK':
-							tk = lk, ps[lk.content]++;
+							tk = lk, ps[lk.content]++, psn++;
 							if ((lk = tokens[lk.previous_pair_pos as number]) && (lk.content !== '}' || lk.data))
 								lk.next_pair_pos = tk.offset;
 							else tk = EMPTY_TOKEN, lk = undefined;
@@ -4894,7 +4902,7 @@ export class Lexer {
 				if (ps[')'] > 0 || ps[']'] > 0 || ps['}'] > 0) tk = EMPTY_TOKEN;
 				if (tk.type === 'TK_WORD' || tk.type.startsWith('TK_START_') || (tk.content === '%' && tk.next_pair_pos)) {
 					let ttk = tk, t;
-					s = tk.content, tk = tokens[tk.next_token_offset];
+					s = '';
 					while (tk.offset < end) {
 						switch (tk.type) {
 							case 'TK_DOT': s += '.', tk = tokens[tk.next_token_offset]; break;

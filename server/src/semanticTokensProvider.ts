@@ -20,7 +20,8 @@ function resolve_sem(tk: Token, doc: Lexer) {
 			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) && tk.previous_token?.type === 'TK_DOT'
 				|| (curclass = undefined, type === SemanticTokenTypes.class))
 				type = resolveSemanticType(tk.content.toLowerCase(), tk, doc);
-			doc.STB.push(pos.line, pos.character, tk.length, type, sem.modifier ?? 0);
+			if (!tk.ignore || type === SemanticTokenTypes.keyword)
+				doc.STB.push(pos.line, pos.character, tk.length, type, sem.modifier ?? 0);
 		}
 	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 		curclass = undefined;

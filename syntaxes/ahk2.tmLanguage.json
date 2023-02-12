@@ -1334,18 +1334,7 @@
               "name": "entity.name.function.method.ahk2"
             },
             {
-              "match": "\\b(?i:true|false|unset)\\b",
-              "name": "constant.language.ahk2"
-            },
-            {
-              "match": "\\b(?<!\\.)(?i:this|super)\\b",
-              "name": "variable.language.this.ahk2"
-            },
-            {
-              "include": "#default_classes"
-            },
-            {
-              "include": "#function_defaultLibrary"
+              "include": "#variables_language"
             }
           ]
         }

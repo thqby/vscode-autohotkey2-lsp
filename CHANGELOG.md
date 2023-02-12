@@ -1,3 +1,7 @@
+## 1.9.0
+- 修复[#282](https://github.com/thqby/vscode-autohotkey2-lsp/issues/282)
+- 增加编辑器标题菜单`运行`和`调试`子菜单
+
 ## 1.8.9
 - 修复[#273](https://github.com/thqby/vscode-autohotkey2-lsp/issues/273)
 - 修复[#279](https://github.com/thqby/vscode-autohotkey2-lsp/issues/279)

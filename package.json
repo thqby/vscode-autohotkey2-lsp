@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.8.9",
+	"version": "1.9.0",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -281,6 +281,7 @@
 				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
 				"command": "ahk2.debug",
 				"title": "%ahk2.debug%",
+				"icon": "$(debug)",
 				"category": "ahk2"
 			},
 			{
@@ -299,6 +300,7 @@
 				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
 				"command": "ahk2.run",
 				"title": "%ahk2.run%",
+				"icon": "$(play)",
 				"category": "ahk2"
 			},
 			{
@@ -311,6 +313,7 @@
 				"enablement": "editorLangId == ahk2 && !isWeb",
 				"command": "ahk2.stop",
 				"title": "%ahk2.stop%",
+				"icon": "$(stop)",
 				"category": "ahk2"
 			},
 			{
@@ -401,6 +404,23 @@
 					"when": "editorLangId == ahk2",
 					"command": "ahk2.updateversioninfo",
 					"group": "navigation@2"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "ahk2.run",
+					"group": "navigation@0",
+					"when": "resourceLangId == ahk2 && !ahk2:isRunning && shellExecutionSupported"
+				},
+				{
+					"command": "ahk2.stop",
+					"group": "navigation@0",
+					"when": "resourceLangId == ahk2 && ahk2:isRunning && shellExecutionSupported"
+				},
+				{
+					"command": "ahk2.debug",
+					"group": "navigation@1",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				}
 			]
 		},

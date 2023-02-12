@@ -179,10 +179,6 @@
 			"prefix": "as"
 		},
 		{
-			"body": "unset",
-			"prefix": "unset"
-		},
-		{
 			"body": "continue",
 			"description": "Skip the rest of the current iteration of the loop statement, and then start a new loop.",
 			"prefix": "continue"
@@ -992,6 +988,11 @@
 			"body": "false",
 			"description": "Boolean value'false', same as value 0.",
 			"prefix": "false"
+		},
+		{
+			"body": "unset",
+			"description": "Within a function call, array literal or object literal, the keyword unset can be used to explicitly omit the parameter or value.",
+			"prefix": "unset"
 		}
 	],
 	"texts": [
@@ -1640,10 +1641,6 @@
 		{
 			"body": "underline",
 			"prefix": "underline"
-		},
-		{
-			"body": "unset",
-			"prefix": "unset"
 		},
 		{
 			"body": "UpDown",
