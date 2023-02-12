@@ -2,7 +2,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { cleardetectcache, detectExpType, FuncNode, getcacheproperty, getClassMembers, getFuncCallInfo, last_full_exp, searchNode, Token, Variable } from './Lexer';
+import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, last_full_exp, searchNode, Token, Variable } from './Lexer';
 import { completionitem } from './localize';
 import { ahkvars, completionItemCache, dllcalltpe, extsettings, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, sendAhkRequest, utils, winapis } from './common';
 
@@ -93,7 +93,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			if (context.text.match(/^\d+(\.\d*)*\.$/))
 				return;
 			let unknown = true, isstatic = true, isfunc = false, isobj = false;
-			let props: any = {}, tps: any = [], ts: any = {}, p = context.text.replace(/\.\w*$/, '').toLowerCase();
+			let props: any = {}, tps: any = [], ts: any = {}, p = context.text.replace(/\.(\w|[^\x00-\x7f])*$/, '').toLowerCase();
 			cleardetectcache(), detectExpType(doc, p, position, ts);
 			delete ts['@comvalue'];
 			let tsn = Object.keys(ts).length;
@@ -157,12 +157,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						isobj = true; break;
 				}
 			}
-			getcacheproperty().map(s => {
-				if (!props[l = s.toLowerCase()]) {
-					items.push(props[l] = CompletionItem.create(s));
-					props[l].kind = CompletionItemKind.Property;
-				}
-			});
 			if (!unknown && (triggerKind !== 1 || context.text.match(/\..{0,2}$/)))
 				return items;
 			let objs = [doc.object];

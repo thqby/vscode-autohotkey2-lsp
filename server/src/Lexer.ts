@@ -244,7 +244,7 @@ export class Lexer {
 	public uri = '';
 	public maybev1?: number;
 	public actionwhenv1?: ActionType;
-	private anonymous: FuncNode[] = [];
+	private anonymous: DocumentSymbol[] = [];
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let input: string, output_lines: { text: string[], indent: number }[], flags: any, opt: FormatOptions, previous_flags: any, prefix: string, flag_store: any[], includetable: { [uri: string]: string };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
@@ -1979,8 +1979,6 @@ export class Lexer {
 								if (vr) {
 									vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
 									vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) }, vr.def = true;
-									if (equ === ':=' && typeof o[' #object'] === 'object')
-										(<any>vr).property = Object.values(o[' #object']);
 									let tt = vr.returntypes;
 									for (const t in tt)
 										tt[t] = vr.range.end;
@@ -2025,7 +2023,7 @@ export class Lexer {
 			}
 
 			function parse_expression(inpair?: string, types: any = {}, mustexp = 1, end?: string): DocumentSymbol[] {
-				let pres = result.length, tpexp = '', byref = false, ternarys: number[] = [], t: any, objk: any;
+				let pres = result.length, tpexp = '', byref = false, ternarys: number[] = [], t: any;
 				block_mode = false;
 				while (nexttoken()) {
 					if (tk.topofline === 1)
@@ -2129,8 +2127,6 @@ export class Lexer {
 											tpexp = tpexp.slice(0, -1) + '#varref';
 										else
 											tpexp += tp, vr.def = true;
-										if (equ === ':=' && typeof o[' #object'] === 'object')
-											(<any>vr).property = Object.values(o[' #object']);
 									} else {
 										next = false;
 										if (vr.ref)
@@ -2232,7 +2228,7 @@ export class Lexer {
 							break;
 						case 'TK_START_BLOCK':
 							if (tpexp && (!(lk.type === 'TK_OPERATOR' && !lk.content.match(/^(\+\+|--)$/)) && lk.type !== 'TK_EQUALS')) {
-								types[tpexp] = (tpexp === ' #object' && objk) ? objk : true;
+								types[tpexp] = 0;
 								next = false, ternaryMiss();
 								return result.splice(pres);
 							} else {
@@ -2251,14 +2247,10 @@ export class Lexer {
 									if (lk.type === 'TK_WORD' || lk.type === 'TK_OPERATOR' || lk.type.startsWith('TK_END'))
 										mustexp = 0;
 								}
-								if (parse_obj(mustexp > 0 || isobj, t = {}, objk = {})) {
-									if (objk && tokens[tk.previous_pair_pos as number]?.previous_token?.content === ':=')
-										Object.assign(types[' #object'] ||= {}, objk);
+								if (parse_obj(mustexp > 0 || isobj, t = {})) {
 									tpexp += ' ' + (Object.keys(t).pop() || '#object'); break;
 								} else {
 									types[tpexp] = 0, _this.diagnostics.splice(l);
-									if (tpexp === ' #object' && objk)
-										Object.assign(types[tpexp] ||= {}, objk);
 									ternaryMiss(), next = false; return result.splice(pres);
 								}
 							}
@@ -2268,8 +2260,6 @@ export class Lexer {
 						case 'TK_END_EXPR':
 						case 'TK_COMMA':
 							next = false, types[tpexp] = 0;
-							if (tpexp === ' #object' && objk)
-								types[tpexp] = objk;
 							ternaryMiss();
 							return result.splice(pres);
 						case 'TK_LABEL': _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length); break;
@@ -2298,8 +2288,6 @@ export class Lexer {
 								let prec = input.charAt(tk.offset - 1);
 								if (inpair === '%') {
 									next = false, types[tpexp] = 0;
-									if (tpexp === ' #object' && objk)
-										Object.assign(types[tpexp] ||= {}, objk);
 									ternaryMiss();
 									return result.splice(pres);
 								} else if (prec.match(/\w|\.|[^\x00-\x7f]/))
@@ -2343,8 +2331,6 @@ export class Lexer {
 										if (end === ':') {
 											next = false, tpexp = tpexp.slice(0, -2);
 											types[tpexp] = 0;
-											if (tpexp === ' #object' && objk)
-												Object.assign(types[tpexp] ||= {}, objk);
 											return result.splice(pres);
 										}
 										_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
@@ -2356,8 +2342,6 @@ export class Lexer {
 					byref = false;
 				}
 				types[tpexp] = 0;
-				if (tpexp === ' #object' && objk)
-					Object.assign(types[tpexp] ||= {}, objk);
 				ternaryMiss();
 				return result.splice(pres);
 
@@ -2557,10 +2541,11 @@ export class Lexer {
 				}
 			}
 
-			function parse_obj(must: boolean = false, tp: any = {}, ks: any = {}): boolean {
-				let l = lk, b = tk, rl = result.length, isobj = true;
+			function parse_obj(must: boolean = false, tp: any = {}): boolean {
+				let l = lk, b = tk, rl = result.length, isobj = true, props: any = {};
 				let ts: any = {}, k: Token | undefined, mark: number[] = [];
-				block_mode = false, next = true, tk.data = ks;
+				let cls = DocumentSymbol.create('', undefined, SymbolKind.Class, make_range(0, 0), make_range(0, 0)) as ClassNode;
+				cls.extends = '', block_mode = false, next = true, tk.data = cls;
 				while (objkey())
 					if (objval())
 						break;
@@ -2585,7 +2570,11 @@ export class Lexer {
 					_this.addFoldingRange(tk.previous_pair_pos = b.offset, tk.offset), b.next_pair_pos = tk.offset;
 				else
 					_this.addDiagnostic(diagnostic.missing('}'), b.offset, 1);
-				delete ks.base;
+				if (Object.keys(props).length) {
+					cls.name = cls.full = `$${_this.anonymous.push(cls) - 1}`;
+					cls.staticdeclaration = props, cls.declaration = {};
+					tp[cls.name] = true;
+				}
 				return true;
 
 				function objkey(): boolean {
@@ -2617,22 +2606,21 @@ export class Lexer {
 								if (tk.content === ':') {
 									mark.push(lk.offset);
 									if (t.content !== '%')
-										k = lk, ks[lk.content.toLowerCase()] = lk.content;
+										k = lk;
 									return true;
 								}
 								return isobj = false;
 							case 'TK_STRING':
 								nexttoken();
 								if (tk.content === ':') {
+									k = Object.assign({}, lk), k.content = k.content.slice(1, -1), k.offset++, k.length -= 2;
 									_this.addDiagnostic(diagnostic.invalidpropname(), lk.offset, lk.length);
 									return true;
 								}
 								return isobj = false;
 							case 'TK_LABEL':
 								if (tk.content.match(/^(\w|[^\x00-\x7f])+:$/)) {
-									let t: string;
-									addtext(t = tk.content.replace(':', ''));
-									ks[t.toLowerCase()] = t;
+									k = Object.assign({}, tk), k.content = k.content.slice(0, -1), k.length--;
 									return true;
 								}
 								return isobj = false;
@@ -2655,16 +2643,18 @@ export class Lexer {
 					let exp = parse_expression(',', ts = {});
 					result.push(...exp);
 					if (k) {
-						if (k.content.toLowerCase() === 'base') {
+						let _ = k.content.toLowerCase();
+						if (_ === 'base') {
 							let t = Object.keys(ts).pop();
 							if (t && t.match(/\.prototype$/i)) {
 								t = t.slice(0, -10).trim().toLowerCase();
 								if (classfullname && t === 'this' && _parent.static && _parent.kind === SymbolKind.Method)
 									t = classfullname.slice(0, -1).toLowerCase();
-								tp[t.replace(/([^.]+)$/, '@$1')] = true;
+								cls.extends = t.replace(/([^.]+)$/, '@$1');
 							}
 						} else
-							addprop(k);
+							(props[_] = Variable.create(k.content, SymbolKind.Property, make_range(k.offset, k.length)))
+								.returntypes = ts, addprop(k);
 					}
 					if (tk.type === 'TK_COMMA')
 						return !(next = true);
@@ -2793,8 +2783,6 @@ export class Lexer {
 											if (vr.ref)
 												tpexp = tpexp.slice(0, -1) + '#varref';
 											else tpexp += tp, vr.def = true;
-											if (equ === ':=' && typeof o[' #object'] === 'object')
-												(<any>vr).property = Object.values(o[' #object']);
 										} else if (vr.ref)
 											tpexp = tpexp.slice(0, -1) + '#varref';
 										else tpexp += ' ' + lk.content;
@@ -3006,7 +2994,7 @@ export class Lexer {
 								let o = tokens[tokens[end].next_token_offset], prop = nk.content.slice(1, -1);
 								let t: Variable | FuncNode;
 								rg = make_range(nk.offset + 1, prop.length);
-								if (o.type === 'TK_START_BLOCK' && o.data?.call) {
+								if (o.type === 'TK_START_BLOCK' && o.data?.staticdeclaration?.call) {
 									t = FuncNode.create(prop, SymbolKind.Method, rg, rg, [Variable.create('*', SymbolKind.Variable, make_range(0, 0))], undefined, s);
 									t.full = `(${classfullname.slice(0, -1)}) ` + t.full;
 								} else
@@ -3650,7 +3638,7 @@ export class Lexer {
 				if (c !== '#') add_sharp_foldingrange();
 			}
 
-			if (isIdentifierChar(c.charCodeAt(0))) {
+			if (isIdentifierChar(c.charCodeAt(0)) || c === '$' && !_this.uri) {
 				while (parser_pos < input_length && isIdentifierChar(input.charCodeAt(parser_pos)))
 					c += input.charAt(parser_pos), parser_pos += 1;
 
@@ -4905,13 +4893,17 @@ export class Lexer {
 				}
 				if (ps[')'] > 0 || ps[']'] > 0 || ps['}'] > 0) tk = EMPTY_TOKEN;
 				if (tk.type === 'TK_WORD' || tk.type.startsWith('TK_START_') || (tk.content === '%' && tk.next_pair_pos)) {
-					let ttk = tk;
+					let ttk = tk, t;
 					s = tk.content, tk = tokens[tk.next_token_offset];
 					while (tk.offset < end) {
 						switch (tk.type) {
 							case 'TK_DOT': s += '.', tk = tokens[tk.next_token_offset]; break;
 							case 'TK_STRING': s += '""', tk = tokens[tk.next_token_offset]; break;
-							case 'TK_START_BLOCK': s += ' {}', tk = tokens[tk.next_pair_pos as number]; break;
+							case 'TK_START_BLOCK':
+								if (t = (tk.data as ClassNode)?.name)
+									s += ' ' + t, tk = tokens[tk.next_pair_pos as number], tk = tokens[tk.next_token_offset];
+								else s += ' {', tk = tokens[tk.next_pair_pos as number];
+								break;
 							case 'TK_START_EXPR':
 								if (!tk.prefix_is_whitespace) {
 									s += tk.content === '[' ? '[]' : '()';
@@ -5236,7 +5228,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 	let _cls: any = node, cl: ClassNode, tn: DocumentSymbol, hasget: any = {};
 	let isobj = l === 'object' || l === 'comobjarray' || (!(node as ClassNode).extends && l !== 'any');
 	getmems(doc, node, staticmem);
-	if (staticmem) {
+	if (staticmem && node.children) {
 		if (isobj && !v['call'] && v['__new']) {
 			tn = Object.assign({}, v['__new']), tn.name = 'Call', (<any>tn).def = false;
 			v['call'] = tn;
@@ -5305,7 +5297,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 					(<any>nd).uri = cl[0].uri;
 				while (nd) {
 					if (p.length === 1) {
-						getmems(dc, nd, staticmem);
+						getmems(dc, nd, p[0].startsWith('@') ? false : staticmem);
 						break;
 					} else {
 						let bak = v, bakhasget = Object.assign({}, hasget);
@@ -5327,16 +5319,14 @@ export function cleardetectcache() {
 	hasdetectcache = {};
 }
 
-export function getcacheproperty(): string[] {
-	return hasdetectcache['##object'] ?? [];
-}
-
 export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [type: string]: DocumentSymbol | boolean }) {
+	if (exp.match(/^\s*[@#$](\w|[^\x00-\x7f])+$/))
+		return types[exp.trim()] = false;
 	let nd = new Lexer(TextDocument.create('', 'ahk2', -10, '_:=' + exp));
 	last_full_exp = '', searchcache = {}, nd.parseScript();
-	let it = nd.children.shift() as Variable, s = Object.keys(it?.returntypes || {}).pop();
-	if (s)
-		detectExp(doc, s, pos, nd.document.getText(Range.create(it.selectionRange.end, it.range.end))).map(tp => types[tp] = searchcache[tp] ?? false);
+	let it = nd.children.shift() as Variable, s = Object.keys(it?.returntypes || {}).pop() as string;
+	if (!s) return;
+	detectExp(doc, s, pos, nd.document.getText(Range.create(it.selectionRange.end, it.range.end))).map(tp => types[tp] = searchcache[tp] ?? false);
 }
 
 export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?: DocumentSymbol }, pos?: Position) {
@@ -5413,8 +5403,6 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 			let fullexp = doc.document.getText(Range.create(ite.selectionRange.end, ite.range.end));
 			for (let s in (<Variable>ite).returntypes)
 				detectExp(doc, s.toLowerCase(), ite.range.end, fullexp).map(tp => types[tp] = true);
-			let p = (ite as any).property;
-			if (p?.length) (hasdetectcache['##object'] ??= []).push(...p);
 		}
 	}
 	if (types['#any'])
@@ -5604,12 +5592,10 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 								(ttt as string[]).map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
 							} else if ((<Variable>n.node).returntypes) {
 								for (let s in (n.node as Variable).returntypes) {
-									if (s === ' #object') {
-										ts['#object'] = true;
-										let p = (n.node as any).property;
-										if (p?.length) (hasdetectcache['##object'] ??= []).push(...p);
-									} else if (s)
-										detect(lexers[n.uri] ?? doc, s, n.node.range.end)
+									if (s = s.trim())
+										if (s.startsWith('#'))
+											ts[s] = true;
+										else detect(lexers[n.uri] ?? doc, s, n.node.range.end)
 											.map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
 								}
 							} else if (n.node.children) {
@@ -5740,7 +5726,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 					if (i === ps) {
 						if (it = mems[_]) {
 							node = it, uri = (<any>it).uri || '';
-							if (_ === 'prototype')
+							if (_ === 'prototype' && it.children)
 								node = Object.assign({}, it), node.kind = SymbolKind.Object;
 						}
 						if (!node && _ !== 'clone')
