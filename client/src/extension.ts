@@ -31,13 +31,11 @@ import * as child_process from 'child_process';
 import { resolve } from 'path';
 import { existsSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'fs';
 
-let client: LanguageClient;
-let outputchannel = window.createOutputChannel('AutoHotkey2');
+let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 let ahkprocess: child_process.ChildProcess | undefined;
-let ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 let ahkpath_cur = '', server_is_ready = false, zhcn = false;
-let textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
+const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 
 export async function activate(context: ExtensionContext) {
 	// The server is implemented in node
@@ -103,7 +101,7 @@ export async function activate(context: ExtensionContext) {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
 		},
-		outputChannel: outputchannel,
+		outputChannel: outputchannel = window.createOutputChannel('AutoHotkey2', '~ahk2-output'),
 		outputChannelName: 'AutoHotkey2',
 		initializationOptions: {
 			commands: Object.keys(request_handlers),
@@ -160,6 +158,7 @@ export async function activate(context: ExtensionContext) {
 	update_extensions_info();
 
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
+	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 	ahkStatusBarItem.command = 'ahk2.setinterpreter';
 	context.subscriptions.push(
 		extensions.onDidChange(e => update_extensions_info()),

@@ -27,7 +27,7 @@
 		"url": "https://github.com/thqby/vscode-autohotkey2-lsp/issues"
 	},
 	"engines": {
-		"vscode": "^1.60.0"
+		"vscode": "^1.66.0"
 	},
 	"activationEvents": [
 		"onLanguage:ahk2"
@@ -60,10 +60,7 @@
 				}
 			},
 			{
-				"id": "ahk2-output",
-				"mimetypes": [
-					"text/x-code-output"
-				]
+				"id": "~ahk2-output"
 			}
 		],
 		"grammars": [
@@ -79,13 +76,12 @@
 				]
 			},
 			{
-				"language": "ahk2-output",
+				"language": "~ahk2-output",
 				"scopeName": "ahk2.output",
 				"path": "./syntaxes/ahk2-output.tmLanguage.json"
 			}
 		],
 		"configuration": {
-			"id": "AutoHotkey2",
 			"title": "AutoHotkey2",
 			"properties": {
 				"AutoHotkey2.AutoLibInclude": {
