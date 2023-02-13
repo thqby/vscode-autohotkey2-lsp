@@ -11,104 +11,104 @@
 	],
 	"texts": [
 		{
-			"body": "{Alt Down}",
-			"prefix": "{Alt Down}"
+			"body": "Alt Down",
+			"prefix": "Alt Down"
 		},
 		{
-			"body": "{Alt Up}",
-			"prefix": "{Alt Up}"
+			"body": "Alt Up",
+			"prefix": "Alt Up"
 		},
 		{
-			"body": "{Blind}",
-			"prefix": "{Blind}"
+			"body": "Blind",
+			"prefix": "Blind"
 		},
 		{
-			"body": "{Click}",
-			"prefix": "{Click}"
+			"body": "Click",
+			"prefix": "Click"
 		},
 		{
-			"body": "{Ctrl Down}",
-			"prefix": "{Ctrl Down}"
+			"body": "Ctrl Down",
+			"prefix": "Ctrl Down"
 		},
 		{
-			"body": "{Ctrl Up}",
-			"prefix": "{Ctrl Up}"
+			"body": "Ctrl Up",
+			"prefix": "Ctrl Up"
 		},
 		{
-			"body": "{LAlt Down}",
-			"prefix": "{LAlt Down}"
+			"body": "LAlt Down",
+			"prefix": "LAlt Down"
 		},
 		{
-			"body": "{LAlt Up}",
-			"prefix": "{LAlt Up}"
+			"body": "LAlt Up",
+			"prefix": "LAlt Up"
 		},
 		{
-			"body": "{LCtrl Down}",
-			"prefix": "{LCtrl Down}"
+			"body": "LCtrl Down",
+			"prefix": "LCtrl Down"
 		},
 		{
-			"body": "{LCtrl Up}",
-			"prefix": "{LCtrl Up}"
+			"body": "LCtrl Up",
+			"prefix": "LCtrl Up"
 		},
 		{
-			"body": "{LShift Down}",
-			"prefix": "{LShift Down}"
+			"body": "LShift Down",
+			"prefix": "LShift Down"
 		},
 		{
-			"body": "{LShift Up}",
-			"prefix": "{LShift Up}"
+			"body": "LShift Up",
+			"prefix": "LShift Up"
 		},
 		{
-			"body": "{LWin Down}",
-			"prefix": "{LWin Down}"
+			"body": "LWin Down",
+			"prefix": "LWin Down"
 		},
 		{
-			"body": "{LWin Up}",
-			"prefix": "{LWin Up}"
+			"body": "LWin Up",
+			"prefix": "LWin Up"
 		},
 		{
-			"body": "{RAlt Down}",
-			"prefix": "{RAlt Down}"
+			"body": "RAlt Down",
+			"prefix": "RAlt Down"
 		},
 		{
-			"body": "{RAlt Up}",
-			"prefix": "{RAlt Up}"
+			"body": "RAlt Up",
+			"prefix": "RAlt Up"
 		},
 		{
-			"body": "{Raw}",
-			"prefix": "{Raw}"
+			"body": "Raw",
+			"prefix": "Raw"
 		},
 		{
-			"body": "{RCtrl Down}",
-			"prefix": "{RCtrl Down}"
+			"body": "RCtrl Down",
+			"prefix": "RCtrl Down"
 		},
 		{
-			"body": "{RCtrl Up}",
-			"prefix": "{RCtrl Up}"
+			"body": "RCtrl Up",
+			"prefix": "RCtrl Up"
 		},
 		{
-			"body": "{RShift Down}",
-			"prefix": "{RShift Down}"
+			"body": "RShift Down",
+			"prefix": "RShift Down"
 		},
 		{
-			"body": "{RShift Up}",
-			"prefix": "{RShift Up}"
+			"body": "RShift Up",
+			"prefix": "RShift Up"
 		},
 		{
-			"body": "{RWin Down}",
-			"prefix": "{RWin Down}"
+			"body": "RWin Down",
+			"prefix": "RWin Down"
 		},
 		{
-			"body": "{RWin Up}",
-			"prefix": "{RWin Up}"
+			"body": "RWin Up",
+			"prefix": "RWin Up"
 		},
 		{
-			"body": "{Shift Down}",
-			"prefix": "{Shift Down}"
+			"body": "Shift Down",
+			"prefix": "Shift Down"
 		},
 		{
-			"body": "{Shift Up}",
-			"prefix": "{Shift Up}"
+			"body": "Shift Up",
+			"prefix": "Shift Up"
 		}
 	],
 	"constants": [
