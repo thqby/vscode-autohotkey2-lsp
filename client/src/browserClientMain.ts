@@ -6,13 +6,11 @@
 import { commands, env, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 
-const ahkconfig = workspace.getConfiguration('AutoHotkey2');
+let client: LanguageClient;
 
 // this method is called when vs code is activated
 export function activate(context: ExtensionContext) {
 	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
-	const worker = new Worker(serverMain.toString());
-
 	const request_handlers: { [cmd: string]: any } = {
 		'ahk2.executeCommands': async (params: { command: string, args?: string[], wait?: boolean }[]) => {
 			let result: any[] = [];
@@ -48,7 +46,7 @@ export function activate(context: ExtensionContext) {
 			let all = !params.length;
 			if (workspace.workspaceFolders) {
 				if (all)
-					return (await workspace.findFiles('**/*.{ahk,ah2,ahk2}')).map(it => it.toString());
+					return (await workspace.findFiles('**/*.{ahk,ah2,ahk2}')).forEach(it => it.toString());
 				else {
 					let files: string[] = [];
 					for (let folder of workspace.workspaceFolders)
@@ -61,25 +59,15 @@ export function activate(context: ExtensionContext) {
 		'ahk2.getWorkspaceFileContent': async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText()
 	};
 
-	const client = new LanguageClient('ahk2', 'Autohotkey2 Server', {
+	client = new LanguageClient('ahk2', 'AutoHotkey2', {
 		documentSelector: [{ language: 'ahk2' }],
 		synchronize: {},
 		initializationOptions: {
 			locale: env.language,
 			commands: Object.keys(request_handlers),
-			ActionWhenV1IsDetected: getConfig('ActionWhenV1IsDetected'),
-			AutoLibInclude: getConfig('AutoLibInclude'),
-			CommentTags: getConfig('CommentTags'),
-			CompleteFunctionParens: getConfig('CompleteFunctionParens'),
-			CompletionCommitCharacters: getConfig('CompletionCommitCharacters'),
-			Diagnostics: getConfig('Diagnostics'),
-			FormatOptions: getConfig('FormatOptions'),
-			InterpreterPath: getConfig('InterpreterPath'),
-			SymbolFoldingFromOpenBrace: getConfig('SymbolFoldingFromOpenBrace'),
-			extensionUri: context.extensionUri.toString(),
-			WorkingDirs: getConfig('WorkingDirs'),
+			...workspace.getConfiguration('AutoHotkey2')
 		}
-	}, worker);
+	}, new Worker(serverMain.toString()));
 
 	context.subscriptions.push(
 		commands.registerCommand('ahk2.updateversioninfo', async () => {
@@ -116,20 +104,17 @@ export function activate(context: ExtensionContext) {
 			const doc = window.activeTextEditor?.document;
 			if (doc) languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
 		}),
-	);
-
-	client.start().then(() => {
-		Object.entries(request_handlers).map(handler => client.onRequest(...handler));
 		workspace.onDidCloseTextDocument(e => {
 			client.sendNotification('onDidCloseTextDocument', e.isClosed ?
 				{ uri: '', id: '' } : { uri: e.uri.toString(), id: e.languageId });
-		});
+		})
+	);
+
+	client.start().then(() => {
+		Object.entries(request_handlers).forEach(handler => client.onRequest(...handler));
 	});
 }
 
-function getConfig(key: string, defaultVal = '') {
-	let t = ahkconfig.inspect(key);
-	if (t)
-		return (t.workspaceFolderValue || t.workspaceValue || t.globalValue || t.defaultValue || defaultVal) as string;
-	return '';
+export function deactivate() {
+	return client?.stop();
 }

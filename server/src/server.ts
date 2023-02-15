@@ -133,7 +133,6 @@ connection.onInitialize((params: InitializeParams) => {
 	initahk2cache();
 	loadahk2();
 	if (configs) {
-		locale = configs.locale;
 		update_settings(configs);
 		if (existsSync(extsettings.InterpreterPath))
 			initpathenv();
@@ -145,7 +144,7 @@ connection.onInitialize((params: InitializeParams) => {
 connection.onInitialized(async () => {
 	if (hasConfigurationCapability) {
 		// Register for all configuration changes.
-		connection.client.register(DidChangeConfigurationNotification.type, undefined);
+		connection.client.register(DidChangeConfigurationNotification.type);
 	}
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders((event: WorkspaceFoldersChangeEvent) => {
