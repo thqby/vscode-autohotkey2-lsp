@@ -341,7 +341,7 @@ export function getallahkfiles(dirpath: string, maxdeep = 3): string[] {
 	return files;
 
 	function enumfile(dirpath: string, deep: number) {
-		readdirSync(dirpath).map(file => {
+		readdirSync(dirpath).forEach(file => {
 			let path = resolve(dirpath, file);
 			if (statSync(path).isDirectory()) {
 				if (deep < maxdeep)

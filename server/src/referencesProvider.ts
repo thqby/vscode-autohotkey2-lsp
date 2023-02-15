@@ -7,7 +7,7 @@ export async function referenceProvider(params: ReferenceParams, token: Cancella
 	if (!doc || token.isCancellationRequested) return;
 	let refs = getAllReferences(doc, doc.buildContext(params.position));
 	for (const uri in refs)
-		result.push(...refs[uri].map(range => { return { uri, range } }));
+		result.push(...refs[uri].map(range => ({ uri, range })));
 	return result;
 }
 
@@ -121,9 +121,9 @@ function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: Docu
 		if (not_static && scope && (<any>node)?.declaration?.[name]?.static === null)
 			not_static = false;
 		if (node.kind === SymbolKind.Property && node.parent?.kind === SymbolKind.Class) {
-			node.children?.map(it => {
+			node.children?.forEach(it => {
 				if (it.kind === SymbolKind.Function)
-					it.children?.map(it => {
+					it.children?.forEach(it => {
 						if (it.name.toLowerCase() === name)
 							ranges.push(it.selectionRange);
 						if (it.children)
@@ -136,7 +136,7 @@ function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: Docu
 				if (!((local && local[name]) || (dec && dec[name])))
 					c = undefined;
 			}
-			node.children?.map(it => {
+			node.children?.forEach(it => {
 				if (it.name.toLowerCase() === name)
 					ranges.push(it.selectionRange);
 				if (it.children)
@@ -169,19 +169,19 @@ function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[
 	if (not_static)
 		not_static = !((<any>node)?.local?.[name]?.static);
 	if (assume_glo === global) {
-		node.children?.map(it => {
+		node.children?.forEach(it => {
 			if (it.name.toLowerCase() === name && (it.kind !== SymbolKind.Property && it.kind !== SymbolKind.Method && it.kind !== SymbolKind.Class))
 				ranges.push(it.selectionRange);
 			if (it.children)
 				findAllVar(it as FuncNode, name, global, ranges, it.kind === SymbolKind.Function ? assume_glo : global || undefined, not_static);
 		});
 	} else {
-		node.children?.map(it => {
+		node.children?.forEach(it => {
 			if (it.children)
 				findAllVar(it as FuncNode, name, global, ranges, global ? false : undefined, not_static);
 		});
 		// if (!global)
-		// 	node.funccall?.map(it => {
+		// 	node.funccall?.forEach(it => {
 		// 		if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
 		// 			ranges.push(it.selectionRange);
 		// 	});

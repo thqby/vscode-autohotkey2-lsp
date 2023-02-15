@@ -111,10 +111,10 @@ export class PEFile {
 		if (types.length === 1 && this.resource[types[0]])
 			return this.resource[types[0]];
 		const baseRva = resinfo.addr, dirs = [baseRva], resources: any = {};
-		types.map(type => this.resource[type] ??= resources[type] = []);
+		types.forEach(type => this.resource[type] ??= resources[type] = []);
 		resources[RESOURCE_TYPE.RCDATA] &&= this.resource[RESOURCE_TYPE.RCDATA] = {};
 		parseResourcesDirectory(baseRva);
-		types.map(type => resources[type] ??= this.resource[type]);
+		types.forEach(type => resources[type] ??= this.resource[type]);
 		return types.length === 1 ? resources[types[0]] : resources;
 
 		function parseResourcesDirectory(rva: number, level = 0): any {
@@ -180,7 +180,7 @@ export class PEFile {
 						if (resources[10] instanceof Array)
 							resources[10] = {};
 						let resource = resources[10];
-						lastEntry.directory?.entries.map((entrie: any) => {
+						lastEntry.directory?.entries.forEach((entrie: any) => {
 							const name = entrie.name ?? `#${entrie.id}`;
 							const rcdata = entrie.directory?.entries?.pop()?.data?.struct;
 							if (rcdata)

@@ -120,7 +120,7 @@ export async function generateComment(args: string[]) {
 				}
 				if (end.line >= start.line && start.line > -1)
 					range = { start, end };
-				comments.map(line => {
+				comments.forEach(line => {
 					if (m = line.match(/^@(param|arg)\s+(({.+?}\s)?\s*(\S+).*)$/i))
 						lastarr = params[m[4].toLowerCase()] = [m[2].trim()];
 					else if (m = line.match(/^@(returns?)([\s|:]\s*(.*))?$/i))
@@ -132,17 +132,17 @@ export async function generateComment(args: string[]) {
 				});
 			}
 			if (details.length)
-				details.map(s => ss.push(' * ' + s));
+				details.forEach(s => ss.push(' * ' + s));
 			else
 				ss.push(' * $1'), i++;
-			n.params.map(it => {
+			n.params.forEach(it => {
 				if (lastarr = params[it.name.toLowerCase()]) {
 					ss.push(` * @param ${lastarr.shift()}`);
-					lastarr.map(s => ss.push(' * ' + s));
+					lastarr.forEach(s => ss.push(' * ' + s));
 				} else {
 					let rets: string[] = [], o: any = {}, p: Position;
 					for (const ret in it.returntypes)
-						cleardetectcache(), detectExp(doc, ret, Position.is(p = it.returntypes[ret]) ? p : position).map(tp => o[trim(tp)] = true);
+						cleardetectcache(), detectExp(doc, ret, Position.is(p = it.returntypes[ret]) ? p : position).forEach(tp => o[trim(tp)] = true);
 					rets = o['any'] ? ['any'] : Object.keys(o);
 					if (!rets.length)
 						rets = ['any'];
@@ -151,11 +151,11 @@ export async function generateComment(args: string[]) {
 			});
 			if (returns.length) {
 				ss.push(` * @returns ${returns.shift()}`);
-				returns.map(s => ss.push(' * ' + s));
+				returns.forEach(s => ss.push(' * ' + s));
 			} else {
 				let rets: string[] = [], o: any = {}, p: Position;
 				for (const ret in n.returntypes)
-					cleardetectcache(), detectExp(doc, ret, Position.is(p = n.returntypes[ret]) ? p : position).map(tp => o[trim(tp)] = true);
+					cleardetectcache(), detectExp(doc, ret, Position.is(p = n.returntypes[ret]) ? p : position).forEach(tp => o[trim(tp)] = true);
 				rets = o['any'] ? ['any'] : Object.keys(o);
 				if (rets.length)
 					ss.push(` * @returns $\{${(++i).toString() + ':' + (rets.length ? '{' + rets.join('|') + '\\}' : '')}}`);

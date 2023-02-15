@@ -134,7 +134,7 @@ connection.onInitialized(async () => {
 		connection.workspace.onDidChangeWorkspaceFolders((event: WorkspaceFoldersChangeEvent) => {
 			let del = event.removed.map(it => it.uri.toLowerCase() + '/') || [];
 			set_Workspacefolder(workspaceFolders.filter(it => !del.includes(it)));
-			event.added.map(it => workspaceFolders.push(it.uri.toLowerCase() + '/'));
+			event.added.forEach(it => workspaceFolders.push(it.uri.toLowerCase() + '/'));
 		});
 	}
 });

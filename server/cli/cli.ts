@@ -3,7 +3,7 @@ import { Lexer } from '../src/Lexer';
 
 function main() {
 	let options: any = {};
-	process.argv.slice(2).map(s => {
+	process.argv.slice(2).forEach(s => {
 		let arr = s.split('=');
 		options[arr[0]] = arr[1];
 	});

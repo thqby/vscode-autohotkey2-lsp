@@ -151,13 +151,13 @@ connection.onInitialized(async () => {
 		connection.workspace.onDidChangeWorkspaceFolders((event: WorkspaceFoldersChangeEvent) => {
 			let del = event.removed.map(it => it.uri.toLowerCase() + '/') || [];
 			set_Workspacefolder(workspaceFolders.filter(it => !del.includes(it)));
-			event.added.map(it => workspaceFolders.push(it.uri.toLowerCase() + '/'));
+			event.added.forEach(it => workspaceFolders.push(it.uri.toLowerCase() + '/'));
 			parseWorkspaceFolders();
 		});
 	}
 	setTimeout(async () => {
 		parseWorkspaceFolders();
-		['user32', 'kernel32', 'comctl32', 'gdi32'].map(name => setTimeout(() => {
+		['user32', 'kernel32', 'comctl32', 'gdi32'].forEach(name => setTimeout(() => {
 			winapis.push(...getDllExport([`C:\\Windows\\System32\\${name}.dll`]));
 		}, 200));
 	}, 500);
@@ -487,7 +487,7 @@ function getDllExport(paths: string[], onlyone = false) {
 	for (let path of paths) {
 		let pe = searchAndOpenPEFile(path);
 		if (pe) {
-			pe.getExport()?.Functions.map((it) => funcs[it.Name] = true);
+			pe.getExport()?.Functions.forEach((it) => funcs[it.Name] = true);
 			if (onlyone) break;
 		}
 	}

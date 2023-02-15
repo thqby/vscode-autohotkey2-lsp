@@ -24,7 +24,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			}), params.position, ts);
 			if (word && ts['#any'] === undefined)
 				for (const tp in ts)
-					searchNode(doc, tp + word, context.range.end, kind)?.map(it => {
+					searchNode(doc, tp + word, context.range.end, kind)?.forEach(it => {
 						if (!nodes?.map(i => i.node).includes(it.node))
 							nodes?.push(it);
 					});
@@ -41,7 +41,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		}
 		if (nodes) {
 			if (nodes.length > 1) {
-				nodes.map(it => {
+				nodes.forEach(it => {
 					if ((<any>(it.node)).full)
 						hover.push({ kind: 'ahk2', value: (<any>(it.node)).full })
 				});

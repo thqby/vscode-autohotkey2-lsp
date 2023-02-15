@@ -34,7 +34,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 			}), params.position, ts);
 			if (word && ts['#any'] === undefined)
 				for (const tp in ts)
-					searchNode(doc, tp + word, context.range.end, kind)?.map(it => {
+					searchNode(doc, tp + word, context.range.end, kind)?.forEach(it => {
 						if (!nodes?.map(i => i.node).includes(it.node))
 							nodes?.push(it);
 					});
@@ -47,7 +47,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 						docs.push(lexers[u]);
 					for (const doc of docs) {
 						if (doc.object.method[word]?.length)
-							nodes?.push(...doc.object.method[word].map(it => { return { node: it, uri: doc.uri }; }));
+							nodes?.push(...doc.object.method[word].map(it => ({ node: it, uri: doc.uri })));
 					}
 					return '';
 				});
@@ -56,7 +56,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 			return undefined;
 		if (nodes) {
 			let uri = '';
-			nodes.map(it => {
+			nodes.forEach(it => {
 				if (it.node.selectionRange.end.character && (uri = (<any>it.node).uri || it.uri))
 					locas.push(LocationLink.create(lexers[uri].document.uri, it.node.range, it.node.selectionRange));
 			});

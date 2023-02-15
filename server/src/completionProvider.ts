@@ -57,8 +57,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	if (temp = lt.match(/^\s*((class\s+(\w|[^\x00-\x7f])+\s+)?(extends)|class)\s/i)) {
 		if (triggerchar === '.') {
 			if (temp[3]) {
-				searchNode(doc, doc.buildContext(position, true, true).text.replace(/\.[^.]*$/, '').toLowerCase(), position, SymbolKind.Class)?.map(it => {
-					Object.values(getClassMembers(doc, it.node, true)).map(it => {
+				searchNode(doc, doc.buildContext(position, true, true).text.replace(/\.[^.]*$/, '').toLowerCase(), position, SymbolKind.Class)?.forEach(it => {
+					Object.values(getClassMembers(doc, it.node, true)).forEach(it => {
 						if (it.kind === SymbolKind.Class && !vars[l = it.name.toLowerCase()] && expg.test(l))
 							items.push(convertNodeCompletion(it)), vars[l] = true;
 					});
@@ -72,7 +72,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 		for (const uri in list)
 			if (lexers[uri])
 				glo.push(lexers[uri].declaration);
-		glo.map(g => {
+		glo.forEach(g => {
 			for (const cl in g) {
 				if (g[cl].kind === SymbolKind.Class && !vars[cl] && expg.test(cl))
 					items.push(convertNodeCompletion(g[cl])), vars[cl] = true;
@@ -120,7 +120,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							p.push(temp[2]);
 						if (p.length) {
 							let result = (await sendAhkRequest('GetDispMember', p) ?? {}) as { [func: string]: number };
-							Object.entries(result).map(it => expg.test(it[0]) && additem(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
+							Object.entries(result).forEach(it => expg.test(it[0]) && additem(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
 						}
 						if (tsn === 1)
 							return items;
@@ -128,7 +128,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						if (!isfunc && (isfunc = true, ahkvars['func']))
 							tps.push(ahkvars['func']), isstatic = false;
 					} else
-						searchNode(doc, tp, position, SymbolKind.Variable)?.map(it => tps.push(it.node));
+						searchNode(doc, tp, position, SymbolKind.Variable)?.forEach(it => tps.push(it.node));
 				}
 			}
 			for (const node of tps) {
@@ -137,7 +137,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						let omems = getClassMembers(doc, node, isstatic);
 						if (isstatic && (<FuncNode>omems['__new'])?.static === false)
 							delete omems['__new'];
-						Object.values(omems).map((it: any) => {
+						Object.values(omems).forEach((it: any) => {
 							if (expg.test(it.name)) {
 								if (it.kind === SymbolKind.Property || it.kind === SymbolKind.Class) {
 									if (!props[l = it.name.toLowerCase()])
@@ -187,13 +187,13 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if ((isobj && cl === 'object') || (isfunc && cl === 'func') || cl === 'any' || !ahkvars[cl].children)
 					continue;
 				let cls: DocumentSymbol[] = [];
-				ahkvars[cl].children?.map((it: any) => {
+				ahkvars[cl].children?.forEach((it: any) => {
 					if (it.kind === SymbolKind.Class) {
 						cls.push(...it.children);
 					} else
 						cls.push(it);
 				});
-				cls.map((it: any) => {
+				cls.forEach((it: any) => {
 					if (it.kind === SymbolKind.Class)
 						return;
 					if (expg.test(l = it.name.toLowerCase()))
@@ -215,7 +215,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				let tt = lt.replace(/^\s*#(include(again)?|dllload)\s+/i, '').replace(/\*i\s+/i, ''), paths: string[] = [], inlib = false, lchar = '';
 				let pre = lt.substring(lt.length - tt.length, position.character), xg = '\\', m: any, a_ = '', isdll = !!temp[2];
 				if (percent) {
-					completionItemCache.other.map(it => {
+					completionItemCache.other.forEach(it => {
 						if (it.kind === CompletionItemKind.Variable && expg.test(it.label))
 							items.push(it);
 					})
@@ -293,16 +293,16 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			} else if (temp = lt.match(/(?<!\.)\b(goto|continue|break)\b(?!\s*:)(\s+|\(\s*('|")?)/i)) {
 				let t = temp[2].trim();
 				if (scopenode = doc.searchScopedNode(position))
-					scopenode.children?.map(it => {
+					scopenode.children?.forEach(it => {
 						if (it.kind === SymbolKind.Field && expg.test(it.name))
 							items.push(convertNodeCompletion(it));
 					});
 				else {
-					doc.children.map(it => {
+					doc.children.forEach(it => {
 						if (it.kind === SymbolKind.Field && expg.test(it.name))
 							items.push(convertNodeCompletion(it));
 					});
-					for (const t in list) lexers[t].children.map(it => {
+					for (const t in list) lexers[t].children.forEach(it => {
 						if (it.kind === SymbolKind.Field && expg.test(it.name))
 							items.push(convertNodeCompletion(it));
 					});
@@ -373,16 +373,16 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 										for (let u in list) docs.push(lexers[u]);
 										items.splice(0);
 										if (!pre.match(/[\\/]/)) {
-											docs.map(d => d.dllpaths.map(path => {
+											docs.forEach(d => d.dllpaths.forEach(path => {
 												path = path.replace(/^.*[\\/]/, '').replace(/\.dll$/i, '');
 												if (!files[l = path.toLowerCase()])
 													files[l] = true, additem(path + '\\', CompletionItemKind.File);
 											}));
-											readdirSync('C:\\Windows\\System32').map(file => {
+											readdirSync('C:\\Windows\\System32').forEach(file => {
 												if (file.toLowerCase().endsWith('.dll') && expg.test(file = file.slice(0, -4)))
 													additem(file + '\\', CompletionItemKind.File);
 											});
-											winapis.map(f => { if (expg.test(f)) additem(f, CompletionItemKind.Function); });
+											winapis.forEach(f => { if (expg.test(f)) additem(f, CompletionItemKind.Function); });
 											return items;
 										} else {
 											let dlls: { [key: string]: any } = {}, onlyfile = true;
@@ -395,8 +395,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 													dlls[doc.scriptpath + l] = 1;
 												else dlls[doc.scriptpath + '/' + l] = 1;
 											} else {
-												docs.map(d => {
-													d.dllpaths.map(path => {
+												docs.forEach(d => {
+													d.dllpaths.forEach(path => {
 														if (path.endsWith(l)) {
 															dlls[path] = 1;
 															if (onlyfile && path.includes('/'))
@@ -407,7 +407,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 														dlls[l] = dlls[d.scriptpath + '/' + l] = 1;
 												});
 											}
-											utils.get_DllExport(Object.keys(dlls), true).map(it => additem(it, CompletionItemKind.Function));
+											utils.get_DllExport(Object.keys(dlls), true).forEach(it => additem(it, CompletionItemKind.Function));
 											return items;
 										}
 									}
@@ -427,7 +427,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							case 'comobject':
 								if (res.index === 0) {
 									let ids = (await sendAhkRequest('GetProgID', []) ?? []) as string[];
-									ids.map(s => additem(s, CompletionItemKind.Unit));
+									ids.forEach(s => additem(s, CompletionItemKind.Unit));
 									return items;
 								}
 								break;
@@ -448,7 +448,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							case 'objbindmethod':
 								if (res.index === 1) {
 									let ns: any, funcs: { [key: string]: any } = {};
-									['new', 'delete', 'get', 'set', 'call'].map(it => { funcs['__' + it] = true; });
+									['new', 'delete', 'get', 'set', 'call'].forEach(it => { funcs['__' + it] = true; });
 									if (temp = context.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\x7f])+)\s*,/i)) {
 										let ts: any = {};
 										cleardetectcache(), detectExpType(doc, temp[1], position, ts);
@@ -458,8 +458,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 													ns = searchNode(doc, tp, position, SymbolKind.Class);
 												} else if (ts[tp])
 													ns = [ts[tp]];
-												ns?.map((it: any) => {
-													Object.values(getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/))).map(it => {
+												ns?.forEach((it: any) => {
+													Object.values(getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/))).forEach(it => {
 														if (it.kind === SymbolKind.Method && !funcs[temp = it.name.toLowerCase()] && expg.test(temp))
 															funcs[temp] = true, additem(it.name, CompletionItemKind.Method);
 													});
@@ -515,7 +515,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					}
 				}
 				if (other)
-					completionItemCache.other.map(it => {
+					completionItemCache.other.forEach(it => {
 						if (it.kind === CompletionItemKind.Text && expg.test(it.label))
 							vars[it.label.toLowerCase()] = true, items.push(it);
 					});
@@ -571,7 +571,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			for (const n in ahkvars)
 				if (expg.test(n))
 					vars[n] = convertNodeCompletion(ahkvars[n]);
-			Object.values(doc.declaration).map(it => {
+			Object.values(doc.declaration).forEach(it => {
 				if (expg.test(l = it.name.toLowerCase()) && !ateditpos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
 					vars[l] = convertNodeCompletion(it);
 			});
@@ -585,12 +585,12 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				}
 			}
 			if (scopenode) {
-				doc.getScopeChildren(scopenode).map(it => {
+				doc.getScopeChildren(scopenode).forEach(it => {
 					if (expg.test(l = it.name.toLowerCase()) && (!vars[l] || it.kind !== SymbolKind.Variable || (<Variable>it).returntypes))
 						vars[l] = convertNodeCompletion(it);
 				});
 			}
-			completionItemCache.other.map(it => {
+			completionItemCache.other.forEach(it => {
 				if (expg.test(it.label)) {
 					if (it.kind === CompletionItemKind.Variable)
 						vars[it.label.toLowerCase()] = it;
@@ -613,7 +613,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					if (!list || !list[u]) {
 						path = URI.parse(u).fsPath;
 						if ((extsettings.AutoLibInclude > 1 && (<any>libfuncs[u]).islib) || ((extsettings.AutoLibInclude & 1) && path.startsWith(dir))) {
-							libfuncs[u].map(it => {
+							libfuncs[u].forEach(it => {
 								if (!vars[l = it.name.toLowerCase()] && expg.test(l)) {
 									cpitem = convertNodeCompletion(it);
 									cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
@@ -627,7 +627,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						}
 					}
 				}
-			scopenode?.children?.map(it => {
+			scopenode?.children?.forEach(it => {
 				if (!vars[l = it.name.toLowerCase()] && expg.test(l) && !ateditpos(it))
 					vars[l] = convertNodeCompletion(it);
 			});

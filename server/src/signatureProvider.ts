@@ -48,7 +48,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 	nodes = Object.values(ts).filter((it: any) => it?.node);
 	let tns: any;
 	tns = nodes ?? [], nodes = [];
-	tns.map((it: any) => {
+	tns.forEach((it: any) => {
 		let nn = it.node;
 		switch (nn.kind) {
 			case SymbolKind.Class: {
@@ -71,18 +71,18 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 	if (!nodes.length) {
 		if (kind === SymbolKind.Method) {
 			for (const key in ahkvars)
-				ahkvars[key].children?.map(node => {
+				ahkvars[key].children?.forEach(node => {
 					if (node.kind === SymbolKind.Method && node.name.toLowerCase() === name &&
 						!nodes.map((it: any) => it.node).includes(node))
 						nodes.push({ node, uri: '' });
 				});
-			doc.object.method[name]?.map(node => nodes.push({ node, uri: '' }));
+			doc.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
 			for (const u in doc.relevance)
-				lexers[u].object.method[name]?.map(node => nodes.push({ node, uri: '' }));
+				lexers[u].object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
 			if (!nodes.length) return undefined;
 		} else return undefined;
 	}
-	nodes.map((it: any) => {
+	nodes.forEach((it: any) => {
 		const node = it.node as FuncNode, overloads: string[] = [], needthis = it.needthis ?? 0;
 		let params: Variable[] | undefined, name: string | undefined, paramindex: number;
 		if (params = node.params) {
@@ -105,7 +105,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				let { label, documentation } = signinfo.signatures[0], n = node;
 				let fn = label.replace(new RegExp(`(?<=\\b${node.name})\\(.+$`), '');
 				lex.parseScript();
-				lex.children.map((node: any) => {
+				lex.children.forEach((node: any) => {
 					if (params = node.params) {
 						parameters = params.map(param => ({ label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...') }));
 						if (needthis)
