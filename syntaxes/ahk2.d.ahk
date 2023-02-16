@@ -2826,12 +2826,12 @@ class File extends Object {
 	/**
 	 * Read the original binary data from the file to the memory and move the file pointer forward.
 	 */
-	RawRead(VarOrAddress, Bytes) => Number
+	RawRead(Buffer [, Bytes]) => Number
 
 	/**
 	 * Write the original binary data to the file and move the file pointer forward.
 	 */
-	RawWrite(VarOrAddress, Bytes) => Number
+	RawWrite(Data [, Bytes]) => Number
 
 	/**
 	 * Read a line of text from the file and move the file pointer forward.
@@ -2936,7 +2936,7 @@ class File extends Object {
 	/**
 	 * Move the file pointer. If the second parameter is omitted, it is equivalent to File.Pos := Distance.
 	 */
-	Seek(Distance, Origin := 0) => Number
+	Seek(Distance [, Origin]) => Number
 
 	/**
 	 * Close the file, write all the data in the cache to disk and release the shared lock.
