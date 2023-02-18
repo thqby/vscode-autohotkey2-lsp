@@ -18,6 +18,6 @@ export async function renameProvider(params: RenameParams, token: CancellationTo
 	if (token.isCancellationRequested) return;
 	let result: any = { changes: {} }, newText = params.newName;
 	for (const uri in renameranges)
-		result.changes[uri] = renameranges[uri].forEach(range => { return { range, newText } })
+		result.changes[uri] = renameranges[uri].map(range => ({ range, newText }))
 	return result;
 }
