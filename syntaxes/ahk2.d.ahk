@@ -1931,6 +1931,11 @@ SendRaw(Keys) => void
 SendText(Keys) => void
 
 /**
+ * Set the state of the caps Lock key. You can also force the key to stay on or off.
+ */
+SetCapsLockState([State]) => void
+
+/**
  * Set the delay that will occur after each control changes the function.
  */
 SetControlDelay(Delay) => Integer
@@ -1951,14 +1956,9 @@ SetKeyDelay([Delay, PressDuration, 'Play']) => void
 SetMouseDelay(Delay [, 'Play']) => Integer
 
 /**
- * Set the state of the caps Lock key. You can also force the key to stay on or off.
- */
-SetCapsLockState(State) => void
-
-/**
  * Set the state of the NumLock key. You can also force the key to remain open or closed.
  */
-SetNumLockState(State) => void
+SetNumLockState([State]) => void
 
 /**
  * Set RegRead, RegWrite, RegDelete, RegDeleteKey and the registry view used by the registry cycle.
@@ -1968,7 +1968,7 @@ SetRegView(RegView) => Integer
 /**
  * Set the state of the scroll lock key. You can also force the key to stay on or off.
  */
-SetScrollLockState(State) => void
+SetScrollLockState([State]) => void
 
 /**
  * Whether to restore the capsLock state after send.
@@ -2934,7 +2934,7 @@ class File extends Object {
 	WriteUShort(Num) => Number
 
 	/**
-	 * Move the file pointer. If the second parameter is omitted, it is equivalent to File.Pos := Distance.
+	 * Move the file pointer. If Origin is omitted, when the Distance is negative, Origin defaults to SEEK_END, and otherwise it is SEEK_SET..
 	 */
 	Seek(Distance [, Origin]) => Number
 

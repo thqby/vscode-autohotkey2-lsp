@@ -1931,6 +1931,11 @@ SendRaw(Keys) => void
 SendText(Keys) => void
 
 /**
+ * 设置Caps Lock键的状态.还可以强制按键保持打开或关闭状态.
+ */
+SetCapsLockState([State]) => void
+
+/**
  * 设置每个控件改动函数后将发生的延迟.
  */
 SetControlDelay(Delay) => Integer
@@ -1951,14 +1956,9 @@ SetKeyDelay([Delay, PressDuration, 'Play']) => void
 SetMouseDelay(Delay [, 'Play']) => Integer
 
 /**
- * 设置Caps Lock键的状态.还可以强制按键保持打开或关闭状态.
- */
-SetCapsLockState(State) => void
-
-/**
  * 设置NumLock键的状态. 也可以强制按键保持打开或关闭状态.
  */
-SetNumLockState(State) => void
+SetNumLockState([State]) => void
 
 /**
  * 设置RegRead,RegWrite,RegDelete,RegDeleteKey和注册表循环使用的注册表视图.
@@ -1968,7 +1968,7 @@ SetRegView(RegView) => Integer
 /**
  * 设置滚动锁定键的状态. 也可以强制按键保持打开或关闭状态.
  */
-SetScrollLockState(State) => void
+SetScrollLockState([State]) => void
 
 /**
  * 在 Send 之后是否恢复 CapsLock 的状态.
@@ -2877,12 +2877,12 @@ class File extends Object {
 	/**
 	 * 从文件读取原始的二进制数据到内存并向前移动文件指针.
 	 */
-	RawRead(VarOrAddress, Bytes) => Number
+	RawRead(Buffer [, Bytes]) => Number
 
 	/**
 	 * 写入原始的二进制数据到文件并向前移动文件指针.
 	 */
-	RawWrite(VarOrAddress, Bytes) => Number
+	RawWrite(Data [, Bytes]) => Number
 
 	/**
 	 * 从文件中读取一行文本并使文件指针向前移动.
@@ -2985,9 +2985,9 @@ class File extends Object {
 	WriteUShort(Num) => Number
 
 	/**
-	 * 移动文件指针. 如果第二个参数被省略, 等同于 File.Pos := Distance.
+	 * 移动文件指针. 如果省略 Origin, 当 Distance 为负数时, Origin 默认为 SEEK_END, 而其他情况时为 SEEK_SET.
 	 */
-	Seek(Distance, Origin := 0) => Number
+	Seek(Distance [, Origin]) => Number
 
 	/**
 	 * 关闭文件, 将缓存中的所有数据写入磁盘并释放共享锁定.
