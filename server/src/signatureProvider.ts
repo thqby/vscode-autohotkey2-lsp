@@ -15,9 +15,9 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			kind = SymbolKind.Method;
 	let ts: any = {};
 	if (cleardetectcache(), kind === SymbolKind.Method || res.full) {
-		let t = res.full;
-		t ||= doc.buildContext(pos).text.toLowerCase();
-		detectExpType(doc, t, pos, ts);
+		let t: string = res.full, c = doc.buildContext(pos);
+		t ||= c.text.toLowerCase();
+		detectExpType(doc, t, c.range.end, ts);
 		if (kind === SymbolKind.Method) {
 			if ((res.name === 'call' && ts['func.call']) || (res.name === 'bind' && ts['func.bind'])) {
 				let tt: any = {};

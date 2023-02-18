@@ -79,6 +79,7 @@ export interface FuncNode extends DocumentSymbol {
 	returntypes?: { [exp: string]: any }
 	overwrite?: number
 	has_this_param?: boolean
+	unresolved_vars?: { [name: string]: Variable }
 }
 
 export interface ClassNode extends DocumentSymbol {
@@ -88,7 +89,7 @@ export interface ClassNode extends DocumentSymbol {
 	funccall: CallInfo[]
 	declaration: { [name: string]: FuncNode | Variable };
 	staticdeclaration: { [name: string]: FuncNode | ClassNode | Variable };
-	cache: DocumentSymbol[]
+	cache: Variable[]
 	returntypes?: { [exp: string]: any }
 	overwrite?: number
 }
@@ -161,7 +162,7 @@ export namespace FuncNode {
 	export function create(name: string, kind: SymbolKind, range: Range, selectionRange: Range, params: Variable[], children?: DocumentSymbol[], isstatic?: boolean): FuncNode {
 		let full = '', ps: Variable[] = [], hasref = false;
 		(<any>params).format?.(params);
-		params.map(param => {
+		params.forEach(param => {
 			if (param.name !== '*') ps.push(param);
 			full += ', ' + (param.ref ? (hasref = true, '&') : '') + param.name + (param.defaultVal ? ' := ' + param.defaultVal : param.arr ? '*' : param.defaultVal === null ? '?' : '');
 		});
@@ -307,7 +308,7 @@ export class Lexer {
 				if (tk = tks[i])
 					return tk;
 				if (c === '\0') {
-					if (tk = tks[_this.strcommpos[_this.strcommpos.length - 1].start])
+					if (tk = tks[_this.strcommpos[_this.strcommpos.length - 1]?.start])
 						if (i === tk.offset + tk.length)
 							return tk;
 					return eof;
@@ -669,7 +670,7 @@ export class Lexer {
 										tn.full = `(${cls.join('.')}) ` + tn.full;
 									if (rets?.length) {
 										let o: any = {};
-										rets.map((tp: string) => o[tp] = true);
+										rets.forEach((tp: string) => o[tp] = true);
 										tn.returntypes = o;
 									}
 									if ((i -= (isstatic ? 2 : 1)) >= 0 && tokens[i].type.endsWith('COMMENT'))
@@ -693,13 +694,14 @@ export class Lexer {
 								cl.declaration = {}, cl.staticdeclaration = {}, j = i + 1, cls.push(tn.name), cl.full = cls.join('.');
 								cl.returntypes = { [(cl.full.replace(/([^.]+)$/, '@$1')).toLowerCase()]: true };
 								tk.semantic = { type: SemanticTokenTypes.class, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
-								tk.symbol = tk.definition = tn, cl.funccall = [], cl.extends = '';
-								cl.declaration = {}, cl.staticdeclaration = {}, p[blocks].children?.push(tn);
+								tk.symbol = tk.definition = tn, cl.funccall = [], cl.extends = '', p[blocks].children?.push(tn);
 								if (blocks === 0)
 									(<FuncNode>p[0]).declaration[tn.name.toLowerCase()] = tn;
 								else
 									(<ClassNode>p[blocks]).staticdeclaration[tn.name.toLowerCase()] = tn;
 								if ((lk = tokens[j])?.content.toLowerCase() === 'extends') {
+									if ((lk = tokens[j + 1])?.type === 'TK_WORD')
+										_this.children.push(Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length)));
 									while ((++j) < l && (lk = tokens[j]).content !== '{')
 										extends_ += lk.content;
 									cl.extends = extends_;
@@ -726,7 +728,7 @@ export class Lexer {
 					return;
 				if (this.d & 2) {
 					let overwrite = this.uri.endsWith('/ahk2_h.d.ahk') ? 1 : 0, t: any;
-					this.children.map(it => {
+					this.children.forEach(it => {
 						switch (it.kind) {
 							case SymbolKind.Function:
 								(<Variable>it).def = false;
@@ -745,7 +747,7 @@ export class Lexer {
 				}
 				checksamenameerr({}, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length, this.isparsed = true;
-				customblocks.region.map(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
+				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 			}
 		} else {
 			this.parseScript = function (): void {
@@ -766,7 +768,7 @@ export class Lexer {
 				}
 				checksamenameerr(this.declaration, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length, this.isparsed = true;
-				customblocks.region.map(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
+				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 				if (this.actived)
 					this.actionwhenv1 ??= 'Continue';
 			}
@@ -997,8 +999,6 @@ export class Lexer {
 														let o: any = {}, sub: DocumentSymbol[], fcs = _parent.funccall.length;
 														tn = FuncNode.create(lk.content.toLowerCase(), SymbolKind.Function,
 															make_range(lk.offset, parser_pos - lk.offset), make_range(lk.offset, lk.length), [...par]);
-														if (lk.content.match(/^\d/))
-															_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
 														lk.symbol = lk.definition = tn, mode = 3;
 														tn.parent = prop, sub = parse_line(o, undefined, 'return', 1), mode = 2;
 														tn.funccall?.push(..._parent.funccall.splice(fcs));
@@ -1046,8 +1046,11 @@ export class Lexer {
 															next = false;
 														}
 													}
-													if (tn)
+													if (tn) {
 														prop.children.push(tn);
+														if (tn !== ((prop as any)[tn.name] ??= tn))
+															_this.addDiagnostic(diagnostic.dupdeclaration(), nk.offset, nk.length);
+													}
 												} else {
 													let b = 0;
 													_this.addDiagnostic(diagnostic.invalidprop(), tk.offset, tk.length);
@@ -1067,8 +1070,8 @@ export class Lexer {
 										} else if (tk.content === '=>') {
 											let off = parser_pos, o: any = {}, tn: FuncNode, fcs = _parent.funccall.length;
 											mode = 3, tn = FuncNode.create('get', SymbolKind.Function,
-												rg = make_range(off, parser_pos - off), Object.assign({}, rg), par);
-											tn.parent = prop;
+												rg = make_range(off, parser_pos - off), make_range(0, 0), par);
+											tn.parent = prop, (prop as any).get = tn;
 											tn.children = parse_line(o, undefined, 'return', 1), tn.returntypes = o;
 											tn.funccall?.push(..._parent.funccall.splice(fcs)), mode = 2;
 											tn.range.end = document.positionAt(lk.offset + lk.length);
@@ -1095,7 +1098,11 @@ export class Lexer {
 									} else {
 										tk = lk, lk = EMPTY_TOKEN, next = false;
 										parser_pos = tk.offset + tk.length;
-										result.push(...parse_statement(''));
+										let rl = result.length, _ = _parent;
+										_parent = _parent.declaration.__init;
+										let sta = parse_statement('');
+										_parent.children.push(...result.splice(rl)), _parent = _;
+										result.push(...sta);
 										if (line_begin_pos !== undefined)
 											_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
 									}
@@ -1110,7 +1117,11 @@ export class Lexer {
 							}
 
 							if (mode === 2) {
-								result.push(...parse_statement(''));
+								let rl = result.length, _ = _parent;
+								_parent = _parent.declaration.__init;
+								let sta = parse_statement('');
+								_parent.children.push(...result.splice(rl)), _parent = _;
+								result.push(...sta);
 							} else {
 								if (tk.topofline)
 									parse_top_word();
@@ -1322,7 +1333,7 @@ export class Lexer {
 								tk = get_next_token();
 								if (tk.type === 'TK_WORD') {
 									ex = tk.content;
-									result.push(Variable.create(tk.content, SymbolKind.Variable, rg = make_range(tk.offset, tk.length)));
+									addvariable(tk, 0, _this.children);
 									while (parser_pos < input_length && input.charAt(parser_pos) === '.') {
 										get_next_token();
 										tk = get_next_token();
@@ -1351,6 +1362,9 @@ export class Lexer {
 									ex = m[1].replace(/^{([^}]+)}$/, '$1');
 							if (ex)
 								tn.extends = ex;
+							tn.declaration.__init = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
+							tn.staticdeclaration.__init = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
+							(tn.declaration.__init as any).ranges = [], (tn.staticdeclaration.__init as any).ranges = [];
 							tn.children.push(...parse_block(2, sv, classfullname + cl.content + '.')), tn.range = make_range(beginpos, parser_pos - beginpos);
 							adddeclaration(tn as ClassNode), cl.semantic = { type: SemanticTokenTypes.class, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 							_this.addSymbolFolding(tn, tk.offset);
@@ -1370,15 +1384,10 @@ export class Lexer {
 						if (tk.topofline) {
 							if (mode === 2)
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
-							else if (_low === 'local')
+							else if (_low === 'local' || _parent.children?.length)
 								_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
-							else {
-								if (_parent.assume > 0)
-									_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
-								if (_low === 'static')
-									_parent.assume = FuncScope.STATIC;
-								else _parent.assume = FuncScope.GLOBAL;
-							}
+							else
+								_parent.assume = _low === 'static' ? FuncScope.STATIC : FuncScope.GLOBAL;
 						} else if (tk.type === 'TK_WORD' || tk.type === 'TK_RESERVED') {
 							if (mode === 0) {
 								next = false;
@@ -1393,23 +1402,24 @@ export class Lexer {
 							if ('(['.includes(input.charAt(parser_pos)) || _this.get_token(parser_pos, true).content.match(/^(\{|=>)$/)) {
 								tk.topofline = 2;
 							} else {
-								let sta: any[];
+								let sta: any[], rl = result.length, _ = _parent;
+								if (mode === 2)
+									tk.topofline = 2, _parent = _parent.staticdeclaration.__init;
 								next = false;
 								sta = parse_statement(_low === 'global' ? '' : _low);
 								if (_low === 'global') {
-									sta.map(it => {
-										_parent.global[it.name.toLowerCase()] = it;
-									});
+									sta.forEach(it => _parent.global[it.name.toLowerCase()] ??= it);
 								} else {
 									if (mode === 2) {
+										_parent.children.push(...result.splice(rl)), _parent = _;
 										for (const it of sta)
 											if (it.kind === SymbolKind.Property)
 												it.static = true, it.full = it.full.replace(') ', ') static ');
 									} else {
-										let s = _low === 'static';
-										sta.map(it => {
-											_parent.local[it.name.toLowerCase()] = it;
-											if (s) it.static = true;
+										let isstatic = _low === 'static';
+										sta.forEach(it => {
+											_parent.local[it.name.toLowerCase()] ??= it;
+											it.static = isstatic;
 										});
 									}
 								}
@@ -1528,7 +1538,7 @@ export class Lexer {
 							} else {
 								let s: Token[] = [];
 								parse_pair('(', ')', undefined, {}, s);
-								s.map(i => {
+								s.forEach(i => {
 									if (i.content.indexOf('\n') < 0)
 										addlabel({ content: i.content.slice(1, -1), offset: i.offset + 1, length: i.length - 2, type: '', topofline: 0, next_token_offset: -1 });
 								});
@@ -1961,12 +1971,12 @@ export class Lexer {
 				block_mode = false;
 				loop:
 				while (nexttoken()) {
-					if (tk.topofline && !is_line_continue(lk, tk, _parent)) { next = false; break; }
+					if (tk.topofline === 1 && !is_line_continue(lk, tk, _parent)) { next = false; break; }
 					switch (tk.type) {
 						case 'TK_WORD':
 							bak = lk, nexttoken();
 							if (tk.type as string === 'TK_EQUALS') {
-								let vr: Variable | undefined, o: any = {}, equ = tk.content;
+								let vr: Variable | undefined, o: any = {}, equ = tk.content, pp = parser_pos;
 								if (bak.type === 'TK_DOT') {
 									addprop(lk);
 								} else if (addvariable(lk, mode, sta)) {
@@ -1976,6 +1986,7 @@ export class Lexer {
 								} else if (local)
 									_this.addDiagnostic(diagnostic.conflictserr(local, 'built-in variable', lk.content), lk.offset, lk.length);
 								result.push(...parse_expression(undefined, o));
+								_parent.ranges?.push([pp, lk.offset + lk.length]);
 								if (vr) {
 									vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
 									vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) }, vr.def = true;
@@ -1984,14 +1995,42 @@ export class Lexer {
 										tt[t] = vr.range.end;
 								}
 							} else {
-								if (mode === 2 && input.charAt(lk.offset + lk.length) !== '.') {
-									_this.addDiagnostic(diagnostic.propnotinit(), lk.offset, lk.length);
+								if (mode === 2) {
+									let llk = lk, ttk = tk, err = diagnostic.propnotinit();
+									addvariable(lk, 2, sta) && ((<Variable>sta[sta.length - 1]).def = false);
+									if (tk.type as string === 'TK_DOT') {
+										while (nexttoken() && tk.type === 'TK_WORD') {
+											if (!nexttoken())
+												break;
+											if (tk.type as string === 'TK_EQUALS') {
+												let pp = parser_pos;
+												addprop(lk);
+												result.push(...parse_expression());
+												_parent.ranges?.push([pp, lk.offset + lk.length]);
+												continue loop;
+											}
+											if (tk.type as string === 'TK_DOT')
+												addprop(lk);
+											else if (tk.topofline && (allIdentifierChar.test(tk.content) || tk.content === '}')) {
+												lk = EMPTY_TOKEN, next = false;
+												break loop;
+											} else {
+												if (tk.content !== ',')
+													err = diagnostic.propdeclaraerr();
+												else err = '';
+												break;
+											}
+										}
+									}
+									err && _this.addDiagnostic(err, lk.offset, lk.length);
 									if (tk.topofline && allIdentifierChar.test(tk.content)) {
 										lk = EMPTY_TOKEN, next = false;
 										break loop;
 									}
-									if (!tk.topofline && tk.type as string !== 'TK_COMMA')
+									if (!tk.topofline && tk.type as string !== 'TK_COMMA') {
+										next = false, lk = llk, tk = ttk, parser_pos = tk.offset + tk.length;
 										parse_expression(',');
+									}
 									next = false;
 									break;
 								}
@@ -2015,6 +2054,7 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 							next = false, tk.type = 'TK_WORD'; break;
 						case 'TK_END_BLOCK':
+							next = false;
 						case 'TK_END_EXPR': _this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1);
 						default: break loop;
 					}
@@ -2027,7 +2067,7 @@ export class Lexer {
 				block_mode = false;
 				while (nexttoken()) {
 					if (tk.topofline === 1)
-						if (!inpair && !is_line_continue(lk, tk, _parent)) {
+						if ((!inpair || inpair === ',') && !is_line_continue(lk, tk, _parent)) {
 							if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) === '.')
 								addprop(lk);
 							next = false; break;
@@ -2550,7 +2590,7 @@ export class Lexer {
 					if (objval())
 						break;
 				if (isobj || must)
-					mark.map(o => {
+					mark.forEach(o => {
 						if (k = tokens[o])
 							k.type = 'TK_WORD', k.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.modification };
 					});
@@ -2688,6 +2728,9 @@ export class Lexer {
 				let pairnum = 0, apos = result.length, tp = parser_pos, llk = lk, pairpos = [pairbeg ?? tk.offset];
 				let rpair = 0, tpexp = '', byref = false, ternarys: number[] = [];
 				let info: ParamInfo = { count: 0, comma: [], miss: [], unknown: false };
+				let exps: string[] = [];
+				if (b !== '%')
+					tk.data = exps;
 				if (block_mode = false, types.paraminfo) {
 					info = types.paraminfo;
 					delete types.paraminfo;
@@ -2874,7 +2917,7 @@ export class Lexer {
 						prec === '.' ? (maybeclassprop(tk, null), parse_prop()) : parse_pair('%', '%');
 					} else if (tk.type.startsWith('TK_END_')) {
 						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1);
-						pairMiss(), next = false;
+						pairMiss(), next = false, exps.push(tpexp);
 						types[tpexp.indexOf('#any') < 0 ? '(' + tpexp + ')' : '#any'] = 0;
 						ternaryMiss();
 						return;
@@ -2898,7 +2941,7 @@ export class Lexer {
 					} else if (tk.type === 'TK_COMMA') {
 						if (b !== '(') tpexp += ' ,';
 						else if (pairnum === 0) {
-							tpexp = '', ++info.count;
+							exps.push(tpexp), tpexp = '', ++info.count;
 							if (lk.type === 'TK_COMMA' || lk.content === '(')
 								info.miss.push(info.comma.length);
 							else if (!lk.ignore && lk.type === 'TK_OPERATOR' && !lk.content.match(/(--|\+\+|%)/))
@@ -2934,7 +2977,7 @@ export class Lexer {
 					}
 					byref = false;
 				}
-				types[b + tpexp + e] = 0;
+				exps.push(tpexp), types[b + tpexp + e] = 0;
 				if (tk.type === 'TK_EOF' && pairnum > -1)
 					e === '%' && stop_parse(_this.tokens[pairpos[0]]), pairMiss();
 				else if (b === '(') {
@@ -3050,10 +3093,9 @@ export class Lexer {
 					addprop(token);
 					if (classfullname)
 						tn.full = `(${classfullname.slice(0, -1)}) ${tn.name}`, token.symbol = tn;
-					// tn.def = true;
 				} else if (_low.match(/^\d/))
 					_this.addDiagnostic(diagnostic.invalidsymbolname(token.content), token.offset, token.length);
-				if (p) p.push(tn); else result.push(tn);
+				(p ?? result).push(tn);
 				return true;
 			}
 
@@ -3069,159 +3111,191 @@ export class Lexer {
 			}
 
 			function adddeclaration(node: FuncNode | ClassNode) {
-				let dec = node.declaration, _diags = _this.diagnostics, lpv = false, pars: { [name: string]: Variable } = {}, funcs: { [name: string]: DocumentSymbol } = {};
+				let t: Variable, severity = DiagnosticSeverity.Error;
+				let dec = node.declaration ??= {}, _diags = _this.diagnostics, lpv = false, pars: { [name: string]: Variable } = {};
 				if (!dec)
 					return;
 				if (node.kind === SymbolKind.Class) {
-					let sdec = (<ClassNode>node).staticdeclaration;
-					node.children?.map(it => {
-						if ((<SymbolKind[]>[SymbolKind.Property, SymbolKind.Method, SymbolKind.Class]).includes(it.kind)) {
-							dec = (<any>it).static || it.kind === SymbolKind.Class ? sdec : node.declaration;
-							if (!dec)
-								return;
-							if (!dec[_low = it.name.toLowerCase()]) {
-								if (it.kind !== SymbolKind.Variable || (<Variable>it).def)
-									dec[_low] = it;
-							} else if (it.kind !== SymbolKind.Property || (<Variable>it).def)
-								_diags.push({ message: samenameerr(dec[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+					let cls = node as ClassNode, sdec = cls.staticdeclaration ??= {}, children = cls.children ??= [];
+					adddeclaration(sdec.__init as FuncNode);
+					if ((dec.__init as any)?.ranges?.length)
+						adddeclaration(dec.__init as FuncNode);
+					else delete dec.__init;
+					children.forEach((it: Variable) => {
+						_low = it.name.toLowerCase();
+						if (/^__(new|init|item|enum|get|call|set|delete)$/.test(_low))
+							delete (tokens[document.offsetAt(it.selectionRange.start)] ?? {}).semantic;
+						if (it.children) {
+							let tc = it.static || it.kind === SymbolKind.Class ? sdec : dec;
+							if (!(t = tc[_low]))
+								tc[_low] = it;
+							else if (t.kind === SymbolKind.Property && !t.children?.length) {
+								if (it.children.length || it.kind !== SymbolKind.Property)
+									tc[_low] = it;
+							} else {
+								if (t.kind !== it.kind && ![it.kind, t.kind].includes(SymbolKind.Class)) {
+									let method, prop: any = t.kind === SymbolKind.Property ? (method = it, t) : (method = t, it);
+									if (!prop.call)
+										return (prop.call = method, tc[_low] = prop);
+								}
+								_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange, severity });
+							}
 						}
 					});
-					(<ClassNode>node).cache?.map(it => {
-						dec = (<Variable>it).static ? sdec : node.declaration;
-						if (!dec[_low = it.name.toLowerCase()])
-							dec[_low] = it, node.children?.push(it);
+					children.forEach((it: Variable) => {
+						if (it.children) return;
+						let tc = it.static || it.kind === SymbolKind.Class ? sdec : dec;
+						if (!(t = tc[_low = it.name.toLowerCase()]))
+							return it.def === false || (tc[_low] = it);
+						if (t.children) {
+							let _ = t as any;
+							if (!_.val) return _.val = it;
+						}
+						if (it.def !== false)
+							_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange, severity });
 					});
-					(<ClassNode>node).cache?.splice(0);
+					cls.cache?.splice(0).forEach(it => {
+						(it.static ? sdec : dec)[_low = it.name.toLowerCase()] ??= it;
+						children.push(it);
+					});
 				} else {
+					let fn = node as FuncNode, vars: { [k: string]: any } = {}, unresolved_vars: { [k: string]: any } = {};
 					let has_this_param = node.kind === SymbolKind.Method || node.parent?.kind === SymbolKind.Property && node.kind === SymbolKind.Function;
-					if (has_this_param)
-						(node as FuncNode).has_this_param = true, pars['this'] = pars['super'] = dec['this'] = dec['super'] = null as any;
+					if (has_this_param) {
+						let rg = make_range(0, 0);
+						fn.has_this_param = true;
+						pars.this = dec.this = Variable.create('this', SymbolKind.TypeParameter, rg);
+						pars.super = dec.super = Variable.create('super', SymbolKind.TypeParameter, rg);
+						pars.this.def = pars.super.def = true;
+					}
 					if (node.kind === SymbolKind.Function && node.name.toLowerCase() === 'isset') {
 						let offset = _this.document.offsetAt(node.selectionRange.start);
 						_this.addDiagnostic(diagnostic.reservedworderr('IsSet'), offset, 5);
 						_this.tokens[offset].semantic = { type: SemanticTokenTypes.keyword };
 					}
-					if ((<FuncNode>node).assume === FuncScope.GLOBAL) {
-						(<FuncNode>node).params?.map(it => {
-							node.children?.unshift(it), it.def = true, it.kind = SymbolKind.TypeParameter;
-							if (dec[_low = it.name.toLowerCase()] === undefined)
-								dec[_low] = it;
-							if (it.defaultVal !== undefined || it.arr)
-								lpv = true;
-							else if (lpv)
-								_diags.push({ message: diagnostic.defaultvalmissing(it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							if (pars[_low] !== undefined)
-								_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							else pars[_low] = it;
-						});
-						node.children?.map(it => {
-							if (it.kind === SymbolKind.Function) {
-								if (!(_low = it.name.toLowerCase()))
-									return;
-								if (dec[_low] === undefined) {
-									dec[_low] = it, funcs[_low] = it;
-								} else
-									_diags.push({ message: diagnostic.conflictserr('function', pars[_low] !== undefined ? 'parameter' : 'Func', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							}
-						});
-						for (const n in (<FuncNode>node).local) {
-							if (dec[n] === undefined)
-								dec[n] = (<FuncNode>node).local[n];
-							else if (pars[n] !== undefined)
-								_diags.push({ message: diagnostic.conflictserr('local', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
-						}
-						for (const n in (<FuncNode>node).global) {
-							if (pars[n] !== undefined)
-								_diags.push({ message: diagnostic.conflictserr('global', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
+					fn.children ??= [];
+					for (let it of (fn.params ??= [])) {
+						node.children?.unshift(it), it.def = true, it.kind = SymbolKind.TypeParameter;
+						if (it.defaultVal !== undefined || it.arr)
+							lpv = true;
+						else if (lpv)
+							_diags.push({
+								message: diagnostic.defaultvalmissing(it.name),
+								range: it.selectionRange, severity
+							});
+						if (t = pars[_low = it.name.toLowerCase()])
+							_diags.push({
+								message: diagnostic.conflictserr('parameter', 'parameter', t.name),
+								range: it.selectionRange, severity
+							});
+						else pars[_low] = dec[_low] = it;
+					}
+					for (let [k, v] of Object.entries(fn.local ??= {})) {
+						if (t = pars[k])
+							_diags.push({
+								message: diagnostic.conflictserr(v.static ? 'static' : 'local', 'parameter', t.name),
+								range: v.selectionRange, severity
+							});
+						else dec[k] = v;
+					}
+					Object.entries(fn.global ??= {}).forEach(([k, v]) => {
+						if (t = dec[k]) {
+							if (pars[k])
+								return _diags.push({
+									message: diagnostic.conflictserr('global', 'parameter', t.name),
+									range: v.selectionRange, severity
+								});
 							else {
-								if (dec[n]) {
-									_this.declaration[n] = dec[n];
-									delete dec[n];
-								} else
-									_this.declaration[n] = (<FuncNode>node).global[n];
-								(<any>_this.declaration[n]).infunc = true;
+								let varsp = v.static ? 'static' : 'local';
+								_diags.push({
+									message: diagnostic.conflictserr(...(
+										t.selectionRange.start.line < v.selectionRange.start.line ?
+											(t = v, ['global', varsp]) : [varsp, 'global']
+									), t.name),
+									range: t.selectionRange, severity
+								});
+								if (v !== t) return;
+								delete fn.local[k];
 							}
 						}
-						let gdec = _this.declaration;
-						node.children?.map(it => {
-							if (it.kind === SymbolKind.Variable) {
-								if (dec[_low = it.name.toLowerCase()] === undefined) {
-									if (!gdec[_low]) {
-										gdec[_low] = it;
-										(<any>it).infunc = true;
-									} else if (gdec[_low].kind !== SymbolKind.Variable)
-										_diags.push({ message: samenameerr(gdec[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-								}
+						_this.declaration[k] ??= dec[k] = v, (v as any).infunc = true;
+					});
+					fn.children.forEach(it => {
+						if (!(_low = it.name.toLowerCase()))
+							return;
+						if (it.kind === SymbolKind.Function) {
+							if (dec[_low]) {
+								if (t = pars[_low])
+									return _diags.push({
+										message: diagnostic.conflictserr('function', 'parameter', t.name),
+										range: it.selectionRange, severity
+									});
+								if (t = fn.global[_low]) {
+									_diags.push({
+										message: diagnostic.conflictserr(...(
+											t.selectionRange.start.line < it.selectionRange.start.line ||
+												t.selectionRange.start.line === it.selectionRange.start.line &&
+												t.selectionRange.start.character < it.selectionRange.start.character ?
+												(t = it, ['function', 'global']) : ['global', 'function']
+										), t.name),
+										range: t.selectionRange, severity
+									});
+									if (it === t) return;
+									delete fn.global[_low];
+									delete (t as any).infunc;
+									if (_this.declaration[_low] === t)
+										delete _this.declaration[_low];
+								} else if (t = fn.local[_low])
+									if (t.selectionRange.start.line < it.selectionRange.start.line ||
+										t.selectionRange.start.line === it.selectionRange.start.line &&
+										t.selectionRange.start.character < it.selectionRange.start.character)
+										return _diags.push({
+											message: diagnostic.conflictserr('function',
+												t.kind === SymbolKind.Function ? 'Func' : t.static ? 'static' : 'local', it.name),
+											range: it.selectionRange, severity
+										});
+									else if (t.static)
+										_diags.push({
+											message: diagnostic.conflictserr(t.kind === SymbolKind.Function ? 'function' : 'static',
+												it.kind === SymbolKind.Function ? 'Func' : 'static', t.name),
+											range: t.selectionRange, severity
+										});
 							}
+							dec[_low] = fn.local[_low] = it;
+						} else if (it.kind === SymbolKind.Variable)
+							((it as Variable).def ? vars : unresolved_vars)[_low] ??= it;
+					});
+					if (fn.assume === FuncScope.GLOBAL) {
+						Object.entries(vars = Object.assign({}, unresolved_vars, vars)).forEach(([k, v]) => {
+							if (!(t = dec[k]))
+								_this.declaration[k] ??= fn.global[k] = v, v.infunc = true;
+							else if (t.kind === SymbolKind.Function && v.def)
+								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
 						});
+						unresolved_vars = {};
 					} else {
-						(<FuncNode>node).params?.map(it => {
-							node.children?.unshift(it), it.def = true, it.kind = SymbolKind.TypeParameter;
-							if (dec[_low = it.name.toLowerCase()] === undefined)
-								dec[_low] = it;
-							if (it.defaultVal !== undefined || it.arr)
-								lpv = true;
-							else if (lpv)
-								_diags.push({ message: diagnostic.defaultvalmissing(it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							if (pars[_low] !== undefined)
-								_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-							else pars[_low] = it;
+						let assme_static = fn.assume === FuncScope.STATIC;
+						let is_outer = fn.kind === SymbolKind.Method || !fn.parent;
+						Object.entries(vars).forEach(([k, v]) => {
+							delete unresolved_vars[k];
+							if (!(t = dec[k])) {
+								if (dec[k] = v, is_outer)
+									fn.local[k] = v, v.static = assme_static;
+								else if (assme_static)
+									v.static = null;
+							} else if (t.kind === SymbolKind.Function)
+								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
+							else if (!t.def && t.kind === SymbolKind.Variable && fn.local[k])
+								dec[k] = fn.local[k] = v, v.static = t.static;
 						});
-						node.children?.map(it => {
-							if (it.kind === SymbolKind.Function || (<Variable>it).def) {
-								if (!(_low = it.name.toLowerCase()))
-									return;
-								if (dec[_low] === undefined) {
-									dec[_low] = it;
-								} else if (pars[_low] !== undefined) {
-									if (it.kind === SymbolKind.Function)
-										return _diags.push({ message: diagnostic.conflictserr('function', 'parameter', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-								} else if (!(it.kind === SymbolKind.Variable && dec[_low].kind === SymbolKind.Variable)) {
-									if (dec[_low].kind === SymbolKind.Variable) {
-										_diags.push({ message: samenameerr(it, dec[_low]), range: dec[_low].selectionRange, severity: DiagnosticSeverity.Error });
-										dec[_low] = it;
-									} else
-										_diags.push({ message: samenameerr(dec[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-								}
-								if (it.kind === SymbolKind.Function)
-									funcs[_low] = it;
-							}
-						});
-						for (const n in (<FuncNode>node).local) {
-							if (dec[n] === undefined)
-								dec[n] = (<FuncNode>node).local[n];
-							else if (pars[n] !== undefined)
-								_diags.push({ message: diagnostic.conflictserr('local', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
-						}
-						for (const n in (<FuncNode>node).global) {
-							if (pars[n] !== undefined)
-								_diags.push({ message: diagnostic.conflictserr('global', 'parameter', pars[n].name), range: (<FuncNode>node).local[n].selectionRange, severity: DiagnosticSeverity.Error });
-							else {
-								if (dec[n]) {
-									_this.declaration[n] = dec[n];
-									if (dec[n].kind !== SymbolKind.Variable)
-										(<FuncNode>node).global[n] = dec[n];
-									delete dec[n];
-								} else
-									_this.declaration[n] = (<FuncNode>node).global[n];
-								(<any>_this.declaration[n]).infunc = true;
-							}
-						}
 					}
-					if (pars['this'] === null)
-						delete pars['this'], delete pars['super'], delete dec['this'], delete dec['super'];
-					for (const n in pars)
-						(<FuncNode>node).local[n] = pars[n];
-					for (const n in funcs)
-						(<FuncNode>node).local[n] = funcs[n];
-					if (node.kind === SymbolKind.Method && pars['this'])
-						_diags.push({ message: diagnostic.conflictserr('parameter', 'parameter', 'this'), range: pars['this'].selectionRange, severity: DiagnosticSeverity.Error });
-					if ((<FuncNode>node).assume === FuncScope.STATIC) {
-						let loc = (node as FuncNode).local, it: Variable;
-						for (const n in dec)
-							if (!loc[n] && (it = dec[n] as Variable).def && it.kind === SymbolKind.Variable)
-								it.static = null;
-					}
+					vars = unresolved_vars, unresolved_vars = {};
+					for (let k in vars)
+						if (!dec[k]) (unresolved_vars[k] = vars[k]).def = false;
+					fn.unresolved_vars = unresolved_vars;
+					if (has_this_param)
+						delete pars.this, delete pars.super, delete dec.this, delete dec.super;
+					Object.assign(fn.local, pars);
 				}
 			}
 
@@ -3741,7 +3815,7 @@ export class Lexer {
 										offset += 4 + (js.index as number);
 										if (tks.length) {
 											suffix_is_whitespace = whitespace.includes(s.charAt(s.length - 1));
-											tks.map(tk => {
+											tks.forEach(tk => {
 												tk.offset += offset, tk.length = 0;
 												tk.next_token_offset = -1;
 											});
@@ -4664,7 +4738,7 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
-			token_text.split('\n').map(s => {
+			token_text.split('\n').forEach(s => {
 				print_newline(true);
 				print_token(s.trim());
 			});
@@ -4757,14 +4831,21 @@ export class Lexer {
 			if (position) {
 				scope = this.searchScopedNode(position);
 				if (scope) {
-					if (scope.kind === SymbolKind.Function && (<FuncNode>scope).static)
+					if (scope.kind === SymbolKind.Class) {
+						scope = undefined;
+						// if (scope.selectionRange.start.line === position.line)
+						// 	scope = undefined;
+						// else {
+						// 	let cls = scope as ClassNode, line = this.buildContext(position, true).range.start.line;
+						// 	node = cls.children?.find(it => it.selectionRange.start.line === line && it.name.toLowerCase() === name);
+						// 	if (node?.kind === SymbolKind.Property)
+						// 		node = ((node as Variable).static ? cls.staticdeclaration[name] : cls.declaration[name]) ?? node;
+						// 	if (node)
+						// 		return { node, uri, scope };
+						// 	return null;
+						// }
+					} else if (scope.kind === SymbolKind.Function && (<FuncNode>scope).static)
 						fn_is_static = true;
-					if (scope.kind === SymbolKind.Class && (<ClassNode>scope).extends) {
-						let tks = this.tokens, o = this.document.offsetAt(scope.selectionRange.start);
-						let tk = tks[tks[o].next_token_offset];
-						if ((tk.pos ??= this.document.positionAt(tk.offset)).line === position.line)
-							scope = undefined;
-					}
 					bak = scope;
 				}
 			}
@@ -4773,26 +4854,26 @@ export class Lexer {
 					let dec = (<FuncNode>scope).declaration, loc = (<FuncNode>scope).local, glo = (<FuncNode>scope).global;
 					if (loc && (t = loc[name]) && (!fn_is_static || (<Variable>t).static)) {
 						return { node: t, uri, scope };
-					} else if (glo && glo[name])
-						return { node: this.declaration[name] || glo[name], uri, scope };
+					} else if (glo?.[name])
+						return { node: this.declaration[name] ?? glo[name], uri };
 					else if ((<FuncNode>scope).assume === FuncScope.GLOBAL) {
 						if ((scope as FuncNode).has_this_param && ['this', 'super'].includes(name)) {
 							node = undefined;
 							break;
 						}
-						if (node = this.declaration[name])
-							return { node, uri, scope };
+						if (node = this.declaration[name] ?? node)
+							return { node, uri };
 						return undefined;
 					} else if (dec && scope.kind !== SymbolKind.Class && (t = dec[name])) {
 						if (fn_is_static) {
 							if ((<Variable>t).static)
 								return { node: t, uri, scope };
 							if (bak === scope || (<Variable>t).static === null)
-								node = t;
+								node = t, bak = scope;
 						} else {
 							if (scope.kind === SymbolKind.Method || !(<FuncNode>scope).parent)
 								return { node: t, uri, scope };
-							node = t;
+							node = t, bak = scope;
 						}
 					} else if (fn_is_static && bak === scope) {
 						node = scope.children?.find(it => it.name.toLowerCase() === name);
@@ -4805,12 +4886,22 @@ export class Lexer {
 					scope = (<any>scope).parent;
 				}
 				if (node) {
-					if (fn_is_static && (t = (<Variable>node).def ? node : this.declaration[name]))
+					if (fn_is_static && (t = (<Variable>node).def ? (scope ??= bak, node) : this.declaration[name]))
 						return { node: t, uri, scope };
 					else
-						return { node, uri, fn_is_static, scope };
+						return { node, uri, fn_is_static, scope: bak };
 				} else if (['this', 'super'].includes(name)) {
 					scope = bak;
+					if (scope?.kind === SymbolKind.Class && position) {
+						let off = this.document.offsetAt(position);
+						for (let it of scope.children ?? []) {
+							if (it.kind === SymbolKind.Property && (it as any).static &&
+								this.document.offsetAt(it.range.start) <= off && off < this.document.offsetAt(it.range.end)) {
+								ref = false;
+								break;
+							}
+						}
+					}
 					while (scope && scope.kind !== SymbolKind.Class) {
 						if ((<FuncNode>scope).static && (scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Property))
 							ref = false;
@@ -4860,7 +4951,7 @@ export class Lexer {
 			while (isIdentifierChar(linetext.charCodeAt(character)))
 				character++;
 		let text = linetext.substring(++start, character), range = Range.create(line, start, line, character);
-		let off = document.offsetAt(range.start), token = tokens[off];
+		let off = document.offsetAt(range.start), token = tokens[off], symbol: DocumentSymbol | undefined;
 		if (full) {
 			let pt = token ? token.previous_token : tokens[off - 1];
 			if (pt?.content === '.' && pt.type !== 'TK_OPERATOR') {
@@ -4876,7 +4967,7 @@ export class Lexer {
 							break;
 						case 'TK_START_BLOCK': tk = lk, lk = (--ps['}'] < 0 || !--psn) ? undefined : lk.previous_token; break;
 						case 'TK_START_EXPR':
-							if (tk = lk, --ps[lk.content === '[' ? ']' : ')'] < 0 || !--psn)
+							if (tk = lk, --ps[lk.content === '[' ? ']' : ')'] < 0 || !--psn && tk.type === 'TK_START_BLOCK')
 								lk = undefined;
 							else if (lk = lk.previous_token)
 								if (lk.type !== 'TK_WORD' || lk.offset + lk.length !== tk.offset)
@@ -4900,31 +4991,33 @@ export class Lexer {
 					}
 				}
 				if (ps[')'] > 0 || ps[']'] > 0 || ps['}'] > 0) tk = EMPTY_TOKEN;
+				else if (tk.symbol?.kind === SymbolKind.Property) {
+					let fc = tk.symbol as FuncNode;
+					pre = fc.full.replace(/^\((\S+)\).*$/i, (...m) =>
+						`${fc.static ? m[1] : m[1].replace(/([^.]+)$/, '@$1')}.`);
+				}
 				if (tk.type === 'TK_WORD' || tk.type.startsWith('TK_START_') || (tk.content === '%' && tk.next_pair_pos)) {
 					let ttk = tk, t;
-					s = '';
 					while (tk.offset < end) {
 						switch (tk.type) {
 							case 'TK_DOT': s += '.', tk = tokens[tk.next_token_offset]; break;
-							case 'TK_STRING': s += '""', tk = tokens[tk.next_token_offset]; break;
+							case 'TK_STRING': s += '#string', tk = tokens[tk.next_token_offset]; break;
+							case 'TK_NUMBER': s += '#number', tk = tokens[tk.next_token_offset]; break;
 							case 'TK_START_BLOCK':
-								if (t = (tk.data as ClassNode)?.name)
-									s += ' ' + t, tk = tokens[tk.next_pair_pos as number], tk = tokens[tk.next_token_offset];
-								else s += ' {', tk = tokens[tk.next_pair_pos as number];
+								t = (tk.data as ClassNode)?.name ?? '#object';
+								s += ' ' + t, tk = tokens[tk.next_pair_pos as number], tk = tokens[tk.next_token_offset];
 								break;
 							case 'TK_START_EXPR':
-								if (!tk.prefix_is_whitespace) {
-									s += tk.content === '[' ? '[]' : '()';
-									tk = tokens[tk.next_pair_pos as number];
-									tk = tokens[tk.next_token_offset as number];
-									break;
-								}
+								s += tk.content === '[' ? '[]' : '()';
+								tk = tokens[tk.next_pair_pos as number];
+								tk = tokens[tk.next_token_offset as number];
+								break;
 							default: s += (tk.prefix_is_whitespace ? ' ' : '') + tk.content, tk = tokens[tk.next_token_offset]; break;
 						}
 					}
-					range.start = document.positionAt(ttk.offset);
-				} else s = '#any';
-				text = s + '.' + text;
+					range.start = document.positionAt(ttk.offset), text = pre + s.trim() + '.' + text;
+				} else text = '#any.' + text;
+				kind = SymbolKind.Property;
 			}
 		}
 		if (!token && linetext.charAt(start - 1) === '#')
@@ -4934,8 +5027,8 @@ export class Lexer {
 		suf = this.document.getText(Range.create(range.end.line, range.end.character, range.end.line + 1, 0)).trimRight();
 		if (token) {
 			if (token.type === 'TK_WORD') {
-				let sk = token.semantic, symbol = token.symbol, fc: FuncNode;
-				if (symbol) {
+				let sk = token.semantic, fc: FuncNode;
+				if (symbol = token.symbol) {
 					kind = symbol.kind;
 					if (kind === SymbolKind.Class)
 						text = (symbol as ClassNode).full;
@@ -4956,7 +5049,7 @@ export class Lexer {
 			} else if (token.type === 'TK_LABEL')
 				kind = SymbolKind.Field;
 		}
-		return { text, range, kind, pre, suf, linetext, token };
+		return { text, range, kind, pre, suf, linetext, token, symbol };
 	}
 
 	public getNodeAtPosition(position: Position): DocumentSymbol | undefined {
@@ -4969,79 +5062,56 @@ export class Lexer {
 	}
 
 	public searchScopedNode(position: Position, root?: DocumentSymbol[]): DocumentSymbol | undefined {
-		let { line, character } = position, its: DocumentSymbol[] | undefined = undefined, it: DocumentSymbol | undefined;
-		if (!root)
-			root = this.children;
-		for (const item of root) {
+		let { line, character } = position, its: DocumentSymbol[] | undefined;
+		for (let item of (root ?? this.children)) {
 			if (!(its = item.children) || line > item.range.end.line || line < item.selectionRange.start.line ||
 				(line === item.selectionRange.start.line && character < item.selectionRange.start.character) ||
 				(line === item.range.end.line && character > item.range.end.character))
 				continue;
-			if (position.line > item.selectionRange.start.line || position.character > item.selectionRange.end.character)
-				return this.searchScopedNode(position, its) ?? item;
+			if (position.line > item.selectionRange.start.line || position.character > item.selectionRange.end.character) {
+				item = this.searchScopedNode(position, its) ?? item;
+				if (item.kind === SymbolKind.Class) {
+					let offset = this.document.offsetAt(position);
+					for (let dec of [(item as any).staticdeclaration, (item as any).declaration])
+						for (let rg of dec.__init?.ranges ?? [])
+							if (offset <= rg[0]) break;
+							else if (offset <= rg[1])
+								return dec.__init;
+				}
+				return item;
+			}
 			return undefined;
 		}
 		return undefined;
 	}
 
-	public getScopeChildren(scopenode?: DocumentSymbol) {
-		let p: FuncNode | undefined, nodes: DocumentSymbol[] = [], it: DocumentSymbol, vars: { [key: string]: any } = {}, _l = '';
-		if (scopenode) {
-			let ff = scopenode as FuncNode, fn_is_static = ff.kind === SymbolKind.Function && ff.static;
-			for (const n in ff.local)
-				vars[n] = ff.local[n];
-			for (const n in ff.global)
-				vars[n] = null;
-			for (const n in ff.declaration)
-				if (vars[n] === undefined)
-					vars[n] = ff.declaration[n];
-			p = ff.parent as FuncNode;
-			if (p && p.kind === SymbolKind.Class && ff.kind === SymbolKind.Function) {
-				scopenode = p;
-			} else {
-				while (p && p.children && (p.kind === SymbolKind.Function || p.kind === SymbolKind.Method || p.kind === SymbolKind.Property)) {
-					if (fn_is_static) {
-						let t: Variable;
-						for (const n in p.declaration)
-							if ((t = p.declaration[n] as Variable) && (t.static || t.static === null) && (!vars[n] || vars[n].static === null))
-								vars[n] = t;
-					} else {
-						for (const n in p.local)
-							if (vars[n] === undefined)
-								vars[n] = p.local[n];
-						for (const n in p.global)
-							if (vars[n] === undefined)
-								vars[n] = null;
-						for (const n in p.declaration)
-							if (vars[n] === undefined)
-								vars[n] = p.declaration[n];
-					}
-					scopenode = p, p = p.parent as FuncNode;
-				}
-				if (vars[_l = scopenode.name.toLowerCase()] === undefined && (scopenode.kind !== SymbolKind.Method && scopenode.kind !== SymbolKind.Property))
-					vars[_l] = scopenode;
-			}
-			if (scopenode.kind === SymbolKind.Method || (scopenode.kind === SymbolKind.Property && scopenode.children)) {
-				if ((<FuncNode>scopenode).parent)
-					scopenode = (<FuncNode>scopenode).parent;
-				else
-					nodes.push(DocumentSymbol.create('this', completionitem._this(), SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
-			}
-			if (scopenode?.kind === SymbolKind.Class) {
-				nodes.push(DocumentSymbol.create('this', completionitem._this(), SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
-				if ((<ClassNode>scopenode).extends)
-					nodes.push(DocumentSymbol.create('super', completionitem._super(), SymbolKind.Variable, Range.create(0, 0, 0, 0), Range.create(0, 0, 0, 0)));
-			}
-			return nodes.concat(Object.values(vars).filter(it => !!it));
-		} else {
-			for (const it of this.children) {
-				if (it.kind === SymbolKind.Event) continue;
-				if (it.kind === SymbolKind.Variable || it.kind === SymbolKind.Class)
-					if (vars[_l = it.name.toLowerCase()]) continue; else vars[_l] = true;
-				nodes.push(it);
-			}
-			return nodes;
+	public getScopeChildren(scopenode?: DocumentSymbol): { [name: string]: Variable } {
+		if (!scopenode || scopenode.kind === SymbolKind.Class || scopenode.kind === SymbolKind.Property)
+			return {};
+		let fn = scopenode as FuncNode, roots: FuncNode[] = [fn], rg = Range.create(0, 0, 0, 0);
+		let vars: { [name: string]: Variable } = {};
+		while (fn = fn.parent as FuncNode)
+			if (fn.kind === SymbolKind.Class)
+				break;
+			else roots.push(fn);
+		if (fn?.kind === SymbolKind.Class) {
+			vars.this = DocumentSymbol.create('this', completionitem._this(), SymbolKind.TypeParameter, rg, rg);
+			if ((fn as any).extends)
+				vars.super = DocumentSymbol.create('super', completionitem._super(), SymbolKind.TypeParameter, rg, rg);
 		}
+		while (fn = roots.pop() as FuncNode) {
+			if (fn.kind === SymbolKind.Property)
+				continue;
+			if (fn.assume === FuncScope.GLOBAL)
+				vars = {};
+			else if (fn.assume === FuncScope.STATIC)
+				Object.entries(vars).forEach(([k, v]) => !v.static && v.static !== null && delete vars[k]);
+			Object.assign(vars, fn.local ?? {});
+			Object.entries(fn.declaration ?? {}).forEach(([k, v]) => vars[k] ??= v);
+			Object.entries(fn.unresolved_vars ?? {}).forEach(([k, v]) => vars[k] ??= v);
+			Object.keys(fn.global ?? {}).forEach(k => delete vars[k]);
+		}
+		return vars;
 	}
 
 	public update_relevance() {
@@ -5170,7 +5240,7 @@ export class Lexer {
 		connection.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
 		delete lexers[uri];
 		let dels: string[] = [];
-		lexs.map(lex => {
+		lexs.forEach(lex => {
 			if (!lex.actived && !(lex.d > 2 && !lex.uri.includes('?'))) {
 				let del = true;
 				for (let u in lex.relevance)
@@ -5180,7 +5250,7 @@ export class Lexer {
 				del && dels.push(lex.uri);
 			}
 		});
-		dels.map(u => lexers[u]?.close(force));
+		dels.forEach(u => lexers[u]?.close(force));
 	}
 }
 
@@ -5327,14 +5397,12 @@ export function cleardetectcache() {
 	hasdetectcache = {};
 }
 
-export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [type: string]: DocumentSymbol | boolean }) {
+export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [type: string]: DocumentSymbol | boolean }, fullexp?: string) {
 	if (exp.match(/^\s*[@#$](\w|[^\x00-\x7f])+$/))
 		return types[exp.trim()] = false;
-	let nd = new Lexer(TextDocument.create('', 'ahk2', -10, '_:=' + exp));
-	last_full_exp = '', searchcache = {}, nd.parseScript();
-	let it = nd.children.shift() as Variable, s = Object.keys(it?.returntypes || {}).pop() as string;
-	if (!s) return;
-	detectExp(doc, s, pos, nd.document.getText(Range.create(it.selectionRange.end, it.range.end))).map(tp => types[tp] = searchcache[tp] ?? false);
+	last_full_exp = '', searchcache = {};
+	detectExp(doc, exp, pos, fullexp)
+		.forEach(tp => types[tp] = searchcache[tp] ?? false);
 }
 
 export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?: DocumentSymbol }, pos?: Position) {
@@ -5353,7 +5421,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 			if ((scope = (scope as any).parent)?.kind === SymbolKind.Property && (scope as any).parent?.kind === SymbolKind.Class)
 				s = scope;
 			let ts = cvt_types(s.detail?.match(new RegExp(`^@(param|arg)\\s+{(.*?)}\\s+${name}\\b`, 'mi'))?.[2] ?? '');
-			if (ts && (ts.map(t => types[t] = true), !types['@object']))
+			if (ts && (ts.forEach(t => types[t] = true), !types['@object']))
 				return ts;
 		} else
 			syms.push(n.node);
@@ -5368,7 +5436,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 	for (let sym of syms) {
 		let ts = get_comment_types(sym);
 		if (ts)
-			if (ts.map(t => types[t] = true), !types['@object'])
+			if (ts.forEach(t => types[t] = true), !types['@object'])
 				return ts;
 			else break;
 	}
@@ -5410,7 +5478,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 		} else {
 			let fullexp = doc.document.getText(Range.create(ite.selectionRange.end, ite.range.end));
 			for (let s in (<Variable>ite).returntypes)
-				detectExp(doc, s.toLowerCase(), ite.range.end, fullexp).map(tp => types[tp] = true);
+				detectExp(doc, s.toLowerCase(), ite.range.end, fullexp).forEach(tp => types[tp] = true);
 		}
 	}
 	if (types['#any'])
@@ -5453,7 +5521,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			let ts: any = {}, mt: RegExpMatchArray | null;
 			for (let i = 1; i < 5; i += 3) {
 				if (mt = m[i].match(/^\[([^\[\]]+)\]$/)) {
-					mt[1].split(',').map(tp => ts[tp] = true);
+					mt[1].split(',').forEach(tp => ts[tp] = true);
 				} else
 					ts[m[i]] = true;
 			}
@@ -5467,7 +5535,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			let ts: any = {}, mt: RegExpMatchArray | null;
 			for (let i = 3; i < 6; i += 2) {
 				if (mt = m[i].match(/^\[([^\[\]]+)\]$/)) {
-					mt[1].split(',').map(tp => ts[tp] = true);
+					mt[1].split(',').forEach(tp => ts[tp] = true);
 				} else
 					ts[m[i]] = true;
 			}
@@ -5480,53 +5548,17 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 		if (deep === 0) {
 			while (exp !== (t = exp.replace(/((\w|[$@#.]|[^\x00-\x7f])+)\(\)/, (...m) => {
 				let ns = searchNode(doc, m[1], exp.trim() === m[0] ? { line: pos.line, character: pos.character - exp.length } : pos, SymbolKind.Variable), s = '', ts: any = {}, c: RegExpMatchArray | null | undefined;
-				if (ns) {
-					ns.map(it => {
-						let n = it.node as FuncNode, uri = it.uri;
-						swlb:
-						switch (n.kind) {
-							case SymbolKind.Method:
-								c = n.full.toLowerCase().match(/\(([^()]+)\)\s*([^()]+)/);
-								if (c && c[1] === 'gui') {
-									if (c[2] === 'add') {
-										let ctls: { [key: string]: string } = { dropdownlist: 'ddl', tab2: 'tab', tab3: 'tab', picture: 'pic' };
-										if (c = fullexp?.toLowerCase().match(/\.add\(\s*(('|")(\w+)\2)?/)) {
-											if (c[3])
-												ts['gui.@' + (ctls[c[3]] || c[3])] = true;
-											else
-												ts['gui.@tab'] = ts['gui.@listview'] = ts['gui.@treeview'] = ts['gui.@statusbar'] = true;
-										}
-									} else {
-										for (const t in n.returntypes)
-											ts[t] = true;
-									}
-									break;
-								}
-							case SymbolKind.Function:
-								if (n === ahkvars['objbindmethod'] && (c = fullexp?.toLowerCase().match(/objbindmethod\(\s*(([\w.]|[^\x00-\x7f])+)\s*,\s*('|")([^'"]+)\3\s*[,)]/))) {
-									ts[c[1] + '.' + c[4]] = true;
-								} else if ((uri = (<any>n).uri || uri) && lexers[uri]) {
-									let m = cvt_types(n.detail?.match(/^@returns?\s+{(.+?)}/mi)?.[1] ?? ''), o: any = {};
-									if (m)
-										m.map(s => o[s] = true), n.returntypes = o;
-									for (const e in n.returntypes)
-										detectExp(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
-								}
-								break;
-							case SymbolKind.Variable:
-								if (lexers[uri])
-									detectVariableType(lexers[uri], it, uri === doc.uri ? pos : it.node.selectionRange.end).map(tp => {
-										tp.includes('=>') && (searchcache[tp] ??= gen(tp, uri, it.node, it.scope));
-										if (n = searchcache[tp]?.node) {
-											if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
-												for (const e in n.returntypes)
-													detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
-										}
-									});
-								break;
-							case SymbolKind.Property: {
+				if (!ns)
+					return '#void';
+				ns.forEach(it => {
+					let n = it.node as FuncNode, uri = it.uri;
+					switch (n.kind) {
+						case SymbolKind.Property:
+							if ((n as any).call?.kind === SymbolKind.Method)
+								n = (n as any).call;
+							else {
 								let tps: any = {};
-								if (get_comment_types(n, true)?.map(tp => tps[tp] = true)) {
+								if (get_comment_types(n, true)?.forEach(tp => tps[tp] = true)) {
 								} else if (lexers[uri]) {
 									for (s in n.returntypes)
 										detectExpType(lexers[uri], s, n.range.end, tps);
@@ -5538,45 +5570,85 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 									if (n = searchcache[tp]?.node) {
 										if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
 											for (const e in n.returntypes)
-												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => ts[tp] = true);
+												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
+													.forEach(tp => ts[tp] = true);
 									}
 								}
 								break;
 							}
-							case SymbolKind.Class:
-								if ((uri = (<any>n).uri || uri) && lexers[uri])
-									for (const i of Object.values(getClassMembers(lexers[uri], n, true)))
-										if ((<any>i).def !== false && i.name.toLowerCase() === 'call') {
-											let n = i as FuncNode;
-											let m = cvt_types(n.detail?.match(/^@returns?\s+{(.+?)}/mi)?.[1] ?? ''), o: any = {};
-											if (m)
-												m.map(s => o[s] = true), n.returntypes = o;
-											for (const e in n.returntypes)
-												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos).map(tp => { ts[tp] = true });
-											if (ts['@comobject'])
-												last_full_exp = fullexp?.replace(/^\s*:=\s*/, '') ?? '';
-											if (n.returntypes)
-												break swlb;
-											break;
-										}
-								if (s = Object.keys(n.returntypes || {}).pop() || '')
-									ts[s] = true;
+						case SymbolKind.Method:
+							c = n.full.toLowerCase().match(/\(([^()]+)\)\s*([^()]+)/);
+							if (c && c[1] === 'gui') {
+								if (c[2] === 'add') {
+									let ctls: { [key: string]: string } = { dropdownlist: 'ddl', tab2: 'tab', tab3: 'tab', picture: 'pic' };
+									if (c = fullexp?.toLowerCase().match(/\.add\(\s*(('|")(\w+)\2)?/)) {
+										if (c[3])
+											ts['gui.@' + (ctls[c[3]] || c[3])] = true;
+										else
+											ts['gui.@tab'] = ts['gui.@listview'] = ts['gui.@treeview'] = ts['gui.@statusbar'] = true;
+									} else ts['gui.@control'] = true;
+								} else {
+									for (const t in n.returntypes)
+										ts[t] = true;
+								}
 								break;
-						}
-					});
-					if (ts['gui.@control'])
-						return '[gui.@tab,gui.@listview,gui.@treeview,gui.@statusbar]';
-					ts = Object.keys(ts);
-					return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#void');
-				}
-				return '#void';
+							}
+						case SymbolKind.Function:
+							if (n === ahkvars['objbindmethod'] && (c = fullexp?.toLowerCase().match(/objbindmethod\(\s*(([\w.]|[^\x00-\x7f])+)\s*,\s*('|")([^'"]+)\3\s*[,)]/))) {
+								ts[c[1] + '.' + c[4]] = true;
+							} else if ((uri = (<any>n).uri || uri) && lexers[uri]) {
+								let m = cvt_types(n.detail?.match(/^@returns?\s+{(.+?)}/mi)?.[1] ?? ''), o: any = {};
+								if (m)
+									m.forEach(s => o[s] = true), n.returntypes = o;
+								for (const e in n.returntypes)
+									detectExp(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
+										.forEach(tp => { ts[tp] = true });
+							}
+							break;
+						case SymbolKind.Variable:
+							if (lexers[uri])
+								detectVariableType(lexers[uri], it, uri === doc.uri ? pos : it.node.selectionRange.end).forEach(tp => {
+									tp.includes('=>') && (searchcache[tp] ??= gen(tp, uri, it.node, it.scope));
+									if (n = searchcache[tp]?.node) {
+										if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
+											for (const e in n.returntypes)
+												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
+													.forEach(tp => { ts[tp] = true });
+									}
+								});
+							break;
+						case SymbolKind.Class:
+							if ((uri = (<any>n).uri || uri) && lexers[uri]) {
+								let call = getClassMembers(lexers[uri], n, true).call as FuncNode;
+								if (call && (call as any).def !== false) {
+									let m = cvt_types(call.detail?.match(/^@returns?\s+{(.+?)}/mi)?.[1] ?? ''), o: any = {};
+									if (m)
+										m.forEach(s => o[s] = true), call.returntypes = o;
+									for (const e in call.returntypes)
+										detect(lexers[uri], e.toLowerCase(), Position.is(call.returntypes[e]) ? call.returntypes[e] : pos)
+											.forEach(tp => { ts[tp] = true });
+									if (ts['@comobject'])
+										last_full_exp = fullexp?.replace(/^\s*:=\s*/, '') ?? '';
+									if (call.returntypes)
+										return;
+								}
+							}
+							if (s = Object.keys(n.returntypes || {}).pop() || '')
+								ts[s] = true;
+							break;
+					}
+				});
+				if (ts['gui.@control'])
+					return '[gui.@tab,gui.@listview,gui.@treeview,gui.@statusbar]';
+				ts = Object.keys(ts);
+				return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#void');
 			})))
 				exp = t;
 		}
 		let tpexp = exp.trim(), exps: string[] = [], ts: any = {};
 		if (t = tpexp.match(/^\[([^\[\]]+)\]$/)) {
 			let ts: any = {};
-			t[1].split(',').map(tp => ts[tp] = true), tps.map(tp => ts[tp] = true);
+			t[1].split(',').forEach(tp => ts[tp] = true), tps.forEach(tp => ts[tp] = true);
 			exps = Object.keys(ts);
 		} else
 			exps = [tpexp];
@@ -5585,38 +5657,43 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 		exp = exp.trim();
 		for (let ex of exps) {
 			if (t = ex.match(/^([@#]?)(\$|\w|[^\x00-\x7f])+(\.[@#]?(\$|\w|[^\x00-\x7f])+)*$/)) {
-				let ll = '', ttt: any;
+				let ll = '', ttt: any, sym: any;
 				if ((t[1] && !t[3]) || searchcache[ex])
 					ts[ex] = true;
 				else for (const n of searchNode(doc, ex, ex === exp ? { line: pos.line, character: pos.character - ex.length } : pos, SymbolKind.Variable) || []) {
-					switch (n.node.kind) {
+					switch ((sym = n.node).kind) {
 						case SymbolKind.TypeParameter:
 						case SymbolKind.Variable:
 							detectVariableType(lexers[n.uri], n, n.uri === doc.uri ? pos : n.node.selectionRange.end)
-								.map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
+								.forEach(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
 							break;
 						case SymbolKind.Property:
 							if (ttt = get_comment_types(n.node, true)) {
-								(ttt as string[]).map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
-							} else if ((<Variable>n.node).returntypes) {
-								for (let s in (n.node as Variable).returntypes) {
+								(ttt as string[]).forEach(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
+							} else if (ttt = (<Variable>n.node).returntypes) {
+								for (let s in ttt) {
 									if (s = s.trim())
 										if (s.startsWith('#'))
 											ts[s] = true;
 										else detect(lexers[n.uri] ?? doc, s, n.node.range.end)
-											.map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
+											.forEach(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
 								}
 							} else if (n.node.children) {
-								for (const it of n.node.children) {
-									let rets = (<FuncNode>it).returntypes;
-									if (it.name.toLowerCase() === 'get' && it.kind === SymbolKind.Function) {
-										for (const ret in rets)
-											detect(lexers[n.uri] ?? doc, ret.toLowerCase(), Position.is(rets[ret]) ? rets[ret] : pos)
-												.map(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
-										break;
+								if ((ttt = sym.call) && doc.tokens[doc.document.offsetAt(pos)]?.content === '(')
+									sym = ttt, ttt = true;
+								else {
+									ttt = sym.get;
+									for (let [exp, p] of Object.entries(ttt?.returntypes ?? { '#void': 0 })) {
+										detect(lexers[n.uri] ?? doc, exp.toLowerCase(), Position.is(p) ? p : pos)
+											.forEach(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
 									}
 								}
 							}
+							if (ttt !== true) break;
+						case SymbolKind.Method:
+							ttt = sym.full.match(/^\(([^()]+)\)/)?.[1];
+							ll = ((ttt ? (sym.static ? ttt : ttt.replace(/([^.]+)$/, '@$1')) + '.' : '') + sym.name).toLowerCase();
+							ts[ll] = true, searchcache[ll] = n;
 							break;
 						case SymbolKind.Object:
 							if (ex.endsWith('.prototype'))
@@ -5626,11 +5703,6 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 							break;
 						case SymbolKind.Function:
 							ts[ll = ex.startsWith('$') ? ex : n.node.name.toLowerCase()] = true, searchcache[ll] = n;
-							break;
-						case SymbolKind.Method:
-							ttt = (<FuncNode>n.node).full.match(/^\(([^()]+)\)/);
-							ll = ((ttt ? ttt[1] + '.' : '') + n.node.name).toLowerCase();
-							ts[ll] = true, searchcache[ll] = n;
 							break;
 						case SymbolKind.Class:
 							ts[ex = (n.ref ? '@' : '') + ex] = true, searchcache[ex] = n;
@@ -5681,7 +5753,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 		if (n.kind === SymbolKind.Variable) {
 			let tps = detectVariableType(lexers[uri], nodes[0], doc.uri === u ? pos : n.selectionRange.end), rs: any = [];
 			for (const tp of tps) {
-				searchNode(lexers[uri], name.replace(new RegExp('^' + p[0]), tp), tp.match(/^[@#]/) ? undefined : pos, kind)?.map(it => {
+				searchNode(lexers[uri], name.replace(new RegExp('^' + p[0]), tp), tp.match(/^[@#]/) ? undefined : pos, kind)?.forEach(it => {
 					if (!rs.map((i: any) => i.node).includes(it.node))
 						rs.push(it);
 				});
@@ -5707,15 +5779,14 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 					else {
 						let tps: any = {}, rs: any = [];
 						if (t = get_comment_types(n, true))
-							(t as string[]).map(tp => tps[tp.includes('=>') ? '@func' : tp] = true);
+							(t as string[]).forEach(tp => tps[tp.includes('=>') ? '@func' : tp] = true);
 						else if (t = (<Variable>n).returntypes) {
 							let r = Object.keys(t).pop();
-							if (r)
-								detectExpType(lexers[(<any>n).uri || uri], r, Position.is(t[r]) ? t[r] : n.selectionRange.end, tps);
+							r && detectExpType(lexers[(<any>n).uri || uri], r, Position.is(t[r]) ? t[r] : n.selectionRange.end, tps);
 						}
 						let nm = p.slice(i).join('.');
 						for (const tp in tps) {
-							searchNode(lexers[uri], tp + '.' + nm, undefined, kind)?.map(it => {
+							searchNode(lexers[uri], tp + '.' + nm, undefined, kind)?.forEach(it => {
 								if (!rs.map((i: any) => i.node).includes(it.node))
 									rs.push(it);
 							});
@@ -5759,9 +5830,11 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 				if (!node) break; else n = node;
 			}
 		}
-		if (node)
+		if (node) {
+			if (kind === SymbolKind.Method && node.kind === SymbolKind.Property)
+				node = ((node as any).call ?? node) as DocumentSymbol;
 			return [{ node, uri }];
-		else return undefined;
+		} else return undefined;
 	} else if (!(res = doc.searchNode(name = name.replace(/^@/, ''), pos, kind))) {
 		if (res === null)
 			return undefined;
@@ -5943,7 +6016,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 	let detail = node.detail, ols = overloads ?? [], s, code = 0;
 	if (!detail)
 		return '';
-	detail.split(/\r?\n/).map(line => {
+	detail.split(/\r?\n/).forEach(line => {
 		if (line.startsWith('@')) {
 			lastparam = '';
 			if (code)
@@ -5986,7 +6059,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 						m[2].replace(/^\s*{(.+?)}/, (...m) => {
 							let o: any = {}, tps = cvt_types(m[1]);
 							if (tps)
-								tps.map(t => o[t] = true), (node as FuncNode).returntypes = o;
+								tps.forEach(t => o[t] = true), (node as FuncNode).returntypes = o;
 							return '';
 						});
 					default:
@@ -6004,14 +6077,14 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 	});
 	if (code === 2)
 		details.push('```');
-	(node as FuncNode).params?.map(it => {
+	(node as FuncNode).params?.forEach(it => {
 		let p = params[it.name.toLowerCase()];
 		if (p) {
 			if (p.length)
 				p[0] = '*@param* ' + p[0], it.detail = p.join('\n').replace(/ — ?/, '\n___\n').replace(/(?<!\\)\\@/g, '\n@');
 			let o: any = {}, types = cvt_types((p as any).types ?? '');
 			if (types)
-				it.returntypes = o, types.map(t => o[t] = true);
+				it.returntypes = o, types.forEach(t => o[t] = true);
 		}
 	});
 	if (name !== undefined)
@@ -6054,7 +6127,7 @@ export function samenameerr(a: DocumentSymbol, b: DocumentSymbol): string {
 export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: DocumentSymbol[], diags: any) {
 	let _low = '';
 	for (const it of arr) {
-		if (!it.name)
+		if (!it.name || !it.selectionRange.end.character)
 			continue;
 		switch (it.kind) {
 			case SymbolKind.Class:
@@ -6144,7 +6217,7 @@ function cvt_types(tps: string) {
 		while ((t = tps.replace(/\(([^)]*)\)(?!\s*=>)/g, '$1')) !== tps)
 			tps = t;
 		tps.toLowerCase().split(/(?<!=>\s*[^)]*)\|/)
-			.map(tp => o[tp === 'void' ? '#void' : tp.includes('=>') ? tp :
+			.forEach(tp => o[tp === 'void' ? '#void' : tp.includes('=>') ? tp :
 				tp.replace(/(?<=(^|\.))([^.$@#]+(<[^>]+>)?)$/, '@$2').replace('$', '')] = true);
 		delete o[''];
 		let a = Object.keys(o);

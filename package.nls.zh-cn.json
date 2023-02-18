@@ -41,7 +41,7 @@
 	"diagnostic.classinfuncerr": "函数不能包含类",
 	"diagnostic.classuseerr": "类不能用作输出变量",
 	"diagnostic.conflictserr": "{0} '{2}'声明和已存在的{1}冲突",
-	"diagnostic.declarationerr": "错误声明",
+	"diagnostic.declarationerr": "意外的声明",
 	"diagnostic.defaultvalmissing": "'{0}' 需要参数默认值",
 	"diagnostic.deprecated": "使用'{0}'而不是'{1}'",
 	"diagnostic.didyoumean": "你是想用'{0}'吗?",

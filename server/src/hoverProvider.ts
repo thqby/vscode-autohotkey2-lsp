@@ -21,7 +21,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			nodes = <any>[], cleardetectcache(), detectExpType(doc, word.replace(/\.[^.]+$/, m => {
 				word = m.match(/^\.[^.]+$/) ? m : '';
 				return '';
-			}), params.position, ts);
+			}), context.range.end, ts);
 			if (word && ts['#any'] === undefined)
 				for (const tp in ts)
 					searchNode(doc, tp + word, context.range.end, kind)?.forEach(it => {

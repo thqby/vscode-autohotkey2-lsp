@@ -2,13 +2,14 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, last_full_exp, searchNode, Token, Variable } from './Lexer';
+import { ClassNode, cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, last_full_exp, Lexer, searchNode, Token } from './Lexer';
 import { completionitem } from './localize';
 import { ahkvars, completionItemCache, dllcalltpe, extsettings, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, sendAhkRequest, utils, winapis } from './common';
+import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	if (token.isCancellationRequested || params.context?.triggerCharacter === null) return;
-	const { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, txs: any = {};
+	let { position, textDocument } = params, items: CompletionItem[] = [], vars: { [key: string]: any } = {}, txs: any = {};
 	let scopenode: DocumentSymbol | undefined, other = true, triggerKind = params.context?.triggerKind;
 	let uri = textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc?.buildContext(position, false, true);
 	if (!context) return;
@@ -94,7 +95,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				return;
 			let unknown = true, isstatic = true, isfunc = false, isobj = false;
 			let props: any = {}, tps: any = [], ts: any = {}, p = context.text.replace(/\.(\w|[^\x00-\x7f])*$/, '').toLowerCase();
-			cleardetectcache(), detectExpType(doc, p, position, ts);
+			cleardetectcache(), detectExpType(doc, p, context.range.end, ts, doc.document.getText(context.range));
 			delete ts['@comvalue'];
 			let tsn = Object.keys(ts).length;
 			if (ts['#any'] === undefined) {
@@ -116,7 +117,6 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						if (temp = tp.substring(10).match(/<([\w.{}-]+)(,([\w{}-]+))?>/))
 							p.push(temp[1]), temp[3] && p.push(temp[3]);
 						else if (tp === '@comobject' && (temp = last_full_exp.match(/^comobject\(\s*('|")([^'"]+)\1\s*\)$/i)))
-						// else if (tp === '@comobject' && (temp = last_full_exp.match(/^comobject\(\s*('|")([^'"]+)\1\s*(,\s*('|")([^'"]+)\4\s*)?\)$/i)))
 							p.push(temp[2]);
 						if (p.length) {
 							let result = (await sendAhkRequest('GetDispMember', p) ?? {}) as { [func: string]: number };
@@ -319,8 +319,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						switch (res.name) {
 							case 'add':
 								if (res.index === 0) {
-									let n = searchNode(doc, doc.buildContext(res.pos, true).text.toLowerCase(), res.pos, SymbolKind.Method);
-									if (n && (<FuncNode>n[0].node).full?.match(/\(gui\)\s+add\(/i)) {
+									let c = doc.buildContext(res.pos, true), ts: any = {};
+									cleardetectcache(), detectExpType(doc, c.text.toLowerCase(), c.range.end, ts);
+									if (ts['@gui.add'] !== undefined) {
 										return ['Text', 'Edit', 'UpDown', 'Picture', 'Button', 'Checkbox', 'Radio', 'DropDownList',
 											'ComboBox', 'ListBox', 'ListView', 'TreeView', 'Link', 'Hotkey', 'DateTime', 'MonthCal',
 											'Slider', 'Progress', 'GroupBox', 'Tab', 'Tab2', 'Tab3', 'StatusBar', 'ActiveX', 'Custom'].map(maptextitem);
@@ -329,14 +330,14 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 								break;
 							case 'onevent':
 								if (res.index === 0) {
-									let n = searchNode(doc, doc.buildContext(res.pos, true).text.toLowerCase(), res.pos, SymbolKind.Method)?.[0].node as FuncNode;
-									if (n)
-										if (n.full.match(/\(gui\)\s+onevent\(/i))
-											return ['Close', 'ContextMenu', 'DropFiles', 'Escape', 'Size'].map(maptextitem);
-										else if (n.full.match(/\(gui\.control\)\s+onevent\(/i))
-											return ['Change', 'Click', 'DoubleClick', 'ColClick',
-												'ContextMenu', 'Focus', 'LoseFocus', 'ItemCheck',
-												'ItemEdit', 'ItemExpand', 'ItemFocus', 'ItemSelect'].map(maptextitem);;
+									let c = doc.buildContext(res.pos, true), ts: any = {};
+									cleardetectcache(), detectExpType(doc, c.text.toLowerCase(), c.range.end, ts);
+									if (ts['@gui.onevent'] !== undefined)
+										return ['Close', 'ContextMenu', 'DropFiles', 'Escape', 'Size'].map(maptextitem);
+									else if (ts['gui.@control.onevent'] !== undefined)
+										return ['Change', 'Click', 'DoubleClick', 'ColClick',
+											'ContextMenu', 'Focus', 'LoseFocus', 'ItemCheck',
+											'ItemEdit', 'ItemExpand', 'ItemFocus', 'ItemSelect'].map(maptextitem);;
 								}
 								break;
 							case 'bind':
@@ -450,8 +451,9 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 									let ns: any, funcs: { [key: string]: any } = {};
 									['new', 'delete', 'get', 'set', 'call'].forEach(it => { funcs['__' + it] = true; });
 									if (temp = context.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\x7f])+)\s*,/i)) {
-										let ts: any = {};
-										cleardetectcache(), detectExpType(doc, temp[1], position, ts);
+										let ts: any = {}, nd = new Lexer(TextDocument.create('', 'ahk2', -10, '_:=' + temp[1]));
+										let ret = (nd.parseScript(), nd.children.shift() as FuncNode)?.returntypes ?? {};
+										cleardetectcache(), detectExpType(doc, Object.keys(ret).pop() ?? '', position, ts);
 										if (ts['#any'] === undefined) {
 											for (const tp in ts) {
 												if (ts[tp] === false) {
@@ -542,29 +544,36 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					['class', ['class $1', '{\n\t$0\n}']]
 				] as [string, string[]][])
 					items.push({ label, kind: CompletionItemKind.Keyword, insertTextFormat: InsertTextFormat.Snippet, insertText: arr.join(c) });
-			if (scopenode = doc.searchScopedNode(position)) {
+			if (scopenode ??= doc.searchScopedNode(position)) {
 				if (scopenode.kind === SymbolKind.Class) {
-					let its: CompletionItem[] = [], t = lt.trim();
-					for (let m of ['__Call(${1:Name}, ${2:Params})', '__Delete()',
+					let metafns = ['__Init()', '__Call(${1:Name}, ${2:Params})', '__Delete()',
 						'__Enum(${1:NumberOfVars})', '__Get(${1:Key}, ${2:Params})',
-						'__Item[$1]', '__New($1)', '__Init()', '__Set(${1:Key}, ${2:Params}, ${3:Value})'
-					])
-						its.push({
-							label: m.replace(/[(\[].*$/, ''),
-							kind: CompletionItemKind.Method,
-							insertTextFormat: InsertTextFormat.Snippet,
-							insertText: m + c + '{\n\t$0\n}'
+						'__Item[$1]', '__New($1)', '__Set(${1:Key}, ${2:Params}, ${3:Value})'
+					], cls = scopenode as ClassNode, top = context.token?.topofline;
+					if (top === 2) {
+						metafns.splice(0, 1), items.length = 0;
+						Object.values(cls.staticdeclaration).forEach(it => additem(it.name, it.kind === SymbolKind.Class
+							? CompletionItemKind.Class : it.kind === SymbolKind.Method
+								? CompletionItemKind.Method : CompletionItemKind.Property));
+					} else {
+						if (top === 1)
+							items.push({ label: 'static', kind: CompletionItemKind.Keyword, insertText: 'static ' })
+								, items = items.splice(-2, 2);
+						Object.values(cls.declaration).forEach(it => additem(it.name,
+							it.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Property));
+					}
+					if (top) {
+						metafns.forEach(s => {
+							let label = s.replace(/[(\[].*$/, '');
+							if (!vars[label.toLowerCase()])
+								items.push({
+									label, kind: CompletionItemKind.Method,
+									insertTextFormat: InsertTextFormat.Snippet,
+									insertText: s + c + '{\n\t$0\n}'
+								});
 						});
-					if (t.match(/^(\w|[^\x00-\x7f])*$/)) {
-						if (position.line === scopenode.range.end.line && position.character > scopenode.range.end.character)
-							return undefined;
-						return its.concat({
-							label: 'static',
-							kind: CompletionItemKind.Keyword,
-							insertText: 'static '
-						}, items.pop() as CompletionItem);
-					} else if (t.match(/^(static\s+)?(\w|[^\x00-\x7f])+(\(|$)/i))
-						return its;
+					}
+					return items;
 				} else if (scopenode.kind === SymbolKind.Property && scopenode.children)
 					return [{ label: 'get', kind: CompletionItemKind.Function }, { label: 'set', kind: CompletionItemKind.Function }]
 			}
@@ -585,8 +594,10 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				}
 			}
 			if (scopenode) {
-				doc.getScopeChildren(scopenode).forEach(it => {
-					if (expg.test(l = it.name.toLowerCase()) && (!vars[l] || it.kind !== SymbolKind.Variable || (<Variable>it).returntypes))
+				position = context.range.end;
+				Object.entries(doc.getScopeChildren(scopenode)).forEach(([l, it]) => {
+					if (expg.test(l) && (it.def !== false || !vars[l] && (
+						it.selectionRange.end.line !== position.line || it.selectionRange.end.character !== position.character)))
 						vars[l] = convertNodeCompletion(it);
 				});
 			}

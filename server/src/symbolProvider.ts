@@ -10,7 +10,7 @@ export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
 	if (!doc || token?.isCancellationRequested || (!doc.reflat && symbolcache[uri])) return symbolcache[uri];
-	let gvar: any = {}, glo = doc.declaration;
+	let gvar: { [name: string]: Variable } = {}, glo = doc.declaration;
 	for (const key in ahkvars)
 		gvar[key] = ahkvars[key];
 	let list = doc.relevance;
@@ -28,131 +28,115 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	}
 	doc.reflat = false, globalsymbolcache = gvar;
 	let rawuri = doc.document.uri;
-	symbolcache[uri] = flatTree(doc).map(info => {
-		return SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri,
-			info.kind === SymbolKind.Class && (<ClassNode>info).extends ? (<ClassNode>info).extends : undefined);
-	});
+	const result: DocumentSymbol[] = [];
+	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class, SymbolKind.TypeParameter];
+	for (let [k, v] of Object.entries(doc.declaration))
+		if (gvar[k] === v)
+			result.push(v);
+	flatTree(doc);
 	if (doc.actived)
 		checksamename(doc), setTimeout(sendDiagnostics, 200);
-	return symbolcache[uri];
+	return symbolcache[uri] = result.map(info => SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri));
 
-	function flatTree(node: { children?: DocumentSymbol[], funccall?: CallInfo[] }, vars: { [key: string]: DocumentSymbol } = {}, global = false): DocumentSymbol[] {
-		const result: DocumentSymbol[] = [], t: DocumentSymbol[] = [];
-		let tk: Token;
-		vars['isset'] = ahkvars['isset'];
-		node.children?.map(info => {
+	function flatTree(node: { children?: DocumentSymbol[], funccall?: CallInfo[] }, vars: { [key: string]: DocumentSymbol } = {}, outer_is_global = false) {
+		const t: DocumentSymbol[] = [];
+		let tk: Token, iscls = (node as DocumentSymbol).kind === SymbolKind.Class;
+		node.children?.forEach(info => {
 			if (info.children)
 				t.push(info);
 			if (!info.name)
 				return;
-			if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Variable || info.kind === SymbolKind.Class) {
-				let _l = info.name.toLowerCase(), sym = gvar[_l];
-				if (!vars[_l]) {
-					if (info.kind === SymbolKind.Variable && !(<Variable>info).def && sym) {
-						vars[_l] = sym;
-						if (info === sym)
-							result.push(info);
-						converttype(info, sym === ahkvars[_l], sym.kind).definition = sym;
-					} else {
-						vars[_l] = info, result.push(info);
-						if (info.kind !== SymbolKind.Class || !(<any>info).parent)
-							converttype(info, ahkvars[_l] && sym === ahkvars[_l], sym?.kind || info.kind).definition = sym ?? info;
-					}
-				} else if (info.kind === SymbolKind.Variable) {
-					if (info !== vars[_l] || (info as any).infunc)
-						if (vars[_l].kind !== SymbolKind.TypeParameter || vars[_l].selectionRange.start.character !== vars[_l].selectionRange.end.character)
-							converttype(info, vars[_l] === ahkvars[_l], vars[_l].kind).definition = vars[_l];
-						else if (tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]) {
-							if (tk.semantic)
-								delete tk.semantic;
-						}
-				} else if (info !== vars[_l])
-					result.push(info), vars[_l] = info, converttype(info, info === ahkvars[_l]).definition = info;
-				else if (info === sym)
-					result.push(info), converttype(info, info === ahkvars[_l]).definition = sym;
-			} else if (info.kind !== SymbolKind.TypeParameter) {
+			let kind = info.kind;
+			if (kind === SymbolKind.Variable || kind === SymbolKind.Function || !iscls && kind === SymbolKind.Class) {
+				let name = info.name.toLowerCase(), sym = vars[name] ?? gvar[name];
+				if (sym === info || !sym)
+					return;
+				(tk = converttype(info, sym === ahkvars[name], sym.kind)).definition = sym;
+				if (!sym.selectionRange.end.character && tk.semantic)
+					delete tk.semantic;
+			} else if (!filter_types.includes(kind))
 				result.push(info);
-				if ((info.kind === SymbolKind.Method || info.kind === SymbolKind.Property) && info.name.match(/^__(new|init|enum|get|call|set|delete)$/i))
-					if (tk = doc.tokens[doc.document.offsetAt(info.selectionRange.start)]) {
-						if (tk.semantic)
-							delete tk.semantic;
+		});
+		node.funccall?.forEach(info => {
+			if (info.kind !== SymbolKind.Function)
+				return;
+			let name = info.name.toLowerCase();
+			checkParams(doc, (vars[name] ?? gvar[name]) as FuncNode, info);
+		});
+		t.forEach(info => {
+			let inherit: { [key: string]: DocumentSymbol } = {}, fn = info as FuncNode, s: DocumentSymbol;
+			switch (info.kind) {
+				case SymbolKind.Class:
+					let rg = Range.create(0, 0, 0, 0), cls = info as ClassNode;
+					inherit = {
+						this: DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg),
+						super: !cls.extends ? false as any :
+							DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg)
+					}, outer_is_global = false;
+					for (let dec of [cls.staticdeclaration, cls.declaration])
+						Object.values(dec).forEach(it => it.selectionRange.end.character && result.push(it));
+					break;
+				case SymbolKind.Method:
+					inherit = { this: vars.this, super: vars.super ?? false }, outer_is_global ||= fn.assume === FuncScope.GLOBAL;
+				case SymbolKind.Event:
+				case SymbolKind.Function:
+					if (!fn.parent)
+						outer_is_global ||= fn.assume === FuncScope.GLOBAL;
+					else if (fn.kind !== SymbolKind.Method)
+						if (fn.assume !== FuncScope.GLOBAL) {
+							if (fn.assume === FuncScope.STATIC)
+								outer_is_global = false;
+							if (fn.static) {
+								for (let [k, v] of Object.entries(vars))
+									if ((v as Variable).static || v === gvar[k])
+										inherit[k] = v;
+							} else inherit = { ...vars };
+						} else outer_is_global = true;
+					for (let [k, v] of Object.entries(fn.global ?? {}))
+						s = inherit[k] = gvar[k] ??= v, converttype(v, !!ahkvars[k], s.kind).definition = s;
+					for (let v of fn.params ?? [])
+						converttype(inherit[v.name.toLowerCase()] = v, false, SymbolKind.TypeParameter).definition = v;
+					for (let [k, v] of Object.entries(fn.local ?? {}))
+						if (inherit[k]?.kind === SymbolKind.TypeParameter)
+							converttype(v, false, SymbolKind.TypeParameter).definition = inherit[k];
+						else converttype(inherit[k] = v).definition = v, result.push(v);
+					for (let [k, v] of Object.entries(fn.declaration ??= {}))
+						if (s = inherit[k])
+							s !== v && (converttype(v, s === ahkvars[k], s.kind).definition = s);
+						else if (outer_is_global)
+							s = gvar[k] ??= (result.push(v), (v as any).infunc = true, doc.declaration[k] = v),
+								converttype(v, !!ahkvars[k], s.kind).definition = s;
+						else if (!(v as Variable).def && (s = gvar[k]))
+							converttype(v, !!ahkvars[k], s.kind).definition = s;
+						else converttype(inherit[k] = v).definition = v, result.push(v);
+					for (let [k, v] of Object.entries(fn.unresolved_vars ??= {}))
+						if (s = inherit[k] ?? gvar[k])
+							converttype(v, s === ahkvars[k], s.kind).definition = s;
+						else {
+							converttype(v).definition = inherit[k] = fn.declaration[k] = fn.local[k] = v;
+							result.push(v), delete v.def, delete fn.unresolved_vars[k];
+							if (fn.assume === FuncScope.STATIC)
+								v.static = true;
+						}
+					break;
+				case SymbolKind.Property:
+					if ((info as FuncNode).parent?.kind === SymbolKind.Class) {
+						inherit = { this: vars.this, super: vars.super ?? false };
+						let t = info as any;
+						for (let s of ['get', 'set', 'call'])
+							(t[s] as DocumentSymbol)?.selectionRange.end.character && result.push(t[s]);
+						break;
 					}
+				default: inherit = { ...vars }; break;
 			}
+			flatTree(info, inherit, outer_is_global);
 		});
-		node.funccall?.map(info => {
-			if (info.kind === SymbolKind.Function)
-				checkParams(doc, vars[info.name.toLowerCase()] as FuncNode, info);
-		});
-		t.map(info => {
-			if (info.children) {
-				let inherit: { [key: string]: DocumentSymbol } = {}, gg = false;
-				if (info.kind === SymbolKind.Function || info.kind === SymbolKind.Method || info.kind === SymbolKind.Event) {
-					let p = info as FuncNode, ps: any = {}, ll = '', fn_is_static = info.kind === SymbolKind.Function && (<FuncNode>info).static;
-					for (const k in p.global) {
-						let it = p.global[k];
-						inherit[k] = gvar[k] ?? it, converttype(it, !!ahkvars[k], inherit[k].kind).definition = inherit[k];
-					}
-					(<FuncNode>info).params?.map(it => {
-						inherit[ll = it.name.toLowerCase()] = it, ps[ll] = true;
-						converttype(it, false, SymbolKind.TypeParameter).definition = it;
-					});
-					for (const k in p.local)
-						if (k && !ps[k]) {
-							let it = p.local[k];
-							result.push(it), converttype(it).definition = it;
-							inherit[k] = it;
-						}
-					if (p.assume === FuncScope.GLOBAL || global) {
-						gg = true;
-						if (p.has_this_param)
-							inherit['this'] = vars['this'], inherit['super'] = vars['super'];
-					} else {
-						gg = false;
-						let kk = (<FuncNode>info).parent, tt = p.declaration;
-						if (kk) {
-							if (kk.kind === SymbolKind.Property && kk.children?.length && (<FuncNode>kk).parent?.kind === SymbolKind.Class)
-								kk = (<FuncNode>kk).parent as DocumentSymbol;
-							if (kk.kind === SymbolKind.Class)
-								inherit['this'] = vars['this'], inherit['super'] = vars['super'];
-							if (kk.kind === SymbolKind.Function || kk.kind === SymbolKind.Method || kk.kind === SymbolKind.Event)
-								if (fn_is_static) {
-									for (const k in vars)
-										if (!inherit[k] && ((<Variable>vars[k])?.static || vars[k] === gvar[k]))
-											inherit[k] = vars[k];
-								} else for (const k in vars)
-									if (!inherit[k])
-										inherit[k] = vars[k];
-						}
-						for (const k in tt) {
-							if (!k)
-								continue;
-							if (!inherit[k]) {
-								inherit[k] = tt[k], result.push(inherit[k]), converttype(tt[k]).definition = tt[k];
-							} else if (tt[k] !== inherit[k]) {
-								if (tt[k].kind !== SymbolKind.Variable || (inherit[k] === gvar[k] && (<Variable>tt[k]).def))
-									inherit[k] = tt[k], result.push(tt[k]), converttype(tt[k]).definition = tt[k];
-								else converttype(tt[k], false, inherit[k].kind).definition = inherit[k];
-							} else if (!ps[k])
-								converttype(tt[k]).definition = tt[k];
-						}
-					}
-				} else if (info.kind === SymbolKind.Class) {
-					let rg = Range.create(0, 0, 0, 0);
-					inherit['this'] = DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg);
-					if ((<ClassNode>info).extends)
-						inherit['super'] = DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg);
-				} else if (info.kind === SymbolKind.Property && (info as FuncNode).parent?.kind === SymbolKind.Class)
-					inherit['this'] = vars['this'], inherit['super'] = vars['super'];
-				result.push(...flatTree(info, inherit, gg));
-			}
-		});
-		return result;
 	}
 	function checksamename(doc: Lexer) {
 		if (doc.d)
 			return;
 		let dec: any = { ...ahkvars }, dd: Lexer, lbs: any = {};
-		Object.keys(doc.labels).map(lb => lbs[lb] = true);
+		Object.keys(doc.labels).forEach(lb => lbs[lb] = true);
 		for (const uri in doc.relevance) {
 			if (dd = lexers[uri]) {
 				dd.diagnostics.splice(dd.diags);
@@ -170,7 +154,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			if (dd = lexers[uri])
 				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
 		}
-		t.map(it => {
+		t.forEach(it => {
 			if (it.kind === SymbolKind.Class) {
 				let l = (<ClassNode>it).extends?.toLowerCase();
 				if (l === it.name.toLowerCase())
@@ -267,7 +251,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 					--paramcount;
 			if (pc < paramcount && !paraminfo.unknown)
 				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount + '+', pc), range: info.range, severity: 1 });
-			paraminfo.miss.map(index => {
+			paraminfo.miss.forEach(index => {
 				miss[index] = true;
 				if (index < paramcount && node.params[index].defaultVal === undefined)
 					doc.addDiagnostic(diagnostic.missingparam(), paraminfo.comma[index] ?? doc.document.offsetAt(info.range.end), 1);
@@ -289,7 +273,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount === maxcount ? maxcount : paramcount + '-' + maxcount, pc), range: info.range, severity: 1 });
 		}
 		if (node.hasref) {
-			node.params.map((param, index) => {
+			node.params.forEach((param, index) => {
 				if (index < pc && param.ref && !miss[index]) {
 					let o: number, t: Token;
 					if (index === 0)

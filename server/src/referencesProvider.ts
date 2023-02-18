@@ -70,8 +70,10 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 		default:
 			if (node.kind === SymbolKind.Class || (<FuncNode>node).static) {
 				let c = name.split('.'), rgs = findAllFromDoc(doc, c[0], SymbolKind.Variable);
-				let refs: { [uri: string]: Range[] } = {};
+				let refs: { [uri: string]: Range[] } = {}, incls = scope?.kind === SymbolKind.Class;
 				c.splice(0, 1);
+				if (incls && c[0] === scope?.name.toLowerCase())
+					scope?.children?.forEach(it => it.name.toLowerCase() === 'this' && rgs.push(it.selectionRange));
 				if (rgs.length)
 					refs[doc.document.uri] = rgs;
 				for (const uri in doc.relevance) {
@@ -100,6 +102,10 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 						references[doc.document.uri] = tt;
 				}
 				let t = references[lexers[uri].document.uri] ??= [], ns = node.selectionRange;
+				name = node.name.toLowerCase();
+				if (incls && (node.kind === SymbolKind.Property || node.kind === SymbolKind.Method))
+					scope?.children?.forEach(it => it.name.toLowerCase() === name && it.kind === SymbolKind.Property
+						&& it.selectionRange !== ns && t.push(it.selectionRange));
 				if ((node as any).full)
 					t.unshift(node.selectionRange);
 				break;
@@ -158,14 +164,14 @@ function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[
 		if (!global)
 			return;
 		assume_glo = true;
-	} else if ((f && node.local && node.local[name]) || (!f && node.declaration?.[name])) {
+	} else if ((f && node.local?.[name]) || (!f && node.declaration?.[name])) {
 		if (!global)
 			return;
 		assume_glo = false;
 	} else if (fn_is_static && global && !assume_glo && (!(t = node.declaration?.[name]) || t.kind === SymbolKind.Variable && !t.def))
 		assume_glo = true;
-	else if (assume_glo && node.declaration?.[name])
-		assume_glo = false;
+	// else if (assume_glo && node.declaration?.[name])
+	// 	assume_glo = false;
 	if (not_static)
 		not_static = !((<any>node)?.local?.[name]?.static);
 	if (assume_glo === global) {
