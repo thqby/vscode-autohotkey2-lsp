@@ -170,13 +170,13 @@ connection.onDidChangeConfiguration(async (change: any) => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	let old = extsettings.AutoLibInclude;
-	if (newset.InterpreterPath !== extsettings.InterpreterPath) {
-		setInterpreter(newset.InterpreterPath);
-		connection.sendRequest('ahk2.updateStatusBar', [newset.InterpreterPath]);
-	}
+	let { AutoLibInclude, InterpreterPath } = extsettings;
 	update_settings(newset);
-	if (old !== extsettings.AutoLibInclude) {
+	if (InterpreterPath !== extsettings.InterpreterPath) {
+		setInterpreter(extsettings.InterpreterPath ??= '');
+		connection.sendRequest('ahk2.updateStatusBar', [extsettings.InterpreterPath]);
+	}
+	if (AutoLibInclude !== extsettings.AutoLibInclude) {
 		if (extsettings.AutoLibInclude > 1)
 			parseuserlibs();
 		if (extsettings.AutoLibInclude & 1)
