@@ -1079,8 +1079,6 @@ export class Lexer {
 											_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 											for (const t in o)
 												o[t] = tn.range.end;
-											if (mode !== 0)
-												tn.parent = _parent;
 											adddeclaration(tn), prop.children.push(tn);
 											_this.linepos[prop.range.end.line] = oo;
 										}
@@ -1830,7 +1828,7 @@ export class Lexer {
 					if (tk.type === 'TK_RESERVED' && line_starters.includes(tk.content.toLowerCase())) {
 						let t = tk;
 						if (lk.content.toLowerCase() !== 'try')
-							line_begin_pos = tk.offset;
+							line_begin_pos = previous_pos ?? tk.offset;
 						next = true;
 						if (parse_reserved())
 							return else_body;
@@ -1841,9 +1839,9 @@ export class Lexer {
 							parse_top_word();
 						else if (tk.type !== 'TK_EOF')
 							lk = EMPTY_TOKEN, next = false, result.push(...parse_line());
-						if (line_begin_pos !== undefined)
-							_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
 					}
+					if (line_begin_pos !== undefined)
+						_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
 					next = tk.type === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
 				}
 				if (typeof else_body === 'boolean') {
@@ -3154,6 +3152,7 @@ export class Lexer {
 						if (it.def !== false)
 							_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange, severity });
 					});
+					dec.__init && children.unshift(dec.__init), children.unshift(sdec.__init);
 					cls.cache?.splice(0).forEach(it => {
 						(it.static ? sdec : dec)[_low = it.name.toLowerCase()] ??= it;
 						children.push(it);
@@ -3458,8 +3457,11 @@ export class Lexer {
 		function print_newline(preserve_statement_flags = false): void {
 			if (!preserve_statement_flags) {
 				if (last_type !== 'TK_COMMA' && last_type !== 'TK_EQUALS' && (last_type !== 'TK_OPERATOR' || ['++', '--', '%'].includes(flags.last_text))) {
-					while (flags.mode === MODE.Statement && (flags.declaration_statement || !flags.if_block && !flags.loop_block && !flags.try_block))
+					// while (flags.mode === MODE.Statement && (flags.declaration_statement || !flags.if_block && !flags.loop_block && !flags.try_block))
+					// 	restore_mode();
+					while (flags.mode === MODE.Statement)
 						restore_mode();
+					flags.if_block = flags.loop_block = flags.try_block = flags.catch_block = 0;
 				}
 			}
 
@@ -4375,7 +4377,7 @@ export class Lexer {
 			if (start_of_statement()) {
 				// The conditional starts the statement if appropriate.
 				preserve_statement_flags = flags.declaration_statement;
-				if (!input_wanted_newline && ['else', 'finally'].includes(flags.last_word) &&
+				if (!input_wanted_newline && ['try', 'else', 'finally'].includes(flags.last_word) &&
 					['if', 'while', 'loop', 'for', 'try', 'switch'].includes(token_text_low))
 					deindent();
 			}
@@ -4670,10 +4672,10 @@ export class Lexer {
 				if (last_type === 'TK_COMMA' || last_type === 'TK_START_EXPR')
 					space_before = false;
 			} else if (token_text === '*') {
-				if (last_text === '(' || (last_type === 'TK_WORD' && (is_next_char(')') || is_next_char(']'))))
-					space_before = space_after = false;
-				else if (last_text === ',')
+				if (last_text === ',')
 					space_after = false;
+				else if (_this.tokens[ck.next_token_offset]?.type === 'TK_END_EXPR')
+					space_before = space_after = false;
 			}
 
 			output_space_before_token ||= space_before;
@@ -5613,7 +5615,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 										if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
 											for (const e in n.returntypes)
 												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
-													.forEach(tp => { ts[tp] = true });
+													.forEach(tp => ts[tp] = true);
 									}
 								});
 							break;
@@ -5626,10 +5628,10 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 										m.forEach(s => o[s] = true), call.returntypes = o;
 									for (const e in call.returntypes)
 										detect(lexers[uri], e.toLowerCase(), Position.is(call.returntypes[e]) ? call.returntypes[e] : pos)
-											.forEach(tp => { ts[tp] = true });
+											.forEach(tp => ts[tp] = true);
 									if (ts['@comobject'])
 										last_full_exp = fullexp?.replace(/^\s*:=\s*/, '') ?? '';
-									if (call.returntypes)
+									if (call.returntypes && o['@this'] === undefined)
 										return;
 								}
 							}

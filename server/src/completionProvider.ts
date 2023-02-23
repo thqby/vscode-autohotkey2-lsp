@@ -550,7 +550,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						'__Enum(${1:NumberOfVars})', '__Get(${1:Key}, ${2:Params})',
 						'__Item[$1]', '__New($1)', '__Set(${1:Key}, ${2:Params}, ${3:Value})'
 					], cls = scopenode as ClassNode, top = context.token?.topofline;
-					if (top === 2) {
+					if (top === 2 || (context.symbol as FuncNode)?.static) {
 						metafns.splice(0, 1), items.length = 0;
 						Object.values(cls.staticdeclaration).forEach(it => additem(it.name, it.kind === SymbolKind.Class
 							? CompletionItemKind.Class : it.kind === SymbolKind.Method
