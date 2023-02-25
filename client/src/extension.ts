@@ -481,7 +481,11 @@ async function setInterpreter() {
 			return;
 		} else if (pick.selectedItems[0] === it) {
 			pick.ignoreFocusOut = true;
-			let path = await window.showOpenDialog({ filters: { Executables: ['exe'] }, openLabel: zhcn ? '选择解释器' : 'Select Interpreter' });
+			let path = await window.showOpenDialog({
+				defaultUri: ahkpath ? Uri.file(ahkpath) : undefined,
+				filters: { Executables: ['exe'] },
+				openLabel: zhcn ? '选择解释器' : 'Select Interpreter'
+			});
 			if (path)
 				sel.detail = path[0].fsPath;
 		} else {

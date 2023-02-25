@@ -358,12 +358,10 @@ export class Lexer {
 				space_in_empty_paren: false,
 				space_in_other: true,
 				space_in_paren: false,
-				wrap_line_length: 0,
-				white_space_before_inline_comment: options?.indent_string
+				wrap_line_length: 0
 			} as FormatOptions, options);
 			if (isNaN(opt.one_true_brace = Number(opt.one_true_brace)))
 				delete opt.one_true_brace;
-			opt.white_space_before_inline_comment ||= '\t';
 
 			last_type = last_last_text = last_text = '', begin_line = true, lst = EMPTY_TOKEN;
 			last_LF = -1, end_pos = input_length, ck = _this.get_token(0);
@@ -4705,7 +4703,7 @@ export class Lexer {
 			for (j = 1; j < lines.length - 1; j++) {
 				print_newline(true);
 				if (javadoc) {
-					print_token(' * ' + lines[j].replace(/^\s*\* ?|\s+$/g, ''));
+					print_token(' * ' + lines[j].replace(/^\s*\* ?/g, ''));
 				} else {
 					print_token(lines[j].trimRight().replace(remove, ''));
 				}
@@ -4714,7 +4712,6 @@ export class Lexer {
 				print_newline(true);
 				print_token((javadoc ? ' ' : '') + lines[lines.length - 1].trim());
 			}
-			// for comments of more than one line, make sure there's a new line after
 			print_newline(true);
 			flags.had_comment = 3;
 		}
@@ -4724,7 +4721,11 @@ export class Lexer {
 				return token_text = '';
 			if (just_added_newline())
 				output_lines.pop();
-			output_lines[output_lines.length - 1].text.push(opt.white_space_before_inline_comment as string, token_text);
+			let t;
+			output_lines[output_lines.length - 1].text.push(
+				opt.white_space_before_inline_comment ||
+				((t = ck.previous_token) ? input.substring(t.offset + t.length, ck.offset) : '\t'),
+				token_text);
 			print_newline(true);
 			flags.had_comment = 1;
 		}

@@ -1,3 +1,9 @@
+## 1.9.2
+- 修复[#295](https://github.com/thqby/vscode-autohotkey2-lsp/issues/295)
+- 修复[#296](https://github.com/thqby/vscode-autohotkey2-lsp/issues/296)
+- 修复符号重命名失效
+- 行末注释默认保留前缀留白
+
 ## 1.9.1
 - 修复[#286](https://github.com/thqby/vscode-autohotkey2-lsp/issues/286)
 - 修复[#287](https://github.com/thqby/vscode-autohotkey2-lsp/issues/287)

@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.9.1",
+	"version": "1.9.2",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -171,7 +171,9 @@
 					"properties": {
 						"break_chained_methods": {
 							"type": "boolean",
-							"default": false
+							"default": false,
+							"enum": [true, false],
+							"enumDescriptions": ["obj.method()\n.method2()", "obj.method().method2()"]
 						},
 						"ignore_comment": {
 							"type": "boolean",
@@ -195,9 +197,14 @@
 						"one_true_brace": {
 							"type": "string",
 							"enum": [
-								"-1",
+								"1",
 								"0",
-								"1"
+								"-1"
+							],
+							"enumDescriptions": [
+								"if 1 {\n} else {\n}",
+								"if 1\n{\n}\nelse\n{\n}",
+								"if 1 {\n}\nelse {\n}"
 							]
 						},
 						"preserve_newlines": {
@@ -229,8 +236,7 @@
 							"default": false
 						},
 						"white_space_before_inline_comment": {
-							"type": "string",
-							"default": "\t"
+							"type": "string"
 						},
 						"wrap_line_length": {
 							"type": "number",
