@@ -92,6 +92,7 @@ export interface ClassNode extends DocumentSymbol {
 	cache: Variable[]
 	returntypes?: { [exp: string]: any }
 	overwrite?: number
+	undefined?: { [name: string]: Token[] }
 }
 
 export interface Variable extends DocumentSymbol {

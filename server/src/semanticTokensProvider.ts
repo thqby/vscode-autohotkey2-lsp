@@ -38,7 +38,7 @@ export async function semanticTokensOnFull(params: SemanticTokensParams, token: 
 	doc.STB.previousResult(''), curclass = undefined, memscache.clear();
 	symbolProvider({ textDocument: params.textDocument });
 	Object.values(doc.tokens).forEach(tk => resolve_sem(tk, doc));
-	memscache.clear();
+	resolve_class_undefined_member(doc), memscache.clear();
 	return doc.STB.build();
 }
 
@@ -48,7 +48,7 @@ export async function semanticTokensOnDelta(params: SemanticTokensDeltaParams, t
 	doc.STB.previousResult(''), curclass = undefined, memscache.clear();
 	symbolProvider({ textDocument: params.textDocument });
 	Object.values(doc.tokens).forEach(tk => resolve_sem(tk, doc));
-	memscache.clear();
+	resolve_class_undefined_member(doc), memscache.clear();
 	return doc.STB.buildEdits();
 }
 
@@ -65,7 +65,7 @@ export async function semanticTokensOnRange(params: SemanticTokensRangeParams, t
 			break;
 		resolve_sem(tk, doc);
 	}
-	memscache.clear();
+	resolve_class_undefined_member(doc), memscache.clear();
 	return doc.STB.build();
 }
 
@@ -126,7 +126,8 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 							if (tt?.content === ':=') {
 								cls_add_prop(curclass, tk.content, tk.offset);
 							} else if ((memscache.get(curclass) as any)?.['#checkmember'] !== false)
-								doc.addDiagnostic(diagnostic.maybehavenotmember(curclass.name, tk.content), tk.offset, tk.length, 2);
+								((curclass.undefined ??= {})[tk.content.toLowerCase()] ??= []).push(tk);
+								// doc.addDiagnostic(diagnostic.maybehavenotmember(curclass.name, tk.content), tk.offset, tk.length, 2);
 						}
 				}
 			}
@@ -142,18 +143,35 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 			let p = DocumentSymbol.create(name, undefined, SymbolKind.Property, rg, rg) as Variable;
 			p.static = p.def = true, name = name.toLowerCase();
 			if (d === doc && d.d < 2)
-				cls.staticdeclaration[name] ??= (cls.children?.push(p), p);
+				cls.children?.push(p), cls.staticdeclaration[name] ??= p;
 			else {
 				let t = memscache.get(cls);
 				if (t)
 					t[name] ??= p;
 			}
-		} else if (d && d.d < 2)
-			(<any>cls).checkmember = false;
-		else {
-			let t = memscache.get(cls) as any;
-			if (t)
-				t['#checkmember'] = false;
+			if (cls.undefined)
+				delete cls.undefined[name];
+		} else {
+			delete cls.undefined;
+			if (d && d.d < 2)
+				(<any>cls).checkmember = false;
+			else {
+				let t = memscache.get(cls) as any;
+				if (t)
+					t['#checkmember'] = false;
+			}
+		}
+	}
+}
+
+function resolve_class_undefined_member(doc: Lexer) {
+	for (let cls of memscache.keys()) {
+		if (cls.undefined) {
+			let name = cls.name;
+			for (let tks of Object.values(cls.undefined))
+				for (let tk of tks)
+					doc.addDiagnostic(diagnostic.maybehavenotmember(name, tk.content), tk.offset, tk.length, 2);
+			delete cls.undefined;
 		}
 	}
 }
