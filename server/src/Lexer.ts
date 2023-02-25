@@ -4311,15 +4311,16 @@ export class Lexer {
 				else
 					output_space_before_token = space_in_other;
 			} else {
+				let had_comment = flags.had_comment;
 				if (!['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally', 'switch'].includes(flags.last_word))
 					while (flags.mode === MODE.Statement)
 						restore_mode();
 				flags.declaration_statement = false;
-				set_mode(MODE.BlockStatement), flags.had_comment = previous_flags.had_comment;
+				set_mode(MODE.BlockStatement);
 				output_space_before_token ??= space_in_other;
 
-				if (previous_flags.in_case_statement && last_text.endsWith(':'))
-					flags.indentation_level--, trim_newlines();
+				if (previous_flags.in_case_statement && !had_comment && last_type === 'TK_LABEL' && /^(default)?:$/.test(last_text))
+					flags.indentation_level--, flags.case_body = null, trim_newlines();
 				if (opt.one_true_brace === 0 || input_wanted_newline && opt.preserve_newlines && !opt.one_true_brace)
 					print_newline(true);
 
@@ -4359,11 +4360,9 @@ export class Lexer {
 			if (previous_flags.indentation_level === flags.indentation_level && just_added_newline())
 				deindent();
 			print_token();
-			if (flags.case_body)
-				indent();
 			if (!is_obj) {
-				if (flags.in_case_statement && flags.last_text.endsWith(':'))
-					flags.indentation_level++;
+				if (previous_flags.case_body === null)
+					indent();
 				if (opt.one_true_brace !== undefined)
 					print_newline(true);
 				output_space_before_token = space_in_other;
