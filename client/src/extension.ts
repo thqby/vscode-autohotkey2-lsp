@@ -8,6 +8,7 @@ import {
 	ConfigurationTarget,
 	debug,
 	DebugConfiguration,
+	env,
 	ExtensionContext,
 	extensions,
 	languages,
@@ -110,7 +111,7 @@ export async function activate(context: ExtensionContext) {
 
 	// Create the language client and start the client.
 	client = new LanguageClient('ahk2', 'AutoHotkey2', serverOptions, clientOptions);
-	zhcn = client.getLocale().startsWith('zh-');
+	zhcn = env.language.startsWith('zh-');
 	textdecoders.push(new TextDecoder(zhcn ? 'gbk' : 'windows-1252'));
 
 	// Start the client. This will also launch the server
@@ -128,7 +129,7 @@ export async function activate(context: ExtensionContext) {
 		for (const ext of extensions.all) {
 			let type;
 			if (ext.extensionKind === 1 && /ahk|autohotkey/i.test(ext.id) &&
-				(type = ext.packageJSON?.contributes?.debuggers?.[0]))
+				(type = ext.packageJSON?.contributes?.debuggers?.[0]?.type))
 				debugexts[type] = ext.id;
 		}
 		extlist = Object.values(debugexts);

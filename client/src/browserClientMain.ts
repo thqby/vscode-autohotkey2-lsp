@@ -63,7 +63,6 @@ export function activate(context: ExtensionContext) {
 		documentSelector: [{ language: 'ahk2' }],
 		synchronize: {},
 		initializationOptions: {
-			locale: env.language,
 			commands: Object.keys(request_handlers),
 			...workspace.getConfiguration('AutoHotkey2')
 		}

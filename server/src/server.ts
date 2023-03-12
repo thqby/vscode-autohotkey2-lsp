@@ -126,9 +126,7 @@ connection.onInitialize((params: InitializeParams) => {
 		try { configs = JSON.parse(process.env.AHK2_LS_CONFIG); } catch { }
 	if (params.initializationOptions)
 		configs = Object.assign(configs ?? {}, params.initializationOptions);
-	let locale = configs?.locale ?? params.locale;
-	if (locale)
-		set_locale(locale);
+	set_locale(configs?.locale ?? params.locale);
 	loadlocalize();
 	initahk2cache();
 	loadahk2();

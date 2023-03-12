@@ -113,9 +113,8 @@ connection.onInitialize((params: InitializeParams) => {
 		};
 	}
 
-	let locale, configs: AHKLSSettings = params.initializationOptions;
-	if (locale = configs.locale ?? params.locale)
-		set_locale(locale);
+	let configs: AHKLSSettings = params.initializationOptions;
+	set_locale(params.locale);
 	set_dirname((configs as any).extensionUri);
 	loadlocalize();
 	update_settings(configs);
