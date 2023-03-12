@@ -217,8 +217,10 @@ class JSON {
 
 	/**
 	 * Convert JSON strings to AutoHotkey objects.
+	 * @param KeepType If true, convert true/false/null to JSON.true/JSON.false/JSON.null, otherwise 1/0/''
+	 * @param AsMap If true, convert `{}` to Map, otherwise Object
 	 */
-	static parse(JSONstring) => Map | Array
+	static parse(Text, KeepType := true, AsMap := true) => Map | Array
 
 	/**
 	 * Objects include maps, arrays, objects and Com objects.

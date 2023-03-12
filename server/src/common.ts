@@ -77,7 +77,7 @@ export let utils = {
 export let locale = 'en-us';
 export type Maybe<T> = T | undefined;
 
-export enum LibIncludeType {
+enum LibIncludeType {
 	'Disabled',
 	'Local',
 	'User and Standard',
@@ -403,6 +403,16 @@ export function update_settings(configs: AHKLSSettings) {
 		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 	else if (typeof configs.AutoLibInclude === 'boolean')
 		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
+	if (typeof configs.FormatOptions.brace_style === 'string')
+		switch (configs.FormatOptions.brace_style) {
+			case '0':
+			case 'Allman': configs.FormatOptions.brace_style = 0; break;
+			case '1':
+			case 'One True Brace': configs.FormatOptions.brace_style = 1; break;
+			case '-1':
+			case 'One True Brace Variant': configs.FormatOptions.brace_style = -1; break;
+			default: delete configs.FormatOptions.brace_style; break;
+		}
 	try {
 		update_commentTags(configs.CommentTags);
 	} catch (e: any) {

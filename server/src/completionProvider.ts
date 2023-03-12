@@ -536,7 +536,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			else if (!tk.content && !lt.includes('::'))
 				return completionItemCache.other.filter(it => it.kind === CompletionItemKind.Text);
 
-			let c = extsettings.FormatOptions.one_true_brace === 0 ? '\n' : ' ';
+			let c = extsettings.FormatOptions.brace_style === 0 ? '\n' : ' ';
 			if (other)
 				for (let [label, arr] of [
 					['switch', ['switch ${1:[SwitchValue, CaseSense]}', '{\n\tcase ${2:}:\n\t\t${3:}\n\tdefault:\n\t\t$0\n}']],

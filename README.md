@@ -228,7 +228,7 @@ node install.js
 					"indent_string": "\t",
 					"keep_array_indentation": true,
 					"max_preserve_newlines": 2,
-					"one_true_brace": "1", // or "0" or "-1"
+					"brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
 					"preserve_newlines": true,
 					"space_after_double_colon": true,
 					"space_before_conditional": true,
@@ -481,7 +481,7 @@ node install.js
 					"indent_string": "\t",
 					"keep_array_indentation": true,
 					"max_preserve_newlines": 2,
-					"one_true_brace": "1", // or "0" or "-1"
+					"brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
 					"preserve_newlines": true,
 					"space_after_double_colon": true,
 					"space_before_conditional": true,

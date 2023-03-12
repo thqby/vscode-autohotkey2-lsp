@@ -217,8 +217,10 @@ class JSON {
 
 	/**
 	 * 将JSON字符串转换为AutoHotkey对象.
+	 * @param KeepType 如果为true, 则将true/false/null转换为JSON.true/JSON.false/JSON.null，否则为1/0/''
+	 * @param AsMap 如果为true, 转换`{}`为Map, 否则为Object
 	 */
-	static parse(JSONstring) => Map | Array
+	static parse(Text, KeepType := true, AsMap := true) => Map | Array
 
 	/**
 	 * 对象包括映射、数组、对象和Com对象.

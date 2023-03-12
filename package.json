@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "1.9.2",
+	"version": "1.9.3",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -169,11 +169,22 @@
 					"scope": "window",
 					"type": "object",
 					"properties": {
+						"brace_style": {
+							"type": "string",
+							"enum": [
+								"One True Brace",
+								"Allman",
+								"One True Brace Variant"
+							],
+							"enumDescriptions": [
+								"if 1 {\n} else {\n}",
+								"if 1\n{\n}\nelse\n{\n}",
+								"if 1 {\n}\nelse {\n}"
+							]
+						},
 						"break_chained_methods": {
 							"type": "boolean",
-							"default": false,
-							"enum": [true, false],
-							"enumDescriptions": ["obj.method()\n.method2()", "obj.method().method2()"]
+							"default": false
 						},
 						"ignore_comment": {
 							"type": "boolean",
@@ -193,19 +204,6 @@
 						"max_preserve_newlines": {
 							"type": "number",
 							"default": 2
-						},
-						"one_true_brace": {
-							"type": "string",
-							"enum": [
-								"1",
-								"0",
-								"-1"
-							],
-							"enumDescriptions": [
-								"if 1 {\n} else {\n}",
-								"if 1\n{\n}\nelse\n{\n}",
-								"if 1 {\n}\nelse {\n}"
-							]
 						},
 						"preserve_newlines": {
 							"type": "boolean",

@@ -1,3 +1,6 @@
+## 1.9.3
+- 修复[#294](https://github.com/thqby/vscode-autohotkey2-lsp/issues/294)
+
 ## 1.9.2
 - 修复[#295](https://github.com/thqby/vscode-autohotkey2-lsp/issues/295)
 - 修复[#296](https://github.com/thqby/vscode-autohotkey2-lsp/issues/296)
@@ -137,8 +140,8 @@
 
 ## 1.6.4
 - 增加jsdoc类型标注
-- 增加brace样式, `one_true_brace=-1`
-- 修复函数定义未应用`one_true_brace`样式
+- 增加brace样式, `brace_style=-1`
+- 修复函数定义未应用`brace_style`样式
 - 代码块补全应用格式化设置指定的样式[#194](https://github.com/thqby/vscode-autohotkey2-lsp/issues/194)
 - 修复[#191](https://github.com/thqby/vscode-autohotkey2-lsp/issues/191)
 - 修复[#193](https://github.com/thqby/vscode-autohotkey2-lsp/issues/193)
@@ -152,7 +155,7 @@
 
 ## 1.6.2
 - 优化局部格式化
-- 增加格式化选项`one_true_brace`
+- 增加格式化选项`brace_style`
 - 修复自定义设置未生效
 
 ## 1.6.1
