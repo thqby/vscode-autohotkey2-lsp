@@ -4722,7 +4722,7 @@ export class Lexer {
 			let t;
 			output_lines[output_lines.length - 1].text.push(
 				opt.white_space_before_inline_comment ||
-				((t = ck.previous_token) ? input.substring(t.offset + t.length, ck.offset) : '\t'),
+				((t = ck.previous_token) ? input.substring(t.skip_pos ?? t.offset + t.length, ck.offset) : '\t'),
 				token_text);
 			print_newline(true);
 			flags.had_comment = 1;
