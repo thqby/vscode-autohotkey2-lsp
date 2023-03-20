@@ -32,7 +32,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class, SymbolKind.TypeParameter];
 	for (let [k, v] of Object.entries(doc.declaration))
 		if (gvar[k] === v)
-			result.push(v);
+			result.push(v), converttype(v, false, v.kind);
 	flatTree(doc);
 	if (doc.actived)
 		checksamename(doc), setTimeout(sendDiagnostics, 200);
@@ -94,12 +94,9 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						} else outer_is_global = true;
 					for (let [k, v] of Object.entries(fn.global ?? {}))
 						s = inherit[k] = gvar[k] ??= v, converttype(v, !!ahkvars[k], s.kind).definition = s;
-					for (let v of fn.params ?? [])
-						converttype(inherit[v.name.toLowerCase()] = v, false, SymbolKind.TypeParameter).definition = v;
 					for (let [k, v] of Object.entries(fn.local ?? {}))
-						if (inherit[k]?.kind === SymbolKind.TypeParameter)
-							converttype(v, false, SymbolKind.TypeParameter).definition = inherit[k];
-						else converttype(inherit[k] = v).definition = v, result.push(v);
+						converttype(inherit[k] = v, false, v.kind).definition = v,
+							v.kind !== SymbolKind.TypeParameter && result.push(v);
 					for (let [k, v] of Object.entries(fn.declaration ??= {}))
 						if (s = inherit[k])
 							s !== v && (converttype(v, s === ahkvars[k], s.kind).definition = s);
@@ -113,7 +110,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						if (s = inherit[k] ?? gvar[k])
 							converttype(v, s === ahkvars[k], s.kind).definition = s;
 						else {
-							converttype(v).definition = inherit[k] = fn.declaration[k] = fn.local[k] = v;
+							converttype(v, false, v.kind).definition = inherit[k] = fn.declaration[k] = fn.local[k] = v;
 							result.push(v), delete v.def, delete fn.unresolved_vars[k];
 							if (fn.assume === FuncScope.STATIC)
 								v.static = true;
