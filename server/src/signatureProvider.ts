@@ -53,9 +53,9 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		switch (nn.kind) {
 			case SymbolKind.Class: {
 				let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, !it.ref);
-				let n: FuncNode | undefined = (it.ref ? mems['call'] : mems['__new'] ?? mems['call']) as FuncNode;
-				if (mems['call'] && (<any>mems['call']).def !== false)
-					n = mems['call'] as FuncNode;
+				let n: FuncNode | undefined = (it.ref ? mems['CALL'] : mems['__NEW'] ?? mems['CALL']) as FuncNode;
+				if (mems['CALL'] && (<any>mems['CALL']).def !== false)
+					n = mems['CALL'] as FuncNode;
 				if (n)
 					nodes.push({ node: n, uri: '' });
 				break;
@@ -76,7 +76,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 						!nodes.map((it: any) => it.node).includes(node))
 						nodes.push({ node, uri: '' });
 				});
-			doc.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
+			doc.object.method[name = name.toUpperCase()]?.forEach(node => nodes.push({ node, uri: '' }));
 			for (const u in doc.relevance)
 				lexers[u].object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
 			if (!nodes.length) return undefined;

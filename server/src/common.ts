@@ -293,7 +293,7 @@ function build_item_cache(ahk2: any) {
 				case 'keywords': type = CompletionItemKind.Keyword; break;
 				case 'variables':
 					for (snip of arr) {
-						ahkvars[snip.prefix.toLowerCase()] = {
+						ahkvars[snip.prefix.toUpperCase()] = {
 							name: snip.prefix,
 							kind: SymbolKind.Variable,
 							range: rg, selectionRange: rg,

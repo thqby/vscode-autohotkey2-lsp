@@ -12,13 +12,13 @@ export async function referenceProvider(params: ReferenceParams, token: Cancella
 }
 
 export function getAllReferences(doc: Lexer, context: any, allow_builtin = true): { [uri: string]: Range[] } | null | undefined {
-	let name: string = context.text.toLowerCase(), references: { [uri: string]: Range[] } = {};
+	let name: string = context.text.toUpperCase(), references: { [uri: string]: Range[] } = {};
 	if (!context.text) return undefined;
 	let nodes = searchNode(doc, name, context.range.end, context.kind);
 	if (!nodes || nodes.length > 1)
 		return undefined;
 	let { node, uri, scope, ref } = nodes[0];
-	if (!uri || !node.selectionRange.end.character || ref && name.match(/^(this|super)$/))
+	if (!uri || !node.selectionRange.end.character || ref && name.match(/^(THIS|SUPER)$/))
 		return undefined;
 	if (node === doc.declaration[name])
 		scope = undefined;
@@ -72,8 +72,8 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 				let c = name.split('.'), rgs = findAllFromDoc(doc, c[0], SymbolKind.Variable);
 				let refs: { [uri: string]: Range[] } = {}, incls = scope?.kind === SymbolKind.Class;
 				c.splice(0, 1);
-				if (incls && c[0] === scope?.name.toLowerCase())
-					scope?.children?.forEach(it => it.name.toLowerCase() === 'this' && rgs.push(it.selectionRange));
+				if (incls && c[0] === scope?.name.toUpperCase())
+					scope?.children?.forEach(it => it.name.toUpperCase() === 'THIS' && rgs.push(it.selectionRange));
 				if (rgs.length)
 					refs[doc.document.uri] = rgs;
 				for (const uri in doc.relevance) {
@@ -88,7 +88,7 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 						while (i < c.length) {
 							tk = doc.get_token(offset, true);
 							if (tk.type === 'TK_DOT') {
-								if ((tk = doc.find_token(tk.offset + tk.length)).type === 'TK_WORD' && tk.content.toLowerCase() === c[i]) {
+								if ((tk = doc.find_token(tk.offset + tk.length)).type === 'TK_WORD' && tk.content.toUpperCase() === c[i]) {
 									offset = tk.offset + tk.length, i++;
 									continue;
 								}
@@ -102,9 +102,9 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 						references[doc.document.uri] = tt;
 				}
 				let t = references[lexers[uri].document.uri] ??= [], ns = node.selectionRange;
-				name = node.name.toLowerCase();
+				name = node.name.toUpperCase();
 				if (incls && (node.kind === SymbolKind.Property || node.kind === SymbolKind.Method))
-					scope?.children?.forEach(it => it.name.toLowerCase() === name && it.kind === SymbolKind.Property
+					scope?.children?.forEach(it => it.name.toUpperCase() === name && it.kind === SymbolKind.Property
 						&& it.selectionRange !== ns && t.push(it.selectionRange));
 				if ((node as any).full)
 					t.unshift(node.selectionRange);
@@ -130,7 +130,7 @@ function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: Docu
 			node.children?.forEach(it => {
 				if (it.kind === SymbolKind.Function)
 					it.children?.forEach(it => {
-						if (it.name.toLowerCase() === name)
+						if (it.name.toUpperCase() === name)
 							ranges.push(it.selectionRange);
 						if (it.children)
 							findAllVar(it as FuncNode, name, gg, ranges, gg, not_static);
@@ -143,7 +143,7 @@ function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: Docu
 					c = undefined;
 			}
 			node.children?.forEach(it => {
-				if (it.name.toLowerCase() === name)
+				if (it.name.toUpperCase() === name)
 					ranges.push(it.selectionRange);
 				if (it.children)
 					findAllVar(it as FuncNode, name, gg, ranges, gg || it.kind === SymbolKind.Function ? c : undefined, not_static);
@@ -158,7 +158,7 @@ function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[
 	let t: Variable;
 	if (fn_is_static && not_static && !global)
 		return;
-	if (global && node.has_this_param && ['this', 'super'].includes(name))
+	if (global && node.has_this_param && ['THIS', 'SUPER'].includes(name))
 		assume_glo = false;
 	else if (node.assume === FuncScope.GLOBAL || node.global?.[name]) {
 		if (!global)
@@ -176,7 +176,7 @@ function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[
 		not_static = !((<any>node)?.local?.[name]?.static);
 	if (assume_glo === global) {
 		node.children?.forEach(it => {
-			if (it.name.toLowerCase() === name && (it.kind !== SymbolKind.Property && it.kind !== SymbolKind.Method && it.kind !== SymbolKind.Class))
+			if (it.name.toUpperCase() === name && (it.kind !== SymbolKind.Property && it.kind !== SymbolKind.Method && it.kind !== SymbolKind.Class))
 				ranges.push(it.selectionRange);
 			if (it.children)
 				findAllVar(it as FuncNode, name, global, ranges, it.kind === SymbolKind.Function ? assume_glo : global || undefined, not_static);
@@ -188,7 +188,7 @@ function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[
 		});
 		// if (!global)
 		// 	node.funccall?.forEach(it => {
-		// 		if (it.kind === SymbolKind.Function && it.name.toLowerCase() === name)
+		// 		if (it.kind === SymbolKind.Function && it.name.toUpperCase() === name)
 		// 			ranges.push(it.selectionRange);
 		// 	});
 	}

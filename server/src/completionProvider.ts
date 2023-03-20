@@ -60,7 +60,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			if (temp[3]) {
 				searchNode(doc, doc.buildContext(position, true, true).text.replace(/\.[^.]*$/, '').toLowerCase(), position, SymbolKind.Class)?.forEach(it => {
 					Object.values(getClassMembers(doc, it.node, true)).forEach(it => {
-						if (it.kind === SymbolKind.Class && !vars[l = it.name.toLowerCase()] && expg.test(l))
+						if (it.kind === SymbolKind.Class && !vars[l = it.name.toUpperCase()] && expg.test(l))
 							items.push(convertNodeCompletion(it)), vars[l] = true;
 					});
 				});
@@ -106,8 +106,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						if (kind === SymbolKind.Function || kind === SymbolKind.Method) {
 							if (!isfunc) {
 								isfunc = true;
-								if (ahkvars['func'])
-									tps.push(ahkvars['func']), isstatic = false;
+								if (ahkvars['FUNC'])
+									tps.push(ahkvars['FUNC']), isstatic = false;
 							}
 							continue;
 						}
@@ -125,8 +125,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						if (tsn === 1)
 							return items;
 					} else if (tp.includes('=>')) {
-						if (!isfunc && (isfunc = true, ahkvars['func']))
-							tps.push(ahkvars['func']), isstatic = false;
+						if (!isfunc && (isfunc = true, ahkvars['FUNC']))
+							tps.push(ahkvars['FUNC']), isstatic = false;
 					} else
 						searchNode(doc, tp, position, SymbolKind.Variable)?.forEach(it => tps.push(it.node));
 				}
@@ -135,17 +135,17 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				switch (node.kind) {
 					case SymbolKind.Class:
 						let omems = getClassMembers(doc, node, isstatic);
-						if (isstatic && (<FuncNode>omems['__new'])?.static === false)
-							delete omems['__new'];
+						if (isstatic && (<FuncNode>omems['__NEW'])?.static === false)
+							delete omems['__NEW'];
 						Object.values(omems).forEach((it: any) => {
 							if (expg.test(it.name)) {
 								if (it.kind === SymbolKind.Property || it.kind === SymbolKind.Class) {
-									if (!props[l = it.name.toLowerCase()])
+									if (!props[l = it.name.toUpperCase()])
 										items.push(props[l] = convertNodeCompletion(it));
 									else if (props[l].detail !== it.full)
 										props[l].detail = '(...) ' + it.name, props[l].insertText = it.name;
 								} else if (it.kind === SymbolKind.Method) {
-									if (!props[l = it.name.toLowerCase()])
+									if (!props[l = it.name.toUpperCase()])
 										items.push(props[l] = convertNodeCompletion(it));
 									else if (props[l].detail !== it.full)
 										props[l].detail = '(...) ' + it.name + '()', props[l].documentation = '';
@@ -184,7 +184,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							props[n].detail = '(...) ' + props[n].label;
 			}
 			for (const cl in ahkvars) {
-				if ((isobj && cl === 'object') || (isfunc && cl === 'func') || cl === 'any' || !ahkvars[cl].children)
+				if ((isobj && cl === 'OBJECT') || (isfunc && cl === 'FUNC') || cl === 'ANY' || !ahkvars[cl].children)
 					continue;
 				let cls: DocumentSymbol[] = [];
 				ahkvars[cl].children?.forEach((it: any) => {
@@ -196,15 +196,15 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				cls.forEach((it: any) => {
 					if (it.kind === SymbolKind.Class)
 						return;
-					if (expg.test(l = it.name.toLowerCase()))
+					if (expg.test(l = it.name.toUpperCase()))
 						if (!props[l])
 							items.push(props[l] = convertNodeCompletion(it));
 						else if (props[l].detail !== it.full)
 							props[l].detail = '(...) ' + it.name, props[l].insertText = it.name, props[l].documentation = undefined;
 				});
 			}
-			for (const it of ahkvars['any']?.children ?? [])
-				if (!props[l = it.name.toLowerCase()] && expg.test(l))
+			for (const it of ahkvars['ANY']?.children ?? [])
+				if (!props[l = it.name.toUpperCase()] && expg.test(l))
 					items.push(props[l] = convertNodeCompletion(it));
 			return items;
 		default:
@@ -240,7 +240,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				let extreg = isdll ? new RegExp(/\.(dll|ocx|cpl)$/i) : inlib ? new RegExp(/\.ahk$/i) : new RegExp(/\.(ahk2?|ah2)$/i), ts = '';
 				pre = pre.replace(/[^\\/]*$/, m => (ts = m, ''));
 				while (m = pre.match(/%a_(\w+)%/i))
-					if (pathenv[a_ = m[1].toLowerCase()])
+					if (typeof pathenv[a_ = m[1].toLowerCase()] === 'string')
 						pre = pre.replace(m[0], pathenv[a_]);
 					else if (a_ === 'scriptdir')
 						pre = pre.replace(m[0], doc.scriptdir);
@@ -290,7 +290,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						break;
 				}
 				return items;
-			} else if (temp = lt.match(/(?<!\.)\b(goto|continue|break)\b(?!\s*:)(\s+|\(\s*('|")?)/i)) {
+			} else if (temp = lt.match(/(?<!([\w.]|[^\x00-\x7f]))(goto|continue|break)(?!\s*:)(\s+|\(\s*('|")?)/i)) {
 				let t = temp[2].trim();
 				if (scopenode = doc.searchScopedNode(position))
 					scopenode.children?.forEach(it => {
@@ -449,7 +449,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 							case 'objbindmethod':
 								if (res.index === 1) {
 									let ns: any, funcs: { [key: string]: any } = {};
-									['new', 'delete', 'get', 'set', 'call'].forEach(it => { funcs['__' + it] = true; });
+									['NEW', 'DELETE', 'GET', 'SET', 'CALL'].forEach(it => { funcs['__' + it] = true; });
 									if (temp = context.pre.match(/objbindmethod\(\s*(([\w.]|[^\x00-\x7f])+)\s*,/i)) {
 										let ts: any = {}, nd = new Lexer(TextDocument.create('', 'ahk2', -10, '_:=' + temp[1]));
 										let ret = (nd.parseScript(), nd.children.shift() as FuncNode)?.returntypes ?? {};
@@ -462,7 +462,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 													ns = [ts[tp]];
 												ns?.forEach((it: any) => {
 													Object.values(getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/))).forEach(it => {
-														if (it.kind === SymbolKind.Method && !funcs[temp = it.name.toLowerCase()] && expg.test(temp))
+														if (it.kind === SymbolKind.Method && !funcs[temp = it.name.toUpperCase()] && expg.test(temp))
 															funcs[temp] = true, additem(it.name, CompletionItemKind.Method);
 													});
 												});
@@ -519,7 +519,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (other)
 					completionItemCache.other.forEach(it => {
 						if (it.kind === CompletionItemKind.Text && expg.test(it.label))
-							vars[it.label.toLowerCase()] = true, items.push(it);
+							vars[it.label.toUpperCase()] = true, items.push(it);
 					});
 				for (const t in vars)
 					txs[t] = true;
@@ -565,7 +565,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					if (top) {
 						metafns.forEach(s => {
 							let label = s.replace(/[(\[].*$/, '');
-							if (!vars[label.toLowerCase()])
+							if (!vars[label.toUpperCase()])
 								items.push({
 									label, kind: CompletionItemKind.Method,
 									insertTextFormat: InsertTextFormat.Snippet,
@@ -581,7 +581,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				if (expg.test(n))
 					vars[n] = convertNodeCompletion(ahkvars[n]);
 			Object.values(doc.declaration).forEach(it => {
-				if (expg.test(l = it.name.toLowerCase()) && !ateditpos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
+				if (expg.test(l = it.name.toUpperCase()) && !ateditpos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
 					vars[l] = convertNodeCompletion(it);
 			});
 			for (const t in list) {
@@ -603,11 +603,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			}
 			completionItemCache.other.forEach(it => {
 				if (expg.test(it.label)) {
-					if (it.kind === CompletionItemKind.Variable)
-						vars[it.label.toLowerCase()] = it;
-					else if (it.kind === CompletionItemKind.Function) {
-						if (!vars[l = it.label.toLowerCase()])
-							vars[l] = it;
+					if (it.kind === CompletionItemKind.Function) {
+						vars[it.label.toUpperCase()] ??= it;
 					} else if (other && it.kind !== CompletionItemKind.Text)
 						items.push(it);
 				}
@@ -625,7 +622,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						path = URI.parse(u).fsPath;
 						if ((extsettings.AutoLibInclude > 1 && (<any>libfuncs[u]).islib) || ((extsettings.AutoLibInclude & 1) && path.startsWith(dir))) {
 							libfuncs[u].forEach(it => {
-								if (!vars[l = it.name.toLowerCase()] && expg.test(l)) {
+								if (!vars[l = it.name.toUpperCase()] && expg.test(l)) {
 									cpitem = convertNodeCompletion(it);
 									cpitem.detail = `${completionitem.include(path)}  ` + (cpitem.detail || '');
 									cpitem.command = { title: 'ahk2.fix.include', command: 'ahk2.fix.include', arguments: [path, uri] };
@@ -638,29 +635,22 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						}
 					}
 				}
-			scopenode?.children?.forEach(it => {
-				if (!vars[l = it.name.toLowerCase()] && expg.test(l) && !ateditpos(it))
-					vars[l] = convertNodeCompletion(it);
-			});
-			if (other)
-				addOther();
+			if (other) {
+				items.push(...completionItemCache.snippet);
+				if (triggerKind === 1 && context.text.length > 2 && context.text.includes('_')) {
+					for (const it of completionItemCache.constant)
+						if (expg.test(it.label))
+							items.push(it);
+				}
+			}
 			return items.concat(Object.values(vars));
 	}
 	function isbuiltin(name: string, pos: any) {
 		let n = searchNode(doc, name, pos, SymbolKind.Variable)?.[0].node;
 		return n && n === ahkvars[name];
 	}
-	function addOther() {
-		items.push(...completionItemCache.snippet);
-		if (triggerKind === 1 && context.text.length > 2 && context.text.match(/^[a-z]+_/i)) {
-			const constants = completionItemCache.constant;
-			for (const it of constants)
-				if (expg.test(it.label))
-					items.push(it);
-		}
-	}
 	function additem(label: string, kind: CompletionItemKind) {
-		if (vars[l = label.toLowerCase()]) return;
+		if (vars[l = label.toUpperCase()]) return;
 		items.push(cpitem = CompletionItem.create(label)), cpitem.kind = kind, vars[l] = true;
 	};
 	function ateditpos(it: DocumentSymbol) {

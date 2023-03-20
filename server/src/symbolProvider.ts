@@ -48,7 +48,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				return;
 			let kind = info.kind;
 			if (kind === SymbolKind.Variable || kind === SymbolKind.Function || !iscls && kind === SymbolKind.Class) {
-				let name = info.name.toLowerCase(), sym = vars[name] ?? gvar[name];
+				let name = info.name.toUpperCase(), sym = vars[name] ?? gvar[name];
 				if (sym === info || !sym)
 					return;
 				(tk = converttype(info, sym === ahkvars[name], sym.kind)).definition = sym;
@@ -60,7 +60,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		node.funccall?.forEach(info => {
 			if (info.kind !== SymbolKind.Function)
 				return;
-			let name = info.name.toLowerCase();
+			let name = info.name.toUpperCase();
 			checkParams(doc, (vars[name] ?? gvar[name]) as FuncNode, info);
 		});
 		t.forEach(info => {
@@ -69,15 +69,15 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				case SymbolKind.Class:
 					let rg = Range.create(0, 0, 0, 0), cls = info as ClassNode;
 					inherit = {
-						this: DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg),
-						super: !cls.extends ? false as any :
+						THIS: DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg),
+						SUPER: !cls.extends ? false as any :
 							DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg)
 					}, outer_is_global = false;
 					for (let dec of [cls.staticdeclaration, cls.declaration])
 						Object.values(dec).forEach(it => it.selectionRange.end.character && result.push(it));
 					break;
 				case SymbolKind.Method:
-					inherit = { this: vars.this, super: vars.super ?? false }, outer_is_global ||= fn.assume === FuncScope.GLOBAL;
+					inherit = { THIS: vars.THIS, SUPER: vars.SUPER ?? false }, outer_is_global ||= fn.assume === FuncScope.GLOBAL;
 				case SymbolKind.Event:
 				case SymbolKind.Function:
 					if (!fn.parent)
@@ -118,10 +118,11 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					break;
 				case SymbolKind.Property:
 					if ((info as FuncNode).parent?.kind === SymbolKind.Class) {
-						inherit = { this: vars.this, super: vars.super ?? false };
+						inherit = { THIS: vars.THIS, SUPER: vars.SUPER ?? false };
 						let t = info as any;
 						for (let s of ['get', 'set', 'call'])
-							(t[s] as DocumentSymbol)?.selectionRange.end.character && result.push(t[s]);
+							(t[s] as DocumentSymbol)?.selectionRange.end.character && result.push(t[s]),
+								inherit[s.toUpperCase()] = false as any;
 						break;
 					}
 				default: inherit = { ...vars }; break;
@@ -153,8 +154,8 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		}
 		t.forEach(it => {
 			if (it.kind === SymbolKind.Class) {
-				let l = (<ClassNode>it).extends?.toLowerCase();
-				if (l === it.name.toLowerCase())
+				let l = (<ClassNode>it).extends?.toUpperCase();
+				if (l === it.name.toUpperCase())
 					err_extends(doc, <ClassNode>it, false);
 				else if (l && !checkextendsclassexist(l))
 					err_extends(doc, <ClassNode>it);
@@ -164,8 +165,8 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			if (dd = lexers[uri])
 				for (const it of Object.values(dd.declaration))
 					if (it.kind === SymbolKind.Class) {
-						let l = (<ClassNode>it).extends?.toLowerCase();
-						if (l === it.name.toLowerCase())
+						let l = (<ClassNode>it).extends?.toUpperCase();
+						if (l === it.name.toUpperCase())
 							err_extends(dd, <ClassNode>it, false);
 						else if (l && !checkextendsclassexist(l))
 							err_extends(dd, <ClassNode>it);
@@ -173,7 +174,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		}
 
 		function checkextendsclassexist(name: string) {
-			let n = name.toLowerCase().split('.'), c: ClassNode | undefined;
+			let n = name.split('.'), c: ClassNode | undefined;
 			for (let t of n) {
 				c = c ? c.staticdeclaration[t] : dec[t];
 				if (!c || c.kind !== SymbolKind.Class || (<any>c).def === false)
@@ -228,12 +229,12 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 	if (!extsettings.Diagnostics.ParamsCheck || !paraminfo) return;
 	if (node?.kind === SymbolKind.Class) {
 		let cl = node as unknown as ClassNode;
-		node = (cl.staticdeclaration['call'] ?? cl.declaration['__new']) as FuncNode;
-		if (cl.extends && (!node || node !== cl.staticdeclaration['call'])) {
+		node = (cl.staticdeclaration['CALL'] ?? cl.declaration['__NEW']) as FuncNode;
+		if (cl.extends && (!node || node !== cl.staticdeclaration['CALL'])) {
 			let t = getClassMembers(doc, cl, true);
-			if (t['call'] && (<any>t['call']).def !== false)
-				node = t['call'] as FuncNode;
-			else node = (t['__new'] ?? t['call']) as FuncNode;
+			if (t['CALL'] && (<any>t['CALL']).def !== false)
+				node = t['CALL'] as FuncNode;
+			else node = (t['__NEW'] ?? t['CALL']) as FuncNode;
 		}
 	}
 	if (!node) return;

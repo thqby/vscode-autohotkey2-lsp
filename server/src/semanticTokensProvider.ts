@@ -19,13 +19,13 @@ function resolve_sem(tk: Token, doc: Lexer) {
 		} else {
 			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) && tk.previous_token?.type === 'TK_DOT'
 				|| (curclass = undefined, type === SemanticTokenTypes.class))
-				type = resolveSemanticType(tk.content.toLowerCase(), tk, doc);
+				type = resolveSemanticType(tk.content.toUpperCase(), tk, doc);
 			if (!tk.ignore || type === SemanticTokenTypes.keyword)
 				doc.STB.push(pos.line, pos.character, tk.length, type, sem.modifier ?? 0);
 		}
 	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 		curclass = undefined;
-	else if (tk.type === 'TK_WORD' && ['this', 'super'].includes(l = tk.content.toLowerCase()) && tk.previous_token?.type !== 'TK_DOT') {
+	else if (tk.type === 'TK_WORD' && ['THIS', 'SUPER'].includes(l = tk.content.toUpperCase()) && tk.previous_token?.type !== 'TK_DOT') {
 		let r = doc.searchNode(l, doc.document.positionAt(tk.offset), SymbolKind.Variable);
 		if (r && r.ref === false)
 			curclass = r.node as ClassNode;
@@ -86,9 +86,9 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 					if (t)
 						n = t, kind = t.kind;
 					else if (sem.type === SemanticTokenTypes.method) {
-						if (temp['__call'])
+						if (temp['__CALL'])
 							kind = SymbolKind.Null;
-					} else if (temp['__get'])
+					} else if (temp['__GET'])
 						kind = SymbolKind.Null;
 				}
 				switch (kind) {
@@ -116,7 +116,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						return sem.type = SemanticTokenTypes.class;
 					case SymbolKind.Property:
 						let t = n.children;
-						if (t?.length === 1 && t[0].name === 'get')
+						if (t?.length === 1 && t[0].name.toLowerCase() === 'get')
 							sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly | 1 << SemanticTokenModifiers.static;
 						curclass = undefined;
 						return sem.type = SemanticTokenTypes.property;
@@ -126,7 +126,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 							if (tt?.content === ':=') {
 								cls_add_prop(curclass, tk.content, tk.offset);
 							} else if ((memscache.get(curclass) as any)?.['#checkmember'] !== false)
-								((curclass.undefined ??= {})[tk.content.toLowerCase()] ??= []).push(tk);
+								((curclass.undefined ??= {})[tk.content.toUpperCase()] ??= []).push(tk);
 								// doc.addDiagnostic(diagnostic.maybehavenotmember(curclass.name, tk.content), tk.offset, tk.length, 2);
 						}
 				}
@@ -141,7 +141,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 		if (d && offset) {
 			let rg = Range.create(d.document.positionAt(offset), d.document.positionAt(offset + name.length));
 			let p = DocumentSymbol.create(name, undefined, SymbolKind.Property, rg, rg) as Variable;
-			p.static = p.def = true, name = name.toLowerCase();
+			p.static = p.def = true, name = name.toUpperCase();
 			if (d === doc && d.d < 2)
 				cls.children?.push(p), cls.staticdeclaration[name] ??= p;
 			else {

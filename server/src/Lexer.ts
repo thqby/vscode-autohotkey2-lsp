@@ -537,9 +537,9 @@ export class Lexer {
 									};
 									p[blocks].children?.push(tn), tn.static = isstatic, tn.full = `(${cls.join('.')}) ${isstatic ? 'static ' : ''}` + tn.name;
 									if (isstatic && blocks)
-										(<ClassNode>p[blocks]).staticdeclaration[tn.name.toLowerCase()] = tn;
+										(<ClassNode>p[blocks]).staticdeclaration[tn.name.toUpperCase()] = tn;
 									else
-										(<ClassNode>p[blocks]).declaration[tn.name.toLowerCase()] = tn;
+										(<ClassNode>p[blocks]).declaration[tn.name.toUpperCase()] = tn;
 									if (tokens[i - (isstatic ? 2 : 1)].type.endsWith('COMMENT'))
 										tn.detail = trim_comment(tokens[i - (isstatic ? 2 : 1)].content);
 									let pars: Variable[] = [];
@@ -572,7 +572,7 @@ export class Lexer {
 													rets.push(lk.content);
 												while (tokens[j + 1].content === '|')
 													if ((lk = tokens[j += 2]).type === 'TK_WORD')
-														rets.push('#' + lk.content), lk.semantic = { type: SemanticTokenTypes.class };
+														rets.push('#' + lk.content.toLowerCase()), lk.semantic = { type: SemanticTokenTypes.class };
 													else if (lk.type === 'TK_NUMBER')
 														rets.push(lk.content);
 													else j--;
@@ -674,9 +674,9 @@ export class Lexer {
 										tn.detail = trim_comment(tokens[i].content);
 									p[blocks].children?.push(tn);
 									if (isstatic && blocks)
-										(<ClassNode>p[blocks]).staticdeclaration[tn.name.toLowerCase()] = tn;
+										(<ClassNode>p[blocks]).staticdeclaration[tn.name.toUpperCase()] = tn;
 									else
-										(<ClassNode>p[blocks]).declaration[tn.name.toLowerCase()] = tn;
+										(<ClassNode>p[blocks]).declaration[tn.name.toUpperCase()] = tn;
 								}
 							}
 							i = j + 1, isstatic = false;
@@ -693,9 +693,9 @@ export class Lexer {
 								tk.semantic = { type: SemanticTokenTypes.class, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 								tk.symbol = tk.definition = tn, cl.funccall = [], cl.extends = '', p[blocks].children?.push(tn);
 								if (blocks === 0)
-									(<FuncNode>p[0]).declaration[tn.name.toLowerCase()] = tn;
+									(<FuncNode>p[0]).declaration[tn.name.toUpperCase()] = tn;
 								else
-									(<ClassNode>p[blocks]).staticdeclaration[tn.name.toLowerCase()] = tn;
+									(<ClassNode>p[blocks]).staticdeclaration[tn.name.toUpperCase()] = tn;
 								if ((lk = tokens[j])?.content.toLowerCase() === 'extends') {
 									if ((lk = tokens[j + 1])?.type === 'TK_WORD')
 										_this.children.push(Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length)));
@@ -732,14 +732,14 @@ export class Lexer {
 							case SymbolKind.Class:
 								(<FuncNode>it).overwrite = overwrite;
 								(<any>it).uri = this.uri;
-								if (!(t = ahkvars[_low = it.name.toLowerCase()]) || overwrite >= (t.overwrite ?? 0))
+								if (!(t = ahkvars[_low = it.name.toUpperCase()]) || overwrite >= (t.overwrite ?? 0))
 									ahkvars[_low] = it;
 								break;
 						}
 					});
-					let s = this.declaration['struct'] as any;
+					let s = this.declaration['STRUCT'] as any;
 					if (s && s.kind === SymbolKind.Class) s.def = false;
-					s = (ahkvars['class'] as ClassNode)?.staticdeclaration['call'];
+					s = (ahkvars['CLASS'] as ClassNode)?.staticdeclaration['CALL'];
 					if (s) s.def = false;
 				}
 				checksamenameerr({}, this.children, this.diagnostics);
@@ -903,7 +903,7 @@ export class Lexer {
 									let par = parse_params(undefined, true), isstatic = fc.topofline === 2;
 									let oo = isstatic ? fc.previous_token?.offset as number : fc.offset;
 									line_begin_pos = undefined;
-									if ((name_l = fc.content.toLowerCase()).match(/^\d/))
+									if ((name_l = fc.content.toUpperCase()).match(/^\d/))
 										_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
 									if (!par)
 										par = [], _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset + 1 - fc.offset);
@@ -1094,7 +1094,7 @@ export class Lexer {
 										tk = lk, lk = EMPTY_TOKEN, next = false;
 										parser_pos = tk.offset + tk.length;
 										let rl = result.length, _ = _parent;
-										_parent = _parent.declaration.__init;
+										_parent = _parent.declaration.__INIT;
 										let sta = parse_statement('');
 										_parent.children.push(...result.splice(rl)), _parent = _;
 										result.push(...sta);
@@ -1113,7 +1113,7 @@ export class Lexer {
 
 							if (mode === 2) {
 								let rl = result.length, _ = _parent;
-								_parent = _parent.declaration.__init;
+								_parent = _parent.declaration.__INIT;
 								let sta = parse_statement('');
 								_parent.children.push(...result.splice(rl)), _parent = _;
 								result.push(...sta);
@@ -1179,7 +1179,7 @@ export class Lexer {
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1))
 							result.push(tn);
 							if (_parent.labels) {
-								_low = tk.content.toLowerCase().slice(0, -1), (<any>tn).def = true;
+								_low = tk.content.toUpperCase().slice(0, -1), (<any>tn).def = true;
 								if (!_parent.labels[_low])
 									_parent.labels[_low] = [tn];
 								else if (_parent.labels[_low][0].def)
@@ -1357,9 +1357,9 @@ export class Lexer {
 									ex = m[1].replace(/^{([^}]+)}$/, '$1');
 							if (ex)
 								tn.extends = ex;
-							tn.declaration.__init = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
-							tn.staticdeclaration.__init = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
-							(tn.declaration.__init as any).ranges = [], (tn.staticdeclaration.__init as any).ranges = [];
+							tn.declaration.__INIT = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
+							tn.staticdeclaration.__INIT = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
+							(tn.declaration.__INIT as any).ranges = [], (tn.staticdeclaration.__INIT as any).ranges = [];
 							tn.children.push(...parse_block(2, sv, classfullname + cl.content + '.')), tn.range = make_range(beginpos, parser_pos - beginpos);
 							adddeclaration(tn as ClassNode), cl.semantic = { type: SemanticTokenTypes.class, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 							_this.addSymbolFolding(tn, tk.offset);
@@ -1399,11 +1399,11 @@ export class Lexer {
 							} else {
 								let sta: any[], rl = result.length, _ = _parent;
 								if (mode === 2)
-									tk.topofline = 2, _parent = _parent.staticdeclaration.__init;
+									tk.topofline = 2, _parent = _parent.staticdeclaration.__INIT;
 								next = false;
 								sta = parse_statement(_low === 'global' ? '' : _low);
 								if (_low === 'global') {
-									sta.forEach(it => _parent.global[it.name.toLowerCase()] ??= it);
+									sta.forEach(it => _parent.global[it.name.toUpperCase()] ??= it);
 								} else {
 									if (mode === 2) {
 										_parent.children.push(...result.splice(rl)), _parent = _;
@@ -1413,7 +1413,7 @@ export class Lexer {
 									} else {
 										let isstatic = _low === 'static';
 										sta.forEach(it => {
-											_parent.local[it.name.toLowerCase()] ??= it;
+											_parent.local[it.name.toUpperCase()] ??= it;
 											it.static = isstatic;
 										});
 									}
@@ -1592,7 +1592,7 @@ export class Lexer {
 						}
 						break;
 					case 'isset':
-						tk.definition = ahkvars['isset'];
+						tk.definition = ahkvars['ISSET'];
 						tk.semantic = { type: SemanticTokenTypes.keyword };
 						if (input.charAt(tk.offset + 5) === '(') {
 							tk.type = 'TK_WORD', tk.ignore = true, next = false;
@@ -1641,7 +1641,7 @@ export class Lexer {
 
 				function addlabel(tk: Token) {
 					if (_parent.labels) {
-						_low = tk.content.toLowerCase();
+						_low = tk.content.toUpperCase();
 						if (!_parent.labels[_low])
 							_parent.labels[_low] = [];
 						let rg = make_range(tk.offset, tk.length);
@@ -1874,7 +1874,7 @@ export class Lexer {
 				while (true) {
 					let o: any = {};
 					res.push(...parse_expression(undefined, o, 0, end));
-					if (o = Object.keys(o).pop()?.toLowerCase())
+					if (o = Object.keys(o).pop())
 						tps.push(o);
 					if (tk.type === 'TK_COMMA') {
 						next = true, ++hascomma, ++info.count;
@@ -1983,7 +1983,7 @@ export class Lexer {
 								result.push(...parse_expression(undefined, o));
 								_parent.ranges?.push([pp, lk.offset + lk.length]);
 								if (vr) {
-									vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
+									vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toUpperCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
 									vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) }, vr.def = true;
 									let tt = vr.returntypes;
 									for (const t in tt)
@@ -2156,7 +2156,7 @@ export class Lexer {
 										next = true;
 										result.push(...parse_expression(inpair, o, mustexp || 1, end ?? (ternarys.length ? ':' : undefined)));
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
-										let tp = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number';
+										let tp = equ === ':=' ? Object.keys(o).pop()?.toUpperCase() || '#any' : equ === '.=' ? '#string' : '#number';
 										vr.returntypes = { [tp]: vr.range.end };
 										if (vr.ref)
 											tpexp = tpexp.slice(0, -1) + '#varref';
@@ -2307,7 +2307,7 @@ export class Lexer {
 							}
 							if (tk.content.match(/^(class|super|isset)$/i)) {
 								if (tk.content.toLowerCase() === 'isset') {
-									tk.definition = ahkvars['isset'];
+									tk.definition = ahkvars['ISSET'];
 									tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.keyword };
 									if (c !== '(')
 										_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
@@ -2423,7 +2423,7 @@ export class Lexer {
 									tn.detail = trim_comment(_cm?.content);
 								if (byref)
 									byref = false, (<Variable>tn).ref = (<Variable>tn).def = true, tpexp = '#varref';
-								else tpexp = tn.name;
+								else tpexp = ' ' + tn.name;
 								cache.push(tn), bb = parser_pos, bak = tk;
 								if (tk.content === ',')
 									info.comma.push(tk.offset);
@@ -2483,7 +2483,7 @@ export class Lexer {
 									tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length));
 									(<Variable>tn).def = true, (<Variable>tn).defaultVal = null, cache.push(tn);
 									if (byref) byref = false, (<Variable>tn).ref = true, tpexp = '#varref';
-									else tpexp = lk.content;
+									else tpexp = ' ' + lk.content;
 									nexttoken();
 									if (tk.type as string === 'TK_COMMA') {
 										if (t.content.match(/^\d/)) _this.addDiagnostic(diagnostic.invalidsymbolname(t.content), t.offset, t.length);
@@ -2528,7 +2528,7 @@ export class Lexer {
 				}
 				if (paramsdef) {
 					if (endc === ')') {
-						types[tpexp.toLowerCase()] = 0;
+						types[tpexp] = 0;
 						Object.defineProperty(types, 'paraminfo', { value: info, configurable: true });
 					}
 					if (hasexpr)
@@ -2678,8 +2678,8 @@ export class Lexer {
 					let exp = parse_expression(',', ts = {});
 					result.push(...exp);
 					if (k) {
-						let _ = k.content.toLowerCase();
-						if (_ === 'base') {
+						let _ = k.content.toUpperCase();
+						if (_ === 'BASE') {
 							let t = Object.keys(ts).pop();
 							if (t && t.match(/\.prototype$/i)) {
 								t = t.slice(0, -10).trim().toLowerCase();
@@ -2816,7 +2816,7 @@ export class Lexer {
 											next = true;
 											result.push(...parse_expression(e, o, 2, ternarys.length ? ':' : undefined));
 											vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
-											let tp = equ === ':=' ? Object.keys(o).pop()?.toLowerCase() || '#any' : equ === '.=' ? '#string' : '#number'
+											let tp = equ === ':=' ? Object.keys(o).pop()?.toUpperCase() || '#any' : equ === '.=' ? '#string' : '#number'
 											vr.returntypes = { [tp]: vr.range.end };
 											if (vr.ref)
 												tpexp = tpexp.slice(0, -1) + '#varref';
@@ -2924,7 +2924,7 @@ export class Lexer {
 						}
 						if (tk.content.match(/^(class|super|isset)$/i)) {
 							if (tk.content.toLowerCase() === 'isset') {
-								tk.definition = ahkvars['isset'];
+								tk.definition = ahkvars['ISSET'];
 								tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.keyword };
 								if (c !== '(')
 									_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
@@ -3078,7 +3078,7 @@ export class Lexer {
 				if (token.ignore || is_builtinvar(_low, md)) {
 					if (token.semantic && token.semantic.type !== SemanticTokenTypes.keyword)
 						delete token.semantic;
-					token.definition = ahkvars[_low];
+					token.definition = ahkvars[_low.toUpperCase()];
 					token.ignore = true;
 					return false;
 				}
@@ -3095,14 +3095,13 @@ export class Lexer {
 			}
 
 			function addprop(tk: Token) {
-				let l = tk.content.toLowerCase();
+				let l = tk.content.toUpperCase();
 				tk.semantic = { type: SemanticTokenTypes.property };
-				if (!_this.object.property[l])
-					_this.object.property[l] = Variable.create(tk.content, SymbolKind.Property, make_range(tk.offset, tk.length));
+				_this.object.property[l] ??= Variable.create(tk.content, SymbolKind.Property, make_range(tk.offset, tk.length));
 			}
 
 			function addtext(text: string) {
-				_this.texts[text.toLowerCase()] = text;
+				_this.texts[text.toUpperCase()] = text;
 			}
 
 			function adddeclaration(node: FuncNode | ClassNode) {
@@ -3112,13 +3111,13 @@ export class Lexer {
 					return;
 				if (node.kind === SymbolKind.Class) {
 					let cls = node as ClassNode, sdec = cls.staticdeclaration ??= {}, children = cls.children ??= [];
-					adddeclaration(sdec.__init as FuncNode);
-					if ((dec.__init as any)?.ranges?.length)
-						adddeclaration(dec.__init as FuncNode);
-					else delete dec.__init;
+					adddeclaration(sdec.__INIT as FuncNode);
+					if ((dec.__INIT as any)?.ranges?.length)
+						adddeclaration(dec.__INIT as FuncNode);
+					else delete dec.__INIT;
 					children.forEach((it: Variable) => {
-						_low = it.name.toLowerCase();
-						if (/^__(new|init|item|enum|get|call|set|delete)$/.test(_low))
+						_low = it.name.toUpperCase();
+						if (/^__(NEW|INIT|ITEM|ENUM|GET|CALL|SET|DELETE)$/.test(_low))
 							delete (tokens[document.offsetAt(it.selectionRange.start)] ?? {}).semantic;
 						if (it.children) {
 							let tc = it.static || it.kind === SymbolKind.Class ? sdec : dec;
@@ -3140,7 +3139,7 @@ export class Lexer {
 					children.forEach((it: Variable) => {
 						if (it.children) return;
 						let tc = it.static || it.kind === SymbolKind.Class ? sdec : dec;
-						if (!(t = tc[_low = it.name.toLowerCase()]))
+						if (!(t = tc[_low = it.name.toUpperCase()]))
 							return it.def === false || (tc[_low] = it);
 						if (t.children) {
 							let _ = t as any;
@@ -3149,9 +3148,9 @@ export class Lexer {
 						if (it.def !== false)
 							_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange, severity });
 					});
-					dec.__init && children.unshift(dec.__init), children.unshift(sdec.__init);
+					dec.__INIT && children.unshift(dec.__INIT), children.unshift(sdec.__INIT);
 					cls.cache?.splice(0).forEach(it => {
-						(it.static ? sdec : dec)[_low = it.name.toLowerCase()] ??= it;
+						(it.static ? sdec : dec)[_low = it.name.toUpperCase()] ??= it;
 						children.push(it);
 					});
 				} else {
@@ -3160,9 +3159,9 @@ export class Lexer {
 					if (has_this_param) {
 						let rg = make_range(0, 0);
 						fn.has_this_param = true;
-						pars.this = dec.this = Variable.create('this', SymbolKind.TypeParameter, rg);
-						pars.super = dec.super = Variable.create('super', SymbolKind.TypeParameter, rg);
-						pars.this.def = pars.super.def = true;
+						pars.THIS = dec.THIS = Variable.create('this', SymbolKind.TypeParameter, rg);
+						pars.SUPER = dec.SUPER = Variable.create('super', SymbolKind.TypeParameter, rg);
+						pars.THIS.def = pars.SUPER.def = true;
 					}
 					if (node.kind === SymbolKind.Function && node.name.toLowerCase() === 'isset') {
 						let offset = _this.document.offsetAt(node.selectionRange.start);
@@ -3179,7 +3178,7 @@ export class Lexer {
 								message: diagnostic.defaultvalmissing(it.name),
 								range: it.selectionRange, severity
 							});
-						if (t = pars[_low = it.name.toLowerCase()])
+						if (t = pars[_low = it.name.toUpperCase()])
 							_diags.push({
 								message: diagnostic.conflictserr('parameter', 'parameter', t.name),
 								range: it.selectionRange, severity
@@ -3217,7 +3216,7 @@ export class Lexer {
 						_this.declaration[k] ??= dec[k] = v, (v as any).infunc = true;
 					});
 					fn.children.forEach(it => {
-						if (!(_low = it.name.toLowerCase()))
+						if (!(_low = it.name.toUpperCase()))
 							return;
 						if (it.kind === SymbolKind.Function) {
 							if (dec[_low]) {
@@ -3290,7 +3289,7 @@ export class Lexer {
 						if (!dec[k]) (unresolved_vars[k] = vars[k]).def = false;
 					fn.unresolved_vars = unresolved_vars;
 					if (has_this_param)
-						delete pars.this, delete pars.super, delete dec.this, delete dec.super;
+						delete pars.THIS, delete pars.SUPER, delete dec.THIS, delete dec.SUPER;
 					Object.assign(fn.local, pars);
 				}
 			}
@@ -4821,13 +4820,15 @@ export class Lexer {
 	public searchNode(name: string, position?: Position, kind?: SymbolKind)
 		: { node: DocumentSymbol, uri: string, ref?: boolean, scope?: DocumentSymbol, fn_is_static?: boolean } | undefined | false | null {
 		let node: DocumentSymbol | undefined, t: DocumentSymbol | undefined, uri = this.uri;
-		name = name.toLowerCase();
+		name = name.toUpperCase();
 		if (kind === SymbolKind.Variable || kind === SymbolKind.Class || kind === SymbolKind.Function) {
 			let scope: DocumentSymbol | undefined, bak: DocumentSymbol | undefined, ref = true, fn_is_static = false;
 			if (name.startsWith('$')) {
-				if (node = this.anonymous[parseInt(name.substring(1))])
+				let index = parseInt(name = name.substring(1));
+				if (node = this.anonymous[index])
 					return { node, uri };
-				return null;
+				if (!isNaN(index))
+					return null;
 			}
 			if (position) {
 				scope = this.searchScopedNode(position);
@@ -4838,7 +4839,7 @@ export class Lexer {
 						// 	scope = undefined;
 						// else {
 						// 	let cls = scope as ClassNode, line = this.buildContext(position, true).range.start.line;
-						// 	node = cls.children?.find(it => it.selectionRange.start.line === line && it.name.toLowerCase() === name);
+						// 	node = cls.children?.find(it => it.selectionRange.start.line === line && it.name.toUpperCase() === name);
 						// 	if (node?.kind === SymbolKind.Property)
 						// 		node = ((node as Variable).static ? cls.staticdeclaration[name] : cls.declaration[name]) ?? node;
 						// 	if (node)
@@ -4858,7 +4859,7 @@ export class Lexer {
 					} else if (glo?.[name])
 						return { node: this.declaration[name] ?? glo[name], uri };
 					else if ((<FuncNode>scope).assume === FuncScope.GLOBAL) {
-						if ((scope as FuncNode).has_this_param && ['this', 'super'].includes(name)) {
+						if ((scope as FuncNode).has_this_param && ['THIS', 'SUPER'].includes(name)) {
 							node = undefined;
 							break;
 						}
@@ -4877,10 +4878,10 @@ export class Lexer {
 							node = t, bak = scope;
 						}
 					} else if (fn_is_static && bak === scope) {
-						node = scope.children?.find(it => it.name.toLowerCase() === name);
+						node = scope.children?.find(it => it.name.toUpperCase() === name);
 						if (node && (<Variable>node).static)
 							return { node, uri, scope };
-					} else if ((scope as FuncNode).has_this_param && ['this', 'super'].includes(name)) {
+					} else if ((scope as FuncNode).has_this_param && ['THIS', 'SUPER'].includes(name)) {
 						node = undefined;
 						break;
 					}
@@ -4891,7 +4892,7 @@ export class Lexer {
 						return { node: t, uri, scope };
 					else
 						return { node, uri, fn_is_static, scope: bak };
-				} else if (['this', 'super'].includes(name)) {
+				} else if (['THIS', 'SUPER'].includes(name)) {
 					scope = bak;
 					if (scope?.kind === SymbolKind.Class && position) {
 						let off = this.document.offsetAt(position);
@@ -4909,7 +4910,7 @@ export class Lexer {
 						scope = (<FuncNode>scope).parent;
 					}
 					if (scope) {
-						if (name === 'this') {
+						if (name === 'THIS') {
 							return { node: scope, uri, ref, scope };
 						} else {
 							if ((<ClassNode>scope).extends) {
@@ -4924,7 +4925,7 @@ export class Lexer {
 				if (!scope && this.declaration[name])
 					return { node: this.declaration[name], uri };
 				if (!scope && (scope = bak))
-					if (node = scope.children?.find(it => it.name.toLowerCase() === name))
+					if (node = scope.children?.find(it => it.name.toUpperCase() === name))
 						return { node, uri, scope };
 			} else if (node = this.declaration[name])
 				return { node, uri, scope };
@@ -5056,7 +5057,7 @@ export class Lexer {
 	public getNodeAtPosition(position: Position): DocumentSymbol | undefined {
 		let context = this.buildContext(position);
 		if (context) {
-			let t = this.searchNode(context.text.toLowerCase(), context.range.end, context.kind);
+			let t = this.searchNode(context.text, context.range.end, context.kind);
 			if (t)
 				return t.node;
 		}
@@ -5074,10 +5075,10 @@ export class Lexer {
 				if (item.kind === SymbolKind.Class) {
 					let offset = this.document.offsetAt(position);
 					for (let dec of [(item as any).staticdeclaration, (item as any).declaration])
-						for (let rg of dec.__init?.ranges ?? [])
+						for (let rg of dec.__INIT?.ranges ?? [])
 							if (offset <= rg[0]) break;
 							else if (offset <= rg[1])
-								return dec.__init;
+								return dec.__INIT;
 				}
 				return item;
 			}
@@ -5096,9 +5097,9 @@ export class Lexer {
 				break;
 			else roots.push(fn);
 		if (fn?.kind === SymbolKind.Class) {
-			vars.this = DocumentSymbol.create('this', completionitem._this(), SymbolKind.TypeParameter, rg, rg);
+			vars.THIS = DocumentSymbol.create('this', completionitem._this(), SymbolKind.TypeParameter, rg, rg);
 			if ((fn as any).extends)
-				vars.super = DocumentSymbol.create('super', completionitem._super(), SymbolKind.TypeParameter, rg, rg);
+				vars.SUPER = DocumentSymbol.create('super', completionitem._super(), SymbolKind.TypeParameter, rg, rg);
 		}
 		while (fn = roots.pop() as FuncNode) {
 			if (fn.kind === SymbolKind.Property)
@@ -5308,20 +5309,20 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 	let isobj = l === 'object' || l === 'comobjarray' || (!(node as ClassNode).extends && l !== 'any');
 	getmems(doc, node, staticmem);
 	if (staticmem && node.children) {
-		if (isobj && !v['call'] && v['__new']) {
-			tn = Object.assign({}, v['__new']), tn.name = 'Call', (<any>tn).def = false;
-			v['call'] = tn;
+		if (isobj && !v['CALL'] && v['__NEW']) {
+			tn = Object.assign({}, v['__NEW']), tn.name = 'Call', (<any>tn).def = false;
+			v['CALL'] = tn;
 		}
-		if ((cl = ahkvars['class'] as ClassNode) && cl !== node) {
+		if ((cl = ahkvars['CLASS'] as ClassNode) && cl !== node) {
 			for (l in cl.staticdeclaration)
 				if (!v[l]) v[l] = cl.staticdeclaration[l], (<any>v[l]).uri = (<any>cl).uri;
 		}
 	}
-	let other: string[] = ['object', 'any'];
+	let other: string[] = ['OBJECT', 'ANY'];
 	if (!isobj)
 		if (!staticmem) {
 			other.splice(0, 1);
-			if (node === ahkvars['comobject'])
+			if (node === ahkvars['COMOBJECT'])
 				other = [];
 		}
 	for (let cls of other)
@@ -5337,28 +5338,28 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 			return;
 		hasget[l2] = true;
 		if (staticmem) {
-			if (!v['__new']) {
-				let it = (node as ClassNode).declaration['__new'];
-				if (it) v['__new'] = it, (<any>it).uri = u;
+			if (!v['__NEW']) {
+				let it = (node as ClassNode).declaration['__NEW'];
+				if (it) v['__NEW'] = it, (<any>it).uri = u;
 			}
 			for (let it of Object.values((node as ClassNode).staticdeclaration)) {
-				if (!v[l = it.name.toLowerCase()] || (it.kind === SymbolKind.Class || it.kind === SymbolKind.Method) && v[l].kind === SymbolKind.Property)
+				if (!v[l = it.name.toUpperCase()] || (it.kind === SymbolKind.Class || it.kind === SymbolKind.Method) && v[l].kind === SymbolKind.Property)
 					v[l] = it, (<any>it).uri = u;
-				else if (l === 'call' && (<any>v['call']).def === false)
+				else if (l === 'CALL' && (<any>v['CALL']).def === false)
 					v[l] = it, (<any>it).uri = u;
 			}
-			if ((v['__new'] as FuncNode)?.static)
-				delete v['__new'];
+			if ((v['__NEW'] as FuncNode)?.static)
+				delete v['__NEW'];
 		} else {
 			for (let it of Object.values((node as ClassNode).declaration)) {
-				if (!v[l = it.name.toLowerCase()] || ((<any>v[l]).def === false && (<any>it).def !== false))
+				if (!v[l = it.name.toUpperCase()] || ((<any>v[l]).def === false && (<any>it).def !== false))
 					v[l] = it, (<any>it).uri = u;
 			}
 		}
-		if ((l = (<ClassNode>node).extends?.toLowerCase()) && l !== (l2 = (<ClassNode>node).full.toLowerCase())) {
+		if ((l = (<ClassNode>node).extends?.toUpperCase()) && l !== (l2 = (<ClassNode>node).full.toUpperCase())) {
 			let cl: any, nd: DocumentSymbol | undefined, dc: Lexer;
 			let p = l.split('.'), p2 = l2.split('.'), i = -1;
-			if (!isobj && (l === 'object' || l === 'comobjarray'))
+			if (!isobj && (l === 'OBJECT' || l === 'COMOBJARRAY'))
 				isobj = true;
 			while (p[i + 1] === p2[i + 1])
 				i++;
@@ -5399,6 +5400,7 @@ export function cleardetectcache() {
 }
 
 export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [type: string]: DocumentSymbol | boolean }, fullexp?: string) {
+	exp = exp.toLowerCase();
 	if (exp.match(/^\s*[@#$](\w|[^\x00-\x7f])+$/))
 		return types[exp.trim()] = false;
 	last_full_exp = '', searchcache = {};
@@ -5415,6 +5417,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 			return ['#array'];
 		else if (builtin_variable.includes(name) || isahk2_h && builtin_variable_h.includes(name))
 			return ['#string'];
+	name = name.toUpperCase();
 	if (n.scope) {
 		let scope = n.scope;
 		if (n.node.kind === SymbolKind.TypeParameter) {
@@ -5452,7 +5455,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 	if (!scope && pos && pos !== n.node.selectionRange.end)
 		scope = doc as any;
 	for (const it of scope?.children ?? [])
-		if (name === it.name.toLowerCase()) {
+		if (name === it.name.toUpperCase()) {
 			if (it.kind === SymbolKind.Variable || it.kind === SymbolKind.TypeParameter) {
 				if (pos && (it.selectionRange.end.line > pos.line || (it.selectionRange.end.line === pos.line && it.selectionRange.start.character > pos.character)))
 					break;
@@ -5468,10 +5471,10 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 				let n = searchNode(doc, res.name, ite.selectionRange.end, SymbolKind.Variable);
 				if (n) {
 					let nn = n[0].node;
-					if (nn === ahkvars['regexmatch']) {
+					if (nn === ahkvars['REGEXMATCH']) {
 						if (res.index = 2)
 							return ['#regexmatchinfo'];
-					} else if (ahkvars[res.name] === nn)
+					} else if (ahkvars[res.name.toUpperCase()] === nn)
 						return ['#number'];
 				}
 			}
@@ -5495,6 +5498,7 @@ function get_comment_types(it: DocumentSymbol, prop = false) {
 }
 
 export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: string): string[] {
+	exp = exp.toLowerCase();
 	if (exp.includes('=>'))
 		return [exp.trim()];
 	let tz = `${exp.trim()},${doc.uri},${pos.line},${pos.character}`;
@@ -5504,7 +5508,9 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 	return hasdetectcache[tz] = detect(doc, exp, pos, 0, fullexp);
 	function detect(doc: Lexer, exp: string, pos: Position, deep: number = 0, fullexp?: string): string[] {
 		let t: string | RegExpMatchArray | null, tps: string[] = [];
-		exp = exp.replace(/#any(\(\)|\.(\w|[^\x00-\x7f])+)+/g, '#any').replace(/\b(true|false)\b/gi, '#number');
+		exp = exp.replace(/#any(\(\)|\.(\w|[^\x00-\x7f])+)+/g, '#any')
+			.replace(/(?<!([\w.$]|[^\x00-\x7f]))(true|false)(?!(\w|[^\x00-\x7f]))/gi, '#number')
+			.replace(/(?<!([\w.$]|[^\x00-\x7f]))(__proto__|constructor)(?!(\w|[^\x00-\x7f]))/g, '$$$2');
 		while ((t = exp.replace(/\(((\(\)|[^\(\)])+)\)/g, (...m) => {
 			let ts = detect(doc, m[1], pos, deep + 1);
 			return ts.length > 1 ? `[${ts.join(',')}]` : (ts.pop() || '#any');
@@ -5595,14 +5601,14 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 								break;
 							}
 						case SymbolKind.Function:
-							if (n === ahkvars['objbindmethod'] && (c = fullexp?.toLowerCase().match(/objbindmethod\(\s*(([\w.]|[^\x00-\x7f])+)\s*,\s*('|")([^'"]+)\3\s*[,)]/))) {
+							if (n === ahkvars['OBJBINDMETHOD'] && (c = fullexp?.toLowerCase().match(/objbindmethod\(\s*(([\w.]|[^\x00-\x7f])+)\s*,\s*('|")([^'"]+)\3\s*[,)]/))) {
 								ts[c[1] + '.' + c[4]] = true;
 							} else if ((uri = (<any>n).uri || uri) && lexers[uri]) {
 								let m = cvt_types(n.detail?.match(/^@returns?\s+{(.+?)}/mi)?.[1] ?? ''), o: any = {};
 								if (m)
 									m.forEach(s => o[s] = true), n.returntypes = o;
 								for (const e in n.returntypes)
-									detectExp(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
+									detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
 										.forEach(tp => { ts[tp] = true });
 							}
 							break;
@@ -5655,13 +5661,12 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 			exps = [tpexp];
 		if (deep)
 			return exps;
-		exp = exp.trim();
 		for (let ex of exps) {
 			if (t = ex.match(/^([@#]?)(\$|\w|[^\x00-\x7f])+(\.[@#]?(\$|\w|[^\x00-\x7f])+)*$/)) {
 				let ll = '', ttt: any, sym: any;
 				if ((t[1] && !t[3]) || searchcache[ex])
 					ts[ex] = true;
-				else for (const n of searchNode(doc, ex, ex === exp ? { line: pos.line, character: pos.character - ex.length } : pos, SymbolKind.Variable) || []) {
+				else for (const n of searchNode(doc, ex, ex === tpexp ? { line: pos.line, character: pos.character - ex.length } : pos, SymbolKind.Variable) || []) {
 					switch ((sym = n.node).kind) {
 						case SymbolKind.TypeParameter:
 						case SymbolKind.Variable:
@@ -5723,7 +5728,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 		if (m) {
 			let d = new Lexer(TextDocument.create('', 'ahk2', 0, `${node.name}(${m[1]})=>${m[2].includes('=>') ? 'void' : m[2]}`), undefined, -1);
 			d.parseScript();
-			let n = d.declaration[node.name.toLowerCase()];
+			let n = d.declaration[node.name.toUpperCase()];
 			if (n?.kind === SymbolKind.Function) {
 				if (m[2].includes('=>'))
 					n.returntypes = { [m[2]]: true };
@@ -5745,7 +5750,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 export function searchNode(doc: Lexer, name: string, pos: Position | undefined, kind: SymbolKind, isstatic = true): [{ node: DocumentSymbol, uri: string, scope?: DocumentSymbol, ref?: boolean }] | undefined | null {
 	let node: DocumentSymbol | undefined, res: { node: DocumentSymbol, uri: string, scope?: DocumentSymbol, fn_is_static?: boolean } | undefined | false | null, t: any, uri = doc.uri;
 	if (kind === SymbolKind.Method || kind === SymbolKind.Property || name.includes('.')) {
-		let p = name.split('.'), nodes = searchNode(doc, p[0], pos, SymbolKind.Class), i = 0, ps = 0;
+		let p = name.toLowerCase().split('.'), nodes = searchNode(doc, p[0], pos, SymbolKind.Class), i = 0, ps = 0;
 		if (!nodes || p.length < 2) return undefined;
 		let { node: n, uri: u } = nodes[0];
 		uri = u || uri;
@@ -5769,11 +5774,11 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 				if (n.kind === SymbolKind.Function || n.kind === SymbolKind.Method) {
 					fc = n as FuncNode;
 					if (i <= p.length && p[i] === 'call') {
-						if (!(node = (ahkvars['func'] as ClassNode)?.declaration['call']))
+						if (!(node = (ahkvars['FUNC'] as ClassNode)?.declaration['CALL']))
 							(node = Object.assign({}, n)).kind = SymbolKind.Method;
 						continue;
-					} else if (ahkvars['func'])
-						n = ahkvars['func'], p[i - 1] = '@' + p[i - 1].replace(/^[@#]/, '');
+					} else if (ahkvars['FUNC'])
+						n = ahkvars['FUNC'], p[i - 1] = '@' + p[i - 1].replace(/^[@#]/, '');
 				} else if (n.kind === SymbolKind.Property || n.kind === SymbolKind.Variable) {
 					if (cc?.kind === SymbolKind.Class && (n as any).full === '(Class) static Prototype')
 						p[i - 1] = '@prototype', n = cc;
@@ -5804,18 +5809,18 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 					let ss = isstatic && i > 0 && !p[i - 1].match(/^[@#]/), _ = p[i].replace(/[@#]/, '');
 					let mems = getClassMembers(doc, n, ss), it: DocumentSymbol;
 					if (i === ps) {
-						if (it = mems[_]) {
+						if (it = mems[_.toUpperCase()]) {
 							node = it, uri = (<any>it).uri || '';
 							if (_ === 'prototype' && it.children)
 								node = Object.assign({}, it), node.kind = SymbolKind.Object;
 						}
 						if (!node && _ !== 'clone')
-							if (kind !== SymbolKind.Property && (it = mems['__call']) || (kind === SymbolKind.Property && (it = mems['__get'] ?? mems['__set'])))
+							if (kind !== SymbolKind.Property && (it = mems['__CALL']) || (kind === SymbolKind.Property && (it = mems['__GET'] ?? mems['__SET'])))
 								node = it, uri = (<any>it).uri || '';
-					} else if (it = mems[_])
+					} else if (it = mems[_.toUpperCase()])
 						node = it, uri = (<any>it).uri || '';
 					if (_ === 'clone') {
-						let t = (<FuncNode>node)?.full.toLowerCase().match(/^\(([^()]+)\)\s+/), _ = (<ClassNode>n).full.toLowerCase();
+						let t = (<FuncNode>node)?.full.toUpperCase().match(/^\(([^()]+)\)\s+/), _ = (<ClassNode>n).full.toUpperCase();
 						if (!t || (t[1] !== _ && ahkvars[t[1]])) {
 							let rg = Range.create(0, 0, 0, 0);
 							uri = '', node = FuncNode.create('Clone', SymbolKind.Method, rg, rg, [], [], true);
@@ -5823,7 +5828,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 						}
 					} else if (node && _ === 'bind' && fc && (<FuncNode>node).full.match(/\(func\)\s+bind\(/i)) {
 						let c = Object.assign({}, node) as FuncNode, cl = fc.full.match(/^\s*\(([^()]+)\)/);
-						c.returntypes = { [((cl ? cl[1] + '.' : '') + fc.name).toLowerCase()]: true };
+						c.returntypes = { [((cl ? cl[1] + '.' : '') + fc.name).toUpperCase()]: true };
 						node = c;
 					}
 					fc = undefined;
@@ -5836,7 +5841,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 				node = ((node as any).call ?? node) as DocumentSymbol;
 			return [{ node, uri }];
 		} else return undefined;
-	} else if (!(res = doc.searchNode(name = name.replace(/^@/, ''), pos, kind))) {
+	} else if (!(res = doc.searchNode(name = name.replace(/^@/, '').toUpperCase(), pos, kind))) {
 		if (res === null)
 			return undefined;
 		else if (res === false)
@@ -5861,7 +5866,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 			res.node = nn, res.uri = uu;
 		}
 	}
-	if (kind !== SymbolKind.Field && (!res || (res.node.kind === SymbolKind.Variable && !(<Variable>res.node).def)) && (t = ahkvars[name.replace(/^[@#]/, '')]))
+	if (kind !== SymbolKind.Field && (!res || (res.node.kind === SymbolKind.Variable && !(<Variable>res.node).def)) && (t = ahkvars[name.replace(/^[@#$]/, '')]))
 		return [{ uri: t.uri, node: t }];
 	if (res)
 		return [res];
@@ -6032,7 +6037,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 								m[3] = m[3].substring(1).replace(/\W.*$/, '');
 							s = `\`${m[3]}\`${m[2] ? `: *${m[2]}*` : ''}` + (t ? ' — ' + t : '');
 							name ?? details.push(`\n*@param* ${s}`);
-							(params[lastparam = m[3].toLowerCase()] ??= []).push(s);
+							(params[lastparam = m[3].toUpperCase()] ??= []).push(s);
 							(params[lastparam] as any).types = m[2];
 							return '';
 						});
@@ -6080,7 +6085,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 	if (code === 2)
 		details.push('```');
 	(node as FuncNode).params?.forEach(it => {
-		let p = params[it.name.toLowerCase()];
+		let p = params[it.name.toUpperCase()];
 		if (p) {
 			if (p.length)
 				p[0] = '*@param* ' + p[0], it.detail = p.join('\n').replace(/ — ?/, '\n___\n').replace(/(?<!\\)\\@/g, '\n@');
@@ -6090,7 +6095,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 		}
 	});
 	if (name !== undefined)
-		s = params[name.toLowerCase()]?.join('\n') ?? '', detail = s + '\n\n' + details.join('\n');
+		s = params[name.toUpperCase()]?.join('\n') ?? '', detail = s + '\n\n' + details.join('\n');
 	else if (!overloads && ols.length)
 		detail = '*@overload*\n```ahk2\n' + ols.map(it => it.replace(/^_[^\W]*/, node.name)).join('\n') + '\n```\n' + (details.length ? '___\n' + details.join('\n') : '');
 	else detail = details.join('\n');
@@ -6135,7 +6140,7 @@ export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: 
 			case SymbolKind.Class:
 			case SymbolKind.Function:
 			case SymbolKind.Variable:
-				if (!decs[_low = it.name.toLowerCase()]) {
+				if (!decs[_low = it.name.toUpperCase()]) {
 					decs[_low] = it;
 				} else if ((<any>decs[_low]).infunc) {
 					if (it.kind === SymbolKind.Variable) {

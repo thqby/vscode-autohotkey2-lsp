@@ -34,9 +34,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			return undefined;
 		if (!nodes) {
 			if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
-			} else if (ahkvars[word])
-				nodes = [{ node: ahkvars[word], uri: '' }];
-			else if (kind !== SymbolKind.Function && (t = hoverCache[word]))
+			} else if (kind !== SymbolKind.Function && (t = hoverCache[word]))
 				return t[1];
 		}
 		if (nodes) {
