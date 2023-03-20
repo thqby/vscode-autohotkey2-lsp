@@ -730,8 +730,8 @@ export class Lexer {
 							case SymbolKind.Function:
 								(<Variable>it).def = false;
 							case SymbolKind.Class:
-								(<FuncNode>it).overwrite = overwrite;
-								(<any>it).uri = this.uri;
+								(<FuncNode>it).overwrite ??= overwrite;
+								(<any>it).uri ??= this.uri;
 								if (!(t = ahkvars[_low = it.name.toUpperCase()]) || overwrite >= (t.overwrite ?? 0))
 									ahkvars[_low] = it;
 								break;
@@ -761,7 +761,7 @@ export class Lexer {
 					if (e instanceof ParseStopError) {
 						e.message && this.addDiagnostic(e.message, e.token.offset, e.token.length, DiagnosticSeverity.Warning);
 					} else
-						throw e;
+						console.error(e);
 				}
 				checksamenameerr(this.declaration, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length, this.isparsed = true;
@@ -5315,7 +5315,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 		}
 		if ((cl = ahkvars['CLASS'] as ClassNode) && cl !== node) {
 			for (l in cl.staticdeclaration)
-				if (!v[l]) v[l] = cl.staticdeclaration[l], (<any>v[l]).uri = (<any>cl).uri;
+				if (!v[l]) v[l] = cl.staticdeclaration[l], (<any>v[l]).uri ??= (<any>cl).uri;
 		}
 	}
 	let other: string[] = ['OBJECT', 'ANY'];
@@ -5328,7 +5328,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 	for (let cls of other)
 		if (cl = ahkvars[cls] as ClassNode) {
 			for (l in cl.declaration)
-				if (!v[l] || (v[l] as any).def === false) v[l] = cl.declaration[l], (<any>v[l]).uri = (<any>cl).uri;
+				if (!v[l] || (v[l] as any).def === false) v[l] = cl.declaration[l], (<any>v[l]).uri ??= (<any>cl).uri;
 		}
 	return v;
 
@@ -5340,20 +5340,20 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 		if (staticmem) {
 			if (!v['__NEW']) {
 				let it = (node as ClassNode).declaration['__NEW'];
-				if (it) v['__NEW'] = it, (<any>it).uri = u;
+				if (it) v['__NEW'] = it, (<any>it).uri ??= u;
 			}
 			for (let it of Object.values((node as ClassNode).staticdeclaration)) {
 				if (!v[l = it.name.toUpperCase()] || (it.kind === SymbolKind.Class || it.kind === SymbolKind.Method) && v[l].kind === SymbolKind.Property)
-					v[l] = it, (<any>it).uri = u;
+					v[l] = it, (<any>it).uri ??= u;
 				else if (l === 'CALL' && (<any>v['CALL']).def === false)
-					v[l] = it, (<any>it).uri = u;
+					v[l] = it, (<any>it).uri ??= u;
 			}
 			if ((v['__NEW'] as FuncNode)?.static)
 				delete v['__NEW'];
 		} else {
 			for (let it of Object.values((node as ClassNode).declaration)) {
 				if (!v[l = it.name.toUpperCase()] || ((<any>v[l]).def === false && (<any>it).def !== false))
-					v[l] = it, (<any>it).uri = u;
+					v[l] = it, (<any>it).uri ??= u;
 			}
 		}
 		if ((l = (<ClassNode>node).extends?.toUpperCase()) && l !== (l2 = (<ClassNode>node).full.toUpperCase())) {
@@ -5374,7 +5374,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 				_cls.checkmember ??= (nd as any).checkmember;
 				dc = lexers[cl[0].uri] ?? doc;
 				if (cl[0].uri && (<any>nd).uri === undefined)
-					(<any>nd).uri = cl[0].uri;
+					(<any>nd).uri ??= cl[0].uri;
 				while (nd) {
 					if (p.length === 1) {
 						getmems(dc, nd, p[0].startsWith('@') ? false : staticmem);
@@ -5805,7 +5805,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 					p[i - 1] = '@prototype', n = cc;
 				if (n.kind === SymbolKind.Class) {
 					cc = n;
-					if (u && !(<any>n).uri) (<any>n).uri = u;
+					if (u && !(<any>n).uri) (<any>n).uri ??= u;
 					let ss = isstatic && i > 0 && !p[i - 1].match(/^[@#]/), _ = p[i].replace(/[@#]/, '');
 					let mems = getClassMembers(doc, n, ss), it: DocumentSymbol;
 					if (i === ps) {
