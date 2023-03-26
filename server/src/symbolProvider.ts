@@ -52,8 +52,10 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				if (sym === info || !sym)
 					return;
 				(tk = converttype(info, sym === ahkvars[name], sym.kind)).definition = sym;
-				if (!sym.selectionRange.end.character && tk.semantic)
+				if (!sym.selectionRange.end.character)
 					delete tk.semantic;
+				else if (info.kind !== SymbolKind.Variable)
+					result.push(info);
 			} else if (!filter_types.includes(kind))
 				result.push(info);
 		});
@@ -152,27 +154,27 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			if (dd = lexers[uri])
 				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
 		}
+		let cls: ClassNode;
 		t.forEach(it => {
-			if (it.kind === SymbolKind.Class) {
-				let l = (<ClassNode>it).extends?.toUpperCase();
+			if (it.kind === SymbolKind.Class && (cls = it as ClassNode).extendsuri === undefined) {
+				let l = cls.extends?.toUpperCase();
 				if (l === it.name.toUpperCase())
-					err_extends(doc, <ClassNode>it, false);
+					err_extends(doc, cls, false);
 				else if (l && !checkextendsclassexist(l))
-					err_extends(doc, <ClassNode>it);
+					err_extends(doc, cls);
 			}
 		});
 		for (const uri in doc.relevance) {
 			if (dd = lexers[uri])
 				for (const it of Object.values(dd.declaration))
-					if (it.kind === SymbolKind.Class) {
-						let l = (<ClassNode>it).extends?.toUpperCase();
+					if (it.kind === SymbolKind.Class && (cls = it as ClassNode).extendsuri === undefined) {
+						let l = cls.extends?.toUpperCase();
 						if (l === it.name.toUpperCase())
-							err_extends(dd, <ClassNode>it, false);
+							err_extends(dd, cls, false);
 						else if (l && !checkextendsclassexist(l))
-							err_extends(dd, <ClassNode>it);
+							err_extends(dd, cls);
 					}
 		}
-
 		function checkextendsclassexist(name: string) {
 			let n = name.split('.'), c: ClassNode | undefined;
 			for (let t of n) {
@@ -298,7 +300,7 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 	let symbols: SymbolInformation[] = [], n = 0, query = params.query;
 	if (token.isCancellationRequested || !query || !query.match(/^(\w|[^\x00-\x7f])+$/))
 		return symbols;
-	let reg = new RegExp(query.replace(/(?<=[^A-Z])([A-Z])/g, '.*$1'), 'i');
+	let reg = new RegExp(query.match(/[^\w]/) ? query.replace(/(.)/g, '$1.*') : '(' + query.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	for (let uri in lexers)
 		if (await filterSymbols(uri)) return symbols;
 	if (!inBrowser) {

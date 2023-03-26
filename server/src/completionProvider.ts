@@ -2,9 +2,9 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
-import { ClassNode, cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, last_full_exp, Lexer, searchNode, Token } from './Lexer';
+import { ClassNode, cleardetectcache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, last_full_exp, Lexer, searchNode, Token, Variable } from './Lexer';
 import { completionitem } from './localize';
-import { ahkvars, completionItemCache, dllcalltpe, extsettings, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, sendAhkRequest, utils, winapis } from './common';
+import { ahkuris, ahkvars, completionItemCache, dllcalltpe, extsettings, inBrowser, inWorkspaceFolders, lexers, libfuncs, Maybe, pathenv, sendAhkRequest, utils, winapis } from './common';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export async function completionProvider(params: CompletionParams, token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
@@ -18,10 +18,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 	let expg = new RegExp(context.text.match(/[^\w]/) ? context.text.replace(/(.)/g, '$1.*') : '(' + context.text.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	let o = doc.document.offsetAt({ line, character: character - 1 }), tk = doc.find_token(o);
 	let istr = tk.type === 'TK_STRING', right_is_paren = '(['.includes(context.suf.charAt(0) || '\0');
-	let commitCharacters = {
-		Class: extsettings.CompletionCommitCharacters?.Class.split(''),
-		Function: extsettings.CompletionCommitCharacters?.Function.split(''),
-	};
+	let commitCharacters = Object.fromEntries(Object.entries(extsettings.CompletionCommitCharacters ?? {})
+		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 
 	if (istr) {
 		if (triggerKind === 2)
@@ -93,8 +91,8 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 			context = doc.buildContext(position, true, true);
 			if (context.text.match(/^\d+(\.\d*)*\.$/))
 				return;
-			let unknown = true, isstatic = true, isfunc = false, isobj = false;
-			let props: any = {}, tps: any = [], ts: any = {}, p = context.text.replace(/\.(\w|[^\x00-\x7f])*$/, '').toLowerCase();
+			let unknown = true, isstatic = true, tps = new Set<DocumentSymbol>();
+			let props: any = {}, ts: any = {}, p = context.text.replace(/\.(\w|[^\x00-\x7f])*$/, '').toLowerCase();
 			cleardetectcache(), detectExpType(doc, p, context.range.end, ts, doc.document.getText(context.range));
 			delete ts['@comvalue'];
 			let tsn = Object.keys(ts).length;
@@ -102,16 +100,11 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 				for (const tp in ts) {
 					unknown = false, isstatic = !tp.match(/[@#][^.]+$/);
 					if (ts[tp]) {
-						let kind = ts[tp].node.kind;
-						if (kind === SymbolKind.Function || kind === SymbolKind.Method) {
-							if (!isfunc) {
-								isfunc = true;
-								if (ahkvars['FUNC'])
-									tps.push(ahkvars['FUNC']), isstatic = false;
-							}
-							continue;
-						}
-						tps.push(ts[tp].node);
+						let kind = ts[tp].node?.kind;
+						if (kind === SymbolKind.Function || kind === SymbolKind.Method)
+							tps.add(ahkvars['FUNC']), isstatic = false;
+						else if (kind === SymbolKind.Class)
+							tps.add(ts[tp].node);
 					} else if (tp.match(/^@comobject\b/)) {
 						let p: string[] = [];
 						if (temp = tp.substring(10).match(/<([\w.{}-]+)(,([\w{}-]+))?>/))
@@ -125,87 +118,51 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 						if (tsn === 1)
 							return items;
 					} else if (tp.includes('=>')) {
-						if (!isfunc && (isfunc = true, ahkvars['FUNC']))
-							tps.push(ahkvars['FUNC']), isstatic = false;
-					} else
-						searchNode(doc, tp, position, SymbolKind.Variable)?.forEach(it => tps.push(it.node));
+						tps.add(ahkvars['FUNC']), isstatic = false;
+					} else for (let it of searchNode(doc, tp, position, SymbolKind.Variable) ?? [])
+						it.node.kind === SymbolKind.Class && tps.add(it.node);
 				}
 			}
 			for (const node of tps) {
-				switch (node.kind) {
-					case SymbolKind.Class:
-						let omems = getClassMembers(doc, node, isstatic);
-						if (isstatic && (<FuncNode>omems['__NEW'])?.static === false)
-							delete omems['__NEW'];
-						Object.values(omems).forEach((it: any) => {
-							if (expg.test(it.name)) {
-								if (it.kind === SymbolKind.Property || it.kind === SymbolKind.Class) {
-									if (!props[l = it.name.toUpperCase()])
-										items.push(props[l] = convertNodeCompletion(it));
-									else if (props[l].detail !== it.full)
-										props[l].detail = '(...) ' + it.name, props[l].insertText = it.name;
-								} else if (it.kind === SymbolKind.Method) {
-									if (!props[l = it.name.toUpperCase()])
-										items.push(props[l] = convertNodeCompletion(it));
-									else if (props[l].detail !== it.full)
-										props[l].detail = '(...) ' + it.name + '()', props[l].documentation = '';
-								}
-							}
-						});
-						break;
-					case SymbolKind.Object:
-						isobj = true; break;
+				let omems = getClassMembers(doc, node, isstatic);
+				if (isstatic && (<FuncNode>omems['__NEW'])?.static === false)
+					delete omems['__NEW'];
+				for (const [k, it] of Object.entries(omems)) {
+					if (expg.test(k)) {
+						if (!(temp = props[k]))
+							items.push(props[k] = convertNodeCompletion(it));
+						else if (!temp.detail?.endsWith((it as Variable).full ?? '')) {
+							temp.detail = '(...) ' + (temp.insertText = it.name);
+							temp.commitCharacters = temp.command = temp.documentation = undefined;
+						}
+					}
 				}
 			}
 			if (!unknown && (triggerKind !== 1 || context.text.match(/\..{0,2}$/)))
 				return items;
-			let objs = [doc.object];
+			let objs = new Set([doc.object, lexers[ahkuris.ahk2]?.object, lexers[ahkuris.ahk2_h]?.object]);
+			objs.delete(undefined as any);
 			for (const uri in list)
-				objs.push(lexers[uri].object);
+				objs.add(lexers[uri].object);
+			for (const k in (temp = doc.object.property)) {
+				let v = temp[k];
+				if (v.length === 1 && !v[0].full && ateditpos(v[0]))
+					delete temp[k];
+			}
 			for (const obj of objs) {
-				if (obj === doc.object) {
-					for (const n in obj.property)
-						if (expg.test(n))
-							if (!props[n]) {
-								let i = obj.property[n];
-								if (!ateditpos(i))
-									items.push(props[n] = convertNodeCompletion(i));
-							} else props[n].detail = props[n].label;
-				} else for (const n in obj.property)
-					if (expg.test(n))
-						if (!props[n])
-							items.push(props[n] = convertNodeCompletion(obj.property[n]));
-						else props[n].detail = props[n].label;
-				for (const n in obj.method)
-					if (expg.test(n))
-						if (!props[n])
-							items.push(props[n] = convertNodeCompletion(obj.method[n][0]));
-						else if (typeof props[n] === 'object')
-							props[n].detail = '(...) ' + props[n].label;
+				for (const arr of Object.values(obj))
+					for (const [k, its] of Object.entries(arr))
+						if (expg.test(k)) {
+							if (!(temp = props[k])) {
+								items.push(props[k] = temp = convertNodeCompletion(its[0]));
+								if (its.length === 1)
+									continue;
+							} else if (temp.detail?.endsWith(its[0].full ?? ''))
+								continue;
+							temp.detail = '(...) ' + (temp.insertText = temp.label);
+							temp.commitCharacters = temp.command = temp.documentation = undefined;
+						}
 			}
-			for (const cl in ahkvars) {
-				if ((isobj && cl === 'OBJECT') || (isfunc && cl === 'FUNC') || cl === 'ANY' || !ahkvars[cl].children)
-					continue;
-				let cls: DocumentSymbol[] = [];
-				ahkvars[cl].children?.forEach((it: any) => {
-					if (it.kind === SymbolKind.Class) {
-						cls.push(...it.children);
-					} else
-						cls.push(it);
-				});
-				cls.forEach((it: any) => {
-					if (it.kind === SymbolKind.Class)
-						return;
-					if (expg.test(l = it.name.toUpperCase()))
-						if (!props[l])
-							items.push(props[l] = convertNodeCompletion(it));
-						else if (props[l].detail !== it.full)
-							props[l].detail = '(...) ' + it.name, props[l].insertText = it.name, props[l].documentation = undefined;
-				});
-			}
-			for (const it of ahkvars['ANY']?.children ?? [])
-				if (!props[l = it.name.toUpperCase()] && expg.test(l))
-					items.push(props[l] = convertNodeCompletion(it));
 			return items;
 		default:
 			if (temp = lt.match(/^\s*#(include|(dllload))/i)) {
@@ -654,7 +611,7 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 		items.push(cpitem = CompletionItem.create(label)), cpitem.kind = kind, vars[l] = true;
 	};
 	function ateditpos(it: DocumentSymbol) {
-		return it.range.end.line === line && it.range.start.character <= character && character <= it.range.end.character;
+		return it.selectionRange.end.line === line && character === it.selectionRange.end.character;
 	}
 	function maptextitem(name: string) {
 		const cpitem = CompletionItem.create(name);
@@ -679,26 +636,22 @@ export async function completionProvider(params: CompletionParams, token: Cancel
 					} else ci.insertText = ci.label + '()';
 				} else
 					ci.commitCharacters = commitCharacters.Function;
-				ci.detail = info.full, ci.documentation = info.detail; break;
+				ci.detail = info.full, ci.documentation = info.detail;
+				break;
 			case SymbolKind.Variable:
 			case SymbolKind.TypeParameter:
 				ci.kind = CompletionItemKind.Variable, ci.detail = info.detail; break;
 			case SymbolKind.Class:
 				ci.kind = CompletionItemKind.Class, ci.commitCharacters = commitCharacters.Class;
-				ci.detail = 'class ' + ci.label, ci.documentation = info.detail; break;
+				ci.detail = 'class ' + (info.full || ci.label), ci.documentation = info.detail; break;
 			case SymbolKind.Event:
 				ci.kind = CompletionItemKind.Event; break;
 			case SymbolKind.Field:
 				ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.replace(/:$/, ''); break;
 			case SymbolKind.Property:
-				ci.kind = CompletionItemKind.Property, ci.detail = (info.full || ci.label), ci.documentation = (info.detail || '');
-				if (info.children) for (const it of info.children) {
-					if (it.kind === SymbolKind.Function && it.name.toLowerCase() === 'get' && it.params.length) {
-						ci.insertTextFormat = InsertTextFormat.Snippet;
-						ci.insertText = ci.label + '[$0]';
-						break;
-					}
-				}
+				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label, ci.documentation = info.detail;
+				if (info.get?.params.length)
+					ci.insertTextFormat = InsertTextFormat.Snippet, ci.insertText = ci.label + '[$0]';
 				break;
 			default:
 				ci.kind = CompletionItemKind.Text; break;

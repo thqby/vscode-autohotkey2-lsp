@@ -25,7 +25,7 @@ import { diagnostic } from './localize';
 
 export const inBrowser = typeof process === 'undefined';
 export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false;
-export let ahkvars: { [key: string]: DocumentSymbol } = {};
+export let ahkvars: { [key: string]: DocumentSymbol } = {}, ahkuris: { [name: string]: string } = {};
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
 export let hoverCache: { [key: string]: [string, Hover] } = {}, libdirs: string[] = [];
@@ -213,7 +213,7 @@ export function sendDiagnostics() {
 }
 
 export function initahk2cache() {
-	ahkvars = {};
+	ahkvars = {}, ahkuris = {};
 	dllcalltpe = ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'hresult'];
 	completionItemCache = {
 		sharp: [],
@@ -243,7 +243,7 @@ export async function loadahk2(filename = 'ahk2') {
 		let td = openFile(file + '.d.ahk');
 		if (td) {
 			let doc = new Lexer(td, undefined, 3);
-			doc.parseScript(), lexers[doc.uri] = doc;
+			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
 		}
 		let data;
 		if (filename === 'ahk2')
@@ -256,7 +256,7 @@ export async function loadahk2(filename = 'ahk2') {
 		let td: TextDocument | undefined;
 		if ((path = getlocalefilepath(file + '.d.ahk')) && (td = openFile(path))) {
 			let doc = new Lexer(td, undefined, 3);
-			doc.parseScript(), lexers[doc.uri] = doc;
+			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
 		}
 		if (!(path = getlocalefilepath(file + '.json')))
 			return;

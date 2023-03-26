@@ -80,11 +80,13 @@ export interface FuncNode extends DocumentSymbol {
 	overwrite?: number
 	has_this_param?: boolean
 	unresolved_vars?: { [name: string]: Variable }
+	uri?: string
 }
 
 export interface ClassNode extends DocumentSymbol {
 	full: string
 	extends: string
+	extendsuri?: string
 	parent?: DocumentSymbol
 	funccall: CallInfo[]
 	declaration: { [name: string]: FuncNode | Variable };
@@ -93,6 +95,8 @@ export interface ClassNode extends DocumentSymbol {
 	returntypes?: { [exp: string]: any }
 	overwrite?: number
 	undefined?: { [name: string]: Token[] }
+	uri?: string
+	checkmember?: boolean
 }
 
 export interface Variable extends DocumentSymbol {
@@ -104,6 +108,7 @@ export interface Variable extends DocumentSymbol {
 	full?: string
 	returntypes?: { [exp: string]: any }
 	range_offset?: [number, number]
+	uri?: string
 }
 
 export interface SemanticToken {
@@ -190,7 +195,7 @@ export function isIdentifierChar(code: number) {
 export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e\x60\x7b-\x7f]+$');
 let commentTags = new RegExp('^;;\\s*(?<tag>.+)');
 
-const colorregexp = new RegExp(/(?<=['"\s])(c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
+const colorregexp = new RegExp(/['"\s](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
 const whitespace = " \t\r\n", punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , ?? : ? ^ ^= |= =>'.split(' ');
 const line_starters = 'try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
@@ -231,7 +236,7 @@ export class Lexer {
 	public dllpaths: string[] = [];
 	public labels: { [key: string]: DocumentSymbol[] } = {};
 	public libdirs: string[] = [];
-	public object: { method: { [key: string]: FuncNode[] }, property: { [key: string]: any }, userdef: { [key: string]: FuncNode } } = { method: {}, property: {}, userdef: {} };
+	public object: { method: { [key: string]: FuncNode[] }, property: { [key: string]: Variable[] } } = { method: {}, property: {} };
 	public parseScript: () => void;
 	public reflat = false;
 	public isparsed = false;
@@ -255,6 +260,7 @@ export class Lexer {
 		let continuation_sections_mode: boolean, space_in_other: boolean, requirev2 = false, currsymbol: DocumentSymbol | undefined;
 		let input_length: number, n_newlines: number, last_LF: number, preindent_string: string, lst: Token, ck: Token;
 		let comments: { [line: number]: Token } = {}, block_mode = true, format_mode = false, string_mode = false;
+		let uri = URI.parse(this.uri = document.uri.toLowerCase()), allow_$ = !this.uri;
 		let handlers: { [index: string]: () => void } = {
 			'TK_START_EXPR': handle_start_expr,
 			'TK_END_EXPR': handle_end_expr,
@@ -280,7 +286,7 @@ export class Lexer {
 
 		this.document = document;
 		if (document.uri) {
-			this.scriptpath = (filepath = URI.parse(this.uri = document.uri.toLowerCase()).fsPath).replace(/\\[^\\]+$/, '');
+			this.scriptpath = (filepath = uri.fsPath).replace(/\\[^\\]+$/, '');
 			this.initlibdirs(scriptdir);
 		}
 
@@ -511,7 +517,7 @@ export class Lexer {
 		}
 
 		if (d || document.uri.match(/\.d\.(ahk2?|ah2)(?=(\?|$))/i)) {
-			this.d = d || 1;
+			this.d = d || 1, allow_$ ||= true;
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
 				lst = EMPTY_TOKEN, begin_line = true, parser_pos = 0, last_LF = -1, currsymbol = undefined;
@@ -532,9 +538,8 @@ export class Lexer {
 									let tn = Variable.create(tk.content, SymbolKind.Property, rg = make_range(tk.offset, tk.length));
 									tk.symbol = tk.definition = tn, tk.semantic = {
 										type: SemanticTokenTypes.property,
-										modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly
-											| (isstatic ? 1 << SemanticTokenModifiers.static : 0)
-									};
+										modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0)
+									}, (tn as FuncNode).parent = p[blocks];
 									p[blocks].children?.push(tn), tn.static = isstatic, tn.full = `(${cls.join('.')}) ${isstatic ? 'static ' : ''}` + tn.name;
 									if (isstatic && blocks)
 										(<ClassNode>p[blocks]).staticdeclaration[tn.name.toUpperCase()] = tn;
@@ -542,6 +547,7 @@ export class Lexer {
 										(<ClassNode>p[blocks]).declaration[tn.name.toUpperCase()] = tn;
 									if (tokens[i - (isstatic ? 2 : 1)].type.endsWith('COMMENT'))
 										tn.detail = trim_comment(tokens[i - (isstatic ? 2 : 1)].content);
+									(_this.object.property[tn.name.toUpperCase()] ??= []).push(tn);
 									let pars: Variable[] = [];
 									if (lk.content === '[') {
 										while ((lk = tokens[++j]).content !== ']')
@@ -650,7 +656,7 @@ export class Lexer {
 											while ((lk = tokens[j + 1]) && (lk.type === 'TK_WORD' || lk.type === 'TK_DOT') && (!lk.topofline && lt !== lk.type))
 												r += lk.content, j++, lt = lk.type, lk.semantic = { type: SemanticTokenTypes.class };
 											if (r)
-												rets.push(r = r.replace(/(?<=(^|\.))([^.$@#]+)$/, '@$2').replace('$', '').toLowerCase()), r === '@void' && rets.pop();
+												rets.push(r = r.replace(/(^|\.)([^.$@#]+)$/, '$1@$2').replace('$', '').toLowerCase()), r === '@void' && rets.pop();
 										} while (tokens[j + 1]?.content === '|');
 										lk?.type !== 'TK_END_EXPR' && (lk = tokens[j]);
 									}
@@ -663,8 +669,11 @@ export class Lexer {
 										modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly
 											| (isstatic ? 1 << SemanticTokenModifiers.static : 0)
 									};
-									if (blocks)
+									if (blocks) {
 										tn.full = `(${cls.join('.')}) ` + tn.full;
+										(_this.object.method[tn.name.toUpperCase()] ??= []).push(tn);
+										tn.parent = p[blocks];
+									}
 									if (rets?.length) {
 										let o: any = {};
 										rets.forEach((tp: string) => o[tp] = true);
@@ -687,7 +696,7 @@ export class Lexer {
 								isstatic = true, i++;
 							} else if (i < l - 1 && _low === 'class') {
 								let extends_ = '', tn = DocumentSymbol.create((tk = tokens[++i]).content.replace('_', '#'), tokens[i - 2].type.endsWith('COMMENT') ? trim_comment(tokens[i - 2].content) : undefined, SymbolKind.Class, make_range(tokens[i - 1].offset, 0), make_range(tk.offset, tk.length), []);
-								let cl = tn as ClassNode;
+								let cl = tn as ClassNode, m: any;
 								cl.declaration = {}, cl.staticdeclaration = {}, j = i + 1, cls.push(tn.name), cl.full = cls.join('.');
 								cl.returntypes = { [(cl.full.replace(/([^.]+)$/, '@$1')).toLowerCase()]: true };
 								tk.semantic = { type: SemanticTokenTypes.class, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
@@ -701,8 +710,10 @@ export class Lexer {
 										_this.children.push(Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length)));
 									while ((++j) < l && (lk = tokens[j]).content !== '{')
 										extends_ += lk.content;
-									cl.extends = extends_;
+									cl.extends = extends_.toLowerCase();
 								}
+								if (m = cl.detail?.match(/^\s*@extends\s+(.+)/m))
+									set_extends(cl, m[1]);
 								blocks++, p.push(tn);
 								i = j + 1;
 							} else
@@ -977,7 +988,7 @@ export class Lexer {
 											return (it.ref ? '&' : '') + it.name + (it.defaultVal ? ' := ' + it.defaultVal : it.arr ? '*' : it.defaultVal === null ? '?' : '');
 										}).join(', ')}]` : '');
 										prop.static = isstatic, prop.children = result.splice(rl);
-										result.push(prop), addprop(fc), prop.funccall = [];
+										result.push(prop), addprop(fc, prop), prop.funccall = [];
 										if (fc.content.toLowerCase() !== '__item')
 											fc.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
 										if (tk.content === '{') {
@@ -1353,10 +1364,10 @@ export class Lexer {
 							tn.staticdeclaration = {}, tn.declaration = {};
 							tn.returntypes = { [(classfullname + '@' + cl.content).toLowerCase()]: true };
 							if (_cm = comments[tn.selectionRange.start.line])
-								if (m = (tn.detail = trim_comment(_cm.content)).match(/^\s*@extends\s+(\S+)/m))
-									ex = m[1].replace(/^{([^}]+)}$/, '$1');
+								if (m = (tn.detail = trim_comment(_cm.content)).match(/^\s*@extends\s+(.+)/m))
+									set_extends(tn, m[1]);
 							if (ex)
-								tn.extends = ex;
+								tn.extends = ex.toLowerCase();
 							tn.declaration.__INIT = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
 							tn.staticdeclaration.__INIT = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
 							(tn.declaration.__INIT as any).ranges = [], (tn.staticdeclaration.__INIT as any).ranges = [];
@@ -3085,7 +3096,7 @@ export class Lexer {
 				let rg = make_range(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg);
 				if (md === 2) {
 					tn.kind = SymbolKind.Property;
-					addprop(token);
+					addprop(token, tn);
 					if (classfullname)
 						tn.full = `(${classfullname.slice(0, -1)}) ${tn.name}`, token.symbol = tn;
 				} else if (_low.match(/^\d/))
@@ -3094,10 +3105,12 @@ export class Lexer {
 				return true;
 			}
 
-			function addprop(tk: Token) {
-				let l = tk.content.toUpperCase();
-				tk.semantic = { type: SemanticTokenTypes.property };
-				_this.object.property[l] ??= Variable.create(tk.content, SymbolKind.Property, make_range(tk.offset, tk.length));
+			function addprop(tk: Token, v?: Variable) {
+				let t = _this.object.property[tk.content.toUpperCase()] ??= [];
+				tk.semantic ??= { type: SemanticTokenTypes.property };
+				if (v)
+					t.unshift(v);
+				else t[0] ??= Variable.create(tk.content, SymbolKind.Property, make_range(tk.offset, tk.length));
 			}
 
 			function addtext(text: string) {
@@ -3298,6 +3311,32 @@ export class Lexer {
 				if (next) return lk = tk, next = (tk = get_token_ignore_comment()).type !== 'TK_EOF';
 				else return next = tk.type !== 'TK_EOF';
 			}
+		}
+
+		function set_extends(tn: ClassNode, str: string) {
+			tn.extendsuri = '', tn.extends = str.replace(/^{(.*)}$/, '$1').trim().replace(/^(.+[\\/])?/, m => {
+				if (m = m.slice(0, -1)) {
+					let u: URI;
+					m = m.replace(/\\/g, '/').toLowerCase();
+					if (!m.endsWith('.ahk'))
+						m += '.d.ahk';
+					if (/^([a-z]:)?\//.test(m))
+						u = URI.file(m);
+					else {
+						let t = (uri.path + '/../' + m).split('/'), arr: string[] = [];
+						t.shift();
+						for (let s of t) {
+							if (s !== '..')
+								arr.push(s);
+							else if (!arr.pop())
+								return '';
+						}
+						u = uri.with({ path: arr.join('/') });
+					}
+					tn.extendsuri = u.toString().toLowerCase();
+				}
+				return '';
+			}).toLowerCase();
 		}
 
 		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
@@ -3710,7 +3749,7 @@ export class Lexer {
 				if (c !== '#') add_sharp_foldingrange();
 			}
 
-			if (isIdentifierChar(c.charCodeAt(0)) || c === '$' && !_this.uri) {
+			if (isIdentifierChar(c.charCodeAt(0)) || c === '$' && allow_$) {
 				while (parser_pos < input_length && isIdentifierChar(input.charCodeAt(parser_pos)))
 					c += input.charAt(parser_pos), parser_pos += 1;
 
@@ -3802,7 +3841,7 @@ export class Lexer {
 									let content = input.substring(offset, parser_pos).trimRight();
 									lst.data = { content, offset, length: parser_pos - offset };
 									lst.skip_pos = parser_pos;
-									let js = content.match(/(?<=(^|\s))join(\S*)/i), tk: Token;
+									let js = content.match(/(^|\s)join(\S*)/i), tk: Token;
 									let _lst = lst, lk = lst, optionend = false, _mode = format_mode, llf = parser_pos;
 									let create_tokens: (n: number, LF: number) => any = (n, pos) => undefined;
 									if (js) {
@@ -3810,7 +3849,7 @@ export class Lexer {
 										let tl = new Lexer(TextDocument.create('', 'ahk2', -10, s));
 										tl.parseScript();
 										let tks = Object.values(tl.tokens);
-										offset += 4 + (js.index as number);
+										offset += 4 + js[1].length + js.index!;
 										if (tks.length) {
 											suffix_is_whitespace = whitespace.includes(s.charAt(s.length - 1));
 											tks.forEach(tk => {
@@ -4810,7 +4849,7 @@ export class Lexer {
 
 	private clear() {
 		this.texts = {}, this.declaration = {}, this.include = {}, this.tokens = {}, this.linepos = {};
-		this.labels = {}, this.object = { method: {}, property: {}, userdef: {} };
+		this.labels = {}, this.object = { method: {}, property: {} };
 		this.funccall.length = this.diagnostics.length = this.foldingranges.length = 0;
 		this.children.length = this.dllpaths.length = this.strcommpos.length = this.anonymous.length = 0;
 		this.includedir = new Map(), this.dlldir = new Map();
@@ -4914,7 +4953,7 @@ export class Lexer {
 							return { node: scope, uri, ref, scope };
 						} else {
 							if ((<ClassNode>scope).extends) {
-								let ex = searchNode(this, (<ClassNode>scope).extends.toLowerCase(), Position.create(0, 0), SymbolKind.Class)
+								let ex = searchNode(this, (<ClassNode>scope).extends, Position.create(0, 0), SymbolKind.Class)
 								if (ex)
 									return { node: ex[0].node, uri: ex[0].uri, ref, scope };
 							}
@@ -5010,7 +5049,7 @@ export class Lexer {
 								s += ' ' + t, tk = tokens[tk.next_pair_pos!], tk = tokens[tk.next_token_offset];
 								break;
 							case 'TK_START_EXPR':
-								s += tk.content === '[' ? '[]' : '()';
+								s += tk.content === '[' ? '#array' : '()';
 								tk = tokens[tk.next_pair_pos!];
 								tk = tokens[tk.next_token_offset!];
 								break;
@@ -5162,7 +5201,7 @@ export class Lexer {
 			if (a.type === 2) {
 				let s = a.start, e = a.end, m = colorregexp.exec(text.substring(s, e)), range: Range, v = '';
 				if (!m || (!m[1] && e - s + 1 !== m[2].length + 2)) continue;
-				range = Range.create(document.positionAt(s += m.index + (m[1] ? m[1].length : 0)), document.positionAt(s + m[2].length));
+				range = Range.create(document.positionAt(s += m.index + 1 + (m[1]?.length ?? 0)), document.positionAt(s + m[2].length));
 				v = m[5] ? colortable[m[5].toLowerCase()] : m[3] === undefined ? m[2] : m[2].substring(2);
 				let color: any = { red: 0, green: 0, blue: 0, alpha: 1 }, cls: string[] = ['red', 'green', 'blue'];
 				if (m[4] !== undefined) cls.unshift('alpha');
@@ -5333,16 +5372,16 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 	return v;
 
 	function getmems(doc: Lexer, node: DocumentSymbol, staticmem: boolean) {
-		let u = (<any>node).uri, l2: string;
-		if (hasget[l2 = `${u},${(node as ClassNode).full}`.toLowerCase()])
+		let cls = node as ClassNode, u = cls.uri, l2: string;
+		if (hasget[l2 = `${u},${cls.full}`.toLowerCase()])
 			return;
 		hasget[l2] = true;
 		if (staticmem) {
 			if (!v['__NEW']) {
-				let it = (node as ClassNode).declaration['__NEW'];
+				let it = cls.declaration['__NEW'];
 				if (it) v['__NEW'] = it, (<any>it).uri ??= u;
 			}
-			for (let it of Object.values((node as ClassNode).staticdeclaration)) {
+			for (let it of Object.values(cls.staticdeclaration)) {
 				if (!v[l = it.name.toUpperCase()] || (it.kind === SymbolKind.Class || it.kind === SymbolKind.Method) && v[l].kind === SymbolKind.Property)
 					v[l] = it, (<any>it).uri ??= u;
 				else if (l === 'CALL' && (<any>v['CALL']).def === false)
@@ -5351,30 +5390,35 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 			if ((v['__NEW'] as FuncNode)?.static)
 				delete v['__NEW'];
 		} else {
-			for (let it of Object.values((node as ClassNode).declaration)) {
+			for (let it of Object.values(cls.declaration)) {
 				if (!v[l = it.name.toUpperCase()] || ((<any>v[l]).def === false && (<any>it).def !== false))
 					v[l] = it, (<any>it).uri ??= u;
 			}
 		}
-		if ((l = (<ClassNode>node).extends?.toUpperCase()) && l !== (l2 = (<ClassNode>node).full.toUpperCase())) {
-			let cl: any, nd: DocumentSymbol | undefined, dc: Lexer;
+		if ((l = cls.extends?.toUpperCase()) && l !== (l2 = cls.full.toUpperCase()) ||
+			cls.extendsuri && cls.uri !== cls.extendsuri) {
+			let cl: any, nd: ClassNode | undefined, dc: Lexer;
 			let p = l.split('.'), p2 = l2.split('.'), i = -1;
 			if (!isobj && (l === 'OBJECT' || l === 'COMOBJARRAY'))
 				isobj = true;
-			while (p[i + 1] === p2[i + 1])
-				i++;
+			if (l !== l2 && (!cls.extendsuri || cls.uri === cls.extendsuri))
+				while (p[i + 1] === p2[i + 1])
+					i++;
 			if (p.length > p2.length && i === p2.length - 1) {
 				if (i + 1 < p.length && v[p[++i]]) {
 					cl = [{ node: v[p[i]], uri: (<any>v[p[i]]).uri }];
 					p.splice(0, i);
 				}
+			} else if (cls.extendsuri) {
+				if (cl = lexers[cls.extendsuri]?.declaration[p[0]])
+					cl = [{ node: cl, uri: cls.extendsuri }];
 			} else
 				cl = searchNode(doc, p[0], Position.create(0, 0), SymbolKind.Class);
-			if (cl && cl.length && (nd = cl[0].node).kind === SymbolKind.Class) {
-				_cls.checkmember ??= (nd as any).checkmember;
+			if (cl && (nd = cl[0].node) && nd.kind === SymbolKind.Class) {
+				_cls.checkmember ??= nd.checkmember;
 				dc = lexers[cl[0].uri] ?? doc;
-				if (cl[0].uri && (<any>nd).uri === undefined)
-					(<any>nd).uri ??= cl[0].uri;
+				if (cl[0].uri && nd.uri === undefined)
+					nd.uri ??= cl[0].uri;
 				while (nd) {
 					if (p.length === 1) {
 						getmems(dc, nd, p[0].startsWith('@') ? false : staticmem);
@@ -5384,7 +5428,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 						v = {};
 						getmems(dc, nd, true);
 						p.splice(0, 1);
-						if ((nd = v[p[0]]) && nd.kind !== SymbolKind.Class)
+						if ((nd = v[p[0]] as ClassNode) && nd.kind !== SymbolKind.Class)
 							nd = undefined;
 						v = bak, hasget = bakhasget;
 					}
@@ -5607,6 +5651,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 								let m = cvt_types(n.detail?.match(/^@returns?\s+{(.+?)}/mi)?.[1] ?? ''), o: any = {};
 								if (m)
 									m.forEach(s => o[s] = true), n.returntypes = o;
+								let pos = { line: n.range.end.line, character: n.range.end.character - 1 };
 								for (const e in n.returntypes)
 									detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
 										.forEach(tp => { ts[tp] = true });
@@ -5677,11 +5722,11 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 							if (ttt = get_comment_types(n.node, true)) {
 								(ttt as string[]).forEach(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
 							} else if (ttt = (<Variable>n.node).returntypes) {
-								for (let s in ttt) {
-									if (s = s.trim())
-										if (s.startsWith('#'))
-											ts[s] = true;
-										else detect(lexers[n.uri] ?? doc, s, n.node.range.end)
+								for (let e in ttt) {
+									if (e = e.trim())
+										if (e.startsWith('#'))
+											ts[e] = true;
+										else detect(lexers[n.uri] ?? doc, e.toLowerCase(), n.node.range.end)
 											.forEach(tp => (tp.includes('=>') && (searchcache[tp] ??= gen(tp, n.uri, n.node, n.scope)), ts[tp] = true));
 								}
 							} else if (n.node.children) {
@@ -5708,10 +5753,10 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 								ts['#object'] = true, searchcache[ex] = n;
 							break;
 						case SymbolKind.Function:
-							ts[ll = ex.startsWith('$') ? ex : n.node.name.toLowerCase()] = true, searchcache[ll] = n;
+							ts[ll = ex.startsWith('$') ? ex : _name(n.node.name.toLowerCase())] = true, searchcache[ll] = n;
 							break;
 						case SymbolKind.Class:
-							ts[ex = (n.ref ? '@' : '') + ex] = true, searchcache[ex] = n;
+							ts[ll = n.ref ? ((n.node as any).full || n.node.name).replace(/([^.]+)$/, '@$1').toLowerCase() : _name(ex)] = true, searchcache[ll] = n;
 							break;
 					}
 				}
@@ -5719,6 +5764,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 		}
 		ts = Object.keys(ts);
 		return ts.length ? ts : ['#any'];
+		function _name(name: string) { return name === '__proto__' || name === 'constructor' ? '$' + name : name; }
 	}
 
 	function gen(def: string, uri: string, node: DocumentSymbol, scope?: DocumentSymbol) {
@@ -6225,7 +6271,7 @@ function cvt_types(tps: string) {
 			tps = t;
 		tps.toLowerCase().split(/(?<!=>\s*[^)]*)\|/)
 			.forEach(tp => o[tp === 'void' ? '#void' : tp.includes('=>') ? tp :
-				tp.replace(/(?<=(^|\.))([^.$@#]+(<[^>]+>)?)$/, '@$2').replace('$', '')] = true);
+				tp.replace(/(^|\.)([^.$@#]+(<[^>]+>)?)$/, '$1@$2').replace('$', '')] = true);
 		delete o[''];
 		let a = Object.keys(o);
 		if (a.length)

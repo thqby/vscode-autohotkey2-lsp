@@ -191,6 +191,83 @@ ahkReady(ThreadID := 0) => Integer
 MinHookDisable(pHook) => Integer
 MinHookEnable(Target, Detour, &Original?) => Integer
 
+/** @extends {ahk2/Array} */
+class Array {
+	/**
+	 * 返回满足回调函数中指定条件的数组元素.
+	 * @param {(Value [, Index]) => Boolean} Predicate Filter方法为数组中的每个元素调用一次Predicate函数.
+	 */
+	Filter(Predicate) => Array
+
+	/**
+	 * 返回数组中Predicate为true的第一个元素的索引, 否则为0.
+	 * @param {(Value [, Index]) => Boolean} Predicate FindIndex为数组的每个元素调用Predicate一次, 
+	 * 直到它找到一个Predicate返回true的值. 如果找到这样的元素, FindIndex立即返回该元素索引. 否则, FindIndex返回0.
+	 * @param {Integer} StartingPosition 开始搜索的数组索引. 指定1从第一个元素开始升序搜索; 指定-1从最后一个元素开始降序搜索.
+	 */
+	FindIndex(Predicate, StartingPosition := 1) => Integer
+
+	/**
+	 * 返回数组中值第一次出现的索引, 如果不存在, 则返回0.
+	 * @param {Any} SearchElement 要在数组中定位的值.
+	 * @param {Integer} StartingPosition 开始搜索的数组索引. 指定1从第一个元素开始升序搜索; 指定-1从最后一个元素开始降序搜索.
+	 */
+	IndexOf(SearchElement, StartingPosition := 1) => Integer
+
+	/**
+	 * 将数组中的所有元素添加到一个字符串中, 用指定的分隔符字符串分隔.
+	 * @param {String} Separator 用于将数组中的一个元素与结果字符串中的下一个元素分隔开的字符串. 如果省略, 数组元素用逗号分隔.
+	 */
+	Join(Separator := ',') => String
+
+	/**
+	 * 对数组的每个元素调用定义的回调函数, 并返回包含结果的数组.
+	 * @param {(Value [, Index]) => Any} CallbackFn Map方法为数组中的每个元素调用一次CallbackFn函数.
+	 */
+	Map(CallbackFn) => Array
+
+	/**
+	 * 对数组进行排序. 此方法会使数组发生变化, 并返回对同一数组的引用.
+	 * @param {(a, b) => Number} CompareFn 用于确定元素顺序的函数. 如果第一个参数小于第二个参数, 则返回负值;
+	 * 如果相等则返回零, 否则返回正值. 如果省略, 则元素按随机顺序排序.
+	 */
+	Sort(CompareFn?) => $this
+}
+
+/** @extends {ahk2/Gui} */
+class Gui {
+	/**
+	 * 当脚本接收到指定消息时, 会自动调用指定的函数.
+	 * @param {Integer} Msg 需要监听或查询的消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间.
+	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback 事件发生时要调用的函数, 方法或对象.
+	 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
+	 * 否则, 这个参数必须是一个函数对象. 该函数还可以查询内置变量 A_EventInfo, 如果消息是通过 SendMessage 发送的, 则其为 0.
+	 * 如果是通过 PostMessage 发送的, 则其为消息发出时的 tick-count 时间.
+	 * @param {Integer} AddRemove 如果省略, 则默认为 1(在任何先前注册的回调之后调用回调). 否则, 指定下列数字之一:
+	 * - 1 = 在任何先前注册的回调之后调用回调.
+	 * - -1 = 在任何先前注册的回调之前调用回调.
+	 * - 0 = 不调用该回调.
+	 */
+	OnMessage(Msg, Callback [, AddRemove]) => void
+
+	/** @extends {ahk2/Gui.Control} */
+	class Control {
+		/**
+		 * 当脚本接收到指定消息时, 会自动调用指定的函数.
+		 * @param {Integer} Msg 需要监听或查询的消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间.
+		 * @param {String|(GuiCtrlObj, wParam, lParam, Msg) => Integer} Callback 事件发生时要调用的函数, 方法或对象.
+		 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
+		 * 否则, 这个参数必须是一个函数对象. 该函数还可以查询内置变量 A_EventInfo, 如果消息是通过 SendMessage 发送的, 则其为 0.
+		 * 如果是通过 PostMessage 发送的, 则其为消息发出时的 tick-count 时间.
+		 * @param {Integer} AddRemove 如果省略, 则默认为 1(在任何先前注册的回调之后调用回调). 否则, 指定下列数字之一:
+		 * - 1 = 在任何先前注册的回调之后调用回调.
+		 * - -1 = 在任何先前注册的回调之前调用回调.
+		 * - 0 = 不调用该回调.
+		 */
+		OnMessage(Msg, Callback [, AddRemove]) => void
+	}
+}
+
 class Decimal extends Number {
 	/**
 	 * 设置计算精度和tostring()精度

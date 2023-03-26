@@ -1676,6 +1676,7 @@ ObjSetCapacity(Obj, MaxProps) => void
 
 /**
  * Register a function or function object that will run whenever the contents of the clipboard are changed.
+ * @param {(Type) => Integer} Func The function object to call.
  * @param AddRemove If empty or omitted, it defaults to 1 (call this function after any previous registered function). Otherwise, specify one of the following numbers:
  * 
  * 1 = This function is called after any previous registered function.
@@ -1688,18 +1689,20 @@ OnClipboardChange(Func, AddRemove := 1) => void
 
 /**
  * Specify a function to run automatically when an unhandled error occurs.
+ * @param {(Thrown, Mode) => Integer} Func The function object to call when an unhandled error occurs.
  */
 OnError(Func, AddRemove := 1) => void
 
 /**
  * Specify a function to run automatically when the script exits.
+ * @param {(ExitReason, ExitCode) => Integer} Func The function object to call when the script is exiting.
  */
 OnExit(Func, AddRemove := 1) => void
 
 /**
  * Specify the function or function object to be automatically called when the script receives the specified message.
  * @param MsgNumber The number of the message that needs to be monitored or queried. It should be between 0 and 4294967295 (0xFFFFFFFF). If you don't want to monitor system messages (that is, those with a number less than 0x0400), then it is best to choose one greater than 4096 (0x1000) Number. This reduces possible interference with messages used internally by current and future versions of AutoHotkey.
- * @param Function The name of the function or function object. To pass the literal function name, it must be enclosed in quotation marks (""). The function must be able to accept four parameters, as described below.
+ * @param {(wParam, lParam, msg, hwnd) => Integer} Function The name of the function or function object. To pass the literal function name, it must be enclosed in quotation marks (""). The function must be able to accept four parameters, as described below.
  * @param MaxThreads This integer is usually omitted. In this case, the monitoring function can only process one thread at a time. This is usually the best, because otherwise whenever the monitoring function is interrupted, the script will process the messages in chronological order. Therefore, as an alternative to MaxThreads, Critical can be considered, as shown below.
  * 
  * Specify 0 to unregister the function previously identified by Function.
@@ -3275,7 +3278,15 @@ class Gui extends Object {
 	Move([X, Y, Width, Height]) => void
 
 	/**
-	 * Register a function or method to be called when a given event is triggered.
+	 * Registers a function or method to be called when the given event is raised by a GUI window.
+	 * @param Callback The function, method or object to call when the event is raised.
+	 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
+	 * Otherwise, this parameter must be a function object.
+	 * - Close(GuiObj) => Integer
+	 * - ContextMenu(GuiObj, GuiCtrlObj, Item, IsRightClick, X, Y) => Integer
+	 * - DropFiles(GuiObj, GuiCtrlObj, FileArray, X, Y) => Integer
+	 * - Escape(GuiObj) => Integer
+	 * - Size(GuiObj, MinMax, Width, Height) => Integer
 	 */
 	OnEvent(EventName, Callback, AddRemove := 1) => void
 
@@ -3399,12 +3410,40 @@ class Gui extends Object {
 		Move([X, Y, Width, Height]) => void
 
 		/**
-		 * Register the function or method to be called when a given event is raised.
+		 * Registers a function or method to be called when a control notification is received via the WM_COMMAND message.
+		 * @param Callback The function, method or object to call when the event is raised.
+		 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
+		 * Otherwise, this parameter must be a function object.
+		 * - Command(GuiControl)
+		 */
+		OnCommand(NotifyCode, Callback, AddRemove := 1) => void
+
+		/**
+		 * Registers a function or method to be called when the given event is raised.
+		 * @param Callback The function, method or object to call when the event is raised.
+		 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
+		 * Otherwise, this parameter must be a function object.
+		 * - Change(GuiCtrlObj, Info)
+		 * - Click(GuiCtrlObj, Info, Href?)
+		 * - DoubleClick(GuiCtrlObj, Info)
+		 * - ColClick(GuiCtrlObj, Info)
+		 * - ContextMenu(GuiCtrlObj, Item, IsRightClick, X, Y)
+		 * - Focus(GuiCtrlObj, Info)
+		 * - LoseFocus(GuiCtrlObj, Info)
+		 * - ItemCheck(GuiCtrlObj, Item, Checked)
+		 * - ItemEdit(GuiCtrlObj, Item)
+		 * - ItemExpand(GuiCtrlObj, Item, Expanded)
+		 * - ItemFocus(GuiCtrlObj, Item)
+		 * - ItemSelect(GuiCtrlObj, Item, Selected?)
 		 */
 		OnEvent(EventName, Callback, AddRemove := 1) => void
 
 		/**
-		 * Register the function or method to be called when the control notification is received through the WM_NOTIFY message.
+		 * Registers a function or method to be called when a control notification is received via the WM_NOTIFY message.
+		 * @param Callback The function, method or object to call when the event is raised.
+		 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
+		 * Otherwise, this parameter must be a function object.
+		 * - Notify(GuiControl, lParam)
 		 */
 		OnNotify(NotifyCode, Callback, AddRemove := 1) => void
 

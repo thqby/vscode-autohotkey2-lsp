@@ -1676,6 +1676,7 @@ ObjSetCapacity(Obj, MaxProps) => void
 
 /**
  * 注册一个每当剪贴板内容发生改变时都会运行的函数或函数对象.
+ * @param {(Type) => Integer} Func 要调用的函数.
  * @param AddRemove 如果为空或省略, 则默认为 1(在任何先前的注册函数之后调用该函数). 否则, 指定下列数字之一:
  * 
  * 1 = 在任何先前的注册函数之后调用该函数.
@@ -1688,18 +1689,20 @@ OnClipboardChange(Func, AddRemove := 1) => void
 
 /**
  * 指定在未处理错误发生时自动运行的函数.
+ * @param {(Thrown, Mode) => Integer} Func 当未处理的错误发生时调用的函数对象.
  */
 OnError(Func, AddRemove := 1) => void
 
 /**
  * 指定一个在脚本退出时自动运行的函数.
+ * @param {(ExitReason, ExitCode) => Integer} Func 脚本退出时调用的函数对象.
  */
 OnExit(Func, AddRemove := 1) => void
 
 /**
  * 指定当脚本接收到指定消息时自动调用的函数或函数对象.
  * @param MsgNumber 需要监听或查询的消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间. 如果你不想监听系统消息(即编号小于 0x0400 的那些), 那么最好选择一个大于 4096(0x1000) 的数字. 这降低了可能对当前及将来版本的 AutoHotkey 内部所使用的消息的干扰.
- * @param Function 函数或函数对象的名称. 要传递原义的函数名称, 必须用引号("") 括起来. 该函数必须能够接受四个参数, 如下所述.
+ * @param {(wParam, lParam, msg, hwnd) => Integer} Function 函数或函数对象的名称. 要传递原义的函数名称, 必须用引号("") 括起来. 该函数必须能够接受四个参数, 如下所述.
  * @param MaxThreads 这个整数通常被省略, 在这种情况下, 监控函数一次只能处理一个线程. 这通常是最好的, 因为否则每当监控函数中断时, 脚本就会按时间顺序处理消息. 因此, 作为 MaxThreads 的替代方案, 可以考虑使用 Critical, 如下所示.
  * 
  * 指定 0 来取消注册之前由 Function 标识的函数.
@@ -3276,7 +3279,15 @@ class Gui extends Object {
 	Move([X, Y, Width, Height]) => void
 
 	/**
-	 * 注册一个函数或方法, 当给定的事件被触发时调用.
+	 * 注册一个函数或方法, 当 GUI 窗口发生给定事件时, 该函数或方法将被调用.
+	 * @param Callback 事件发生时要调用的函数, 方法或对象.
+	 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
+	 * 否则, 这个参数必须是一个函数对象.
+	 * - Close(GuiObj) => Integer
+	 * - ContextMenu(GuiObj, GuiCtrlObj, Item, IsRightClick, X, Y) => Integer
+	 * - DropFiles(GuiObj, GuiCtrlObj, FileArray, X, Y) => Integer
+	 * - Escape(GuiObj) => Integer
+	 * - Size(GuiObj, MinMax, Width, Height) => Integer
 	 */
 	OnEvent(EventName, Callback, AddRemove := 1) => void
 
@@ -3384,12 +3395,40 @@ class Gui extends Object {
 		Move([X, Y, Width, Height]) => void
 
 		/**
-		 * 注册引发给定事件时要调用的函数或方法.
+		 * 注册一个函数或方法, 当通过 WM_COMMAND 消息接收到控件通知时调用.
+		 * @param Callback 事件发生时要调用的函数, 方法或对象.
+		 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
+		 * 否则, 这个参数必须是一个函数对象.
+		 * - Command(GuiControl)
+		 */
+		OnCommand(NotifyCode, Callback, AddRemove := 1) => void
+
+		/**
+		 * 注册一个函数或方法, 当控件发生给定事件时, 该函数或方法将被调用.
+		 * @param Callback 事件发生时要调用的函数, 方法或对象.
+		 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
+		 * 否则, 这个参数必须是一个函数对象.
+		 * - Change(GuiCtrlObj, Info)
+		 * - Click(GuiCtrlObj, Info, Href?)
+		 * - DoubleClick(GuiCtrlObj, Info)
+		 * - ColClick(GuiCtrlObj, Info)
+		 * - ContextMenu(GuiCtrlObj, Item, IsRightClick, X, Y)
+		 * - Focus(GuiCtrlObj, Info)
+		 * - LoseFocus(GuiCtrlObj, Info)
+		 * - ItemCheck(GuiCtrlObj, Item, Checked)
+		 * - ItemEdit(GuiCtrlObj, Item)
+		 * - ItemExpand(GuiCtrlObj, Item, Expanded)
+		 * - ItemFocus(GuiCtrlObj, Item)
+		 * - ItemSelect(GuiCtrlObj, Item, Selected?)
 		 */
 		OnEvent(EventName, Callback, AddRemove := 1) => void
 
 		/**
-		 * 注册通过WM_NOTIFY消息接收到控制通知时要调用的函数或方法.
+		 * 注册一个函数或方法, 当通过 WM_NOTIFY 消息接收到控件通知时调用.
+		 * @param Callback 事件发生时要调用的函数, 方法或对象.
+		 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
+		 * 否则, 这个参数必须是一个函数对象.
+		 * - Notify(GuiControl, lParam)
 		 */
 		OnNotify(NotifyCode, Callback, AddRemove := 1) => void
 

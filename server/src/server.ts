@@ -329,10 +329,8 @@ function initpathenv(samefolder = false) {
 			connection.window.showErrorMessage(setting.versionerr());
 		if (!samefolder) {
 			libdirs.length = 0;
-			if (existsSync(path = pathenv.mydocuments + '\\autohotkey\\lib'))
-				libdirs.push(path.toLowerCase());
-			if (existsSync(path = (ahkpath_cur || pathenv.ahkpath).replace(/[^\\/]+$/, 'lib')))
-				libdirs.push(path.toLowerCase());
+			libdirs.push(pathenv.mydocuments.toLowerCase() + '\\autohotkey\\lib',
+				(ahkpath_cur || pathenv.ahkpath).replace(/[^\\/]+$/, 'lib').toLowerCase());
 		}
 		pathenv.h = (pathenv.h ?? '0').slice(0, 1);
 		if (pathenv.h === '1') {

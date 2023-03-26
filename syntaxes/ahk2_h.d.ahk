@@ -191,6 +191,88 @@ ahkReady(ThreadID := 0) => Integer
 MinHookDisable(pHook) => Integer
 MinHookEnable(Target, Detour, &Original?) => Integer
 
+/** @extends {ahk2/Array} */
+class Array {
+	/**
+	 * Returns the elements of an array that meet the condition specified in a callback function.
+	 * @param {(Value [, Index]) => Boolean} Predicate The filter method calls the predicate function one time for each element in the array.
+	 */
+	Filter(Predicate) => Array
+
+	/**
+	 * Returns the index of the first element in the array where predicate is true, and 0 otherwise.
+	 * @param {(Value [, Index]) => Boolean} Predicate FindIndex calls predicate once for each element of the array,
+	 * until it finds one where Predicate returns true. If such an element is found,
+	 * FindIndex immediately returns that element index. Otherwise, FindIndex returns 0.
+	 * @param {Integer} StartingPosition The array index at which to begin the search. Specify 1 to start at the first element,
+	 * in ascending order; specify -1 to start at the last element, in descending order.
+	 */
+	FindIndex(Predicate, StartingPosition := 1) => Integer
+
+	/**
+	 * Returns the index of the first occurrence of a value in an array, or 0 if it is not present.
+	 * @param {Any} SearchElement The value to locate in the array.
+	 * @param {Integer} StartingPosition The array index at which to begin the search. Specify 1 to start at the first element,
+	 * in ascending order; specify -1 to start at the last element, in descending order.
+	 */
+	IndexOf(SearchElement, StartingPosition := 1) => Integer
+
+	/**
+	 * Adds all the elements of an array into a string, separated by the specified separator string.
+	 * @param {String} Separator A string used to separate one element of the array from the next in the resulting string.
+	 * If omitted, the array elements are separated with a comma.
+	 */
+	Join(Separator := ',') => String
+
+	/**
+	 * Calls a defined callback function on each element of an array, and returns an array that contains the results.
+	 * @param {(Value [, Index]) => Any} CallbackFn The map method calls the CallbackFn function one time for each element in the array.
+	 */
+	Map(CallbackFn) => Array
+
+	/**
+	 * Sorts an array in place. This method mutates the array and returns a reference to the same array.
+	 * @param {(a, b) => Number} CompareFn Function used to determine the order of the elements.
+	 * It is expected to return a negative value if the first argument is less than the second argument,
+	 * zero if they're equal, and a positive value otherwise. If omitted, the elements are sorted in random order.
+	 */
+	Sort(CompareFn?) => $this
+}
+
+/** @extends {ahk2/Gui} */
+class Gui {
+	/**
+	 * Causes the specified function to be called automatically whenever the script receives the specified message.
+	 * @param {Integer} Msg The number of the message to monitor or query, which should be between 0 and 4294967295 (0xFFFFFFFF).
+	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback The function, method or object to call when the event is raised.
+	 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
+	 * Otherwise, this parameter must be a function object. The function may also consult the built-in variable `A_EventInfo`, which contains 0 if the message was sent via SendMessage.
+	 * If sent via PostMessage, it contains the tick-count time the message was posted.
+	 * @param {Integer} AddRemove If omitted, it defaults to 1 (call the callback after any previously registered callbacks). Otherwise, specify one of the following numbers:
+	 * - 1 = Call the callback after any previously registered callbacks.
+	 * - -1 = Call the callback before any previously registered callbacks.
+	 * - 0 = Do not call the callback.
+	 */
+	OnMessage(Msg, Callback [, AddRemove]) => void
+
+	/** @extends {ahk2/Gui.Control} */
+	class Control {
+		/**
+		 * Causes the specified function to be called automatically whenever the script receives the specified message.
+		 * @param {Integer} Msg The number of the message to monitor or query, which should be between 0 and 4294967295 (0xFFFFFFFF).
+		 * @param {String|(GuiCtrlObj, wParam, lParam, Msg) => Integer} Callback The function, method or object to call when the event is raised.
+		 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
+		 * Otherwise, this parameter must be a function object. The function may also consult the built-in variable `A_EventInfo`, which contains 0 if the message was sent via SendMessage.
+		 * If sent via PostMessage, it contains the tick-count time the message was posted.
+		 * @param {Integer} AddRemove If omitted, it defaults to 1 (call the callback after any previously registered callbacks). Otherwise, specify one of the following numbers:
+		 * - 1 = Call the callback after any previously registered callbacks.
+		 * - -1 = Call the callback before any previously registered callbacks.
+		 * - 0 = Do not call the callback.
+		 */
+		OnMessage(Msg, Callback [, AddRemove]) => void
+	}
+}
+
 class Decimal extends Number {
 	/**
 	 * Sets the computation precision and tostring() precision

@@ -1,6 +1,6 @@
 import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
 import { cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, Lexer, searchNode, Variable } from './Lexer';
-import { ahkvars, lexers, Maybe } from './common';
+import { ahkuris, lexers, Maybe } from './common';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
@@ -70,15 +70,13 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 	});
 	if (!nodes.length) {
 		if (kind === SymbolKind.Method) {
-			for (const key in ahkvars)
-				ahkvars[key].children?.forEach(node => {
-					if (node.kind === SymbolKind.Method && node.name.toLowerCase() === name &&
-						!nodes.map((it: any) => it.node).includes(node))
-						nodes.push({ node, uri: '' });
-				});
-			doc.object.method[name = name.toUpperCase()]?.forEach(node => nodes.push({ node, uri: '' }));
+			name = name.toUpperCase();
+			lexers[ahkuris.ahk2]?.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
+			lexers[ahkuris.ahk2_h]?.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
+			if (!Object.values(ahkuris).includes(doc.uri))
+				doc.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
 			for (const u in doc.relevance)
-				lexers[u].object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
+				lexers[u]?.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
 			if (!nodes.length) return undefined;
 		} else return undefined;
 	}
@@ -89,7 +87,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			let label = node.full, parameters = params.map(param =>
 				({ label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...') }));
 			if (needthis)
-				label = label.replace(/(?<=(\w|[^\x00-\x7f])+)\(/, '(@this' + (params.length ? ', ' : '')),
+				label = label.replace(/((\w|[^\x00-\x7f])+)\(/, '$1(@this' + (params.length ? ', ' : '')),
 					parameters.unshift({ label: '@this' });
 			paramindex = index - needthis;
 			signinfo.signatures.push({
@@ -103,7 +101,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			if (overloads.length) {
 				let lex = new Lexer(TextDocument.create('', 'ahk2', -10, overloads.join('\n')), undefined, -1);
 				let { label, documentation } = signinfo.signatures[0], n = node;
-				let fn = label.replace(new RegExp(`(?<=\\b${node.name})\\(.+$`), '');
+				let fn = label.substring(0, label.indexOf('(', 1));
 				lex.parseScript();
 				lex.children.forEach((node: any) => {
 					if (params = node.params) {
