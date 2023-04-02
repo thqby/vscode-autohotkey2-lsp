@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, env, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
+import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 
 let client: LanguageClient;
@@ -59,12 +59,13 @@ export function activate(context: ExtensionContext) {
 		'ahk2.getWorkspaceFileContent': async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText()
 	};
 
-	client = new LanguageClient('ahk2', 'AutoHotkey2', {
+	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', {
 		documentSelector: [{ language: 'ahk2' }],
 		synchronize: {},
 		initializationOptions: {
+			extensionUri: context.extensionUri,
 			commands: Object.keys(request_handlers),
-			...workspace.getConfiguration('AutoHotkey2')
+			...JSON.parse(JSON.stringify(workspace.getConfiguration('AutoHotkey2')))
 		}
 	}, new Worker(serverMain.toString()));
 
