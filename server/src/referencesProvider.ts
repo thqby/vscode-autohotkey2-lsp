@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
-import { Lexer, FuncScope, FuncNode, searchNode, Token, Variable } from './Lexer';
-import { Maybe, lexers, ahkvars } from './common';
+import { Lexer, FuncScope, FuncNode, searchNode, Variable, ClassNode } from './Lexer';
+import { lexers, ahkvars } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
 	let result: any = [], doc = lexers[params.textDocument.uri.toLowerCase()];
@@ -12,15 +12,27 @@ export async function referenceProvider(params: ReferenceParams, token: Cancella
 }
 
 export function getAllReferences(doc: Lexer, context: any, allow_builtin = true): { [uri: string]: Range[] } | null | undefined {
-	let name: string = context.text.toUpperCase(), references: { [uri: string]: Range[] } = {};
 	if (!context.text) return undefined;
+	let name: string = context.text.toUpperCase(), references: { [uri: string]: Range[] } = {};
 	let nodes = searchNode(doc, name, context.range.end, context.kind);
 	if (!nodes || nodes.length > 1)
 		return undefined;
 	let { node, uri, scope, ref } = nodes[0];
-	if (!uri || !node.selectionRange.end.character || ref && name.match(/^(THIS|SUPER)$/))
+	if (!uri || !node.selectionRange.end.character)
 		return undefined;
-	if (node === doc.declaration[name])
+
+	if (ref === true) { // this.prop
+		return undefined;
+	} else if (ref === false) { // this.staticprop
+		let cls = scope as ClassNode, range: Range[] = [];
+		for (let it of Object.values(cls.staticdeclaration ?? {}))
+			it.children && findAllVar(it as FuncNode, name, false, range, false);
+		if (range.length)
+			return { [lexers[uri].uri]: range };
+		return undefined;
+	}
+
+	if (node === lexers[uri].declaration[name])
 		scope = undefined;
 	else if (!scope)
 		scope = doc.searchScopedNode(node.selectionRange.start);
@@ -49,8 +61,8 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 		case SymbolKind.Class:
 			if (node.kind !== SymbolKind.Class || !(<any>node).full.includes('.')) {
 				if (scope) {
-					if (scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Event) {
-						if ((<FuncNode>scope).global && (<FuncNode>scope).global[name])
+					if (scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Event) {
+						if ((<FuncNode>scope).global?.[name])
 							scope = undefined;
 					}
 				}
@@ -69,45 +81,46 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 			}
 		default:
 			if (node.kind === SymbolKind.Class || (<FuncNode>node).static) {
-				let c = name.split('.'), rgs = findAllFromDoc(doc, c[0], SymbolKind.Variable);
-				let refs: { [uri: string]: Range[] } = {}, incls = scope?.kind === SymbolKind.Class;
-				c.splice(0, 1);
-				if (incls && c[0] === scope?.name.toUpperCase())
-					scope?.children?.forEach(it => it.name.toUpperCase() === 'THIS' && rgs.push(it.selectionRange));
-				if (rgs.length)
-					refs[doc.document.uri] = rgs;
-				for (const uri in doc.relevance) {
-					let rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, undefined);
-					if (rgs.length)
-						refs[lexers[uri].document.uri] = rgs;
+				if (node.kind === SymbolKind.Class)
+					name = (node as ClassNode).full.toUpperCase();
+				else {
+					let m = (node as FuncNode).full?.match(/^\(([^)]+)\)\sstatic\s([^(]+)($|[(\[])/);
+					if (!m) return;
+					name = `${m[1]}.${m[2]}`.toUpperCase();
 				}
-				for (const uri in refs) {
-					let rgs = refs[uri], doc = lexers[uri.toLowerCase()], tt: Range[] = [];
-					for (let rg of rgs) {
-						let i = 0, offset = doc.document.offsetAt(rg.end), tk: Token | undefined;
-						while (i < c.length) {
-							tk = doc.get_token(offset, true);
-							if (tk.type === 'TK_DOT') {
-								if ((tk = doc.find_token(tk.offset + tk.length)).type === 'TK_WORD' && tk.content.toUpperCase() === c[i]) {
-									offset = tk.offset + tk.length, i++;
-									continue;
-								}
-							}
-							break;
-						}
-						if (i === c.length && tk)
-							tt.push({ start: doc.document.positionAt(tk.offset), end: doc.document.positionAt(tk.offset + tk.length) });
+				let c = name.split('.'), l = c.length, i = 0, refs: { [uri: string]: Range[] } = {};
+				for (const uri of new Set([doc.uri, ...Object.keys(doc.relevance ?? {})]))
+					refs[lexers[uri].document.uri] = findAllFromDoc(lexers[uri], c[0], SymbolKind.Variable);
+				while (i < l) {
+					let name = c.slice(0, ++i).join('.');
+					let nodes = searchNode(doc, name, undefined, SymbolKind.Variable);
+					if (nodes?.[0].node.kind === SymbolKind.Class) {
+						for (let it of Object.values((nodes[0].node as ClassNode).staticdeclaration ?? {}))
+							it.children && findAllVar(it as FuncNode, 'THIS', false, refs[lexers[nodes[0].uri].document.uri] ??= [], false);
 					}
-					if (tt.length)
-						references[doc.document.uri] = tt;
+					for (const uri in refs) {
+						let rgs = refs[uri], doc = lexers[uri.toLowerCase()], arr: Range[] = references[uri] ??= [];
+						let document = doc.document, tokens = doc.tokens;
+						next_rg:
+						for (let rg of rgs) {
+							let tk = tokens[document.offsetAt(rg.start)];
+							if (!tk) continue;
+							for (let j = i; j < l; j++){
+								if ((tk = tokens[tk.next_token_offset])?.type !== 'TK_DOT')
+									continue next_rg;
+								if ((tk = tokens[tk.next_token_offset])?.type !== 'TK_WORD' || tk.content.toUpperCase() !== c[j])
+									continue next_rg;
+							}
+							arr.push({ start: document.positionAt(tk.offset), end: document.positionAt(tk.offset + tk.length) });
+						}
+						if (!references[uri].length)
+							delete references[uri];
+					}
+					refs = {};
 				}
-				let t = references[lexers[uri].document.uri] ??= [], ns = node.selectionRange;
-				name = node.name.toUpperCase();
-				if (incls && (node.kind === SymbolKind.Property || node.kind === SymbolKind.Method))
-					scope?.children?.forEach(it => it.name.toUpperCase() === name && it.kind === SymbolKind.Property
-						&& it.selectionRange !== ns && t.push(it.selectionRange));
-				if ((node as any).full)
-					t.unshift(node.selectionRange);
+				let _uri = lexers[uri].document.uri;
+				(references[_uri] ??= []).unshift(node.selectionRange);
+				references[_uri] = [...new Set(references[_uri])];
 				break;
 			}
 			return undefined;
