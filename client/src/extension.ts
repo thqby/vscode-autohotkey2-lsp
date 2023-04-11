@@ -34,7 +34,7 @@ import { resolve } from 'path';
 import { existsSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'fs';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
-let ahkprocess: child_process.ChildProcess | undefined;
+let ahkprocesses = new Map<number, child_process.ChildProcess>();
 let ahkconfig = workspace.getConfiguration('AutoHotkey2');
 let ahkpath_cur: string = ahkconfig.InterpreterPath, server_is_ready = false, zhcn = false;
 const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
@@ -145,7 +145,7 @@ export async function activate(context: ExtensionContext) {
 		extensions.onDidChange(() => update_extensions_info()),
 		commands.registerCommand('ahk2.run', () => runCurrentScriptFile()),
 		commands.registerCommand('ahk2.selection.run', () => runCurrentScriptFile(true)),
-		commands.registerCommand('ahk2.stop', () => stopRunningScript()),
+		commands.registerCommand('ahk2.stop', stopRunningScript),
 		commands.registerCommand('ahk2.compile', () => compileScript()),
 		commands.registerCommand('ahk2.help', () => quickHelp()),
 		commands.registerCommand('ahk2.debug', async () => begindebug(extlist, debugexts)),
@@ -202,8 +202,9 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 	}
 	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
 	let startTime: Date;
-	await stopRunningScript(true);
-	outputchannel.show(true), outputchannel.clear();
+	outputchannel.show(true);
+	if (!ahkprocesses.size)
+		outputchannel.clear();
 	if (selection || editor.document.isUntitled)
 		selecttext = editor.document.getText(editor.selection);
 	executePath.replace(/^(.+[\\/])AutoHotkeyUX\.exe$/i, (...m) => {
@@ -212,53 +213,68 @@ async function runCurrentScriptFile(selection = false): Promise<void> {
 			command = `"${executePath}" "${lc}" `;
 		return '';
 	})
+	let process: child_process.ChildProcess;
 	if (selecttext !== '') {
 		if (ahkStatusBarItem.text.endsWith('[UIAccess]')) {
 			path = resolve(__dirname, 'temp.ahk');
 			writeFileSync(path, selecttext);
-			command += `"${path}"`, outputchannel.appendLine('[Running] ' + command), startTime = new Date();
-			ahkprocess = child_process.spawn(command, { cwd: `${resolve(editor.document.fileName, '..')}`, shell: true });
+			command += `"${path}"`, startTime = new Date();
+			process = child_process.spawn(command, { cwd: `${resolve(editor.document.fileName, '..')}`, shell: true });
+			unlinkSync(path);
 		} else {
-			command += path, outputchannel.appendLine('[Running] ' + command), startTime = new Date();
-			ahkprocess = child_process.spawn(command, { cwd: `${resolve(editor.document.fileName, '..')}`, shell: true });
-			ahkprocess.stdin?.write(selecttext), ahkprocess.stdin?.end(), path = '';
+			command += path, startTime = new Date();
+			process = child_process.spawn(command, { cwd: `${resolve(editor.document.fileName, '..')}`, shell: true });
+			process.stdin?.write(selecttext), process.stdin?.end();
 		}
 	} else {
 		commands.executeCommand('workbench.action.files.save');
-		path = editor.document.fileName, command += `"${path}"`;
-		outputchannel.appendLine('[Running] ' + command), startTime = new Date();
-		ahkprocess = child_process.spawn(command, { cwd: resolve(path, '..'), shell: true }), path = '';
+		path = editor.document.fileName, command += `"${path}"`, startTime = new Date();
+		process = child_process.spawn(command, { cwd: resolve(path, '..'), shell: true });
 	}
-	if (ahkprocess) {
+	if (process.pid) {
+		outputchannel.appendLine(`[Running] [pid:${process.pid}] ${command}`);
+		ahkprocesses.set(process.pid, process);
+		(process as any).path = path;
 		commands.executeCommand('setContext', 'ahk2:isRunning', true);
-		ahkprocess.stderr?.on('data', (data) => {
-			outputchannel.appendLine(`[Error] ${decode(data)}`);
+		process.stderr?.on('data', (data) => {
+			outputchannel.appendLine(decode(data));
 		});
-		ahkprocess.on('error', (error) => {
-			console.error(error.message);
+		process.on('error', (error) => {
+			outputchannel.appendLine(JSON.stringify(error));
+			ahkprocesses.delete(process.pid);
 		});
-		ahkprocess.stdout?.on('data', (data) => {
-			outputchannel.append(decode(data));
+		process.stdout?.on('data', (data) => {
+			outputchannel.appendLine(decode(data));
 		});
-		ahkprocess.on('exit', (code) => {
-			outputchannel.appendLine('');
-			outputchannel.appendLine('[Done] exited with code=' + code + ' in ' + ((new Date()).getTime() - startTime.getTime()) / 1000 + ' seconds');
-			ahkprocess = undefined;
-			commands.executeCommand('setContext', 'ahk2:isRunning', false);
-			if (path)
-				unlinkSync(path);
+		process.on('exit', (code) => {
+			outputchannel.appendLine(`[Done] [pid:${process.pid}] exited with code=${code} in ${((new Date()).getTime() - startTime.getTime()) / 1000} seconds`);
+			ahkprocesses.delete(process.pid);
+			if (!ahkprocesses.size)
+				commands.executeCommand('setContext', 'ahk2:isRunning', false);
 		});
 	} else
-		commands.executeCommand('setContext', 'ahk2:isRunning', false);
+		outputchannel.appendLine(`[Fail] ${command}`);
 }
 
-async function stopRunningScript(wait = false) {
-	if (ahkprocess) {
-		child_process.execSync('taskkill /pid ' + ahkprocess.pid + ' /T /F');
-		if (wait) {
-			while (ahkprocess)
-				await sleep(200);
-		}
+async function stopRunningScript() {
+	if (!ahkprocesses.size)
+		return;
+	if (ahkprocesses.size === 1)
+		ahkprocesses.forEach(t => kill(t.pid));
+	else {
+		let pick = window.createQuickPick(), items: QuickPickItem[] = [];
+		pick.title = 'Running Scripts';
+		ahkprocesses.forEach(t => items.push({ label: `pid: ${t.pid}`, detail: (t as any).path }));
+		pick.items = items, pick.canSelectMany = true;
+		pick.onDidAccept(e => {
+			pick.selectedItems.forEach(item => kill(parseInt(item.label.slice(5))));
+			pick.dispose();
+		});
+		pick.show();
+	}
+	function kill(pid: number) {
+		child_process.execSync('taskkill /pid ' + pid + ' /T /F');
+		ahkprocesses.delete(pid);
 	}
 }
 
