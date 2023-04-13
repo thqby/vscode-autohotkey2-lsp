@@ -485,7 +485,7 @@ DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
 /**
  * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
  */
-DllCall(DllFile_Function [, Type1, Arg1, * , 'Cdecl ReturnType']) => Number | String
+DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number | String
 
 /**
  * 从互联网下载文件.
@@ -2602,6 +2602,11 @@ class Array extends Object {
 	__Enum(NumberOfVars?) => Enumerator
 
 	/**
+	 * 检索或设置数组元素的值.
+	 */
+	__Item[Index] => Any
+
+	/**
 	 * 返回对象的一个浅拷贝.
 	 */
 	Clone() => Array
@@ -2668,7 +2673,7 @@ class Buffer extends Object {
 	 * 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
 	 * 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
 	 */
-	__New([ByteCount, FillByte]) => Buffer
+	static Call([ByteCount, FillByte]) => Buffer
 
 	/**
 	 * 检索缓冲区的当前内存地址.
@@ -2683,21 +2688,16 @@ class Buffer extends Object {
 
 class Class extends Object {
 	/**
-	 * 构造类的新实例.
-	 */
-	static Call() => Class
-
-	/**
 	 * 检索或设置类的所有实例所基于的对象.
 	 */
-	static Prototype => Object
+	Prototype => Prototype
 }
 
 class ClipboardAll extends Buffer {
 	/**
 	 * 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
 	 */
-	__New([Data, Size]) => Buffer
+	static Call([Data, Size]) => Buffer
 }
 
 class Closure extends Func {
@@ -3850,12 +3850,17 @@ class Map extends Object {
 	__New([Key1, Value1, * ]) => Map
 
 	/**
-	 * 枚举键-值对.
+	 * 枚举键值对.
 	 */
 	__Enum(NumberOfVars?) => Enumerator
 
 	/**
-	 * 从映射中删除所有键-值对.
+	 * 检索或设置键值对的值.
+	 */
+	__Item[Index] => Any
+
+	/**
+	 * 从映射中删除所有键值对.
 	 */
 	Clear() => void
 
@@ -3865,7 +3870,7 @@ class Map extends Object {
 	Clone() => Map
 
 	/**
-	 * 从映射中删除键-值对.
+	 * 从映射中删除键值对.
 	 */
 	Delete(Key) => Any
 
@@ -3885,7 +3890,7 @@ class Map extends Object {
 	Set(Key1, Value1, * ) => void
 
 	/**
-	 * 检索映射中存在的键-值对的数量.
+	 * 检索映射中存在的键值对的数量.
 	 */
 	Count => Number
 
@@ -4018,9 +4023,9 @@ class Number extends Primitive {
 
 class Object extends Any {
 	/**
-	 * Object是从AutoHotkey对象类派生的基本类.
+	 * 构造类的新实例.
 	 */
-	__New() => Object
+	static Call() => this
 
 	/**
 	 * 返回对象的一个浅拷贝.

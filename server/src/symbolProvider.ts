@@ -1,5 +1,5 @@
 import { CancellationToken, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
-import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, getClassMembers, ParamInfo, samenameerr } from './Lexer';
+import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, samenameerr, get_class_call } from './Lexer';
 import { diagnostic } from './localize';
 import { ahkvars, connection, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
 import { URI } from 'vscode-uri';
@@ -178,8 +178,8 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		function checkextendsclassexist(name: string) {
 			let n = name.split('.'), c: ClassNode | undefined;
 			for (let t of n) {
-				c = c ? c.staticdeclaration[t] : dec[t];
-				if (!c || c.kind !== SymbolKind.Class || (<any>c).def === false)
+				c = c?.staticdeclaration[t] ?? dec[t];
+				if (c?.kind !== SymbolKind.Class || (<any>c).def === false)
 					return false;
 			}
 			return true;
@@ -227,22 +227,14 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 }
 
 export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
-	let paraminfo = info.paraminfo as ParamInfo;
-	if (!extsettings.Diagnostics.ParamsCheck || !paraminfo) return;
-	if (node?.kind === SymbolKind.Class) {
-		let cl = node as unknown as ClassNode;
-		node = (cl.staticdeclaration['CALL'] ?? cl.declaration['__NEW']) as FuncNode;
-		if (cl.extends && (!node || node !== cl.staticdeclaration['CALL'])) {
-			let t = getClassMembers(doc, cl, true);
-			if (t['CALL'] && (<any>t['CALL']).def !== false)
-				node = t['CALL'] as FuncNode;
-			else node = (t['__NEW'] ?? t['CALL']) as FuncNode;
-		}
-	}
+	let paraminfo = info.paraminfo!;
+	if (!paraminfo || !extsettings.Diagnostics.ParamsCheck) return;
+	if (node?.kind === SymbolKind.Class)
+		node = get_class_call(node as any) as any;
 	if (!node) return;
 	if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) {
-		let paramcount = node.params.length, isVariadic = false, pc = paraminfo.count, miss: { [index: number]: boolean } = {};
-		if (isVariadic = node.full.includes('*')) {
+		let paramcount = node.params.length, pc = paraminfo.count, miss: { [index: number]: boolean } = {};
+		if (node.variadic) {
 			if (paramcount > 0 && node.params[paramcount - 1].arr)
 				paramcount--;
 			while (paramcount > 0 && node.params[paramcount - 1].defaultVal !== undefined) --paramcount;

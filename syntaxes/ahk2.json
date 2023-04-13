@@ -1,5 +1,5 @@
 {
-	"keywords": [
+	"directives": [
 		{
 			"body": "#ClipboardTimeout ",
 			"description": "Change the time the script continues to try to access the clipboard when the first attempt to access the clipboard fails.",
@@ -159,10 +159,33 @@
 			"body": ";@Ahk2Exe-SetMainIcon ${1:[IcoFile]}",
 			"description": "Overwrite the custom EXE icon used for compilation.",
 			"prefix": "_SetMainIcon"
-		},
+		}
+	],
+	"keywords": [
 		{
 			"body": "and",
 			"prefix": "and"
+		},
+		{
+			"body": "as",
+			"prefix": "as"
+		},
+		{
+			"body": "in",
+			"prefix": "in"
+		},
+		{
+			"body": "is",
+			"description": "If Value is an instance of Class, it returns true (1), otherwise it returns false (0).",
+			"prefix": "is"
+		},
+		{
+			"body": "not",
+			"prefix": "not"
+		},
+		{
+			"body": "or",
+			"prefix": "or"
 		},
 		{
 			"body": "break",
@@ -173,10 +196,6 @@
 			"body": "catch",
 			"description": "Specify the code to be executed when an exception is raised during the execution of the try statement.",
 			"prefix": "catch"
-		},
-		{
-			"body": "as",
-			"prefix": "as"
 		},
 		{
 			"body": "continue",
@@ -218,15 +237,6 @@
 			"prefix": "if"
 		},
 		{
-			"body": "in",
-			"prefix": "in"
-		},
-		{
-			"body": "is ",
-			"description": "If Value is an instance of Class, it returns true (1), otherwise it returns false (0).",
-			"prefix": "is"
-		},
-		{
 			"body": "loop files ${1:FilePattern [, Mode]}",
 			"description": "Retrieve the specified file or folder, one at a time.",
 			"prefix": "loop files"
@@ -255,14 +265,6 @@
 			"body": "local",
 			"description": "Local variables are specific to a single function and are only visible inside that function. Therefore, local variables may have the same name as global variables, and the two will have separate contents. Separate functions can also be used safely The same variable name.",
 			"prefix": "local"
-		},
-		{
-			"body": "not",
-			"prefix": "not"
-		},
-		{
-			"body": "or",
-			"prefix": "or"
 		},
 		{
 			"body": "case $0:",
@@ -997,15 +999,6 @@
 	],
 	"texts": [
 		{
-			"body": "Abort",
-			"prefix": "Abort"
-		},
-		{
-			"body": "AboveNormal",
-			"description": "Above the standard",
-			"prefix": "AboveNormal"
-		},
-		{
 			"body": "ahk_class",
 			"description": "The window class is a set of attributes used by the system as a template for creating windows. In other words, the class name of the window identifies the type of window. To use the window class, please specify ahk_class ExactClassName, as shown in Window Spy .ExactClassName can be retrieved through WinGetClass.",
 			"prefix": "ahk_class"
@@ -1031,14 +1024,6 @@
 			"prefix": "ahk_pid"
 		},
 		{
-			"body": "All",
-			"prefix": "All"
-		},
-		{
-			"body": "AltSubmit",
-			"prefix": "AltSubmit"
-		},
-		{
 			"body": "AlwaysOnTop",
 			"description": "Keep the window above all other windows.",
 			"prefix": "AlwaysOnTop"
@@ -1049,42 +1034,9 @@
 			"prefix": "AutoSize"
 		},
 		{
-			"body": "Background",
-			"prefix": "Background"
-		},
-		{
-			"body": "BackgroundTrans",
-			"prefix": "BackgroundTrans"
-		},
-		{
-			"body": "BelowNormal",
-			"description": "Below standard",
-			"prefix": "BelowNormal"
-		},
-		{
-			"body": "bold",
-			"prefix": "bold"
-		},
-		{
 			"body": "Border",
 			"description": "Provide a thin border around the control. Most controls do not need this because they already have a type-specific border. When adding a border to an existing control, you may need to increase the width and height of the control by 1 Pixels.",
 			"prefix": "Border"
-		},
-		{
-			"body": "Bottom",
-			"prefix": "Bottom"
-		},
-		{
-			"body": "Button",
-			"prefix": "Button"
-		},
-		{
-			"body": "Buttons",
-			"prefix": "Buttons"
-		},
-		{
-			"body": "Cancel",
-			"prefix": "Cancel"
 		},
 		{
 			"body": "Caption",
@@ -1097,626 +1049,9 @@
 			"prefix": "Center"
 		},
 		{
-			"body": "Checkbox",
-			"prefix": "Checkbox"
-		},
-		{
-			"body": "Checked",
-			"prefix": "Checked"
-		},
-		{
-			"body": "CheckedGray",
-			"prefix": "CheckedGray"
-		},
-		{
-			"body": "Click",
-			"prefix": "Click"
-		},
-		{
-			"body": "Color",
-			"prefix": "Color"
-		},
-		{
-			"body": "ComboBox",
-			"prefix": "ComboBox"
-		},
-		{
-			"body": "DateTime",
-			"prefix": "DateTime"
-		},
-		{
-			"body": "Days",
-			"prefix": "Days"
-		},
-		{
-			"body": "DDL",
-			"description": "Dropdown list",
-			"prefix": "DDL"
-		},
-		{
-			"body": "default",
-			"prefix": "default"
-		},
-		{
-			"body": "DeleteAll",
-			"prefix": "DeleteAll"
-		},
-		{
-			"body": "Disabled",
-			"prefix": "Disabled"
-		},
-		{
-			"body": "DPIScale",
-			"prefix": "DPIScale"
-		},
-		{
-			"body": "DropDownList",
-			"prefix": "DropDownList"
-		},
-		{
 			"body": "DropFiles",
 			"description": "Start when a file/folder is dragged and dropped onto the window as part of a drag-and-drop operation (but if this callback is already running, the drag-and-drop event will be ignored).",
 			"prefix": "DropFiles"
-		},
-		{
-			"body": "Error",
-			"prefix": "Error"
-		},
-		{
-			"body": "Expand",
-			"prefix": "Expand"
-		},
-		{
-			"body": "ExStyle",
-			"prefix": "ExStyle"
-		},
-		{
-			"body": "First",
-			"prefix": "First"
-		},
-		{
-			"body": "Font",
-			"prefix": "Font"
-		},
-		{
-			"body": "Grid",
-			"prefix": "Grid"
-		},
-		{
-			"body": "Group",
-			"prefix": "Group"
-		},
-		{
-			"body": "GroupBox",
-			"prefix": "GroupBox"
-		},
-		{
-			"body": "Hdr",
-			"prefix": "Hdr"
-		},
-		{
-			"body": "Hidden",
-			"prefix": "Hidden"
-		},
-		{
-			"body": "High",
-			"prefix": "High"
-		},
-		{
-			"body": "HKCC",
-			"prefix": "HKCC"
-		},
-		{
-			"body": "HKCR",
-			"prefix": "HKCR"
-		},
-		{
-			"body": "HKCU",
-			"prefix": "HKCU"
-		},
-		{
-			"body": "HKEY_CLASSES_ROOT",
-			"prefix": "HKEY_CLASSES_ROOT"
-		},
-		{
-			"body": "HKEY_CURRENT_CONFIG",
-			"prefix": "HKEY_CURRENT_CONFIG"
-		},
-		{
-			"body": "HKEY_CURRENT_USER",
-			"prefix": "HKEY_CURRENT_USER"
-		},
-		{
-			"body": "HKEY_LOCAL_MACHINE",
-			"prefix": "HKEY_LOCAL_MACHINE"
-		},
-		{
-			"body": "HKEY_USERS",
-			"prefix": "HKEY_USERS"
-		},
-		{
-			"body": "HKLM",
-			"prefix": "HKLM"
-		},
-		{
-			"body": "HKU",
-			"prefix": "HKU"
-		},
-		{
-			"body": "Hours",
-			"prefix": "Hours"
-		},
-		{
-			"body": "HScroll",
-			"prefix": "HScroll"
-		},
-		{
-			"body": "Hwnd",
-			"prefix": "Hwnd"
-		},
-		{
-			"body": "Icon",
-			"prefix": "Icon"
-		},
-		{
-			"body": "IconSmall",
-			"prefix": "IconSmall"
-		},
-		{
-			"body": "Ignore",
-			"prefix": "Ignore"
-		},
-		{
-			"body": "ImageList",
-			"prefix": "ImageList"
-		},
-		{
-			"body": "Interrupt",
-			"prefix": "Interrupt"
-		},
-		{
-			"body": "italic",
-			"prefix": "italic"
-		},
-		{
-			"body": "Join",
-			"prefix": "Join"
-		},
-		{
-			"body": "LastFound",
-			"prefix": "LastFound"
-		},
-		{
-			"body": "LastFoundExist",
-			"prefix": "LastFoundExist"
-		},
-		{
-			"body": "Limit",
-			"prefix": "Limit"
-		},
-		{
-			"body": "Lines",
-			"prefix": "Lines"
-		},
-		{
-			"body": "ListBox",
-			"prefix": "ListBox"
-		},
-		{
-			"body": "ListView",
-			"prefix": "ListView"
-		},
-		{
-			"body": "Logoff",
-			"prefix": "Logoff"
-		},
-		{
-			"body": "Low",
-			"prefix": "Low"
-		},
-		{
-			"body": "Lowercase",
-			"prefix": "Lowercase"
-		},
-		{
-			"body": "LTrim",
-			"prefix": "LTrim"
-		},
-		{
-			"body": "MainWindow",
-			"prefix": "MainWindow"
-		},
-		{
-			"body": "Maximize",
-			"prefix": "Maximize"
-		},
-		{
-			"body": "MaximizeBox",
-			"prefix": "MaximizeBox"
-		},
-		{
-			"body": "MaxSize",
-			"prefix": "MaxSize"
-		},
-		{
-			"body": "Minimize",
-			"prefix": "Minimize"
-		},
-		{
-			"body": "MinimizeBox",
-			"prefix": "MinimizeBox"
-		},
-		{
-			"body": "MinSize",
-			"prefix": "MinSize"
-		},
-		{
-			"body": "Minutes",
-			"prefix": "Minutes"
-		},
-		{
-			"body": "MonthCal",
-			"prefix": "MonthCal"
-		},
-		{
-			"body": "Mouse",
-			"prefix": "Mouse"
-		},
-		{
-			"body": "Multi",
-			"prefix": "Multi"
-		},
-		{
-			"body": "NA",
-			"prefix": "NA"
-		},
-		{
-			"body": "No",
-			"prefix": "No"
-		},
-		{
-			"body": "NoActivate",
-			"prefix": "NoActivate"
-		},
-		{
-			"body": "NoDefault",
-			"prefix": "NoDefault"
-		},
-		{
-			"body": "NoHide",
-			"prefix": "NoHide"
-		},
-		{
-			"body": "NoIcon",
-			"prefix": "NoIcon"
-		},
-		{
-			"body": "NoMainWindow",
-			"prefix": "NoMainWindow"
-		},
-		{
-			"body": "norm",
-			"prefix": "norm"
-		},
-		{
-			"body": "Normal",
-			"prefix": "Normal"
-		},
-		{
-			"body": "NoSort",
-			"prefix": "NoSort"
-		},
-		{
-			"body": "NoSortHdr",
-			"prefix": "NoSortHdr"
-		},
-		{
-			"body": "NoStandard",
-			"prefix": "NoStandard"
-		},
-		{
-			"body": "NoTab",
-			"prefix": "NoTab"
-		},
-		{
-			"body": "NoTimers",
-			"prefix": "NoTimers"
-		},
-		{
-			"body": "Number",
-			"prefix": "Number"
-		},
-		{
-			"body": "Off",
-			"prefix": "Off"
-		},
-		{
-			"body": "Ok",
-			"prefix": "Ok"
-		},
-		{
-			"body": "On",
-			"prefix": "On"
-		},
-		{
-			"body": "OwnDialogs",
-			"prefix": "OwnDialogs"
-		},
-		{
-			"body": "Owner",
-			"prefix": "Owner"
-		},
-		{
-			"body": "Parent",
-			"prefix": "Parent"
-		},
-		{
-			"body": "Parse",
-			"prefix": "Parse"
-		},
-		{
-			"body": "Password",
-			"prefix": "Password"
-		},
-		{
-			"body": "Pic",
-			"prefix": "Pic"
-		},
-		{
-			"body": "Picture",
-			"prefix": "Picture"
-		},
-		{
-			"body": "Pixel",
-			"prefix": "Pixel"
-		},
-		{
-			"body": "Priority",
-			"prefix": "Priority"
-		},
-		{
-			"body": "Radio",
-			"prefix": "Radio"
-		},
-		{
-			"body": "Range",
-			"prefix": "Range"
-		},
-		{
-			"body": "Read",
-			"prefix": "Read"
-		},
-		{
-			"body": "ReadOnly",
-			"prefix": "ReadOnly"
-		},
-		{
-			"body": "Realtime",
-			"prefix": "Realtime"
-		},
-		{
-			"body": "REG_BINARY",
-			"prefix": "REG_BINARY"
-		},
-		{
-			"body": "REG_DWORD",
-			"prefix": "REG_DWORD"
-		},
-		{
-			"body": "REG_EXPAND_SZ",
-			"prefix": "REG_EXPAND_SZ"
-		},
-		{
-			"body": "REG_MULTI_SZ",
-			"prefix": "REG_MULTI_SZ"
-		},
-		{
-			"body": "REG_SZ",
-			"prefix": "REG_SZ"
-		},
-		{
-			"body": "Region",
-			"prefix": "Region"
-		},
-		{
-			"body": "Relative",
-			"prefix": "Relative"
-		},
-		{
-			"body": "Report",
-			"prefix": "Report"
-		},
-		{
-			"body": "Resize",
-			"prefix": "Resize"
-		},
-		{
-			"body": "Restore",
-			"prefix": "Restore"
-		},
-		{
-			"body": "Retry",
-			"prefix": "Retry"
-		},
-		{
-			"body": "RGB",
-			"prefix": "RGB"
-		},
-		{
-			"body": "Screen",
-			"prefix": "Screen"
-		},
-		{
-			"body": "Seconds",
-			"prefix": "Seconds"
-		},
-		{
-			"body": "Section",
-			"prefix": "Section"
-		},
-		{
-			"body": "Single",
-			"prefix": "Single"
-		},
-		{
-			"body": "Slider",
-			"prefix": "Slider"
-		},
-		{
-			"body": "SortDesc",
-			"prefix": "SortDesc"
-		},
-		{
-			"body": "Standard",
-			"prefix": "Standard"
-		},
-		{
-			"body": "StatusBar",
-			"prefix": "StatusBar"
-		},
-		{
-			"body": "strike",
-			"prefix": "strike"
-		},
-		{
-			"body": "Style",
-			"prefix": "Style"
-		},
-		{
-			"body": "SysMenu",
-			"prefix": "SysMenu"
-		},
-		{
-			"body": "Tab2",
-			"prefix": "Tab2"
-		},
-		{
-			"body": "TabStop",
-			"prefix": "TabStop"
-		},
-		{
-			"body": "Theme",
-			"prefix": "Theme"
-		},
-		{
-			"body": "Tile",
-			"prefix": "Tile"
-		},
-		{
-			"body": "Tip",
-			"prefix": "Tip"
-		},
-		{
-			"body": "ToolWindow",
-			"prefix": "ToolWindow"
-		},
-		{
-			"body": "Top",
-			"prefix": "Top"
-		},
-		{
-			"body": "Topmost",
-			"prefix": "Topmost"
-		},
-		{
-			"body": "TransColor",
-			"prefix": "TransColor"
-		},
-		{
-			"body": "Transparent",
-			"prefix": "Transparent"
-		},
-		{
-			"body": "Tray",
-			"prefix": "Tray"
-		},
-		{
-			"body": "TreeView",
-			"prefix": "TreeView"
-		},
-		{
-			"body": "TryAgain",
-			"prefix": "TryAgain"
-		},
-		{
-			"body": "underline",
-			"prefix": "underline"
-		},
-		{
-			"body": "UpDown",
-			"prefix": "UpDown"
-		},
-		{
-			"body": "Uppercase",
-			"prefix": "Uppercase"
-		},
-		{
-			"body": "UseErrorLevel",
-			"prefix": "UseErrorLevel"
-		},
-		{
-			"body": "Vis",
-			"prefix": "Vis"
-		},
-		{
-			"body": "VisFirst",
-			"prefix": "VisFirst"
-		},
-		{
-			"body": "VScroll",
-			"prefix": "VScroll"
-		},
-		{
-			"body": "Wait",
-			"prefix": "Wait"
-		},
-		{
-			"body": "WaitClose",
-			"prefix": "WaitClose"
-		},
-		{
-			"body": "WantCtrlA",
-			"prefix": "WantCtrlA"
-		},
-		{
-			"body": "WantF2",
-			"prefix": "WantF2"
-		},
-		{
-			"body": "WantReturn",
-			"prefix": "WantReturn"
-		},
-		{
-			"body": "Wrap",
-			"prefix": "Wrap"
-		},
-		{
-			"body": "xm",
-			"prefix": "xm"
-		},
-		{
-			"body": "xp",
-			"prefix": "xp"
-		},
-		{
-			"body": "xs",
-			"prefix": "xs"
-		},
-		{
-			"body": "Yes",
-			"prefix": "Yes"
-		},
-		{
-			"body": "ym",
-			"prefix": "ym"
-		},
-		{
-			"body": "yp",
-			"prefix": "yp"
-		},
-		{
-			"body": "ys",
-			"prefix": "ys"
 		}
 	],
 	"keys": [

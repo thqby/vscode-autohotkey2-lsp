@@ -1,5 +1,5 @@
 {
-	"keywords": [
+	"directives": [
 		{
 			"body": "#CriticalObjectSleepTime ",
 			"description": "访问CriticalObject时, TryEnterCriticalObject调用之间的睡眠时间. 这会影响CPU负载. 此设置仅影响创建CriticalObject的线程.",
@@ -46,7 +46,9 @@
 		{
 			"body": "#TargetWindowError",
 			"prefix": "#TargetWindowError"
-		},
+		}
+	],
+	"keywords": [
 		{
 			"body": "macro",
 			"prefix": "macro"

@@ -1,82 +1,135 @@
-import { CancellationToken, Position, Range, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
-import { cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, getClassMembers, getFuncCallInfo, Lexer, searchNode, Variable } from './Lexer';
-import { ahkuris, lexers, Maybe } from './common';
+import { CancellationToken, DocumentSymbol, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
+import { reset_detect_cache, detectExpType, formatMarkdowndetail, FuncNode, getFuncCallInfo, Lexer, searchNode, Variable, allIdentifierChar, get_class_member, get_class_call } from './Lexer';
+import { ahkuris, ahkvars, lexers, Maybe } from './common';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (token.isCancellationRequested) return undefined;
-	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], kind: SymbolKind = SymbolKind.Function, nodes: any;
-	let res: any, name: string, pos: Position, index: number, signinfo: SignatureHelp = { activeSignature: 0, signatures: [], activeParameter: 0 };
-	if (!(res = getFuncCallInfo(doc, params.position)) || res.index < 0)
+	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], nodes: any, context: any;
+	let signinfo: SignatureHelp = { activeSignature: 0, signatures: [], activeParameter: 0 };
+	let res = getFuncCallInfo(doc, params.position);
+	if (!res || res.index < 0)
 		return undefined;
-	name = res.name, pos = res.pos, index = res.index;
-	if (pos.character > 0)
-		if (doc.document.getText(Range.create({ line: pos.line, character: pos.character - 1 }, pos)) === '.')
-			kind = SymbolKind.Method;
-	let ts: any = {};
-	if (cleardetectcache(), kind === SymbolKind.Method || res.full) {
-		let t: string = res.full, c = doc.buildContext(pos);
-		t ||= c.text.toLowerCase();
-		detectExpType(doc, t, c.range.end, ts);
-		if (kind === SymbolKind.Method) {
-			if ((res.name === 'call' && ts['func.call']) || (res.name === 'bind' && ts['func.bind'])) {
-				let tt: any = {};
-				detectExpType(doc, t.replace(new RegExp(`\.${res.name}$`, 'i'), ''), pos, tt);
-				if (Object.keys(tt).length) {
-					if (res.name === 'bind') {
-						let t = ts['func.bind'].node = Object.assign({}, ts['func.bind'].node) as FuncNode;
-						let f = t;
-						for (let n in tt) {
-							if (!(f = tt[n]?.node) && n.startsWith('$'))
-								f = searchNode(doc, n, pos, SymbolKind.Variable)?.pop()?.node as FuncNode;
-							if (!f) return undefined;
-							break;
-						}
-						t.params = f.params;
-						t.detail = t.detail && f.detail ? t.detail + '\n___\n' + f.detail : (t.detail ?? '') + (f.detail ?? '');
-						let rp = f.full.lastIndexOf(')'), lp = f.full.indexOf('(', 1);
-						lp === -1 && f.full.startsWith('(') && lp++;
-						t.full = t.full.replace(/Bind\([^)]*\)/i, `Bind(${f.full.slice(lp + 1, rp)})`);
-						if (f.kind === SymbolKind.Method)
-							kind = SymbolKind.Function;
-					} else ts = tt;
-				}
-			}
-		}
+	let { name, pos, index, kind } = res, ts: any = {}, iscall = true, prop = '';
+	if (reset_detect_cache(), kind !== SymbolKind.Function) {
+		let t = (context = doc.buildContext(pos)).text.toLowerCase();
+		t = t.replace(/\.([^.()]+)$/, (_, m) => (prop = m.toLowerCase(), ''));
+		if (prop && !allIdentifierChar.test(prop))
+			return;
+		if (kind === SymbolKind.Property)
+			prop ||= '__item', iscall = false;
+		detectExpType(doc, t, context.range.end, ts);
+		// name = name.toLowerCase();
+		// if (kind === SymbolKind.Method && ((name === 'call' && ts['@func.call']) || (name === 'bind' && ts['@func.bind']))) {
+		// 	let tt: any = {};
+		// 	detectExpType(doc, t.replace(new RegExp(`\.${res.name}$`, 'i'), ''), pos, tt);
+		// 	if (Object.keys(tt).length) {
+		// 		if (res.name === 'bind') {
+		// 			let t = ts['func.bind'].node = Object.assign({}, ts['func.bind'].node) as FuncNode;
+		// 			let f = t;
+		// 			for (let n in tt) {
+		// 				if (!(f = tt[n]?.node) && n.startsWith('$'))
+		// 					f = searchNode(doc, n, pos, SymbolKind.Variable)?.pop()?.node as FuncNode;
+		// 				if (!f) return undefined;
+		// 				break;
+		// 			}
+		// 			t.params = f.params;
+		// 			t.detail = t.detail && f.detail ? t.detail + '\n___\n' + f.detail : (t.detail ?? '') + (f.detail ?? '');
+		// 			let rp = f.full.lastIndexOf(')'), lp = f.full.indexOf('(', 1);
+		// 			lp === -1 && f.full.startsWith('(') && lp++;
+		// 			t.full = t.full.replace(/Bind\([^)]*\)/i, `Bind(${f.full.slice(lp + 1, rp)})`);
+		// 			if (f.kind === SymbolKind.Method)
+		// 				kind = SymbolKind.Function;
+		// 		} else ts = tt;
+		// 	}
+		// }
 	} else
-		detectExpType(doc, name, pos, ts);
-	nodes = Object.values(ts).filter((it: any) => it?.node);
-	let tns: any;
-	tns = nodes ?? [], nodes = [];
-	tns.forEach((it: any) => {
-		let nn = it.node;
-		switch (nn.kind) {
-			case SymbolKind.Class: {
-				let mems = getClassMembers(lexers[nn.uri || it.uri] || doc, nn, !it.ref);
-				let n: FuncNode | undefined = (it.ref ? mems['CALL'] : mems['__NEW'] ?? mems['CALL']) as FuncNode;
-				if (mems['CALL'] && (<any>mems['CALL']).def !== false)
-					n = mems['CALL'] as FuncNode;
-				if (n)
-					nodes.push({ node: n, uri: '' });
-				break;
+		detectExpType(doc, name, pos, ts), prop = 'call';
+	let st = new Set<any>();
+	nodes = [];
+	for (const tp in ts) {
+		let t = ts[tp], n: any;
+		if (t)
+			add(t.node, t.uri, !/[#@]/.test(tp));
+		else if (tp.includes('=>'))
+			add(n = ahkvars['FUNC'] as any, n.uri, false);
+		else for (let t of searchNode(doc, tp, pos, SymbolKind.Variable) ?? [])
+			add(t.node as any, t.uri, !/[#@]/.test(tp));
+		function add(it: FuncNode, uri: string, isstatic = false) {
+			let fn: FuncNode | undefined, needthis = false;
+			if (st.has(it))
+				return;
+			st.add(it);
+			switch (it.kind) {
+				case SymbolKind.Method:
+					if (!iscall)
+						break;
+					if ((needthis = !prop && kind !== SymbolKind.Method) || !prop) {
+						nodes.push({ node: it, needthis });
+						break;
+					} else needthis = true;
+					fn = it as any;
+					if (!(it = ahkvars['FUNC'] as any))
+						break;
+					uri = (it as any).uri, isstatic = false;
+					add_cls();
+					break;
+				case SymbolKind.Function:
+					if (!iscall)
+						break;
+					if (!prop || prop === 'call') {
+						nodes.push({ node: it });
+						break;
+					}
+					fn = it as any;
+					if (!(it = ahkvars['FUNC'] as any))
+						break;
+					uri = (it as any).uri, isstatic = false;
+				case SymbolKind.Class:
+					add_cls();
+					break;
+				// case SymbolKind.Property:
+				// 	if (kind === SymbolKind.Property || itemname) {
+				// 		it.params && nodes.push({ node: it });
+				// 	} else if ((it as any).call)
+				// 		nodes.push({ node: (it as any).call });
+				// 	break;
 			}
-			case SymbolKind.Method:
-				if (kind === SymbolKind.Function)
-					it.needthis = 1;
-			case SymbolKind.Function:
-				nodes.push(it);
-				break;
+			function add_cls() {
+				let n: DocumentSymbol | undefined;
+				let d = lexers[uri];
+				if (d.d) d = doc;
+				if (!iscall)
+					n = get_class_member(d, it as any, prop, isstatic, false);
+				else if (isstatic && prop === 'call')
+					n = get_class_call(it as any);
+				else {
+					n = get_class_member(d, it as any, prop, isstatic, true);
+					if (!n)
+						return;
+					if (fn) {
+						if (prop === 'bind') {
+							let arr: string[] = [];
+							fn.detail && arr.push(fn.detail);
+							n.detail && arr.push(n.detail);
+							fn = Object.assign({}, fn);
+							fn.detail = arr.join('\n___\n');
+							fn.name = n.name;
+							fn.full = '(Func) Bind' + fn.full.slice(fn.full.indexOf('(', 1));
+							n = fn;
+						}
+					}
+				}
+				n && nodes.push({ node: n, needthis });
+			}
 		}
-	});
+	}
 	if (!nodes.length) {
 		if (kind === SymbolKind.Method) {
 			name = name.toUpperCase();
-			lexers[ahkuris.ahk2]?.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
-			lexers[ahkuris.ahk2_h]?.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
-			if (!Object.values(ahkuris).includes(doc.uri))
-				doc.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
-			for (const u in doc.relevance)
-				lexers[u]?.object.method[name]?.forEach(node => nodes.push({ node, uri: '' }));
+			for (const u in new Set([ahkuris.ahk2, ahkuris.ahk2_h, doc.uri, ...Object.keys(doc.relevance ?? {})]))
+				for (const node of lexers[u]?.object.method[name] ?? [])
+					nodes.push({ node });
 			if (!nodes.length) return undefined;
 		} else return undefined;
 	}

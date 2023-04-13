@@ -110,7 +110,7 @@ export async function activate(context: ExtensionContext) {
 		window.showWarningMessage('configuration "AutoHotkey2.FormatOptions.one_true_brace" is deprecated!\nplease use "AutoHotkey2.FormatOptions.brace_style"');
 
 	// Create the language client and start the client.
-	client = new LanguageClient('ahk2', 'AutoHotkey2', serverOptions, clientOptions);
+	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', serverOptions, clientOptions);
 	zhcn = env.language.startsWith('zh-');
 	textdecoders.push(new TextDecoder(zhcn ? 'gbk' : 'windows-1252'));
 
@@ -157,12 +157,21 @@ export async function activate(context: ExtensionContext) {
 			const doc = window.activeTextEditor?.document;
 			if (doc) languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
 		}),
+		commands.registerCommand('ahk2.export.symbols', () => {
+			const doc = window.activeTextEditor?.document;
+			if (doc?.languageId !== 'ahk2')
+				return;
+			client.sendRequest('ahk2.exportSymbols', doc.uri.toString())
+				.then(result => workspace.openTextDocument({
+					language: 'json', content: JSON.stringify(result, undefined, 2)
+				}).then(d => window.showTextDocument(d, 2)));
+		}),
 		workspace.registerTextDocumentContentProvider('ahkres', {
 			provideTextDocumentContent(uri: Uri, token) {
 				return client.sendRequest('ahk2.getContent', uri.toString()).then(content => {
 					setTimeout(() => {
 						let it = workspace.textDocuments.find(it => it.uri.scheme === 'ahkres' && it.uri.path === uri.path);
-						it && languages.setTextDocumentLanguage(it, 'ahk2');
+						it && it.languageId !== 'ahk2' && languages.setTextDocumentLanguage(it, 'ahk2');
 					}, 100);
 					return content as string;
 				});

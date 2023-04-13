@@ -13,6 +13,7 @@
 	"ahk2.description": "Autohotkey2 Language Support using vscode-lsp",
 	"ahk2.actionwhenv1isdetected": "Action when v1 script is detected",
 	"ahk2.generatecomment": "Generate Comment Template",
+	"ahk2.export.symbols": "Export ahk classes and functions",
 	"ahk2.help": "Quick Help",
 	"ahk2.run": "Run Script",
 	"ahk2.setinterpreter": "Select AutoHotkey2 Interpreter",

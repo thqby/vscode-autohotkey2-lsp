@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, cleardetectcache, detectExpType, formatMarkdowndetail, FuncNode, searchNode, Variable } from './Lexer';
-import { lexers, hoverCache, Maybe, ahkvars } from './common';
+import { reset_detect_cache, detectExpType, formatMarkdowndetail, FuncNode, searchNode, Variable } from './Lexer';
+import { lexers, hoverCache, Maybe } from './common';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return;
@@ -18,7 +18,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		}
 		if (undefined === (nodes = searchNode(doc, word, context.range.end, kind = context.kind)) && word.includes('.') && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
 			let ts: any = {};
-			nodes = <any>[], cleardetectcache(), detectExpType(doc, word.replace(/\.[^.]+$/, m => {
+			nodes = <any>[], reset_detect_cache(), detectExpType(doc, word.replace(/\.[^.]+$/, m => {
 				word = m.match(/^\.[^.]+$/) ? m : '';
 				return '';
 			}), context.range.end, ts);
@@ -44,19 +44,16 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 						hover.push({ kind: 'ahk2', value: (<any>(it.node)).full })
 				});
 			} else {
-				let { node, scope } = nodes[0];
-				if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method || node.kind === SymbolKind.Property) {
-					if ((<FuncNode>node).full)
-						hover.push({ kind: 'ahk2', value: (<FuncNode>node).full });
-				} else if (node.kind === SymbolKind.Class)
-					hover.push({ kind: 'ahk2', value: 'class ' + ((<ClassNode>node).full || node.name) });
+				let { node, scope } = nodes[0], fn = node as FuncNode;
+				if (node.kind === SymbolKind.Class && !fn.full?.startsWith('('))
+					hover.push({ kind: 'ahk2', value: 'class ' + (fn.full || node.name) });
 				else if (scope && node.kind === SymbolKind.TypeParameter) {
 					let p = (scope as any).parent;
 					if (p?.kind === SymbolKind.Property && p.parent?.kind === SymbolKind.Class)
 						scope = p as DocumentSymbol;
 					formatMarkdowndetail(scope);
-				} else if ((<FuncNode>node).full)
-					hover.push({ kind: 'ahk2', value: (<FuncNode>node).full });
+				} else if (fn.full)
+					hover.push({ kind: 'ahk2', value: fn.full });
 
 				if (node.detail) {
 					let md = formatMarkdowndetail(node);

@@ -10,7 +10,7 @@ import {
 } from 'vscode-languageserver/browser';
 import {
 	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
-	generateAuthor, generateComment, hoverProvider, initahk2cache, Lexer, lexers,
+	exportSymbols, generateComment, hoverProvider, initahk2cache, Lexer, lexers,
 	loadahk2, loadlocalize, prepareRename, rangeFormatting, referenceProvider, renameProvider,
 	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, set_ahk_h, set_Connection,
 	set_dirname, set_locale, set_Workspacefolder, signatureProvider, symbolProvider, typeFormatting,
@@ -55,7 +55,7 @@ connection.onInitialize((params: InitializeParams) => {
 			},
 			completionProvider: {
 				resolveProvider: false,
-				triggerCharacters: ['.', '#']
+				triggerCharacters: ['.', '#', '*']
 			},
 			signatureHelpProvider: {
 				triggerCharacters: ['(', ',']
@@ -67,8 +67,7 @@ connection.onInitialize((params: InitializeParams) => {
 			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinese_punctuations)] },
 			executeCommandProvider: {
 				commands: [
-					'ahk2.generate.comment',
-					'ahk2.generate.author'
+					'ahk2.generate.comment'
 				]
 			},
 			hoverProvider: true,
@@ -188,6 +187,8 @@ connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
+connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
+connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
 connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
 	let doc = lexers[uri.toLowerCase()];
 	if (doc) {
@@ -219,9 +220,6 @@ async function executeCommandProvider(params: ExecuteCommandParams) {
 	switch (params.command) {
 		case 'ahk2.generate.comment':
 			generateComment(args);
-			break;
-		case 'ahk2.generate.author':
-			generateAuthor();
 			break;
 	}
 }

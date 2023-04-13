@@ -28,7 +28,7 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 		for (let it of Object.values(cls.staticdeclaration ?? {}))
 			it.children && findAllVar(it as FuncNode, name, false, range, false);
 		if (range.length)
-			return { [lexers[uri].uri]: range };
+			return { [lexers[uri].document.uri]: range };
 		return undefined;
 	}
 

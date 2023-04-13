@@ -485,7 +485,7 @@ DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
 /**
  * Call functions in DLL files, such as standard Windows API functions.
  */
-DllCall(DllFile_Function [, Type1, Arg1, * , 'Cdecl ReturnType']) => Number | String
+DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number | String
 
 /**
  * Download files from the Internet.
@@ -2602,6 +2602,11 @@ class Array extends Object {
 	__Enum(NumberOfVars?) => Enumerator
 
 	/**
+	 * Retrieves or sets the value of an array element.
+	 */
+	__Item[Index] => Any
+
+	/**
 	 * Return a shallow copy of the object.
 	 */
 	Clone() => Array
@@ -2683,14 +2688,9 @@ class Buffer extends Object {
 
 class Class extends Object {
 	/**
-	 * Construct a new instance of the class.
-	 */
-	static Call() => Class
-
-	/**
 	 * Retrieve or set the object on which all instances of the class are based.
 	 */
-	static Prototype => Object
+	Prototype => Prototype
 }
 
 class ClipboardAll extends Buffer {
@@ -3870,6 +3870,11 @@ class Map extends Object {
 	__Enum(NumberOfVars?) => Enumerator
 
 	/**
+	 * Retrieves or sets the value of a key-value pair.
+	 */
+	__Item[Index] => Any
+
+	/**
 	 * Remove all key-value pairs from the map.
 	 */
 	Clear() => void
@@ -4033,9 +4038,9 @@ class Number extends Primitive {
 
 class Object extends Any {
 	/**
-	 * Object is the basic class derived from the AutoHotkey object class.
+	 * Construct a new instance of the class.
 	 */
-	__New() => Object
+	static Call() => this
 
 	/**
 	 * Return a shallow copy of the object.

@@ -28,9 +28,16 @@ export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] 
 export let ahkvars: { [key: string]: DocumentSymbol } = {}, ahkuris: { [name: string]: string } = {};
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
-export let hoverCache: { [key: string]: [string, Hover] } = {}, libdirs: string[] = [];
+export let hoverCache: { [key: string]: [string, Hover | undefined] } = {}, libdirs: string[] = [];
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
-export let completionItemCache: { [key: string]: CompletionItem[] } = { sharp: [], method: [], key: [], other: [], constant: [], snippet: [] };
+export let completionItemCache = {
+	constant: [] as CompletionItem[],
+	directive: [] as CompletionItem[],
+	key: [] as CompletionItem[],
+	keyword: [] as CompletionItem[],
+	snippet: [] as CompletionItem[],
+	text: [] as CompletionItem[]
+};
 export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe',
 	ActionWhenV1IsDetected: 'Warn',
@@ -116,7 +123,7 @@ export function openFile(path: string, showError = true): TextDocument | undefin
 		let buf: Buffer | string;
 		try { buf = readFileSync(path); }
 		catch (e: any) {
-			connection.window.showErrorMessage(e.message);
+			showError && connection.window.showErrorMessage(e.message);
 			return undefined;
 		}
 		if (buf[0] === 0xff && buf[1] === 0xfe)
@@ -127,33 +134,40 @@ export function openFile(path: string, showError = true): TextDocument | undefin
 			try {
 				buf = new TextDecoder('utf8', { fatal: true }).decode(buf);
 			} catch {
-				if (showError)
-					connection.window.showErrorMessage(diagnostic.invalidencoding(path));
+				showError && connection.window.showErrorMessage(diagnostic.invalidencoding(path));
 				return undefined;
 			}
 		}
-		if (path === path.toLowerCase())
-			path = restorePath(path);
 		return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, buf);
 	}
 }
 
+export function openAndParse(path: string, showError = true, cache = true) {
+	let td = openFile(path, showError);
+	if (td) {
+		let lex = new Lexer(td);
+		lex.parseScript();
+		cache && (lexers[lex.uri] = lex);
+		return lex;
+	}
+}
+
 export function restorePath(path: string): string {
-	if (!existsSync(path))
+	if (inBrowser || !existsSync(path))
 		return path;
 	if (path.includes('..'))
 		path = resolve(path);
-	let dirs = path.toUpperCase().split('\\'), i = 1, s = dirs[0];
+	let dirs = path.toLowerCase().split('\\'), i = 1, s = dirs[0];
 	while (i < dirs.length) {
 		for (const d of readdirSync(s + '\\')) {
-			if (d.toUpperCase() === dirs[i]) {
+			if (d.toLowerCase() === dirs[i]) {
 				s += '\\' + d;
 				break;
 			}
 		}
 		i++;
 	}
-	return s.toLowerCase() === path ? s : path;
+	return i < dirs.length ? path : s;
 }
 
 export function getlocalefilepath(filepath: string): string | undefined {
@@ -216,23 +230,18 @@ export function initahk2cache() {
 	ahkvars = {}, ahkuris = {};
 	dllcalltpe = ['str', 'astr', 'wstr', 'int64', 'int', 'uint', 'short', 'ushort', 'char', 'uchar', 'float', 'double', 'ptr', 'uptr', 'hresult'];
 	completionItemCache = {
-		sharp: [],
-		method: [],
-		key: [],
-		other: [],
 		constant: [],
-		snippet: !inBrowser && process.env.AHK2_LS_CONFIG ? [] : [{
-			label: 'zs-Comment',
-			detail: completionitem.comment(),
-			kind: CompletionItemKind.Snippet,
-			command: { title: 'ahk2.generate.comment', command: 'ahk2.generate.comment', arguments: [] }
-		},
-		{
-			label: 'zs-Author',
-			detail: completionitem.author(),
-			kind: CompletionItemKind.Snippet,
-			command: { title: 'ahk2.generate.author', command: 'ahk2.generate.author' }
-		}]
+		directive: [],
+		key: [],
+		keyword: [],
+		snippet: [],
+		text: []
+		// snippet: !inBrowser && process.env.AHK2_LS_CONFIG ? [] : [{
+		// 	label: 'zs-Comment',
+		// 	detail: completionitem.comment(),
+		// 	kind: CompletionItemKind.Snippet,
+		// 	command: { title: 'ahk2.generate.comment', command: 'ahk2.generate.comment', arguments: [] }
+		// }]
 	};
 }
 
@@ -254,7 +263,7 @@ export async function loadahk2(filename = 'ahk2') {
 	} else {
 		const file = resolve(__dirname, `../../syntaxes/<>/${filename}`);
 		let td: TextDocument | undefined;
-		if ((path = getlocalefilepath(file + '.d.ahk')) && (td = openFile(path))) {
+		if ((path = getlocalefilepath(file + '.d.ahk')) && (td = openFile(restorePath(path)))) {
 			let doc = new Lexer(td, undefined, 3);
 			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
 		}
@@ -264,33 +273,71 @@ export async function loadahk2(filename = 'ahk2') {
 			build_item_cache(JSON.parse(readFileSync(resolve(__dirname, '../../syntaxes/ahk2_common.json'), { encoding: 'utf8' })));
 		build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
 	}
-}
-
-function build_item_cache(ahk2: any) {
-	const cmd: Command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
-	let type: CompletionItemKind, t = '', snip: { prefix: string, body: string, description?: string }, rg = Range.create(0, 0, 0, 0);
-	for (const key in ahk2) {
-		if (key === 'snippet') {
-			for (snip of ahk2['snippet']) {
-				const completionItem = CompletionItem.create(snip.prefix);
-				completionItem.kind = CompletionItemKind.Snippet;
-				completionItem.insertText = bodytostring(snip.body);
-				completionItem.detail = snip.description;
-				completionItem.insertTextFormat = InsertTextFormat.Snippet;
-				completionItemCache.snippet.push(completionItem);
-			}
-		} else if (key === 'keys') {
-			for (snip of ahk2['keys']) {
-				const completionItem = CompletionItem.create(snip.prefix);
-				completionItem.kind = CompletionItemKind.Keyword;
-				completionItem.insertText = snip.body;
-				completionItem.detail = snip.description;
-				completionItemCache.key.push(completionItem);
-			}
-		} else {
+	function build_item_cache(ahk2: any) {
+		let insertTextFormat: InsertTextFormat, kind: CompletionItemKind;
+		let snip: { prefix: string, body: string, description?: string };
+		let rg = Range.create(0, 0, 0, 0);
+		for (const key in ahk2) {
 			let arr: any[] = ahk2[key];
 			switch (key) {
-				case 'keywords': type = CompletionItemKind.Keyword; break;
+				case 'constants':
+					kind = CompletionItemKind.Constant;
+					insertTextFormat = InsertTextFormat.Snippet;
+					for (snip of arr) {
+						completionItemCache.constant.push({
+							label: snip.prefix, kind, insertTextFormat,
+							insertText: `\${1:${snip.prefix} := }${snip.body}$0`,
+							detail: snip.description ?? snip.body
+						});
+					}
+					break;
+				case 'directives':
+					let re = /^#/;
+					kind = CompletionItemKind.Keyword;
+					insertTextFormat = InsertTextFormat.Snippet;
+					for (snip of arr) {
+						completionItemCache.directive.push({
+							label: snip.prefix,
+							insertText: snip.body.replace(re, ''),
+							kind, insertTextFormat,
+							detail: snip.description
+						});
+						hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, { contents: { kind: 'markdown', value: '```ahk2\n' + trim(snip.body) + '\n```\n\n' + (snip.description ?? '') } }];
+					}
+					break;
+				case 'keys':
+					kind = CompletionItemKind.Keyword;
+					for (snip of arr) {
+						completionItemCache.key.push({
+							label: snip.prefix, kind,
+							detail: snip.description
+						});
+					}
+					break;
+				case 'keywords':
+					kind = CompletionItemKind.Keyword;
+					insertTextFormat = InsertTextFormat.Snippet;
+					for (snip of arr) {
+						completionItemCache.keyword.push({
+							label: snip.prefix, kind, insertTextFormat,
+							insertText: snip.body,
+							detail: snip.description
+						});
+						hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, { contents: { kind: 'markdown', value: '```ahk2\n' + trim(snip.body) + '\n```\n\n' + (snip.description ?? '') } }];
+					}
+					break;
+				case 'snippet':
+					kind = CompletionItemKind.Snippet;
+					insertTextFormat = InsertTextFormat.Snippet;
+					for (snip of arr) {
+						completionItemCache.snippet.push({
+							label: snip.prefix,
+							insertText: bodytostring(snip.body),
+							detail: snip.description,
+							kind, insertTextFormat
+						});
+					}
+					break;
 				case 'variables':
 					for (snip of arr) {
 						ahkvars[snip.prefix.toUpperCase()] = {
@@ -300,64 +347,46 @@ function build_item_cache(ahk2: any) {
 							detail: snip.description
 						};
 					}
-					continue;
-				case 'constants': type = CompletionItemKind.Constant; break;
-				default: type = CompletionItemKind.Text; break;
+					break;
+				case 'texts':
+					kind = CompletionItemKind.Text;
+					for (snip of arr)
+						completionItemCache.text.push({ label: snip.prefix, kind });
+					break;
+				default: break;
 			}
-			for (snip of arr) additem();
+		}
+		function bodytostring(body: string[] | string) { return (typeof body === 'object' ? body.join('\n') : body) };
+		function trim(str: string) {
+			return str.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => m[2] ? m[3].replace(/,/g, '|') : m[3] || '');
 		}
 	}
-
-	function additem() {
-		const completionItem = CompletionItem.create(snip.prefix.replace('.', '')), hover: Hover = { contents: [] }, _low = snip.prefix.toLowerCase();
-		completionItem.kind = type, completionItem.insertTextFormat = InsertTextFormat.Snippet;
-		if (type === CompletionItemKind.Constant)
-			completionItem.insertText = '${1:' + snip.prefix + ' := }' + snip.body + '$0', completionItem.detail = snip.description ?? snip.body, t = 'constant';
-		else if (snip.prefix.startsWith('#'))
-			t = 'sharp', snip.body = bodytostring(snip.body), completionItem.insertText = snip.body.replace(/^#/, ''), completionItem.detail = snip.description;
-		else if (t = 'other', type === CompletionItemKind.Function && snip.body.indexOf('|}') === -1 && snip.body.indexOf('(') !== -1)
-			completionItem.insertText = snip.prefix + '($0)', completionItem.command = cmd, completionItem.detail = snip.description;
-		else completionItem.insertText = snip.body.replace(/\$\{\d:\s*\[,[^\]\}]+\]\}/, () => {
-			completionItem.command = cmd;
-			return '';
-		}), completionItem.detail = snip.description;
-		snip.body = snip.body.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => {
-			return m[2] ? m[3].replace(/,/g, '|') : m[3] || '';
-		});
-		completionItem.documentation = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```' };
-		completionItemCache[t].push(completionItem);
-		if (type === CompletionItemKind.Constant || type === CompletionItemKind.Text || !snip.description)
-			return;
-		hover.contents = { kind: MarkupKind.Markdown, value: '```ahk2\n' + snip.body + '\n```\n\n' + snip.description };
-		hoverCache[_low] = [snip.prefix, hover];
-	}
-	function bodytostring(body: any) { return (typeof body === 'object' ? body.join('\n') : body) };
 }
 
 export function getallahkfiles(dirpath: string, maxdeep = 3): string[] {
 	let files: string[] = [];
-	if (existsSync(dirpath) && statSync(dirpath).isDirectory())
+	if (existsSync(dirpath) && statSync(dirpath = restorePath(dirpath)).isDirectory())
 		enumfile(dirpath, 0);
 	return files;
 
 	function enumfile(dirpath: string, deep: number) {
-		readdirSync(dirpath).forEach(file => {
+		for (let file of readdirSync(dirpath)) {
 			let path = resolve(dirpath, file);
 			if (statSync(path).isDirectory()) {
 				if (deep < maxdeep)
 					enumfile(path, deep + 1);
 			} else if (file.match(/\.(ahk2?|ah2)$/i))
-				files.push(path.toLowerCase());
-		});
+				files.push(path);
+		}
 	}
 }
 
 export function inWorkspaceFolders(uri: string) {
-	uri = uri.toLowerCase();
+	let u = '';
 	for (let f of extsettings.WorkingDirs.concat(workspaceFolders))
-		if (uri.startsWith(f))
-			return f;
-	return '';
+		if (uri.startsWith(f) && f.length > u.length)
+			u = f;
+	return u;
 }
 
 export async function parseWorkspaceFolders() {
@@ -429,6 +458,13 @@ export async function sendAhkRequest(method: string, params: any[]) {
 	if (inBrowser)
 		return undefined;
 	return utils.get_ahkProvider().then((server: any) => server?.sendRequest(method, ...params));
+}
+
+export function make_search_re(search: string) {
+	let t = undefined;
+	search = search.replace(/([*.?+^$|\\/\[\](){}])|([^\x00-\x7f])|(.)/,
+		(_, m1, m2, m3) => `${m3 || (t = m2) || `\\${m1}`}.*`);
+	return new RegExp(t ? search : `([^\x00-\x7f]|${search})`, 'i');
 }
 
 export function clearLibfuns() { libfuncs = {}; }

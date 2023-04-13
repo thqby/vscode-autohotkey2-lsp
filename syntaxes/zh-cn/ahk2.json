@@ -1,5 +1,5 @@
 {
-	"keywords": [
+	"directives": [
 		{
 			"body": "#ClipboardTimeout ",
 			"description": "更改首次尝试访问剪贴板失败时脚本继续尝试访问剪贴板的时间.",
@@ -159,10 +159,33 @@
 			"body": ";@Ahk2Exe-SetMainIcon ${1:[IcoFile]}",
 			"description": "覆盖用于编译的自定义 EXE 图标.",
 			"prefix": "_SetMainIcon"
-		},
+		}
+	],
+	"keywords": [
 		{
 			"body": "and",
 			"prefix": "and"
+		},
+		{
+			"body": "as",
+			"prefix": "as"
+		},
+		{
+			"body": "in",
+			"prefix": "in"
+		},
+		{
+			"body": "is",
+			"description": "如果Value是Class的实例,则返回true,否则返回false.",
+			"prefix": "is"
+		},
+		{
+			"body": "not",
+			"prefix": "not"
+		},
+		{
+			"body": "or",
+			"prefix": "or"
 		},
 		{
 			"body": "break",
@@ -173,10 +196,6 @@
 			"body": "catch",
 			"description": "指定在try语句执行期间引发异常时要执行的代码.",
 			"prefix": "catch"
-		},
-		{
-			"body": "as",
-			"prefix": "as"
 		},
 		{
 			"body": "continue",
@@ -218,15 +237,6 @@
 			"prefix": "if"
 		},
 		{
-			"body": "in",
-			"prefix": "in"
-		},
-		{
-			"body": "is ",
-			"description": "如果Value是Class的实例,则返回true（1）,否则返回false（0）.",
-			"prefix": "is"
-		},
-		{
 			"body": "loop files ${1:FilePattern [, Mode]}",
 			"description": "检索指定的文件或文件夹, 每次一个.",
 			"prefix": "loop files"
@@ -255,14 +265,6 @@
 			"body": "local",
 			"description": "局部变量特定于单个函数,并且仅在该函数内部可见.因此,局部变量可能与全局变量具有相同的名称,并且两者将具有单独的内容.单独的函数也可以安全地使用相同的变量名.",
 			"prefix": "local"
-		},
-		{
-			"body": "not",
-			"prefix": "not"
-		},
-		{
-			"body": "or",
-			"prefix": "or"
 		},
 		{
 			"body": "case $0:",
@@ -303,7 +305,6 @@
 			"prefix": "while"
 		}
 	],
-	"functions": [],
 	"variables": [
 		{
 			"body": "A_AhkPath",
@@ -998,15 +999,6 @@
 	],
 	"texts": [
 		{
-			"body": "Abort",
-			"prefix": "Abort"
-		},
-		{
-			"body": "AboveNormal",
-			"description": "高于标准",
-			"prefix": "AboveNormal"
-		},
-		{
 			"body": "ahk_class",
 			"description": "窗口类是系统用作创建窗口的模板的一组属性.换句话说,窗口的类名标识了窗口的类型.若要使用窗口类,请指定ahk_class ExactClassName,如Window Spy所示.可以通过WinGetClass检索ExactClassName.",
 			"prefix": "ahk_class"
@@ -1032,14 +1024,6 @@
 			"prefix": "ahk_pid"
 		},
 		{
-			"body": "All",
-			"prefix": "All"
-		},
-		{
-			"body": "AltSubmit",
-			"prefix": "AltSubmit"
-		},
-		{
 			"body": "AlwaysOnTop",
 			"description": "使窗口保持在所有其他窗口之上.",
 			"prefix": "AlwaysOnTop"
@@ -1050,42 +1034,9 @@
 			"prefix": "AutoSize"
 		},
 		{
-			"body": "Background",
-			"prefix": "Background"
-		},
-		{
-			"body": "BackgroundTrans",
-			"prefix": "BackgroundTrans"
-		},
-		{
-			"body": "BelowNormal",
-			"description": "低于标准",
-			"prefix": "BelowNormal"
-		},
-		{
-			"body": "bold",
-			"prefix": "bold"
-		},
-		{
 			"body": "Border",
 			"description": "在控件周围提供细线边框.大多数控件不需要这样,因为它们已经有了特定于类型的边框.向现有控件添加边框时,可能需要将控件的宽度和高度增加1个像素.",
 			"prefix": "Border"
-		},
-		{
-			"body": "Bottom",
-			"prefix": "Bottom"
-		},
-		{
-			"body": "Button",
-			"prefix": "Button"
-		},
-		{
-			"body": "Buttons",
-			"prefix": "Buttons"
-		},
-		{
-			"body": "Cancel",
-			"prefix": "Cancel"
 		},
 		{
 			"body": "Caption",
@@ -1098,626 +1049,9 @@
 			"prefix": "Center"
 		},
 		{
-			"body": "Checkbox",
-			"prefix": "Checkbox"
-		},
-		{
-			"body": "Checked",
-			"prefix": "Checked"
-		},
-		{
-			"body": "CheckedGray",
-			"prefix": "CheckedGray"
-		},
-		{
-			"body": "Click",
-			"prefix": "Click"
-		},
-		{
-			"body": "Color",
-			"prefix": "Color"
-		},
-		{
-			"body": "ComboBox",
-			"prefix": "ComboBox"
-		},
-		{
-			"body": "DateTime",
-			"prefix": "DateTime"
-		},
-		{
-			"body": "Days",
-			"prefix": "Days"
-		},
-		{
-			"body": "DDL",
-			"description": "下拉列表",
-			"prefix": "DDL"
-		},
-		{
-			"body": "default",
-			"prefix": "default"
-		},
-		{
-			"body": "DeleteAll",
-			"prefix": "DeleteAll"
-		},
-		{
-			"body": "Disabled",
-			"prefix": "Disabled"
-		},
-		{
-			"body": "DPIScale",
-			"prefix": "DPIScale"
-		},
-		{
-			"body": "DropDownList",
-			"prefix": "DropDownList"
-		},
-		{
 			"body": "DropFiles",
 			"description": "当文件/文件夹作为拖放操作的一部分被拖放到窗口上时启动(但是如果这个回调已经在运行,拖放事件将被忽略).",
 			"prefix": "DropFiles"
-		},
-		{
-			"body": "Error",
-			"prefix": "Error"
-		},
-		{
-			"body": "Expand",
-			"prefix": "Expand"
-		},
-		{
-			"body": "ExStyle",
-			"prefix": "ExStyle"
-		},
-		{
-			"body": "First",
-			"prefix": "First"
-		},
-		{
-			"body": "Font",
-			"prefix": "Font"
-		},
-		{
-			"body": "Grid",
-			"prefix": "Grid"
-		},
-		{
-			"body": "Group",
-			"prefix": "Group"
-		},
-		{
-			"body": "GroupBox",
-			"prefix": "GroupBox"
-		},
-		{
-			"body": "Hdr",
-			"prefix": "Hdr"
-		},
-		{
-			"body": "Hidden",
-			"prefix": "Hidden"
-		},
-		{
-			"body": "High",
-			"prefix": "High"
-		},
-		{
-			"body": "HKCC",
-			"prefix": "HKCC"
-		},
-		{
-			"body": "HKCR",
-			"prefix": "HKCR"
-		},
-		{
-			"body": "HKCU",
-			"prefix": "HKCU"
-		},
-		{
-			"body": "HKEY_CLASSES_ROOT",
-			"prefix": "HKEY_CLASSES_ROOT"
-		},
-		{
-			"body": "HKEY_CURRENT_CONFIG",
-			"prefix": "HKEY_CURRENT_CONFIG"
-		},
-		{
-			"body": "HKEY_CURRENT_USER",
-			"prefix": "HKEY_CURRENT_USER"
-		},
-		{
-			"body": "HKEY_LOCAL_MACHINE",
-			"prefix": "HKEY_LOCAL_MACHINE"
-		},
-		{
-			"body": "HKEY_USERS",
-			"prefix": "HKEY_USERS"
-		},
-		{
-			"body": "HKLM",
-			"prefix": "HKLM"
-		},
-		{
-			"body": "HKU",
-			"prefix": "HKU"
-		},
-		{
-			"body": "Hours",
-			"prefix": "Hours"
-		},
-		{
-			"body": "HScroll",
-			"prefix": "HScroll"
-		},
-		{
-			"body": "Hwnd",
-			"prefix": "Hwnd"
-		},
-		{
-			"body": "Icon",
-			"prefix": "Icon"
-		},
-		{
-			"body": "IconSmall",
-			"prefix": "IconSmall"
-		},
-		{
-			"body": "Ignore",
-			"prefix": "Ignore"
-		},
-		{
-			"body": "ImageList",
-			"prefix": "ImageList"
-		},
-		{
-			"body": "Interrupt",
-			"prefix": "Interrupt"
-		},
-		{
-			"body": "italic",
-			"prefix": "italic"
-		},
-		{
-			"body": "Join",
-			"prefix": "Join"
-		},
-		{
-			"body": "LastFound",
-			"prefix": "LastFound"
-		},
-		{
-			"body": "LastFoundExist",
-			"prefix": "LastFoundExist"
-		},
-		{
-			"body": "Limit",
-			"prefix": "Limit"
-		},
-		{
-			"body": "Lines",
-			"prefix": "Lines"
-		},
-		{
-			"body": "ListBox",
-			"prefix": "ListBox"
-		},
-		{
-			"body": "ListView",
-			"prefix": "ListView"
-		},
-		{
-			"body": "Logoff",
-			"prefix": "Logoff"
-		},
-		{
-			"body": "Low",
-			"prefix": "Low"
-		},
-		{
-			"body": "Lowercase",
-			"prefix": "Lowercase"
-		},
-		{
-			"body": "LTrim",
-			"prefix": "LTrim"
-		},
-		{
-			"body": "MainWindow",
-			"prefix": "MainWindow"
-		},
-		{
-			"body": "Maximize",
-			"prefix": "Maximize"
-		},
-		{
-			"body": "MaximizeBox",
-			"prefix": "MaximizeBox"
-		},
-		{
-			"body": "MaxSize",
-			"prefix": "MaxSize"
-		},
-		{
-			"body": "Minimize",
-			"prefix": "Minimize"
-		},
-		{
-			"body": "MinimizeBox",
-			"prefix": "MinimizeBox"
-		},
-		{
-			"body": "MinSize",
-			"prefix": "MinSize"
-		},
-		{
-			"body": "Minutes",
-			"prefix": "Minutes"
-		},
-		{
-			"body": "MonthCal",
-			"prefix": "MonthCal"
-		},
-		{
-			"body": "Mouse",
-			"prefix": "Mouse"
-		},
-		{
-			"body": "Multi",
-			"prefix": "Multi"
-		},
-		{
-			"body": "NA",
-			"prefix": "NA"
-		},
-		{
-			"body": "No",
-			"prefix": "No"
-		},
-		{
-			"body": "NoActivate",
-			"prefix": "NoActivate"
-		},
-		{
-			"body": "NoDefault",
-			"prefix": "NoDefault"
-		},
-		{
-			"body": "NoHide",
-			"prefix": "NoHide"
-		},
-		{
-			"body": "NoIcon",
-			"prefix": "NoIcon"
-		},
-		{
-			"body": "NoMainWindow",
-			"prefix": "NoMainWindow"
-		},
-		{
-			"body": "norm",
-			"prefix": "norm"
-		},
-		{
-			"body": "Normal",
-			"prefix": "Normal"
-		},
-		{
-			"body": "NoSort",
-			"prefix": "NoSort"
-		},
-		{
-			"body": "NoSortHdr",
-			"prefix": "NoSortHdr"
-		},
-		{
-			"body": "NoStandard",
-			"prefix": "NoStandard"
-		},
-		{
-			"body": "NoTab",
-			"prefix": "NoTab"
-		},
-		{
-			"body": "NoTimers",
-			"prefix": "NoTimers"
-		},
-		{
-			"body": "Number",
-			"prefix": "Number"
-		},
-		{
-			"body": "Off",
-			"prefix": "Off"
-		},
-		{
-			"body": "Ok",
-			"prefix": "Ok"
-		},
-		{
-			"body": "On",
-			"prefix": "On"
-		},
-		{
-			"body": "OwnDialogs",
-			"prefix": "OwnDialogs"
-		},
-		{
-			"body": "Owner",
-			"prefix": "Owner"
-		},
-		{
-			"body": "Parent",
-			"prefix": "Parent"
-		},
-		{
-			"body": "Parse",
-			"prefix": "Parse"
-		},
-		{
-			"body": "Password",
-			"prefix": "Password"
-		},
-		{
-			"body": "Pic",
-			"prefix": "Pic"
-		},
-		{
-			"body": "Picture",
-			"prefix": "Picture"
-		},
-		{
-			"body": "Pixel",
-			"prefix": "Pixel"
-		},
-		{
-			"body": "Priority",
-			"prefix": "Priority"
-		},
-		{
-			"body": "Radio",
-			"prefix": "Radio"
-		},
-		{
-			"body": "Range",
-			"prefix": "Range"
-		},
-		{
-			"body": "Read",
-			"prefix": "Read"
-		},
-		{
-			"body": "ReadOnly",
-			"prefix": "ReadOnly"
-		},
-		{
-			"body": "Realtime",
-			"prefix": "Realtime"
-		},
-		{
-			"body": "REG_BINARY",
-			"prefix": "REG_BINARY"
-		},
-		{
-			"body": "REG_DWORD",
-			"prefix": "REG_DWORD"
-		},
-		{
-			"body": "REG_EXPAND_SZ",
-			"prefix": "REG_EXPAND_SZ"
-		},
-		{
-			"body": "REG_MULTI_SZ",
-			"prefix": "REG_MULTI_SZ"
-		},
-		{
-			"body": "REG_SZ",
-			"prefix": "REG_SZ"
-		},
-		{
-			"body": "Region",
-			"prefix": "Region"
-		},
-		{
-			"body": "Relative",
-			"prefix": "Relative"
-		},
-		{
-			"body": "Report",
-			"prefix": "Report"
-		},
-		{
-			"body": "Resize",
-			"prefix": "Resize"
-		},
-		{
-			"body": "Restore",
-			"prefix": "Restore"
-		},
-		{
-			"body": "Retry",
-			"prefix": "Retry"
-		},
-		{
-			"body": "RGB",
-			"prefix": "RGB"
-		},
-		{
-			"body": "Screen",
-			"prefix": "Screen"
-		},
-		{
-			"body": "Seconds",
-			"prefix": "Seconds"
-		},
-		{
-			"body": "Section",
-			"prefix": "Section"
-		},
-		{
-			"body": "Single",
-			"prefix": "Single"
-		},
-		{
-			"body": "Slider",
-			"prefix": "Slider"
-		},
-		{
-			"body": "SortDesc",
-			"prefix": "SortDesc"
-		},
-		{
-			"body": "Standard",
-			"prefix": "Standard"
-		},
-		{
-			"body": "StatusBar",
-			"prefix": "StatusBar"
-		},
-		{
-			"body": "strike",
-			"prefix": "strike"
-		},
-		{
-			"body": "Style",
-			"prefix": "Style"
-		},
-		{
-			"body": "SysMenu",
-			"prefix": "SysMenu"
-		},
-		{
-			"body": "Tab2",
-			"prefix": "Tab2"
-		},
-		{
-			"body": "TabStop",
-			"prefix": "TabStop"
-		},
-		{
-			"body": "Theme",
-			"prefix": "Theme"
-		},
-		{
-			"body": "Tile",
-			"prefix": "Tile"
-		},
-		{
-			"body": "Tip",
-			"prefix": "Tip"
-		},
-		{
-			"body": "ToolWindow",
-			"prefix": "ToolWindow"
-		},
-		{
-			"body": "Top",
-			"prefix": "Top"
-		},
-		{
-			"body": "Topmost",
-			"prefix": "Topmost"
-		},
-		{
-			"body": "TransColor",
-			"prefix": "TransColor"
-		},
-		{
-			"body": "Transparent",
-			"prefix": "Transparent"
-		},
-		{
-			"body": "Tray",
-			"prefix": "Tray"
-		},
-		{
-			"body": "TreeView",
-			"prefix": "TreeView"
-		},
-		{
-			"body": "TryAgain",
-			"prefix": "TryAgain"
-		},
-		{
-			"body": "underline",
-			"prefix": "underline"
-		},
-		{
-			"body": "UpDown",
-			"prefix": "UpDown"
-		},
-		{
-			"body": "Uppercase",
-			"prefix": "Uppercase"
-		},
-		{
-			"body": "UseErrorLevel",
-			"prefix": "UseErrorLevel"
-		},
-		{
-			"body": "Vis",
-			"prefix": "Vis"
-		},
-		{
-			"body": "VisFirst",
-			"prefix": "VisFirst"
-		},
-		{
-			"body": "VScroll",
-			"prefix": "VScroll"
-		},
-		{
-			"body": "Wait",
-			"prefix": "Wait"
-		},
-		{
-			"body": "WaitClose",
-			"prefix": "WaitClose"
-		},
-		{
-			"body": "WantCtrlA",
-			"prefix": "WantCtrlA"
-		},
-		{
-			"body": "WantF2",
-			"prefix": "WantF2"
-		},
-		{
-			"body": "WantReturn",
-			"prefix": "WantReturn"
-		},
-		{
-			"body": "Wrap",
-			"prefix": "Wrap"
-		},
-		{
-			"body": "xm",
-			"prefix": "xm"
-		},
-		{
-			"body": "xp",
-			"prefix": "xp"
-		},
-		{
-			"body": "xs",
-			"prefix": "xs"
-		},
-		{
-			"body": "Yes",
-			"prefix": "Yes"
-		},
-		{
-			"body": "ym",
-			"prefix": "ym"
-		},
-		{
-			"body": "yp",
-			"prefix": "yp"
-		},
-		{
-			"body": "ys",
-			"prefix": "ys"
 		}
 	],
 	"keys": [

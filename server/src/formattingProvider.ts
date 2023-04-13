@@ -69,7 +69,7 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 					if (tk.type === 'TK_STRING' || tk.type.endsWith('COMMENT'))
 						return undefined;
 					let b = ['TK_START_EXPR', 'TK_START_BLOCK', ''];
-					while (tk = tk.previous_token as Token) {
+					while (tk = tk.previous_token!) {
 						if (b.includes(tk.type))
 							break;
 					}
@@ -84,7 +84,7 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 		return format_end_with_brace(position);
 	else if ((s = chinese_punctuations[ch])) {
 		let p = { line: position.line, character: position.character - 1 };
-		tk = doc.find_token(doc.document.offsetAt(p), true);
+		tk = doc.find_token(doc.document.offsetAt(p));
 		if (tk.type === 'TK_WORD') {
 			if (tk.length > 1) {
 				s = tk.content.replace(/./g, (c) => chinese_punctuations[c] ?? c);

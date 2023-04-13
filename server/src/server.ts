@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 import { existsSync } from 'fs';
 import { URI } from 'vscode-uri';
-import { basename, resolve } from 'path';
+import { resolve } from 'path';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, Connection, DidChangeConfigurationNotification, ExecuteCommandParams, FoldingRange, FoldingRangeParams, InitializeParams,
@@ -12,8 +12,8 @@ import {
 } from 'vscode-languageserver/node';
 import {
 	AHKLSSettings, chinese_punctuations, clearLibfuns, codeActionProvider, colorPresentation, colorProvider, completionProvider, defintionProvider,
-	documentFormatting, extsettings, fixinclude, generateAuthor, generateComment, getallahkfiles, getincludetable, hoverProvider,
-	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, parseinclude, pathenv, prepareRename,
+	documentFormatting, extsettings, exportSymbols, generateComment, getallahkfiles, hoverProvider,
+	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, pathenv, prepareRename,
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workspacefolder, setting, signatureProvider, sleep,
 	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, workspaceSymbolProvider, inWorkspaceFolders,
@@ -60,7 +60,7 @@ connection.onInitialize((params: InitializeParams) => {
 			},
 			completionProvider: {
 				resolveProvider: false,
-				triggerCharacters: ['.', '#']
+				triggerCharacters: ['.', '#', '*']
 			},
 			signatureHelpProvider: {
 				triggerCharacters: ['(', ',']
@@ -72,9 +72,7 @@ connection.onInitialize((params: InitializeParams) => {
 			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinese_punctuations)] },
 			executeCommandProvider: {
 				commands: [
-					'ahk2.fix.include',
 					'ahk2.generate.comment',
-					'ahk2.generate.author',
 					'ahk2.resetinterpreterpath'
 				]
 			},
@@ -224,7 +222,9 @@ connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
+connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
 connection.onRequest('ahk2.getAHKversion', getAHKversion);
+connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
 connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
 	let doc = lexers[uri.toLowerCase()];
 	if (doc) {
@@ -242,14 +242,11 @@ connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
 	}
 	return null;
 });
-connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
-connection.onNotification('onDidCloseTextDocument',
-	(params: { uri: string, id: string }) => {
-		if (params.id === 'ahk2')
-			lexers[params.uri.toLowerCase()]?.close(true);
-		else uri_switch_to_ahk2 = params.uri;
-	});
-	connection.onDidCloseTextDocument
+connection.onNotification('onDidCloseTextDocument', (params: { uri: string, id: string }) => {
+	if (params.id === 'ahk2')
+		lexers[params.uri.toLowerCase()]?.close(true);
+	else uri_switch_to_ahk2 = params.uri;
+});
 documents.listen(connection);
 connection.listen();
 
@@ -257,14 +254,8 @@ async function executeCommandProvider(params: ExecuteCommandParams, token: Cance
 	if (token.isCancellationRequested) return;
 	let args = params.arguments || [];
 	switch (params.command) {
-		case 'ahk2.fix.include':
-			fixinclude(args[0], args[1]);
-			break;
 		case 'ahk2.generate.comment':
 			generateComment(args);
-			break;
-		case 'ahk2.generate.author':
-			generateAuthor();
 			break;
 		case 'ahk2.resetinterpreterpath':
 			setInterpreter(args[0]);
@@ -323,14 +314,17 @@ function initpathenv(samefolder = false) {
 		}
 		let paths = data.split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '';
 		for (let i in paths)
-			pathenv[s[i]] = paths[i].toLowerCase();
+			pathenv[s[i]] = paths[i].replace(/^[A-Z]:/, m => m.toLowerCase());
 		initnum = 1;
 		if (pathenv.version?.match(/^1\./))
 			connection.window.showErrorMessage(setting.versionerr());
 		if (!samefolder) {
 			libdirs.length = 0;
-			libdirs.push(pathenv.mydocuments.toLowerCase() + '\\autohotkey\\lib',
-				(ahkpath_cur || pathenv.ahkpath).replace(/[^\\/]+$/, 'lib').toLowerCase());
+			libdirs.push(pathenv.mydocuments + '\\AutoHotkey\\Lib\\',
+				pathenv.ahkpath.replace(/[^\\/]+$/, 'Lib\\'));
+			let lb: any;
+			for (lb of Object.values(libfuncs))
+				lb.inlib = inlibdirs(lb.fsPath);
 		}
 		pathenv.h = (pathenv.h ?? '0').slice(0, 1);
 		if (pathenv.h === '1') {
@@ -350,10 +344,8 @@ function initpathenv(samefolder = false) {
 			let doc = lexers[uri];
 			if (!doc.d) {
 				doc.initlibdirs();
-				if (Object.keys(doc.include).length || doc.diagnostics.length) {
-					doc.parseScript(), parseinclude(doc.include, doc.scriptdir);
-					doc.relevance = getincludetable(doc.uri).list;
-				}
+				if (Object.keys(doc.include).length || doc.diagnostics.length)
+					doc.update();
 			}
 		}
 		sendDiagnostics();
@@ -387,23 +379,20 @@ async function parseuserlibs() {
 					}
 				}
 				libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
-				Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
+				Object.defineProperties(libfuncs[uri], {
+					islib: { value: inlibdirs(path), enumerable: false },
+					fsPath: { value: path, enumerable: false }
+				});
 				await sleep(50);
 			}
 		}
 }
 
-function inlibdirs(path: string, ...dirs: string[]) {
-	let file = basename(path), i = 0, a = file.endsWith('.ahk');
-	for (const p of dirs) {
-		if (path.startsWith(p + '\\')) {
-			if (a) for (let j = i - 1; j >= 0; j--) {
-				if (libfuncs[dirs[j] + '\\' + file])
-					return false;
-			}
+function inlibdirs(path: string) {
+	path = path.toLowerCase();
+	for (const p of libdirs) {
+		if (path.startsWith(p.toLowerCase()))
 			return true;
-		}
-		i++;
 	}
 	return false;
 }
@@ -431,11 +420,14 @@ async function setInterpreter(path: string) {
 
 async function parseproject(uri: string) {
 	let doc: Lexer = lexers[uri];
-	if (!libfuncs[uri])
-		libfuncs[uri] = [], Object.defineProperty(libfuncs[uri], 'islib', { value: inlibdirs(URI.parse(uri).toString(), ...libdirs), enumerable: false });
+	if (!doc.d && !libfuncs[uri])
+		Object.defineProperties(libfuncs[uri] = [], {
+			islib: { value: inlibdirs(doc.fsPath), enumerable: false },
+			fsPath: { value: doc.fsPath, enumerable: false }
+		});
 	setTimeout(async () => {
 		let searchdir = '', workspace = false;
-		if (searchdir = inWorkspaceFolders(doc.document.uri))
+		if (searchdir = inWorkspaceFolders(uri))
 			searchdir = URI.parse(searchdir).fsPath, workspace = true;
 		else
 			searchdir = doc.scriptdir + '\\lib';
@@ -449,11 +441,16 @@ async function parseproject(uri: string) {
 						d.close();
 						continue;
 					}
-					if (workspace)
+					if (workspace || d.d)
 						lexers[u] = d;
 				}
-				libfuncs[u] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
-				Object.defineProperty(libfuncs[u], 'islib', { value: inlibdirs(path, ...libdirs), enumerable: false });
+				if (!d.d) {
+					libfuncs[u] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
+					Object.defineProperties(libfuncs[u], {
+						islib: { value: inlibdirs(path), enumerable: false },
+						fsPath: { value: path, enumerable: false }
+					});
+				}
 				await sleep(50);
 			}
 		}

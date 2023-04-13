@@ -1,7 +1,6 @@
-import { basename, extname, relative, resolve } from 'path';
-import { Position, Range, SymbolKind, TextEdit } from 'vscode-languageserver';
-import { cleardetectcache, detectExp, FuncNode } from './Lexer';
-import { connection, extsettings, lexers, pathenv, restorePath } from './common';
+import { DocumentSymbol, Position, Range, SymbolKind } from 'vscode-languageserver';
+import { ClassNode, reset_detect_cache, detectExp, FuncNode, Token, Variable, find_class, Lexer } from './Lexer';
+import { connection, extsettings, lexers, restorePath } from './common';
 
 function checkCommand(cmd: string) {
 	if (extsettings.commands?.includes(cmd))
@@ -23,179 +22,176 @@ export function insertSnippet(value: string, range?: Range) {
 }
 
 export function setTextDocumentLanguage(uri: string, lang?: string) {
-	if (extsettings.commands?.includes('ahk2.setTextDocumentLanguage'))
-		return connection.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
+	if (!checkCommand('ahk2.setTextDocumentLanguage'))
+		return;
+	return connection.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
 }
 
-export async function fixinclude(libpath: string, docuri: string) {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
-		return;
-	let doc = lexers[docuri], text = '', line = -1, curdir = '';
-	for (const p of doc.libdirs.slice(1)) {
-		if (libpath.startsWith(p + '\\')) {
-			let ext = extname(libpath);
-			if (ext === '.ahk')
-				text = `#Include <${relative(p, restorePath(libpath)).slice(0, -4)}>`;
-			else if (pathenv.mydocuments && libpath.startsWith(pathenv.mydocuments + '\\autohotkey\\lib'))
-				text = `#Include '%A_MyDocuments%\\AutoHotkey\\Lib\\${basename(restorePath(libpath))}'`;
-			else
-				text = `#Include '${restorePath(libpath)}'`;
-			doc.includedir.forEach((v, k) => line = k + 1);
-		}
-	}
-	if (text === '') {
-		doc.includedir.forEach((v, k) => {
-			if (libpath.startsWith(v + '\\')) {
-				if (v.length > curdir.length)
-					line = k + 1, curdir = v;
-			} else if (!curdir && libpath.startsWith(resolve(v, '..') + '\\'))
-				line = k + 1, curdir = v;
-		});
-		curdir = curdir || doc.scriptpath;
-		if (curdir.charAt(0) !== libpath.charAt(0))
-			text = `#Include '${restorePath(libpath)}'`;
+export function generate_fn_comment(doc: Lexer, fn: FuncNode) {
+	let comments = fn.detail?.replace(/\$/g, '\\$').split('\n');
+	let returns: string[] = [], details: string[] = [], result = ['/**'];
+	let lastarr: string[] | undefined, m: RegExpMatchArray | null;
+	let params: { [name: string]: string[] } = {}, i = 0, z = true;
+	let p: Position, pp = Object.assign({}, fn.range.end);
+	pp.character--;
+	comments?.forEach(line => {
+		if (m = line.match(/^@(param|arg)\s+(({[^}]*}\s)?\s*(\[.*?\]|\S+).*)$/i))
+			(lastarr = params[m[4].replace(/^\[?((\w|[^\x00-\x7f])+).*$/, '$1').toUpperCase()] ??= []).push('@param ' + m[2].trim());
+		else if (m = line.match(/^@(returns?)([\s:]\s*(.*))?$/i))
+			lastarr = returns, returns.push(`@${m[1].toLowerCase()} ${m[3]}`);
+		else if (lastarr && !line.startsWith('@'))
+			lastarr.push(line);
 		else
-			text = `#Include '${relative(curdir, restorePath(libpath))}'`;
-	}
-	if (line === -1)
-		line = doc.document.lineCount, text = '\n\n' + text;
-	else {
-		let space = doc.document.getText({ start: { line: line - 1, character: 0 }, end: { line, character: 0 } }).match(/^\s+/);
-		text = (space ? space[0] : '') + text;
-		if (line < doc.document.lineCount)
-			text += '\n';
-	}
-	let { position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { position: Position }, char = doc.document.getText(Range.create(position.line, position.character - 1, position.line, position.character));
-	if (position.line < line) text = '\n' + text;
-	await connection.workspace.applyEdit({ changes: { [doc.document.uri]: [TextEdit.insert({ line, character: 0 }, text)] } });
-	if (char === '(')
-		executeCommands([{ command: 'editor.action.triggerParameterHints' }]);
-	else {
-		if (line <= position.line)
-			position.line++;
-		insertSnippet('$0', Range.create(position, position));
-		if (char === '.')
-			executeCommands([{ command: 'editor.action.triggerSuggest' }]);
-	}
-	return;
-}
-
-export async function generateComment(args: string[]) {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
-		return;
-	if (args.length === 0)
-		await executeCommands([{ command: 'undo', wait: true }, { command: 'undo', wait: true }]);
-	let { uri, position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
-	let doc = lexers[uri = uri.toLowerCase()], scope = doc.searchScopedNode(position), ts = scope?.children || doc.children;
-	for (const it of ts) {
-		if ((it.kind === SymbolKind.Function || it.kind === SymbolKind.Method) && it.selectionRange.start.line === position.line && it.selectionRange.start.character <= position.character && position.character <= it.selectionRange.end.character) {
-			scope = it;
-			break;
+			lastarr = undefined, details.push(line);
+	});
+	if (details.join('').trim())
+		details.forEach(s => result.push(' * ' + s));
+	else
+		result.push(' * $0'), z = false;
+	fn.params.forEach(it => {
+		if (lastarr = params[it.name.toUpperCase()]) {
+			lastarr.forEach(s => result.push(' * ' + s));
+		} else if (it.name) {
+			let rets: string[] = [], o: any = {};
+			for (const ret in it.returntypes)
+				reset_detect_cache(), detectExp(doc, ret, Position.is(p = it.returntypes[ret]) ? p : pp).forEach(tp => o[trim(tp)] = true);
+			rets = o['#any'] ? [] : Object.keys(o);
+			if (rets.length)
+				result.push(` * @param $\{${++i}:{${rets.join('|')}\\}} ${it.name} $${++i}`);
+			else result.push(` * @param ${it.name} $${++i}`);
 		}
+	});
+	if (returns.length) {
+		returns.forEach(s => result.push(' * ' + s));
+	} else {
+		let rets: string[] = [], o: any = {};
+		for (const ret in fn.returntypes)
+			reset_detect_cache(), detectExp(doc, ret, Position.is(p = fn.returntypes[ret]) ? p : pp).forEach(tp => o[trim(tp)] = true);
+		rets = o['#any'] ? ['any'] : Object.keys(o);
+		if (rets.length)
+			result.push(` * @returns $\{${++i}:{${rets.join('|')}\\}} $${++i}`);
 	}
-	if (scope && (scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method)) {
-		let t: any, line = scope.range.start.line, linetext = doc.document.getText({ start: { line, character: 0 }, end: { line: line + 1, character: 0 } });
-		if (t = linetext.match(/^(\s*)((static|macro)\s*)?\S+\(/i)) {
-			let n = scope as FuncNode, ss: string[] = ['/**'], i = 0, character = t[1].length, comments = scope.detail?.split('\n'), range: Range | undefined;
-			let params: { [name: string]: string[] } = {}, lastarr: string[] | undefined, returns: string[] = [], details: string[] = [], m: RegExpMatchArray | null;
-			if (comments) {
-				let block = false, start = { line: -1, character: 0 }, end = { line: -1, character: 0 };
-				for (let i = line - 1; i >= 0; i--) {
-					let t = doc.document.getText({ start: { line: i, character: 0 }, end: { line: i + 1, character: 0 } });
-					if (block) {
-						if (m = t.match(/^\s*\/\*/)) {
-							start.line = i, start.character = m[0].length - 2;
-							break;
-						}
-					} else {
-						if (m = t.match(/^\s*;/)) {
-							start.line = end.line = i;
-							start.character = m[0].length - 1, end.character = t.length;
-							break;
-						} else if (m = t.match(/\*\/((\s+.*)?)$/))
-							end.line = i, end.character = t.length - m[1].length, block = true;
-						else
-							break;
-					}
-				}
-				if (end.line >= start.line && start.line > -1)
-					range = { start, end };
-				comments.forEach(line => {
-					if (m = line.match(/^@(param|arg)\s+(({.+?}\s)?\s*(\S+).*)$/i))
-						lastarr = params[m[4].toLowerCase()] = [m[2].trim()];
-					else if (m = line.match(/^@(returns?)([\s|:]\s*(.*))?$/i))
-						lastarr = returns, returns.push(m[3]);
-					else if (lastarr && !line.startsWith('@'))
-						lastarr.push(line);
-					else
-						lastarr = undefined, details.push(line);
-				});
-			}
-			if (details.length)
-				details.forEach(s => ss.push(' * ' + s));
-			else
-				ss.push(' * $1'), i++;
-			n.params.forEach(it => {
-				if (lastarr = params[it.name.toLowerCase()]) {
-					ss.push(` * @param ${lastarr.shift()}`);
-					lastarr.forEach(s => ss.push(' * ' + s));
-				} else {
-					let rets: string[] = [], o: any = {}, p: Position;
-					for (const ret in it.returntypes)
-						cleardetectcache(), detectExp(doc, ret, Position.is(p = it.returntypes[ret]) ? p : position).forEach(tp => o[trim(tp)] = true);
-					rets = o['any'] ? ['any'] : Object.keys(o);
-					if (!rets.length)
-						rets = ['any'];
-					ss.push(` * @param $\{${(++i).toString() + `:{${rets.join('|')}\\}`}} ${it.name} $${(++i).toString()}`);
-				}
-			});
-			if (returns.length) {
-				ss.push(` * @returns ${returns.shift()}`);
-				returns.forEach(s => ss.push(' * ' + s));
-			} else {
-				let rets: string[] = [], o: any = {}, p: Position;
-				for (const ret in n.returntypes)
-					cleardetectcache(), detectExp(doc, ret, Position.is(p = n.returntypes[ret]) ? p : position).forEach(tp => o[trim(tp)] = true);
-				rets = o['any'] ? ['any'] : Object.keys(o);
-				if (rets.length)
-					ss.push(` * @returns $\{${(++i).toString() + ':' + (rets.length ? '{' + rets.join('|') + '\\}' : '')}}`);
-			}
-			if (i === 0)
-				return;
-			ss.push(' */');
-			if (!range)
-				range = Range.create(line, character, line, character), ss.push('');
-			insertSnippet(ss.join('\n'), range);
-		}
-	}
-
+	result.push(' */');
+	let text = result.join('\n');
+	if (z)
+		text = text.replace(new RegExp(`\\$${i}\\b`), '$0');
+	return text;
 	function trim(tp: string) {
 		tp = tp.trim().replace(/([^.]+)$/, '\\$$$1').replace(/\\\$[@#]/, '');
 		return tp;
 	}
 }
 
-export async function generateAuthor() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+export async function generateComment(args: any[]) {
+	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
 		return;
-	let info: string[] = [
-		"/************************************************************************",
-		" * @description ${1:}",
-		" * @file $TM_FILENAME",
-		" * @author ${2:}",
-		" * @date ${3:$CURRENT_YEAR/$CURRENT_MONTH/$CURRENT_DATE}",
-		" * @version ${4:0.0.0}",
-		" ***********************************************************************/",
-		"$0"
-	];
-	await executeCommands([{ command: 'undo', wait: true }, { command: 'undo', wait: true }]);
-	let { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string }, doc = lexers[uri = uri.toLowerCase()];
-	let tk: { type: string, content: string, offset: number } = doc.get_token(0), range = Range.create(0, 0, 0, 0);
-	if (tk.type.endsWith('COMMENT')) {
-		if (tk.type === 'TK_BLOCK_COMMENT' && tk.content.match(/@(version|版本)\b/i))
-			return;
+	let { uri, position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
+	let doc = lexers[uri = uri.toLowerCase()], scope = doc.searchScopedNode(position), ts = scope?.children || doc.children;
+	for (const it of ts) {
+		if ((it.kind === SymbolKind.Function || it.kind === SymbolKind.Method) &&
+			it.selectionRange.start.line === position.line &&
+			it.selectionRange.start.character <= position.character &&
+			position.character <= it.selectionRange.end.character) {
+			scope = it;
+			break;
+		}
 	}
-	if (doc.document.positionAt(tk.offset).line === 0)
-		info.push('');
-	insertSnippet(info.join('\n'), range);
+	if (scope && (scope as FuncNode).params) {
+		let text = generate_fn_comment(doc, scope as FuncNode), pos = scope.selectionRange.start;
+		let tk: Token, range: Range;
+		if (scope.detail === undefined) {
+			text += '\n', tk = doc.tokens[doc.document.offsetAt(pos)];
+			if (tk.topofline === 2)
+				tk = tk.previous_token!;
+			pos = doc.document.positionAt(tk.offset);
+			range = { start: pos, end: pos };
+		} else {
+			tk = doc.find_token(doc.document.offsetAt({ line: pos.line - 1, character: 0 }));
+			if (!tk.type.endsWith('COMMENT'))
+				return;
+			range = {
+				start: doc.document.positionAt(tk.offset),
+				end: doc.document.positionAt(tk.offset + tk.length)
+			};
+		}
+		insertSnippet(text, range);
+	}
+}
+
+export function exportSymbols(uri: string) {
+	let doc = lexers[uri.toLowerCase()], cache: any = {}, result: any = {};
+	if (!doc)
+		return;
+	if (!doc.relevance)
+		doc.update_relevance();
+	for (let uri of [doc.uri, ...Object.keys(doc.relevance!)]) {
+		if (!(doc = lexers[uri]))
+			continue;
+		let includes;
+		includes = Object.values(doc.include).map(p => restorePath(p));
+		!includes.length && (includes = undefined);
+		dump(Object.values(doc.declaration), result[doc.fsPath || doc.document.uri] = { includes });
+	}
+	return result;
+	function dump(nodes: DocumentSymbol[], result: any) {
+		let kind: SymbolKind, fn: FuncNode, cl: ClassNode, t: any;
+		for (let it of nodes) {
+			if (!it.selectionRange.end.character)
+				continue;
+			switch (kind = it.kind) {
+				case SymbolKind.Class:
+					cl = it as ClassNode;
+					(result.classes ??= []).push(t = {
+						name: it.name, label: cl.full,
+						extends: _extends(cl),
+						comment: it.detail
+					});
+					dump(Object.values(cl.staticdeclaration ?? {}), t);
+					dump(Object.values(cl.declaration ?? {}), t);
+					break;
+				case SymbolKind.Property:
+					fn = it as FuncNode;
+					(result.properties ??= []).push({
+						name: it.name, label: fn.full,
+						static: fn.static || undefined,
+						variadic: fn.variadic || undefined,
+						params: fn.params?.map(p => ({
+							name: p.name, byref: p.ref || undefined,
+							defval: _def(p)
+						})),
+						readonly: fn.params && !(it as any).set || undefined,
+						comment: it.detail
+					});
+					if (!(it = (it as any).call))
+						break;
+				case SymbolKind.Function:
+				case SymbolKind.Method:
+					fn = it as FuncNode;
+					(result[kind === SymbolKind.Function ? 'functions' : 'methods'] ??= []).push({
+						name: it.name, label: fn.full,
+						static: fn.static || undefined,
+						variadic: fn.variadic || undefined,
+						params: fn.params.map(p => ({
+							name: p.name, byref: p.ref || undefined,
+							defval: _def(p)
+						})),
+						comment: it.detail
+					});
+					break;
+			}
+		}
+		function _def(v: Variable) {
+			switch (v.defaultVal) {
+				case false: return null;
+				case null: return 'unset';
+				default: return v.defaultVal;
+			}
+		}
+		function _extends(cl: ClassNode) {
+			let s;
+			if (!(s = cl.extends))
+				return;
+			return cache[`${cl.extendsuri},${s}`] ??= find_class(doc, s, cl.extendsuri)?.full || s;
+		}
+	}
 }

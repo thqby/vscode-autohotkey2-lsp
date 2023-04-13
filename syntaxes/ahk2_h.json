@@ -1,5 +1,5 @@
 {
-	"keywords": [
+	"directives": [
 		{
 			"body": "#CriticalObjectSleepTime ",
 			"description": "When accessing a CriticalObject, the sleep time between TryEnterCriticalObject calls. This will affect the CPU load. This setting only affects the thread that created the CriticalObject.",
@@ -41,7 +41,9 @@
 		{
 			"body": "#TargetWindowError",
 			"prefix": "#TargetWindowError"
-		},
+		}
+	],
+	"keywords": [
 		{
 			"body": "macro",
 			"prefix": "macro"
