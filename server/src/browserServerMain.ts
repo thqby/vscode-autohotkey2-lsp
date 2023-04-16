@@ -120,6 +120,7 @@ connection.onInitialize((params: InitializeParams) => {
 	initahk2cache();
 	loadahk2();
 	loadahk2('ahk2_h');
+	loadahk2('winapi', 4);
 	return result;
 });
 

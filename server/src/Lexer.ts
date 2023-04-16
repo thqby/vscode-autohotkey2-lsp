@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { action, ActionType, ahkvars, connection, extsettings, hoverCache, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile, pathenv, restorePath, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
+import { action, ActionType, ahkuris, ahkvars, connection, extsettings, hoverCache, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile, pathenv, restorePath, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
 
 export interface ParamInfo {
 	offset: number
@@ -4105,14 +4105,16 @@ export class Lexer {
 						ln++;
 						if (t = line.match(/^;\s*@/)) {
 							let s = line.substring(t[0].length);
-							if (t = s.match(/^include\s+(.*)/i))
+							if ((s = s.toLowerCase()) === 'include-winapi') {
+								h && (t = lexers[ahkuris.winapi]) && (includetable[ahkuris.winapi] = t.fsPath);
+							} else if (t = s.match(/^include\s+(.*)/i))
 								add_include_dllload(t[1].replace(/\s+;.*$/, '').trim());
-							else if ((s = s.toLowerCase()).startsWith('lint-disable')) {
+							else if (s.startsWith('lint-disable')) {
 								if (currsymbol && s.includes('class-static-member-check'))
-									(currsymbol as any).checkmember = false;
+									(currsymbol as ClassNode).checkmember = false;
 							} else if (s.startsWith('lint-enable')) {
 								if (currsymbol && s.includes('class-static-member-check'))
-									delete (currsymbol as any).checkmember;
+									delete (currsymbol as ClassNode).checkmember;
 							}
 							ignore = true;
 						} else if (t = line.match(/^;+\s*([{}])/)) {
@@ -5948,11 +5950,9 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 		if (t && (t.node.kind !== SymbolKind.Variable || (t.node as any).def))
 			res = t;
 	}
-	name = name.replace(/^[@#$]/, '');
-	if (node = lexers[uri = lexers[res?.uri!]?.d_uri]?.declaration[name])
-		return [{ uri, node }];
-	if (kind !== SymbolKind.Field && (!res || (res.node.kind === SymbolKind.Variable && !(<Variable>res.node).def)) && (t = ahkvars[name]))
-		return [{ uri: t.uri, node: t }];
+	name = name.replace(/^[#$]/, '');
+	if (kind !== SymbolKind.Field && (!res || (res.node.kind === SymbolKind.Variable && !(<Variable>res.node).def)) && (t = ahkvars[name] ?? lexers[ahkuris.winapi]?.declaration[name]))
+		return [{ uri: t.uri ?? ahkuris.winapi, node: t }];
 	return res ? [res] : undefined;
 	function searchIncludeNode(list: { [uri: string]: string }, name: string) {
 		let ret = undefined, t;

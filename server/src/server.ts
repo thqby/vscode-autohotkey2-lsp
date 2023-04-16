@@ -331,7 +331,7 @@ function initpathenv(samefolder = false) {
 			if (!isahk2_h)
 				set_ahk_h(true), samefolder = false;
 			if (!hasahk2_hcache)
-				hasahk2_hcache = true, loadahk2('ahk2_h');
+				hasahk2_hcache = true, loadahk2('ahk2_h'), loadahk2('winapi', 4);
 		} else {
 			if (isahk2_h)
 				set_ahk_h(false), samefolder = false;

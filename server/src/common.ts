@@ -245,13 +245,13 @@ export function initahk2cache() {
 	};
 }
 
-export async function loadahk2(filename = 'ahk2') {
+export async function loadahk2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
 	if (inBrowser) {
 		const file = dirname + `/syntaxes/<>/${filename}`;
 		let td = openFile(file + '.d.ahk');
 		if (td) {
-			let doc = new Lexer(td, undefined, 3);
+			let doc = new Lexer(td, undefined, d);
 			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
 		}
 		let data;
@@ -264,7 +264,7 @@ export async function loadahk2(filename = 'ahk2') {
 		const file = resolve(__dirname, `../../syntaxes/<>/${filename}`);
 		let td: TextDocument | undefined;
 		if ((path = getlocalefilepath(file + '.d.ahk')) && (td = openFile(restorePath(path)))) {
-			let doc = new Lexer(td, undefined, 3);
+			let doc = new Lexer(td, undefined, d);
 			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
 		}
 		if (!(path = getlocalefilepath(file + '.json')))
