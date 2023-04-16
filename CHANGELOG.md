@@ -1,3 +1,7 @@
+## 1.9.8
+- ahk_h增加winapi函数补全项(`;@include-winapi`启用)
+- 诊断未赋值的变量[FR#308](https://github.com/thqby/vscode-autohotkey2-lsp/issues/308)
+
 ## 1.9.7
 - 修复[#306](https://github.com/thqby/vscode-autohotkey2-lsp/issues/306)
 - 支持同时运行多个脚本[#307]

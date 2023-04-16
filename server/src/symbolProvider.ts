@@ -1,39 +1,48 @@
-import { CancellationToken, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
-import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, samenameerr, get_class_call } from './Lexer';
-import { diagnostic } from './localize';
-import { ahkvars, connection, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
 import { URI } from 'vscode-uri';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { CancellationToken, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
+import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, samenameerr, get_class_call } from './Lexer';
+import { ahkuris, ahkvars, connection, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
+import { diagnostic } from './localize';
 
 export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
 	if (!doc || token?.isCancellationRequested || (!doc.reflat && symbolcache[uri])) return symbolcache[uri];
-	let gvar: { [name: string]: Variable } = {}, glo = doc.declaration;
-	for (const key in ahkvars)
-		gvar[key] = ahkvars[key];
-	let list = doc.relevance;
-	for (const uri in list) {
-		const gg = lexers[uri]?.declaration;
-		for (let key in gg) {
-			let t = gvar[key];
-			if (!t || gg[key].kind !== SymbolKind.Variable && (t !== ahkvars[key] || t.def === false))
-				gvar[key] = gg[key], (<any>gg[key]).uri = uri;
+	let gvar: { [name: string]: Variable } = { ...ahkvars }, winapis: any = {};
+	let list = [uri, ...Object.keys(doc.relevance ?? {})];
+	list = list.map(u => lexers[u].d_uri).concat(list);
+	for (const uri of list) {
+		let lex = lexers[uri];
+		if (!lex) continue;
+		let d = lex.d, dec = lex.declaration, t;
+		for (let k in dec) {
+			if (!(t = gvar[k]) || d || dec[k].kind !== SymbolKind.Variable && (t.kind === SymbolKind.Variable || t.def === false))
+				gvar[k] = dec[k];
+			else if (t.kind === SymbolKind.Variable && (dec[k] as Variable).def)
+				t.def ??= false;
 		}
 	}
-	for (const key in glo) {
-		if (!gvar[key] || gvar[key].kind === SymbolKind.Variable || (gvar[key] === ahkvars[key] && glo[key].kind !== SymbolKind.Variable && gvar[key].def === false))
-			gvar[key] = glo[key], (<any>glo[key]).uri = uri;
-	}
+	if (ahkuris.winapi && !list.includes(ahkuris.winapi))
+		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
 	doc.reflat = false, globalsymbolcache = gvar;
 	let rawuri = doc.document.uri;
-	const result: DocumentSymbol[] = [];
+	const result: DocumentSymbol[] = [], maybe_is_unset: Variable[] = [];
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class, SymbolKind.TypeParameter];
-	for (let [k, v] of Object.entries(doc.declaration))
-		if (gvar[k] === v)
+	for (let [k, v] of Object.entries(doc.declaration)) {
+		let t = gvar[k];
+		if (t.kind === SymbolKind.Variable && !t.returntypes && !t.ref)
+			if (!winapis[k])
+				maybe_is_unset.push(v);
+			else t = gvar[k] = winapis[k];
+		if (t === v || v.kind !== SymbolKind.Variable)
 			result.push(v), converttype(v, false, v.kind);
+	}
 	flatTree(doc);
+	for (let v of maybe_is_unset)
+		if (!v.returntypes)
+			doc.diagnostics.push({ message: diagnostic.varisunset(v.name), range: v.selectionRange, severity: 2 });
 	if (doc.actived)
 		checksamename(doc), setTimeout(sendDiagnostics, 200);
 	return symbolcache[uri] = result.map(info => SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri));
@@ -66,7 +75,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			checkParams(doc, (vars[name] ?? gvar[name]) as FuncNode, info);
 		});
 		t.forEach(info => {
-			let inherit: { [key: string]: DocumentSymbol } = {}, fn = info as FuncNode, s: DocumentSymbol;
+			let inherit: { [key: string]: DocumentSymbol } = {}, fn = info as FuncNode, s: Variable;
 			switch (info.kind) {
 				case SymbolKind.Class:
 					let rg = Range.create(0, 0, 0, 0), cls = info as ClassNode;
@@ -95,27 +104,36 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							} else inherit = { ...vars };
 						} else outer_is_global = true;
 					for (let [k, v] of Object.entries(fn.global ?? {}))
-						s = inherit[k] = gvar[k] ??= v, converttype(v, !!ahkvars[k], s.kind).definition = s;
-					for (let [k, v] of Object.entries(fn.local ?? {}))
-						converttype(inherit[k] = v, false, v.kind).definition = v,
-							v.kind !== SymbolKind.TypeParameter && result.push(v);
+						s = inherit[k] = gvar[k] ??= v, converttype(v, !!ahkvars[k], s.kind).definition = s,
+							s.kind === SymbolKind.Variable && (s.returntypes ??= v.returntypes);
+					for (let [k, v] of Object.entries(fn.local ?? {})) {
+						converttype(inherit[k] = v, false, v.kind).definition = v;
+						if (v.kind !== SymbolKind.TypeParameter) {
+							result.push(v);
+							if (v.kind === SymbolKind.Variable && !v.returntypes && !v.ref)
+								maybe_is_unset.push(v);
+						}
+					}
 					for (let [k, v] of Object.entries(fn.declaration ??= {}))
 						if (s = inherit[k])
-							s !== v && (converttype(v, s === ahkvars[k], s.kind).definition = s);
+							s !== v && (converttype(v, s === ahkvars[k], s.kind).definition = s,
+								s.kind === SymbolKind.Variable && (s.returntypes ??= v.returntypes));
 						else if (outer_is_global)
 							s = gvar[k] ??= (result.push(v), (v as any).infunc = true, doc.declaration[k] = v),
-								converttype(v, !!ahkvars[k], s.kind).definition = s;
+								converttype(v, !!ahkvars[k], s.kind).definition = s,
+								s.kind === SymbolKind.Variable && (s.returntypes ??= v.returntypes);
 						else if (!(v as Variable).def && (s = gvar[k]))
 							converttype(v, !!ahkvars[k], s.kind).definition = s;
 						else converttype(inherit[k] = v).definition = v, result.push(v);
 					for (let [k, v] of Object.entries(fn.unresolved_vars ??= {}))
-						if (s = inherit[k] ?? gvar[k])
+						if (s = inherit[k] ?? gvar[k] ?? winapis[k])
 							converttype(v, s === ahkvars[k], s.kind).definition = s;
 						else {
 							converttype(v, false, v.kind).definition = inherit[k] = fn.declaration[k] = fn.local[k] = v;
 							result.push(v), delete v.def, delete fn.unresolved_vars[k];
 							if (fn.assume === FuncScope.STATIC)
 								v.static = true;
+							maybe_is_unset.push(v);
 						}
 					break;
 				case SymbolKind.Property:

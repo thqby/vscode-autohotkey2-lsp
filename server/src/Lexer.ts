@@ -1496,8 +1496,10 @@ export class Lexer {
 									} else
 										tk.type = 'TK_WORD';
 								case 'TK_WORD':
-									if (addvariable(tk, 0))
-										(<Variable>result[result.length - 1]).def = true;
+									if (addvariable(tk, 0)) {
+										let vr = result[result.length - 1] as Variable;
+										vr.def = vr.ref = true;
+									}
 									break;
 								case 'TK_OPERATOR':
 									if (tk.content.toLowerCase() === 'in') {
@@ -1988,7 +1990,7 @@ export class Lexer {
 			}
 
 			function parse_statement(local: string) {
-				let sta: DocumentSymbol[] | Variable[] = [], bak: Token, pc: Token | undefined;
+				let sta: Variable[] = [], bak: Token, pc: Token | undefined;
 				block_mode = false;
 				loop:
 				while (nexttoken()) {
@@ -3312,6 +3314,8 @@ export class Lexer {
 								_this.declaration[k] ??= fn.global[k] = v, v.infunc = true;
 							else if (t.kind === SymbolKind.Function && v.def)
 								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
+							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
+								t.def = true, t.returntypes ??= v.returntypes;
 						});
 						unresolved_vars = {};
 					} else {
@@ -3326,8 +3330,8 @@ export class Lexer {
 									v.static = null;
 							} else if (t.kind === SymbolKind.Function)
 								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
-							else if (!t.def && t.kind === SymbolKind.Variable && fn.local[k])
-								dec[k] = fn.local[k] = v, v.static = t.static;
+							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
+								t.def = true, t.returntypes ??= v.returntypes;
 						});
 					}
 					vars = unresolved_vars, unresolved_vars = {};
@@ -3336,6 +3340,8 @@ export class Lexer {
 					fn.unresolved_vars = unresolved_vars;
 					if (has_this_param)
 						delete pars.THIS, delete pars.SUPER, delete dec.THIS, delete dec.SUPER;
+					for (let k in vars = fn.local)
+						vars[k].def = true;
 					Object.assign(fn.local, pars);
 				}
 			}

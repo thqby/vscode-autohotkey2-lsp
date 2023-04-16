@@ -36,14 +36,15 @@ export namespace diagnostic {
 	export const funccallerr2 = localize('diagnostic.funccallerr2', 'In the expression, the function call requires parentheses');
 	export const globalconflicts = localize('diagnostic.globalconflicts', 'This global declaration conflicts with an existing {0}');
 	export const hotdeferr = localize('diagnostic.hotdeferr', 'Hotkeys/hotstrings cannot be defined in functions/classes');
-	export const invalidusage = localize('diagnostic.invalidusage', '\'{0}\' cannot be used in functions/classes');
 	export const hotmissbrace = localize('diagnostic.hotmissbrace', 'Hotkey or hotstring is missing its opening brace');
 	export const invaliddefinition = localize('diagnostic.invaliddefinition', 'Invalid {0} definition');
+	export const invalidencoding = localize('diagnostic.invalidencoding', '\'{0}\' invalid file encoding');
 	export const invalidhotdef = localize('diagnostic.invalidhotdef', 'Invalid hotkey definition');
 	export const invalidparam = localize('diagnostic.invalidparam', 'Invalid parameter definition');
 	export const invalidprop = localize('diagnostic.invalidprop', 'Invalid dynamic property');
 	export const invalidpropname = localize('diagnostic.invalidpropname', 'Invalid property name in object literal');
 	export const invalidsymbolname = localize('diagnostic.invalidsymbolname', 'Invalid symbol naming \'{0}\'');
+	export const invalidusage = localize('diagnostic.invalidusage', '\'{0}\' cannot be used in functions/classes');
 	export const maybehavenotmember = localize('diagnostic.maybehavenotmember', 'Class \'{0}\' maybe have not member \'{1}\'');
 	export const maybev1 = localize('diagnostic.maybev1', 'This might be a v1 script, and the lexer stops parsing.');
 	export const missing = localize('diagnostic.missing', 'Missing \'{0}\'');
@@ -51,24 +52,24 @@ export namespace diagnostic {
 	export const missingretval = localize('diagnostic.missingretval', 'The function missing a return value');
 	export const missingspace = localize('diagnostic.missingspace', 'Missing space or operator before this');
 	export const objectliteralerr = localize('diagnostic.objectliteralerr', 'Error in object literal');
-	export const pathinvalid = localize('diagnostic.pathinvalid', 'Invalid file path');
 	export const paramcounterr = localize('diagnostic.paramcounterr', 'Expected {0} parameters, but got {1}');
+	export const pathinvalid = localize('diagnostic.pathinvalid', 'Invalid file path');
 	export const propdeclaraerr = localize('diagnostic.propdeclaraerr', 'Not a valid method, class or property definition');
 	export const propemptyparams = localize('diagnostic.propemptyparams', 'Empty [] not permitted');
 	export const propnotinit = localize('diagnostic.propnotinit', 'Property declaration is not initialized');
 	export const requirev1 = localize('diagnostic.requirev1', 'This script requires AutoHotkey v1, and the lexer stops parsing.');
 	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name');
+	export const resourcenotfound = localize('diagnostic.resourcenotfound', 'No resource found or could not be resolved');
 	export const skipline = localize('diagnostic.skipline', 'The line is skipped and not resolved');
 	export const tryswitchtov1 = localize('diagnostic.tryswitchtov1', 'Try switching to AutoHotkey v1.');
 	export const typemaybenot = localize('diagnostic.typemaybenot', 'Type maybe not \'{0}\'');
-	export const resourcenotfound = localize('diagnostic.resourcenotfound', 'No resource found or could not be resolved');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');
 	export const unknown = localize('diagnostic.unknown', 'Unknown {0}');
-	export const invalidencoding = localize('diagnostic.invalidencoding', '\'{0}\' invalid file encoding');
 	export const unknownoperatoruse = localize('diagnostic.unknownoperatoruse', 'Unknown operator use');
 	export const unknowntoken = localize('diagnostic.unknowntoken', 'Unknown token \'{0}\'');
 	export const unsupportinclude = localize('diagnostic.unsupportinclude', '#Include in functions and classes cannot correctly deduce scope and code completion');
 	export const unterminated = localize('diagnostic.unterminated', 'Unterminated string text');
+	export const varisunset = localize('diagnostic.varisunset', 'Variable \'{0}\' appears to never be assigned a value');
 }
 export namespace setting {
 	export const ahkpatherr = localize('setting.ahkpatherr', 'The AutoHotkey interpreter does not exist, re-specify in\'Settings-AutoHotkey2.InterpreterPath\'');
