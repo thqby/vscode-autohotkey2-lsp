@@ -132,6 +132,12 @@
 					"default": true,
 					"description": "%ahk2.diagnostics.paramscheck%"
 				},
+				"AutoHotkey2.Diagnostics.VarUnset": {
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "%ahk2.diagnostics.varunset%"
+				},
 				"AutoHotkey2.ActionWhenV1IsDetected": {
 					"scope": "window",
 					"type": "string",

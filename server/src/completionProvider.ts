@@ -611,11 +611,16 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (expg.test(l = it.name.toUpperCase()) && !at_edit_pos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
 			vars[l] = convertNodeCompletion(it);
 	}
-	for (const t in list) {
-		path = list[t];
-		for (const n in (temp = lexers[t]?.declaration)) {
-			if (expg.test(n) && (!vars[n] || (vars[n].kind === CompletionItemKind.Variable && temp[n].kind !== SymbolKind.Variable)))
-				vars[n] = cpitem = convertNodeCompletion(temp[n]), cpitem.detail = `${completionitem.include(path)}\n\n${cpitem.detail ?? ''}`;
+	let list_arr = Object.keys(list);
+	for (let uri of [doc.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr]) {
+		if (!(temp = lexers[uri]?.declaration))
+			continue;
+		path = lexers[uri].fsPath;
+		let all = !!list[uri];
+		for (const n in temp) {
+			let it = temp[n];
+			if ((all || it.kind !== SymbolKind.Interface) && expg.test(n) && (!vars[n] || (vars[n].kind === CompletionItemKind.Variable && it.kind !== SymbolKind.Variable)))
+				vars[n] = cpitem = convertNodeCompletion(it), cpitem.detail = `${completionitem.include(path)}\n\n${cpitem.detail ?? ''}`;
 		}
 	}
 
@@ -623,8 +628,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	if (scope) {
 		position = range.end;
 		Object.entries(doc.getScopeChildren(scope)).forEach(([l, it]) => {
-			if (expg.test(l) && (it.def !== false || !vars[l] && (
-				it.selectionRange.end.line !== position.line || it.selectionRange.end.character !== position.character)))
+			if (expg.test(l) && (it.def !== false || !vars[l] && !at_edit_pos(it)))
 				vars[l] = convertNodeCompletion(it);
 		});
 	}
@@ -688,6 +692,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return [TextEdit.insert(pos, text)];
 		}
 	}
+
+	if ((list_arr.unshift(doc.uri), !list_arr.includes(ahkuris.winapi)) && list_arr.some(u => lexers[u]?.include[ahkuris.winapi]))
+		for (const n in temp = lexers[ahkuris.winapi]?.declaration)
+			expg.test(n) && (vars[n] ??= convertNodeCompletion(temp[n]));
 
 	// snippet
 	items.push(...completionItemCache.snippet);
@@ -765,6 +773,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				if (info.get?.params.length)
 					ci.insertTextFormat = InsertTextFormat.Snippet, ci.insertText = ci.label + '[$0]';
 				break;
+			case SymbolKind.Interface:
+				ci.kind = CompletionItemKind.Interface; break;
 			default:
 				ci.kind = CompletionItemKind.Text; break;
 		}

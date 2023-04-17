@@ -40,9 +40,10 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			result.push(v), converttype(v, false, v.kind);
 	}
 	flatTree(doc);
-	for (let v of maybe_is_unset)
-		if (!v.returntypes)
-			doc.diagnostics.push({ message: diagnostic.varisunset(v.name), range: v.selectionRange, severity: 2 });
+	if (extsettings.Diagnostics.VarUnset)
+		for (let v of maybe_is_unset)
+			if (!v.returntypes)
+				doc.diagnostics.push({ message: diagnostic.varisunset(v.name), range: v.selectionRange, severity: 2 });
 	if (doc.actived)
 		checksamename(doc), setTimeout(sendDiagnostics, 200);
 	return symbolcache[uri] = result.map(info => SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri));
@@ -124,13 +125,13 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 								s.kind === SymbolKind.Variable && (s.returntypes ??= v.returntypes);
 						else if (!(v as Variable).def && (s = gvar[k]))
 							converttype(v, !!ahkvars[k], s.kind).definition = s;
-						else converttype(inherit[k] = v).definition = v, result.push(v);
+						else converttype(inherit[k] = fn.local[k] = v).definition = v, result.push(v);
 					for (let [k, v] of Object.entries(fn.unresolved_vars ??= {}))
 						if (s = inherit[k] ?? gvar[k] ?? winapis[k])
 							converttype(v, s === ahkvars[k], s.kind).definition = s;
 						else {
-							converttype(v, false, v.kind).definition = inherit[k] = fn.declaration[k] = fn.local[k] = v;
-							result.push(v), delete v.def, delete fn.unresolved_vars[k];
+							converttype(v, false, v.kind).definition = v;
+							result.push(v);
 							if (fn.assume === FuncScope.STATIC)
 								v.static = true;
 							maybe_is_unset.push(v);

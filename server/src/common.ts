@@ -50,8 +50,9 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	},
 	SymbolFoldingFromOpenBrace: false,
 	Diagnostics: {
+		ClassStaticMemberCheck: true,
 		ParamsCheck: true,
-		ClassStaticMemberCheck: true
+		VarUnset: true
 	},
 	FormatOptions: {},
 	WorkingDirs: []
@@ -105,8 +106,9 @@ export interface AHKLSSettings {
 	}
 	SymbolFoldingFromOpenBrace: boolean
 	Diagnostics: {
-		ParamsCheck: boolean
 		ClassStaticMemberCheck: boolean
+		ParamsCheck: boolean
+		VarUnset: boolean
 	}
 	FormatOptions: FormatOptions
 	InterpreterPath: string

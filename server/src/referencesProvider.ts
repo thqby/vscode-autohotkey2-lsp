@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
 import { Lexer, FuncScope, FuncNode, searchNode, Variable, ClassNode } from './Lexer';
-import { lexers, ahkvars, ahkuris } from './common';
+import { lexers, ahkvars, ahkuris, symbolProvider } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
 	let result: any = [], doc = lexers[params.textDocument.uri.toLowerCase()];
@@ -26,7 +26,7 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 	} else if (ref === false) { // this.staticprop
 		let cls = scope as ClassNode, range: Range[] = [];
 		for (let it of Object.values(cls.staticdeclaration ?? {}))
-			it.children && findAllVar(it as FuncNode, name, false, range, false);
+			it.children?.length && findAllVar(it as FuncNode, name, range, false, false);
 		if (range.length)
 			return { [lexers[uri].document.uri]: range };
 		return undefined;
@@ -96,8 +96,9 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 					let nodes = searchNode(doc, name, undefined, SymbolKind.Variable);
 					if (nodes?.[0].node.kind === SymbolKind.Class) {
 						for (let it of Object.values((nodes[0].node as ClassNode).staticdeclaration ?? {}))
-							it.children && findAllVar(it as FuncNode, 'THIS', false, refs[lexers[nodes[0].uri].document.uri] ??= [], false);
+							it.children?.length && findAllVar(it as FuncNode, 'THIS', refs[lexers[nodes[0].uri].document.uri] ??= [], false, false);
 					}
+					// TODO: search subclass's `super`
 					for (const uri in refs) {
 						let rgs = refs[uri], doc = lexers[uri.toLowerCase()], arr: Range[] = references[uri] ??= [];
 						let document = doc.document, tokens = doc.tokens;
@@ -118,9 +119,16 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 					}
 					refs = {};
 				}
-				let _uri = lexers[uri].document.uri;
-				(references[_uri] ??= []).unshift(node.selectionRange);
-				references[_uri] = [...new Set(references[_uri])];
+				let cls = (node as FuncNode).parent, arr = references[lexers[uri].document.uri] ??= [];
+				if (cls) {
+					let name = node.name.toLowerCase(), t = [];
+					for (let it of cls.children ?? []) {
+						if ((it as Variable).static && it.name.toLowerCase() === name)
+							t.push(it.selectionRange);
+					}
+					arr.unshift(...t);
+				} else if (!arr.includes(node.selectionRange))
+					arr.unshift(node.selectionRange);
 				break;
 			}
 			return undefined;
@@ -135,9 +143,10 @@ function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: Docu
 	if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
 
 	} else {
-		let node = (scope ?? doc) as FuncNode, gg = !scope, c: boolean | undefined = gg;
+		let node = (scope ?? doc) as FuncNode, gg = !scope, assume: boolean | undefined = gg;
 		let not_static = !((<any>node)?.local?.[name]?.static);
-		if (not_static && scope && (<any>node)?.declaration?.[name]?.static === null)
+		// symbolProvider({ textDocument: { uri: doc.uri } });
+		if (not_static && scope && node.declaration?.[name]?.static === null)
 			not_static = false;
 		if (node.kind === SymbolKind.Property && node.parent?.kind === SymbolKind.Class) {
 			node.children?.forEach(it => {
@@ -146,58 +155,60 @@ function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: Docu
 						if (it.name.toUpperCase() === name)
 							ranges.push(it.selectionRange);
 						if (it.children)
-							findAllVar(it as FuncNode, name, gg, ranges, gg, not_static);
+							findAllVar(it as FuncNode, name, ranges, gg, gg, not_static);
 					});
 			});
 		} else {
-			if (!c) {
+			if (!assume) {
 				let local = (<FuncNode>node).local, dec = (<FuncNode>node).declaration;
-				if (!((local && local[name]) || (dec && dec[name])))
-					c = undefined;
-			}
+				if (!(local?.[name] || dec?.[name]))
+					assume = undefined;
+			} else assume = false;
 			node.children?.forEach(it => {
 				if (it.name.toUpperCase() === name)
 					ranges.push(it.selectionRange);
-				if (it.children)
-					findAllVar(it as FuncNode, name, gg, ranges, gg || it.kind === SymbolKind.Function ? c : undefined, not_static);
+				if (it.children?.length)
+					findAllVar(it as FuncNode, name, ranges, gg, gg || it.kind === SymbolKind.Function ? assume : undefined, not_static);
 			});
 		}
 	}
 	return ranges;
 }
 
-function findAllVar(node: FuncNode, name: string, global = false, ranges: Range[], assume_glo?: boolean, not_static?: boolean) {
+function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boolean, assume_glo?: boolean, not_static = true) {
 	let fn_is_static = node.kind === SymbolKind.Function && node.static, f = fn_is_static || node.closure;
-	let t: Variable;
+	let t: Variable, assume = assume_glo;
 	if (fn_is_static && not_static && !global)
 		return;
 	if (global && node.has_this_param && ['THIS', 'SUPER'].includes(name))
-		assume_glo = false;
+		assume_glo = assume = false;
 	else if (node.assume === FuncScope.GLOBAL || node.global?.[name]) {
 		if (!global)
 			return;
-		assume_glo = true;
-	} else if ((f && node.local?.[name]) || (!f && node.declaration?.[name])) {
+		assume_glo = assume = true;
+	} else if (node.local?.[name] || ((!f || global && !assume_glo) && node.declaration?.[name])) {
 		if (!global)
 			return;
-		assume_glo = false;
-	} else if (fn_is_static && global && !assume_glo && (!(t = node.declaration?.[name]) || t.kind === SymbolKind.Variable && !t.def))
-		assume_glo = true;
-	// else if (assume_glo && node.declaration?.[name])
-	// 	assume_glo = false;
+		assume_glo = assume = false;
+	} else if (global && !assume_glo)
+		if (fn_is_static && (!(t = node.declaration?.[name]) || t.kind === SymbolKind.Variable && !t.def))
+			assume = true;
+		else if (node.unresolved_vars?.[name])
+			assume = true;
+
 	if (not_static)
 		not_static = !((<any>node)?.local?.[name]?.static);
-	if (assume_glo === global) {
+	if (assume === global) {
 		node.children?.forEach(it => {
 			if (it.name.toUpperCase() === name && (it.kind !== SymbolKind.Property && it.kind !== SymbolKind.Method && it.kind !== SymbolKind.Class))
 				ranges.push(it.selectionRange);
-			if (it.children)
-				findAllVar(it as FuncNode, name, global, ranges, it.kind === SymbolKind.Function ? assume_glo : global || undefined, not_static);
+			if (it.children?.length)
+				findAllVar(it as FuncNode, name, ranges, global, it.kind === SymbolKind.Function ? assume_glo : global || undefined, not_static);
 		});
 	} else {
 		node.children?.forEach(it => {
-			if (it.children)
-				findAllVar(it as FuncNode, name, global, ranges, global ? false : undefined, not_static);
+			if (it.children?.length)
+				findAllVar(it as FuncNode, name, ranges, global, global ? false : undefined, not_static);
 		});
 		// if (!global)
 		// 	node.funccall?.forEach(it => {

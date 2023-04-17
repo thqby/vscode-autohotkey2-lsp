@@ -1,5 +1,5 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaParams, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, FuncNode, getClassMembers, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token } from './Lexer';
+import { ClassNode, FuncNode, getClassMembers, get_class_member, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token } from './Lexer';
 import { diagnostic, extsettings, lexers, Variable } from './common';
 import { checkParams, globalsymbolcache, symbolProvider } from './symbolProvider';
 
@@ -95,17 +95,21 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 					case SymbolKind.Method:
 						sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly | 1 << SemanticTokenModifiers.static;
 						if (tk.callinfo) {
-							checkParams(doc, n as FuncNode, tk.callinfo);
-							if (curclass && n.full?.startsWith('(Object) DefineProp(')) {
-								let tt = doc.tokens[tk.next_token_offset];
-								if (tt?.content === '(')
-									tt = doc.tokens[tt.next_token_offset];
-								if (tt) {
-									if (tt.type === 'TK_STRING') {
-										cls_add_prop(curclass, tt.content.slice(1, -1), tt.offset + 1);
-									} else cls_add_prop(curclass, '');
+							if (curclass) {
+								if (n.full?.startsWith('(Object) static Call('))
+									n = get_class_member(doc, curclass, '__new', false, true) ?? n;
+								else if (n.full?.startsWith('(Object) DefineProp(')) {
+									let tt = doc.tokens[tk.next_token_offset];
+									if (tt?.content === '(')
+										tt = doc.tokens[tt.next_token_offset];
+									if (tt) {
+										if (tt.type === 'TK_STRING') {
+											cls_add_prop(curclass, tt.content.slice(1, -1), tt.offset + 1);
+										} else cls_add_prop(curclass, '');
+									}
 								}
 							}
+							checkParams(doc, n as FuncNode, tk.callinfo);
 						}
 						curclass = undefined;
 						return sem.type = SemanticTokenTypes.method;

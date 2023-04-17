@@ -16,6 +16,7 @@
 	"ahk2.description": "基于 vscode-lsp 协议的 Autohotkey2 语言支持",
 	"ahk2.diagnostics.classstaticmembercheck": "检查类静态成员是否存在",
 	"ahk2.diagnostics.paramscheck": "检查函数调用参数个数是否正确",
+	"ahk2.diagnostics.varunset": "为每个从未直接赋值或与引用操作符一起使用的变量的显示警告",
 	"ahk2.export.symbols": "导出ahk类和函数",
 	"ahk2.generatecomment": "生成注释模板",
 	"ahk2.help": "快捷帮助",

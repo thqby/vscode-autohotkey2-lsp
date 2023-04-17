@@ -13,6 +13,7 @@
 	"ahk2.description": "Autohotkey2 Language Support using vscode-lsp",
 	"ahk2.diagnostics.classstaticmembercheck": "Check whether static members of class exist",
 	"ahk2.diagnostics.paramscheck": "Check that the function call has the correct number of arguments",
+	"ahk2.diagnostics.varunset": "Display warnings for each variable that has never been directly assigned or used with the reference operator",
 	"ahk2.export.symbols": "Export ahk classes and functions",
 	"ahk2.generatecomment": "Generate Comment Template",
 	"ahk2.help": "Quick Help",
