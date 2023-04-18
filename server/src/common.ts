@@ -434,7 +434,7 @@ export function update_settings(configs: AHKLSSettings) {
 		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 	else if (typeof configs.AutoLibInclude === 'boolean')
 		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
-	if (typeof configs.FormatOptions.brace_style === 'string')
+	if (typeof configs.FormatOptions?.brace_style === 'string')
 		switch (configs.FormatOptions.brace_style) {
 			case '0':
 			case 'Allman': configs.FormatOptions.brace_style = 0; break;
