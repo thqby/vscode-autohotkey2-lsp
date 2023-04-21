@@ -1752,8 +1752,10 @@ export class Lexer {
 							if (!t.topofline && t.content !== '{' && !(p && t.content === ')'))
 								_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length), next = false;
 							else {
-								if (addvariable(tk))
-									next = true, (<Variable>result[result.length - 1]).def = true;
+								if (addvariable(tk)) {
+									let vr = result[result.length - 1] as Variable;
+									next = true, vr.def = vr.ref = true;
+								}
 								if (p) {
 									if (t.content === ')')
 										parser_pos = t.offset + 1, next = true;
