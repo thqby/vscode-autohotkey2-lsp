@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
 import { Lexer, FuncScope, FuncNode, searchNode, Variable, ClassNode } from './Lexer';
-import { lexers, ahkvars, ahkuris, symbolProvider } from './common';
+import { lexers, ahkvars, ahkuris } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
 	let result: any = [], doc = lexers[params.textDocument.uri.toLowerCase()];
@@ -120,6 +120,8 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 					refs = {};
 				}
 				let cls = (node as FuncNode).parent, arr = references[lexers[uri].document.uri] ??= [];
+				while (cls && cls.kind !== SymbolKind.Class)
+					cls = (cls as FuncNode).parent;
 				if (cls) {
 					let name = node.name.toLowerCase(), t = [];
 					for (let it of cls.children ?? []) {
