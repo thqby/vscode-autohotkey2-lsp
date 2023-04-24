@@ -3982,6 +3982,8 @@ export class Lexer {
 						if (nosep) lst.data = null, lst.semantic = se;
 						if (_lst)
 							lst = _lst, parser_pos = lst.offset + lst.length;
+						if (isIdentifierChar(input.charCodeAt(parser_pos)))
+							_this.addDiagnostic(diagnostic.missingspace(), parser_pos);
 						return lst;
 					} else if (continuation_sections_mode) {
 						if (c === '\n') {
@@ -4038,6 +4040,8 @@ export class Lexer {
 								let s = input.substring(p, parser_pos);
 								tk.content += s, tk.length += s.length, data[data.length - 1] += s.length;
 								_this.tokenranges.push({ start: tk.offset, end: tk.offset + tk.length, type: 2 });
+								if (isIdentifierChar(input.charCodeAt(parser_pos)))
+									_this.addDiagnostic(diagnostic.missingspace(), parser_pos);
 								break stringend;
 							} else if (c === '\n' || c === ';' && ' \t'.includes(input.charAt(parser_pos - 2))) {
 								let s = input.substring(p, parser_pos - (c === ';' ? 2 : 1)).trimRight();
