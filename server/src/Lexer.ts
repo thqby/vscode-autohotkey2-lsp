@@ -3892,6 +3892,7 @@ export class Lexer {
 										let s = js[2].replace(/`[srn]/g, '  '), suffix_is_whitespace = false;
 										let tl = new Lexer(TextDocument.create('', 'ahk2', -10, s));
 										tl.parseScript();
+										delete tl.tokens[-1];
 										let tks = Object.values(tl.tokens);
 										offset += 4 + js[1].length + js.index!;
 										if (tks.length) {
