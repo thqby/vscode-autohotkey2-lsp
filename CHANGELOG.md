@@ -1,3 +1,9 @@
+## 1.9.9
+- 修复[#311](https://github.com/thqby/vscode-autohotkey2-lsp/issues/311)
+- 修复[#313](https://github.com/thqby/vscode-autohotkey2-lsp/issues/313)
+- 修复[#317](https://github.com/thqby/vscode-autohotkey2-lsp/issues/317)
+- 修复[#318](https://github.com/thqby/vscode-autohotkey2-lsp/issues/318)
+
 ## 1.9.8
 - ahk_h增加winapi函数补全项(`;@include-winapi`启用)
 - 诊断未赋值的变量[FR#308](https://github.com/thqby/vscode-autohotkey2-lsp/issues/308)
