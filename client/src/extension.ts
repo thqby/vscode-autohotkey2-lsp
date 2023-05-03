@@ -362,6 +362,7 @@ async function quickHelp() {
 	}
 	if (ahkpath_cur && existsSync(ahkpath_cur)) {
 		let script = `
+#NoTrayIcon
 #DllLoad oleacc.dll
 chm_hwnd := 0, chm_path := '${helpPath}', DetectHiddenWindows(true), !(WinGetExStyle(top := WinExist('A')) & 8) && (top := 0)
 for hwnd in WinGetList('AutoHotkey ahk_class HH Parent')
@@ -374,7 +375,9 @@ if top && top != chm_hwnd
 	WinSetAlwaysOnTop(0, top)
 if !chm_hwnd
 	Run(chm_path, , , &pid), chm_hwnd := WinWait('AutoHotkey ahk_class HH Parent ahk_pid' pid)
-WinShow(), WinActivate(), WinWaitActive(), ctl := ControlGetHwnd('Internet Explorer_Server1')
+WinShow(), WinActivate(), WinWaitActive(), ctl := 0, endt := A_TickCount + 3000
+while (!ctl && A_TickCount < endt)
+	try ctl := ControlGetHwnd('Internet Explorer_Server1')
 NumPut('int64', 0x11CF3C3D618736E0, 'int64', 0x719B3800AA000C81, IID_IAccessible := Buffer(16))
 if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint', 0, 'ptr', IID_IAccessible, 'ptr*', IAccessible := ComValue(13, 0)) {
 	IServiceProvider := ComObjQuery(IAccessible, IID_IServiceProvider := '{6D5140C1-7436-11CE-8034-00AA006009FA}')
