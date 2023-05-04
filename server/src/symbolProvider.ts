@@ -246,9 +246,9 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 }
 
 export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
-	let paraminfo = info.paraminfo!;
+	let paraminfo = info.paraminfo!, is_cls: boolean;
 	if (!paraminfo || !extsettings.Diagnostics.ParamsCheck) return;
-	if (node?.kind === SymbolKind.Class)
+	if (is_cls = node?.kind === SymbolKind.Class)
 		node = get_class_call(node as any) as any;
 	if (!node) return;
 	if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) {
@@ -296,7 +296,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 				}
 			});
 		}
-		if (!node.returntypes) {
+		if (!node.returntypes && !(is_cls && node.name.toLowerCase() === '__new')) {
 			let tk = doc.tokens[info.offset as number];
 			if (tk?.previous_token?.type === 'TK_EQUALS') {
 				let nt = doc.get_token(doc.document.offsetAt(info.range.end), true);

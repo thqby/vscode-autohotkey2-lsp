@@ -464,8 +464,8 @@ export async function sendAhkRequest(method: string, params: any[]) {
 
 export function make_search_re(search: string) {
 	let t = undefined;
-	search = search.replace(/([*.?+^$|\\/\[\](){}])|([^\x00-\x7f])|(.)/,
-		(_, m1, m2, m3) => `${m3 || (t = m2) || `\\${m1}`}.*`);
+	search = search.replace(/([*.?+^$|\\/\[\](){}])|([^\x00-\x7f])|(.)/g,
+		(_, m1, m2, m3) => `${m3 || (t ??= m2) || `\\${m1}`}.*`);
 	return new RegExp(t ? search : `([^\x00-\x7f]|${search})`, 'i');
 }
 

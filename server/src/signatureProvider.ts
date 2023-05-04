@@ -118,7 +118,8 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 							fn.full = '(Func) Bind' + fn.full.slice(fn.full.indexOf('(', 1));
 							n = fn;
 						}
-					}
+					} else if (n.kind === SymbolKind.Class)
+						n = get_class_call(n as any);
 				}
 				n && nodes.push({ node: n, needthis });
 			}

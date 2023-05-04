@@ -412,9 +412,8 @@ export class Lexer {
 						if (!flags.declaration_statement || !just_added_newline())
 							print_newline();
 						if (pt) {
-							if (flags.had_comment)
-								while ((ck = _this.find_token(pt.skip_pos ?? pt.offset + pt.length)).offset < end_pos)
-									pt = ck;
+							while ((ck = _this.find_token(pt.skip_pos ?? pt.offset + pt.length)).offset < end_pos)
+								pt = ck;
 							for (end = pt.offset + pt.length; ' \t'.includes(input.charAt(end) || '\0'); end++);
 							if (!whitespace.includes(input.charAt(end)))
 								end = pt.offset + pt.length;
@@ -973,8 +972,6 @@ export class Lexer {
 									adddeclaration(tn);
 									if (mode === 2) {
 										tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
-										if (!isstatic && tn.name.toLowerCase() === '__new')
-											tn.returntypes = { [classfullname.replace(/([^.]+)\.?$/, '@$1')]: tn.range.end };
 										if (!_this.object.method[name_l])
 											_this.object.method[name_l] = [];
 										_this.object.method[name_l].push(tn);
@@ -5546,7 +5543,8 @@ export function find_class(doc: Lexer, name: string, uri?: string) {
 		if (!c?.staticdeclaration || (c as any).def === false)
 			return undefined;
 	}
-	return c;
+	if (c?.kind === SymbolKind.Class)
+		return c;
 	function get_ownprop(cls: ClassNode | undefined, name: string): DocumentSymbol | undefined {
 		if (cls)
 			return cls.staticdeclaration[name] ?? (cls.extendsuri && get_ownprop(find_class(doc, c.extends, c.extendsuri), name));
@@ -5788,7 +5786,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 						case SymbolKind.Class:
 							if (lexers[uri]) {
 								let call = get_class_call(n as any) as FuncNode;
-								if (!call.full?.startsWith('(Object) static Call(')) {
+								if (!(call.name.toLowerCase() === '__new' || call.full?.startsWith('(Object) static Call('))) {
 									let m = cvt_types(call.detail?.match(/^@returns?\s+{(.+?)}/mi)?.[1] ?? ''), o: any = {};
 									if (m)
 										m.forEach(s => o[s] = true), call.returntypes = o;

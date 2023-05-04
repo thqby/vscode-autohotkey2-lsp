@@ -2673,7 +2673,7 @@ class Buffer extends Object {
 	 * 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
 	 * 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
 	 */
-	static Call([ByteCount, FillByte]) => Buffer
+	__New([ByteCount, FillByte])
 
 	/**
 	 * 检索缓冲区的当前内存地址.
@@ -2697,7 +2697,7 @@ class ClipboardAll extends Buffer {
 	/**
 	 * 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
 	 */
-	static Call([Data, Size]) => Buffer
+	__New([Data, Size]) => Buffer
 }
 
 class Closure extends Func {
