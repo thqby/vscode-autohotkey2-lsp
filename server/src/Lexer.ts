@@ -6033,9 +6033,11 @@ export function getFuncCallInfo(doc: Lexer, position: Position, ci?: CallInfo) {
 	if (ci?.paraminfo)
 		return get(ci.paraminfo);
 	let tk: Token | undefined = doc.find_token(offset), nk = tk.previous_token;
-	if (tk.topofline > 0)
-		return;
 	if (offset <= tk.offset && !(tk = nk))
+		return;
+	if (tk.callinfo && offset > tk.offset + tk.length && position.line <= tk.callinfo.range.end.line)
+		return get(tk.paraminfo!);
+	if (tk.topofline > 0)
 		return;
 	while (tk.topofline <= 0) {
 		switch (tk.type) {
@@ -6060,6 +6062,8 @@ export function getFuncCallInfo(doc: Lexer, position: Position, ci?: CallInfo) {
 		}
 		if (!(tk = tk?.previous_token))
 			break;
+		if (tk.callinfo && tk.paraminfo)
+			return get(tk.paraminfo);
 	}
 }
 
