@@ -3348,7 +3348,7 @@ export class Lexer {
 							} else if (t.kind === SymbolKind.Function)
 								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
-								t.def = true, t.returntypes ??= v.returntypes;
+								t.def = true, t.returntypes ??= v.returntypes ?? (v.ref ? {} : undefined);
 						});
 					}
 					vars = unresolved_vars, unresolved_vars = {};
