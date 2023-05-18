@@ -1448,7 +1448,7 @@
             "2": {
               "patterns": [
                 {
-                  "match": "(?i:([*?borstz]0?|c[01]?|k-1|[kp]\\d+|s[ipe]|x))",
+                  "match": "(?i:(s[ipe]|[*?borstz]0?|c[01]?|k-1|[kp]\\d+|x))",
                   "name": "string.options.ahk2 markup.italic"
                 },
                 {
