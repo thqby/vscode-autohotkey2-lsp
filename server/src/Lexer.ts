@@ -4934,6 +4934,11 @@ export class Lexer {
 					return { node, uri };
 				if (!isNaN(index))
 					return null;
+			} else if (name.startsWith('#')) {
+				name = name.substring(1);
+				if (node = from_d(this.d_uri))
+					return { node, uri };
+				return undefined;
 			}
 			if (position) {
 				scope = this.searchScopedNode(position);
@@ -5321,7 +5326,7 @@ export class Lexer {
 			sendDiagnostics();
 			return;
 		}
-		parseinclude(this.include, this.scriptdir);
+		parseinclude(this, this.scriptdir);
 		for (const t in initial)
 			if (!this.include[t] && lexers[t]?.diagnostics.length)
 				lexers[t].parseScript();
@@ -5415,19 +5420,26 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 	}
 }
 
-export function parseinclude(include: { [uri: string]: string }, dir: string) {
+export function parseinclude(lex: Lexer, dir: string) {
+	let include = lex.include, u = lex.uri;
+	let need_update: Lexer[] = [];
 	for (const uri in include) {
-		let path = include[uri];
-		if (!(lexers[uri]) && existsSync(path)) {
+		let path = include[uri], ll = lexers[uri];
+		if (ll) {
+			if (!ll.relevance?.[u])
+				need_update.push(ll);
+		} else if (existsSync(path)) {
 			let t = openFile(restorePath(path));
 			if (!t)
 				continue;
 			let doc = new Lexer(t, dir);
 			lexers[uri] = doc, doc.parseScript();
-			parseinclude(doc.include, dir);
+			parseinclude(doc, dir);
 			doc.relevance = getincludetable(uri).list;
 		}
 	}
+	for (let t of need_update)
+		t.update_relevance(), t.diagnostics.length && t.update();
 }
 
 export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boolean = true): { [name: string]: DocumentSymbol } {
@@ -5458,7 +5470,7 @@ export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boo
 			return;
 		else if (!(cls = find_class(doc, cls.extends.replace(/(^|\.)[@#](?=[^.]+$)/, (_, m1) => (isstatic = false, m1)), cls.extendsuri) as ClassNode))
 			return;
-		getmems(lexers[cls.uri!], cls, isstatic);
+		getmems(doc, cls, isstatic);
 		_cls.checkmember ??= cls.checkmember;
 	}
 }
@@ -5501,10 +5513,7 @@ export function get_class_member(doc: Lexer, cls: ClassNode, name: string, issta
 			_bases.push(null);
 			break;
 		}
-		cls = t, doc = lexers[cls.uri!];
-	}
-	if (isstatic) {
-		_bases
+		cls = t;
 	}
 	if (!ismethod)
 		return prop ?? method ?? val;

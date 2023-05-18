@@ -128,7 +128,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 	if (!nodes.length) {
 		if (kind === SymbolKind.Method) {
 			name = name.toUpperCase();
-			for (const u in new Set([ahkuris.ahk2, ahkuris.ahk2_h, doc.uri, ...Object.keys(doc.relevance ?? {})]))
+			for (const u of new Set([ahkuris.ahk2, ahkuris.ahk2_h, doc.uri, ...Object.keys(doc.relevance ?? {})]))
 				for (const node of lexers[u]?.object.method[name] ?? [])
 					nodes.push({ node });
 			if (!nodes.length) return undefined;

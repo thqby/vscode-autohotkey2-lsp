@@ -106,8 +106,14 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						paths = [(temp = doc.dlldir.get(position.line)) ? temp : doc.scriptpath, 'C:\\Windows\\System32'];
 					else if (c.startsWith('>'))
 						paths = doc.libdirs, inlib = true;
-					else
-						paths = [doc.includedir.get(position.line) ?? doc.scriptpath];
+					else {
+						let t = doc.scriptpath, l = position.line;
+						for (let [k, v] of doc.includedir)
+							if (k < l)
+								t = v;
+							else break;
+						paths = [t];
+					}
 					if (c) {
 						if (text.endsWith(c) || text.endsWith('>'))
 							c = '';

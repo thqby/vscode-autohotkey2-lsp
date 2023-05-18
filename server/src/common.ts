@@ -125,7 +125,10 @@ export function openFile(path: string, showError = true): TextDocument | undefin
 		let buf: Buffer | string;
 		try { buf = readFileSync(path); }
 		catch (e: any) {
-			showError && connection.window.showErrorMessage(e.message);
+			if (showError) {
+				delete e.stack;
+				console.log(e);
+			}
 			return undefined;
 		}
 		if (buf[0] === 0xff && buf[1] === 0xfe)
