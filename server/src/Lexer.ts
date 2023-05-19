@@ -5911,7 +5911,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 		if (n.kind === SymbolKind.Variable) {
 			let tps = detectVariableType(lexers[uri], nodes[0], doc.uri === u ? pos : n.selectionRange.end), rs: any = [], m = new Set<any>();
 			for (const tp of tps)
-				searchNode(lexers[uri], name.replace(new RegExp('^' + p[0]), tp),
+				searchNode(lexers[uri], name.replace(new RegExp('^' + p[0], 'i'), tp.toUpperCase()),
 					tp.match(/^[@#]/) ? undefined : pos, kind)?.forEach(it => !m.has(it.node) && (m.add(it.node), rs.push(it)));
 			if (rs.length)
 				return rs;
