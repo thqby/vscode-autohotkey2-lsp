@@ -15,6 +15,7 @@
 	"ahk2.diagnostics.paramscheck": "Check that the function call has the correct number of arguments",
 	"ahk2.diagnostics.varunset": "Display warnings for each variable that has never been directly assigned or used with the reference operator",
 	"ahk2.export.symbols": "Export ahk classes and functions",
+	"ahk2.files.exclude": "Configure glob patterns for excluding files and folders in scan.",
 	"ahk2.generatecomment": "Generate Comment Template",
 	"ahk2.help": "Quick Help",
 	"ahk2.interpreterpath": "The path of the AutoHotkey.exe executable file. This default setting is used as a fallback if no interpreter is selected for the workspace. The extension will also not set nor change the value of this setting, it will only read from it. If AutoHotkeyUX.exe is selected, the script will be launched using UX Launcher.",

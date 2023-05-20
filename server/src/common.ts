@@ -54,6 +54,9 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 		ParamsCheck: true,
 		VarUnset: true
 	},
+	Files: {
+		Exclude: []
+	},
 	FormatOptions: {},
 	WorkingDirs: []
 };
@@ -109,6 +112,9 @@ export interface AHKLSSettings {
 		ClassStaticMemberCheck: boolean
 		ParamsCheck: boolean
 		VarUnset: boolean
+	}
+	Files: {
+		Exclude: string[] | RegExp[]
 	}
 	FormatOptions: FormatOptions
 	InterpreterPath: string
@@ -372,6 +378,9 @@ export function getallahkfiles(dirpath: string, maxdeep = 3): string[] {
 	let files: string[] = [];
 	if (existsSync(dirpath) && statSync(dirpath = restorePath(dirpath)).isDirectory())
 		enumfile(dirpath, 0);
+	let exclude = extsettings.Files?.Exclude;
+	if (exclude?.length)
+		return files.filter(u => exclude.some(re => !(re as RegExp).test(u)));
 	return files;
 
 	function enumfile(dirpath: string, deep: number) {
@@ -380,7 +389,7 @@ export function getallahkfiles(dirpath: string, maxdeep = 3): string[] {
 			if (statSync(path).isDirectory()) {
 				if (deep < maxdeep)
 					enumfile(path, deep + 1);
-			} else if (file.match(/\.(ahk2?|ah2)$/i))
+			} else if (/\.(ahk2?|ah2)$/i.test(file))
 				files.push(path);
 		}
 	}
@@ -398,6 +407,9 @@ export async function parseWorkspaceFolders() {
 	let l: string;
 	if (inBrowser) {
 		let uris = (await connection.sendRequest('ahk2.getWorkspaceFiles', []) || []) as string[];
+		let exclude = extsettings.Files?.Exclude;
+		if (exclude?.length)
+			uris = uris.filter(u => exclude.some(re => (re as RegExp).test(u)));
 		for (let uri of uris)
 			if (!lexers[l = uri.toLowerCase()]) {
 				let v = await connection.sendRequest('ahk2.getWorkspaceFileContent', [uri]) as string;
@@ -456,6 +468,16 @@ export function update_settings(configs: AHKLSSettings) {
 	if (configs.WorkingDirs instanceof Array)
 		configs.WorkingDirs = configs.WorkingDirs.map(dir => (dir = URI.file(dir).toString().toLowerCase()).endsWith('/') ? dir : dir + '/');
 	else delete (configs as any).WorkingDirs;
+	if (configs.Files?.Exclude) {
+		let t = [];
+		for (let s of configs.Files.Exclude)
+			try {
+				t.push(glob2regexp(s as string));
+			} catch (e) {
+				console.log(`[Error] Invalid glob pattern: ${s}`);
+			}
+		configs.Files.Exclude = t;
+	}
 	Object.assign(extsettings, configs);
 }
 
@@ -482,4 +504,63 @@ export function set_Workspacefolder(folders?: string[]) { workspaceFolders = fol
 
 export async function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function glob2regexp(glob: string) {
+	let reStr = '^', inGroup = false, isNot: boolean, c: string;
+	if (isNot = glob.startsWith('!'))
+		glob = glob.slice(1);
+	for (let i = 0, len = glob.length; i < len; i++) {
+		switch (c = glob[i]) {
+			case '/':
+			case '\\':
+				reStr += '[\\x5c/]';
+				break;
+			case '$':
+			case '^':
+			case '+':
+			case '.':
+			case '(':
+			case ')':
+			case '=':
+			case '|':
+				reStr += '\\' + c;
+				break;
+			case '?':
+				reStr += '.';
+				break;
+			case '!':
+				if (!i)
+					isNot = true;
+				else if (reStr.endsWith('['))
+					reStr += '^';
+				else reStr += '\\' + c;
+				break;
+			case '{':
+				inGroup = true;
+				reStr += '(';
+				break;
+			case '}':
+				inGroup = false;
+				reStr += ')';
+				break;
+			case ',':
+				reStr += inGroup ? '|' : ',';
+				break;
+			case '*':
+				let j = i;
+				while (glob[i + 1] === '*')
+					i++;
+				if (i > j && /^[\x5c/]?\*+[\x5c/]?$/.test(glob.substring(j - 1, i + 2))) {
+					reStr += '((?:[^\\x5c/]*(?:[\\x5c/]|$))*)';
+					i++;
+				} else {
+					reStr += '([^\\x5c/]*)';
+				}
+				break;
+			default:
+				reStr += c;
+		}
+	}
+	return new RegExp(isNot ? `^(?!${reStr}$)` : reStr + '$', 'i');
 }

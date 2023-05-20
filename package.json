@@ -171,6 +171,16 @@
 					},
 					"description": "%ahk2.completioncommitcharacters%"
 				},
+				"AutoHotkey2.Files.Exclude": {
+					"scope": "window",
+					"type": "array",
+					"default": [],
+					"items": {
+						"type": "string"
+					},
+					"uniqueItems": true,
+					"description": "%ahk2.files.exclude%"
+				},
 				"AutoHotkey2.FormatOptions": {
 					"scope": "window",
 					"type": "object",

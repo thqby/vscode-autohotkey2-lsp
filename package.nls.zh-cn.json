@@ -18,6 +18,7 @@
 	"ahk2.diagnostics.paramscheck": "检查函数调用参数个数是否正确",
 	"ahk2.diagnostics.varunset": "为每个从未直接赋值或与引用操作符一起使用的变量的显示警告",
 	"ahk2.export.symbols": "导出ahk类和函数",
+	"ahk2.files.exclude": "配置 glob 模式以在扫描时排除文件和文件夹.",
 	"ahk2.generatecomment": "生成注释模板",
 	"ahk2.help": "快捷帮助",
 	"ahk2.interpreterpath": "AutoHotkey.exe可执行文件的路径. 如果没有为工作区选择解释器, 则使用此默认设置. 扩展也不会设置或更改此设置的值, 它只会从中读取. 如果选择AutoHotkeyUX.exe, 将使用UX Launcher启动脚本.",
