@@ -5647,7 +5647,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 		} else {
 			let fullexp = doc.document.getText(Range.create(ite.selectionRange.end, ite.range.end));
 			for (let s in (<Variable>ite).returntypes)
-				detectExp(doc, s.toLowerCase(), ite.range.end, fullexp).forEach(tp => types[tp] = true);
+				detectExp(doc, s, ite.range.end, fullexp).forEach(tp => types[tp] = true);
 		}
 	}
 	if (types['#any'])
@@ -5744,7 +5744,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 									if (n = searchcache[tp]?.node) {
 										if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
 											for (const e in n.returntypes)
-												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
+												detectExp(lexers[uri], e, Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
 													.forEach(tp => ts[tp] = true);
 									}
 								}
@@ -5776,7 +5776,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 									m.forEach(s => o[s] = true), n.returntypes = o;
 								let pos = { line: n.range.end.line, character: n.range.end.character - 1 };
 								for (const e in n.returntypes)
-									detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
+									detectExp(lexers[uri], e, Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
 										.forEach(tp => { ts[tp] = true });
 							}
 							break;
@@ -5787,7 +5787,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 									if (n = searchcache[tp]?.node) {
 										if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
 											for (const e in n.returntypes)
-												detect(lexers[uri], e.toLowerCase(), Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
+												detectExp(lexers[uri], e, Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
 													.forEach(tp => ts[tp] = true);
 									}
 								});
@@ -5800,7 +5800,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 									if (m)
 										m.forEach(s => o[s] = true), call.returntypes = o;
 									for (const e in call.returntypes)
-										detect(lexers[uri], e.toLowerCase(), Position.is(call.returntypes[e]) ? call.returntypes[e] : pos)
+										detectExp(lexers[uri], e, Position.is(call.returntypes[e]) ? call.returntypes[e] : pos)
 											.forEach(tp => ts[tp] = true);
 									if (ts['@comobject'])
 										last_full_exp = fullexp?.replace(/^\s*:=\s*/, '') ?? '';
@@ -5848,7 +5848,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position, fullexp?: stri
 								sym = ttt, ttt = true;
 							else if (ttt = (sym.get ?? sym).returntypes)
 								for (let [exp, p] of Object.entries(ttt)) {
-									detect(lexers[n.uri] ?? doc, exp.toLowerCase(), Position.is(p) ? p : sym.range.end)
+									detectExp(lexers[n.uri] ?? doc, exp, Position.is(p) ? p : sym.range.end)
 										.forEach(tp => (tp.includes('=>') && (searchcache[tp] ??= gen_fat_fn(tp, n.uri, sym, n.scope)), ts[tp] = true));
 								}
 							if (ttt !== true) break;
