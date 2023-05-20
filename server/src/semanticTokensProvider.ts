@@ -20,8 +20,7 @@ function resolve_sem(tk: Token, doc: Lexer) {
 			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) && tk.previous_token?.type === 'TK_DOT'
 				|| (curclass = undefined, type === SemanticTokenTypes.class))
 				type = resolveSemanticType(tk.content.toUpperCase(), tk, doc);
-			if (!tk.ignore || type === SemanticTokenTypes.keyword)
-				doc.STB.push(pos.line, pos.character, tk.length, type, sem.modifier ?? 0);
+			doc.STB.push(pos.line, pos.character, tk.length, type, sem.modifier ?? 0);
 		}
 	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 		curclass = undefined;
@@ -40,16 +39,6 @@ export async function semanticTokensOnFull(params: SemanticTokensParams, token: 
 	Object.values(doc.tokens).forEach(tk => resolve_sem(tk, doc));
 	resolve_class_undefined_member(doc), memscache.clear();
 	return doc.STB.build();
-}
-
-export async function semanticTokensOnDelta(params: SemanticTokensDeltaParams, token: CancellationToken): Promise<SemanticTokensDelta | SemanticTokens> {
-	let doc = lexers[params.textDocument.uri.toLowerCase()];
-	if (!doc || token.isCancellationRequested) return { data: [] };
-	doc.STB.previousResult(''), curclass = undefined, memscache.clear();
-	symbolProvider({ textDocument: params.textDocument });
-	Object.values(doc.tokens).forEach(tk => resolve_sem(tk, doc));
-	resolve_class_undefined_member(doc), memscache.clear();
-	return doc.STB.buildEdits();
 }
 
 export async function semanticTokensOnRange(params: SemanticTokensRangeParams, token: CancellationToken): Promise<SemanticTokens> {

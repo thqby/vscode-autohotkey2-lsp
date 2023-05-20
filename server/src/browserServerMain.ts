@@ -12,7 +12,7 @@ import {
 	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
 	exportSymbols, generateComment, hoverProvider, initahk2cache, Lexer, lexers,
 	loadahk2, loadlocalize, prepareRename, rangeFormatting, referenceProvider, renameProvider,
-	semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange, set_ahk_h, set_Connection,
+	semanticTokensOnFull, semanticTokensOnRange, set_ahk_h, set_Connection,
 	set_dirname, set_locale, set_Workspacefolder, signatureProvider, symbolProvider, typeFormatting,
 	workspaceFolders, workspaceSymbolProvider, update_settings
 } from './common';
@@ -86,7 +86,8 @@ connection.onInitialize((params: InitializeParams) => {
 						'property',
 						'keyword',
 						'string',
-						'number'
+						'number',
+						'operator'
 					],
 					tokenModifiers: [
 						'definition',
@@ -98,7 +99,7 @@ connection.onInitialize((params: InitializeParams) => {
 						'defaultLibrary'
 					]
 				},
-				full: { delta: true },
+				full: true,
 				range: true
 			},
 			workspaceSymbolProvider: true
@@ -186,7 +187,6 @@ connection.onSignatureHelp(signatureProvider);
 connection.onExecuteCommand(executeCommandProvider);
 connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
-connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
 connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
 connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());

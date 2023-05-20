@@ -1,11 +1,11 @@
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Command, CompletionItem, CompletionItemKind, DocumentSymbol, Hover, InsertTextFormat, MarkupKind, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver-types';
+import { resolve } from 'path';
 import { URI } from 'vscode-uri';
 import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
-import { resolve } from 'path';
-import { FormatOptions, FuncNode, Lexer, update_commentTags } from './Lexer';
-import { completionitem } from './localize';
 import { Connection } from 'vscode-languageserver';
+import { TextDocument } from 'vscode-languageserver-textdocument';
+import { CompletionItem, CompletionItemKind, DocumentSymbol, Hover, InsertTextFormat, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver-types';
+import { FormatOptions, Lexer, update_commentTags } from './Lexer';
+import { diagnostic } from './localize';
 export * from './Lexer';
 export * from './codeActionProvider';
 export * from './colorProvider';
@@ -21,7 +21,6 @@ export * from './scriptrunner';
 export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
-import { diagnostic } from './localize';
 
 export const inBrowser = typeof process === 'undefined';
 export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false;
@@ -227,9 +226,8 @@ export function getwebfile(filepath: string) {
 }
 
 export function sendDiagnostics() {
-	let doc: Lexer;
 	for (const uri in lexers) {
-		doc = lexers[uri];
+		let doc = lexers[uri];
 		connection.sendDiagnostics({
 			uri: doc.document.uri,
 			diagnostics: (!doc.actived && (!doc.relevance || !Object.keys(doc.relevance).length) ? [] : doc.diagnostics)
@@ -446,7 +444,7 @@ export async function parseWorkspaceFolders() {
 
 export function update_settings(configs: AHKLSSettings) {
 	if (typeof configs.AutoLibInclude === 'string')
-		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
+		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as any;
 	else if (typeof configs.AutoLibInclude === 'boolean')
 		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
 	if (typeof configs.FormatOptions?.brace_style === 'string')
@@ -462,7 +460,8 @@ export function update_settings(configs: AHKLSSettings) {
 	try {
 		update_commentTags(configs.CommentTags);
 	} catch (e: any) {
-		connection.console.error(e.message);
+		delete e.stack;
+		console.log(e);
 		configs.CommentTags = extsettings.CommentTags;
 	}
 	if (configs.WorkingDirs instanceof Array)

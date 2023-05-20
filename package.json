@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -278,6 +278,10 @@
 					"scope": "window",
 					"type": "array",
 					"default": [],
+					"items": {
+						"type": "string"
+					},
+					"uniqueItems": true,
 					"description": "%ahk2.workingdirs%"
 				}
 			}
@@ -481,6 +485,16 @@
 				"command": "ahk2.stop",
 				"key": "ctrl+f6",
 				"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning"
+			}
+		],
+		"semanticTokenScopes": [
+			{
+				"language": "ahk2",
+				"scopes": {
+					"operator": [
+						"keyword.operator.wordlike.ahk2"
+					]
+				}
 			}
 		]
 	},

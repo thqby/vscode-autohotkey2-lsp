@@ -14,7 +14,7 @@ import {
 	AHKLSSettings, chinese_punctuations, clearLibfuns, codeActionProvider, colorPresentation, colorProvider, completionProvider, defintionProvider,
 	documentFormatting, extsettings, exportSymbols, generateComment, getallahkfiles, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, pathenv, prepareRename,
-	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnDelta, semanticTokensOnFull, semanticTokensOnRange,
+	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workspacefolder, setting, signatureProvider, sleep,
 	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, workspaceSymbolProvider, inWorkspaceFolders,
 	parseWorkspaceFolders, winapis, update_settings, utils
@@ -93,7 +93,8 @@ connection.onInitialize((params: InitializeParams) => {
 						'property',
 						'keyword',
 						'string',
-						'number'
+						'number',
+						'operator'
 					],
 					tokenModifiers: [
 						'definition',
@@ -105,7 +106,7 @@ connection.onInitialize((params: InitializeParams) => {
 						'defaultLibrary'
 					]
 				},
-				full: { delta: true },
+				full: true,
 				range: true
 			},
 			workspaceSymbolProvider: true
@@ -220,7 +221,6 @@ connection.onSignatureHelp(signatureProvider);
 connection.onExecuteCommand(executeCommandProvider);
 connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
-connection.languages.semanticTokens.onDelta(semanticTokensOnDelta);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
 connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
 connection.onRequest('ahk2.getAHKversion', getAHKversion);

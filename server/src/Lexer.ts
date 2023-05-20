@@ -54,7 +54,8 @@ export enum SemanticTokenTypes {
 	property,
 	keyword,
 	string,
-	number
+	number,
+	operator
 }
 
 export enum SemanticTokenModifiers {
@@ -918,7 +919,7 @@ export class Lexer {
 						case 'TK_EOF': return;
 
 						case 'TK_WORD':
-							if (tk.topofline > 0) {
+							if (tk.topofline > 0 && !tk.ignore) {
 								let isfuncdef = is_func_def();
 								nexttoken();
 								if (!isfuncdef && h && mode !== 2 && lk.topofline === 1 && !tk.topofline && tk.type === 'TK_WORD' && lk.content.toLowerCase() === 'macro') {
@@ -1615,7 +1616,7 @@ export class Lexer {
 						break;
 					case 'isset':
 						tk.definition = ahkvars['ISSET'];
-						tk.semantic = { type: SemanticTokenTypes.keyword };
+						tk.semantic = { type: SemanticTokenTypes.operator };
 						if (input.charAt(tk.offset + 5) === '(') {
 							tk.type = 'TK_WORD', tk.ignore = true, next = false;
 						} else
@@ -2351,7 +2352,7 @@ export class Lexer {
 							if (tk.content.match(/^(class|super|isset)$/i)) {
 								if (tk.content.toLowerCase() === 'isset') {
 									tk.definition = ahkvars['ISSET'];
-									tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.keyword };
+									tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.operator };
 									if (c !== '(')
 										_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
 								}
@@ -2979,7 +2980,7 @@ export class Lexer {
 						if (tk.content.match(/^(class|super|isset)$/i)) {
 							if (tk.content.toLowerCase() === 'isset') {
 								tk.definition = ahkvars['ISSET'];
-								tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.keyword };
+								tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.operator };
 								if (c !== '(')
 									_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
 							}
@@ -3137,7 +3138,7 @@ export class Lexer {
 			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
 				let _low = token.content.toLowerCase();
 				if (token.ignore || is_builtinvar(_low, md)) {
-					if (token.semantic && token.semantic.type !== SemanticTokenTypes.keyword)
+					if (token.semantic && token.semantic.type !== SemanticTokenTypes.operator)
 						delete token.semantic;
 					token.definition = ahkvars[_low.toUpperCase()];
 					token.ignore = true;
@@ -3226,7 +3227,7 @@ export class Lexer {
 					if (node.kind === SymbolKind.Function && node.name.toLowerCase() === 'isset') {
 						let offset = _this.document.offsetAt(node.selectionRange.start);
 						_this.addDiagnostic(diagnostic.reservedworderr('IsSet'), offset, 5);
-						_this.tokens[offset].semantic = { type: SemanticTokenTypes.keyword };
+						_this.tokens[offset].semantic = { type: SemanticTokenTypes.operator };
 					}
 					fn.children ??= [];
 					for (let it of (fn.params ??= [])) {

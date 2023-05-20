@@ -1,3 +1,11 @@
+## 2.0.2
+- 修复[#324](https://github.com/thqby/vscode-autohotkey2-lsp/issues/324)
+- 修复[#327](https://github.com/thqby/vscode-autohotkey2-lsp/issues/327)
+- 修复[#328](https://github.com/thqby/vscode-autohotkey2-lsp/issues/328)
+- 修复[#329](https://github.com/thqby/vscode-autohotkey2-lsp/issues/329)
+- 修复[#330](https://github.com/thqby/vscode-autohotkey2-lsp/issues/330)
+- 增加设置项`AutoHotkey2.Files.Exclude`支持扫描时跳过指定文件或文件夹 FR[#326](https://github.com/thqby/vscode-autohotkey2-lsp/issues/326)
+
 ## 2.0.1
 - 修复[#321](https://github.com/thqby/vscode-autohotkey2-lsp/issues/321)
 - 修复[#244](https://github.com/thqby/vscode-autohotkey2-lsp/issues/244#issuecomment-1547153582)
