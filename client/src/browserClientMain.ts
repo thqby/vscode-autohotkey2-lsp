@@ -63,7 +63,7 @@ export function activate(context: ExtensionContext) {
 		documentSelector: [{ language: 'ahk2' }],
 		synchronize: {},
 		initializationOptions: {
-			extensionUri: context.extensionUri,
+			extensionUri: context.extensionUri.toString(),
 			commands: Object.keys(request_handlers),
 			...JSON.parse(JSON.stringify(workspace.getConfiguration('AutoHotkey2')))
 		}
