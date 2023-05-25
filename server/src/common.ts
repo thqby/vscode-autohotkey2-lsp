@@ -378,7 +378,7 @@ export function getallahkfiles(dirpath: string, maxdeep = 3): string[] {
 		enumfile(dirpath, 0);
 	let exclude = extsettings.Files?.Exclude;
 	if (exclude?.length)
-		return files.filter(u => exclude.some(re => !(re as RegExp).test(u)));
+		return files.filter(u => !exclude.some(re => (re as RegExp).test(u)));
 	return files;
 
 	function enumfile(dirpath: string, deep: number) {
