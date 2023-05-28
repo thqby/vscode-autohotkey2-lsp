@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { action, ActionType, ahkuris, ahkvars, connection, extsettings, hoverCache, inBrowser, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile, pathenv, restorePath, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
+import { action, ActionType, ahkuris, ahkvars, connection, extsettings, hoverCache, inBrowser, inWorkspaceFolders, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile, pathenv, restorePath, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
 
 export interface ParamInfo {
 	offset: number
@@ -2789,7 +2789,9 @@ export class Lexer {
 							stop_parse(_pk);
 							_pk.next_pair_pos = -1;
 							_this.addDiagnostic(diagnostic.missing('%'), pairbeg, 1);
-							next = false, tpexp = '#any'; break;
+							next = false, tpexp = '#any';
+							ternaryMiss();
+							return;
 						}
 						if (tk.topofline === 1)
 							tk.topofline = -1;
@@ -5355,6 +5357,8 @@ export class Lexer {
 				return;
 			if (this.d && lexers[uri.slice(0, -5) + 'ahk'])
 				return;
+			if (!inWorkspaceFolders(uri))
+				return;
 			for (let lex of lexs)
 				if (lex.actived && lex.relevance?.[uri])
 					return;
@@ -5363,7 +5367,7 @@ export class Lexer {
 		delete lexers[uri];
 		let dels: string[] = [];
 		lexs.forEach(lex => {
-			if (!lex.actived && !(lex.d > 2 && !lex.uri.includes('?'))) {
+			if (!lex.actived && !(lex.d > 2 && !lex.uri.includes('?')) && !inWorkspaceFolders(lex.uri)) {
 				let del = true;
 				for (let u in lex.relevance)
 					if (lexers[u]?.actived) {
@@ -5381,7 +5385,7 @@ export class Lexer {
 			it = sc[i = (l + r) >> 1];
 			if (offset < it.start)
 				r = i - 1;
-			else if (offset > it.end)
+			else if (offset >= it.end)
 				l = i + 1;
 			else break;
 		}

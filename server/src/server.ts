@@ -17,7 +17,7 @@ import {
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workspacefolder, setting, signatureProvider, sleep,
 	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, workspaceSymbolProvider, inWorkspaceFolders,
-	parseWorkspaceFolders, winapis, update_settings, utils
+	parseWorkspaceFolders, winapis, update_settings, utils, parseinclude
 } from './common';
 import { get_ahkProvider } from './ahkProvider';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
@@ -442,7 +442,7 @@ async function parseproject(uri: string) {
 						continue;
 					}
 					if (workspace || d.d)
-						lexers[u] = d;
+						lexers[u] = d, parseinclude(d, d.scriptdir);
 				}
 				if (!d.d) {
 					libfuncs[u] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);

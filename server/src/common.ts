@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { Connection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, DocumentSymbol, Hover, InsertTextFormat, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver-types';
-import { FormatOptions, Lexer, update_commentTags } from './Lexer';
+import { FormatOptions, Lexer, parseinclude, update_commentTags } from './Lexer';
 import { diagnostic } from './localize';
 export * from './Lexer';
 export * from './codeActionProvider';
@@ -418,7 +418,7 @@ export async function parseWorkspaceFolders() {
 						d.close();
 						continue;
 					}
-					lexers[l] = d;
+					lexers[l] = d, parseinclude(d, d.scriptdir);
 					await sleep(100);
 				}
 			}
@@ -434,7 +434,7 @@ export async function parseWorkspaceFolders() {
 						d.close();
 						continue;
 					}
-					lexers[l] = d;
+					lexers[l] = d, parseinclude(d, d.scriptdir);
 					await sleep(100);
 				}
 			}
