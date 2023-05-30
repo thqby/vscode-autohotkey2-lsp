@@ -1,5 +1,4 @@
-import { resolve } from 'path';
-import { dirname, getlocalefile, getwebfile, inBrowser } from './common';
+import { rootdir, getlocalefile, getwebfile, inBrowser } from './common';
 
 let loadedCollection: { [key: string]: string } = {};
 
@@ -92,11 +91,11 @@ export namespace response {
 
 export function loadlocalize() {
 	if (inBrowser) {
-		let data = getwebfile(dirname + '/package.nls.<>.json');
+		let data = getwebfile(`${rootdir}/package.nls.<>.json`);
 		if (data)
 			loadedCollection = JSON.parse(data.text);
 	} else {
-		let s = getlocalefile(resolve(__dirname, '../../package.nls.<>.json'), 'utf8') as string;
+		let s = getlocalefile(`${rootdir}/package.nls.<>.json`, 'utf8') as string;
 		loadedCollection = s ? JSON.parse(s) : {};
 	}
 }

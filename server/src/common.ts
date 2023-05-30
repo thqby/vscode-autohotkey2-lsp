@@ -23,7 +23,7 @@ export * from './signatureProvider';
 export * from './symbolProvider';
 
 export const inBrowser = typeof process === 'undefined';
-export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], dirname = '', isahk2_h = false;
+export let connection: Connection, ahkpath_cur = '', workspaceFolders: string[] = [], rootdir = '', isahk2_h = false;
 export let ahkvars: { [key: string]: DocumentSymbol } = {}, ahkuris: { [name: string]: string } = {};
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
@@ -132,6 +132,7 @@ export function openFile(path: string, showError = true): TextDocument | undefin
 		catch (e: any) {
 			if (showError) {
 				delete e.stack;
+				e.path = path;
 				console.log(e);
 			}
 			return undefined;
@@ -167,7 +168,7 @@ export function restorePath(path: string): string {
 		return path;
 	if (path.includes('..'))
 		path = resolve(path);
-	let dirs = path.toLowerCase().split('\\'), i = 1, s = dirs[0];
+	let dirs = path.toLowerCase().split(/[/\\]/), i = 1, s = dirs[0];
 	while (i < dirs.length) {
 		for (const d of readdirSync(s + '\\')) {
 			if (d.toLowerCase() === dirs[i]) {
@@ -256,8 +257,8 @@ export function initahk2cache() {
 
 export async function loadahk2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
+	const file = `${rootdir}/syntaxes/<>/${filename}`;
 	if (inBrowser) {
-		const file = dirname + `/syntaxes/<>/${filename}`;
 		let td = openFile(file + '.d.ahk');
 		if (td) {
 			let doc = new Lexer(td, undefined, d);
@@ -265,12 +266,11 @@ export async function loadahk2(filename = 'ahk2', d = 3) {
 		}
 		let data;
 		if (filename === 'ahk2')
-			if (data = getwebfile(dirname + '/syntaxes/ahk2_common.json'))
+			if (data = getwebfile(`${rootdir}/syntaxes/ahk2_common.json`))
 				build_item_cache(JSON.parse(data.text));
 		if (data = getwebfile(file + '.json'))
 			build_item_cache(JSON.parse(data.text));
 	} else {
-		const file = resolve(__dirname, `../../syntaxes/<>/${filename}`);
 		let td: TextDocument | undefined;
 		if ((path = getlocalefilepath(file + '.d.ahk')) && (td = openFile(restorePath(path)))) {
 			let doc = new Lexer(td, undefined, d);
@@ -279,7 +279,7 @@ export async function loadahk2(filename = 'ahk2', d = 3) {
 		if (!(path = getlocalefilepath(file + '.json')))
 			return;
 		if (filename === 'ahk2')
-			build_item_cache(JSON.parse(readFileSync(resolve(__dirname, '../../syntaxes/ahk2_common.json'), { encoding: 'utf8' })));
+			build_item_cache(JSON.parse(readFileSync(`${rootdir}/syntaxes/ahk2_common.json`, { encoding: 'utf8' })));
 		build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
 	}
 	function build_item_cache(ahk2: any) {
@@ -497,7 +497,7 @@ export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
 export function set_ahkpath(path: string) { ahkpath_cur = path; }
 export function set_Connection(conn: Connection) { connection = conn; }
-export function set_dirname(dir: string) { dirname = dir.replace(/[/\\]$/, ''); }
+export function set_dirname(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }
 export function set_Workspacefolder(folders?: string[]) { workspaceFolders = folders || []; }
 

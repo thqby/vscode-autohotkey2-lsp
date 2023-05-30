@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { action, ActionType, ahkuris, ahkvars, connection, extsettings, hoverCache, inBrowser, inWorkspaceFolders, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile, pathenv, restorePath, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
+import { action, ActionType, ahkuris, ahkvars, connection, extsettings, hoverCache, inBrowser, inWorkspaceFolders, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile, pathenv, restorePath, rootdir, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
 
 export interface ParamInfo {
 	offset: number
@@ -3379,9 +3379,11 @@ export class Lexer {
 					m = m.replace(/\\/g, '/').toLowerCase();
 					if (!m.endsWith('.ahk'))
 						m += '.d.ahk';
-					if (/^([a-z]:)?\//.test(m))
+					if (m.startsWith('~/'))
+						u = inBrowser ? URI.parse(rootdir + m.slice(1)) : URI.file(rootdir + m.slice(1));
+					else if (/^([a-z]:)?\//.test(m))
 						u = URI.file(m);
-					else {
+					else if (!m.includes(':')) {
 						let t = (uri.path + '/../' + m).split('/'), arr: string[] = [];
 						t.shift();
 						for (let s of t) {
@@ -3391,7 +3393,7 @@ export class Lexer {
 								return '';
 						}
 						u = uri.with({ path: arr.join('/') });
-					}
+					} else u = URI.parse(m);
 					tn.extendsuri = u.toString().toLowerCase();
 				}
 				return '';

@@ -1,9 +1,8 @@
 import { createClientSocketTransport, createMessageConnection, createServerSocketTransport, MessageConnection } from 'vscode-languageserver/node';
-import { resolve as resolvepath } from 'path';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { type } from 'os';
-import { ahkpath_cur, dirname, extsettings } from './common';
+import { ahkpath_cur, rootdir, extsettings } from './common';
 let ahk_server: MessageConnection | undefined | null;
 
 async function get_ahkProvider_port(): Promise<number> {
@@ -20,7 +19,7 @@ async function get_ahkProvider_port(): Promise<number> {
 				port++;
 			}
 		}
-		let process = spawn(executePath, [resolvepath(dirname, '../dist/ahkProvider.ahk'), port.toString()]);
+		let process = spawn(executePath, [`${rootdir}/dist/ahkProvider.ahk`, port.toString()]);
 		if (!process || !process.pid)
 			return resolve(0);
 		let resolve2: any = (r?: MessageConnection) => {
