@@ -5177,7 +5177,7 @@ export class Lexer {
 		} else if (pt?.content.startsWith('#'))
 			token = pt, text = pt.content;
 		else
-			text = (token = this.find_token(off === linetext.length ? off - 1 : off)).content;
+			text = (token = this.find_token(range.start.character === linetext.length ? off - 1 : off)).content;
 		kind ??= SymbolKind.Null;
 		return { text, word, range, kind, linetext, token, symbol };
 	}
