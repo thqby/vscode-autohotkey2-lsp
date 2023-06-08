@@ -19,7 +19,7 @@ async function get_ahkProvider_port(): Promise<number> {
 				port++;
 			}
 		}
-		let process = spawn(executePath, [`${rootdir}/dist/ahkProvider.ahk`, port.toString()]);
+		let process = spawn(executePath, [`${rootdir}/server/dist/ahkProvider.ahk`, port.toString()]);
 		if (!process || !process.pid)
 			return resolve(0);
 		let resolve2: any = (r?: MessageConnection) => {
