@@ -1,18 +1,8 @@
 {
 	"directives": [
 		{
-			"body": "#CriticalObjectSleepTime ",
-			"description": "When accessing a CriticalObject, the sleep time between TryEnterCriticalObject calls. This will affect the CPU load. This setting only affects the thread that created the CriticalObject.",
-			"prefix": "#CriticalObjectSleepTime"
-		},
-		{
-			"body": "#CriticalObjectTimeOut ",
-			"description": "When access to CriticalObject times out, an error message will be displayed, and the current thread will exit.",
-			"prefix": "#CriticalObjectTimeOut"
-		},
-		{
 			"body": "#DefineDefault${1|Array,Map,Object|}Value ",
-			"description": "Defines the default value that will be used when an attribute or item is not found in object/array/map.",
+			"description": "Defines the default value that will be used when an attribute or item is not found in Object/Array/Map.",
 			"prefix": "#DefineDefault"
 		},
 		{
@@ -32,34 +22,51 @@
 		},
 		{
 			"body": "#UseStdLib",
+			"description": "Automatically load a functions from standard library. The search order is UserLib -> Resource LIB -> WinApi.",
 			"prefix": "#UseStdLib"
 		},
 		{
-			"body": "#MapCaseSense",
+			"body": "#MapCaseSense ${1|On,Off,Locale|}",
+			"description": "Set the default case-sensitive Settings for Map.",
 			"prefix": "#MapCaseSense"
 		},
 		{
+			"body": "#TargetControlError",
+			"description": "Don't throw error when target control is not found.",
+			"prefix": "#TargetControlError"
+		},
+		{
 			"body": "#TargetWindowError",
+			"description": "Don't throw error when target window  is not found.",
 			"prefix": "#TargetWindowError"
+		},
+		{
+			"body": "#InitExec ${1:Expression}",
+			"description": "The initialization expression is executed in load order before the script begins.",
+			"prefix": "#InitExec"
 		}
 	],
 	"keywords": [
 		{
 			"body": "macro",
+			"description": "A function definition can be prefixed with 'macro ' to create a macro function. All undeclared variables within a macro function except parameters and local variables come from the scope of the caller.",
 			"prefix": "macro"
 		}
 	],
 	"variables": [
 		{
 			"body": "A_AhkDir",
+			"description": "The dir of current exe.",
 			"prefix": "A_AhkDir"
 		},
 		{
 			"body": "A_DllDir",
+			"description": "the dir of current module (dll or exe)",
 			"prefix": "A_DllDir"
 		},
 		{
 			"body": "A_DllPath",
+			"description": "The path of current module (dll or exe).",
 			"prefix": "A_DllPath"
 		},
 		{

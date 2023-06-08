@@ -1,29 +1,14 @@
 {
 	"directives": [
 		{
-			"body": "#CriticalObjectSleepTime ",
-			"description": "访问CriticalObject时, TryEnterCriticalObject调用之间的睡眠时间. 这会影响CPU负载. 此设置仅影响创建CriticalObject的线程.",
-			"prefix": "#CriticalObjectSleepTime"
-		},
-		{
-			"body": "#CriticalObjectTimeOut ",
-			"description": "当访问CriticalObject超时时, 将显示错误消息, 并且当前线程将退出.",
-			"prefix": "#CriticalObjectTimeOut"
-		},
-		{
 			"body": "#DefineDefault${1|Array,Map,Object|}Value ",
-			"description": "定义在object/array/map中找不到属性或项目时将使用的默认值.",
+			"description": "定义在Object/Array/Map中找不到属性或项目时将使用的默认值.",
 			"prefix": "#DefineDefault"
 		},
 		{
 			"body": "#DllImport ${1:Function_Name}, ${2:DllFile\\Function}${3:[, Type1, Arg1, Type2, Arg2, Cdecl ReturnType]}",
 			"description": "为dll或exe函数创建脚本函数.",
 			"prefix": "#DllImport"
-		},
-		{
-			"body": "#WarnContinuableException",
-			"description": "对于连续的异常, 不显示EXCEPTION_ACCESS_VIOLATION警告消息.",
-			"prefix": "#WarnContinuableException"
 		},
 		{
 			"body": "#WindowClassGui ",
@@ -37,34 +22,51 @@
 		},
 		{
 			"body": "#UseStdLib",
+			"description": "自动从标准库加载函数。搜索顺序是UserLib -> Resource LIB -> WinApi.",
 			"prefix": "#UseStdLib"
 		},
 		{
-			"body": "#MapCaseSense",
+			"body": "#MapCaseSense ${1|On,Off,Locale|}",
+			"description": "设置Map的默认大小写敏感性设置.",
 			"prefix": "#MapCaseSense"
 		},
 		{
+			"body": "#TargetControlError",
+			"description": "当没有找到目标控件时, 不要抛出错误.",
+			"prefix": "#TargetControlError"
+		},
+		{
 			"body": "#TargetWindowError",
+			"description": "当没有找到目标窗口时, 不要抛出错误.",
 			"prefix": "#TargetWindowError"
+		},
+		{
+			"body": "#InitExec ${1:Expression}",
+			"description": "在脚本开始之前按加载顺序执行初始化表达式.",
+			"prefix": "#InitExec"
 		}
 	],
 	"keywords": [
 		{
 			"body": "macro",
+			"description": "函数定义可以以'macro '作为前缀来创建宏函数. 宏函数内除参数和局部变量外的所有未声明变量来自调用者的作用域.",
 			"prefix": "macro"
 		}
 	],
 	"variables": [
 		{
 			"body": "A_AhkDir",
+			"description": "当前exe文件的目录.",
 			"prefix": "A_AhkDir"
 		},
 		{
 			"body": "A_DllDir",
+			"description": "当前模块(dll或exe)的目录.",
 			"prefix": "A_DllDir"
 		},
 		{
 			"body": "A_DllPath",
+			"description": "当前模块(dll或exe)的路径.",
 			"prefix": "A_DllPath"
 		},
 		{

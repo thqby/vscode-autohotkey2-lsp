@@ -4265,7 +4265,8 @@ export class Lexer {
 					sharp += c, parser_pos++;
 				sharp_offsets.push(offset);
 				lst = createToken(sharp, 'TK_SHARP', offset, sharp.length, bg);
-				if (sharp.toLowerCase() === '#hotif' && bg && whitespace.includes(c))
+				token_text_low = sharp.toLowerCase();
+				if (bg && whitespace.includes(c) && (token_text_low === '#hotif' || h && token_text_low === '#initexec'))
 					return lst;
 				last_LF = input.indexOf('\n', offset = parser_pos);
 				parser_pos = last_LF < 0 ? input_length : last_LF;

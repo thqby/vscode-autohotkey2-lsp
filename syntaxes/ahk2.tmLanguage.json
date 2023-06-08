@@ -1921,7 +1921,7 @@
           ]
         },
         {
-          "begin": "^\\s*((#)(?i:dllload|mapcasesense|requires|errorstdout|definedefault(array|map|object)value|windowclass(gui|main)|singleinstance))\\b",
+          "begin": "^\\s*((#)(?i:dllload|mapcasesense|requires|errorstdout|definedefault(array|map|object)value|windowclass(gui|main)|singleinstance|targetcontrolerror|targetwindowerror))\\b",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
@@ -1991,7 +1991,7 @@
           ]
         },
         {
-          "match": "^\\s*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|inputlevel|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|notrayicon|suspendexempt|usehook|warn|warncontinuableexception|winactivateforce))\\b",
+          "match": "^\\s*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|inputlevel|initexec|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|notrayicon|suspendexempt|usehook|warn|warncontinuableexception|winactivateforce))\\b",
           "captures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
