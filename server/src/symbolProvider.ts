@@ -12,7 +12,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	if (!doc || token?.isCancellationRequested || (!doc.reflat && symbolcache[uri])) return symbolcache[uri];
 	let gvar: { [name: string]: Variable } = { ...ahkvars }, winapis: any = {};
 	let list = [uri, ...Object.keys(doc.relevance ?? {})];
-	list = list.map(u => lexers[u].d_uri).concat(list);
+	list = list.map(u => lexers[u]?.d_uri).concat(list);
 	for (const uri of list) {
 		let lex = lexers[uri];
 		if (!lex) continue;
