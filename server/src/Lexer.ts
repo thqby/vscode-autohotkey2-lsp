@@ -1615,12 +1615,7 @@ export class Lexer {
 						}
 						break;
 					case 'isset':
-						tk.definition = ahkvars['ISSET'];
-						tk.semantic = { type: SemanticTokenTypes.operator };
-						if (input.charAt(tk.offset + 5) === '(') {
-							tk.type = 'TK_WORD', tk.ignore = true, next = false;
-						} else
-							_this.addDiagnostic(diagnostic.missing('('), tk.offset, 5);
+						parse_isset(input.charAt(tk.offset + 5));
 						break;
 					default:
 						nk = get_token_ignore_comment();
@@ -2349,13 +2344,9 @@ export class Lexer {
 								next = false, tk.type = 'TK_WORD', tk.semantic = { type: SemanticTokenTypes.variable };
 								break;
 							}
-							if (tk.content.match(/^(class|super|isset)$/i)) {
-								if (tk.content.toLowerCase() === 'isset') {
-									tk.definition = ahkvars['ISSET'];
-									tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.operator };
-									if (c !== '(')
-										_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
-								}
+							if (/^(class|super|isset)$/i.test(tk.content)) {
+								if (tk.content.toLowerCase() === 'isset' && parse_isset(c))
+									break;
 								next = false, tk.type = 'TK_WORD';
 								break;
 							}
@@ -2980,12 +2971,8 @@ export class Lexer {
 							continue;
 						}
 						if (tk.content.match(/^(class|super|isset)$/i)) {
-							if (tk.content.toLowerCase() === 'isset') {
-								tk.definition = ahkvars['ISSET'];
-								tk.ignore = true, tk.semantic = { type: SemanticTokenTypes.operator };
-								if (c !== '(')
-									_this.addDiagnostic(diagnostic.missing('('), tk.offset, tk.length);
-							}
+							if (tk.content.toLowerCase() === 'isset' && parse_isset(c))
+								continue;
 							next = false, tk.type = 'TK_WORD';
 							continue;
 						}
@@ -3061,6 +3048,27 @@ export class Lexer {
 					while ((o = pairpos.pop()) !== undefined)
 						_this.addDiagnostic(diagnostic.missing(e), o, 1);
 				}
+			}
+
+			function parse_isset(c: string) {
+				let l = result.length;
+				tk.definition = ahkvars['ISSET'];
+				tk.ignore = true, tk.type = 'TK_WORD';
+				tk.semantic = { type: SemanticTokenTypes.operator };
+				if (c === '(') {
+					let fc = tk;
+					nexttoken(), parse_pair('(', ')');
+					let pc = tokens[tk.previous_pair_pos!]?.paraminfo?.count ?? 0;
+					if (pc !== 1)
+						extsettings.Diagnostics.ParamsCheck && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
+					else if (result.length > l && lk.type === 'TK_WORD') {
+						let vr = result[result.length - 1] as Variable;
+						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
+							vr.returntypes ??= {};
+					}
+					return true;
+				}
+				_this.addDiagnostic(diagnostic.missing('('), tk.offset, 5);
 			}
 
 			function maybeclassprop(tk: Token, flag: boolean | null = false) {
@@ -6258,6 +6266,7 @@ export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: 
 					if (decs[_low].kind === SymbolKind.Variable) {
 						if ((<Variable>it).def && !(<Variable>decs[_low]).def)
 							decs[_low] = it;
+						else (decs[_low] as Variable).returntypes ??= (it as Variable).returntypes;
 					} else if ((<Variable>it).def)
 						delete (<Variable>it).def, diags.push({ message: samenameerr(decs[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 				} else {

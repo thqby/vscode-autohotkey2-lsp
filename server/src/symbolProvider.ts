@@ -20,8 +20,8 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		for (let k in dec) {
 			if (!(t = gvar[k]) || d || dec[k].kind !== SymbolKind.Variable && (t.kind === SymbolKind.Variable || t.def === false))
 				gvar[k] = dec[k];
-			else if (t.kind === SymbolKind.Variable && (dec[k] as Variable).def)
-				t.def ??= false, t.returntypes ??= dec[k].returntypes;
+			else if (t.kind === SymbolKind.Variable && (t.returntypes ??= dec[k].returntypes, (dec[k] as Variable).def))
+				t.def ??= false;
 		}
 	}
 	if (ahkuris.winapi && !list.includes(ahkuris.winapi))
