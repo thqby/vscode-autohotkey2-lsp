@@ -5422,7 +5422,7 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 		}
 	} else {
 		while (m = path.match(/%a_(\w+)%/i)) {
-			let a_ = m[1];
+			let a_ = m[1].toLowerCase();
 			if (pathenv[a_])
 				path = path.replace(m[0], <string>pathenv[a_]);
 			else return;
