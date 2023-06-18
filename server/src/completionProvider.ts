@@ -1,7 +1,7 @@
 import { basename, resolve, relative } from 'path';
 import { existsSync, readdirSync, statSync } from 'fs';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
-import { allIdentifierChar, ClassNode, reset_detect_cache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, last_full_exp, searchNode, Token, Variable, find_class } from './Lexer';
+import { allIdentifierChar, ClassNode, reset_detect_cache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Token, Variable, find_class } from './Lexer';
 import { completionitem } from './localize';
 import { ahkuris, ahkvars, completionItemCache, dllcalltpe, extsettings, generate_fn_comment, inBrowser, inWorkspaceFolders, lexers, libfuncs, make_search_re, Maybe, pathenv, sendAhkRequest, utils, winapis } from './common';
 import { URI } from 'vscode-uri';
@@ -502,7 +502,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return;
 		let unknown = true, isstatic = true, tps = new Set<DocumentSymbol>();
 		let props: any = {}, ts: any = {}, p = text.replace(/\.(\w|[^\x00-\x7f])*$/, '').toLowerCase();
-		reset_detect_cache(), detectExpType(doc, p, range.end, ts, doc.document.getText(range));
+		reset_detect_cache(), detectExpType(doc, p, range.end, ts);
 		delete ts['@comvalue'];
 		let tsn = Object.keys(ts).length;
 		if (ts['#any'] === undefined) {
@@ -518,8 +518,6 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					let p: string[] = [];
 					if (temp = tp.substring(10).match(/<([\w.{}-]+)(,([\w{}-]+))?>/))
 						p.push(temp[1]), temp[3] && p.push(temp[3]);
-					else if (tp === '@comobject' && (temp = last_full_exp.match(/^comobject\(\s*('|")([^'"]+)\1\s*\)$/i)))
-						p.push(temp[2]);
 					if (p.length) {
 						let result = (await sendAhkRequest('GetDispMember', p) ?? {}) as { [func: string]: number };
 						Object.entries(result).forEach(it => expg.test(it[0]) && additem(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
