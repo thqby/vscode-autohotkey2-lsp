@@ -1792,7 +1792,7 @@ export class Lexer {
 			function parse_top_word() {
 				let c = '';
 				next = true, nexttoken(), next = false;
-				if (tk.type !== 'TK_EQUALS' && !'=??'.includes(tk.content || ' ') &&
+				if (tk.type !== 'TK_EQUALS' && !'==??'.includes(tk.content || ' ') &&
 					(tk.type === 'TK_DOT' || ', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))) {
 					if (tk.type === 'TK_DOT') {
 						next = true, addvariable(lk);
@@ -2257,8 +2257,6 @@ export class Lexer {
 									let par = parse_params(), rs = result.splice(rl);
 									let pfl = _parent.funccall.length, bbb = fc ? fc.offset : b;
 									quoteend = parser_pos, nexttoken();
-									let sub = parse_expression(inpair, o = {}, fc?.topofline ? 2 : mustexp || 1,
-										end ?? (ternarys.length ? ':' : undefined));
 									if (fc) {
 										if (fc.content.match(/^\d/))
 											_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
@@ -2268,9 +2266,14 @@ export class Lexer {
 									if (!par)
 										par = [], _this.addDiagnostic(diagnostic.invalidparam(), bbb, quoteend - bbb);
 									let tn = FuncNode.create(fc.content, SymbolKind.Function,
-										make_range(fc.offset, lk.offset + lk.length - fc.offset),
-										make_range(fc.offset, fc.length), par, rs.concat(sub));
+										make_range(fc.offset, 0),
+										make_range(fc.offset, fc.length), par);
+									let _p = _parent, _m = mode;
+									_parent = tn, mode = 1;
 									result.push(fc.symbol = fc.definition = tn);
+									tn.children = rs.concat(parse_expression(inpair, o = {}, fc?.topofline ? 2 : mustexp || 1,
+										end ?? (ternarys.length ? ':' : undefined)));
+									_parent = _p, mode = _m, tn.range.end = _this.document.positionAt(lk.offset + lk.length);
 									tn.returntypes = o, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 									adddeclaration(tn);
 									tn.funccall?.push(..._parent.funccall.splice(pfl));
