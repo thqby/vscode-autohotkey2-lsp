@@ -236,25 +236,11 @@ class Array {
 
 /** @extends {ahk2/Gui} */
 class Gui {
-	/**
-	 * 当脚本接收到指定消息时, 会自动调用指定的函数.
-	 * @param {Integer} Msg 需要监听或查询的消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间.
-	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback 事件发生时要调用的函数, 方法或对象.
-	 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
-	 * 否则, 这个参数必须是一个函数对象. 该函数还可以查询内置变量 A_EventInfo, 如果消息是通过 SendMessage 发送的, 则其为 0.
-	 * 如果是通过 PostMessage 发送的, 则其为消息发出时的 tick-count 时间.
-	 * @param {Integer} AddRemove 如果省略, 则默认为 1(在任何先前注册的回调之后调用回调). 否则, 指定下列数字之一:
-	 * - 1 = 在任何先前注册的回调之后调用回调.
-	 * - -1 = 在任何先前注册的回调之前调用回调.
-	 * - 0 = 不调用该回调.
-	 */
-	OnMessage(Msg, Callback [, AddRemove]) => void
-
 	/** @extends {ahk2/Gui.Control} */
 	class Control {
 		/**
-		 * 当脚本接收到指定消息时, 会自动调用指定的函数.
-		 * @param {Integer} Msg 需要监听或查询的消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间.
+		 * 注册要在GuiControl接收到指定消息时调用的函数或方法.
+		 * @param {Integer} Msg 需要监听消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间.
 		 * @param {String|(GuiCtrlObj, wParam, lParam, Msg) => Integer} Callback 事件发生时要调用的函数, 方法或对象.
 		 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
 		 * 否则, 这个参数必须是一个函数对象. 该函数还可以查询内置变量 A_EventInfo, 如果消息是通过 SendMessage 发送的, 则其为 0.

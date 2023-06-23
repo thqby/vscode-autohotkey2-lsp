@@ -241,25 +241,11 @@ class Array {
 
 /** @extends {ahk2/Gui} */
 class Gui {
-	/**
-	 * Causes the specified function to be called automatically whenever the script receives the specified message.
-	 * @param {Integer} Msg The number of the message to monitor or query, which should be between 0 and 4294967295 (0xFFFFFFFF).
-	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback The function, method or object to call when the event is raised.
-	 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
-	 * Otherwise, this parameter must be a function object. The function may also consult the built-in variable `A_EventInfo`, which contains 0 if the message was sent via SendMessage.
-	 * If sent via PostMessage, it contains the tick-count time the message was posted.
-	 * @param {Integer} AddRemove If omitted, it defaults to 1 (call the callback after any previously registered callbacks). Otherwise, specify one of the following numbers:
-	 * - 1 = Call the callback after any previously registered callbacks.
-	 * - -1 = Call the callback before any previously registered callbacks.
-	 * - 0 = Do not call the callback.
-	 */
-	OnMessage(Msg, Callback [, AddRemove]) => void
-
 	/** @extends {ahk2/Gui.Control} */
 	class Control {
 		/**
-		 * Causes the specified function to be called automatically whenever the script receives the specified message.
-		 * @param {Integer} Msg The number of the message to monitor or query, which should be between 0 and 4294967295 (0xFFFFFFFF).
+		 * Registers a function or method to be called whenever the GuiControl receives the specified message.
+		 * @param {Integer} Msg The number of the message to monitor, which should be between 0 and 4294967295 (0xFFFFFFFF).
 		 * @param {String|(GuiCtrlObj, wParam, lParam, Msg) => Integer} Callback The function, method or object to call when the event is raised.
 		 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
 		 * Otherwise, this parameter must be a function object. The function may also consult the built-in variable `A_EventInfo`, which contains 0 if the message was sent via SendMessage.

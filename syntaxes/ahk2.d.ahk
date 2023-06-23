@@ -20,6 +20,12 @@ ASin(Number) => Number
 ATan(Number) => Number
 
 /**
+ * Returns the inverse tangent of y/x in radians.
+ * @since v2.1-alpha.1
+ */
+ATan2(Y, X) => Number
+
+/**
  * Disable or enable the user's ability to interact with the computer through the keyboard and mouse.
  */
 BlockInput(Option) => void
@@ -580,8 +586,9 @@ DriveUnlock(Drive) => void
 
 /**
  * Opens the current script for editing in the associated editor.
+ * @param Filename [@since v2.1-alpha.1] The path and name of the file to open for editing. If omitted, it defaults to the main file of the current script (A_ScriptFullPath). Relative paths are relative to the script directory (A_ScriptDir).
  */
-Edit() => void
+Edit(Filename?) => void
 
 /**
  * Returns the column number of the caret (text insertion point) in the Edit control.
@@ -2344,6 +2351,12 @@ WinClose([WinTitle, WinText, SecondsToWait, ExcludeTitle, ExcludeText]) => void
 WinExist([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
+ * Returns true if the specified window is always-on-top, otherwise false.
+ * @since v2.1-alpha.1
+ */
+WinGetAlwaysOnTop([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+
+/**
  * Get the class name of the specified window.
  */
 WinGetClass([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
@@ -2367,6 +2380,12 @@ WinGetControlsHwnd([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
  * Returns the number of existing windows that meet the specified conditions.
  */
 WinGetCount([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+
+/**
+ * Returns true if the specified window is enabled, otherwise false.
+ * @since v2.1-alpha.1
+ */
+WinGetEnabled([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * Return the style or extended style of the specified window respectively.
@@ -3291,6 +3310,21 @@ class Gui extends Object {
 	OnEvent(EventName, Callback, AddRemove := 1) => void
 
 	/**
+	 * Registers a function or method to be called whenever the Gui receives the specified message.
+	 * @param {Integer} Msg The number of the message to monitor, which should be between 0 and 4294967295 (0xFFFFFFFF).
+	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback The function, method or object to call when the event is raised.
+	 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
+	 * Otherwise, this parameter must be a function object. (**ahk_h 2.0**)The function may also consult the built-in variable `A_EventInfo`, which contains 0 if the message was sent via SendMessage.
+	 * If sent via PostMessage, it contains the tick-count time the message was posted.
+	 * @param {Integer} AddRemove If omitted, it defaults to 1 (call the callback after any previously registered callbacks). Otherwise, specify one of the following numbers:
+	 * - 1 = Call the callback after any previously registered callbacks.
+	 * - -1 = Call the callback before any previously registered callbacks.
+	 * - 0 = Do not call the callback.
+	 * @since 2.1-alpha.1 or ahk_h 2.0
+	 */
+	OnMessage(Msg, Callback [, AddRemove]) => void
+
+	/**
 	 * Set various options and styles for the appearance and behavior of the window.
 	 * @param Options AlwaysOnTop Border Caption Disabled -DPIScale LastFound
 	 * MaximizeBox MinimizeBox MinSize600x600 MaxSize800x800 Resize
@@ -3999,8 +4033,11 @@ class Menu extends Object {
 
 	/**
 	 * Display the menu.
+	 * @param Wait [@since v2.1-alpha.1] If this parameter is 1 (true), the method will not return until after the menu is closed. Specify 0 (false) to return immediately, allowing the script to continue execution while the menu is being displayed.
+	 * 
+	 * The default value of this parameter depends on the menu style. If the script has applied the MNS_MODELESS style (typically via DllCall), the default is 0 (no wait); otherwise, the default is 1 (wait).
 	 */
-	Show([X, Y]) => void
+	Show([X, Y, Wait]) => void
 
 	/**
 	 * Toggle the check mark next to the menu item.

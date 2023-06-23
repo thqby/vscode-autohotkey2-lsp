@@ -282,13 +282,12 @@ function initpathenv(samefolder = false) {
 	let script = `
 	#NoTrayIcon
 	#Warn All, Off
-	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 3) = "2.0" ? "FileAppend" : "FileAppend2"
+	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 1) = "1" ? "FileAppend2" : "FileAppend"
 	for _, p in [A_MyDocuments,A_Desktop,A_AhkPath,A_ProgramFiles,A_Programs,A_AhkVersion]
 		s .= p "|"
 	try _H := !!A_ThreadID
 	%Append%(s _H "\`n", "*", "UTF-8")
-	FileAppend2(text, file) {
-		encode := "UTF-8"
+	FileAppend2(text, file, encode) {
 		FileAppend %text%, %file%, %encode%
 	}`;
 	let fail = 0;

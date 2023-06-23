@@ -20,6 +20,12 @@ ASin(Number) => Number
 ATan(Number) => Number
 
 /**
+ * 返回以弧度表示的y/x的反正切值.
+ * @since v2.1-alpha.1
+ */
+ATan2(Y, X) => Number
+
+/**
  * 禁用或启用用户通过键盘和鼠标与计算机交互的能力.
  */
 BlockInput(Option) => void
@@ -580,8 +586,9 @@ DriveUnlock(Drive) => void
 
 /**
  * 在关联编辑器中打开当前脚本进行编辑.
+ * @param Filename [@since v2.1-alpha.1] 要打开以进行编辑的文件的路径和名称. 如果省略, 则默认为当前脚本的主文件(A_ScriptFullPath). 相对路径是相对于脚本目录(A_ScriptDir)的.
  */
-Edit() => void
+Edit(Filename?) => void
 
 /**
  * 返回插入符号(文本插入点) 在的 Edit 控件中的列号.
@@ -2344,6 +2351,12 @@ WinClose([WinTitle, WinText, SecondsToWait, ExcludeTitle, ExcludeText]) => void
 WinExist([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
+ * 如果指定的窗口始终位于顶部, 则返回true, 否则返回false.
+ * @since v2.1-alpha.1
+ */
+WinGetAlwaysOnTop([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+
+/**
  * 获取指定窗口的类名.
  */
 WinGetClass([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
@@ -2367,6 +2380,12 @@ WinGetControlsHwnd([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
  * 返回符合指定条件的现有窗口的数目.
  */
 WinGetCount([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+
+/**
+ * 如果指定的窗口已启用, 则返回true, 否则返回false.
+ * @since v2.1-alpha.1
+ */
+WinGetEnabled([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
 
 /**
  * 分别返回指定窗口的样式或扩展样式.
@@ -3292,6 +3311,21 @@ class Gui extends Object {
 	OnEvent(EventName, Callback, AddRemove := 1) => void
 
 	/**
+	 * 注册要在Gui接收到指定消息时调用的函数或方法.
+	 * @param {Integer} Msg 需要监听的消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间.
+	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback 事件发生时要调用的函数, 方法或对象.
+	 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
+	 * 否则, 这个参数必须是一个函数对象. (**ahk_h 2.0**)该函数还可以查询内置变量 A_EventInfo, 如果消息是通过 SendMessage 发送的, 则其为 0.
+	 * 如果是通过 PostMessage 发送的, 则其为消息发出时的 tick-count 时间.
+	 * @param {Integer} AddRemove 如果省略, 则默认为 1(在任何先前注册的回调之后调用回调). 否则, 指定下列数字之一:
+	 * - 1 = 在任何先前注册的回调之后调用回调.
+	 * - -1 = 在任何先前注册的回调之前调用回调.
+	 * - 0 = 不调用该回调.
+	 * @since 2.1-alpha.1 or ahk_h 2.0
+	 */
+	OnMessage(Msg, Callback [, AddRemove]) => void
+
+	/**
 	 * 为窗口的外观和行为设置各种选项和样式.
 	 */
 	Opt(Options) => void
@@ -3984,8 +4018,11 @@ class Menu extends Object {
 
 	/**
 	 * 显示菜单.
+	 * @param Wait [@since v2.1-alpha.1] 如果该参数为1 (true), 则该方法在关闭菜单之前不会返回. 指定0 (false)立即返回, 允许脚本在显示菜单时继续执行.
+	 * 
+	 * 该参数的默认值取决于菜单样式. 如果脚本应用了MNS_MODELESS样式(通常通过DllCall), 则默认值为0(不等待); 否则, 默认值为1(等待).
 	 */
-	Show([X, Y]) => void
+	Show([X, Y, Wait]) => void
 
 	/**
 	 * 切换菜单项旁边的复选标记.
