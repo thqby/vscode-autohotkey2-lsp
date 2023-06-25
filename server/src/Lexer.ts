@@ -2275,12 +2275,12 @@ export class Lexer {
 										end ?? (ternarys.length ? ':' : undefined)));
 									_parent = _p, mode = _m, tn.range.end = _this.document.positionAt(lk.offset + lk.length);
 									tn.returntypes = o, _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-									adddeclaration(tn);
 									tn.funccall?.push(..._parent.funccall.splice(pfl));
 									for (const t in o)
 										o[t] = tn.range.end;
 									if (mode !== 0)
 										tn.parent = _parent;
+									adddeclaration(tn);
 									if (fc.content)
 										tpexp += ' ' + fc.content.toLowerCase();
 									else
@@ -2849,12 +2849,12 @@ export class Lexer {
 						let prec = _parent.funccall.length, sub = parse_expression(e, undefined, 1, ternarys.length ? ':' : undefined);
 						let tn = FuncNode.create('', SymbolKind.Function, make_range(b, lk.offset + lk.length - b),
 							make_range(b, 0), par, rs.concat(sub));
-						result.push(tn), adddeclaration(tn), tn.funccall = _parent.funccall.splice(prec);
 						for (const t in o)
 							o[t] = tn.range.end;
 						if (mode !== 0)
 							tn.parent = _parent;
 						apos = result.length;
+						result.push(tn), adddeclaration(tn), tn.funccall = _parent.funccall.splice(prec);
 						tpexp = tpexp.replace(/(\([^()]*\)|\S*)$/, '') + ` $${_this.anonymous.push(tn as FuncNode) - 1}`;
 						if (tk.length === 1 && ',:)]}'.includes(tk.content))
 							tk.fat_arrow_end = true;
@@ -2900,11 +2900,11 @@ export class Lexer {
 										parse_expression(e, o, 2, ternarys.length ? ':' : undefined));
 									fc.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
 									_parent = pp, tn.range.end = document.positionAt(lk.offset + lk.length);
-									tn.returntypes = o, adddeclaration(tn);
 									for (const t in o)
 										o[t] = tn.range.end;
 									if (mode !== 0)
 										tn.parent = _parent;
+									tn.returntypes = o, adddeclaration(tn);
 									result.push(tn), _this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 									if (fc.content)
 										tpexp += ' ' + fc.content.toLowerCase();
@@ -3308,12 +3308,13 @@ export class Lexer {
 						_this.declaration[k] ??= dec[k] = v, (v as any).infunc = true;
 					});
 					fn.children.forEach(it => {
-						if (!(_low = it.name.toUpperCase()))
-							return;
+						_low = it.name.toUpperCase();
 						if (it.kind === SymbolKind.Function) {
 							let _f = it as FuncNode;
 							if (!_f.static)
 								_f.closure = true;
+							if (!_low)
+								return;
 							if (dec[_low]) {
 								if (t = pars[_low])
 									return _diags.push({
