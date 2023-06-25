@@ -5768,7 +5768,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position): string[] {
 			exp = t;
 		if (deep === 0) {
 			exp = exp.trimLeft();
-			while (exp !== (t = exp.replace(/^((\w|[$@#.]|[^\x00-\x7f])+)\((\d*)\)/, (...m) => {
+			while (exp !== (t = exp.replace(/((\w|[$@#.]|[^\x00-\x7f])+)\((\d*)\)/, (...m) => {
 				let ns = searchNode(doc, m[1], exp.trim() === m[0] ? { line: pos.line, character: pos.character - exp.length } : pos,
 					m[1].includes('.') ? SymbolKind.Method : SymbolKind.Variable);
 				let s = '', ts: any = {}, tk = doc.tokens[m[3]], c: RegExpMatchArray | null | undefined;
