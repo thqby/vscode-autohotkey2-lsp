@@ -658,7 +658,7 @@ Exp(N) => Number
  * 
  * `n (newline character): If the carriage return character does not exist, insert the carriage return character (`r) before each newline character (`n). In other words, it will convert `n to `r`n. This This conversion usually does not affect performance. If this option is not used, the end of the line in the Text will not be changed.
  */
-FileAppend(Text, Filename, Options := '') => void
+FileAppend(Text, Filename?, Options?) => void
 
 /**
  * Copy one or more files.

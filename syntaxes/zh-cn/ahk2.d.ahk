@@ -658,7 +658,7 @@ Exp(N) => Number
  * 
  * `n(换行符): 如果回车符不存在, 则在每个换行符(`n) 之前插入回车符(`r). 换句话说, 将转换 `n 为 `r`n. 这种转换通常不会影响性能. 如果不使用此选项, 则不会更改 Text 中的行尾.
  */
-FileAppend(Text, Filename, Options := '') => void
+FileAppend(Text, Filename?, Options?) => void
 
 /**
  * 复制一个或多个文件.
