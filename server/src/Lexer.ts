@@ -857,7 +857,7 @@ export class Lexer {
 			const result: DocumentSymbol[] = [], document = _this.document, tokens = _this.tokens;
 			let _parent = scopevar.get('#parent') || _this, tk = _this.tokens[parser_pos - 1] ?? EMPTY_TOKEN, lk = tk.previous_token ?? EMPTY_TOKEN;
 			let blocks = 0, next = true, _low = '', case_pos: number[] = [], _cm: Token | undefined, line_begin_pos: number | undefined;
-			let blockpos: number[] = [], tn: DocumentSymbol | undefined, m: RegExpMatchArray | string | null, o: any;
+			let blockpos: number[] = [], tn: DocumentSymbol | undefined, m: RegExpMatchArray | string | null, o: any, last_hotif: number | undefined;
 			let baksym = currsymbol;
 			if (block_mode = true, mode !== 0)
 				blockpos.push(parser_pos - 1), delete tk.data;
@@ -866,6 +866,8 @@ export class Lexer {
 			currsymbol = baksym;
 			if (tk.type === 'TK_EOF' && blocks > (mode === 0 ? 0 : -1))
 				_this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (mode === 0 ? 1 : 0)], 1);
+			else if (last_hotif !== undefined)
+				_this.addFoldingRange(last_hotif, lk.offset, 'region');
 			return result;
 
 			function is_func_def(fat = undefined) {
@@ -904,19 +906,20 @@ export class Lexer {
 				while (block_mode = true, nexttoken()) {
 					let _nk: Token | undefined;
 					if (tk.topofline === 1) {
+						let p: number;
 						line_begin_pos = tk.offset;
 						if (mode === 2) {
 							if (tk.type !== 'TK_RESERVED' && allIdentifierChar.test(tk.content))
 								tk.type = 'TK_WORD', delete tk.semantic;
-						} else if (input.charAt(parser_pos) === ':') {
-							if ((whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content)) ||
-								(case_pos.length && tk.content.toLowerCase() === 'default')) {
-								if (_nk = tokens[parser_pos]) {
+						} else if (p = is_next_char(':')) {
+							if ((case_pos.length && tk.content.toLowerCase() === 'default') ||
+								(p === parser_pos && whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content))) {
+								if (_nk = tokens[p]) {
 									if ((tk.next_token_offset = _nk.next_token_offset) > 0)
 										tokens[_nk.next_token_offset].previous_token = tk;
-									delete tokens[parser_pos];
+									delete tokens[p];
 								}
-								tk.content += ':', tk.length++, tk.type = 'TK_LABEL', parser_pos++;
+								tk.content += ':', tk.length = (parser_pos = p + 1) - tk.offset, tk.type = 'TK_LABEL';
 								line_begin_pos = undefined;
 							}
 						}
@@ -1793,7 +1796,7 @@ export class Lexer {
 			function parse_top_word() {
 				let c = '';
 				next = true, nexttoken(), next = false;
-				if (tk.type !== 'TK_EQUALS' && !'==??'.includes(tk.content || ' ') &&
+				if (tk.type !== 'TK_EQUALS' && !'==??:'.includes(tk.content || ' ') &&
 					(tk.type === 'TK_DOT' || ', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))) {
 					if (tk.type === 'TK_DOT') {
 						next = true, addvariable(lk);
@@ -1990,6 +1993,12 @@ export class Lexer {
 					case '#hotif':
 						if (mode !== 0)
 							_this.addDiagnostic(diagnostic.invalidusage(tk.content), tk.offset, tk.length);
+						else {
+							if (last_hotif !== undefined)
+								_this.addFoldingRange(last_hotif, tk.offset);
+							nexttoken(), next = false;
+							last_hotif = tk.topofline ? undefined : lk.offset;
+						}
 						break;
 					default:
 						if (l.match(/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i) && !stop_parse(tk, true))
@@ -3711,11 +3720,11 @@ export class Lexer {
 			return ['break', 'continue', 'global', 'goto', 'local', 'return', 'static', 'throw'].includes(word);
 		}
 
-		function is_next_char(find_char: string): boolean {
+		function is_next_char(find_char: string) {
 			let local_pos = parser_pos, c = input.charAt(local_pos);
 			while (c !== find_char && whitespace.includes(c) && ++local_pos < input_length)
 				c = input.charAt(local_pos);
-			return c === find_char;
+			return c === find_char ? local_pos : 0;
 		}
 
 		function get_token_ignore_comment(depth = 0): Token {
