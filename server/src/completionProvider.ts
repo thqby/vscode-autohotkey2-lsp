@@ -443,6 +443,27 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								else if (res.index === 1)
 									return ['Screen', 'Window', 'Client'].map(text2item);
 								break;
+							case 'mouseclick':
+								if (res.index === 0)
+									return ['Left', 'Right', 'Middle', 'X1', 'X2', 'WheelUp', 'WheelDown', 'WheelLeft', 'WheelRight'].map(text2item);
+								break;
+							case 'controlsend':
+							case 'getkeyname':
+							case 'getkeysc':
+							case 'getkeystate':
+							case 'getkeyvk':
+							case 'keywait':
+							case 'send':
+							case 'sendevent':
+							case 'sendinput':
+							case 'sendplay':
+								if (res.index > 0)
+									break;
+							case 'hotkey':
+								if (res.index > 1)
+									break;
+								items.push(...completionItemCache.key);
+								return items;
 						}
 					}
 				}

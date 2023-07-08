@@ -23,14 +23,6 @@
 			"prefix": "AltSubmit"
 		},
 		{
-			"body": "Alt Down",
-			"prefix": "Alt Down"
-		},
-		{
-			"body": "Alt Up",
-			"prefix": "Alt Up"
-		},
-		{
 			"body": "Background",
 			"prefix": "Background"
 		},
@@ -51,10 +43,6 @@
 			"prefix": "Bottom"
 		},
 		{
-			"body": "Button",
-			"prefix": "Button"
-		},
-		{
 			"body": "Buttons",
 			"prefix": "Buttons"
 		},
@@ -67,92 +55,8 @@
 			"prefix": "Click"
 		},
 		{
-			"body": "Ctrl Down",
-			"prefix": "Ctrl Down"
-		},
-		{
-			"body": "Ctrl Up",
-			"prefix": "Ctrl Up"
-		},
-		{
-			"body": "LAlt Down",
-			"prefix": "LAlt Down"
-		},
-		{
-			"body": "LAlt Up",
-			"prefix": "LAlt Up"
-		},
-		{
-			"body": "LCtrl Down",
-			"prefix": "LCtrl Down"
-		},
-		{
-			"body": "LCtrl Up",
-			"prefix": "LCtrl Up"
-		},
-		{
-			"body": "LShift Down",
-			"prefix": "LShift Down"
-		},
-		{
-			"body": "LShift Up",
-			"prefix": "LShift Up"
-		},
-		{
-			"body": "LWin Down",
-			"prefix": "LWin Down"
-		},
-		{
-			"body": "LWin Up",
-			"prefix": "LWin Up"
-		},
-		{
-			"body": "RAlt Down",
-			"prefix": "RAlt Down"
-		},
-		{
-			"body": "RAlt Up",
-			"prefix": "RAlt Up"
-		},
-		{
 			"body": "Raw",
 			"prefix": "Raw"
-		},
-		{
-			"body": "RCtrl Down",
-			"prefix": "RCtrl Down"
-		},
-		{
-			"body": "RCtrl Up",
-			"prefix": "RCtrl Up"
-		},
-		{
-			"body": "RShift Down",
-			"prefix": "RShift Down"
-		},
-		{
-			"body": "RShift Up",
-			"prefix": "RShift Up"
-		},
-		{
-			"body": "RWin Down",
-			"prefix": "RWin Down"
-		},
-		{
-			"body": "RWin Up",
-			"prefix": "RWin Up"
-		},
-		{
-			"body": "Shift Down",
-			"prefix": "Shift Down"
-		},
-		{
-			"body": "Shift Up",
-			"prefix": "Shift Up"
-		},
-		{
-			"body": "Checkbox",
-			"prefix": "Checkbox"
 		},
 		{
 			"body": "Checked",
@@ -171,25 +75,8 @@
 			"prefix": "Color"
 		},
 		{
-			"body": "ComboBox",
-			"prefix": "ComboBox"
-		},
-		{
-			"body": "DateTime",
-			"prefix": "DateTime"
-		},
-		{
 			"body": "Days",
 			"prefix": "Days"
-		},
-		{
-			"body": "DDL",
-			"description": "DropDownList",
-			"prefix": "DDL"
-		},
-		{
-			"body": "DeleteAll",
-			"prefix": "DeleteAll"
 		},
 		{
 			"body": "Disabled",
@@ -198,14 +85,6 @@
 		{
 			"body": "DPIScale",
 			"prefix": "DPIScale"
-		},
-		{
-			"body": "DropDownList",
-			"prefix": "DropDownList"
-		},
-		{
-			"body": "Error",
-			"prefix": "Error"
 		},
 		{
 			"body": "Expand",
@@ -226,14 +105,6 @@
 		{
 			"body": "Grid",
 			"prefix": "Grid"
-		},
-		{
-			"body": "Group",
-			"prefix": "Group"
-		},
-		{
-			"body": "GroupBox",
-			"prefix": "GroupBox"
 		},
 		{
 			"body": "Hdr",
@@ -312,10 +183,6 @@
 			"prefix": "ImageList"
 		},
 		{
-			"body": "Interrupt",
-			"prefix": "Interrupt"
-		},
-		{
 			"body": "italic",
 			"prefix": "italic"
 		},
@@ -338,14 +205,6 @@
 		{
 			"body": "Lines",
 			"prefix": "Lines"
-		},
-		{
-			"body": "ListBox",
-			"prefix": "ListBox"
-		},
-		{
-			"body": "ListView",
-			"prefix": "ListView"
 		},
 		{
 			"body": "Logoff",
@@ -390,10 +249,6 @@
 		{
 			"body": "Minutes",
 			"prefix": "Minutes"
-		},
-		{
-			"body": "MonthCal",
-			"prefix": "MonthCal"
 		},
 		{
 			"body": "Multi",
@@ -480,24 +335,12 @@
 			"prefix": "Password"
 		},
 		{
-			"body": "Pic",
-			"prefix": "Pic"
-		},
-		{
-			"body": "Picture",
-			"prefix": "Picture"
-		},
-		{
 			"body": "Radio",
 			"prefix": "Radio"
 		},
 		{
 			"body": "Range",
 			"prefix": "Range"
-		},
-		{
-			"body": "Read",
-			"prefix": "Read"
 		},
 		{
 			"body": "ReadOnly",
@@ -528,10 +371,6 @@
 			"prefix": "Region"
 		},
 		{
-			"body": "Relative",
-			"prefix": "Relative"
-		},
-		{
 			"body": "Report",
 			"prefix": "Report"
 		},
@@ -552,10 +391,6 @@
 			"prefix": "RGB"
 		},
 		{
-			"body": "Screen",
-			"prefix": "Screen"
-		},
-		{
 			"body": "Seconds",
 			"prefix": "Seconds"
 		},
@@ -566,10 +401,6 @@
 		{
 			"body": "Single",
 			"prefix": "Single"
-		},
-		{
-			"body": "Slider",
-			"prefix": "Slider"
 		},
 		{
 			"body": "SortDesc",
@@ -594,10 +425,6 @@
 		{
 			"body": "SysMenu",
 			"prefix": "SysMenu"
-		},
-		{
-			"body": "Tab2",
-			"prefix": "Tab2"
 		},
 		{
 			"body": "TabStop",
@@ -652,16 +479,8 @@
 			"prefix": "underline"
 		},
 		{
-			"body": "UpDown",
-			"prefix": "UpDown"
-		},
-		{
 			"body": "Uppercase",
 			"prefix": "Uppercase"
-		},
-		{
-			"body": "UseErrorLevel",
-			"prefix": "UseErrorLevel"
 		},
 		{
 			"body": "Vis",
