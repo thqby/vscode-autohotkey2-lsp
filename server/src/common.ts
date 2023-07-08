@@ -330,7 +330,8 @@ export async function loadahk2(filename = 'ahk2', d = 3) {
 						completionItemCache.keyword.push({
 							label: snip.prefix, kind, insertTextFormat,
 							insertText: snip.body,
-							detail: snip.description
+							detail: snip.description,
+							preselect: true
 						});
 						hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, { contents: { kind: 'markdown', value: '```ahk2\n' + trim(snip.body) + '\n```\n\n' + (snip.description ?? '') } }];
 					}
