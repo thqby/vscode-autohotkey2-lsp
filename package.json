@@ -210,6 +210,10 @@
 							"type": "string",
 							"default": "\t"
 						},
+						"indent_between_hotif_directive": {
+							"type": "boolean",
+							"default": false
+						},
 						"keep_array_indentation": {
 							"type": "boolean",
 							"default": true

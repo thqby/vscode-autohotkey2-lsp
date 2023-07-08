@@ -153,6 +153,7 @@ export interface FormatOptions {
 	break_chained_methods?: boolean
 	ignore_comment?: boolean
 	indent_string?: string
+	indent_between_hotif_directive?: boolean
 	keep_array_indentation?: boolean
 	keyword_start_with_uppercase?: boolean
 	max_preserve_newlines?: number
@@ -4905,11 +4906,22 @@ export class Lexer {
 			print_newline();
 			if (opt.symbol_with_same_case && token_type === 'TK_SHARP')
 				token_text = hoverCache[token_text_low]?.[0] || token_text;
+			if (token_text_low === '#hotif' && opt.indent_between_hotif_directive) {
+				if (flags.hotif_block)
+					deindent(), flags.hotif_block = false;
+				print_token();
+				if (_this.tokens[ck.next_token_offset]?.topofline === 0)
+					indent(), flags.hotif_block = true;
+				output_space_before_token = true;
+				return;
+			}
 			print_token();
 			let t = ck.data?.content;
 			if (t)
 				print_token(token_type === 'TK_HOTLINE' ? t : ' ' + t);
-			else output_space_before_token = token_type === 'TK_HOT' ? !!opt.space_after_double_colon : space_in_other;
+			else if (token_type === 'TK_HOT')
+				output_space_before_token = !!opt.space_after_double_colon;
+			else output_space_before_token = space_in_other || token_type === 'TK_SHARP';
 		}
 
 		function handle_label() {
