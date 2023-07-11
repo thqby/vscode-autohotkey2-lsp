@@ -3943,8 +3943,8 @@ export class Lexer {
 									lst.data = { content, offset, length: parser_pos - offset };
 									lst.skip_pos = parser_pos;
 									_this.tokenranges.push({ start: offset, end: parser_pos, type: 4, previous: lst.offset });
-									let js = content.match(/(^|\s)join(\S*)/i), tk: Token;
-									let _lst = lst, lk = lst, optionend = false, _mode = format_mode, llf = parser_pos;
+									let js = content.match(/(^|\s)join(\S*)/i), ignore_comment = /(^|\s)[Cc]/.test(content), tk: Token;
+									let _lst = lst, lk = lst, optionend = false, _mode = format_mode, llf = parser_pos, sum = 0;
 									let create_tokens: (n: number, LF: number) => any = (n, pos) => undefined;
 									if (js) {
 										let s = js[2].replace(/`[srn]/g, '  '), suffix_is_whitespace = false;
@@ -3974,17 +3974,27 @@ export class Lexer {
 									}
 									format_mode = true, tk = get_next_token();
 									if (continuation_sections_mode && tk.type !== 'TK_EOF') {
-										if (n_newlines > 1)
-											tk.previous_extra_tokens = create_tokens(n_newlines - 1, llf);
-										tk.topofline = top ? 1 : 0;
+										if (ignore_comment && tk.topofline && tk.type.endsWith('COMMENT')) {
+											sum = n_newlines - 2;
+										} else {
+											if (n_newlines > 1)
+												tk.previous_extra_tokens = create_tokens(n_newlines - 1, llf);
+											tk.topofline = top ? 1 : 0;
+										}
 										llf = last_LF, lk = tk, tk = get_next_token();
 									}
 									while (continuation_sections_mode && tk.type !== 'TK_EOF') {
 										if (tk.topofline) {
-											tk.previous_extra_tokens = create_tokens(n_newlines, llf);
-											tk.topofline = 0, llf = last_LF;
-											if (optionend && lk.content === '?')
-												lk.ignore = true;
+											if (ignore_comment && tk.type.endsWith('COMMENT')) {
+												sum += n_newlines - 1;
+											} else {
+												if (sum += n_newlines)
+													tk.previous_extra_tokens = create_tokens(sum, llf);
+												tk.topofline = sum = 0;
+												if (optionend && lk.content === '?')
+													lk.ignore = true;
+											}
+											llf = last_LF;
 										}
 										lk = tk, tk = get_next_token();
 									}

@@ -48,10 +48,10 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		checksamename(doc), setTimeout(sendDiagnostics, 200);
 	return symbolcache[uri] = result.map(info => SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri));
 
-	function flatTree(node: { children?: DocumentSymbol[], funccall?: CallInfo[] }, vars: { [key: string]: DocumentSymbol } = {}, outer_is_global = false) {
+	function flatTree(node: { children?: DocumentSymbol[], funccall?: CallInfo[] }, vars: { [key: string]: Variable } = {}, outer_is_global = false) {
 		const t: DocumentSymbol[] = [];
 		let tk: Token, iscls = (node as DocumentSymbol).kind === SymbolKind.Class;
-		node.children?.forEach(info => {
+		node.children?.forEach((info: Variable) => {
 			if (info.children)
 				t.push(info);
 			if (!info.name)
@@ -66,6 +66,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					delete tk.semantic;
 				else if (info.kind !== SymbolKind.Variable)
 					result.push(info);
+				else sym.returntypes ??= info.returntypes ?? (info.ref ? {} : undefined);
 			} else if (!filter_types.includes(kind))
 				result.push(info);
 		});
