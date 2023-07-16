@@ -7,11 +7,11 @@ export async function codeActionProvider(params: CodeActionParams, token: Cancel
 	let uri = params.textDocument.uri, doc = lexers[uri.toLowerCase()];
 	if (!doc || token.isCancellationRequested) return;
 	let rg = new RegExp('^' + diagnostic.filenotexist().replace('{0}', '(.+?)\\*(\\.\\w+)')), t: RegExpExecArray | null, r = '';
-	let matchexpr = new RegExp(diagnostic.didyoumean('(:=)').replace('?', '\\?').toLowerCase() + '$|^' + diagnostic.deprecated('([^\'"]+)', '([^\'"]+)'));
+	let matchexpr = new RegExp(`${diagnostic.unexpected('(.+)')}, ${diagnostic.didyoumean(':=').toLowerCase()}`.replace('?', '\\?') + '$|^' + diagnostic.deprecated('([^\'"]+)', '([^\'"]+)'));
 	let acts: CodeAction[] = [], replaces: { [k: string]: TextEdit[] } = {};
 	for (const it of doc.diagnostics) {
 		if (t = matchexpr.exec(it.message)) {
-			(replaces[t[3] ? t[3] + ' ' + (r = t[2]) : '= ' + (r = ':=')] ??= []).push({ range: it.range, newText: r });
+			(replaces[t[3] ? `${t[3]} ${r = t[2]}` : `${t[1]} ${r = ':='}`] ??= []).push({ range: it.range, newText: r });
 		} else if (t = rg.exec(it.message)) {
 			r = doc.document.getText(it.range);
 			let path = restorePath(t[1]), reg = new RegExp(t[2] + '$', 'i'), includes = [];

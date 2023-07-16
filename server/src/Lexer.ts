@@ -269,7 +269,7 @@ export class Lexer {
 		let continuation_sections_mode: boolean, space_in_other: boolean, requirev2 = false, currsymbol: DocumentSymbol | undefined;
 		let input_length: number, n_newlines: number, last_LF: number, preindent_string: string, lst: Token, ck: Token;
 		let comments: { [line: number]: Token } = {}, block_mode = true, format_mode = false, string_mode = false;
-		let uri = URI.parse(document.uri), allow_$ = true;
+		let uri = URI.parse(document.uri), allow_$ = true, last_comment_fr: FoldingRange | undefined;
 		let handlers: { [index: string]: () => void } = {
 			'TK_START_EXPR': handle_start_expr,
 			'TK_END_EXPR': handle_end_expr,
@@ -531,7 +531,7 @@ export class Lexer {
 			this.d = d || 1, allow_$ ||= true;
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
-				lst = EMPTY_TOKEN, begin_line = true, parser_pos = 0, last_LF = -1, currsymbol = undefined;
+				lst = EMPTY_TOKEN, begin_line = true, parser_pos = 0, last_LF = -1, currsymbol = last_comment_fr = undefined;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
 				this.clear(), this.reflat = true, customblocks = { region: [], bracket: [] }, this.maybev1 = undefined;
 				let blocks = 0, rg: Range, tokens: Token[] = [], cls: string[] = [], _cm: Token;
@@ -781,7 +781,7 @@ export class Lexer {
 			});
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
-				begin_line = true, requirev2 = false, lst = EMPTY_TOKEN, currsymbol = undefined;
+				begin_line = true, requirev2 = false, lst = EMPTY_TOKEN, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), this.reflat = true, includetable = this.include, comments = {}, this.maybev1 = undefined;
 				try {
@@ -1796,7 +1796,7 @@ export class Lexer {
 			function parse_top_word() {
 				let c = '';
 				next = true, nexttoken(), next = false;
-				if (tk.type !== 'TK_EQUALS' && !'==??:'.includes(tk.content || ' ') &&
+				if (tk.type !== 'TK_EQUALS' && !/^(=[=>]?|\?\??|:)$/.test(tk.content) &&
 					(tk.type === 'TK_DOT' || ', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))) {
 					if (tk.type === 'TK_DOT') {
 						next = true, addvariable(lk);
@@ -1821,7 +1821,7 @@ export class Lexer {
 						addvariable(lk), parse_funccall(SymbolKind.Function, c);
 				} else {
 					let act, offset;
-					tk.content === '=' && (act = '=', offset = tk.offset);
+					/^=>?$/.test(tk.content) && (act = tk.content, offset = tk.offset);
 					reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN, next = false;
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
 					result.push(...parse_line(undefined, undefined, act, offset));
@@ -1936,10 +1936,14 @@ export class Lexer {
 				}
 				if (types)
 					types[tps.pop() ?? '#void'] = 0;
-				if (act === '=') {
-					let expr = tps[0], q: number;
-					if (expr && ((q = expr.indexOf('?')) === -1 || expr.indexOf(':', q) === -1))
-						stop_parse(_this.tokens[(nk as Token).next_token_offset]), _this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=').toLowerCase()}`, min, 1);
+				if (act === '=' || act === '=>') {
+					let expr = tps[0], q: number, m;
+					if (act === '=>' && (m = expr.match(/^\s\$(\d+)$/)))
+						expr = Object.keys((_this.anonymous[m[1] as any] as FuncNode)?.returntypes ?? {}).pop() ?? ' ';
+					if (expr && ((q = expr.indexOf('?')) === -1 || expr.indexOf(':', q) === -1)) {
+						act === '=' && stop_parse(_this.tokens[(nk as Token).next_token_offset]);
+						_this.addDiagnostic(`${diagnostic.unexpected(act)}, ${diagnostic.didyoumean(':=').toLowerCase()}`, min, act.length);
+					}
 				} else if (act && (hascomma >= max || (info.count - (tk === nk ? 1 : 0) < min)))
 					_this.addDiagnostic(diagnostic.acceptparams(act, max === min ? min : `${min}~${max}`), b, lk.offset + lk.length - b);
 				if (lk.content === '*')
@@ -3743,7 +3747,7 @@ export class Lexer {
 					last_LF = parser_pos - 1;
 					n_newlines += 1, begin_line = true;
 				} else if (parser_pos >= input_length) {
-					add_sharp_foldingrange();
+					add_comment_foldingrange(), add_sharp_foldingrange();
 					return _this.tokens[-1] ??= {
 						content: '', type: 'TK_EOF', offset: input_length, length: 0,
 						topofline: is_line_continue(lst, EMPTY_TOKEN) ? - 1 : 1,
@@ -4250,9 +4254,16 @@ export class Lexer {
 				if (!bg) {
 					if (!whitespace.includes(input.charAt(offset - 1)))
 						_this.addDiagnostic(diagnostic.unexpected(cmm.content), offset, cmm.length);
-				} else if (!string_mode && !ignore && line[0] && !line.startsWith('/*'))
-					comments[_this.document.positionAt(parser_pos).line + 1] = cmm;
-				if (ln > 1) _this.addFoldingRange(offset, parser_pos, 'comment');
+				} else {
+					let l = _this.document.positionAt(parser_pos).line;
+					if (!string_mode && !ignore && line[0] && !line.startsWith('/*'))
+						comments[l + 1] = cmm;
+					if (last_comment_fr && (lst.pos ??= _this.document.positionAt(lst.offset)).line > last_comment_fr.endLine)
+						add_comment_foldingrange();
+					if (last_comment_fr)
+						last_comment_fr.endLine = l;
+					else last_comment_fr = FoldingRange.create(_this.document.positionAt(offset).line, l, undefined, undefined, 'commnet');
+				}
 				return cmm;
 			}
 
@@ -4272,7 +4283,7 @@ export class Lexer {
 					if (depth > 5)
 						return cmm;
 					let _lst = lst, _pp = parser_pos;
-					if ((tk = get_next_token(1)).length) {
+					if ((tk = get_next_token(depth + 1)).length) {
 						if (n_newlines < 2) {
 							tk.prefix_is_whitespace ??= ' ';
 							comments[_this.document.positionAt(tk.offset).line] = cmm;
@@ -4281,6 +4292,7 @@ export class Lexer {
 					}
 					lst = _lst, parser_pos = _pp;
 				}
+				add_comment_foldingrange();
 				_this.tokens[offset] = cmm;
 				if (ln) _this.addFoldingRange(offset, parser_pos, 'comment');
 				return cmm;
@@ -4338,6 +4350,13 @@ export class Lexer {
 				if (sharp_offsets.length > 1)
 					_this.addFoldingRange(sharp_offsets[0], sharp_offsets.pop() as number, 'imports');
 				sharp_offsets.length = 0;
+			}
+			function add_comment_foldingrange() {
+				if (!last_comment_fr)
+					return;
+				if (last_comment_fr.endLine > last_comment_fr.startLine)
+					_this.foldingranges.push(last_comment_fr);
+				last_comment_fr = undefined;
 			}
 		}
 
