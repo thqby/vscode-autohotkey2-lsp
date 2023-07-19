@@ -601,21 +601,27 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	// keyword
+	let keyword_start_with_uppercase = extsettings.FormatOptions?.keyword_start_with_uppercase;
+	let addkeyword = keyword_start_with_uppercase ? function (it: CompletionItem) {
+		items.push(it = Object.assign({}, it));
+		it.insertText = (it.insertText ?? it.label).replace(/(?<=^(loop\s)?)[a-z]/g, m => m.toUpperCase());
+	} : (it: CompletionItem) => items.push(it);
 	if (isexpr) {
 		for (let it of completionItemCache.keyword) {
 			if (it.label === 'break') break;
-			expg.test(it.label) && items.push(it);
+			expg.test(it.label) && addkeyword(it);
 		}
 	} else {
 		let kind = CompletionItemKind.Keyword, insertTextFormat = InsertTextFormat.Snippet;
+		let uppercase = keyword_start_with_uppercase ? (s: string) => s.replace(/\b[a-z](?=\w)/g, m => m.toUpperCase()) : (s: string) => s;
 		for (let [label, arr] of [
 			['switch', ['switch ${1:[SwitchValue, CaseSense]}', '{\n\tcase ${2:}:\n\t\t${3:}\n\tdefault:\n\t\t$0\n}']],
 			['trycatch', ['try', '{\n\t$1\n}', 'catch ${2:Error} as ${3:e}', '{\n\t$0\n}']],
 			['class', ['class $1', '{\n\t$0\n}']]
 		] as [string, string[]][])
-			items.push({ label, kind, insertTextFormat, insertText: arr.join(join_c) });
+			items.push({ label, kind, insertTextFormat, insertText: uppercase(arr.join(join_c)) });
 		for (let it of completionItemCache.keyword)
-			expg.test(it.label) && items.push(it);
+			expg.test(it.label) && addkeyword(it);
 		// ;@ahk2exe
 		for (let it of completionItemCache.directive)
 			!it.label.startsWith('#') && expg.test(it.label) && items.push(it);
