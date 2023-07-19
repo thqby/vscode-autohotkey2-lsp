@@ -1280,6 +1280,9 @@ export class Lexer {
 								}
 								next = false;
 							} else {
+								tn.params = [v = Variable.create('ThisHotkey', SymbolKind.Variable,
+									make_range(0, 0))];
+								v.detail = completionitem.thishotkey();
 								let tparent = _parent, tmode = mode, l = tk.content.toLowerCase();
 								_parent = tn, mode = 1;
 								if (l === 'return')
