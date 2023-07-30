@@ -20,7 +20,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		for (let k in dec) {
 			if (!(t = gvar[k]) || d || dec[k].kind !== SymbolKind.Variable && (t.kind === SymbolKind.Variable || t.def === false))
 				gvar[k] = dec[k];
-			else if (t.kind === SymbolKind.Variable && (t.returntypes ??= dec[k].returntypes, (dec[k] as Variable).def))
+			else if (t.kind === SymbolKind.Variable && (t.assigned ||= (dec[k] as Variable).assigned, (dec[k] as Variable).def))
 				t.def ??= false;
 		}
 	}
@@ -28,22 +28,26 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
 	doc.reflat = false, globalsymbolcache = gvar;
 	let rawuri = doc.document.uri;
-	const result: DocumentSymbol[] = [], maybe_is_unset: Variable[] = [];
+	const result: DocumentSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class, SymbolKind.TypeParameter];
+	function maybe_unset(k: Variable, v: Variable) {
+		if (!(k.assigned ||= v.assigned) && v.returntypes === undefined)
+			unset_vars.has(k) || unset_vars.set(k, v);
+	}
 	for (let [k, v] of Object.entries(doc.declaration)) {
 		let t = gvar[k];
-		if (t.kind === SymbolKind.Variable && !t.returntypes && !t.ref)
-			if (!winapis[k])
-				maybe_is_unset.push(v);
-			else t = gvar[k] = winapis[k];
+		if (t.kind === SymbolKind.Variable && !t.assigned)
+			if (winapis[k])
+				t = gvar[k] = winapis[k];
+			else if (v.returntypes === undefined)
+				unset_vars.set(t, v);
 		if (t === v || v.kind !== SymbolKind.Variable)
 			result.push(v), converttype(v, false, v.kind);
 	}
 	flatTree(doc);
 	if (extsettings.Diagnostics.VarUnset)
-		for (let v of maybe_is_unset)
-			if (!v.returntypes)
-				doc.diagnostics.push({ message: diagnostic.varisunset(v.name), range: v.selectionRange, severity: 2 });
+		for (let [k, v] of unset_vars)
+			k.assigned || doc.diagnostics.push({ message: diagnostic.varisunset(v.name), range: v.selectionRange, severity: 2 });
 	if (doc.actived)
 		checksamename(doc), setTimeout(sendDiagnostics, 200);
 	return symbolcache[uri] = result.map(info => SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri));
@@ -66,7 +70,8 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					delete tk.semantic;
 				else if (info.kind !== SymbolKind.Variable)
 					result.push(info);
-				else sym.returntypes ??= info.returntypes ?? (info.ref ? {} : undefined);
+				else if (sym.kind === SymbolKind.Variable)
+					maybe_unset(sym, info);
 			} else if (!filter_types.includes(kind))
 				result.push(info);
 		});
@@ -107,23 +112,23 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						} else outer_is_global = true;
 					for (let [k, v] of Object.entries(fn.global ?? {}))
 						s = inherit[k] = gvar[k] ??= v, converttype(v, !!ahkvars[k], s.kind).definition = s,
-							s.kind === SymbolKind.Variable && (s.returntypes ??= v.returntypes);
+							s.kind === SymbolKind.Variable && maybe_unset(s, v);
 					for (let [k, v] of Object.entries(fn.local ?? {})) {
 						converttype(inherit[k] = v, false, v.kind).definition = v;
 						if (v.kind !== SymbolKind.TypeParameter) {
 							result.push(v);
-							if (v.kind === SymbolKind.Variable && !v.returntypes && !v.ref)
-								maybe_is_unset.push(v);
+							if (v.kind === SymbolKind.Variable && !v.assigned && v.returntypes === undefined)
+								unset_vars.set(v, v);
 						}
 					}
 					for (let [k, v] of Object.entries(fn.declaration ??= {}))
 						if (s = inherit[k])
 							s !== v && (converttype(v, s === ahkvars[k], s.kind).definition = s,
-								s.kind === SymbolKind.Variable && (s.returntypes ??= v.returntypes));
+								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable));
 						else if (outer_is_global)
 							s = gvar[k] ??= (result.push(v), (v as any).infunc = true, doc.declaration[k] = v),
 								converttype(v, !!ahkvars[k], s.kind).definition = s,
-								s.kind === SymbolKind.Variable && (s.returntypes ??= v.returntypes);
+								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
 						else if (!(v as Variable).def && (s = gvar[k]))
 							converttype(v, !!ahkvars[k], s.kind).definition = s;
 						else converttype(inherit[k] = fn.local[k] = v).definition = v, result.push(v);
@@ -132,10 +137,11 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							converttype(v, s === ahkvars[k], s.kind).definition = s;
 						else {
 							converttype(v, false, v.kind).definition = v;
-							result.push(v);
+							result.push(inherit[k] = v);
 							if (fn.assume === FuncScope.STATIC)
 								v.static = true;
-							maybe_is_unset.push(v);
+							if (v.returntypes === undefined)
+								unset_vars.set(v, v);
 						}
 					break;
 				case SymbolKind.Property:

@@ -114,9 +114,10 @@ export interface Variable extends DocumentSymbol {
 	arr?: boolean
 	defaultVal?: string | false | null
 	full?: string
-	returntypes?: { [exp: string]: any }
+	returntypes?: { [exp: string]: any } | null
 	range_offset?: [number, number]
 	uri?: string
+	assigned?: boolean
 }
 
 export interface SemanticToken {
@@ -625,7 +626,8 @@ export class Lexer {
 										switch (lk.type) {
 											case 'TK_WORD':
 												tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length));
-												tn.ref = byref, byref = false, params.push(tn), lk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition };
+												tn.ref = byref, tn.assigned = true, byref = false, params.push(tn);
+												lk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition };
 												if ((lk = tokens[j + 1]).content === ':=') {
 													j = j + 2;
 													if ((lk = tokens[j]).content === '+' || lk.content === '-')
@@ -1506,10 +1508,9 @@ export class Lexer {
 									} else
 										tk.type = 'TK_WORD';
 								case 'TK_WORD':
-									if (addvariable(tk, 0)) {
-										let vr = result[result.length - 1] as Variable;
-										vr.def = vr.ref = true;
-									}
+									let vr = addvariable(tk, 0);
+									if (vr)
+										vr.def = vr.assigned = true;
 									break;
 								case 'TK_OPERATOR':
 									if (tk.content.toLowerCase() === 'in') {
@@ -1760,8 +1761,8 @@ export class Lexer {
 							if (!t.topofline && t.content !== '{' && !(p && t.content === ')'))
 								_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length), next = false;
 							else {
-								if (addvariable(tk)) {
-									let vr = result[result.length - 1] as Variable;
+								let vr = addvariable(tk);
+								if (vr) {
 									let arr: string[] = Object.values(tps), o: any = vr.returntypes = {};
 									next = true, vr.def = true;
 									!arr.length && arr.push('@error');
@@ -2027,8 +2028,7 @@ export class Lexer {
 								let vr: Variable | undefined, o: any = {}, equ = tk.content, pp = parser_pos;
 								if (bak.type === 'TK_DOT') {
 									addprop(lk);
-								} else if (addvariable(lk, mode, sta)) {
-									vr = sta[sta.length - 1];
+								} else if (vr = addvariable(lk, mode, sta)) {
 									if (pc = comments[vr.selectionRange.start.line])
 										vr.detail = trim_comment(pc.content);
 								} else if (local)
@@ -2045,7 +2045,7 @@ export class Lexer {
 							} else {
 								if (mode === 2) {
 									let llk = lk, ttk = tk, err = diagnostic.propnotinit();
-									addvariable(lk, 2, sta) && (sta[sta.length - 1].def = false);
+									(addvariable(lk, 2, sta) ?? {} as Variable).def = false;
 									if (tk.type as string === 'TK_DOT') {
 										while (nexttoken() && tk.type === 'TK_WORD') {
 											if (!nexttoken())
@@ -2083,8 +2083,8 @@ export class Lexer {
 									break;
 								}
 								if (tk.type as string === 'TK_COMMA' || (tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i)))) {
-									if (addvariable(lk, mode, sta)) {
-										let vr = sta[sta.length - 1];
+									let vr = addvariable(lk, mode, sta);
+									if (vr) {
 										if (pc = comments[vr.selectionRange.start.line])
 											vr.detail = trim_comment(pc.content);
 									} else if (local)
@@ -2131,11 +2131,11 @@ export class Lexer {
 								if (predot)
 									addprop(lk), tpexp += '.' + lk.content;
 								else if (input.charAt(lk.offset - 1) !== '%') {
-									if (addvariable(lk) && byref !== undefined) {
-										let vr = (<Variable>result[result.length - 1]);
+									let vr = addvariable(lk);
+									if (vr && byref !== undefined) {
 										vr.def = true;
 										if (byref)
-											vr.ref = true, tpexp = tpexp.slice(0, -1) + ' #varref';
+											vr.ref = vr.assigned = true, tpexp = tpexp.slice(0, -1) + ' #varref';
 										else tpexp += check_concat(lk) + lk.content, vr.returntypes = { '#number': 0 };
 									} else tpexp += check_concat(lk) + lk.content;
 								} else lk.ignore = true;
@@ -2167,9 +2167,12 @@ export class Lexer {
 										addprop(lk);
 									} else {
 										tpexp += check_concat(lk) + lk.content;
-										if (addvariable(lk) && suf) {
-											let vr = result[result.length - 1] as Variable;
-											vr.def = true, vr.returntypes = { '#number': 0 };
+										let vr = addvariable(lk);
+										if (vr) {
+											if (suf)
+												vr.def = true, vr.returntypes = { '#number': 0 };
+											else if (tk.content === '??' || tk.ignore)
+												vr.returntypes = null;
 										}
 									}
 								} else if (predot) {
@@ -2185,11 +2188,11 @@ export class Lexer {
 								next = false;
 								if (!predot) {
 									if (input.charAt(lk.offset - 1) !== '%') {
-										if (addvariable(lk) && byref !== undefined) {
-											let vr = (<Variable>result[result.length - 1]);
+										let vr = addvariable(lk);
+										if (vr && byref !== undefined) {
 											vr.def = true;
 											if (byref)
-												vr.ref = true, tpexp = tpexp.slice(0, -1) + ' #varref';
+												vr.ref = vr.assigned = true, tpexp = tpexp.slice(0, -1) + ' #varref';
 											else tpexp += check_concat(lk) + lk.content, vr.returntypes = { '#number': 0 };
 										} else tpexp += check_concat(lk) + lk.content;
 									} else lk.ignore = true;
@@ -2203,10 +2206,10 @@ export class Lexer {
 								return result.splice(pres);
 							}
 							if (!predot) {
-								if (input.charAt(lk.offset - 1) !== '%' && addvariable(lk)) {
-									let vr = result[result.length - 1] as Variable;
+								let vr: Variable | undefined;
+								if (input.charAt(lk.offset - 1) !== '%' && (vr = addvariable(lk))) {
 									if (byref !== undefined)
-										vr.def = true, byref ? (vr.ref = true) : (vr.returntypes = { '#number': 0 });
+										vr.def = true, byref ? (vr.ref = vr.assigned = true) : (vr.returntypes = { '#number': 0 });
 									if (tk.type as string === 'TK_EQUALS') {
 										if (_cm = comments[vr.selectionRange.start.line])
 											vr.detail = trim_comment(_cm.content);
@@ -2492,7 +2495,7 @@ export class Lexer {
 								if (_cm = comments[tn.selectionRange.start.line])
 									tn.detail = trim_comment(_cm?.content);
 								if (byref)
-									byref = false, (<Variable>tn).ref = (<Variable>tn).def = true, tpexp = '#varref';
+									byref = false, tn.ref = tn.def = tn.assigned = true, tpexp = '#varref';
 								else tpexp = ' ' + tn.name;
 								cache.push(tn), bb = parser_pos, bak = tk;
 								if (tk.content === ',')
@@ -2530,7 +2533,7 @@ export class Lexer {
 										tn.range_offset = [ek.offset, tk.offset], hasexpr = true;
 								}
 								if (byref)
-									byref = false, tn.ref = true, tpexp = '#varref', tn.returntypes = { '#varref': true };
+									byref = false, tn.ref = tn.assigned = true, tpexp = '#varref';
 								else tpexp = Object.keys(o).pop() ?? '#void', tn.returntypes = o;
 								if (tk.type as string === 'TK_COMMA') {
 									info.comma.push(tk.offset);
@@ -2550,9 +2553,10 @@ export class Lexer {
 									} else { paramsdef = false, info.count--; break; }
 								} else if (tk.content === '?' && tk.ignore) {
 									let t = lk;
-									tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length));
-									(<Variable>tn).def = true, (<Variable>tn).defaultVal = null, cache.push(tn);
-									if (byref) byref = false, (<Variable>tn).ref = true, tpexp = '#varref';
+									let tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length));
+									tn.def = true, tn.defaultVal = null, cache.push(tn);
+									if (byref)
+										byref = false, tn.ref = tn.assigned = true, tpexp = '#varref';
 									else tpexp = ' ' + lk.content;
 									nexttoken();
 									if (tk.type as string === 'TK_COMMA') {
@@ -2879,8 +2883,8 @@ export class Lexer {
 						if (input.charAt(tk.offset - 1) !== '.') {
 							if (input.charAt(parser_pos) !== '(') {
 								if (b === '%' || (input.charAt(tk.offset - 1) !== '%' && input.charAt(tk.offset + tk.length) !== '%')) {
-									if (addvariable(tk)) {
-										let vr = result[result.length - 1] as Variable;
+									let vr = addvariable(tk);
+									if (vr) {
 										nexttoken(), next = false;
 										if (tk.type as string === 'TK_EQUALS') {
 											if (_cm = comments[vr.selectionRange.start.line])
@@ -2898,7 +2902,9 @@ export class Lexer {
 											tpexp = tpexp.slice(0, -1) + '#varref';
 										else tpexp += check_concat(lk) + lk.content, ['++', '--'].includes(tk.content) && (byref = false);
 										if (byref !== undefined)
-											vr.def = true, byref ? (vr.ref = true) : (vr.returntypes = { '#number': 0 });
+											vr.def = true, byref ? (vr.ref = vr.assigned = true) : (vr.returntypes = { '#number': 0 });
+										else if (tk.content === '??' || tk.ignore && tk.content === '?')
+											vr.returntypes = null;
 									} else
 										tpexp += check_concat(tk) + tk.content;
 								} else tk.ignore = true;
@@ -2940,8 +2946,8 @@ export class Lexer {
 									next = false;
 									if (par) for (const it of par) if (!is_builtinvar(it.name.toLowerCase())) {
 										result.push(it);
-										if ((<Variable>it).ref || (<Variable>it).returntypes)
-											(<Variable>it).def = true;
+										if (it.ref || it.returntypes)
+											it.def = true;
 									}
 								}
 							}
@@ -3100,7 +3106,7 @@ export class Lexer {
 					else if (result.length > l && lk.type === 'TK_WORD') {
 						let vr = result[result.length - 1] as Variable;
 						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
-							vr.returntypes ??= {};
+							vr.assigned = true, vr.returntypes ??= null;
 					}
 					return true;
 				}
@@ -3181,14 +3187,14 @@ export class Lexer {
 				return false;
 			}
 
-			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]): boolean {
+			function addvariable(token: Token, md: number = 0, p?: DocumentSymbol[]) {
 				let _low = token.content.toLowerCase();
 				if (token.ignore || is_builtinvar(_low, md)) {
 					if (token.semantic && token.semantic.type !== SemanticTokenTypes.operator)
 						delete token.semantic;
 					token.definition = ahkvars[_low.toUpperCase()];
 					token.ignore = true;
-					return false;
+					return;
 				}
 				let rg = make_range(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg);
 				if (md === 2) {
@@ -3199,7 +3205,7 @@ export class Lexer {
 				} else if (_low.match(/^\d/))
 					_this.addDiagnostic(diagnostic.invalidsymbolname(token.content), token.offset, token.length);
 				(p ?? result).push(tn);
-				return true;
+				return tn;
 			}
 
 			function addprop(tk: Token, v?: Variable) {
@@ -3261,7 +3267,7 @@ export class Lexer {
 					dec.__INIT && children.unshift(dec.__INIT), children.unshift(sdec.__INIT);
 					cls.cache?.splice(0).forEach(it => (it.static ? sdec : dec)[_low = it.name.toUpperCase()] ??= it);
 				} else {
-					let fn = node as FuncNode, vars: { [k: string]: any } = {}, unresolved_vars: { [k: string]: any } = {};
+					let fn = node as FuncNode, vars: { [k: string]: any } = {}, unresolved_vars: { [k: string]: any } = {}, vr: Variable;
 					let has_this_param = node.kind === SymbolKind.Method || node.parent?.kind === SymbolKind.Property && node.kind === SymbolKind.Function;
 					if (has_this_param) {
 						let rg = make_range(0, 0);
@@ -3279,7 +3285,7 @@ export class Lexer {
 					for (let it of (fn.params ??= [])) {
 						if (!it.name)
 							continue;
-						node.children?.unshift(it), it.def = true, it.kind = SymbolKind.TypeParameter;
+						node.children?.unshift(it), it.def = it.assigned = true, it.kind = SymbolKind.TypeParameter;
 						if (it.defaultVal !== undefined || it.arr)
 							lpv = true;
 						else if (lpv)
@@ -3300,7 +3306,7 @@ export class Lexer {
 								message: diagnostic.conflictserr(v.static ? 'static' : 'local', 'parameter', t.name),
 								range: v.selectionRange, severity
 							});
-						else dec[k] = v;
+						else dec[k] = v, v.assigned ||= Boolean(v.returntypes);
 					}
 					Object.entries(fn.global ??= {}).forEach(([k, v]) => {
 						if (t = dec[k]) {
@@ -3322,7 +3328,7 @@ export class Lexer {
 								delete fn.local[k];
 							}
 						}
-						_this.declaration[k] ??= dec[k] = v, (v as any).infunc = true;
+						_this.declaration[k] ??= dec[k] = v, v.assigned ||= Boolean(v.returntypes), (v as any).infunc = true;
 					});
 					fn.children.forEach(it => {
 						_low = it.name.toUpperCase();
@@ -3371,7 +3377,7 @@ export class Lexer {
 							}
 							dec[_low] = fn.local[_low] = it;
 						} else if (it.kind === SymbolKind.Variable)
-							((it as Variable).def ? vars : unresolved_vars)[_low] ??= it;
+							((vr = it as Variable).def ? vars : unresolved_vars)[_low] ??= (vr.assigned ||= Boolean(vr.returntypes), it);
 					});
 					if (fn.assume === FuncScope.GLOBAL) {
 						Object.entries(vars = Object.assign({}, unresolved_vars, vars)).forEach(([k, v]) => {
@@ -3380,7 +3386,7 @@ export class Lexer {
 							else if (t.kind === SymbolKind.Function && v.def)
 								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
-								t.def = true, t.returntypes ??= v.returntypes;
+								t.def = true, t.assigned ||= Boolean(v.returntypes);
 						});
 						unresolved_vars = {};
 					} else {
@@ -3396,7 +3402,7 @@ export class Lexer {
 							} else if (t.kind === SymbolKind.Function)
 								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
-								t.def = true, t.returntypes ??= v.returntypes ?? (v.ref ? {} : undefined);
+								t.def = true, t.assigned ||= Boolean(v.returntypes);
 						});
 					}
 					vars = unresolved_vars, unresolved_vars = {};
@@ -5657,7 +5663,7 @@ export function find_class(doc: Lexer, name: string, uri?: string) {
 	if (c?.kind === SymbolKind.Class)
 		return c;
 	function get_ownprop(cls: ClassNode | undefined, name: string): DocumentSymbol | undefined {
-		if (cls)
+		if (cls?.kind === SymbolKind.Class)
 			return cls.staticdeclaration[name] ?? (cls.extendsuri && get_ownprop(find_class(doc, c.extends, c.extendsuri), name));
 	}
 }
@@ -5747,7 +5753,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 			}
 			return [];
 		} else {
-			for (let s in (<Variable>ite).returntypes)
+			for (let s in ite.returntypes)
 				detectExp(doc, s, ite.range.end).forEach(tp => types[tp] = true);
 		}
 	}
@@ -6328,19 +6334,20 @@ export function samenameerr(a: DocumentSymbol, b: DocumentSymbol): string {
 }
 
 export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: DocumentSymbol[], diags: any) {
-	let _low = '', tt: any;
+	let _low = '', vit: Variable;
 	for (const it of arr) {
 		if (!it.name || !it.selectionRange.end.character)
 			continue;
-		switch (it.kind) {
+		switch ((vit = it as Variable).kind) {
+			case SymbolKind.Variable:
+				vit.assigned ||= Boolean(vit.returntypes);
 			case SymbolKind.Class:
 			case SymbolKind.Function:
-			case SymbolKind.Variable:
 				if (!decs[_low = it.name.toUpperCase()]) {
 					decs[_low] = it;
 				} else if ((<any>decs[_low]).infunc) {
 					if (it.kind === SymbolKind.Variable) {
-						if ((<Variable>it).def && decs[_low].kind !== SymbolKind.Variable) {
+						if (vit.def && decs[_low].kind !== SymbolKind.Variable) {
 							diags.push({ message: diagnostic.assignerr(decs[_low].kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 							continue;
 						}
@@ -6353,11 +6360,12 @@ export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: 
 					decs[_low] = it;
 				} else if (it.kind === SymbolKind.Variable) {
 					if (decs[_low].kind === SymbolKind.Variable) {
-						if ((<Variable>it).def && !(<Variable>decs[_low]).def)
+						let t = decs[_low] as Variable;
+						if (vit.def && !t.def)
 							decs[_low] = it;
-						else (decs[_low] as Variable).returntypes ??= (it as Variable).returntypes;
-					} else if ((<Variable>it).def)
-						delete (<Variable>it).def, diags.push({ message: samenameerr(decs[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+						else t.assigned ||= vit.assigned;
+					} else if (vit.def)
+						delete vit.def, diags.push({ message: samenameerr(decs[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 				} else {
 					if (decs[_low].kind === SymbolKind.Variable) {
 						if ((<Variable>decs[_low]).def)
