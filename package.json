@@ -59,9 +59,8 @@
 					"light": "icon_filetype.png"
 				}
 			},
-			{
-				"id": "~ahk2-output"
-			}
+			{ "id": "ahk", "aliases": ["AutoHotkey"] },
+			{ "id": "~ahk2-output" }
 		],
 		"grammars": [
 			{
