@@ -1,7 +1,7 @@
 import { basename, resolve, relative } from 'path';
 import { existsSync, readdirSync, statSync } from 'fs';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
-import { allIdentifierChar, ClassNode, reset_detect_cache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Token, Variable, find_class } from './Lexer';
+import { allIdentifierChar, ClassNode, reset_detect_cache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Token, Variable, find_class, formatMarkdowndetail } from './Lexer';
 import { completionitem } from './localize';
 import { ahkuris, ahkvars, completionItemCache, dllcalltpe, extsettings, generate_fn_comment, inBrowser, inWorkspaceFolders, lexers, libfuncs, make_search_re, Maybe, pathenv, sendAhkRequest, utils, winapis } from './common';
 import { URI } from 'vscode-uri';
@@ -787,20 +787,24 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					} else ci.insertText = ci.label + '()';
 				} else
 					ci.commitCharacters = commitCharacters.Function;
-				ci.detail = info.full, ci.documentation = info.detail;
+				ci.detail = info.full, ci.documentation = { kind: 'markdown', value: formatMarkdowndetail(info) };
 				break;
 			case SymbolKind.Variable:
 			case SymbolKind.TypeParameter:
-				ci.kind = CompletionItemKind.Variable, ci.detail = info.detail; break;
+				ci.kind = CompletionItemKind.Variable;
+				if (info.range.end.character)
+					ci.documentation = { kind: 'markdown', value: formatMarkdowndetail(info) };
+				else ci.detail = info.detail;
+				break;
 			case SymbolKind.Class:
 				ci.kind = CompletionItemKind.Class, ci.commitCharacters = commitCharacters.Class;
-				ci.detail = 'class ' + (info.full || ci.label), ci.documentation = info.detail; break;
+				ci.detail = 'class ' + (info.full || ci.label), ci.documentation = { kind: 'markdown', value: formatMarkdowndetail(info) }; break;
 			case SymbolKind.Event:
 				ci.kind = CompletionItemKind.Event; break;
 			case SymbolKind.Field:
 				ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.slice(0, -1); break;
 			case SymbolKind.Property:
-				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label, ci.documentation = info.detail;
+				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label, ci.documentation = { kind: 'markdown', value: formatMarkdowndetail(info) };
 				if (info.get?.params.length)
 					ci.insertTextFormat = InsertTextFormat.Snippet, ci.insertText = ci.label + '[$0]';
 				break;

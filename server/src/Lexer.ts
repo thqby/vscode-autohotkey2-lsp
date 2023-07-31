@@ -6222,7 +6222,17 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 	let detail = node.detail, ols = overloads ?? [], s, code = 0;
 	if (!detail)
 		return '';
-	detail.split(/\r?\n/).forEach(line => {
+	detail.replace(/\{@link\s+(.*)\}/g, (...m) => {
+		let s: string = m[1]?.trim() ?? '';
+		let p = s.search(/[|\s]/);
+		if (p !== -1) {
+			let tag = s.substring(p + 1).trim();
+			s = s.slice(0, p);
+			if (tag)
+				return `[${tag}](${s})`;
+		}
+		return ` ${s} `;
+	}).split(/\r?\n/).forEach(line => {
 		if (line.startsWith('@')) {
 			lastparam = '';
 			if (code)
