@@ -2680,7 +2680,7 @@ export class Lexer {
 				if (Object.keys(props).length) {
 					cls.name = cls.full = `$${_this.anonymous.push(cls) - 1}`;
 					cls.staticdeclaration = props, cls.declaration = {};
-					tp[cls.name] = true;
+					tp[cls.name] = true, cls.uri = _this.uri;
 				}
 				return true;
 
@@ -5920,7 +5920,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position): string[] {
 										break;
 								}
 							}
-							if (s = Object.keys(n.returntypes || {}).pop() || '')
+							if (s = Object.keys(n.returntypes || { '#object': 0 }).pop() || '')
 								ts[s] = true;
 							break;
 					}

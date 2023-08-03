@@ -63,7 +63,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 							md = md.replace(' — ', '\n___\n');
 							re = /^\n\*@var\*\s/;
 						} else if (md.startsWith('\n*@type* '))
-							md = md.replace(' — ', '\n___\n').replace(/^\n\*@type\*\s*/, `\`${node.name}\`: `);
+							md = md.replace(' — ', '\n___\n').replace(/^\n\*@type\*[ \t]*/, `\`${node.name}\`: `);
 						else
 							md = `\`${node.name}\`\n___\n${md}`;
 						md = md.replace(re, !scope ? '*@global* ' : (node as Variable).static ? '*@static* ' : '*@local* ');
