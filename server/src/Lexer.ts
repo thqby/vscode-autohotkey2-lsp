@@ -1976,7 +1976,7 @@ export class Lexer {
 										u = 'u';
 									else {
 										if (tps[c])
-											args.push(arg = Variable.create(`p${++i}_${u + tps[c]}`, SymbolKind.Variable, rg2)), u = '';
+											args.push(arg = Variable.create(`p${++i}_${u + tps[c]}`, SymbolKind.Variable, rg2)), arg.defaultVal = null, u = '';
 										else if (arg && (c === '*' || c === 'p'))
 											arg.name += 'p', arg = undefined;
 										else {
@@ -1986,7 +1986,9 @@ export class Lexer {
 									}
 								}
 							}
-							result.push(FuncNode.create(n, SymbolKind.Function, rg, rg, args));
+							let fn = FuncNode.create(n, SymbolKind.Function, rg, rg, args);
+							fn.returntypes = { '#number': 0 };
+							result.push(fn);
 						}
 						break;
 					case '#requires':
