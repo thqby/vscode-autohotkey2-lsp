@@ -1931,11 +1931,6 @@ SendMode(Mode) => String
 SendPlay(Keys) => void
 
 /**
- * Similar to "send", the difference is that all characters in the "key" are interpreted and sent literally. For details, please refer to the original mode.
- */
-SendRaw(Keys) => void
-
-/**
  * Similar to Send, except that all characters in Keys are interpreted literally.
  */
 SendText(Keys) => void

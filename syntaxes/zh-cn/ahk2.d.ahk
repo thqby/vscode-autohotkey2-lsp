@@ -1931,11 +1931,6 @@ SendMode(Mode) => String
 SendPlay(Keys) => void
 
 /**
- * 与“发送”相似,不同之处在于“键”中的所有字符均按字面意义进行解释和发送.有关详细信息,请参见原始模式.
- */
-SendRaw(Keys) => void
-
-/**
  * 类似于 Send, 除了 Keys 中的所有字符都按原义解释.
  */
 SendText(Keys) => void
