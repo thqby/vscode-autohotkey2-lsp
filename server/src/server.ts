@@ -283,10 +283,10 @@ function initpathenv(samefolder = false) {
 	#NoTrayIcon
 	#Warn All, Off
 	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 1) = "1" ? "FileAppend2" : "FileAppend"
-	for _, p in [A_MyDocuments,A_Desktop,A_AhkPath,A_ProgramFiles,A_Programs,A_AhkVersion]
-		s .= p "|"
+	for _, p in ['a_ahkpath','a_appdata','a_appdatacommon','a_computername','a_comspec','a_desktop','a_desktopcommon','a_iscompiled','a_mydocuments','a_programfiles','a_programs','a_programscommon','a_startmenu','a_startmenucommon','a_startup','a_startupcommon','a_temp','a_username','a_windir','a_ahkversion']
+		s .= SubStr(p, 3) "\`t" %p% "|"
 	try _H := !!A_ThreadID
-	%Append%(s _H "\`n", "*", "UTF-8")
+	%Append%(s "h\`t" _H "\`n", "*", "UTF-8")
 	FileAppend2(text, file, encode) {
 		FileAppend %text%, %file%, %encode%
 	}`;
@@ -311,9 +311,7 @@ function initpathenv(samefolder = false) {
 				connection.window.showErrorMessage(setting.getenverr());
 			return;
 		}
-		let paths = data.split('|'), s = ['mydocuments', 'desktop', 'ahkpath', 'programfiles', 'programs', 'version', 'h'], path = '';
-		for (let i in paths)
-			pathenv[s[i]] = paths[i].replace(/^[A-Z]:/, m => m.toLowerCase());
+		Object.assign(pathenv, Object.fromEntries(data.replace(/\t[A-Z]:\\/g, m => m.toLowerCase()).split('|').map(l => l.split('\t'))));
 		initnum = 1;
 		if (pathenv.version?.match(/^1\./))
 			connection.window.showErrorMessage(setting.versionerr());

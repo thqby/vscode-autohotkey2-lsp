@@ -28,7 +28,7 @@ export let ahkvars: { [key: string]: DocumentSymbol } = {}, ahkuris: { [name: st
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
 export let hoverCache: { [key: string]: [string, Hover | undefined] } = {}, libdirs: string[] = [];
-export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = {};
+export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = { space: ' ', tab: '\t' };
 export let completionItemCache = {
 	constant: [] as CompletionItem[],
 	directive: [] as CompletionItem[],
