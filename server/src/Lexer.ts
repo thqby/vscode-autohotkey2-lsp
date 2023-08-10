@@ -5905,7 +5905,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position): string[] {
 						case SymbolKind.Class:
 							if (lexers[uri]) {
 								let call = get_class_call(n as any) as FuncNode;
-								if (!(call.name.toLowerCase() === '__new' || call.full?.startsWith('(Object) static Call('))) {
+								if (call && !(call.name.toLowerCase() === '__new' || call.full?.startsWith('(Object) static Call('))) {
 									let m = cvt_types(call.detail?.match(/^@returns?\s+{(.+?)}/mi)?.[1] ?? ''), o: any = {};
 									if (m)
 										m.forEach(s => o[s] = true), call.returntypes = o;

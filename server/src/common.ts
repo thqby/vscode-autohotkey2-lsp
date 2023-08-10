@@ -276,11 +276,15 @@ export async function loadahk2(filename = 'ahk2', d = 3) {
 			let doc = new Lexer(td, undefined, d);
 			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
 		}
-		if (!(path = getlocalefilepath(file + '.json')))
-			return;
-		if (filename === 'ahk2')
+		if (path = getlocalefilepath(file + '.json'))
+			build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
+		if (filename === 'ahk2') {
 			build_item_cache(JSON.parse(readFileSync(`${rootdir}/syntaxes/ahk2_common.json`, { encoding: 'utf8' })));
-		build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
+			for (let file of readdirSync(`${rootdir}/syntaxes/`)) {
+				if (file.toLowerCase().endsWith('.user.json') && !statSync(file = `${rootdir}/syntaxes/${file}`).isDirectory())
+					build_item_cache(JSON.parse(readFileSync(file, { encoding: 'utf8' })));
+			}
+		}
 	}
 	function build_item_cache(ahk2: any) {
 		let insertTextFormat: InsertTextFormat, kind: CompletionItemKind;
