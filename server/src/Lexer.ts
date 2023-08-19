@@ -206,7 +206,7 @@ let commentTags = new RegExp('^;;\\s*(?<tag>.+)');
 
 const colorregexp = new RegExp(/['"\s](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
-const whitespace = " \t\r\n", punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , ?? : ? ^ ^= |= =>'.split(' ');
+const whitespace = " \t\r\n", punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , ?? ??= : ? ^ ^= |= =>'.split(' ');
 const line_starters = 'try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
 const reserved_words = line_starters.concat(['class', 'in', 'is', 'isset', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not', 'as', 'super']);
 const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', Conditional: 'Conditional', Expression: 'Expression' };
@@ -1798,18 +1798,22 @@ export class Lexer {
 			}
 
 			function parse_top_word() {
-				let c = '';
+				let c = '', maybe;
 				next = true, nexttoken(), next = false;
+				if (maybe = tk.ignore && tk.content === '?')
+					tk = get_next_token();
 				if (tk.type !== 'TK_EQUALS' && !/^(=[=>]?|\?\??|:)$/.test(tk.content) &&
 					(tk.type === 'TK_DOT' || ', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))) {
 					if (tk.type === 'TK_DOT') {
-						next = true, addvariable(lk);
+						let v = addvariable(lk);
+						next = true;
+						maybe && v && (v.returntypes = null);
 						while (nexttoken()) {
 							if (tk.type as string === 'TK_WORD') {
 								if (input.charAt(parser_pos) === '%') {
 								} else if (addprop(tk), nexttoken(), tk.content === ':=')
 									maybeclassprop(lk);
-								else if (tk.type === 'TK_DOT')
+								else if (tk.ignore && tk.content === '?' && (tk = get_next_token()), tk.type === 'TK_DOT')
 									continue;
 								next = false;
 								if (tk.type as string !== 'TK_EQUALS' && !'=??'.includes(tk.content || ' ') &&
@@ -4323,11 +4327,11 @@ export class Lexer {
 					lst = createToken(c, 'TK_OPERATOR', offset, 1, bg);
 					let bak = parser_pos, tk = lst, t = get_token_ignore_comment(depth + 1);
 					parser_pos = bak;
-					if (t.type === 'TK_COMMA' || t.type === 'TK_END_EXPR' || t.content === '}' || t.type === 'TK_EOF')
+					if (')]},:??'.includes(t.content) || t.content === '.' && t.type !== 'TK_OPERATOR')
 						tk.ignore = true;
 					return lst = tk;
 				}
-				return lst = createToken(c, c.match(/([:.+\-*/|&^]|\/\/|>>|<<)=/) ? 'TK_EQUALS' : 'TK_OPERATOR', offset, c.length, bg);
+				return lst = createToken(c, c.match(/([:.+\-*/|&^]|\/\/|>>|<<|\?\?)=/) ? 'TK_EQUALS' : 'TK_OPERATOR', offset, c.length, bg);
 			}
 
 			if (c === '#') {
@@ -4847,7 +4851,10 @@ export class Lexer {
 						indent();
 					}
 					set_mode(MODE.Expression);
-				} else space_before = space_after = false;
+				} else {
+					space_before = false;
+					space_after = _this.tokens[ck.next_token_offset]?.content.startsWith('?') ?? false;
+				}
 			} else if (token_text === '.')
 				space_after = space_before = true;
 			else if (token_text === '&') {
@@ -5204,6 +5211,10 @@ export class Lexer {
 									tk = EMPTY_TOKEN;
 							} else tk = EMPTY_TOKEN;
 							break;
+						} else if (lk.ignore && lk.content === '?') {
+							if (!(lk = lk.previous_token))
+								tk = EMPTY_TOKEN;
+							break;
 						}
 					default: lk = undefined; break;
 				}
@@ -5241,7 +5252,7 @@ export class Lexer {
 								if (!(tk = tokens[tk.next_pair_pos!]) || !(tk = tokens[tk.next_token_offset]))
 									break loop;
 								break;
-							} else if (tk.previous_token?.content === '%' && tk.prefix_is_whitespace === undefined && tk.type === 'TK_WORD') {
+							} else if ((tk.ignore && tk.content === '?') || (tk.previous_token?.content === '%' && tk.prefix_is_whitespace === undefined && tk.type === 'TK_WORD')) {
 								tk = tokens[tk.next_token_offset!];
 								break;
 							}
