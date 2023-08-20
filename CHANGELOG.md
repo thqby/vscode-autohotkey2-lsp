@@ -1,3 +1,7 @@
+## 2.1.1
+- 支持v2.1新语法, 可选链操作符`?.`、空值合并`??=`
+- 支持v2.1新语法, 类型化属性`prop: type := val`
+
 ## 2.1.0
 - 修复[#354](https://github.com/thqby/vscode-autohotkey2-lsp/issues/354)
 - 修复[#356](https://github.com/thqby/vscode-autohotkey2-lsp/issues/356)

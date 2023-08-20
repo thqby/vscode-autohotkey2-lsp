@@ -212,10 +212,5 @@ function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boole
 			if (it.children?.length)
 				findAllVar(it as FuncNode, name, ranges, global, global ? false : undefined, not_static);
 		});
-		// if (!global)
-		// 	node.funccall?.forEach(it => {
-		// 		if (it.kind === SymbolKind.Function && it.name.toUpperCase() === name)
-		// 			ranges.push(it.selectionRange);
-		// 	});
 	}
 }

@@ -128,13 +128,13 @@ connection.onInitialize((params: InitializeParams) => {
 	set_locale(configs?.locale ?? params.locale);
 	loadlocalize();
 	initahk2cache();
-	loadahk2();
 	if (configs) {
 		update_settings(configs);
 		if (existsSync(extsettings.InterpreterPath))
 			initpathenv();
 		else connection.window.showErrorMessage(setting.ahkpatherr());
 	}
+	loadahk2();
 	return result;
 });
 

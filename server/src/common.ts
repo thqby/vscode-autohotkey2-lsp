@@ -1,4 +1,4 @@
-import { resolve } from 'path';
+import { resolve, sep } from 'path';
 import { URI } from 'vscode-uri';
 import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { Connection } from 'vscode-languageserver';
@@ -118,6 +118,7 @@ export interface AHKLSSettings {
 	FormatOptions: FormatOptions
 	InterpreterPath: string
 	WorkingDirs: string[]
+	GlobalStorage?: string
 }
 
 export function openFile(path: string, showError = true): TextDocument | undefined {
@@ -169,16 +170,19 @@ export function restorePath(path: string): string {
 	if (path.includes('..'))
 		path = resolve(path);
 	let dirs = path.toLowerCase().split(/[/\\]/), i = 1, s = dirs[0];
+	let _dirs = path.split(/[/\\]/);
 	while (i < dirs.length) {
-		for (const d of readdirSync(s + '\\')) {
-			if (d.toLowerCase() === dirs[i]) {
-				s += '\\' + d;
-				break;
+		try {
+			for (const d of readdirSync(s + sep)) {
+				if (d.toLowerCase() === dirs[i]) {
+					s += sep + d;
+					break;
+				}
 			}
-		}
+		} catch { s += sep + _dirs[i]; }
 		i++;
 	}
-	return i < dirs.length ? path : s;
+	return s;
 }
 
 export function getlocalefilepath(filepath: string): string | undefined {
@@ -280,10 +284,11 @@ export async function loadahk2(filename = 'ahk2', d = 3) {
 			build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
 		if (filename === 'ahk2') {
 			build_item_cache(JSON.parse(readFileSync(`${rootdir}/syntaxes/ahk2_common.json`, { encoding: 'utf8' })));
-			for (let file of readdirSync(`${rootdir}/syntaxes/`)) {
-				if (file.toLowerCase().endsWith('.user.json') && !statSync(file = `${rootdir}/syntaxes/${file}`).isDirectory())
-					build_item_cache(JSON.parse(readFileSync(file, { encoding: 'utf8' })));
-			}
+			if ((path = extsettings.GlobalStorage) && existsSync(path))
+				for (let file of readdirSync(path)) {
+					if (file.toLowerCase().endsWith('.snippet.json') && !statSync(file = `${path}/${file}`).isDirectory())
+						build_item_cache(JSON.parse(readFileSync(file, { encoding: 'utf8' })));
+				}
 		}
 	}
 	function build_item_cache(ahk2: any) {

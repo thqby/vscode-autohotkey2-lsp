@@ -3677,7 +3677,7 @@ export class Lexer {
 
 		function print_newline(preserve_statement_flags = false): void {
 			if (!preserve_statement_flags) {
-				if (last_type !== 'TK_COMMA' && last_type !== 'TK_EQUALS' && (last_type !== 'TK_OPERATOR' || ['++', '--', '%'].includes(flags.last_text))) {
+				if (!is_line_continue(ck.previous_token ?? EMPTY_TOKEN, EMPTY_TOKEN)) {
 					// while (flags.mode === MODE.Statement && (flags.declaration_statement || !flags.if_block && !flags.loop_block && !flags.try_block))
 					// 	restore_mode();
 					while (flags.mode === MODE.Statement)
@@ -4450,9 +4450,9 @@ export class Lexer {
 		}
 
 		function handle_start_expr(): void {
-			if (start_of_statement()) {
+			if (start_of_statement())
 				flags.last_word = '_';
-			} else if (need_newline() || (input_wanted_newline && !is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck)))
+			if (need_newline() || (input_wanted_newline && !is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck)))
 				print_newline();
 
 			let next_mode = MODE.Expression;

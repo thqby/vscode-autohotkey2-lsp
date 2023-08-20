@@ -103,7 +103,9 @@ export async function activate(context: ExtensionContext) {
 		outputChannel: outputchannel = window.createOutputChannel('AutoHotkey2', '~ahk2-output'),
 		outputChannelName: 'AutoHotkey2',
 		initializationOptions: {
-			commands: Object.keys(request_handlers), ...ahkconfig
+			commands: Object.keys(request_handlers),
+			GlobalStorage: context.globalStorageUri.fsPath,
+			...ahkconfig
 		}
 	};
 	if (ahkconfig.FormatOptions?.one_true_brace !== undefined)
