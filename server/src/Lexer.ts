@@ -88,6 +88,7 @@ export interface FuncNode extends DocumentSymbol {
 	unresolved_vars?: { [name: string]: Variable }
 	resolved?: boolean
 	uri?: string
+	ranges?: [number, number][]	// class's __init
 }
 
 export interface ClassNode extends DocumentSymbol {
@@ -2051,7 +2052,8 @@ export class Lexer {
 							} else {
 								if (mode === 2) {
 									let llk = lk, ttk = tk, err = diagnostic.propnotinit();
-									(addvariable(lk, 2, sta) ?? {} as Variable).def = false;
+									let v = addvariable(lk, 2, sta)!;
+									v.def = false;
 									if (tk.type as string === 'TK_DOT') {
 										while (nexttoken() && tk.type === 'TK_WORD') {
 											if (!nexttoken())
@@ -2074,6 +2076,71 @@ export class Lexer {
 												else err = '';
 												break;
 											}
+										}
+									} else if (!local && tk.content === ':') {	// Typed properties
+										let pp = tk.offset + 1, _prop = lk, tpexp = '', _tp: Token | undefined;
+										let _p = _parent, static_init = (currsymbol as ClassNode).staticdeclaration.__INIT as FuncNode;
+										let scl = static_init.children!.length;
+										delete v.def;
+										lk = tk, tk = get_next_token(), err = '';
+										if (allIdentifierChar.test(tk.content)) {
+											_tp = tk, tpexp += tk.content, nexttoken();
+										} else if (tk.type === 'TK_START_EXPR') {
+											let l = result.length, o: any = {};
+											_parent = static_init;
+											parse_pair(tk.content, tk.content as string === '(' ? ')' : ']', undefined, o);
+											static_init.children!.push(...result.splice(l));
+											_parent = _p, nexttoken();
+											tpexp += Object.keys(o).pop() || '#void';
+										} else if (tk.content as string === ':=' || tk.type === 'TK_COMMA' || tk.topofline && allIdentifierChar.test(tk.content))
+											_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length), next = false;
+										else err = diagnostic.propdeclaraerr();
+										if (!err) {
+											while (true) {
+												if (tk.content === '.' && tk.type !== 'TK_OPERATOR') {
+													if (tk.type !== 'TK_DOT')
+														_this.addDiagnostic(diagnostic.unexpected('.'), tk.offset, tk.length);
+													if (nexttoken() && tk.type as string === 'TK_WORD')
+														addprop(tk), nexttoken();
+												} else if (tk.type === 'TK_START_EXPR' && !tk.prefix_is_whitespace && allIdentifierChar.test(lk.content)) {
+													let l = result.length, fc = lk, ttk = tk, predot = lk.previous_token?.type === 'TK_DOT', item;
+													_parent = static_init;
+													parse_pair(tk.content, tk.content as string === '(' ? ')' : item = ']');
+													static_init.children!.push(...result.splice(l));
+													if (!item) {
+														tpexp += ttk.paraminfo?.count ? `(${ttk.offset})` : '()';
+														let tn: CallInfo = DocumentSymbol.create(fc.content, undefined,
+															predot ? SymbolKind.Method : SymbolKind.Function,
+															make_range(fc.offset, parser_pos - fc.offset), make_range(fc.offset, fc.length));
+														static_init.funccall!.push(tn);
+														Object.assign(ttk.paraminfo ?? {}, { name: fc.content });
+														tn.paraminfo = ttk.paraminfo, tn.offset = fc.offset, fc.callinfo = tn;
+														fc.semantic ??= { type: predot ? SemanticTokenTypes.method : SemanticTokenTypes.function };
+													} else tpexp += ttk.paraminfo?.count ? `.__item[${ttk.offset}]` : '.__item';
+													_parent = _p, nexttoken();
+												} else break;
+											}
+											if (_tp) {
+												if (tk.previous_token === _tp && /^([iu](8|16|32|64)|f(32|64)|[iu]ptr)$/i.test(_tp.content))
+													v.returntypes = { '#number': 0 };
+												else if (_tp.type === 'TK_WORD')
+													addvariable(_tp, 3, static_init.children);
+											}
+											v.returntypes ??= { [tpexp + '()']: 0 };
+											if (tk.content === ':=') {
+												static_init.ranges?.push([pp, tk.offset - 1]);
+												pp = tk.offset + 2;
+												result.push(...parse_expression());
+												_parent.ranges?.push([pp, lk.offset + lk.length]);
+												continue loop;
+											}
+											if (tk.type === 'TK_COMMA' || tk.topofline && (allIdentifierChar.test(tk.content) || tk.content === '}') && !(next = false)) {
+												static_init.ranges?.push([pp, tk.offset - 1]);
+												continue loop;
+											}
+											_this.addDiagnostic(diagnostic.propdeclaraerr(), _prop.offset, _prop.length);
+											static_init.children?.splice(scl);
+											llk = tk.previous_token ?? EMPTY_TOKEN, ttk = tk, v.def = false;
 										}
 									}
 									err && _this.addDiagnostic(err, lk.offset, lk.length);
