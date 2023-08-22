@@ -3675,9 +3675,9 @@ export class Lexer {
 			}
 		}
 
-		function print_newline(preserve_statement_flags = false): void {
+		function print_newline(preserve_statement_flags: Boolean | null = false): void {
 			if (!preserve_statement_flags) {
-				if (!is_line_continue(ck.previous_token ?? EMPTY_TOKEN, EMPTY_TOKEN)) {
+				if (preserve_statement_flags === null || !is_line_continue(ck.previous_token ?? EMPTY_TOKEN, EMPTY_TOKEN)) {
 					// while (flags.mode === MODE.Statement && (flags.declaration_statement || !flags.if_block && !flags.loop_block && !flags.try_block))
 					// 	restore_mode();
 					while (flags.mode === MODE.Statement)
@@ -5048,7 +5048,7 @@ export class Lexer {
 		}
 
 		function handle_label() {
-			print_newline();
+			print_newline(null);
 			if (token_text_low === 'default:' && (flags.in_case_statement || (flags.mode === MODE.BlockStatement && flags.last_word === 'switch'))) {
 				if (flags.case_body)
 					deindent();
