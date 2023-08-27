@@ -4626,8 +4626,7 @@ export class Lexer {
 
 		function handle_word() {
 			let preserve_statement_flags = false;
-			if (last_text.match(/[^\W]$/) || ['TK_END_EXPR', 'TK_STRING'].includes(last_type))
-				output_space_before_token = true;
+			output_space_before_token ||= /^(TK_NUMBER|TK_WORD|TK_RESERVED|TK_STRING|TK_END_)/.test(last_type);
 
 			if (start_of_statement()) {
 				// The conditional starts the statement if appropriate.
