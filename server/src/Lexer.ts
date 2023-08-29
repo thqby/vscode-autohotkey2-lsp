@@ -3751,17 +3751,9 @@ export class Lexer {
 		function print_token(printable_token?: string): void {
 			let line = output_lines[output_lines.length - 1];
 			if (!line.text.length) {
-				if (opt.keep_array_indentation && is_array(flags.mode) && input_wanted_newline) {
-					if (preindent_string)
-						line.text.push(preindent_string);
-					if (is_expression(flags.parent.mode))
-						print_indent_string(flags.parent.indentation_level);
-					else print_indent_string(flags.indentation_level);
-				} else {
-					if (preindent_string)
-						line.text.push(preindent_string);
-					flags.indentation_level = print_indent_string(flags.indentation_level);
-				}
+				if (preindent_string)
+					line.text.push(preindent_string);
+				flags.indentation_level = print_indent_string(flags.indentation_level);
 			} else if (output_space_before_token)
 				line.text.push(' ');
 			output_space_before_token = undefined;
@@ -4573,7 +4565,7 @@ export class Lexer {
 			}
 
 			set_mode(next_mode);
-			flags.indentation_level = real_indentation_level();
+			flags.indentation_level = previous_flags.indentation_level = real_indentation_level();
 			print_token();
 
 			// (options\n...\n)
@@ -4605,13 +4597,12 @@ export class Lexer {
 			output_space_before_token = Boolean(opt.space_in_paren && !(last_type === 'TK_START_EXPR' && !opt.space_in_empty_paren));
 			restore_mode();
 			if (just_added_newline()) {
-				if (previous_flags.indentation_level === flags.indentation_level) {
-					deindent();
-					if (previous_flags.indentation_level === flags.indentation_level)
-						trim_newlines();
-				}
+				if (previous_flags.indentation_level === flags.indentation_level)
+					trim_newlines();
 			}
 			print_token();
+			if (flags.mode !== MODE.BlockStatement)
+				indent();
 		}
 
 		function handle_start_block() {
