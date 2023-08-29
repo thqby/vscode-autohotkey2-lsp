@@ -17,7 +17,7 @@ import {
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workspacefolder, setting, signatureProvider, sleep,
 	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, workspaceSymbolProvider, inWorkspaceFolders,
-	parseWorkspaceFolders, winapis, update_settings, utils, parseinclude
+	parseWorkspaceFolders, winapis, update_settings, utils, parseinclude, update_version
 } from './common';
 import { get_ahkProvider } from './ahkProvider';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
@@ -313,7 +313,8 @@ function initpathenv(samefolder = false) {
 		}
 		Object.assign(pathenv, Object.fromEntries(data.replace(/\t[A-Z]:\\/g, m => m.toLowerCase()).split('|').map(l => l.split('\t'))));
 		initnum = 1;
-		if (pathenv.version?.match(/^1\./))
+		update_version(pathenv.version ??= '2.0.0');
+		if (pathenv.version.match(/^1\./))
 			connection.window.showErrorMessage(setting.versionerr());
 		if (!samefolder) {
 			libdirs.length = 0;
@@ -326,14 +327,10 @@ function initpathenv(samefolder = false) {
 		pathenv.h = (pathenv.h ?? '0').slice(0, 1);
 		if (pathenv.h === '1') {
 			if (!isahk2_h)
-				set_ahk_h(true), samefolder = false;
-			if (!hasahk2_hcache)
-				hasahk2_hcache = true, loadahk2('ahk2_h'), loadahk2('winapi', 4);
+				set_ahk_h(true), samefolder = false, loadahk2('ahk2_h'), loadahk2('winapi', 4);
 		} else {
 			if (isahk2_h)
-				set_ahk_h(false), samefolder = false;
-			if (hasahk2_hcache)
-				hasahk2_hcache = false, initahk2cache(), loadahk2();
+				set_ahk_h(false), samefolder = false, initahk2cache(), loadahk2();
 		}
 		if (samefolder)
 			return;

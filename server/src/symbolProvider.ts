@@ -233,7 +233,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			case SymbolKind.Function:
 				st = SemanticTokenTypes.function; break;
 		}
-		if ((tk = doc.tokens[offset = doc.document.offsetAt(it.selectionRange.start)]) && st !== undefined) {
+		if ((tk = doc.tokens[offset = doc.document.offsetAt(it.selectionRange.start)]) && st !== undefined && !tk.ignore) {
 			if ((stk = tk.semantic) === undefined) {
 				tk.semantic = stk = { type: st };
 				if (it.kind === SymbolKind.Variable && (<Variable>it).def && (kind === SymbolKind.Class || kind === SymbolKind.Function))

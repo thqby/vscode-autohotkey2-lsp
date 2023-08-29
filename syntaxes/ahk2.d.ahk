@@ -1616,9 +1616,21 @@ NumPut(Type1, Number1, *, Target [, Offset]) => Number
 ObjAddRef(Ptr) => Number
 
 /**
+ * Allocates Size bytes and stores the address in the object's data pointer field.
+ * @since v2.1-ptype
+ */
+ObjAllocData(Obj, Size) => void
+
+/**
  * Create a binding function object, which can call methods of the specified object.
  */
 ObjBindMethod(Obj, Method := 'Call', Params*) => Func
+
+/**
+ * Immediately frees data allocated by ObjAllocData (it would otherwise be freed when the object is deleted).
+ * @since v2.1-ptype
+ */
+ObjFreeData(Obj) => void
 
 /**
  * Convert the address to a suitable reference.
@@ -1639,6 +1651,18 @@ ObjGetBase(Value) => Object
  * The current capacity of the internal attribute array of the object.
  */
 ObjGetCapacity(Obj) => Number
+
+/**
+ * Gets the object's data pointer (also valid if the object has typed properties).
+ * @since v2.1-ptype
+ */
+ObjGetDataPtr(Obj) => Number
+
+/**
+ * Gets the size which was passed to ObjAllocData (if that wasn't called, it returns 0).
+ * @since v2.1-ptype
+ */
+ObjGetDataSize(Obj) => Number
 
 /**
  * If the object has the attribute of this name, it returns true, otherwise it returns false.
@@ -1680,6 +1704,12 @@ ObjSetBase(Obj, BaseObj) => void
  * @param MaxProps new capacity. If it is less than the current number of own properties, use that number and release all unused space.
  */
 ObjSetCapacity(Obj, MaxProps) => void
+
+/**
+ * Sets the object's data pointer. The script may use ObjGetDataPtr to retrieve it. The value is not required to be a valid pointer, unless Obj has typed properties, in which case it had better point to a valid struct. ObjSetDataPtr does not affect nested objects, as they each have their own data pointer (which points into the outer object's original data).
+ * @since v2.1-ptype
+ */
+ObjSetDataPtr(Obj, Ptr) => void
 
 /**
  * Register a function or function object that will run whenever the contents of the clipboard are changed.
@@ -2266,6 +2296,11 @@ Tan(Number) => Number
  * Thread 'Interrupt' [, Duration, LineCount]
  */
 Thread(SubFunction [, Value1, Value2]) => void
+
+/**
+ * @since v2.1-alpha.3
+ */
+Throw(Value*) => void
 
 /**
  * Create a top window anywhere on the screen.

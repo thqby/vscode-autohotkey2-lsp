@@ -57,6 +57,7 @@ export namespace diagnostic {
 	export const propemptyparams = localize('diagnostic.propemptyparams', 'Empty [] not permitted');
 	export const propnotinit = localize('diagnostic.propnotinit', 'Property declaration is not initialized');
 	export const requirev1 = localize('diagnostic.requirev1', 'This script requires AutoHotkey v1, and the lexer stops parsing.');
+	export const requireversion = localize('diagnostic.requireversion', 'This feature requires the AutoHotkey version >= v{0}');
 	export const requirevariable = localize('diagnostic.requirevariable', "'&' requires a variable");
 	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name');
 	export const resourcenotfound = localize('diagnostic.resourcenotfound', 'No resource found or could not be resolved');

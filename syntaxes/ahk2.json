@@ -285,7 +285,7 @@
 			"prefix": "static"
 		},
 		{
-			"body": "throw ",
+			"body": "throw",
 			"description": "Indicates that an error occurred. The signal can be caught by a try-catch statement.",
 			"prefix": "throw"
 		},

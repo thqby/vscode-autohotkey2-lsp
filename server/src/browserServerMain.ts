@@ -14,7 +14,7 @@ import {
 	loadahk2, loadlocalize, prepareRename, rangeFormatting, referenceProvider, renameProvider,
 	semanticTokensOnFull, semanticTokensOnRange, set_ahk_h, set_Connection,
 	set_dirname, set_locale, set_Workspacefolder, signatureProvider, symbolProvider, typeFormatting,
-	workspaceFolders, workspaceSymbolProvider, update_settings
+	workspaceFolders, workspaceSymbolProvider, update_settings, update_version
 } from './common';
 
 export const languageServer = 'ahk2-language-server';
@@ -118,6 +118,7 @@ connection.onInitialize((params: InitializeParams) => {
 	set_dirname((configs as any).extensionUri);
 	loadlocalize();
 	update_settings(configs);
+	update_version('3.0.0');
 	initahk2cache();
 	loadahk2();
 	loadahk2('ahk2_h');

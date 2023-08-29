@@ -29,6 +29,7 @@ export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let symbolcache: { [uri: string]: SymbolInformation[] } = {};
 export let hoverCache: { [key: string]: [string, Hover | undefined] } = {}, libdirs: string[] = [];
 export let lexers: { [key: string]: Lexer } = {}, pathenv: { [key: string]: string } = { space: ' ', tab: '\t' };
+export let ahk_version = encode_version('3.0.0.0');
 export let completionItemCache = {
 	constant: [] as CompletionItem[],
 	directive: [] as CompletionItem[],
@@ -83,6 +84,8 @@ export let utils = {
 	get_RCDATA: (path?: string) => (0 ? { uri: '', path: '' } : undefined),
 	get_ahkProvider: async () => null as any
 };
+
+export const alpha_3 = encode_version('2.1.0.3');
 
 export let locale = 'en-us';
 export type Maybe<T> = T | undefined;
@@ -488,6 +491,19 @@ export function update_settings(configs: AHKLSSettings) {
 		configs.Files.Exclude = t;
 	}
 	Object.assign(extsettings, configs);
+}
+
+function encode_version(version: string) {
+	let v = (version.replace(/-\w+/, '.0') + '.0').split('.');
+	let n = 0;
+	for (let i = 0; i < 4; i++)
+		n += parseInt(v[i]) * 2 ** ((3 - i) * 10);
+	return n;
+}
+
+export function update_version(version: string) {
+	ahk_version = encode_version('2.1.0.3');
+	ahk_version = encode_version(version);
 }
 
 export async function sendAhkRequest(method: string, params: any[]) {

@@ -1616,9 +1616,21 @@ NumPut(Type1, Number1, *, Target [, Offset]) => Number
 ObjAddRef(Ptr) => Number
 
 /**
+ * 分配Size字节并将地址存储在对象的数据指针字段中.
+ * @since v2.1-ptype
+ */
+ObjAllocData(Obj, Size) => void
+
+/**
  * 创建一个绑定函数对象, 它能调用指定对象的方法.
  */
 ObjBindMethod(Obj, Method := 'Call', Params*) => Func
+
+/**
+ * 立即释放由ObjAllocData分配的数据(否则在对象被删除时将被释放).
+ * @since v2.1-ptype
+ */
+ObjFreeData(Obj) => void
 
 /**
  * 将地址转换为一个合适的引用.
@@ -1639,6 +1651,18 @@ ObjGetBase(Value) => Object
  * 对象内部属性数组的当前容量.
  */
 ObjGetCapacity(Obj) => Number
+
+/**
+ * 获取对象的数据指针(如果对象具有类型化属性也有效).
+ * @since v2.1-ptype
+ */
+ObjGetDataPtr(Obj) => Number
+
+/**
+ * 获取传递给ObjAllocData的大小(如果没有调用，则返回0).
+ * @since v2.1-ptype
+ */
+ObjGetDataSize(Obj) => Number
 
 /**
  * 如果对象拥有此名称的属性,则返回true,否则返回false.
@@ -1680,6 +1704,14 @@ ObjSetBase(Obj, BaseObj) => void
  * @param MaxProps 新的容量. 如果小于自有属性的当前数量, 则使用该数量, 并释放所有未使用的空间.
  */
 ObjSetCapacity(Obj, MaxProps) => void
+
+/**
+ * 设置对象的数据指针. 脚本可以使用ObjGetDataPtr来检索它.
+ * 该值不需要是一个有效的指针，除非Obj具有类型化属性，在这种情况下，它最好指向一个有效的结构体.
+ * ObjSetDataPtr不影响嵌套对象，因为它们每个都有自己的数据指针(指向外部对象的原始数据).
+ * @since v2.1-ptype
+ */
+ObjSetDataPtr(Obj, Ptr) => void
 
 /**
  * 注册一个每当剪贴板内容发生改变时都会运行的函数或函数对象.
@@ -2266,6 +2298,11 @@ Tan(Number) => Number
  * Thread 'Interrupt' [, Duration, LineCount]
  */
 Thread(SubFunction [, Value1, Value2]) => void
+
+/**
+ * @since v2.1-alpha.3
+ */
+Throw(Value*) => void
 
 /**
  * 在屏幕的任意位置创建置顶的窗口.
