@@ -2247,7 +2247,7 @@ export class Lexer {
 								tpexp += ` $${_this.anonymous.push(tn) - 1}`;
 								break;
 							} else if (tk.type as string === 'TK_OPERATOR' && (!tk.topofline || !tk.content.match(/^(!|~|not|\+\+|--)$/i))) {
-								let suf = ['++', '--'].includes(tk.content);
+								let suf = !tk.topofline && ['++', '--'].includes(tk.content);
 								if (input.charAt(lk.offset - 1) !== '%' && input.charAt(lk.offset + lk.length) !== '%') {
 									if (predot) {
 										tpexp += '.' + lk.content;
@@ -2256,6 +2256,7 @@ export class Lexer {
 										tpexp += check_concat(lk) + lk.content;
 										let vr = addvariable(lk);
 										if (vr) {
+											byref ? (vr.def = vr.ref = vr.assigned = true) : byref === false && (vr.returntypes = { '#number': 0 });
 											if (suf)
 												vr.def = true, vr.returntypes = { '#number': 0 };
 											else if (tk.content === '??' || tk.ignore)
@@ -2265,7 +2266,7 @@ export class Lexer {
 								} else if (predot) {
 									tpexp += '.#any', maybeclassprop(lk, null);
 									tk = lk, lk = tk.previous_token ?? EMPTY_TOKEN;
-									parse_prop(), nexttoken(), suf ||= ['++', '--'].includes(tk.content);
+									parse_prop(), nexttoken(), suf ||= !tk.topofline && ['++', '--'].includes(tk.content);
 								} else
 									tpexp += check_concat(lk) + '#any', lk.ignore = true;
 								if (!suf)
@@ -2525,7 +2526,7 @@ export class Lexer {
 									break;
 								}
 								tpexp += ' ' + tk.content;
-								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^([:?%]|\+\+|--|=>)$/) && !tk.content.match(/[+\-%!~]|^not$/i))
+								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^([:?%]|\+\+|--|=>)$/) && !tk.content.match(/[+\-%!~&]|^not$/i))
 									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, tk.length);
 								if (tk.content === '&') {
 									if (lk.paraminfo || ['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR', 'TK_OPERATOR', ''].includes(lk.type)) {
@@ -3018,7 +3019,7 @@ export class Lexer {
 											else tpexp += tp, vr.def = true;
 										} else if (byref)
 											tpexp = tpexp.slice(0, -1) + '#varref';
-										else tpexp += check_concat(lk) + lk.content, ['++', '--'].includes(tk.content) && (byref = false);
+										else tpexp += check_concat(lk) + lk.content, !tk.topofline && ['++', '--'].includes(tk.content) && (byref = false);
 										if (byref !== undefined)
 											vr.def = true, byref ? (vr.ref = vr.assigned = true) : (vr.returntypes = { '#number': 0 });
 										else if (tk.content === '??' || tk.ignore && tk.content === '?')
