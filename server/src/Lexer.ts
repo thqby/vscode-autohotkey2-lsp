@@ -264,6 +264,7 @@ export class Lexer {
 	public maybev1?: number;
 	public actionwhenv1?: ActionType;
 	private anonymous: DocumentSymbol[] = [];
+	private hotstringExecuteAction = false;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let input: string, output_lines: { text: string[], indent: number }[], flags: any, opt: FormatOptions, previous_flags: any, flag_store: any[], includetable: { [uri: string]: string };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
@@ -2022,6 +2023,11 @@ export class Lexer {
 							nexttoken(), next = false;
 							last_hotif = tk.topofline ? undefined : lk.offset;
 						}
+						break;
+					case '#hotstring':
+						l = data.content?.trim().toLowerCase() ?? '';
+						if (l !== 'nomouse' && l !== 'endchars')
+							_this.hotstringExecuteAction = /x(?!0)/.test(l);
 						break;
 					default:
 						if (l.match(/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i) && !stop_parse(tk, true))
@@ -3929,8 +3935,8 @@ export class Lexer {
 				if (line.includes('::') && (block_mode || !'"\''.includes(line[0]) ||
 					!['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lst.type))) {
 					if (m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i)) {
-						let execute: any;
-						if ((execute = m[2].match(/[xX]/)) || m[4].match(/^\s*\{?$/))
+						let execute: boolean;
+						if ((execute = /x(?!0)/i.test(m[2])) || /^\s*\{?$/.test(m[4]) || (execute = _this.hotstringExecuteAction && !/x0/i.test(m[2])))
 							parser_pos += m[1].length - 1, lst = createToken(m[1], 'TK_HOT', offset, m[1].length, 1);
 						else {
 							last_LF = next_LF, parser_pos = offset + m[0].length;
@@ -3942,7 +3948,7 @@ export class Lexer {
 						lst.ignore = true, add_sharp_foldingrange();
 						if (!m[3])
 							_this.addDiagnostic(diagnostic.invalidhotdef(), lst.offset, lst.length);
-						if (lst.type === 'TK_HOTLINE' || (!execute && !m[4].match(/^\s*\{/))) {
+						if (lst.type === 'TK_HOTLINE' || (!execute && !/^\s*\{/.test(m[4]))) {
 							if (depth > 5) {
 								delete _this.tokens[lst.offset];
 								return lst;
@@ -5145,6 +5151,7 @@ export class Lexer {
 		this.funccall.length = this.diagnostics.length = this.foldingranges.length = 0;
 		this.children.length = this.dllpaths.length = this.tokenranges.length = this.anonymous.length = 0;
 		this.includedir = new Map(), this.dlldir = new Map();
+		this.hotstringExecuteAction = false;
 		delete (<any>this).checkmember;
 	}
 
