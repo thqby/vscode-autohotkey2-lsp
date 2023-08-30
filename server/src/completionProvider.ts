@@ -328,7 +328,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 											} else {
 												docs.forEach(d => {
 													d.dllpaths.forEach(path => {
-														if (path.endsWith(l)) {
+														if (path.toLowerCase().endsWith(l)) {
 															dlls[path] = 1;
 															if (onlyfile && path.includes('/'))
 																onlyfile = false;

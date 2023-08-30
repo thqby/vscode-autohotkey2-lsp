@@ -3606,9 +3606,10 @@ export class Lexer {
 						else {
 							if (!m.match(/\.\w+$/))
 								m = m + '.dll';
+							m = pathanalyze(m, [], dlldir)?.path ?? m;
 							if (m.includes(':'))
-								_this.dllpaths.push(m.replace(/\\/g, '/').toLowerCase());
-							else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/').toLowerCase());
+								_this.dllpaths.push(m.replace(/\\/g, '/'));
+							else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/'));
 						}
 					} else {
 						if (tk) {
