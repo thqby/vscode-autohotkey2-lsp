@@ -4604,7 +4604,7 @@ export class Lexer {
 			}
 			print_token();
 			if (flags.mode !== MODE.BlockStatement)
-				indent();
+				flags.indentation_level = (flags.parent ?? flags).indentation_level + 1;
 		}
 
 		function handle_start_block() {
@@ -4678,7 +4678,7 @@ export class Lexer {
 					print_newline(true);
 				output_space_before_token = space_in_other;
 			} else if (flags.mode !== MODE.BlockStatement)
-				indent();
+				flags.indentation_level = (flags.parent ?? flags).indentation_level + 1;
 		}
 
 		function handle_word() {
