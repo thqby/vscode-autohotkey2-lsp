@@ -5882,7 +5882,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 				if (n) {
 					let nn = n[0].node;
 					if (nn === ahkvars['REGEXMATCH']) {
-						if (res.index = 2)
+						if (res.index === 2)
 							return ['#regexmatchinfo'];
 					} else if (ahkvars[res.name.toUpperCase()] === nn)
 						return ['#number'];
