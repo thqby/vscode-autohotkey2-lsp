@@ -118,7 +118,7 @@ export interface Variable extends DocumentSymbol {
 	returntypes?: { [exp: string]: any } | null
 	range_offset?: [number, number]
 	uri?: string
-	assigned?: boolean
+	assigned?: boolean | 1	// 1, ??=
 }
 
 export interface SemanticToken {
@@ -2057,7 +2057,7 @@ export class Lexer {
 								result.push(...parse_expression(undefined, o));
 								_parent.ranges?.push([pp, lk.offset + lk.length]);
 								if (vr) {
-									vr.returntypes = { [equ === ':=' ? Object.keys(o).pop()?.toUpperCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
+									vr.returntypes = { [equ === ':=' || equ === '??=' && (vr.assigned = 1) ? Object.keys(o).pop()?.toUpperCase() || '#any' : equ === '.=' ? '#string' : '#number']: true };
 									vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) }, vr.def = true;
 									let tt = vr.returntypes;
 									for (const t in tt)
@@ -2305,7 +2305,7 @@ export class Lexer {
 										next = true;
 										result.push(...parse_expression(inpair, o, mustexp || 1, end ?? (ternarys.length ? ':' : undefined)));
 										vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
-										let tp = equ === ':=' ? Object.keys(o).pop()?.toUpperCase() || '#any' : equ === '.=' ? '#string' : '#number';
+										let tp = equ === ':=' || equ === '??=' && (vr.assigned = 1) ? Object.keys(o).pop()?.toUpperCase() || '#any' : equ === '.=' ? '#string' : '#number';
 										vr.returntypes ??= { [tp]: vr.range.end };
 										if (vr.ref)
 											tpexp = tpexp.slice(0, -1) + '#varref';
@@ -3012,7 +3012,7 @@ export class Lexer {
 											next = true;
 											result.push(...parse_expression(e, o, 2, ternarys.length ? ':' : undefined));
 											vr.range = { start: vr.range.start, end: document.positionAt(lk.offset + lk.length) };
-											let tp = equ === ':=' ? Object.keys(o).pop()?.toUpperCase() || '#any' : equ === '.=' ? '#string' : '#number'
+											let tp = equ === ':=' || equ === '??=' && (vr.assigned = 1) ? Object.keys(o).pop()?.toUpperCase() || '#any' : equ === '.=' ? '#string' : '#number'
 											vr.returntypes ??= { [tp]: vr.range.end };
 											if (byref)
 												tpexp = tpexp.slice(0, -1) + '#varref';
@@ -3245,7 +3245,7 @@ export class Lexer {
 					else if (result.length > l && lk.type === 'TK_WORD') {
 						let vr = result[result.length - 1] as Variable;
 						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
-							vr.assigned = true, vr.returntypes ??= null;
+							vr.assigned ??= 1, vr.returntypes ??= null;
 					}
 					return true;
 				}
@@ -3516,7 +3516,7 @@ export class Lexer {
 							if (!(t = dec[k]))
 								_this.declaration[k] ??= fn.global[k] = v, v.infunc = true;
 							else if (t.kind === SymbolKind.Function && v.def)
-								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
+								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
 								t.def = true, t.assigned ||= Boolean(v.returntypes);
 						});
@@ -3532,7 +3532,7 @@ export class Lexer {
 								else if (assme_static)
 									v.static = null;
 							} else if (t.kind === SymbolKind.Function)
-								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
+								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
 								t.def = true, t.assigned ||= Boolean(v.returntypes);
 						});
@@ -6481,46 +6481,46 @@ export function samenameerr(a: DocumentSymbol, b: DocumentSymbol): string {
 }
 
 export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: DocumentSymbol[], diags: any) {
-	let _low = '', vit: Variable;
+	let _low = '', v1: Variable, v2: Variable;
 	for (const it of arr) {
 		if (!it.name || !it.selectionRange.end.character)
 			continue;
-		switch ((vit = it as Variable).kind) {
+		switch ((v1 = it as Variable).kind) {
 			case SymbolKind.Variable:
-				vit.assigned ||= Boolean(vit.returntypes);
+				v1.assigned ||= Boolean(v1.returntypes);
 			case SymbolKind.Class:
 			case SymbolKind.Function:
-				if (!decs[_low = it.name.toUpperCase()]) {
+				if (!(v2 = decs[_low = it.name.toUpperCase()])) {
 					decs[_low] = it;
-				} else if ((<any>decs[_low]).infunc) {
-					if (it.kind === SymbolKind.Variable) {
-						if (vit.def && decs[_low].kind !== SymbolKind.Variable) {
-							diags.push({ message: diagnostic.assignerr(decs[_low].kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+				} else if ((<any>v2).infunc) {
+					if (v1.kind === SymbolKind.Variable) {
+						if (v1.def && v2.kind !== SymbolKind.Variable) {
+							if (v1.assigned !== 1)
+								diags.push({ message: diagnostic.assignerr(v2.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 							continue;
 						}
-					} else if ((<Variable>decs[_low]).def)
-						diags.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: decs[_low].selectionRange, severity: DiagnosticSeverity.Error });
-					else if (decs[_low].kind === SymbolKind.Function) {
-						diags.push({ message: samenameerr(decs[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+					} else if (v2.def)
+						v2.assigned !== 1 && diags.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange, severity: DiagnosticSeverity.Error });
+					else if (v2.kind === SymbolKind.Function) {
+						diags.push({ message: samenameerr(v2, it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 						continue;
 					}
 					decs[_low] = it;
-				} else if (it.kind === SymbolKind.Variable) {
-					if (decs[_low].kind === SymbolKind.Variable) {
-						let t = decs[_low] as Variable;
-						if (vit.def && !t.def)
+				} else if (v1.kind === SymbolKind.Variable) {
+					if (v2.kind === SymbolKind.Variable) {
+						if (v1.def && !v2.def)
 							decs[_low] = it;
-						else t.assigned ||= vit.assigned;
-					} else if (vit.def)
-						delete vit.def, diags.push({ message: samenameerr(decs[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+						else v2.assigned ||= v1.assigned;
+					} else if (v1.def)
+						delete v1.def, v1.assigned !== 1 && diags.push({ message: samenameerr(v2, it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
 				} else {
-					if (decs[_low].kind === SymbolKind.Variable) {
-						if ((<Variable>decs[_low]).def)
-							delete (<Variable>decs[_low]).def, diags.push({ message: samenameerr(it, decs[_low]), range: decs[_low].selectionRange, severity: DiagnosticSeverity.Error });
+					if (v2.kind === SymbolKind.Variable) {
+						if (v2.def)
+							delete v2.def, v2.assigned !== 1 && diags.push({ message: samenameerr(it, v2), range: v2.selectionRange, severity: DiagnosticSeverity.Error });
 						decs[_low] = it;
-					} else if ((<Variable>decs[_low]).def !== false)
-						diags.push({ message: samenameerr(decs[_low], it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
-					else if ((it as Variable).def !== false)
+					} else if (v2.def !== false)
+						diags.push({ message: samenameerr(v2, it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+					else if (v1.def !== false)
 						decs[_low] = it;
 				}
 				break;
