@@ -5152,7 +5152,7 @@ export class Lexer {
 		: { node: DocumentSymbol, uri: string, ref?: boolean, scope?: DocumentSymbol, fn_is_static?: boolean } | undefined | false | null {
 		let node: DocumentSymbol | undefined, t: DocumentSymbol | undefined, uri = this.uri;
 		name = name.toUpperCase();
-		if (kind === SymbolKind.Variable || kind === SymbolKind.Class || kind === SymbolKind.Function) {
+		if (kind === SymbolKind.Variable || kind === SymbolKind.Class || kind === SymbolKind.Function || kind === SymbolKind.TypeParameter) {
 			let scope: DocumentSymbol | undefined, bak: DocumentSymbol | undefined, ref = true, fn_is_static = false;
 			if (name.startsWith('$')) {
 				let index = parseInt(name = name.substring(1));

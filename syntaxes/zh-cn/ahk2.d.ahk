@@ -1529,7 +1529,7 @@ MouseClick([WhichButton, X, Y, ClickCount, Speed, DownOrUp, Relative]) => void
  * 
  * R: 将 X1 和 Y1 坐标视为距离当前鼠标位置的偏移. 换句话说, 会把光标从当前位置往右移动 X1 像素(负值则往左) 且往下移动 Y1 像素(负值则往上). 同样地, 会把 X2 和 Y2 坐标视为距离 X1 和 Y1 坐标的偏移. 例如, 后面的例子中会首先把鼠标从起始位置往下和往右移动 5 个像素, 然后从这个位置往下和往右拖动 10 个像素: MouseClickDrag "Left", 5, 5, 10, 10, , "R".
  */
-MouseClickDrag(WhichButton, X1, Y1, X2, Y2 [, Speed, Relative]) => void
+MouseClickDrag(WhichButton, X1?, Y1?, X2, Y2 [, Speed, Relative]) => void
 
 /**
  * 获取鼠标光标的当前位置, 以及它悬停在哪个窗口和控件上.
