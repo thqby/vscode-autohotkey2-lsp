@@ -313,8 +313,8 @@ function initpathenv(samefolder = false) {
 		}
 		Object.assign(pathenv, Object.fromEntries(data.replace(/\t[A-Z]:\\/g, m => m.toLowerCase()).split('|').map(l => l.split('\t'))));
 		initnum = 1;
-		update_version(pathenv.version ??= '2.0.0');
-		if (pathenv.version.match(/^1\./))
+		update_version(pathenv.ahkversion ??= '2.0.0');
+		if (pathenv.ahkversion.startsWith('1.'))
 			connection.window.showErrorMessage(setting.versionerr());
 		if (!samefolder) {
 			libdirs.length = 0;

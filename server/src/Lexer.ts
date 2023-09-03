@@ -2006,7 +2006,8 @@ export class Lexer {
 						}
 						break;
 					case '#requires':
-						h ||= (l = data.content.toLowerCase()).startsWith('autohotkey_h');
+						l = data.content.toLowerCase();
+						h ||= l.startsWith('autohotkey_h');
 						if (m = l.match(/^\w+\s+v(1|2)/)) {
 							if (m[1] === '2')
 								requirev2 = true;
@@ -2096,6 +2097,8 @@ export class Lexer {
 										let _p = _parent, static_init = (currsymbol as ClassNode).staticdeclaration.__INIT as FuncNode;
 										let scl = static_init.children!.length;
 										delete v.def;
+										if (ahk_version < alpha_3)
+											_this.addDiagnostic(diagnostic.requireversion('2.1-alpha.3'), lk.offset, lk.length, DiagnosticSeverity.Warning);
 										lk = tk, tk = get_next_token(), err = '';
 										if (allIdentifierChar.test(tk.content)) {
 											_tp = tk, tpexp += tk.content, nexttoken();
@@ -4449,7 +4452,7 @@ export class Lexer {
 					parser_pos = bak;
 					if (')]},:??'.includes(t.content) || t.content === '.' && t.type !== 'TK_OPERATOR') {
 						tk.ignore = true;
-						if (!')]},:'.includes(t.content))
+						if (!')]},:'.includes(t.content) && ahk_version < alpha_3 - 1)
 							_this.addDiagnostic(diagnostic.requireversion('2.1-alpha.2'), tk.offset, tk.length, DiagnosticSeverity.Warning);
 					}
 					return lst = tk;

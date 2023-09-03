@@ -502,7 +502,6 @@ function encode_version(version: string) {
 }
 
 export function update_version(version: string) {
-	ahk_version = encode_version('2.1.0.3');
 	ahk_version = encode_version(version);
 }
 
