@@ -3970,11 +3970,11 @@ export class Lexer {
 						}
 						return lst;
 					} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`?;|\w+|[\x21-\x3A\x3C-\x7E]|[^\x00-\x7f]))|~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f])\s*&\s*~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))(\s+up)?\s*::)(.*)$/i)) {
-						let mm = m[9].match(/^(\s*)(([<>~*!+#^]*?)(`[{;]|[a-z]\w+|[\x21-\x7A\x7C-\x7E]|[^\x00-\x7f]))$/i);
+						let mm = m[9].match(/^(\s*)(([<>~*!+#^]*?)(`[{;]|[a-z]\w+|.))$/i);
 						add_sharp_foldingrange();
 						if (mm) {
 							let t = mm[4].toLowerCase();
-							if (!allIdentifierChar.test(t) || KEYS_RE.test(t) && !t.startsWith('joy')) {
+							if (t.length === 1 || KEYS_RE.test(t) && !t.startsWith('joy')) {
 								last_LF = next_LF, parser_pos = offset + m[0].length;
 								lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, 1);
 								offset += lst.length + mm[1].length, lst.skip_pos = parser_pos;
