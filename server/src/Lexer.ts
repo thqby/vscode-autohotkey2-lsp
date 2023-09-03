@@ -3973,7 +3973,7 @@ export class Lexer {
 						}
 						return lst;
 					} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`?;|\w+|[\x21-\x3A\x3C-\x7E]|[^\x00-\x7f]))|~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f])\s*&\s*~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))(\s+up)?\s*::)(.*)$/i)) {
-						let mm = m[9].match(/^(\s*)(([<>~*!+#^]*?)(`[{;]|[a-z]\w+|.))$/i);
+						let mm = m[9].match(/^(\s*)(([<>~*!+#^]*?)(`[{;]|[a-z]\w+|[^{]))$/i);
 						add_sharp_foldingrange();
 						if (mm) {
 							let t = mm[4].toLowerCase();
