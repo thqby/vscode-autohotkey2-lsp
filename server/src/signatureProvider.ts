@@ -13,7 +13,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 	let { name, pos, index, kind } = res, ts: any = {}, iscall = true, prop = '';
 	if (reset_detect_cache(), kind !== SymbolKind.Function) {
 		let t = (context = doc.buildContext(pos)).text.toLowerCase();
-		t = t.replace(/\.([^.()]+)$/, (_, m) => (prop = m.toLowerCase(), ''));
+		t = t.replace(/\.([^.()]*)$/, (_, m) => (prop = m.toLowerCase(), ''));
 		if (prop && !allIdentifierChar.test(prop))
 			return;
 		if (kind === SymbolKind.Property)

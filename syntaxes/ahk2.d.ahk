@@ -1192,6 +1192,8 @@ IL_Destroy(ImageListID) => Number
 
 /**
  * Search for images in the screen area.
+ * @param OutputVarX [@since v2.1-alpha.3] Can be omitted.
+ * @param OutputVarY [@since v2.1-alpha.3] Can be omitted.
  * @param ImageFile image file name, if the absolute path is not specified, it is assumed to be in A_WorkingDir. Supported image formats include ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF and WMF (BMP images must 16-bit or higher). Other sources of icons include the following types of files: EXE, DLL, CPL, SCR and other types that contain icon resources.
  * 
  * Option: You can directly add zero or more of the following strings in front of the file name. Use a single space or tab to separate the options. For example: "*2 *w100 *h-1 C:\Main Logo.bmp".
@@ -1206,7 +1208,7 @@ IL_Destroy(ImageListID) => Number
  * 
  * Bitmap or icon handles can be used to replace file names. For example, "HBITMAP:*" handle.
  */
-ImageSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ImageFile) => Number
+ImageSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ImageFile) => Number
 
 /**
  * Delete the value in the standard format .ini file.
@@ -1616,21 +1618,9 @@ NumPut(Type1, Number1, *, Target [, Offset]) => Number
 ObjAddRef(Ptr) => Number
 
 /**
- * Allocates Size bytes and stores the address in the object's data pointer field.
- * @since v2.1-ptype
- */
-ObjAllocData(Obj, Size) => void
-
-/**
  * Create a binding function object, which can call methods of the specified object.
  */
 ObjBindMethod(Obj, Method := 'Call', Params*) => Func
-
-/**
- * Immediately frees data allocated by ObjAllocData (it would otherwise be freed when the object is deleted).
- * @since v2.1-ptype
- */
-ObjFreeData(Obj) => void
 
 /**
  * Convert the address to a suitable reference.
@@ -1653,14 +1643,14 @@ ObjGetBase(Value) => Object
 ObjGetCapacity(Obj) => Number
 
 /**
- * Gets the object's data pointer (also valid if the object has typed properties).
- * @since v2.1-ptype
+ * Returns the address of the object's structured data (typed properties).
+ * @since v2.1-alpha.3
  */
 ObjGetDataPtr(Obj) => Number
 
 /**
- * Gets the size which was passed to ObjAllocData (if that wasn't called, it returns 0).
- * @since v2.1-ptype
+ * Returns the size of the object's structure (typed properties), in bytes.
+ * @since v2.1-alpha.3
  */
 ObjGetDataSize(Obj) => Number
 
@@ -1706,8 +1696,9 @@ ObjSetBase(Obj, BaseObj) => void
 ObjSetCapacity(Obj, MaxProps) => void
 
 /**
- * Sets the object's data pointer. The script may use ObjGetDataPtr to retrieve it. The value is not required to be a valid pointer, unless Obj has typed properties, in which case it had better point to a valid struct. ObjSetDataPtr does not affect nested objects, as they each have their own data pointer (which points into the outer object's original data).
- * @since v2.1-ptype
+ * Sets the address of the object's structured data (typed properties).
+ * ObjSetDataPtr does not affect nested objects, as they each have their own data pointer (which points into the outer object's original data).
+ * @since v2.1-alpha.3
  */
 ObjSetDataPtr(Obj, Ptr) => void
 
@@ -1782,10 +1773,12 @@ PixelGetColor(X, Y, Mode := '') => String
 
 /**
  * Search for pixels of the specified color in the screen area.
+ * @param OutputVarX [@since v2.1-alpha.3] Can be omitted.
+ * @param OutputVarY [@since v2.1-alpha.3] Can be omitted.
  * @param ColorID The color ID to be searched. It is usually represented by a hexadecimal number in red, green and blue (RGB) format. For example: 0x9d6346. The color ID can be determined by Window Spy (accessible from the tray menu) or PixelGetColor.
  * @param Variation is a number between 0 and 255 (inclusive), used to indicate the permissible gradient value of the red/green/blue channel intensity of each pixel color in any direction. If the color you are looking for is not always exactly the same This parameter is very useful. If you specify 255 as the gradient value, all colors will be matched. The default gradient value is 0.
  */
-PixelSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ColorID, Variation := 0) => Number
+PixelSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ColorID, Variation := 0) => Number
 
 /**
  * Place the message in the message queue of the window or control.
@@ -2736,6 +2729,14 @@ class Buffer extends Object {
 }
 
 class Class extends Object {
+	/**
+	 * @param Name If specified, assign the class name to `ClassObj.Prototype.__Class`.
+	 * @param BaseClass `ClassObj.Base` is set to this, while `ClassObj.Prototype.Base` is set to `BaseClass.Prototype`.
+	 * @param Args If specified, any other parameters are passed to `static __New`, as in `ClassObj.__New(Args*)`.
+	 * @since v2.1-alpha.3
+	 */
+	static Call([Name,] BaseClass?, Args*) => this
+
 	/**
 	 * Retrieve or set the object on which all instances of the class are based.
 	 */

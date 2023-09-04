@@ -1192,6 +1192,8 @@ IL_Destroy(ImageListID) => Number
 
 /**
  * 在屏幕区域中搜索图像.
+ * @param OutputVarX [@since v2.1-alpha.3] 可以省略
+ * @param OutputVarY [@since v2.1-alpha.3] 可以省略
  * @param ImageFile 图像文件名, 如果未指定绝对路径, 则假定在 A_WorkingDir 中. 支持的图片格式包括 ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF 和 WMF(BMP 图像必须为 16 位或更高). 图标的其他来源包括以下类型的文件: EXE, DLL, CPL, SCR 和其他包含图标资源的类型.
  * 
  * 选项: 在文件名前面可以直接添加零个或多个下列字符串. 在选项间使用单个空格或 tab 分隔. 例如: "*2 *w100 *h-1 C:\Main Logo.bmp".
@@ -1206,7 +1208,7 @@ IL_Destroy(ImageListID) => Number
  * 
  * 位图或图标句柄可用于替代文件名. 例如, "HBITMAP:*" handle.
  */
-ImageSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ImageFile) => Number
+ImageSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ImageFile) => Number
 
 /**
  * 删除标准格式的 .ini 文件中的值.
@@ -1616,21 +1618,9 @@ NumPut(Type1, Number1, *, Target [, Offset]) => Number
 ObjAddRef(Ptr) => Number
 
 /**
- * 分配Size字节并将地址存储在对象的数据指针字段中.
- * @since v2.1-ptype
- */
-ObjAllocData(Obj, Size) => void
-
-/**
  * 创建一个绑定函数对象, 它能调用指定对象的方法.
  */
 ObjBindMethod(Obj, Method := 'Call', Params*) => Func
-
-/**
- * 立即释放由ObjAllocData分配的数据(否则在对象被删除时将被释放).
- * @since v2.1-ptype
- */
-ObjFreeData(Obj) => void
 
 /**
  * 将地址转换为一个合适的引用.
@@ -1653,14 +1643,14 @@ ObjGetBase(Value) => Object
 ObjGetCapacity(Obj) => Number
 
 /**
- * 获取对象的数据指针(如果对象具有类型化属性也有效).
- * @since v2.1-ptype
+ * 获取对象的结构化数据(类型化属性)的地址.
+ * @since v2.1-alpha.3
  */
 ObjGetDataPtr(Obj) => Number
 
 /**
- * 获取传递给ObjAllocData的大小(如果没有调用，则返回0).
- * @since v2.1-ptype
+ * 获取对象结构(类型化属性)的大小, 以字节为单位.
+ * @since v2.1-alpha.3
  */
 ObjGetDataSize(Obj) => Number
 
@@ -1706,10 +1696,9 @@ ObjSetBase(Obj, BaseObj) => void
 ObjSetCapacity(Obj, MaxProps) => void
 
 /**
- * 设置对象的数据指针. 脚本可以使用ObjGetDataPtr来检索它.
- * 该值不需要是一个有效的指针，除非Obj具有类型化属性，在这种情况下，它最好指向一个有效的结构体.
- * ObjSetDataPtr不影响嵌套对象，因为它们每个都有自己的数据指针(指向外部对象的原始数据).
- * @since v2.1-ptype
+ * 设置对象的结构化数据(类型化属性)的地址.
+ * ObjSetDataPtr不影响嵌套对象, 因为它们每个都有自己的数据指针(指向外部对象的原始数据).
+ * @since v2.1-alpha.3
  */
 ObjSetDataPtr(Obj, Ptr) => void
 
@@ -1784,10 +1773,12 @@ PixelGetColor(X, Y, Mode := '') => String
 
 /**
  * 在屏幕区域中搜索指定颜色的像素.
+ * @param OutputVarX [@since v2.1-alpha.3] 可以省略
+ * @param OutputVarY [@since v2.1-alpha.3] 可以省略
  * @param ColorID 要搜索的颜色 ID. 通常用红绿蓝(RGB) 格式的十六进制数表示. 例如: 0x9d6346. 颜色 ID 可以通过 Window Spy(可从托盘菜单访问) 或 PixelGetColor 来确定.
  * @param Variation 介于 0 和 255(包含) 之间的数字, 用于表示每个像素颜色红/绿/蓝通道强度在任一方向上允许的渐变值. 如果所查找的颜色并不总是完全相同的色度, 这个参数很有用. 如果指定 255 为渐变值, 则匹配所有颜色. 默认渐变值为 0.
  */
-PixelSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ColorID, Variation := 0) => Number
+PixelSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ColorID, Variation := 0) => Number
 
 /**
  * 将消息放置在窗口或控件的消息队列中.
@@ -2738,6 +2729,14 @@ class Buffer extends Object {
 }
 
 class Class extends Object {
+	/**
+	 * @param Name 如果指定, 则分配类名给`ClassObj.Prototype.__Class`.
+	 * @param BaseClass `ClassObj.Base`设置为`BaseClass`, 而`ClassObj.Prototype.Base`设置为`BaseClass.Prototype`.
+	 * @param Args 如果指定, 任何其他参数都传递给`static __New`, 如`ClassObk.__New(Args*)`.
+	 * @since v2.1-alpha.3
+	 */
+	static Call([Name,] BaseClass?, Args*) => this
+
 	/**
 	 * 检索或设置类的所有实例所基于的对象.
 	 */

@@ -2915,7 +2915,7 @@ export class Lexer {
 					let t = _pk.previous_token;
 					_pk.data = info.data = exps;
 					if (info.name || !_pk.topofline && t && _pk.prefix_is_whitespace === undefined
-						&& (t.previous_pair_pos !== undefined || t.type === 'TK_WORD'))
+						&& (t.previous_pair_pos !== undefined || t.type === 'TK_WORD' || t.type === 'TK_DOT'))
 						_pk.paraminfo = info, iscall = true;
 				}
 				while (nexttoken()) {
@@ -4456,7 +4456,8 @@ export class Lexer {
 							_this.addDiagnostic(diagnostic.requireversion('2.1-alpha.2'), tk.offset, tk.length, DiagnosticSeverity.Warning);
 					}
 					return lst = tk;
-				}
+				} else if (c === '??=' && ahk_version < alpha_3 - 1)
+					_this.addDiagnostic(diagnostic.requireversion('2.1-alpha.2'), offset, c.length, DiagnosticSeverity.Warning);
 				return lst = createToken(c, c.match(/([:.+\-*/|&^]|\/\/|>>|<<|\?\?)=/) ? 'TK_EQUALS' : 'TK_OPERATOR', offset, c.length, bg);
 			}
 
