@@ -5822,7 +5822,7 @@ export function detectExpType(doc: Lexer, exp: string, pos: Position, types: { [
 		.forEach(tp => types[tp] = searchcache[tp] ?? false);
 }
 
-export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?: DocumentSymbol }, pos?: Position) {
+export function detectVariableType(doc: Lexer | undefined, n: { node: DocumentSymbol, scope?: DocumentSymbol }, pos?: Position) {
 	let name = n.node.name.toLowerCase(), syms: DocumentSymbol[] = [], types: any = {};
 	if (name.match(/^[$@#]([\w.]|[^\x00-\x7f])+$/))
 		return [name];
@@ -5845,7 +5845,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 			syms.push(n.node);
 	} else {
 		syms.push(n.node);
-		for (const uri in doc.relevance) {
+		for (const uri in doc?.relevance) {
 			let v = lexers[uri]?.declaration?.[name];
 			if (v)
 				syms.push(v);
@@ -5858,7 +5858,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 				return ts;
 			else break;
 	}
-	let scope = pos ? doc.searchScopedNode(pos) : undefined, ite = syms[0] as Variable;
+	let scope = pos ? doc?.searchScopedNode(pos) : undefined, ite = syms[0] as Variable;
 	while (scope) {
 		if (scope.kind === SymbolKind.Class)
 			scope = (<ClassNode>scope).parent;
@@ -5878,7 +5878,7 @@ export function detectVariableType(doc: Lexer, n: { node: DocumentSymbol, scope?
 			} else
 				return [name];
 		}
-	if (ite) {
+	if (ite && doc) {
 		if (ite.ref) {
 			let res = getFuncCallInfo(doc, ite.selectionRange.start);
 			if (res) {
@@ -6030,16 +6030,15 @@ export function detectExp(doc: Lexer, exp: string, pos: Position): string[] {
 							}
 							break;
 						case SymbolKind.Variable:
-							if (lexers[uri])
-								detectVariableType(lexers[uri], it, uri === doc.uri ? pos : it.node.selectionRange.end).forEach(tp => {
-									tp.includes('=>') && (searchcache[tp] ??= gen_fat_fn(tp, uri, it.node, it.scope));
-									if (n = searchcache[tp]?.node) {
-										if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
-											for (const e in n.returntypes)
-												detectExp(lexers[uri], e, Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
-													.forEach(tp => ts[tp] = true);
-									}
-								});
+							detectVariableType(lexers[uri], it, uri === doc.uri ? pos : it.node.selectionRange.end).forEach(tp => {
+								tp.includes('=>') && (searchcache[tp] ??= gen_fat_fn(tp, uri, it.node, it.scope));
+								if (n = searchcache[tp]?.node) {
+									if (n.kind === SymbolKind.Class || n.kind === SymbolKind.Function || n.kind === SymbolKind.Method)
+										for (const e in n.returntypes)
+											detectExp(lexers[uri], e, Position.is(n.returntypes[e]) ? n.returntypes[e] : pos)
+												.forEach(tp => ts[tp] = true);
+								}
+							});
 							break;
 						case SymbolKind.Class:
 							if (lexers[uri]) {
@@ -6254,11 +6253,11 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 			res = t;
 	}
 	name = name.replace(/^[#$]/, '');
-	let tt = true;
+	let tt = true, u;
 	if (kind !== SymbolKind.Field && (!res || res.node.kind === SymbolKind.Variable &&
 		((tt = !(res.node as Variable).def) || !res.scope)) &&
-		(t = ahkvars[name] ?? (tt ? lexers[ahkuris.winapi]?.declaration[name] : undefined)))
-		return [{ uri: t.uri ?? ahkuris.winapi, node: t }];
+		(t = ahkvars[name] ?? (tt ? lexers[u = ahkuris.winapi]?.declaration[name] : undefined)))
+		return [{ uri: t.uri ?? u, node: t }];
 	return res ? [res] : undefined;
 	function searchIncludeNode(list: { [uri: string]: string }, name: string) {
 		let ret = undefined, t;
