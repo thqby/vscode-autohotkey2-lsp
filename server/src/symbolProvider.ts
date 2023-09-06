@@ -2,7 +2,7 @@ import { URI } from 'vscode-uri';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CancellationToken, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, samenameerr, get_class_call } from './Lexer';
-import { ahkuris, ahkvars, connection, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, sendDiagnostics, symbolcache, workspaceFolders } from './common';
+import { ahkuris, ahkvars, connection, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, sendDiagnostics, symbolcache, warn, workspaceFolders } from './common';
 import { diagnostic } from './localize';
 
 export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
@@ -28,6 +28,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
 	doc.reflat = false, globalsymbolcache = gvar;
 	let rawuri = doc.document.uri;
+	const warnLocalSameAsGlobal = extsettings.Warn?.LocalSameAsGlobal;
 	const result: DocumentSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class, SymbolKind.TypeParameter];
 	function maybe_unset(k: Variable, v: Variable) {
@@ -45,9 +46,9 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			result.push(v), converttype(v, false, v.kind);
 	}
 	flatTree(doc);
-	if (extsettings.Diagnostics.VarUnset)
+	if (extsettings.Warn?.VarUnset)
 		for (let [k, v] of unset_vars)
-			k.assigned || doc.diagnostics.push({ message: diagnostic.varisunset(v.name), range: v.selectionRange, severity: 2 });
+			k.assigned || doc.diagnostics.push({ message: warn.varisunset(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 	if (doc.actived)
 		checksamename(doc), setTimeout(sendDiagnostics, 200);
 	return symbolcache[uri] = result.map(info => SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri));
@@ -83,6 +84,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		});
 		t.forEach(info => {
 			let inherit: { [key: string]: DocumentSymbol } = {}, fn = info as FuncNode, s: Variable;
+			let oig = outer_is_global;
 			switch (info.kind) {
 				case SymbolKind.Class:
 					let rg = Range.create(0, 0, 0, 0), cls = info as ClassNode;
@@ -117,8 +119,12 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						converttype(inherit[k] = v, false, v.kind).definition = v;
 						if (v.kind !== SymbolKind.TypeParameter) {
 							result.push(v);
-							if (v.kind === SymbolKind.Variable && !v.assigned && v.returntypes === undefined)
-								unset_vars.set(v, v);
+							if (v.kind === SymbolKind.Variable) {
+								if (!v.assigned && v.returntypes === undefined)
+									unset_vars.set(v, v);
+								else if (warnLocalSameAsGlobal && !v.decl && gvar[k])
+									doc.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+							}
 						}
 					}
 					for (let [k, v] of Object.entries(fn.declaration ??= {}))
@@ -131,7 +137,11 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
 						else if (!(v as Variable).def && (s = gvar[k]))
 							converttype(v, !!ahkvars[k], s.kind).definition = s;
-						else converttype(inherit[k] = fn.local[k] = v).definition = v, result.push(v);
+						else {
+							converttype(inherit[k] = fn.local[k] = v).definition = v, result.push(v);
+							if (warnLocalSameAsGlobal && v.kind === SymbolKind.Variable && gvar[k])
+								doc.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+						}
 					for (let [k, v] of Object.entries(fn.unresolved_vars ??= {}))
 						if (s = inherit[k] ?? gvar[k] ?? winapis[k])
 							converttype(v, s === ahkvars[k], s.kind).definition = s;
@@ -156,6 +166,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				default: inherit = { ...vars }; break;
 			}
 			flatTree(info, inherit, outer_is_global);
+			outer_is_global = oig;
 		});
 	}
 	function checksamename(doc: Lexer) {
@@ -170,7 +181,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				for (const lb in dd.labels)
 					if ((<any>dd.labels[lb][0]).def)
 						if (lbs[lb])
-							dd.diagnostics.push({ message: diagnostic.duplabel(), range: dd.labels[lb][0].selectionRange, severity: 1 });
+							dd.diagnostics.push({ message: diagnostic.duplabel(), range: dd.labels[lb][0].selectionRange, severity: DiagnosticSeverity.Error });
 						else lbs[lb] = true;
 			}
 		}
@@ -268,7 +279,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 				if (node.params[i].defaultVal === false)
 					--paramcount;
 			if (pc < paramcount && !paraminfo.unknown)
-				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount + '+', pc), range: info.range, severity: 1 });
+				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount + '+', pc), range: info.range, severity: DiagnosticSeverity.Error });
 			paraminfo.miss.forEach(index => {
 				miss[index] = true;
 				if (index < paramcount && node.params[index].defaultVal === undefined)
@@ -288,7 +299,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 				miss[t] = true, --l;
 			}
 			if ((pc < paramcount && !paraminfo.unknown) || pc > maxcount)
-				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount === maxcount ? maxcount : paramcount + '-' + maxcount, pc), range: info.range, severity: 1 });
+				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount === maxcount ? maxcount : paramcount + '-' + maxcount, pc), range: info.range, severity: DiagnosticSeverity.Error });
 		}
 		if (node.hasref) {
 			node.params.forEach((param, index) => {

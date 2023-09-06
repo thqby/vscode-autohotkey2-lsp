@@ -51,8 +51,11 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	SymbolFoldingFromOpenBrace: false,
 	Diagnostics: {
 		ClassStaticMemberCheck: true,
-		ParamsCheck: true,
-		VarUnset: true
+		ParamsCheck: true
+	},
+	Warn: {
+		VarUnset: true,
+		LocalSameAsGlobal: false
 	},
 	Files: {
 		Exclude: []
@@ -113,7 +116,10 @@ export interface AHKLSSettings {
 	Diagnostics: {
 		ClassStaticMemberCheck: boolean
 		ParamsCheck: boolean
+	}
+	Warn: {
 		VarUnset: boolean
+		LocalSameAsGlobal: boolean
 	}
 	Files: {
 		Exclude: string[] | RegExp[]

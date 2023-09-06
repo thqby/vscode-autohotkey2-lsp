@@ -131,11 +131,17 @@
 					"default": true,
 					"description": "%ahk2.diagnostics.paramscheck%"
 				},
-				"AutoHotkey2.Diagnostics.VarUnset": {
+				"AutoHotkey2.Warn.VarUnset": {
 					"scope": "window",
 					"type": "boolean",
 					"default": true,
-					"description": "%ahk2.diagnostics.varunset%"
+					"description": "%ahk2.warn.varunset%"
+				},
+				"AutoHotkey2.Warn.LocalSameAsGlobal": {
+					"scope": "window",
+					"type": "boolean",
+					"default": false,
+					"description": "%ahk2.warn.localsameasglobal%"
 				},
 				"AutoHotkey2.ActionWhenV1IsDetected": {
 					"scope": "window",

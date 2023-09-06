@@ -112,6 +112,7 @@ export interface Variable extends DocumentSymbol {
 	ref?: boolean
 	static?: boolean | null
 	def?: boolean
+	decl?: boolean
 	arr?: boolean
 	defaultVal?: string | false | null
 	full?: string
@@ -1433,7 +1434,7 @@ export class Lexer {
 							if ('(['.includes(input.charAt(parser_pos)) || _this.get_token(parser_pos, true).content.match(/^(\{|=>)$/)) {
 								tk.topofline = 2;
 							} else {
-								let sta: any[], rl = result.length, _ = _parent;
+								let sta: Variable[], rl = result.length, _ = _parent;
 								if (mode === 2)
 									tk.topofline = 2, _parent = _parent.staticdeclaration.__INIT;
 								next = false;
@@ -1444,12 +1445,13 @@ export class Lexer {
 									if (mode === 2) {
 										_parent.children.push(...result.splice(rl)), _parent = _;
 										for (const it of sta)
-											it.static = true, it.full = it.full.replace(') ', ') static '), (it as FuncNode).parent = _;
+											it.static = true, it.full = it.full!.replace(') ', ') static '), (it as FuncNode).parent = _;
 									} else {
 										let isstatic = _low === 'static';
 										sta.forEach(it => {
 											_parent.local[it.name.toUpperCase()] ??= it;
 											it.static = isstatic;
+											it.decl = true;
 										});
 									}
 								}

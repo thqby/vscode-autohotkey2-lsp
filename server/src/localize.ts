@@ -70,8 +70,13 @@ export namespace diagnostic {
 	export const unknowntoken = localize('diagnostic.unknowntoken', 'Unknown token \'{0}\'');
 	export const unsupportinclude = localize('diagnostic.unsupportinclude', '#Include in functions and classes cannot correctly deduce scope and code completion');
 	export const unterminated = localize('diagnostic.unterminated', 'Unterminated string text');
-	export const varisunset = localize('diagnostic.varisunset', 'Variable \'{0}\' appears to never be assigned a value');
 }
+
+export namespace warn {
+	export const varisunset = localize('warn.varisunset', 'Variable \'{0}\' appears to never be assigned a value');
+	export const localsameasglobal = localize('warn.localsameasglobal', 'This local variable \'{0}\' has the same name as a global variable');
+}
+
 export namespace setting {
 	export const ahkpatherr = localize('setting.ahkpatherr', 'The AutoHotkey interpreter does not exist, re-specify in\'Settings-AutoHotkey2.InterpreterPath\'');
 	export const getenverr = localize('setting.getenverr', 'Failed to get environment variables');
