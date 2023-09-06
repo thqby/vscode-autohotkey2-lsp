@@ -5841,8 +5841,8 @@ export function detectVariableType(doc: Lexer | undefined, n: { node: DocumentSy
 			let ts = cvt_types(s.detail?.match(new RegExp(`^@(param|arg)\\s+{(.*?)}\\s+${name}\\b`, 'mi'))?.[2] ?? '');
 			if (ts && (ts.forEach(t => types[t] = true), !types['@object']))
 				return ts;
-		} else
-			syms.push(n.node);
+		}
+		syms.push(n.node);
 	} else {
 		syms.push(n.node);
 		for (const uri in doc?.relevance) {
@@ -6030,6 +6030,7 @@ export function detectExp(doc: Lexer, exp: string, pos: Position): string[] {
 							}
 							break;
 						case SymbolKind.Variable:
+						case SymbolKind.TypeParameter:
 							detectVariableType(lexers[uri], it, uri === doc.uri ? pos : it.node.selectionRange.end).forEach(tp => {
 								tp.includes('=>') && (searchcache[tp] ??= gen_fat_fn(tp, uri, it.node, it.scope));
 								if (n = searchcache[tp]?.node) {
@@ -6117,6 +6118,8 @@ export function detectExp(doc: Lexer, exp: string, pos: Position): string[] {
 					}
 				}
 			} else if (ex.startsWith('@comobject<'))
+				ts[ex] = true;
+			else if (ex.includes('=>'))
 				ts[ex] = true;
 		}
 		ts = Object.keys(ts);
