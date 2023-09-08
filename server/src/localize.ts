@@ -75,6 +75,7 @@ export namespace diagnostic {
 export namespace warn {
 	export const varisunset = localize('warn.varisunset', 'Variable \'{0}\' appears to never be assigned a value');
 	export const localsameasglobal = localize('warn.localsameasglobal', 'This local variable \'{0}\' has the same name as a global variable');
+	export const callwithoutparentheses = localize('warn.callwithoutparentheses', 'This function or method call has no parentheses');
 }
 
 export namespace setting {

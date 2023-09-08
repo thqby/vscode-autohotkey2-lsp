@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.1.4",
+	"version": "2.1.5",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -142,6 +142,12 @@
 					"type": "boolean",
 					"default": false,
 					"description": "%ahk2.warn.localsameasglobal%"
+				},
+				"AutoHotkey2.Warn.CallWithoutParentheses": {
+					"scope": "window",
+					"type": "boolean",
+					"default": false,
+					"description": "%ahk2.warn.callwithoutparentheses%"
 				},
 				"AutoHotkey2.ActionWhenV1IsDetected": {
 					"scope": "window",

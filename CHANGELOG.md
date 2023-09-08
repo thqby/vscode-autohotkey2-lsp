@@ -1,3 +1,11 @@
+## 2.1.5
+- 修复[#368](https://github.com/thqby/vscode-autohotkey2-lsp/issues/368)
+- 修复[#381](https://github.com/thqby/vscode-autohotkey2-lsp/issues/381)
+- 修复[#383](https://github.com/thqby/vscode-autohotkey2-lsp/issues/383)
+- 修复[#384](https://github.com/thqby/vscode-autohotkey2-lsp/issues/384)
+- [FR #380](https://github.com/thqby/vscode-autohotkey2-lsp/issues/380)
+- [FR #382](https://github.com/thqby/vscode-autohotkey2-lsp/issues/382)
+
 ## 2.1.4
 - 修复[#378](https://github.com/thqby/vscode-autohotkey2-lsp/issues/378)
 - 修复[#379](https://github.com/thqby/vscode-autohotkey2-lsp/issues/379)
@@ -58,7 +66,7 @@
 - 修复[#328](https://github.com/thqby/vscode-autohotkey2-lsp/issues/328)
 - 修复[#329](https://github.com/thqby/vscode-autohotkey2-lsp/issues/329)
 - 修复[#330](https://github.com/thqby/vscode-autohotkey2-lsp/issues/330)
-- 增加设置项`AutoHotkey2.Files.Exclude`支持扫描时跳过指定文件或文件夹 FR[#326](https://github.com/thqby/vscode-autohotkey2-lsp/issues/326)
+- 增加设置项`AutoHotkey2.Files.Exclude`支持扫描时跳过指定文件或文件夹 [FR #326](https://github.com/thqby/vscode-autohotkey2-lsp/issues/326)
 
 ## 2.0.1
 - 修复[#321](https://github.com/thqby/vscode-autohotkey2-lsp/issues/321)
@@ -76,7 +84,7 @@
 
 ## 1.9.8
 - ahk_h增加winapi函数补全项(`;@include-winapi`启用)
-- 诊断未赋值的变量[FR#308](https://github.com/thqby/vscode-autohotkey2-lsp/issues/308)
+- 诊断未赋值的变量[FR #308](https://github.com/thqby/vscode-autohotkey2-lsp/issues/308)
 
 ## 1.9.7
 - 修复[#306](https://github.com/thqby/vscode-autohotkey2-lsp/issues/306)

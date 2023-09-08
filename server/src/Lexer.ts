@@ -17,7 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { completionitem, diagnostic } from './localize';
-import { action, ActionType, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings, hoverCache, inBrowser, inWorkspaceFolders, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile, pathenv, restorePath, rootdir, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils } from './common';
+import { action, ActionType, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings, hoverCache, inBrowser, inWorkspaceFolders, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile, pathenv, restorePath, rootdir, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils, warn } from './common';
 
 export interface ParamInfo {
 	offset: number
@@ -89,6 +89,7 @@ export interface FuncNode extends DocumentSymbol {
 	resolved?: boolean
 	uri?: string
 	ranges?: [number, number][]	// class's __init
+	def?: boolean	// not use
 }
 
 export interface ClassNode extends DocumentSymbol {
@@ -106,6 +107,7 @@ export interface ClassNode extends DocumentSymbol {
 	uri?: string
 	checkmember?: boolean
 	static?: boolean	// not use
+	def?: boolean		// not use
 }
 
 export interface Variable extends DocumentSymbol {
@@ -269,7 +271,7 @@ export class Lexer {
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let input: string, output_lines: { text: string[], indent: number }[], flags: any, opt: FormatOptions, previous_flags: any, flag_store: any[], includetable: { [uri: string]: string };
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string, last_last_text: string, indent_string: string, includedir: string, dlldir: string;
-		let parser_pos: number, customblocks: { region: number[], bracket: number[] }, _this = this, h = isahk2_h, sharp_offsets: number[] = [];
+		let parser_pos: number, customblocks: { region: number[], bracket: number[] }, _this = this, h = isahk2_h, sharp_offsets: number[] = [], callWithoutParentheses: boolean;
 		let input_wanted_newline: boolean, output_space_before_token: boolean | undefined, is_conditional: boolean, keep_object_line: boolean, begin_line: boolean;
 		let continuation_sections_mode: boolean, space_in_other: boolean, requirev2 = false, currsymbol: DocumentSymbol | undefined;
 		let input_length: number, n_newlines: number, last_LF: number, preindent_string: string, lst: Token, ck: Token;
@@ -767,10 +769,17 @@ export class Lexer {
 								break;
 						}
 					});
-					let s = this.declaration['STRUCT'] as any;
-					if (s && s.kind === SymbolKind.Class) s.def = false;
-					s = (ahkvars['CLASS'] as ClassNode)?.staticdeclaration['CALL'];
-					if (s) s.def = false;
+					let s;
+					if (overwrite) {
+						if (ahk_version > alpha_3) {
+							['STRUCT', 'SIZEOF'].forEach(p => {
+								delete this.declaration[p];
+								delete ahkvars[p];
+							});
+						} else if ((s = this.declaration.STRUCT)?.kind === SymbolKind.Class)
+							s.def = false;
+					} else if (s = (ahkvars.CLASS as ClassNode)?.staticdeclaration.CALL)
+						s.def = false;
 				}
 				checksamenameerr({}, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length, this.isparsed = true;
@@ -790,6 +799,7 @@ export class Lexer {
 				begin_line = true, requirev2 = false, lst = EMPTY_TOKEN, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), this.reflat = true, includetable = this.include, comments = {}, this.maybev1 = undefined;
+				callWithoutParentheses = extsettings.Warn?.CallWithoutParentheses;
 				try {
 					let rs = utils.get_RCDATA('#2');
 					if (rs)
@@ -1859,6 +1869,8 @@ export class Lexer {
 				fc.paraminfo = pi;
 				sub = parse_line(undefined, undefined, undefined, undefined, undefined, pi);
 				result.push(...sub);
+				if (type === SymbolKind.Method)
+					fc.semantic = undefined;
 				fc.semantic ??= {
 					type: type === SymbolKind.Function ? SemanticTokenTypes.function :
 						(pi.method = true, SemanticTokenTypes.method)
@@ -1872,6 +1884,8 @@ export class Lexer {
 				}
 				if (type === SymbolKind.Method)
 					maybeclassprop(fc, true);
+				if (callWithoutParentheses)
+					_this.diagnostics.push({ message: warn.callwithoutparentheses(), range: tn.selectionRange, severity: DiagnosticSeverity.Warning });
 			}
 
 			function parse_body(else_body: boolean | null = false, previous_pos?: number) {

@@ -15,6 +15,7 @@
 	"ahk2.diagnostics.paramscheck": "Check that the function call has the correct number of arguments",
 	"ahk2.warn.varunset": "Display warnings for each variable that has never been directly assigned or used with the reference operator",
 	"ahk2.warn.localsameasglobal": "Display warnings for each undeclared local variable which has the same name as a global variable",
+	"ahk2.warn.callwithoutparentheses": "Display warnings for each function or method call without parentheses",
 	"ahk2.export.symbols": "Export ahk classes and functions",
 	"ahk2.files.exclude": "Configure glob patterns for excluding files and folders in scan.",
 	"ahk2.generatecomment": "Generate Comment Template",

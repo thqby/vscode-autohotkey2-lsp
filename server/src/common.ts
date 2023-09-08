@@ -55,7 +55,8 @@ export let dllcalltpe: string[] = [], extsettings: AHKLSSettings = {
 	},
 	Warn: {
 		VarUnset: true,
-		LocalSameAsGlobal: false
+		LocalSameAsGlobal: false,
+		CallWithoutParentheses: false
 	},
 	Files: {
 		Exclude: []
@@ -120,6 +121,7 @@ export interface AHKLSSettings {
 	Warn: {
 		VarUnset: boolean
 		LocalSameAsGlobal: boolean
+		CallWithoutParentheses: boolean
 	}
 	Files: {
 		Exclude: string[] | RegExp[]
