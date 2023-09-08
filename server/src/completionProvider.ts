@@ -243,15 +243,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (ci) {
 				let kind: CompletionItemKind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
 				let text2item = (label: string) => ({ label, kind, command });
-				let res = getFuncCallInfo(doc, position, ci);
+				let res = getFuncCallInfo(doc, position, ci), ts: any;
 				if (res) {
 					let ismethod = res.kind === SymbolKind.Method;
 					if (ismethod) {
 						switch (res.name.toLowerCase()) {
 							case 'add':
 								if (res.index === 0) {
-									let c = doc.buildContext(res.pos), ts: any = {};
-									reset_detect_cache(), detectExpType(doc, c.text.toLowerCase(), c.range.end, ts);
+									let c = doc.buildContext(res.pos);
+									reset_detect_cache(), detectExpType(doc, c.text.toLowerCase(), c.range.end, ts = {});
 									if (ts['@gui.add'] !== undefined) {
 										return ['Text', 'Edit', 'UpDown', 'Picture', 'Button', 'Checkbox', 'Radio', 'DropDownList',
 											'ComboBox', 'ListBox', 'ListView', 'TreeView', 'Link', 'Hotkey', 'DateTime', 'MonthCal',
@@ -261,8 +261,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								break;
 							case 'onevent':
 								if (res.index === 0) {
-									let c = doc.buildContext(res.pos), ts: any = {};
-									reset_detect_cache(), detectExpType(doc, c.text.toLowerCase(), c.range.end, ts);
+									let c = doc.buildContext(res.pos);
+									reset_detect_cache(), detectExpType(doc, c.text.toLowerCase(), c.range.end, ts = {});
 									if (ts['@gui.onevent'] !== undefined)
 										return ['Close', 'ContextMenu', 'DropFiles', 'Escape', 'Size'].map(text2item);
 									else if (ts['gui.@control.onevent'] !== undefined)
@@ -469,6 +469,34 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								return items;
 						}
 					}
+					let fns: FuncNode[] = [];
+					if (ismethod) {
+						if (!ts) {
+							let c = doc.buildContext(res.pos);
+							reset_detect_cache(), detectExpType(doc, c.text.toLowerCase(), c.range.end, ts = {});
+						}
+						let n;
+						for (let t in ts)
+							if ((n = ts[t]?.node) && (n.kind === SymbolKind.Method || n.kind === SymbolKind.Function))
+								fns.push(n);
+					} else {
+						for (let t of searchNode(doc, res.name, position, SymbolKind.Variable) ?? [])
+							if (t.node.kind === SymbolKind.Function)
+								fns.push(t.node as FuncNode);
+					}
+					for (let fn of fns) {
+						let p = fn.params[res.index], s = '';
+						if (allIdentifierChar.test(p?.name ?? ''))
+							if (s = p.detail?.match(new RegExp(`^@(param|arg)\\s+{(.*?)}\\s+${p.name}\\b`, 'mi'))?.[2].trim() ?? '')
+								if (/^(['"])(`\1|.)+\1\|/.test(s)) {
+									s.split('|').map(s => {
+										if (/['"']/.test(s[0]) && s.endsWith(s[0]) && allIdentifierChar.test(s = s.slice(1, -1)))
+											items.push(text2item(s));
+									});
+								}
+					}
+					if (items.length)
+						return items;
 				}
 			}
 			addtexts();
