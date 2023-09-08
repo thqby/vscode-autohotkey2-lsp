@@ -241,7 +241,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			}
 		} else if (!maxn) {
 			if (ci) {
-				let kind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
+				let kind: CompletionItemKind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
 				let text2item = (label: string) => ({ label, kind, command });
 				let res = getFuncCallInfo(doc, position, ci);
 				if (res) {
@@ -459,6 +459,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							case 'sendplay':
 								if (res.index > 0)
 									break;
+								kind = CompletionItemKind.Text;
+								command = undefined as any;
+								items.push(text2item('Blind'));
 							case 'hotkey':
 								if (res.index > 1)
 									break;
