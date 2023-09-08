@@ -818,15 +818,18 @@
           "name": "punctuation.section.parens.begin.ahk2"
         },
         "2": {
-          "name": "string.options.ahk2 markup.italic",
           "patterns": [
             {
               "match": "(?<=\\s);.*$",
               "name": "comment.inline.ahk2"
             },
             {
-              "match": "(?<=(\\s|^\\s*\\())((?!(?i:(c(om(ments)?)?|[lr]trim0?|`|join(`s|\\S){0,15}))(?=(\\s|$)))(\\S+)(?=(\\s|$)))",
+              "match": "(?<=(\\s|^\\s*\\())((?!(?i:(c(om(ments?)?)?|[lr]trim0?|`|join(`s|\\S){0,15}))(?=(\\s|$)))(\\S+)(?=(\\s|$)))",
               "name": "invalid.options.ahk2 markup.strikethrough"
+            },
+            {
+              "match": "\\S+",
+              "name": "string.options.ahk2 markup.italic"
             }
           ]
         }
@@ -2222,39 +2225,90 @@
       ]
     },
     "continuation_string": {
-      "begin": "(?<=^\\s*)(\\()(((?i:join)\\S*(?=\\s|$)|[^()]+(?=\\s|$))*)$",
-      "beginCaptures": {
-        "1": {
-          "name": "punctuation.section.parens.begin.bracket.round.ahk2"
-        },
-        "2": {
-          "name": "string.options.ahk2 markup.italic",
-          "patterns": [
-            {
-              "match": "(?<=\\s);.*$",
-              "name": "comment.inline.ahk2"
-            },
-            {
-              "match": "(?<=(\\s|^\\s*\\())((?!(?i:(c(om(ments)?)?|[lr]trim0?|`|join(`s|\\S){0,15}))(?=(\\s|$)))(\\S+)(?=(\\s|$)))",
-              "name": "invalid.options.ahk2 markup.strikethrough"
-            }
-          ]
-        }
-      },
-      "end": "(?<=^\\s*)(\\))",
-      "endCaptures": {
-        "1": {
-          "name": "punctuation.section.parens.end.bracket.round.ahk2"
-        }
-      },
-      "name": "string.continuation",
       "patterns": [
         {
-          "match": "(?<=^\\s*)`\\)",
-          "name": "constant.character.escape.ahk2"
+          "begin": "(?<=^\\s*)(\\()(((?i:join)\\S*(?=\\s|$)|[^();]+(?=\\s|$)|\\s)*(?i:c(om(ments?)?)?)\\b((?i:join)\\S*(?=\\s|$)|[^()]+(?=\\s|$))*)$",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.begin.bracket.round.ahk2"
+            },
+            "2": {
+              "patterns": [
+                {
+                  "match": "(?<=\\s);.*$",
+                  "name": "comment.inline.ahk2"
+                },
+                {
+                  "match": "(?<=(\\s|^\\s*\\())((?!(?i:(c(om(ments?)?)?|[lr]trim0?|`|join(`s|\\S){0,15}))(?=(\\s|$)))(\\S+)(?=(\\s|$)))",
+                  "name": "invalid.options.ahk2 markup.strikethrough"
+                },
+                {
+                  "match": "\\S+",
+                  "name": "string.options.ahk2 markup.italic"
+                }
+              ]
+            }
+          },
+          "end": "(?<=^\\s*)(\\))",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.end.bracket.round.ahk2"
+            }
+          },
+          "name": "string.continuation2",
+          "patterns": [
+            {
+              "match": "(?<=(^\\s*|\\s))(;.*)",
+              "name": "comment.line.ahk2"
+            },
+            {
+              "match": "(?<=^\\s*)`\\)",
+              "name": "constant.character.escape.ahk2"
+            },
+            {
+              "include": "#string_escaped_char"
+            }
+          ]
         },
         {
-          "include": "#string_escaped_char"
+          "begin": "(?<=^\\s*)(\\()(((?i:join)\\S*(?=\\s|$)|[^()]+(?=\\s|$))*)$",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.begin.bracket.round.ahk2"
+            },
+            "2": {
+              "patterns": [
+                {
+                  "match": "(?<=\\s);.*$",
+                  "name": "comment.inline.ahk2"
+                },
+                {
+                  "match": "(?<=(\\s|^\\s*\\())((?!(?i:(c(om(ments?)?)?|[lr]trim0?|`|join(`s|\\S){0,15}))(?=(\\s|$)))(\\S+)(?=(\\s|$)))",
+                  "name": "invalid.options.ahk2 markup.strikethrough"
+                },
+                {
+                  "match": "\\S+",
+                  "name": "string.options.ahk2 markup.italic"
+                }
+              ]
+            }
+          },
+          "end": "(?<=^\\s*)(\\))",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.end.bracket.round.ahk2"
+            }
+          },
+          "name": "string.continuation",
+          "patterns": [
+            {
+              "match": "(?<=^\\s*)`\\)",
+              "name": "constant.character.escape.ahk2"
+            },
+            {
+              "include": "#string_escaped_char"
+            }
+          ]
         }
       ]
     },
