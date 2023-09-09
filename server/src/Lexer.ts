@@ -4873,7 +4873,14 @@ export class Lexer {
 				else output_space_before_token = true;
 			}
 			if (ck.ignore) {
+				let p: number;
 				print_newline(true);
+				if (opt.ignore_comment && token_text.startsWith('(') && (p = token_text.indexOf('\n')) > 0) {
+					let t = token_text.slice(0, p).trimEnd().replace(/\s+;.*$/, '');
+					if (/(^\(|\s)c(om(ments?)?)?/i.test(t))
+						token_text = `${t}\n${token_text.slice(p + 1).replace(/^\s*;.*\r?\n/gm, '').replace(/\s+;.*/gm, '')}`;
+					else token_text = `${t}\n${token_text.slice(p + 1)}`;
+				}
 				output_lines[output_lines.length - 1].text = [token_text];
 				return;
 			}
