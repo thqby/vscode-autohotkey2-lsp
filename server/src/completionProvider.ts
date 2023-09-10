@@ -487,7 +487,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					for (let fn of fns) {
 						let p = fn.params[res.index], s = '';
 						if (allIdentifierChar.test(p?.name ?? ''))
-							if (s = p.detail?.match(new RegExp(`^@(param|arg)\\s+{(.*?)}\\s+${p.name}\\b`, 'mi'))?.[2].trim() ?? '')
+							if (s = fn.detail?.match(new RegExp(`^@(param|arg)\\s+{(.*?)}\\s+${p.name}\\b`, 'mi'))?.[2].trim() ?? '')
 								if (/^(['"])(`\1|.)+\1\|/.test(s)) {
 									s.split('|').map(s => {
 										if (/['"']/.test(s[0]) && s.endsWith(s[0]) && allIdentifierChar.test(s = s.slice(1, -1)))
@@ -527,6 +527,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					additem(it.name, it.kind === SymbolKind.Class
 						? CompletionItemKind.Class : it.kind === SymbolKind.Method
 							? CompletionItemKind.Method : CompletionItemKind.Property);
+				additem('Prototype', CompletionItemKind.Property);
 			} else {
 				for (let it of Object.values(cls.declaration))
 					additem(it.name, it.kind === SymbolKind.Method ?
