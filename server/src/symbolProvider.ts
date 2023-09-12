@@ -2,7 +2,7 @@ import { URI } from 'vscode-uri';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CancellationToken, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, samenameerr, get_class_call } from './Lexer';
-import { ahkuris, ahkvars, connection, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, sendDiagnostics, symbolcache, warn, workspaceFolders } from './common';
+import { ahkuris, ahkvars, connection, detectExpType, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, reset_detect_cache, sendDiagnostics, symbolcache, warn, workspaceFolders } from './common';
 import { diagnostic } from './localize';
 
 export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
@@ -308,9 +308,15 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 					if (index === 0)
 						o = info.offset as number + info.name.length + 1;
 					else o = paraminfo.comma[index - 1] + 1;
-					if ((t = doc.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined))
-						if (doc.tokens[t.next_token_offset]?.type !== 'TK_DOT')
-							doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset, t.length, 2);
+					if ((t = doc.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && doc.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
+						let exp = paraminfo.data?.[index], tps: any = {}, n: number;
+						exp && (reset_detect_cache(), detectExpType(doc, exp, doc.document.positionAt(o), tps));
+						if ((tps['@varref'] ?? tps['#varref']) !== undefined)
+							return;
+						let lk = doc.tokens[paraminfo.comma[index] ?? (n = doc.document.offsetAt(info.range.end) - 1)].previous_token;
+						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
+							(lk ? lk.offset + lk.length : n!) - t.offset, 2);
+					}
 				}
 			});
 		}

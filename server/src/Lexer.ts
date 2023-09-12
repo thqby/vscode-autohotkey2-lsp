@@ -5881,7 +5881,8 @@ export function detectVariableType(doc: Lexer | undefined, n: { node: DocumentSy
 				return ts;
 			else break;
 	}
-	let scope = pos ? doc?.searchScopedNode(pos) : undefined, ite = syms[0] as Variable;
+	if (!pos) return [];
+	let scope = doc?.searchScopedNode(pos), ite = syms[0] as Variable;
 	while (scope) {
 		if (scope.kind === SymbolKind.Class)
 			scope = (<ClassNode>scope).parent;
@@ -5889,12 +5890,12 @@ export function detectVariableType(doc: Lexer | undefined, n: { node: DocumentSy
 			scope = (<FuncNode>scope).parent;
 		else break;
 	}
-	if (!scope && pos && pos !== n.node.selectionRange.end)
+	if (!scope && pos !== n.node.selectionRange.end)
 		scope = doc as any;
 	for (const it of scope?.children ?? [])
 		if (name === it.name.toUpperCase()) {
 			if (it.kind === SymbolKind.Variable || it.kind === SymbolKind.TypeParameter) {
-				if (pos && (it.selectionRange.end.line > pos.line || (it.selectionRange.end.line === pos.line && it.selectionRange.start.character > pos.character)))
+				if (it.selectionRange.end.line > pos.line || (it.selectionRange.end.line === pos.line && it.selectionRange.start.character > pos.character))
 					break;
 				if ((<Variable>it).ref || (<Variable>it).returntypes)
 					ite = it;
