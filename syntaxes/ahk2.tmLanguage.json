@@ -1577,7 +1577,7 @@
               "name": "punctuation.definition.colon"
             }
           },
-          "end": "(?<=^\\s*)(})|(?<=::(;|\\s*[^;\\s])[^\\n]*)\\n|(?<=[\\w})\\]]\\s*)\\n",
+          "end": "(?<=^\\s*)(})|(?<=:[^:]*:(;|\\s*[^;\\s])[^\\n]*)\\n|(?<=[\\w})\\]]\\s*)\\n",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.block.hotkey.end.ahk2"
@@ -1668,7 +1668,7 @@
           "name": "comment.inline.ahk2"
         }
       },
-      "end": "(?<=^\\s*)(})|(?<=::(;|\\s*[^;\\s])[^\\n]*)\\n|(?<=[\\w})\\]]\\s*)\\n",
+      "end": "(?<=^\\s*)(})|(?<=:[^:]*:(;|\\s*[^;\\s])[^\\n]*)\\n|(?<=[\\w})\\]]\\s*)\\n",
       "endCaptures": {
         "1": {
           "name": "punctuation.definition.block.hotstring.end.ahk2"
