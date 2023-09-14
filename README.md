@@ -33,10 +33,10 @@ Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https:
     - [Compile Script](#compile-script)
     - [Debug Script](#debug-script)
     - [Generate Comment](#generate-comment)
-  - [Use in Web Browser](#use-in-web-browser)
   - [Use in other editors](#use-in-other-editors)
     - [Sublime Text4](#sublime-text4)
     - [Vim and Neovim](#vim-and-neovim)
+  - [Use in Web Browser](#use-in-web-browser)
 
 ## Language Features
 
@@ -181,10 +181,6 @@ No additional configuration is required to start the installed Debug extensions,
 
 Generate JSDOC-style comments for a function or method.
 
-## Use in Web Browser
-
-visit https://github.dev or https://vscode.dev in `Chrome/Edge`, and install `thqby.vscode-autohotkey2-lsp`
-
 ## Use in other editors
 
 1. Install [Node.js](https://nodejs.org/en/download/).
@@ -276,3 +272,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
   }
 }
 ```
+
+## Use in Web Browser
+
+visit https://github.dev or https://vscode.dev in `Chrome/Edge`, and install `thqby.vscode-autohotkey2-lsp`
