@@ -90,19 +90,20 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					let rg = Range.create(0, 0, 0, 0), cls = info as ClassNode;
 					inherit = {
 						THIS: DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg),
-						SUPER: !cls.extends ? false as any :
-							DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg)
+						SUPER: DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg)
 					}, outer_is_global = false;
 					for (let dec of [cls.staticdeclaration, cls.declaration])
 						Object.values(dec).forEach(it => it.selectionRange.end.character && result.push(it));
 					break;
 				case SymbolKind.Method:
-					inherit = { THIS: vars.THIS, SUPER: vars.SUPER ?? false }, outer_is_global ||= fn.assume === FuncScope.GLOBAL;
+					inherit = { THIS: vars.THIS, SUPER: vars.SUPER }, outer_is_global ||= fn.assume === FuncScope.GLOBAL;
 				case SymbolKind.Event:
 				case SymbolKind.Function:
 					if (!fn.parent)
 						outer_is_global ||= fn.assume === FuncScope.GLOBAL;
-					else if (fn.kind !== SymbolKind.Method)
+					else if (fn.kind !== SymbolKind.Method) {
+						if (vars.SUPER?.range.end.character === 0)
+							delete vars.SUPER;
 						if (fn.assume !== FuncScope.GLOBAL) {
 							if (fn.assume === FuncScope.STATIC)
 								outer_is_global = false;
@@ -112,6 +113,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 										inherit[k] = v;
 							} else inherit = { ...vars };
 						} else outer_is_global = true;
+					}
 					for (let [k, v] of Object.entries(fn.global ?? {}))
 						s = inherit[k] = gvar[k] ??= v, converttype(v, !!ahkvars[k], s.kind).definition = s,
 							s.kind === SymbolKind.Variable && maybe_unset(s, v);
@@ -157,7 +159,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					break;
 				case SymbolKind.Property:
 					if ((info as FuncNode).parent?.kind === SymbolKind.Class) {
-						inherit = { THIS: vars.THIS, SUPER: vars.SUPER ?? false };
+						inherit = { THIS: vars.THIS, SUPER: vars.SUPER };
 						let t = info as any;
 						for (let s of ['get', 'set', 'call'])
 							(t[s] as DocumentSymbol)?.selectionRange.end.character && result.push(t[s]),

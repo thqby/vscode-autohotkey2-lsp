@@ -43,7 +43,8 @@ export namespace diagnostic {
 	export const invalidprop = localize('diagnostic.invalidprop', 'Invalid dynamic property');
 	export const invalidpropname = localize('diagnostic.invalidpropname', 'Invalid property name in object literal');
 	export const invalidsymbolname = localize('diagnostic.invalidsymbolname', 'Invalid symbol naming \'{0}\'');
-	export const invalidusage = localize('diagnostic.invalidusage', '\'{0}\' cannot be used in functions/classes');
+	export const invalidsuper = localize('diagnostic.invalidsuper', '\'super\' is valid only inside a class');
+	export const invalidscope = localize('diagnostic.invalidscope', '\'{0}\' cannot be used in functions/classes');
 	export const maybehavenotmember = localize('diagnostic.maybehavenotmember', 'Class \'{0}\' maybe have not member \'{1}\'');
 	export const maybev1 = localize('diagnostic.maybev1', 'This might be a v1 script, and the lexer stops parsing.');
 	export const missing = localize('diagnostic.missing', 'Missing \'{0}\'');
@@ -62,6 +63,7 @@ export namespace diagnostic {
 	export const reservedworderr = localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name');
 	export const resourcenotfound = localize('diagnostic.resourcenotfound', 'No resource found or could not be resolved');
 	export const skipline = localize('diagnostic.skipline', 'The line is skipped and not resolved');
+	export const syntaxerror = localize('diagnostic.syntaxerror', 'Syntax error. Specifically: {0}');
 	export const tryswitchtov1 = localize('diagnostic.tryswitchtov1', 'Try switching to AutoHotkey v1.');
 	export const typemaybenot = localize('diagnostic.typemaybenot', 'Type maybe not \'{0}\'');
 	export const unexpected = localize('diagnostic.unexpected', 'Unexpected \'{0}\'');

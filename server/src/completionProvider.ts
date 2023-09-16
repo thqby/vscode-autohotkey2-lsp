@@ -495,8 +495,14 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 									});
 								}
 					}
-					if (items.length)
+					if (items.length){
+						if (!text.substring(1).endsWith(text[0])) {
+							let c = text[0];
+							for (let t of items)
+								t.insertText = t.label + c, delete t.command;
+						}
 						return items;
+					}
 				}
 			}
 			addtexts();
