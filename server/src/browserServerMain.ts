@@ -14,7 +14,7 @@ import {
 	loadahk2, loadlocalize, prepareRename, rangeFormatting, referenceProvider, renameProvider,
 	semanticTokensOnFull, semanticTokensOnRange, set_ahk_h, set_Connection,
 	set_dirname, set_locale, set_Workspacefolder, signatureProvider, symbolProvider, typeFormatting,
-	workspaceFolders, workspaceSymbolProvider, update_settings, update_version
+	workspaceFolders, workspaceSymbolProvider, update_settings, update_version, SemanticTokenModifiers, SemanticTokenTypes
 } from './common';
 
 export const languageServer = 'ahk2-language-server';
@@ -77,27 +77,8 @@ connection.onInitialize((params: InitializeParams) => {
 			referencesProvider: { workDoneProgress: true },
 			semanticTokensProvider: {
 				legend: {
-					tokenTypes: [
-						'class',
-						'function',
-						'method',
-						'parameter',
-						'variable',
-						'property',
-						'keyword',
-						'string',
-						'number',
-						'operator'
-					],
-					tokenModifiers: [
-						'definition',
-						'readonly',
-						'static',
-						'deprecated',
-						'modification',
-						'documentation',
-						'defaultLibrary'
-					]
+					tokenTypes: Object.values(SemanticTokenTypes).filter(t => typeof t === 'string') as string[],
+					tokenModifiers: Object.values(SemanticTokenModifiers).filter(t => typeof t === 'string') as string[]
 				},
 				full: true,
 				range: true

@@ -139,6 +139,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							converttype(v, !!ahkvars[k], s.kind).definition = s;
 						else {
 							converttype(inherit[k] = fn.local[k] = v).definition = v, result.push(v);
+							v.static === null && (v.static = true);
 							if (warnLocalSameAsGlobal && v.kind === SymbolKind.Variable && gvar[k])
 								doc.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
@@ -257,7 +258,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			} else if (kind !== undefined)
 				stk.type = st;
 			if (st < 3)
-				stk.modifier = (stk.modifier || 0) | (1 << SemanticTokenModifiers.readonly) | (islib ? 1 << SemanticTokenModifiers.defaultLibrary : 0);
+				stk.modifier = (stk.modifier ?? 0) | (SemanticTokenModifiers.readonly) | (islib ? SemanticTokenModifiers.defaultLibrary : 0);
 		}
 		return tk ?? {};
 	}

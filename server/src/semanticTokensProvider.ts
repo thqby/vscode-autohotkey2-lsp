@@ -1,4 +1,4 @@
-import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaParams, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, FuncNode, getClassMembers, get_class_member, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token } from './Lexer';
 import { diagnostic, extsettings, lexers, Variable } from './common';
 import { checkParams, globalsymbolcache, symbolProvider } from './symbolProvider';
@@ -20,7 +20,7 @@ function resolve_sem(tk: Token, doc: Lexer) {
 			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) && tk.previous_token?.type === 'TK_DOT'
 				|| (curclass = undefined, type === SemanticTokenTypes.class))
 				type = resolveSemanticType(tk.content.toUpperCase(), tk, doc);
-			doc.STB.push(pos.line, pos.character, tk.length, type, sem.modifier ?? 0);
+			doc.STB.push(pos.line, pos.character, tk.length, type, (sem.modifier ?? 0) | ((tk.definition as Variable)?.static === true) as any);
 		}
 	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 		curclass = undefined;
@@ -68,7 +68,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 			return SemanticTokenTypes.class;
 		case SemanticTokenTypes.method:
 		case SemanticTokenTypes.property:
-			if (curclass && sem.modifier !== 1 << SemanticTokenModifiers.modification) {
+			if (curclass) {
 				let n = curclass.staticdeclaration[name], kind = n?.kind, temp: { [name: string]: DocumentSymbol };
 				if (!n || (n as any).def === false) {
 					let t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = getClassMembers(doc, curclass, true)), temp))[name];
@@ -82,7 +82,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 				}
 				switch (kind) {
 					case SymbolKind.Method:
-						sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly | 1 << SemanticTokenModifiers.static;
+						sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | SemanticTokenModifiers.static;
 						if (tk.callinfo) {
 							if (curclass) {
 								if (n.full?.startsWith('(Object) static Call('))
@@ -103,14 +103,14 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						curclass = undefined;
 						return sem.type = SemanticTokenTypes.method;
 					case SymbolKind.Class:
-						sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly;
+						sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;
 						curclass = curclass.staticdeclaration[name] as ClassNode;
 						if (tk.callinfo) checkParams(doc, curclass as unknown as FuncNode, tk.callinfo);
 						return sem.type = SemanticTokenTypes.class;
 					case SymbolKind.Property:
 						let t = n.children;
 						if (t?.length === 1 && t[0].name.toLowerCase() === 'get')
-							sem.modifier = (sem.modifier || 0) | 1 << SemanticTokenModifiers.readonly | 1 << SemanticTokenModifiers.static;
+							sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | SemanticTokenModifiers.static;
 						curclass = undefined;
 						return sem.type = SemanticTokenTypes.property;
 					case undefined:

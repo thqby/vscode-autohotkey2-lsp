@@ -59,13 +59,11 @@ export enum SemanticTokenTypes {
 }
 
 export enum SemanticTokenModifiers {
-	definition,
-	readonly,
-	static,
-	deprecated,
-	modification,
-	documentation,
-	defaultLibrary
+	static = 1,		// true
+	readonly = 2,
+	definition = 4,
+	defaultLibrary = 8,
+	deprecated = 16,
 }
 
 export interface FuncNode extends DocumentSymbol {
@@ -557,7 +555,7 @@ export class Lexer {
 									let fn = tn as FuncNode;
 									tk.symbol = tk.definition = tn, tk.semantic = {
 										type: SemanticTokenTypes.property,
-										modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0)
+										modifier: SemanticTokenModifiers.definition | (isstatic as any)
 									}, fn.parent = p[blocks];
 									p[blocks].children?.push(tn), tn.static = isstatic, tn.full = `(${cls.join('.')}) ${isstatic ? 'static ' : ''}` + tn.name;
 									p[blocks][isstatic ? 'staticdeclaration' : 'declaration'][tn.name.toUpperCase()] = tn;
@@ -571,7 +569,7 @@ export class Lexer {
 											if (lk.type === 'TK_WORD') {
 												let vr = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length));
 												pars.push(vr);
-												lk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition };
+												lk.semantic = { type: SemanticTokenTypes.parameter, modifier: SemanticTokenModifiers.definition };
 												let t = tokens[j + 1];
 												if (t.content === '?')
 													vr.defaultVal = null, j++;
@@ -633,7 +631,7 @@ export class Lexer {
 											case 'TK_WORD':
 												tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length));
 												tn.ref = byref, tn.assigned = true, byref = false, params.push(tn);
-												lk.semantic = { type: SemanticTokenTypes.parameter, modifier: 1 << SemanticTokenModifiers.definition };
+												lk.semantic = { type: SemanticTokenTypes.parameter, modifier: SemanticTokenModifiers.definition };
 												if ((lk = tokens[j + 1]).content === ':=') {
 													j = j + 2;
 													if ((lk = tokens[j]).content === '+' || lk.content === '-')
@@ -689,8 +687,8 @@ export class Lexer {
 									tn.static = isstatic, tn.declaration = {}, tn.variadic && params.push(...params.splice(params.findIndex(it => it.arr), 1));
 									tk.semantic = {
 										type: blocks ? SemanticTokenTypes.method : SemanticTokenTypes.function,
-										modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly
-											| (isstatic ? 1 << SemanticTokenModifiers.static : 0)
+										modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly
+											| (isstatic as any)
 									};
 									if (blocks) {
 										tn.full = `(${cls.join('.')}) ` + tn.full;
@@ -720,7 +718,7 @@ export class Lexer {
 									SymbolKind.Class, make_range(tokens[i - 1].offset, 0), make_range(tk.offset, tk.length), []) as ClassNode;
 								cl.declaration = {}, cl.staticdeclaration = {}, j = i + 1, cls.push(cl.name), cl.full = cls.join('.');
 								cl.returntypes = { [(cl.full.replace(/([^.]+)$/, '@$1')).toLowerCase()]: true };
-								tk.semantic = { type: SemanticTokenTypes.class, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
+								tk.semantic = { type: SemanticTokenTypes.class, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
 								tk.symbol = tk.definition = cl, cl.funccall = [], cl.extends = '', cl.uri ??= _this.uri, p[blocks].children?.push(cl);
 								p[blocks].staticdeclaration[cl.name.toUpperCase()] = cl;
 								cl.name.startsWith('_') && (cl.kind = SymbolKind.Interface);
@@ -992,8 +990,8 @@ export class Lexer {
 										_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 										break;
 									}
-									se.modifier = 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly |
-										(isstatic ? 1 << SemanticTokenModifiers.static : 0);
+									se.modifier = SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly |
+										(isstatic as any);
 									if (cm = comments[tn.selectionRange.start.line])
 										tn.detail = trim_comment(cm.content);
 									adddeclaration(tn);
@@ -1034,7 +1032,7 @@ export class Lexer {
 										prop.static = isstatic, prop.children = result.splice(rl);
 										result.push(prop), addprop(fc, prop), prop.funccall = [];
 										if (fc.content.toLowerCase() !== '__item')
-											fc.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.definition | (isstatic ? 1 << SemanticTokenModifiers.static : 0) };
+											fc.semantic = { type: SemanticTokenTypes.property, modifier: SemanticTokenModifiers.definition | (isstatic as any) };
 										if (tk.content === '{') {
 											let nk: Token, sk: Token, tn: FuncNode | undefined, mmm = mode, brace = tk.offset;
 											tk.previous_pair_pos = oo;
@@ -1044,7 +1042,7 @@ export class Lexer {
 											while (nexttoken() && tk.type as string !== 'TK_END_BLOCK') {
 												if (tk.topofline && (tk.content = tk.content.toLowerCase()).match(/^[gs]et$/)) {
 													let v: Variable;
-													tk.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
+													tk.semantic = { type: SemanticTokenTypes.function, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
 													// nk = tk, sk = _this.get_token(parser_pos, true), parser_pos = sk.offset + sk.length;
 													nexttoken(), nk = lk;
 													if (tk.content === '=>') {
@@ -1134,7 +1132,7 @@ export class Lexer {
 											_this.linepos[prop.range.end.line] = oo;
 										}
 										if (prop.children.length === 1 && prop.children[0].name === 'get')
-											(fc.semantic as SemanticToken).modifier = ((fc.semantic as SemanticToken).modifier || 0) | 1 << SemanticTokenModifiers.readonly;
+											(fc.semantic as SemanticToken).modifier = ((fc.semantic as SemanticToken).modifier || 0) | SemanticTokenModifiers.readonly;
 										break;
 									}
 									tk = lk, lk = EMPTY_TOKEN, next = false;
@@ -2390,7 +2388,7 @@ export class Lexer {
 									if (fc) {
 										if (fc.content.match(/^\d/))
 											_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-										fc.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
+										fc.semantic = { type: SemanticTokenTypes.function, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
 									} else
 										fc = Object.assign({}, EMPTY_TOKEN, { offset: ttk.offset });
 									if (!par)
@@ -2763,7 +2761,7 @@ export class Lexer {
 						case 'TK_RESERVED':
 						case 'TK_WORD':
 							tk.type = 'TK_WORD';
-							tk.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.modification };
+							tk.semantic = { type: SemanticTokenTypes.property };
 							if (input.charAt(parser_pos) === '%')
 								continue;
 							break;
@@ -2786,7 +2784,7 @@ export class Lexer {
 				if (isobj || must)
 					mark.forEach(o => {
 						if (k = tokens[o])
-							k.type = 'TK_WORD', k.semantic = { type: SemanticTokenTypes.property, modifier: 1 << SemanticTokenModifiers.modification };
+							k.type = 'TK_WORD', k.semantic = { type: SemanticTokenTypes.property };
 					});
 				if (!isobj) {
 					let e = tk;
@@ -3074,7 +3072,7 @@ export class Lexer {
 										tn.range.end = document.positionAt(parser_pos);
 										tk = _this.find_token(parser_pos - 1) ?? tk;
 									}
-									fc.semantic = { type: SemanticTokenTypes.function, modifier: 1 << SemanticTokenModifiers.definition | 1 << SemanticTokenModifiers.readonly };
+									fc.semantic = { type: SemanticTokenTypes.function, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
 									_parent = pp;
 									if (mode !== 0)
 										tn.parent = _parent;

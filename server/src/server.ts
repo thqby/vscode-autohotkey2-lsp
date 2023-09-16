@@ -17,7 +17,7 @@ import {
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workspacefolder, setting, signatureProvider, sleep,
 	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, workspaceSymbolProvider, inWorkspaceFolders,
-	parseWorkspaceFolders, winapis, update_settings, utils, parseinclude, update_version
+	parseWorkspaceFolders, winapis, update_settings, utils, parseinclude, update_version, SemanticTokenModifiers, SemanticTokenTypes
 } from './common';
 import { get_ahkProvider } from './ahkProvider';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
@@ -84,27 +84,8 @@ connection.onInitialize((params: InitializeParams) => {
 			referencesProvider: { workDoneProgress: true },
 			semanticTokensProvider: {
 				legend: {
-					tokenTypes: [
-						'class',
-						'function',
-						'method',
-						'parameter',
-						'variable',
-						'property',
-						'keyword',
-						'string',
-						'number',
-						'operator'
-					],
-					tokenModifiers: [
-						'definition',
-						'readonly',
-						'static',
-						'deprecated',
-						'modification',
-						'documentation',
-						'defaultLibrary'
-					]
+					tokenTypes: Object.values(SemanticTokenTypes).filter(t => typeof t === 'string') as string[],
+					tokenModifiers: Object.values(SemanticTokenModifiers).filter(t => typeof t === 'string') as string[]
 				},
 				full: true,
 				range: true
