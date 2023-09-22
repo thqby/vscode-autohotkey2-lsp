@@ -167,6 +167,7 @@ export interface FormatOptions {
 	space_in_empty_paren?: boolean
 	space_in_other?: boolean
 	space_in_paren?: boolean
+	switch_case_alignment?: boolean
 	symbol_with_same_case?: boolean
 	white_space_before_inline_comment?: string
 	wrap_line_length?: number
@@ -4743,7 +4744,8 @@ export class Lexer {
 				let need_newline = !just_added_newline();
 				print_token();
 				previous_flags.indentation_level = Math.min(previous_flags.indentation_level, flags.indentation_level = real_indentation_level());
-				indent();
+				if (!(opt.switch_case_alignment && flags.last_word === 'switch'))
+					indent();
 				if (need_newline || opt.brace_style !== undefined)
 					print_newline();
 				else output_space_before_token = space_in_other;
