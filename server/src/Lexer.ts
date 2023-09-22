@@ -3465,7 +3465,7 @@ export class Lexer {
 						(p ?? result).push(Variable.create(token.content, SymbolKind.Variable, make_range(token.offset, token.length)));
 					return;
 				}
-				if (!tk.length)
+				if (!token.length)
 					return;
 				let rg = make_range(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg);
 				if (md === 2) {
