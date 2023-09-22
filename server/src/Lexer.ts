@@ -910,6 +910,81 @@ export class Lexer {
 				return ' ';
 			}
 
+			function check_operator(op: Token) {
+				let tp = op_type(op);
+				if ((tp >= 0 && (op.topofline === 1 || !yields_an_operand(op.previous_token!))) ||
+					(tp <= 0 && !check_right(_this.get_token(op.offset + op.length, true))))
+					_this.addDiagnostic(diagnostic.missingoperand(), op.offset, op.length);
+				return tp;
+				// -1 prefix; 0 binary; 1 postfix
+				function op_type(op: Token) {
+					let t: Token;
+					switch (op.content.toLowerCase()) {
+						case '!':
+						case '~':
+						case 'not':
+							return -1;
+						case '%':
+							return op.previous_pair_pos === undefined ? -1 : 1;
+						case '&':
+						case '+':
+						case '-':
+							if (op.topofline < 1 && yields_an_operand(op.previous_token ?? EMPTY_TOKEN))
+								return 0;
+							return -1;
+						case '++':
+						case '--':
+							return yields_an_operand(op) ? 1 : -1;
+						case ':':
+							return op.previous_pair_pos === undefined ? 1 : 0;
+						case '?':
+							return op.ignore ? 1 : 0;
+						default:
+							return 0;
+					}
+				}
+				function yields_an_operand(tk: Token): boolean {
+					switch (tk.type) {
+						case 'TK_DOT':
+							return op.content === '%' && op.previous_pair_pos === undefined;
+						case 'TK_END_BLOCK':
+							return Boolean(_this.tokens[tk.previous_pair_pos!]?.data);
+						case 'TK_END_EXPR':
+						case 'TK_NUMBER':
+						case 'TK_STRING':
+							return true;
+						case 'TK_WORD':
+							return !tk.paraminfo;
+						case 'TK_OPERATOR':
+							switch (tk.content) {
+								case '?': return Boolean(tk.ignore);
+								case '%': return tk.previous_pair_pos !== undefined;
+								case '++':
+								case '--':	// postfix, true
+									return !tk.topofline && yields_an_operand(tk.previous_token ?? EMPTY_TOKEN);
+							}
+						default: return false;
+					}
+				}
+				function check_right(tk?: Token) {
+					switch (tk?.type) {
+						case 'TK_START_BLOCK':
+						case 'TK_START_EXPR':
+						case 'TK_NUMBER':
+						case 'TK_STRING':
+							return true;
+						case 'TK_WORD':
+							if (tk.topofline === 1 && allIdentifierChar.test(op.content) && _parent.ranges)
+								return false;
+							return true;
+						case 'TK_OPERATOR':
+							return op_type(tk) === -1;
+						default:
+							return false;
+					}
+				}
+			}
+
 			function parse_brace(level = 0) {
 				if (tk.type === 'TK_START_BLOCK') {
 					delete tk.data;
@@ -2550,10 +2625,9 @@ export class Lexer {
 									break;
 								}
 								tpexp += ' ' + tk.content;
-								if (lk.type === 'TK_OPERATOR' && !lk.content.match(/^([:?%]|\+\+|--|=>)$/) && !tk.content.match(/[+\-%!~&]|^not$/i))
-									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, tk.length);
+								let tp = check_operator(tk);
 								if (tk.content === '&') {
-									if (lk.paraminfo || ['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR', 'TK_OPERATOR', ''].includes(lk.type)) {
+									if (tp === -1) {
 										byref = true;
 										continue;
 									}
@@ -2587,114 +2661,6 @@ export class Lexer {
 					let o: number | undefined;
 					while ((o = ternarys.pop()) !== undefined)
 						_this.addDiagnostic(diagnostic.missing(':'), o, 1);
-				}
-				function checkOperator(op: Token) {
-					return operatorType(op, op.previous_token);
-					function operatorType(op: Token, pre: Token = EMPTY_TOKEN, pre_type?: number) {	// -1 Prefix unary; 1 Suffix unary
-						let t: Token;
-						switch (op.content) {
-							case '!':
-							case '~':
-								return -1;
-							case '%':
-								return op.previous_pair_pos === undefined ? -1 : 1;
-							case '&':
-							case '+':
-							case '-':
-								switch (pre.type) {
-									case '':
-									case 'TK_START_EXPR':
-									case 'TK_START_BLOCK':
-									case 'TK_COMMA':
-									case 'TK_EQUALS':
-										return -1;
-									case 'TK_WORD':
-										return pre.callinfo ? -1 : 0;
-									case 'TK_STRING':
-									case 'TK_NUMBER':
-									case 'TK_RESERVED':
-										return 0;
-									case 'TK_OPERATOR':
-										if (pre.content === '?' || pre.content === ':')
-											return -1;
-										if ((pre_type ?? operatorType(pre, pre.previous_token)) < 1) {
-											if (op.content === '&' && !'!%'.includes(pre.content))
-												return 3;
-											return -1;
-										}
-								}
-								return 0;
-							case '++':
-							case '--':
-								if (op.topofline > 0)
-									return -1;
-								switch (pre.type) {
-									case 'TK_OPERATOR':
-										if ((pre_type ?? operatorType(pre, pre.previous_token)) > 1)
-											return 3;
-									case '':
-									case 'TK_START_EXPR':
-									case 'TK_START_BLOCK':
-									case 'TK_COMMA':
-									case 'TK_EQUALS':
-										switch (_this.get_token(op.offset + op.length).type) {
-											case 'TK_WORD':
-											case 'TK_STRING':
-											case 'TK_NUMBER':
-											case 'TK_RESERVED':
-											case 'TK_START_EXPR':
-											case 'TK_START_BLOCK':
-												return -1;
-											case 'TK_OPERATOR':
-												if (operatorType(pre, pre.previous_token) <= 0)
-													return -1;
-											default:
-												return 3;
-										}
-										return -1;
-									case 'TK_WORD':
-									case 'TK_STRING':
-									case 'TK_NUMBER':
-									case 'TK_RESERVED':
-									case 'TK_END_EXPR':
-									case 'TK_END_BLOCK':
-										return 1;
-								}
-								return 3;
-							case ':':
-								if (op.previous_pair_pos === undefined)
-									return 1;
-							case '?':
-								if (op.ignore)
-									return 1;
-							default:
-								switch (pre.type) {
-									case 'TK_OPERATOR':
-										if ((pre_type ?? operatorType(pre, pre.previous_token)) !== 1)
-											return 3;
-									case 'TK_WORD':
-									case 'TK_STRING':
-									case 'TK_NUMBER':
-									case 'TK_RESERVED':
-									case 'TK_END_EXPR':
-									case 'TK_END_BLOCK':
-										switch ((t = _this.get_token(op.offset + op.length)).type) {
-											case 'TK_OPERATOR':
-												if (operatorType(t, op, 0) !== -1)
-													return 3;
-											case 'TK_WORD':
-											case 'TK_STRING':
-											case 'TK_NUMBER':
-											case 'TK_RESERVED':
-											case 'TK_START_EXPR':
-											case 'TK_START_BLOCK':
-												return 0;
-										}
-									default:
-										return 3;
-								}
-						}
-					}
 				}
 			}
 
@@ -3307,10 +3273,13 @@ export class Lexer {
 					} else if (tk.type === 'TK_NUMBER')
 						tpexp += check_concat(tk) + '#number';
 					else if (tk.type === 'TK_OPERATOR') {
+						let tp = check_operator(tk);
 						tpexp += ' ' + tk.content;
-						if (tk.content === '&' && (lk.content === '=>' || ['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lk.type))) {
-							byref = true;
-							continue;
+						if (tk.content === '&') {
+							if (tp === -1) {
+								byref = true;
+								continue;
+							}
 						} else if (tk.content === '?') {
 							if (tk.ignore)
 								tpexp = tpexp.slice(0, -2);
@@ -6673,7 +6642,7 @@ export function checksamenameerr(decs: { [name: string]: DocumentSymbol }, arr: 
 	}
 }
 
-export function is_line_continue(lk: Token, tk: Token, parent?: DocumentSymbol): boolean {
+export function is_line_continue(lk: Token, tk: Token, parent?: FuncNode): boolean {
 	switch (lk.type) {
 		case '':
 		case 'TK_COMMA':
@@ -6692,7 +6661,7 @@ export function is_line_continue(lk: Token, tk: Token, parent?: DocumentSymbol):
 				case 'TK_EQUALS':
 					return true;
 				case 'TK_OPERATOR':
-					return !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!parent || !tk.content.match(/^\w/) || parent.kind !== SymbolKind.Class);
+					return !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!parent?.ranges || !allIdentifierChar.test(tk.content));
 				// case 'TK_END_BLOCK':
 				// case 'TK_END_EXPR':
 				// 	return false;
