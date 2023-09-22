@@ -260,6 +260,10 @@
 							"type": "boolean",
 							"default": false
 						},
+						"switch_case_alignment": {
+							"type": "boolean",
+							"default": false
+						},
 						"symbol_with_same_case": {
 							"type": "boolean",
 							"default": false

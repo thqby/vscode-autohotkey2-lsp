@@ -84,9 +84,9 @@ onerr:
 			__fn := %__m['method']%
 		catch as __e
 			return this.sendResponse(__m['id'], , { code: -32601, message: __e.Message })
-		try return this.sendResponse(__m['id'], __fn(__m.Get('params', []) *))
+		try return this.sendResponse(__m['id'], __fn(__m.Get('params', [])*))
 		catch as __e
-			return this.sendResponse(__m['id', , { code: -32602, message: __e.Message }])
+			return this.sendResponse(__m['id'], , { code: -32602, message: __e.Message })
 	}
 	onNotification(m) {
 		OutputDebug JSON.stringify(m, 0)
