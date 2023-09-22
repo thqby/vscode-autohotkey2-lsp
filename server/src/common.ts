@@ -1,11 +1,12 @@
 import { resolve, sep } from 'path';
 import { URI } from 'vscode-uri';
-import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
+import { readdirSync, readFileSync, existsSync, statSync, lstatSync, readlinkSync } from 'fs';
 import { Connection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, DocumentSymbol, Hover, InsertTextFormat, Range, SymbolInformation, SymbolKind } from 'vscode-languageserver-types';
 import { FormatOptions, Lexer, parseinclude, update_commentTags } from './Lexer';
 import { diagnostic } from './localize';
+import { execSync } from 'child_process';
 export * from './Lexer';
 export * from './codeActionProvider';
 export * from './colorProvider';
@@ -537,6 +538,27 @@ export function set_Workspacefolder(folders?: string[]) { workspaceFolders = fol
 export async function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+export const commandExistsSync = require('command-exists').sync
+export const resolvePathSync = (path: string): string => {
+	if (!path)
+		return ""
+	if (commandExistsSync(path)) // resolves a command
+		path = execSync('where ' + path).toString().trim();
+	try { // now try to resolve a symlink and check whether the file exists
+		if (lstatSync(path).isSymbolicLink()) // lstatSync throws if file is not found
+			path = readlinkSync(path);
+	} catch {
+		return ""
+	}
+	return path
+}
+export const existsSyncEx = (path: string): boolean => {
+    try { lstatSync(path); } catch (err) {
+      if ((err as any)?.code === 'ENOENT') return false;
+    }
+    return true;
+  };
 
 function glob2regexp(glob: string) {
 	let reStr = '^', inGroup = false, isNot: boolean, c: string;

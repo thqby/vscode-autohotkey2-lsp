@@ -31,13 +31,34 @@ import {
 } from 'vscode-languageclient/node';
 import * as child_process from 'child_process';
 import { resolve } from 'path';
-import { existsSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, readdirSync, statSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 let ahkprocesses = new Map<number, child_process.ChildProcess>();
 let ahkconfig = workspace.getConfiguration('AutoHotkey2');
 let ahkpath_cur: string = ahkconfig.InterpreterPath, server_is_ready = false, zhcn = false;
 const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
+
+const commandExistsSync = require('command-exists').sync
+const resolvePathSync = (path: string): string => {
+	if (!path)
+		return ""
+	if (commandExistsSync(path)) // resolves a command
+		path = child_process.execSync('where ' + path).toString().trim();
+	try { // now try to resolve a symlink and check whether the file exists
+		if (lstatSync(path).isSymbolicLink()) // lstatSync throws if file is not found
+			path = readlinkSync(path);
+	} catch {
+		return ""
+	}
+	return path
+}
+const existsSyncEx = (path: string): boolean => {
+    try { lstatSync(path); } catch (err) {
+      if ((err as any)?.code === 'ENOENT') return false;
+    }
+    return true;
+  };
 
 export async function activate(context: ExtensionContext) {
 	// The server is implemented in node
@@ -203,14 +224,16 @@ function decode(buf: Buffer) {
 
 async function runCurrentScriptFile(selection = false): Promise<void> {
 	let editor = window.activeTextEditor, executePath = ahkpath_cur || workspace.getConfiguration('AutoHotkey2').InterpreterPath as string;
+	let resolvedPath = resolvePathSync(executePath)
 	if (!editor) return;
-	if (executePath && !executePath.includes(':'))
-		executePath = resolve(workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath ?? '', executePath);
-	if (!executePath || !existsSync(executePath)) {
+	if (!resolvedPath && executePath && !executePath.includes(':'))
+		resolvedPath = resolve(workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath ?? '', executePath);
+	if (!resolvedPath) {
 		executePath ||= 'AutoHotkey.exe';
 		window.showErrorMessage(zhcn ? `"${executePath}"未找到!` : `"${executePath}" not find!`);
 		return;
 	}
+	executePath = resolvedPath;
 	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
 	let startTime: Date;
 	outputchannel.show(true);
@@ -300,11 +323,12 @@ async function compileScript() {
 		window.showErrorMessage(zhcn ? `"Ahk2Exe.exe"未找到!` : `"Ahk2Exe.exe" was not found!`);
 		return;
 	}
-	if (!executePath || !existsSync(executePath)) {
+	let resolvePath = resolvePathSync(executePath)
+	if (!resolvePath) {
 		executePath ||= 'AutoHotkey.exe';
 		window.showErrorMessage(zhcn ? `"${executePath}"未找到!` : `"${executePath}" was not found!`);
 		return;
-	}
+	} else executePath = resolvePath
 	if (editor.document.isUntitled) {
 		window.showErrorMessage(zhcn ? '编译前请先保存脚本' : 'Please save the script before compiling');
 		return;
@@ -362,7 +386,8 @@ async function quickHelp() {
 		window.showErrorMessage(zhcn ? `"AutoHotkey.chm"未找到!` : `"AutoHotkey.chm" was not found!`);
 		return;
 	}
-	if (ahkpath_cur && existsSync(ahkpath_cur)) {
+	let executePath = resolvePathSync(ahkpath_cur);
+	if (executePath) {
 		let script = `
 #NoTrayIcon
 #DllLoad oleacc.dll
@@ -400,10 +425,10 @@ if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint
 		if (ahkStatusBarItem.text.endsWith('[UIAccess]')) {
 			let file = resolve(__dirname, 'temp.ahk');
 			writeFileSync(file, script, { encoding: 'utf-8' });
-			child_process.execSync(`"${ahkpath_cur}" /ErrorStdOut ${file}`);
+			child_process.execSync(`"${executePath}" /ErrorStdOut ${file}`);
 			unlinkSync(file);
 		} else
-			child_process.execSync(`"${ahkpath_cur}" /ErrorStdOut *`, { input: script });
+			child_process.execSync(`"${executePath}" /ErrorStdOut *`, { input: script });
 	}
 }
 
@@ -411,8 +436,10 @@ async function begindebug(extlist: string[], debugexts: any, params = false, att
 	let editor = window.activeTextEditor, executePath = ahkpath_cur;
 	if (!editor) return;
 	let extname: string | undefined;
-	if (executePath && !executePath.includes(':'))
+	let resolvedPath = resolvePathSync(executePath)
+	if (!resolvedPath && executePath && !executePath.includes(':'))
 		executePath = resolve(workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath ?? '', executePath);
+	else executePath = resolvedPath
 	if (params || attach) {
 		if (!extlist.includes(extname = 'zero-plusplus.vscode-autohotkey-debug')) {
 			window.showErrorMessage('zero-plusplus.vscode-autohotkey-debug was not found!');
@@ -522,7 +549,7 @@ async function setInterpreter() {
 			if (it = pick.selectedItems[0]) {
 				if ((!active || it !== active) && it.detail)
 					sel = it;
-			} else if (pick.value.match(/\.exe/i) && existsSync(pick.value))
+			} else if (pick.value.match(/\.exe/i) && (existsSyncEx(pick.value)))
 				sel.detail = pick.value;
 		}
 		pick.dispose();
@@ -594,7 +621,7 @@ function findfile(files: string[], workspace: string) {
 	}
 	for (const path of paths)
 		for (const file of files)
-			if (existsSync(s = resolve(path, '..', file)))
+			if (existsSyncEx(s = resolve(path, '..', file)))
 				return s;
 	return '';
 
@@ -609,8 +636,8 @@ function findfile(files: string[], workspace: string) {
 }
 
 async function onDidChangegetInterpreter() {
-	let path = ahkpath_cur;
-	if (path.toLowerCase().endsWith('.exe') && existsSync(path)) {
+	let path = resolvePathSync(ahkpath_cur);
+	if (path.toLowerCase().endsWith('.exe')) {
 		if (path !== ahkStatusBarItem.tooltip) {
 			ahkStatusBarItem.tooltip = path;
 			ahkStatusBarItem.text = (await getAHKversion([path]))[0] || (zhcn ? '未知版本' : 'Unknown version');

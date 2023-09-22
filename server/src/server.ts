@@ -2,7 +2,6 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { existsSync } from 'fs';
 import { URI } from 'vscode-uri';
 import { resolve } from 'path';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -17,7 +16,8 @@ import {
 	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workspacefolder, setting, signatureProvider, sleep,
 	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, workspaceSymbolProvider, inWorkspaceFolders,
-	parseWorkspaceFolders, winapis, update_settings, utils, parseinclude, update_version, SemanticTokenModifiers, SemanticTokenTypes
+	parseWorkspaceFolders, winapis, update_settings, utils, parseinclude, update_version, SemanticTokenModifiers, SemanticTokenTypes,
+	existsSyncEx, resolvePathSync
 } from './common';
 import { get_ahkProvider } from './ahkProvider';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
@@ -111,7 +111,7 @@ connection.onInitialize((params: InitializeParams) => {
 	initahk2cache();
 	if (configs) {
 		update_settings(configs);
-		if (existsSync(extsettings.InterpreterPath))
+		if (resolvePathSync(extsettings.InterpreterPath))
 			initpathenv();
 		else connection.window.showErrorMessage(setting.ahkpatherr());
 	}
@@ -274,11 +274,11 @@ function initpathenv(samefolder = false) {
 	let fail = 0;
 	let ret = runscript(script, (data: string) => {
 		if (!(data = data.trim())) {
-			let path = ahkpath_cur || extsettings.InterpreterPath;
+			let path = resolvePathSync(ahkpath_cur) || resolvePathSync(extsettings.InterpreterPath);
 			if (getAHKversion([path])[0].endsWith('[UIAccess]')) {
 				let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
 				fail = 2;
-				if (path !== n && existsSync(n) && !getAHKversion([n])[0].endsWith('[UIAccess]')) {
+				if (path !== n && existsSyncEx(n) && !getAHKversion([n])[0].endsWith('[UIAccess]')) {
 					set_ahkpath(n);
 					if (ret = initpathenv(samefolder))
 						fail = 0;
@@ -464,11 +464,11 @@ function getDllExport(paths: string[], onlyone = false) {
 
 let curPERCDATA: { exe: string, data: Map<number | string, Buffer> } | undefined = undefined;
 function getRCDATA(name: string | undefined) {
-	let exe = ahkpath_cur || extsettings.InterpreterPath, path = `${exe}:${name}`;
+	let exe = resolvePathSync(ahkpath_cur) || resolvePathSync(extsettings.InterpreterPath), path = `${exe}:${name}`;
 	let uri = URI.from({ scheme: 'ahkres', path }).toString().toLowerCase();
 	if (lexers[uri])
 		return { uri, path };
-	if (!existsSync(exe))
+	if (!exe)
 		return undefined;
 	exe = exe.toLowerCase();
 	let rc: { [name: string]: Buffer } = curPERCDATA?.exe === exe ? curPERCDATA.data :

@@ -1,10 +1,9 @@
 import { spawnSync } from 'child_process';
-import { ahkpath_cur, extsettings } from './common';
-import { existsSync } from 'fs';
+import { ahkpath_cur, extsettings, resolvePathSync } from './common';
 
 export function runscript(script: string, out?: Function): boolean {
-	let executePath = ahkpath_cur || extsettings.InterpreterPath;
-	if (existsSync(executePath)) {
+	let executePath = resolvePathSync(ahkpath_cur) || resolvePathSync(extsettings.InterpreterPath);
+	if (executePath) {
 		const process = spawnSync(`\"${executePath}\" /CP65001 /ErrorStdOut=utf-8 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
 		if (process) {
 			if (out)
