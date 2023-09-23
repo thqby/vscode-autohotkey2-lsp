@@ -912,14 +912,13 @@ export class Lexer {
 			}
 
 			function check_operator(op: Token) {
-				let tp = op_type(op);
+				let tp = op.op_type ??= op_type(op);
 				if ((tp >= 0 && (op.topofline === 1 || !yields_an_operand(op.previous_token!))) ||
 					(tp <= 0 && !check_right(_this.get_token(op.offset + op.length, true))))
 					_this.addDiagnostic(diagnostic.missingoperand(), op.offset, op.length);
 				return tp;
 				// -1 prefix; 0 binary; 1 postfix
 				function op_type(op: Token) {
-					let t: Token;
 					switch (op.content.toLowerCase()) {
 						case '!':
 						case '~':
@@ -978,8 +977,10 @@ export class Lexer {
 							if (tk.topofline === 1 && allIdentifierChar.test(op.content) && _parent.ranges)
 								return false;
 							return true;
+						case 'TK_RESERVED':
+							return /^(class|isset|throw|super)$/.test(tk.content.toLowerCase());
 						case 'TK_OPERATOR':
-							return op_type(tk) === -1;
+							return (tk.op_type ??= op_type(tk)) === -1;
 						default:
 							return false;
 					}
@@ -1373,16 +1374,14 @@ export class Lexer {
 									make_range(0, 0))];
 								v.detail = completionitem.thishotkey();
 								let tparent = _parent, tmode = mode, l = tk.content.toLowerCase();
+								let rl = result.length;
 								_parent = tn, mode = 1;
 								if (l === 'return')
 									tn.children = parse_line(undefined, undefined, 'return');
 								else if (['global', 'local', 'static'].includes(l)) {
-									let _p = _parent, rl = result.length;
-									_parent = tn, parse_reserved();
+									parse_reserved();
 									tn.children = result.splice(rl);
-									_parent = _p;
 								} else {
-									let rl = result.length;
 									next = false, parse_body(null, ht.offset);
 									tn.children = result.splice(rl);
 								}
@@ -2536,7 +2535,7 @@ export class Lexer {
 							}
 							break;
 						case 'TK_START_BLOCK':
-							if (tpexp && (!(lk.type === 'TK_OPERATOR' && !lk.content.match(/^(\+\+|--)$/)) && lk.type !== 'TK_EQUALS')) {
+							if (tpexp && (!(lk.type === 'TK_OPERATOR' && lk.op_type !== 1) && lk.type !== 'TK_EQUALS')) {
 								types[tpexp] = 0;
 								next = false, ternaryMiss();
 								return result.splice(pres);
@@ -2580,7 +2579,7 @@ export class Lexer {
 								break;
 							}
 							if (/^(class|super|isset)$/i.test(tk.content)) {
-								if (tk.content.toLowerCase() === 'isset' && parse_isset(c))
+								if (tk.content.toLowerCase() === 'isset' && parse_isset(c) && (tpexp += ' #number'))
 									break;
 								next = false, tk.type = 'TK_WORD';
 								break;
@@ -3013,7 +3012,7 @@ export class Lexer {
 					if (info.name || !_pk.topofline && t && _pk.prefix_is_whitespace === undefined
 						&& (t.previous_pair_pos !== undefined || t.type === 'TK_WORD' || t.type === 'TK_DOT'))
 						_pk.paraminfo = info, iscall = true;
-				}
+				} else _pk.op_type = -1;
 				while (nexttoken()) {
 					if (tk.topofline) {
 						if (b === '%' && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
@@ -3034,6 +3033,7 @@ export class Lexer {
 						tokens[tk.previous_pair_pos = pairpos.pop() as number].next_pair_pos = tk.offset;
 						if (e !== '%')
 							_this.addFoldingRange(tk.previous_pair_pos as number, tk.offset + 1, 'block');
+						else tk.op_type = 1;
 						if ((--pairnum) < 0)
 							break;
 						if (e === ')')
@@ -3564,7 +3564,10 @@ export class Lexer {
 								delete fn.local[k];
 							}
 						}
-						_this.declaration[k] ??= dec[k] = v, v.assigned ||= Boolean(v.returntypes), (v as any).infunc = true;
+						dec[k] ??= v;
+						_this.declaration[k] ??= v;
+						v.assigned ||= Boolean(v.returntypes);
+						(v as any).infunc = true;
 					});
 					fn.children.forEach(it => {
 						_low = it.name.toUpperCase();
