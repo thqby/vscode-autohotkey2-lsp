@@ -2636,27 +2636,31 @@ export class Lexer {
 									break;
 								}
 								tpexp += ' ' + tk.content;
-								let tp = check_operator(tk);
-								if (tk.content === '&') {
-									if (tp === -1) {
-										byref = true;
-										continue;
-									}
+								if (tk.content === ':') {
+									if ((tk.previous_pair_pos = ternarys.pop()) === undefined) {
+										if (end === ':') {
+											next = false, tpexp = tpexp.slice(0, -2);
+											types[tpexp] = 0;
+											return result.splice(pres);
+										}
+										_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
+									} else
+										_this.tokens[tk.previous_pair_pos!].next_pair_pos = tk.offset;
 								} else if (tk.content === '?') {
 									if (tk.ignore)
 										tpexp = tpexp.slice(0, -2);
 									else
 										ternarys.push(tk.offset);
-								} else if (['++', '--'].includes(tk.content)) {
-									byref = false, tpexp = tpexp.slice(0, -3);
-									continue;
-								} else if (tk.content === ':' && ternarys.pop() === undefined) {
-									if (end === ':') {
-										next = false, tpexp = tpexp.slice(0, -2);
-										types[tpexp] = 0;
-										return result.splice(pres);
+								}
+								if (check_operator(tk) === -1) {
+									if (tk.content === '&') {
+										byref = true;
+										continue;
 									}
-									_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
+									if (['++', '--'].includes(tk.content)) {
+										byref = false, tpexp = tpexp.slice(0, -3);
+										continue;
+									}
 								}
 							}
 							break;
@@ -3274,11 +3278,6 @@ export class Lexer {
 								info.miss.push(info.comma.length);
 							else if (!lk.ignore && lk.type === 'TK_OPERATOR' && !lk.content.match(/(--|\+\+|%)/))
 								_this.addDiagnostic(diagnostic.unexpected(','), tk.offset, 1);
-							// else if (lk.ignore && lk.content.toLowerCase() === 'unset') {
-							// 	let t = lk.previous_token;
-							// 	if (t?.length === 1 && ',('.includes(t.content))
-							// 		info.miss.push(info.count - 1);
-							// }
 							info.comma.push(tk.offset);
 						} else if (b === '(')
 							tpexp = tpexp.substring(0, tpexp.lastIndexOf('(') + 1);
@@ -3287,26 +3286,31 @@ export class Lexer {
 					} else if (tk.type === 'TK_NUMBER')
 						tpexp += check_concat(tk) + '#number';
 					else if (tk.type === 'TK_OPERATOR') {
-						let tp = check_operator(tk);
+						if (allIdentifierChar.test(tk.content) && (input[tk.offset - 1] === '%' || input[tk.offset + tk.length] === '%')) {
+							next = false, tk.type = 'TK_WORD', tk.semantic = { type: SemanticTokenTypes.variable };
+							break;
+						}
 						tpexp += ' ' + tk.content;
-						if (tk.content === '&') {
-							if (tp === -1) {
-								byref = true;
-								continue;
-							}
+						if (tk.content === ':') {
+							if ((tk.previous_pair_pos = ternarys.pop()) === undefined)
+								_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
+							else
+								_this.tokens[tk.previous_pair_pos!].next_pair_pos = tk.offset;
 						} else if (tk.content === '?') {
 							if (tk.ignore)
 								tpexp = tpexp.slice(0, -2);
 							else
 								ternarys.push(tk.offset);
-						} else if (tk.content === ':' && ternarys.pop() === undefined)
-							_this.addDiagnostic(diagnostic.unexpected(':'), tk.offset, 1);
-						else if (['++', '--'].includes(tk.content)) {
-							byref = false, tpexp = tpexp.slice(0, -3);
-							continue;
-						} else if (b !== '%' && allIdentifierChar.test(tk.content) && (input[tk.offset - 1] === '%' || input[tk.offset + tk.length] === '%')) {
-							next = false, tk.type = 'TK_WORD', tk.semantic = { type: SemanticTokenTypes.variable };
-							tpexp = tpexp.slice(0, -1 - tk.length);
+						}
+						if (check_operator(tk) === -1) {
+							if (tk.content === '&') {
+								byref = true;
+								continue;
+							}
+							if (['++', '--'].includes(tk.content)) {
+								byref = false, tpexp = tpexp.slice(0, -3);
+								continue;
+							}
 						}
 					}
 					byref = undefined;
@@ -3323,11 +3327,6 @@ export class Lexer {
 						info.count++;
 						if (lk.content === '*')
 							info.unknown = true, info.count--;
-						// else if (lk.ignore && lk.content.toLowerCase() === 'unset') {
-						// 	let t = lk.previous_token;
-						// 	if (t?.length === 1 && ',('.includes(t.content))
-						// 		info.miss.push(info.count - 1);
-						// }
 					}
 					Object.defineProperty(types, 'paraminfo', { value: info, configurable: true });
 				}
