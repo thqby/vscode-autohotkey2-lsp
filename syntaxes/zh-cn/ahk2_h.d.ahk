@@ -40,7 +40,7 @@ MemoryFindResource(hModule, Name, Type [, Language]) => Number
 /**
  * 释放指定的 dll 先前加载的 MemoryLoadLibrary.类似于 FreeLibrary.
  */
-MemoryFreeLibrary(hModule) => String
+MemoryFreeLibrary(hModule) => void
 
 /**
  * 在先前加载了MemoryLoadLibrary的指定dll中找到函数指针.类似于GetProcAddress.
@@ -345,6 +345,12 @@ class Struct {
 }
 
 class Worker {
+	/**
+	 * 枚举 ahk 线程.
+	 * @return {([&threadid,] &workerobj)=>void} 一个将返回threadid和workerobj的枚举器.
+	 */
+	static __Enum(NumberOfVars?) => Enumerator
+
 	/**
 	 * 在当前进程中创建一个真AutoHotkey线程或关联一个已有AutoHotkey线程, 并返回一个与之交流的对象.
 	 * @param ScriptOrThreadID 当ScriptOrThreadID为脚本时, 创建一个AutoHotkey线程;

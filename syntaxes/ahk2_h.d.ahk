@@ -40,7 +40,7 @@ MemoryFindResource(hModule, Name, Type [, Language]) => Number
 /**
  * Release the previously loaded MemoryLoadLibrary of the specified dll. Similar to FreeLibrary.
  */
-MemoryFreeLibrary(hModule) => String
+MemoryFreeLibrary(hModule) => void
 
 /**
  * Find the function pointer in the specified dll that previously loaded MemoryLoadLibrary. Similar to GetProcAddress.
@@ -350,6 +350,12 @@ class Struct {
 }
 
 class Worker {
+	/**
+	 * Enumerates ahk threads.
+	 * @return {([&threadid,]&workerobj)=>void} An enumerator which will return items contained threadid and workerobj.
+	 */
+	static __Enum(NumberOfVars?) => Enumerator
+
 	/**
 	 * Creates a real AutoHotkey thread or associates an existing AutoHotkey thread in the current process and returns an object that communicates with it.
 	 * @param ScriptOrThreadID When ScriptOrThreadID is a script, create an AutoHotkey thread;

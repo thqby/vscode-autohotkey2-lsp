@@ -260,12 +260,6 @@ export function initahk2cache() {
 		keyword: [],
 		snippet: [],
 		text: []
-		// snippet: !inBrowser && process.env.AHK2_LS_CONFIG ? [] : [{
-		// 	label: 'zs-Comment',
-		// 	detail: completionitem.comment(),
-		// 	kind: CompletionItemKind.Snippet,
-		// 	command: { title: 'ahk2.generate.comment', command: 'ahk2.generate.comment', arguments: [] }
-		// }]
 	};
 }
 
