@@ -55,7 +55,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 				} else if (fn.full)
 					hover.push({ kind: 'ahk2', value: fn.full });
 
-				if (node.detail) {
+				if (node.detail || node.kind === SymbolKind.Variable) {
 					let md = formatMarkdowndetail(node);
 					if (node.kind === SymbolKind.Variable) {
 						let re = /^/;
