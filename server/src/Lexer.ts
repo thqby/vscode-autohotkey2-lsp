@@ -917,7 +917,7 @@ export class Lexer {
 				if ((tp >= 0 && (op.topofline === 1 || !yields_an_operand(op.previous_token!))) ||
 					(tp <= 0 && !check_right(_this.get_token(op.offset + op.length, true))))
 					_this.addDiagnostic(diagnostic.missingoperand(), op.offset, op.length);
-				return tp;
+				return op.op_type;
 				// -1 prefix; 0 binary; 1 postfix
 				function op_type(op: Token) {
 					switch (op.content.toLowerCase()) {
@@ -940,6 +940,12 @@ export class Lexer {
 							return op.previous_pair_pos === undefined ? 1 : 0;
 						case '?':
 							return op.ignore ? 1 : 0;
+						case '*':
+							if (op.previous_token?.type === 'TK_START_EXPR') {
+								let t = op.previous_token.content + _this.get_token(op.offset + 1, true).content;
+								if (t === '()' || t === '[]')
+									return -1;
+							}
 						default:
 							return 0;
 					}
@@ -982,6 +988,10 @@ export class Lexer {
 							return /^(class|isset|throw|super)$/.test(tk.content.toLowerCase());
 						case 'TK_OPERATOR':
 							return (tk.op_type ??= op_type(tk)) === -1;
+						case 'TK_END_EXPR':
+						case 'TK_EOF':
+							if (op.op_type! < 1 && op.content === '*')
+								return (op.op_type = 1);
 						default:
 							return false;
 					}
