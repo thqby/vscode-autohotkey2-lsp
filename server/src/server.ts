@@ -1,8 +1,3 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-import { existsSync } from 'fs';
 import { URI } from 'vscode-uri';
 import { resolve } from 'path';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -14,12 +9,13 @@ import {
 	AHKLSSettings, chinese_punctuations, clearLibfuns, codeActionProvider, colorPresentation, colorProvider, completionProvider, defintionProvider,
 	documentFormatting, extsettings, exportSymbols, generateComment, getallahkfiles, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile, pathenv, prepareRename,
-	rangeFormatting, referenceProvider, renameProvider, runscript, semanticTokensOnFull, semanticTokensOnRange,
+	rangeFormatting, referenceProvider, renameProvider, semanticTokensOnFull, semanticTokensOnRange,
 	sendDiagnostics, set_ahk_h, set_Connection, set_dirname, set_locale, set_Workspacefolder, setting, signatureProvider, sleep,
 	symbolProvider, typeFormatting, workspaceFolders, ahkpath_cur, set_ahkpath, workspaceSymbolProvider, inWorkspaceFolders,
 	parseWorkspaceFolders, winapis, update_settings, utils, parseinclude, update_version, SemanticTokenModifiers, SemanticTokenTypes
 } from './common';
 import { get_ahkProvider } from './ahkProvider';
+import { resolvePath, runscript } from './scriptrunner';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
 const languageServer = 'ahk2-language-server';
@@ -109,12 +105,10 @@ connection.onInitialize((params: InitializeParams) => {
 	set_locale(configs?.locale ?? params.locale);
 	loadlocalize();
 	initahk2cache();
-	if (configs) {
+	if (configs)
 		update_settings(configs);
-		if (existsSync(extsettings.InterpreterPath))
-			initpathenv();
-		else connection.window.showErrorMessage(setting.ahkpatherr());
-	}
+	if (!setInterpreter(resolvePath(extsettings.InterpreterPath ??= '')))
+		connection.window.showErrorMessage(setting.ahkpatherr());
 	loadahk2();
 	return result;
 });
@@ -151,8 +145,8 @@ connection.onDidChangeConfiguration(async (change: any) => {
 	let { AutoLibInclude, InterpreterPath } = extsettings;
 	update_settings(newset);
 	if (InterpreterPath !== extsettings.InterpreterPath) {
-		setInterpreter(extsettings.InterpreterPath ??= '');
-		connection.sendRequest('ahk2.updateStatusBar', [extsettings.InterpreterPath]);
+		if (setInterpreter(resolvePath(extsettings.InterpreterPath ??= '')))
+			connection.sendRequest('ahk2.updateStatusBar', [extsettings.InterpreterPath]);
 	}
 	if (AutoLibInclude !== extsettings.AutoLibInclude) {
 		if (extsettings.AutoLibInclude > 1)
@@ -264,7 +258,7 @@ function initpathenv(samefolder = false) {
 	#NoTrayIcon
 	#Warn All, Off
 	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 1) = "1" ? "FileAppend2" : "FileAppend"
-	for _, p in ['a_ahkpath','a_appdata','a_appdatacommon','a_computername','a_comspec','a_desktop','a_desktopcommon','a_iscompiled','a_mydocuments','a_programfiles','a_programs','a_programscommon','a_startmenu','a_startmenucommon','a_startup','a_startupcommon','a_temp','a_username','a_windir','a_ahkversion']
+	for _, p in ["a_ahkpath","a_appdata","a_appdatacommon","a_computername","a_comspec","a_desktop","a_desktopcommon","a_iscompiled","a_mydocuments","a_programfiles","a_programs","a_programscommon","a_startmenu","a_startmenucommon","a_startup","a_startupcommon","a_temp","a_username","a_windir","a_ahkversion"]
 		s .= SubStr(p, 3) "\`t" %p% "|"
 	try _H := !!A_ThreadID
 	%Append%(s "h\`t" _H "\`n", "*", "UTF-8")
@@ -274,11 +268,11 @@ function initpathenv(samefolder = false) {
 	let fail = 0;
 	let ret = runscript(script, (data: string) => {
 		if (!(data = data.trim())) {
-			let path = ahkpath_cur || extsettings.InterpreterPath;
+			let path = ahkpath_cur;
 			if (getAHKversion([path])[0].endsWith('[UIAccess]')) {
 				let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
 				fail = 2;
-				if (path !== n && existsSync(n) && !getAHKversion([n])[0].endsWith('[UIAccess]')) {
+				if (path !== n && (n = resolvePath(n, true)) && !getAHKversion([n])[0].endsWith('[UIAccess]')) {
 					set_ahkpath(n);
 					if (ret = initpathenv(samefolder))
 						fail = 0;
@@ -294,6 +288,7 @@ function initpathenv(samefolder = false) {
 		}
 		Object.assign(pathenv, Object.fromEntries(data.replace(/\t[A-Z]:\\/g, m => m.toLowerCase()).split('|').map(l => l.split('\t'))));
 		initnum = 1;
+		pathenv.ahkpath = ahkpath_cur;
 		update_version(pathenv.ahkversion ??= '2.0.0');
 		if (pathenv.ahkversion.startsWith('1.'))
 			connection.window.showErrorMessage(setting.versionerr());
@@ -330,7 +325,7 @@ function initpathenv(samefolder = false) {
 	});
 	if (!ret)
 		connection.window.showErrorMessage(setting.ahkpatherr());
-	else if (!pathenv.ahkpath && fail !== 2) {
+	else if (!pathenv.mydocuments && fail !== 2) {
 		if (initnum < 3)
 			setTimeout(() => {
 				initnum++, initpathenv();
@@ -372,8 +367,10 @@ function inlibdirs(path: string) {
 	return false;
 }
 
-async function changeInterpreter(oldpath: string, newpath: string) {
+function changeInterpreter(oldpath: string, newpath: string) {
 	let samefolder = resolve(oldpath, '..').toLowerCase() === resolve(newpath, '..').toLowerCase();
+	if (!initpathenv(samefolder))
+		return false;
 	if (!samefolder) {
 		let uri = URI.file(resolve(oldpath, '../lib')).toString().toLowerCase();
 		for (const u in libfuncs) {
@@ -381,16 +378,18 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 				delete libfuncs[u];
 		}
 	}
-	if (initpathenv(samefolder))
-		documents.all().forEach(validateTextDocument);
+	documents.all().forEach(validateTextDocument);
+	return true;
 }
 
-async function setInterpreter(path: string) {
-	let old = ahkpath_cur || extsettings.InterpreterPath;
-	if (path.toLowerCase() === old.toLowerCase())
-		return;
+function setInterpreter(path: string) {
+	let old = ahkpath_cur;
+	if (!path || path.toLowerCase() === old.toLowerCase())
+		return false;
 	set_ahkpath(path);
-	changeInterpreter(old, path || extsettings.InterpreterPath);
+	if (!changeInterpreter(old, path))
+		set_ahkpath(old);
+	return true;
 }
 
 async function parseproject(uri: string) {
@@ -464,17 +463,16 @@ function getDllExport(paths: string[], onlyone = false) {
 
 let curPERCDATA: { exe: string, data: Map<number | string, Buffer> } | undefined = undefined;
 function getRCDATA(name: string | undefined) {
-	let exe = ahkpath_cur || extsettings.InterpreterPath, path = `${exe}:${name}`;
+	let exe = resolvePath(ahkpath_cur, true), path = `${exe}:${name}`;
+	if (!exe) return;
 	let uri = URI.from({ scheme: 'ahkres', path }).toString().toLowerCase();
 	if (lexers[uri])
 		return { uri, path };
-	if (!existsSync(exe))
-		return undefined;
 	exe = exe.toLowerCase();
 	let rc: { [name: string]: Buffer } = curPERCDATA?.exe === exe ? curPERCDATA.data :
 		(curPERCDATA = { exe, data: new PEFile(exe).getResource(RESOURCE_TYPE.RCDATA) }).data;
 	if (!name || !rc)
-		return undefined;
+		return;
 	let data = rc[name];
 	if (data) {
 		try {
@@ -485,5 +483,5 @@ function getRCDATA(name: string | undefined) {
 			delete rc[name];
 		}
 	}
-	return undefined;
+	return;
 }
