@@ -651,9 +651,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 	} else {
 		let kind = CompletionItemKind.Keyword, insertTextFormat = InsertTextFormat.Snippet;
-		let uppercase = keyword_start_with_uppercase ? (s: string) => s.replace(/\b[a-z](?=\w)/g, m => m.toUpperCase()) : (s: string) => s;
+		let uppercase = (s: string) => s, remove_indent = uppercase;
+		if (keyword_start_with_uppercase)
+			uppercase = (s: string) => s.replace(/\b[a-z](?=\w)/g, m => m.toUpperCase());
+		if (extsettings.FormatOptions?.switch_case_alignment)
+			remove_indent = (s: string) => s.replace(/^\t/gm, '');
 		for (let [label, arr] of [
-			['switch', ['switch ${1:[SwitchValue, CaseSense]}', '{\n\tcase ${2:}:\n\t\t${3:}\n\tdefault:\n\t\t$0\n}']],
+			['switch', ['switch ${1:[SwitchValue, CaseSense]}', remove_indent('{\n\tcase ${2:}:\n\t\t${3:}\n\tdefault:\n\t\t$0\n}')]],
 			['trycatch', ['try', '{\n\t$1\n}', 'catch ${2:Error} as ${3:e}', '{\n\t$0\n}']],
 			['class', ['class $1', '{\n\t$0\n}']]
 		] as [string, string[]][])
