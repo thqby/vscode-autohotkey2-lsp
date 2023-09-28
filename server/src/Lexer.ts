@@ -941,11 +941,9 @@ export class Lexer {
 						case '?':
 							return op.ignore ? 1 : 0;
 						case '*':
-							if (op.previous_token?.type === 'TK_START_EXPR') {
-								let t = op.previous_token.content + _this.get_token(op.offset + 1, true).content;
-								if (t === '()' || t === '[]')
-									return -1;
-							}
+							if (',(['.includes(op.previous_token?.content ?? '\0') &&
+								',),]()[]'.includes(op.previous_token!.content + (_this.get_token(op.offset + 1, true).content || '\0')))
+								return -1;	// skip yields_an_operand check
 						default:
 							return 0;
 					}
