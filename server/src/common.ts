@@ -83,7 +83,7 @@ export const chinese_punctuations: { [c: string]: string } = {
 };
 export let winapis: string[] = [];
 export let utils = {
-	get_DllExport: (paths: string[], onlyone: boolean = false) => [] as string[],
+	get_DllExport: (paths: string[], onlyone: boolean = false) => Promise.resolve([] as string[]),
 	get_RCDATA: (path?: string) => (0 ? { uri: '', path: '' } : undefined),
 	get_ahkProvider: async () => null as any
 };

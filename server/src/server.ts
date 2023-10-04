@@ -30,7 +30,7 @@ utils.get_RCDATA = getRCDATA;
 utils.get_DllExport = getDllExport;
 utils.get_ahkProvider = get_ahkProvider;
 
-connection.onInitialize((params: InitializeParams) => {
+connection.onInitialize(async (params: InitializeParams) => {
 	let capabilities = params.capabilities;
 	set_Workspacefolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
 	hasConfigurationCapability = !!(
@@ -107,7 +107,7 @@ connection.onInitialize((params: InitializeParams) => {
 	initahk2cache();
 	if (configs)
 		update_settings(configs);
-	if (!setInterpreter(resolvePath(extsettings.InterpreterPath ??= '')))
+	if (!(await setInterpreter(resolvePath(extsettings.InterpreterPath ??= ''))))
 		connection.window.showErrorMessage(setting.ahkpatherr());
 	loadahk2();
 	return result;
@@ -128,9 +128,8 @@ connection.onInitialized(async () => {
 	}
 	setTimeout(async () => {
 		parseWorkspaceFolders();
-		['user32', 'kernel32', 'comctl32', 'gdi32'].forEach(name => setTimeout(() => {
-			winapis.push(...getDllExport([`C:\\Windows\\System32\\${name}.dll`]));
-		}, 200));
+		getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(name => `C:\\Windows\\System32\\${name}.dll`))
+			.then(val => winapis.push(...val));
 	}, 500);
 });
 
@@ -145,7 +144,7 @@ connection.onDidChangeConfiguration(async (change: any) => {
 	let { AutoLibInclude, InterpreterPath } = extsettings;
 	update_settings(newset);
 	if (InterpreterPath !== extsettings.InterpreterPath) {
-		if (setInterpreter(resolvePath(extsettings.InterpreterPath ??= '')))
+		if (await setInterpreter(resolvePath(extsettings.InterpreterPath ??= '')))
 			connection.sendRequest('ahk2.updateStatusBar', [extsettings.InterpreterPath]);
 	}
 	if (AutoLibInclude !== extsettings.AutoLibInclude) {
@@ -253,7 +252,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 		parseproject(uri);
 }
 
-function initpathenv(samefolder = false) {
+async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	let script = `
 	#NoTrayIcon
 	#Warn All, Off
@@ -261,78 +260,85 @@ function initpathenv(samefolder = false) {
 	for _, p in ["a_ahkpath","a_appdata","a_appdatacommon","a_computername","a_comspec","a_desktop","a_desktopcommon","a_iscompiled","a_mydocuments","a_programfiles","a_programs","a_programscommon","a_startmenu","a_startmenucommon","a_startup","a_startupcommon","a_temp","a_username","a_windir","a_ahkversion"]
 		s .= SubStr(p, 3) "\`t" %p% "|"
 	try _H := !!A_ThreadID
-	%Append%(s "h\`t" _H "\`n", "*", "UTF-8")
+	%Append%(s "is64bit\`t" (A_PtrSize = 8) "|h\`t" _H "\`n", "*", "UTF-8")
 	FileAppend2(text, file, encode) {
 		FileAppend %text%, %file%, %encode%
 	}`;
-	let fail = 0;
-	let ret = runscript(script, (data: string) => {
-		if (!(data = data.trim())) {
-			let path = ahkpath_cur;
-			if (getAHKversion([path])[0].endsWith('[UIAccess]')) {
-				let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
-				fail = 2;
-				if (path !== n && (n = resolvePath(n, true)) && !getAHKversion([n])[0].endsWith('[UIAccess]')) {
-					set_ahkpath(n);
-					if (ret = initpathenv(samefolder))
-						fail = 0;
-					set_ahkpath(path);
-				}
-				connection.window.showWarningMessage(setting.uialimit());
-				if (ret)
-					return;
-			} else fail = 1;
-			if (!pathenv.mydocuments)
-				connection.window.showErrorMessage(setting.getenverr());
-			return;
-		}
-		Object.assign(pathenv, Object.fromEntries(data.replace(/\t[A-Z]:\\/g, m => m.toLowerCase()).split('|').map(l => l.split('\t'))));
-		initnum = 1;
-		pathenv.ahkpath = ahkpath_cur;
-		update_version(pathenv.ahkversion ??= '2.0.0');
-		if (pathenv.ahkversion.startsWith('1.'))
-			connection.window.showErrorMessage(setting.versionerr());
-		if (!samefolder) {
-			libdirs.length = 0;
-			libdirs.push(pathenv.mydocuments + '\\AutoHotkey\\Lib\\',
-				pathenv.ahkpath.replace(/[^\\/]+$/, 'Lib\\'));
-			let lb: any;
-			for (lb of Object.values(libfuncs))
-				lb.inlib = inlibdirs(lb.fsPath);
-		}
-		pathenv.h = (pathenv.h ?? '0').slice(0, 1);
-		if (pathenv.h === '1') {
-			if (!isahk2_h)
-				set_ahk_h(true), samefolder = false, loadahk2('ahk2_h'), loadahk2('winapi', 4);
-		} else {
-			if (isahk2_h)
-				set_ahk_h(false), samefolder = false, initahk2cache(), loadahk2();
-		}
-		if (samefolder)
-			return;
-		for (const uri in lexers) {
-			let doc = lexers[uri];
-			if (!doc.d) {
-				doc.initlibdirs();
-				if (Object.keys(doc.include).length || doc.diagnostics.length)
-					doc.update();
-			}
-		}
-		sendDiagnostics();
-		clearLibfuns();
-		if (extsettings.AutoLibInclude > 1)
-			parseuserlibs();
-	});
-	if (!ret)
+	let fail = 0, data = runscript(script);
+	if (data === undefined) {
+		if (retry)
+			return initpathenv(samefolder, false);
 		connection.window.showErrorMessage(setting.ahkpatherr());
-	else if (!pathenv.mydocuments && fail !== 2) {
-		if (initnum < 3)
-			setTimeout(() => {
-				initnum++, initpathenv();
-			}, 1000);
 		return false;
 	}
-	return ret && !fail;
+	if (!(data = data.trim())) {
+		let path = ahkpath_cur;
+		if ((await getAHKversion([path]))[0].endsWith('[UIAccess]')) {
+			let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
+			fail = 2;
+			if (path !== n && (n = resolvePath(n, true)) && !(await getAHKversion([n]))[0].endsWith('[UIAccess]')) {
+				set_ahkpath(n);
+				if (ret = await initpathenv(samefolder))
+					fail = 0;
+				set_ahkpath(path);
+			}
+			fail && connection.window.showWarningMessage(setting.uialimit());
+			await update_rcdata();
+			if (ret)
+				return true;
+		} else fail = 1;
+		if (fail !== 2 && retry)
+			return initpathenv(samefolder, false);
+		if (!pathenv.mydocuments)
+			connection.window.showErrorMessage(setting.getenverr());
+		return false;
+	}
+	Object.assign(pathenv, Object.fromEntries(data.replace(/\t[A-Z]:\\/g, m => m.toLowerCase()).split('|').map(l => l.split('\t'))));
+	initnum = 1;
+	pathenv.ahkpath = ahkpath_cur;
+	update_version(pathenv.ahkversion ??= '2.0.0');
+	if (pathenv.ahkversion.startsWith('1.'))
+		connection.window.showErrorMessage(setting.versionerr());
+	if (!samefolder) {
+		libdirs.length = 0;
+		libdirs.push(pathenv.mydocuments + '\\AutoHotkey\\Lib\\',
+			pathenv.ahkpath.replace(/[^\\/]+$/, 'Lib\\'));
+		let lb: any;
+		for (lb of Object.values(libfuncs))
+			lb.inlib = inlibdirs(lb.fsPath);
+	}
+	pathenv.h = (pathenv.h ?? '0').slice(0, 1);
+	if (pathenv.h === '1') {
+		if (!isahk2_h)
+			set_ahk_h(true), samefolder = false, loadahk2('ahk2_h'), loadahk2('winapi', 4);
+	} else {
+		if (isahk2_h)
+			set_ahk_h(false), samefolder = false, initahk2cache(), loadahk2();
+	}
+	await update_rcdata();
+	if (samefolder)
+		return true;
+	for (const uri in lexers) {
+		let doc = lexers[uri];
+		if (!doc.d) {
+			doc.initlibdirs();
+			if (Object.keys(doc.include).length || doc.diagnostics.length)
+				doc.update();
+		}
+	}
+	sendDiagnostics();
+	clearLibfuns();
+	if (extsettings.AutoLibInclude > 1)
+		parseuserlibs();
+	return true;
+	async function update_rcdata() {
+		let pe = new PEFile(ahkpath_cur);
+		try {
+			let rc = await pe.getResource(RESOURCE_TYPE.RCDATA);
+			curPERCDATA = rc;
+		} catch (e) { }
+		finally { pe.close(); }
+	}
 }
 
 async function parseuserlibs() {
@@ -367,9 +373,9 @@ function inlibdirs(path: string) {
 	return false;
 }
 
-function changeInterpreter(oldpath: string, newpath: string) {
+async function changeInterpreter(oldpath: string, newpath: string) {
 	let samefolder = resolve(oldpath, '..').toLowerCase() === resolve(newpath, '..').toLowerCase();
-	if (!initpathenv(samefolder))
+	if (!(await initpathenv(samefolder)))
 		return false;
 	if (!samefolder) {
 		let uri = URI.file(resolve(oldpath, '../lib')).toString().toLowerCase();
@@ -382,12 +388,12 @@ function changeInterpreter(oldpath: string, newpath: string) {
 	return true;
 }
 
-function setInterpreter(path: string) {
+async function setInterpreter(path: string) {
 	let old = ahkpath_cur;
 	if (!path || path.toLowerCase() === old.toLowerCase())
 		return false;
 	set_ahkpath(path);
-	if (!changeInterpreter(old, path))
+	if (!(await changeInterpreter(old, path)))
 		set_ahkpath(old);
 	return true;
 }
@@ -431,37 +437,41 @@ async function parseproject(uri: string) {
 	}, 500);
 }
 
-function getAHKversion(params: string[]) {
-	return params.map(path => {
+async function getAHKversion(params: string[]) {
+	return Promise.all(params.map(async path => {
+		let pe: PEFile | undefined;
 		try {
-			let pe = new PEFile(path);
-			let props = pe.getResource(RESOURCE_TYPE.VERSION)[0].StringTable[0];
+			pe = new PEFile(path);
+			let props = (await pe.getResource(RESOURCE_TYPE.VERSION))[0].StringTable[0];
 			if (props.ProductName?.toLowerCase().startsWith('autohotkey')) {
-				let m = pe.getResource(RESOURCE_TYPE.MANIFEST)[0]?.replace(/<!--[\s\S]*?-->/g, '') ?? '';
-				let version = `${props.ProductName} ${props.ProductVersion ?? 'unknown version'} ${pe.isBit64 ? '64' : '32'} bit`;
+				let is_bit64 = await pe.is_bit64;
+				let m = (await pe.getResource(RESOURCE_TYPE.MANIFEST))[0]?.replace(/<!--[\s\S]*?-->/g, '') ?? '';
+				let version = `${props.ProductName} ${props.ProductVersion ?? 'unknown version'} ${is_bit64 ? '64' : '32'} bit`;
 				if (m.includes('uiAccess="true"'))
 					version += ' [UIAccess]';
 				return version;
 			}
 		} catch (e) { }
+		finally { pe?.close(); }
 		return '';
-	});
+	}));
 }
 
-function getDllExport(paths: string[], onlyone = false) {
+async function getDllExport(paths: string[], onlyone = false) {
 	let funcs: any = {};
 	for (let path of paths) {
-		let pe = searchAndOpenPEFile(path);
-		if (pe) {
-			pe.getExport()?.Functions.forEach((it) => funcs[it.Name] = true);
+		let pe = await searchAndOpenPEFile(path, pathenv.is64bit === '1' ? true : pathenv.is64bit === '0' ? false : undefined);
+		if (!pe) continue;
+		try {
+			(await pe.getExport())?.Functions.forEach((it) => funcs[it.Name] = true);
 			if (onlyone) break;
-		}
+		} finally { pe.close(); }
 	}
 	delete funcs[''];
 	return Object.keys(funcs);
 }
 
-let curPERCDATA: { exe: string, data: Map<number | string, Buffer> } | undefined = undefined;
+let curPERCDATA: { [key: string]: Buffer } | undefined = undefined;
 function getRCDATA(name: string | undefined) {
 	let exe = resolvePath(ahkpath_cur, true), path = `${exe}:${name}`;
 	if (!exe) return;
@@ -469,19 +479,14 @@ function getRCDATA(name: string | undefined) {
 	if (lexers[uri])
 		return { uri, path };
 	exe = exe.toLowerCase();
-	let rc: { [name: string]: Buffer } = curPERCDATA?.exe === exe ? curPERCDATA.data :
-		(curPERCDATA = { exe, data: new PEFile(exe).getResource(RESOURCE_TYPE.RCDATA) }).data;
-	if (!name || !rc)
+	if (!name || !curPERCDATA)
 		return;
-	let data = rc[name];
-	if (data) {
-		try {
-			let doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
-			doc.parseScript();
-			return { uri, path };
-		} catch {
-			delete rc[name];
-		}
-	}
-	return;
+	let data = curPERCDATA[name];
+	if (!data)
+		return;
+	try {
+		let doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
+		doc.parseScript();
+		return { uri, path };
+	} catch { delete curPERCDATA[name]; }
 }

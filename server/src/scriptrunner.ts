@@ -4,16 +4,13 @@ import { lstatSync, readlinkSync } from 'fs';
 import { resolve } from 'path';
 import { type } from 'os';
 
-export function runscript(script: string, out?: Function): boolean {
+export function runscript(script: string) {
 	let executePath = resolvePath(ahkpath_cur, true);
-	if (executePath) {
-		const process = spawnSync(`\"${executePath}\" /CP65001 /ErrorStdOut=utf-8 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
-		if (process) {
-			out?.((process.stdout ?? '').toString());
-			return true;
-		}
-	}
-	return false;
+	if (!executePath)
+		return;
+	const process = spawnSync(`\"${executePath}\" /CP65001 /ErrorStdOut=utf-8 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
+	if (process)
+		return (process.stdout ?? '').toString();
 }
 
 export function existsSync(path: string): boolean {

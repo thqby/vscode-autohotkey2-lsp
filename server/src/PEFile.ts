@@ -1,4 +1,4 @@
-import { openSync, readSync, closeSync, existsSync } from 'fs';
+import { promises as fs, existsSync } from 'fs';
 
 export enum DIRECTORY_ENTRY {
 	IMAGE_DIRECTORY_ENTRY_EXPORT = 0, IMAGE_DIRECTORY_ENTRY_IMPORT = 1, IMAGE_DIRECTORY_ENTRY_RESOURCE = 2, IMAGE_DIRECTORY_ENTRY_EXCEPTION = 3, IMAGE_DIRECTORY_ENTRY_SECURITY = 4, IMAGE_DIRECTORY_ENTRY_BASERELOC = 5, IMAGE_DIRECTORY_ENTRY_DEBUG = 6, IMAGE_DIRECTORY_ENTRY_COPYRIGHT = 7, IMAGE_DIRECTORY_ENTRY_GLOBALPTR = 8, IMAGE_DIRECTORY_ENTRY_TLS = 9, IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG = 10, IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT = 11, IMAGE_DIRECTORY_ENTRY_IAT = 12, IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT = 13, IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR = 14, IMAGE_DIRECTORY_ENTRY_RESERVED = 15
@@ -8,152 +8,182 @@ export enum RESOURCE_TYPE {
 }
 
 export class PEFile {
-	public isBit64 = false;
-	public resource: { [key: number]: any } = {};
-	private imageData: Buffer;
-	private directoryEntry: { addr: number, size: number, data?: any }[] = [];
+	public close = () => { };
+	public is_bit64: Promise<boolean>;
+	private reader: () => Promise<{
+		read(offset: number, length: number): Promise<Buffer>,
+		readString(pos: number): Promise<string>,
+		readUInt16LE(offset?: number): Promise<number>,
+		readUInt32LE(offset?: number): Promise<number>,
+		RVA2Offset(addr: number): number
+	}>;
+	private resource: { [key: number]: any } = {};
+	private dataDirectory: { virtualAddress: number, size: number, data?: any }[] = [];
+	private sectionTable: { virtualAddress: number, sizeOfRawData: number, pointerToRawData: number }[] = [];
 	constructor(path: string) {
-		let sizeOfSectionHdr = 40;
-		let buf = Buffer.alloc(8), fd = openSync(path, 'r');
-		let ntHeadersOffset = readUInt(60);
-		if (readUShort() !== 0x5a4d) {
-			closeSync(fd);
-			throw Error('no MS-DOS stub');
-		}
-		if (readUInt(ntHeadersOffset) !== 0x4550) {
-			closeSync(fd);
-			throw Error('no PE file');
-		}
-		let sizeOfOptionalHeader = readUShort(ntHeadersOffset + 20);
-		let optionalHeaderOffset = ntHeadersOffset + 24, sectionsOffset = optionalHeaderOffset + sizeOfOptionalHeader;
-		this.isBit64 = readShort(optionalHeaderOffset) === 0x20b;
-		let numberOfRvaAndSize = readUInt(optionalHeaderOffset + (this.isBit64 ? 108 : 92));
-		let numberOfSections = readUShort(ntHeadersOffset + 6);
-		let sizeOfImage = readUInt(optionalHeaderOffset + 56);
-		let dataDirectoryOffset = optionalHeaderOffset + (this.isBit64 ? 112 : 96);
-		let offset = 0, rawBytes = Buffer.alloc(sizeOfSectionHdr * numberOfSections)
-		readSync(fd, rawBytes, 0, rawBytes.length, optionalHeaderOffset + sizeOfOptionalHeader);
-		this.imageData = Buffer.alloc(sizeOfImage);
-		for (let i = 0; i < numberOfSections; i++) {
-			let virtualAddress = rawBytes.readUInt32LE(offset + 12), sizeOfRawData = rawBytes.readUInt32LE(offset + 16), pointerToRawData = rawBytes.readUInt32LE(offset + 20);
-			readSync(fd, this.imageData, virtualAddress, sizeOfRawData, pointerToRawData), offset += 40;
-		}
-		for (let i = 0; i < numberOfRvaAndSize; i++) {
-			readSync(fd, buf, 0, 8, dataDirectoryOffset + 8 * i);
-			this.directoryEntry.push({ addr: buf.readUInt32LE(0), size: buf.readUInt32LE(4) });
-		}
-		closeSync(fd);
-
-		function readUShort(pos = 0) { return readSync(fd, buf, 0, 2, pos), buf.readUInt16LE(0); }
-		function readShort(pos = 0) { return readSync(fd, buf, 0, 2, pos), buf.readInt16LE(0); }
-		function readUInt(pos = 0) { return readSync(fd, buf, 0, 4, pos), buf.readUInt32LE(0); }
+		const sizeOfSectionHdr = 40, buf = Buffer.alloc(4096);
+		let ntHeadersOffset: number, optionalHeaderOffset: number;
+		let fd: fs.FileHandle, reader;
+		this.is_bit64 = new Promise(async (resolve, reject) => {
+			try {
+				fd = await fs.open(path, 'r');
+				this.close = () => fd?.close();
+				if (await readUInt16LE(0) !== 0x5a4d)
+					throw Error('no MS-DOS stub');
+				ntHeadersOffset = await readUInt32LE(60);
+				if (await readUInt32LE(ntHeadersOffset) !== 0x4550)
+					throw Error('no PE file');
+				optionalHeaderOffset = ntHeadersOffset + 24;
+				resolve(await readUInt16LE(optionalHeaderOffset) === 0x20b);
+			} catch (e) { fd?.close(); return reject(e); }
+		});
+		this.reader = () => reader ??= new Promise(async (resolve, reject) => {
+			try {
+				let is_bit64 = await this.is_bit64;
+				let dataDirectoryOffset = optionalHeaderOffset + (is_bit64 ? 112 : 96);
+				let numberOfRvaAndSize = await readUInt32LE(dataDirectoryOffset - 4);
+				let numberOfSections = await readUInt16LE(ntHeadersOffset + 6);
+				let sizeOfOptionalHeader = await readUInt16LE(ntHeadersOffset + 20);
+				let rawBytes = Buffer.alloc(sizeOfSectionHdr * numberOfSections);
+				let { dataDirectory, sectionTable } = this;
+				if ((await fd.read(rawBytes, 0, rawBytes.length, optionalHeaderOffset + sizeOfOptionalHeader)).bytesRead !== rawBytes.length)
+					throw Error('bad PE file');
+				for (let i = 0, offset = 0; i < numberOfSections; i++, offset += 40) {
+					let virtualAddress = rawBytes.readUInt32LE(offset + 12), sizeOfRawData = rawBytes.readUInt32LE(offset + 16), pointerToRawData = rawBytes.readUInt32LE(offset + 20);
+					sectionTable.push({ virtualAddress, sizeOfRawData, pointerToRawData });
+				}
+				this.sectionTable = sectionTable = sectionTable.sort((a, b) => b.virtualAddress - a.virtualAddress);
+				rawBytes = Buffer.alloc(8 * numberOfRvaAndSize);
+				if ((await fd.read(rawBytes, 0, rawBytes.length, dataDirectoryOffset)).bytesRead !== rawBytes.length)
+					throw Error('bad PE file');
+				for (let i = 0, offset = 0; i < numberOfRvaAndSize; i++, offset += 8)
+					dataDirectory.push({ virtualAddress: rawBytes.readUInt32LE(offset), size: rawBytes.readUInt32LE(offset + 4) });
+				resolve({ readUInt16LE, readUInt32LE, RVA2Offset, read, readString });
+				function RVA2Offset(addr: number) {
+					let it = sectionTable.find(a => addr >= a.virtualAddress);
+					if (!it || addr >= it.virtualAddress + it.sizeOfRawData)
+						throw Error('out of range');
+					return addr - it.virtualAddress + it.pointerToRawData;
+				}
+				async function readString(pos: number) {
+					await fd.read(buf, 0, buf.length, RVA2Offset(pos));
+					return buf.subarray(0, buf.indexOf(Buffer.alloc(1))).toString();
+				}
+			} catch (e) {
+				this.close();
+				return reject(e);
+			}
+		});
+		async function read(offset: number, length: number) { return (await fd.read(Buffer.alloc(length), 0, length, offset)).buffer; }
+		async function readUInt16LE(offset: number) { await fd.read(buf, 0, 2, offset); return buf.readUInt16LE(0); }
+		async function readUInt32LE(offset: number) { await fd.read(buf, 0, 4, offset); return buf.readUInt32LE(0); }
 	}
-
-	private getAscii(offset: number): string {
-		return this.imageData.slice(offset, this.imageData.indexOf(Buffer.alloc(1), offset)).toString('ascii');
-	}
-	getExport(): { Module: string, Functions: { Name: string, EntryPoint: string, Ordinal: number }[], OrdinalBase: number } | undefined {
-		const imageData = this.imageData, resinfo = this.directoryEntry[DIRECTORY_ENTRY.IMAGE_DIRECTORY_ENTRY_EXPORT];
-		if (!resinfo?.addr)
+	async getExport(): Promise<{ Module: string; Functions: { Name: string; EntryPoint: string; Ordinal: number; }[]; OrdinalBase: number; } | undefined> {
+		const fd = await this.reader(), resinfo = this.dataDirectory[DIRECTORY_ENTRY.IMAGE_DIRECTORY_ENTRY_EXPORT];
+		if (!resinfo?.virtualAddress)
 			return;
 		if (resinfo.data)
 			return resinfo.data;
-		const baseRva = resinfo.addr, endOfSection = baseRva + resinfo.size;
-		let modNamePtr = imageData.readUInt32LE(baseRva + 0x0c);
-		let OrdinalBase = imageData.readUInt32LE(baseRva + 0x10);
-		let funcCount = imageData.readUInt32LE(baseRva + 0x14);
-		let nameCount = imageData.readUInt32LE(baseRva + 0x18);
-		let funcTblPtr = imageData.readUInt32LE(baseRva + 0x1c);
-		let nameTblPtr = imageData.readUInt32LE(baseRva + 0x20);
-		let ordTblPtr = imageData.readUInt32LE(baseRva + 0x24);
-		const Exports = { Module: this.getAscii(modNamePtr), Functions: [] as any[], OrdinalBase }, ordinalList: { [ord: number]: boolean } = {};
+		const baseRva = resinfo.virtualAddress, endOfSection = baseRva + resinfo.size;
+		let buf = await fd.read(fd.RVA2Offset(baseRva), 0x28);
+		let modNamePtr = buf.readUInt32LE(0x0c);
+		let OrdinalBase = buf.readUInt32LE(0x10);
+		let funcCount = buf.readUInt32LE(0x14);
+		let nameCount = buf.readUInt32LE(0x18);
+		let funcTblOffset = fd.RVA2Offset(buf.readUInt32LE(0x1c));
+		let nameTblOffset = fd.RVA2Offset(buf.readUInt32LE(0x20));
+		let ordTblOffset = fd.RVA2Offset(buf.readUInt32LE(0x24));
+		const Exports = { Module: await fd.readString(modNamePtr), Functions: [] as any[], OrdinalBase }, ordinalList: { [ord: number]: boolean } = {};
 		for (let i = 0; i < nameCount; i++) {
-			let nameOffset = imageData.readUInt32LE(nameTblPtr), ordinal = imageData.readUInt16LE(ordTblPtr), fnOffset = imageData.readUInt32LE(funcTblPtr + ordinal * 4);
-			nameTblPtr += 4, ordTblPtr += 2, ordinalList[ordinal] = true;
-			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? this.getAscii(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substring(1);
-			Exports.Functions.push({ Name: this.getAscii(nameOffset), EntryPoint, Ordinal: OrdinalBase + ordinal });
+			let nameOffset = await fd.readUInt32LE(nameTblOffset), ordinal = await fd.readUInt16LE(ordTblOffset), fnOffset = await fd.readUInt32LE(funcTblOffset + ordinal * 4);
+			nameTblOffset += 4, ordTblOffset += 2, ordinalList[ordinal] = true;
+			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? await fd.readString(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substring(1);
+			Exports.Functions.push({ Name: await fd.readString(nameOffset), EntryPoint, Ordinal: OrdinalBase + ordinal });
 		}
 		for (let ordinal = 0; nameCount < funcCount; ordinal++, nameCount++) {
 			while (ordinalList[ordinal]) ordinal++;
-			let fnOffset = imageData.readUInt32LE(funcTblPtr + ordinal * 4);
-			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? this.getAscii(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substring(1);
+			let fnOffset = await fd.readUInt32LE(funcTblOffset + ordinal * 4);
+			let EntryPoint = fnOffset > baseRva && fnOffset < endOfSection ? await fd.readString(fnOffset) : '0x' + (fnOffset + 0x100000000).toString(16).substring(1);
 			ordinalList[ordinal] = true, Exports.Functions.splice(ordinal, 0, { Name: '', EntryPoint, Ordinal: OrdinalBase + ordinal });
 		}
 		return resinfo.data = Exports;
 	}
-	getImport() {
-		const imageData = this.imageData, resinfo = this.directoryEntry[DIRECTORY_ENTRY.IMAGE_DIRECTORY_ENTRY_IMPORT];
-		if (!resinfo?.addr)
+	async getImport() {
+		const fd = await this.reader(), resinfo = this.dataDirectory[DIRECTORY_ENTRY.IMAGE_DIRECTORY_ENTRY_IMPORT];
+		if (!resinfo?.virtualAddress)
 			return;
 		if (resinfo.data)
 			return resinfo.data;
-		const baseRva = resinfo.addr;
-		let nameOffset = imageData.readInt32LE(baseRva + 0x0c), firstThunk = imageData.readInt32LE(baseRva + 0x10);
-		let ptrsize = 4, offset = baseRva, readPtr, ffff: any, IMAGE_ORDINAL_FLAG: any;
-		if (this.isBit64)
-			ptrsize = 8, ffff = BigInt(0xffff), IMAGE_ORDINAL_FLAG = BigInt('0x8000000000000000'), readPtr = imageData.readBigUInt64LE.bind(imageData);
-		else ffff = 0xffff, IMAGE_ORDINAL_FLAG = 0x80000000, readPtr = imageData.readUInt32LE.bind(imageData);
+		const baseOffset = fd.RVA2Offset(resinfo.virtualAddress);
+		let nameOffset = await fd.readUInt32LE(baseOffset + 0x0c), firstThunk = await fd.readUInt32LE(baseOffset + 0x10);
+		let ptrsize = 4, offset = baseOffset, readPtr, ffff: any, IMAGE_ORDINAL_FLAG: any;
+		if (await this.is_bit64)
+			ptrsize = 8, ffff = BigInt(0xffff), IMAGE_ORDINAL_FLAG = BigInt('0x8000000000000000'), readPtr = async (offset: number) => (await fd.read(offset, 8)).readBigUInt64LE();
+		else ffff = 0xffff, IMAGE_ORDINAL_FLAG = 0x80000000, readPtr = fd.readUInt32LE;
 		const Imports: { [dll: string]: string[] } = {};
 		while (firstThunk) {
-			let dllname = this.getAscii(nameOffset), arr = Imports[dllname] = [] as string[], ordinal: any;
-			for (let i = 0; ordinal = readPtr(firstThunk + i * ptrsize); i++)
-				arr.push(ordinal & IMAGE_ORDINAL_FLAG ? `Ordinal#${ordinal & ffff}` : this.getAscii(Number(ordinal) + 2));
+			let dllname = await fd.readString(nameOffset), arr = Imports[dllname] = [] as string[], ordinal: any;
+			for (let i = 0; ordinal = await readPtr(fd.RVA2Offset(firstThunk + i * ptrsize)); i++)
+				arr.push(ordinal & IMAGE_ORDINAL_FLAG ? `Ordinal#${ordinal & ffff}` : await fd.readString(Number(ordinal) + 2));
 			offset += 20;
-			nameOffset = imageData.readUInt32LE(offset + 0x0c);
-			firstThunk = imageData.readUInt32LE(offset + 0x10);
+			nameOffset = await fd.readUInt32LE(offset + 0x0c);
+			firstThunk = await fd.readUInt32LE(offset + 0x10);
 		}
 		return resinfo.data = Imports;
 	}
-	getResource(...types: RESOURCE_TYPE[]): any {
-		const imageData = this.imageData, resinfo = this.directoryEntry[DIRECTORY_ENTRY.IMAGE_DIRECTORY_ENTRY_RESOURCE];
-		if (!resinfo?.addr)
+	async getResource(...types: RESOURCE_TYPE[]): Promise<any> {
+		const fd = await this.reader(), resinfo = this.dataDirectory[DIRECTORY_ENTRY.IMAGE_DIRECTORY_ENTRY_RESOURCE];
+		if (!resinfo?.virtualAddress)
 			return;
 		if (types.length === 1 && this.resource[types[0]])
 			return this.resource[types[0]];
-		const baseRva = resinfo.addr, dirs = [baseRva], resources: any = {};
+		const baseOffset = fd.RVA2Offset(resinfo.virtualAddress), dirs = [baseOffset], resources: any = {};
 		types.forEach(type => this.resource[type] ??= resources[type] = []);
 		resources[RESOURCE_TYPE.RCDATA] &&= this.resource[RESOURCE_TYPE.RCDATA] = {};
-		parseResourcesDirectory(baseRva);
+		await parseResourcesDirectory(baseOffset);
 		types.forEach(type => resources[type] ??= this.resource[type]);
 		return types.length === 1 ? resources[types[0]] : resources;
 
-		function parseResourcesDirectory(rva: number, level = 0): any {
+		async function parseResourcesDirectory(offset: number, level = 0): Promise<any> {
 			const resourceDir = {
-				// Characteristics: imageData.readUInt32LE(rva),	
-				// TimeDateStamp: imageData.readUInt32LE(rva + 4),	
-				// MajorVersion: imageData.readUInt16LE(rva + 8),		
-				// MinorVersion: imageData.readUInt16LE(rva + 10),		
-				NumberOfNamedEntries: imageData.readUInt16LE(rva + 12),
-				NumberOfIdEntries: imageData.readUInt16LE(rva + 14)
+				// Characteristics: await fd.readUInt32LE(offset),	
+				// TimeDateStamp: await fd.readUInt32LE(offset + 4),	
+				// MajorVersion: await fd.readUInt16LE(offset + 8),		
+				// MinorVersion: await fd.readUInt16LE(offset + 10),		
+				NumberOfNamedEntries: await fd.readUInt16LE(offset + 12),
+				NumberOfIdEntries: await fd.readUInt16LE(offset + 14)
 			};
 			const dirEntries = [], numberOfEntries = resourceDir.NumberOfIdEntries + resourceDir.NumberOfNamedEntries;
-			rva += 16
-			for (let i = 0; i < numberOfEntries; i++, rva += 8) {
-				let name = imageData.readUInt32LE(rva)
+			offset += 16
+			for (let i = 0; i < numberOfEntries; i++, offset += 8) {
+				let name = await fd.readUInt32LE(offset)
 				if (level === 0 && !resources[name & 0x0000ffff])
 					continue;
-				let offsetToData = imageData.readUInt32LE(rva + 4), entry = {
+				let offsetToData = await fd.readUInt32LE(offset + 4), entry = {
 					name, id: name & 0x0000ffff, pad: name & 0xffff0000, nameOffset: name & 0x7fffffff,
 					offsetToData, dataIsDirectory: Boolean((offsetToData & 0x80000000) >> 31),
 					offsetToDirectory: offsetToData & 0x7fffffff
 				}, entryName, entryId;
 				if ((name & 0x80000000) >> 31) {	// nameIsString
-					const offset = baseRva + entry.nameOffset, length = imageData.readUInt16LE(offset);
-					entryName = imageData.slice(offset + 2, length * 2 + offset + 2).toString('utf16le');
+					const offset = baseOffset + entry.nameOffset, length = await fd.readUInt16LE(offset);
+					entryName = (await fd.read(offset + 2, length * 2)).toString('utf16le');
 				} else
 					entryId = name;
 				if (entry.dataIsDirectory) {
-					if (dirs.includes(baseRva + entry.offsetToDirectory))
+					if (dirs.includes(baseOffset + entry.offsetToDirectory))
 						break;
-					dirs.push(baseRva + entry.offsetToDirectory);
-					let entryDirectory = parseResourcesDirectory(baseRva + entry.offsetToDirectory, level + 1);
+					dirs.push(baseOffset + entry.offsetToDirectory);
+					let entryDirectory = await parseResourcesDirectory(baseOffset + entry.offsetToDirectory, level + 1);
 					if (entryDirectory === undefined)
 						break;
 					dirEntries.push({ struct: entry, id: entryId, name: entryName, directory: entryDirectory });
 				} else {
-					let rva = baseRva + entry.offsetToDirectory;
+					let offset = baseOffset + entry.offsetToDirectory;
 					let struct = {
-						offsetToData: imageData.readUInt32LE(rva), size: imageData.readUInt32LE(rva + 4), codePage: imageData.readUInt32LE(rva + 8), reserved: imageData.readUInt32LE(rva + 12)
+						offsetToData: await fd.readUInt32LE(offset),
+						size: await fd.readUInt32LE(offset + 4),
+						codePage: await fd.readUInt32LE(offset + 8),
+						reserved: await fd.readUInt32LE(offset + 12)
 					};
 					let entryData = {
 						struct: struct, lang: entry.name & 0x3ff, subLang: entry.name >> 10
@@ -167,33 +197,34 @@ export class PEFile {
 						for (const versionEntry of versionEntries) {
 							const rtVersionStruct = versionEntry.data?.struct;
 							if (rtVersionStruct)
-								parseVersionInformation(resources[16], rtVersionStruct);
+								await parseVersionInformation(resources[16], rtVersionStruct);
 						}
 					} else if (entry.id === RESOURCE_TYPE.MANIFEST) {
 						const manifestEntries = lastEntry.directory?.entries[0].directory?.entries ?? [];
 						for (const manifestEntrie of manifestEntries) {
 							const manifestStruct = manifestEntrie.data?.struct;
 							if (manifestStruct?.size)
-								resources[24].push(parseUTF8String(manifestStruct));
+								resources[24].push(await parseUTF8String(manifestStruct));
 						}
 					} else if (entry.id === RESOURCE_TYPE.RCDATA) {
 						if (resources[10] instanceof Array)
 							resources[10] = {};
 						let resource = resources[10];
-						lastEntry.directory?.entries.forEach((entrie: any) => {
-							const name = entrie.name ?? `#${entrie.id}`;
-							const rcdata = entrie.directory?.entries?.pop()?.data?.struct;
+						for (let entry of lastEntry.directory?.entries ?? []) {
+							const name = entry.name ?? `#${entry.id}`;
+							const rcdata = entry.directory?.entries?.pop()?.data?.struct;
 							if (rcdata)
-								resource[name.toLowerCase()] = imageData.slice(rcdata.offsetToData, rcdata.offsetToData + rcdata.size);
-						});
+								resource[name.toLowerCase()] = await fd.read(fd.RVA2Offset(rcdata.offsetToData), rcdata.size);
+						}
 					}
+					else throw Error('not handled');
 				}
 			}
 			return { struct: resourceDir, entries: dirEntries };
 		}
-		function parseVersionInformation(resource: any, versionStruct: any) {
+		async function parseVersionInformation(resource: any, versionStruct: any) {
 			let nullindex = 0, offset = 0, startOffset = versionStruct.offsetToData;
-			const rawData = imageData.slice(startOffset, startOffset + versionStruct.size);
+			const rawData = await fd.read(fd.RVA2Offset(startOffset), versionStruct.size);
 			let versionInfo = getString(offset);
 			offset = alignDword(2 + nullindex, startOffset);
 			const fixedFileInfo = {
@@ -237,12 +268,10 @@ export class PEFile {
 						Length: rawData.readUInt16LE(offset), ValueLength: rawData.readUInt16LE(offset + 2), Type: rawData.readUInt16LE(offset + 4)
 					}, offset += 6;
 				nullindex = ((rawData.indexOf(Buffer.alloc(2), offset) + 1) >> 1) * 2;
-				return { ...info, Key: rawData.slice(offset, nullindex).toString('utf16le') };
+				return { ...info, Key: rawData.subarray(offset, nullindex).toString('utf16le') };
 			}
 		}
-		function parseUTF8String(dataStruct: any) {
-			return imageData.slice(dataStruct.offsetToData, dataStruct.offsetToData + dataStruct.size).toString();
-		}
+		async function parseUTF8String(dataStruct: any) { return (await fd.read(fd.RVA2Offset(dataStruct.offsetToData), dataStruct.size)).toString(); }
 		function alignDword(offset: number, base: number) { return ((offset + base + 3) & 0xfffffffc) - (base & 0xfffffffc); }
 	}
 }
@@ -251,13 +280,18 @@ export function getFileVersion(path: string) {
 	return new PEFile(path).getResource(RESOURCE_TYPE.VERSION);
 }
 
-export function searchAndOpenPEFile(path: string, isBit64?: boolean): PEFile | undefined {
+export async function searchAndOpenPEFile(path: string, isBit64?: boolean): Promise<PEFile | undefined> {
 	let pe: PEFile, file = '', dirs: string[] | undefined, exts: string[] = [''];
-	while (true)
+	while (true) {
 		try {
-			pe = new PEFile(path);
-			if (file && (typeof isBit64 === 'boolean') && pe.isBit64 !== isBit64)
+			if (!existsSync(path))
 				throw Error();
+			pe = new PEFile(path);
+			let is_bit64 = await pe.is_bit64;
+			if (isBit64 !== undefined && is_bit64 !== isBit64) {
+				pe.close();
+				throw Error();
+			}
 			return pe;
 		} catch (e) {
 			if (e instanceof Error || (e as any).errno === -4058) {
@@ -281,4 +315,5 @@ export function searchAndOpenPEFile(path: string, isBit64?: boolean): PEFile | u
 					return undefined;
 			}
 		}
+	}
 }

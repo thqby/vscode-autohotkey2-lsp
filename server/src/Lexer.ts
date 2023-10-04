@@ -802,8 +802,7 @@ export class Lexer {
 				callWithoutParentheses = extsettings.Warn?.CallWithoutParentheses;
 				try {
 					let rs = utils.get_RCDATA('#2');
-					if (rs)
-						includetable[rs.uri] = rs.path;
+					rs && (includetable[rs.uri] = rs.path);
 					this.children.push(...parse_block());
 				} catch (e: any) {
 					if (e instanceof ParseStopError) {
@@ -3723,7 +3722,7 @@ export class Lexer {
 						else {
 							if (!m.match(/\.\w+$/))
 								m = m + '.dll';
-							m = pathanalyze(m, [], dlldir)?.path ?? m;
+							m = pathanalyze(m, [], dlldir, true)?.path ?? m;
 							if (m.includes(':'))
 								_this.dllpaths.push(m.replace(/\\/g, '/'));
 							else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/'));
@@ -3732,10 +3731,9 @@ export class Lexer {
 						if (tk) {
 							if (m.startsWith('*')) {
 								let rs = utils.get_RCDATA(tk.content.substring(1));
-								if (rs) {
+								if (rs)
 									includetable[rs.uri] = rs.path, tk.data = [undefined, rs.uri];
-									return;
-								}
+								else
 								_this.addDiagnostic(diagnostic.resourcenotfound(), tk.offset, tk.length, DiagnosticSeverity.Warning);
 							} else if (!(m = pathanalyze(m, _this.libdirs, includedir)) || !existsSync(m.path)) {
 								if (!ignore)
@@ -5761,7 +5759,7 @@ export class Lexer {
 	}
 }
 
-export function pathanalyze(path: string, libdirs: string[], workdir: string = '') {
+export function pathanalyze(path: string, libdirs: string[], workdir: string = '', check_exists = false) {
 	let m: RegExpMatchArray | null, uri = '', raw = path;
 
 	if (path.startsWith('<') && path.endsWith('>')) {
@@ -5786,6 +5784,8 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 			path = resolve(workdir, path);
 		else if (path.includes('..'))
 			path = resolve(path);
+		if (check_exists && !existsSync(path))
+			return;
 		uri = URI.file(path).toString().toLowerCase();
 		return { uri, path, raw };
 	}

@@ -338,7 +338,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 														dlls[l] = dlls[d.scriptpath + '/' + l] = 1;
 												});
 											}
-											utils.get_DllExport(Object.keys(dlls), true).forEach(it => additem(it, CompletionItemKind.Function));
+											(await utils.get_DllExport(Object.keys(dlls), true)).forEach(
+												it => expg.test(it) && additem(it, CompletionItemKind.Function));
 											return items;
 										}
 									}
