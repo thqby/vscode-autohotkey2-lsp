@@ -18,7 +18,7 @@ ComObjDll(hModule, CLSID [, IID]) => ComObject
 /**
  * Encrypt and decrypt data.
  */
-CryptAES(AddOrBuf [, Size], password [, EncryptOrDecrypt := true, Algorithm := 256])
+CryptAES(AddOrBuf [, Size], password [, EncryptOrDecrypt := true, Algorithm := 256]) => Buffer
 
 /**
  * Built-in functions, similar to DllCall, but can be used in the DllCall structure and use Object syntax. It is usually faster than DllCall, easier to use, and saves a lot of typing and code.
@@ -69,11 +69,13 @@ MemorySizeOfResource(hModule, hReslnfo) => Number
 
 /**
  * Dump objects to memory or save to file for later use.
+ * @deprecated Removed from v2.1
  */
 ObjDump(obj [, compress, password]) => Buffer
 
 /**
  * Load dumped objects from memory or files.
+ * @deprecated Removed from v2.1
  */
 ObjLoad(AddOrPath [, password]) => Array | Map | Object
 
@@ -89,6 +91,7 @@ Swap(Var1, Var2) => void
 
 /**
  * Built-in functions can calculate the size of structures or types, such as TCHAR or PTR or VOID..., for usage and examples, see also Struct.
+ * @deprecated Removed from v2.1
  */
 sizeof(Definition [, offset]) => Number
 
@@ -110,32 +113,32 @@ UObject([Key1, Value1, ...]) => Object
 /**
  * Extract one or all items from the zip file to the hard drive.
  */
-UnZip(BufOrAddOrFile [, Size], DestinationFolder [, FileToExtract, DestinationFileName, Password]) => void
+UnZip(AddOrBufOrFile [, Size], DestinationFolder, FileToExtract?, DestinationFileName?, Password?, CodePage := 0) => void
 
 /**
  * Extract one item from the zip file.
  */
-UnZipBuffer(AddOrBufOrFile [, Size], FileToExtract [, Password]) => Buffer
+UnZipBuffer(AddOrBufOrFile [, Size], FileToExtract, Password?, CodePage := 0) => Buffer
 
 /**
  * This function is used to decompress and decrypt raw memory, such as decompressing from resources.
  */
-UnZipRawMemory(AddOrBuf [, Size, Password]) => Buffer
+UnZipRawMemory(AddOrBuf [, Size], Password?) => Buffer
 
 /**
  * Add files in memory to a zip archive created using ZipCreateBuffer or ZipCreateFile.
  */
-ZipAddBuffer(ZipHandle, AddOrBuf [, Size], FileName) => Number
+ZipAddBuffer(ZipHandle, AddOrBuf [, Size], FileName?) => void
 
 /**
  * Add files to a zip archive created using ZipCreateFile or ZipCreateBuffer.
  */
-ZipAddFile(ZipHandle, FileName [, ZipFileName]) => Number
+ZipAddFile(ZipHandle, FileName [, ZipFileName]) => void
 
 /**
  * Add empty folders to the zip archive created with ZipCreateFile or ZipCreateBuffer.
  */
-ZipAddFolder(ZipHandle, ZipFoldName) => Number
+ZipAddFolder(ZipHandle, ZipFoldName) => void
 
 /**
  * Close the zip archive created with ZipCreateBuffer and save it in a variable.
@@ -145,33 +148,33 @@ ZipCloseBuffer(ZipHandle) => Buffer
 /**
  * Close the zip archive created with ZipCreateFile.
  */
-ZipCloseFile(ZipHandle) => Number
+ZipCloseFile(ZipHandle) => void
 
 /**
  * This function is used to create a new empty zip file in memory, use ZipAddBuffer or ZipAddFile to add the file to the zip archive
  */
-ZipCreateBuffer(MaxSize [, Password]) => Number
+ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Number
 
 /**
  * This function is used to create a new empty zip file, use ZipAddFile or ZipAddBuffer to add the file to the zip archive.
  */
-ZipCreateFile(FileName [, Password]) => Number
+ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Number
 
 /**
  * Returns an object containing information about all items in the zip archive file.
  */
-ZipInfo(AddOrBufOrFile [, Size]) => Array
+ZipInfo(AddOrBufOrFile [, Size], CodePage := 0) => Array
 
 /**
  * Change the options for zip archives created with ZipCreateFile.
  * @param Options supported options, TZIP_OPTION_GZIP = 0x80000000.
  */
-ZipOptions(ZipHandle, Options) => Number
+ZipOptions(ZipHandle, Options) => void
 
 /**
  * This function is used to compress and decrypt raw memory, for example for resources.
  */
-ZipRawMemory(AddOrBuf [, Size, Password]) => Buffer
+ZipRawMemory(AddOrBuf [, Size], Password?) => Buffer
 
 ; dll/exe export functions
 ; https://hotkeyit.github.io/v2/docs/commands/NewThread.htm
@@ -239,26 +242,6 @@ class Array {
 	Sort(CompareFn?) => $this
 }
 
-/** @extends {ahk2/Gui} */
-class Gui {
-	/** @extends {ahk2/Gui.Control} */
-	class Control {
-		/**
-		 * Registers a function or method to be called whenever the GuiControl receives the specified message.
-		 * @param {Integer} Msg The number of the message to monitor, which should be between 0 and 4294967295 (0xFFFFFFFF).
-		 * @param {String|(GuiCtrlObj, wParam, lParam, Msg) => Integer} Callback The function, method or object to call when the event is raised.
-		 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
-		 * Otherwise, this parameter must be a function object. The function may also consult the built-in variable `A_EventInfo`, which contains 0 if the message was sent via SendMessage.
-		 * If sent via PostMessage, it contains the tick-count time the message was posted.
-		 * @param {Integer} AddRemove If omitted, it defaults to 1 (call the callback after any previously registered callbacks). Otherwise, specify one of the following numbers:
-		 * - 1 = Call the callback after any previously registered callbacks.
-		 * - -1 = Call the callback before any previously registered callbacks.
-		 * - 0 = Do not call the callback.
-		 */
-		OnMessage(Msg, Callback [, AddRemove]) => void
-	}
-}
-
 class Decimal extends Number {
 	/**
 	 * Sets the computation precision and tostring() precision
@@ -297,6 +280,9 @@ class JSON {
 	static stringify(Obj, Space := 0) => String
 }
 
+/**
+ * @deprecated Removed from v2.1
+ */
 class Struct {
 	/**
 	 * Struct is a built-in function used to create and return structure objects. The object can be used to access defined structures using object syntax. The SetCapacity method can be used to allocate memory to structures and pointers.

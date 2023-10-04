@@ -285,7 +285,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount + '+', pc), range: info.range, severity: DiagnosticSeverity.Error });
 			paraminfo.miss.forEach(index => {
 				miss[index] = true;
-				if (index < paramcount && node.params[index].defaultVal === undefined)
+				if (index < paramcount && param_is_miss(node.params, index))
 					doc.addDiagnostic(diagnostic.missingparam(), paraminfo.comma[index] ?? doc.document.offsetAt(info.range.end), 1);
 			});
 		} else {
@@ -297,7 +297,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 			while (l > 0) {
 				if ((t = paraminfo.miss[l - 1]) >= maxcount) {
 					if (t + 1 === pc) --pc;
-				} else if (node.params[t].defaultVal === undefined)
+				} else if (param_is_miss(node.params, t))
 					doc.addDiagnostic(diagnostic.missingparam(), paraminfo.comma[t] ?? doc.document.offsetAt(info.range.end), 1);
 				miss[t] = true, --l;
 			}
@@ -331,6 +331,19 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 					doc.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, 2);
 			}
 		}
+	}
+	function param_is_miss(params: Variable[], i: number) {
+		if (params[i].defaultVal !== undefined)
+			return false;
+		let j = i - 1;
+		while (j >= 0) {
+			// Skip negligible parameters
+			for (; j >= 0 && params[j].defaultVal === false; j--, i++);
+			if (params[i].defaultVal !== undefined)
+				return false;
+			for (; j >= 0 && params[j].defaultVal !== false; j--);
+		}
+		return true;
 	}
 }
 

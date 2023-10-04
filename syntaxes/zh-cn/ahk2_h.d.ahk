@@ -18,7 +18,7 @@ ComObjDll(hModule, CLSID [, IID]) => ComObject
 /**
  * 加密和解密数据.
  */
-CryptAES(AddOrBuf [, Size], password [, EncryptOrDecrypt := true, Algorithm := 256])
+CryptAES(AddOrBuf [, Size], password [, EncryptOrDecrypt := true, Algorithm := 256]) => Buffer
 
 /**
  * 内置函数, 类似于DllCall, 但可用于DllCall结构并使用Object语法.它通常比DllCall更快, 更易于使用, 并且节省了大量的键入和代码.
@@ -69,11 +69,13 @@ MemorySizeOfResource(hModule, hReslnfo) => Number
 
 /**
  * 将对象转储到内存或保存到文件以供以后使用.
+ * @deprecated Removed from v2.1
  */
 ObjDump(obj [, compress, password]) => Buffer
 
 /**
  * 从内存或文件加载转储的对象.
+ * @deprecated Removed from v2.1
  */
 ObjLoad(AddOrPath [, password]) => Array | Map | Object
 
@@ -89,6 +91,7 @@ Swap(Var1, Var2) => void
 
 /**
  * 内置函数可以计算结构或类型的大小, 例如TCHAR或PTR或VOID ..., 有关用法和示例, 另请参见Struct.
+ * @deprecated Removed from v2.1
  */
 sizeof(Definition [, offset]) => Number
 
@@ -110,32 +113,32 @@ UObject([Key1, Value1, ...]) => Object
 /**
  * 从zip文件中提取一项或所有项到硬盘.
  */
-UnZip(BufOrAddOrFile [, Size], DestinationFolder [, FileToExtract, DestinationFileName, Password]) => void
+UnZip(AddOrBufOrFile [, Size], DestinationFolder, FileToExtract?, DestinationFileName?, Password?, CodePage := 0) => void
 
 /**
  * 从zip文件中提取一项.
  */
-UnZipBuffer(AddOrBufOrFile [, Size], FileToExtract [, Password]) => Buffer
+UnZipBuffer(AddOrBufOrFile [, Size], FileToExtract, Password?, CodePage := 0) => Buffer
 
 /**
  * 此功能用于解压缩和解密原始内存, 例如从资源中解压缩.
  */
-UnZipRawMemory(AddOrBuf [, Size, Password]) => Buffer
+UnZipRawMemory(AddOrBuf [, Size], Password?) => Buffer
 
 /**
  * 将内存中的文件添加到使用ZipCreateBuffer或ZipCreateFile创建的zip存档中.
  */
-ZipAddBuffer(ZipHandle, AddOrBuf [, Size], FileName) => Number
+ZipAddBuffer(ZipHandle, AddOrBuf [, Size], FileName?) => void
 
 /**
  * 将文件添加到使用ZipCreateFile或ZipCreateBuffer创建的zip存档中.
  */
-ZipAddFile(ZipHandle, FileName [, ZipFileName]) => Number
+ZipAddFile(ZipHandle, FileName [, ZipFileName]) => void
 
 /**
  * 将空文件夹添加到使用ZipCreateFile或ZipCreateBuffer创建的zip存档中.
  */
-ZipAddFolder(ZipHandle, ZipFoldName) => Number
+ZipAddFolder(ZipHandle, ZipFoldName) => void
 
 /**
  * 关闭使用ZipCreateBuffer创建的zip存档, 将其保存到变量中.
@@ -145,33 +148,33 @@ ZipCloseBuffer(ZipHandle) => Buffer
 /**
  * 关闭使用ZipCreateFile创建的zip存档.
  */
-ZipCloseFile(ZipHandle) => Number
+ZipCloseFile(ZipHandle) => void
 
 /**
  * 此函数用于在内存中创建一个新的空zip文件, 使用ZipAddBuffer或ZipAddFile将文件添加到zip存档中
  */
-ZipCreateBuffer(MaxSize [, Password]) => Number
+ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Number
 
 /**
  * 此函数用于创建一个新的空zip文件, 使用ZipAddFile或ZipAddBuffer将文件添加到zip存档中.
  */
-ZipCreateFile(FileName [, Password]) => Number
+ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Number
 
 /**
  * 返回一个对象, 其中包含有关zip归档文件中所有项目的信息.
  */
-ZipInfo(AddOrBufOrFile [, Size]) => Array
+ZipInfo(AddOrBufOrFile [, Size], CodePage := 0) => Array
 
 /**
  * 更改使用ZipCreateFile创建的zip存档的选项.
  * @param Options 支持的选项, TZIP_OPTION_GZIP = 0x80000000.
  */
-ZipOptions(ZipHandle, Options) => Number
+ZipOptions(ZipHandle, Options) => void
 
 /**
  * 此功能用于压缩和解密原始内存, 例如用于资源.
  */
-ZipRawMemory(AddOrBuf [, Size , Password]) => Buffer
+ZipRawMemory(AddOrBuf [, Size], Password?) => Buffer
 
 ; dll/exe export functions
 ; https://hotkeyit.github.io/v2/docs/commands/NewThread.htm
@@ -234,26 +237,6 @@ class Array {
 	Sort(CompareFn?) => $this
 }
 
-/** @extends {ahk2/Gui} */
-class Gui {
-	/** @extends {ahk2/Gui.Control} */
-	class Control {
-		/**
-		 * 注册要在GuiControl接收到指定消息时调用的函数或方法.
-		 * @param {Integer} Msg 需要监听消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间.
-		 * @param {String|(GuiCtrlObj, wParam, lParam, Msg) => Integer} Callback 事件发生时要调用的函数, 方法或对象.
-		 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
-		 * 否则, 这个参数必须是一个函数对象. 该函数还可以查询内置变量 A_EventInfo, 如果消息是通过 SendMessage 发送的, 则其为 0.
-		 * 如果是通过 PostMessage 发送的, 则其为消息发出时的 tick-count 时间.
-		 * @param {Integer} AddRemove 如果省略, 则默认为 1(在任何先前注册的回调之后调用回调). 否则, 指定下列数字之一:
-		 * - 1 = 在任何先前注册的回调之后调用回调.
-		 * - -1 = 在任何先前注册的回调之前调用回调.
-		 * - 0 = 不调用该回调.
-		 */
-		OnMessage(Msg, Callback [, AddRemove]) => void
-	}
-}
-
 class Decimal extends Number {
 	/**
 	 * 设置计算精度和tostring()精度
@@ -292,6 +275,9 @@ class JSON {
 	static stringify(Obj, Space := 0) => String
 }
 
+/**
+ * @deprecated Removed from v2.1
+ */
 class Struct {
 	/**
 	* Struct是一个内置函数, 用于创建并返回结构对象. 该对象可用于使用对象语法访问定义的结构. SetCapacity方法可用于将内存分配给结构和指针.

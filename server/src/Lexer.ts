@@ -1573,7 +1573,7 @@ export class Lexer {
 						} else if (mode === 2) {
 							_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
 							break;
-						} else if (next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(sub = tk.content.toLowerCase()))) {
+						} else if (bak = lk, next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(sub = tk.content.toLowerCase()))) {
 							min = 1, max = sub === 'parse' ? 3 : 2;
 							tk.type = 'TK_RESERVED', act += ' ' + sub, nexttoken();
 							if (tk.type === 'TK_COMMA' && nexttoken())
@@ -2558,9 +2558,9 @@ export class Lexer {
 									}
 									next = isobj = true;
 								} else if (lk.type === 'TK_EQUALS') {
-									if (lk.content !== ':=') _this.addDiagnostic(diagnostic.unknownoperatoruse(lk.content), lk.offset, lk.length);
+									if (!':=??='.includes(lk.content)) _this.addDiagnostic(diagnostic.unknownoperatoruse(lk.content), lk.offset, lk.length);
 								} else if (mustexp === 1) {
-									if (lk.type === 'TK_WORD' || lk.type === 'TK_OPERATOR' || lk.type.startsWith('TK_END'))
+									if (lk.type === 'TK_WORD' || lk.type === 'TK_OPERATOR' && lk.content !== '=>' || lk.type.startsWith('TK_END'))
 										mustexp = 0;
 								}
 								if (parse_obj(mustexp > 0 || isobj, t = {})) {
@@ -3734,7 +3734,7 @@ export class Lexer {
 								if (rs)
 									includetable[rs.uri] = rs.path, tk.data = [undefined, rs.uri];
 								else
-								_this.addDiagnostic(diagnostic.resourcenotfound(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+									_this.addDiagnostic(diagnostic.resourcenotfound(), tk.offset, tk.length, DiagnosticSeverity.Warning);
 							} else if (!(m = pathanalyze(m, _this.libdirs, includedir)) || !existsSync(m.path)) {
 								if (!ignore)
 									_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length);
@@ -4979,7 +4979,9 @@ export class Lexer {
 						token_text = `${t}\n${token_text.slice(p + 1).replace(/^\s*;.*\r?\n/gm, '').replace(/\s+;.*/gm, '')}`;
 					else token_text = `${t}\n${token_text.slice(p + 1)}`;
 				}
-				output_lines[output_lines.length - 1].text = [token_text];
+				print_token();
+				let t = output_lines[output_lines.length - 1].text;
+				t.length > 1 && t.splice(0, 1);
 				return;
 			}
 			print_token();
