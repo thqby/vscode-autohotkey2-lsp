@@ -522,24 +522,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				'__Enum(${1:NumberOfVars})', '__Get(${1:Key}, ${2:Params})',
 				'__Item[$1]', '__New($1)', '__Set(${1:Key}, ${2:Params}, ${3:Value})'];
 			if (token.topofline === 1)
-				items.push({ label: 'static', insertText: 'static ', kind: CompletionItemKind.Keyword }, {
+				items.push({ label: 'static', insertText: 'static', kind: CompletionItemKind.Keyword }, {
 					label: 'class', insertText: ['class $1', '{\n\t$0\n}'].join(join_c),
 					kind: CompletionItemKind.Keyword, insertTextFormat: InsertTextFormat.Snippet
 				});
 			if (doc.tokens[token.next_token_offset]?.topofline === 0)
 				return token.topofline === 1 ? (items.pop(), items) : undefined;
-			if ((symbol as Variable).static) {
+			let is_static = (symbol as Variable).static ?? false;
+			if (is_static)
 				metafns.splice(0, 1);
-				for (let it of Object.values(cls.staticdeclaration))
-					additem(it.name, it.kind === SymbolKind.Class
-						? CompletionItemKind.Class : it.kind === SymbolKind.Method
-							? CompletionItemKind.Method : CompletionItemKind.Property);
-				additem('Prototype', CompletionItemKind.Property);
-			} else {
-				for (let it of Object.values(cls.declaration))
-					additem(it.name, it.kind === SymbolKind.Method ?
-						CompletionItemKind.Method : CompletionItemKind.Property);
-			}
 			if (token.topofline)
 				metafns.forEach(s => {
 					let label = s.replace(/[(\[].*$/, '');
@@ -550,6 +541,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							insertText: s + join_c + '{\n\t$0\n}'
 						});
 				});
+			for (let it of Object.values(getClassMembers(doc, cls, is_static)))
+				additem(it.name, it.kind === SymbolKind.Method ?
+					CompletionItemKind.Method : CompletionItemKind.Property);
 			return items;
 		}
 		return;
