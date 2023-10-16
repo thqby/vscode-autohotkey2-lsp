@@ -312,13 +312,13 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 						o = info.offset as number + info.name.length + 1;
 					else o = paraminfo.comma[index - 1] + 1;
 					if ((t = doc.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && doc.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
-						let exp = paraminfo.data?.[index], tps: any = {}, n: number;
+						let exp = paraminfo.data?.[index], tps: any = {};
 						exp && (reset_detect_cache(), detectExpType(doc, exp, doc.document.positionAt(o), tps));
 						if ((tps['@varref'] ?? tps['#varref']) !== undefined)
 							return;
-						let lk = doc.tokens[paraminfo.comma[index] ?? (n = doc.document.offsetAt(info.range.end) - 1)].previous_token;
+						let lk = doc.tokens[paraminfo.comma[index]]?.previous_token;
 						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
-							(lk ? lk.offset + lk.length : n!) - t.offset, 2);
+							Math.max(0, (lk ? lk.offset + lk.length : doc.document.offsetAt(info.range.end)) - t.offset), 2);
 					}
 				}
 			});
