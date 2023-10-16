@@ -2,16 +2,19 @@ import { URI } from 'vscode-uri';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CancellationToken, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, samenameerr, get_class_call } from './Lexer';
-import { ahkuris, ahkvars, connection, detectExpType, extsettings, getallahkfiles, inBrowser, is_line_continue, lexers, openFile, reset_detect_cache, sendDiagnostics, symbolcache, warn, workspaceFolders } from './common';
+import { ahkuris, ahkvars, connection, detectExpType, enum_ahkfiles, extsettings, isBrowser, is_line_continue, lexers, openFile, reset_detect_cache, warn, workspaceFolders } from './common';
 import { diagnostic } from './localize';
 
 export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
 
-export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken): SymbolInformation[] {
+export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
-	if (!doc || token?.isCancellationRequested || (!doc.reflat && symbolcache[uri])) return symbolcache[uri];
-	let gvar: { [name: string]: Variable } = { ...ahkvars }, winapis: any = {};
-	let list = [uri, ...Object.keys(doc.relevance ?? {})];
+	if (!doc || token?.isCancellationRequested)
+		return [];
+	if (token !== null && doc.symbolInformation)
+		return doc.symbolInformation;
+	let gvar: { [name: string]: Variable } = globalsymbolcache = { ...ahkvars };
+	let list = [uri, ...Object.keys(doc.relevance ?? {})], winapis: any = {};
 	list = list.map(u => lexers[u]?.d_uri).concat(list);
 	for (const uri of list) {
 		let lex = lexers[uri];
@@ -24,17 +27,14 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				t.def ??= false;
 		}
 	}
+	if (doc.symbolInformation)
+		return doc.symbolInformation;
 	if (ahkuris.winapi && !list.includes(ahkuris.winapi))
 		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
-	doc.reflat = false, globalsymbolcache = gvar;
 	let rawuri = doc.document.uri;
 	const warnLocalSameAsGlobal = extsettings.Warn?.LocalSameAsGlobal;
 	const result: DocumentSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class, SymbolKind.TypeParameter];
-	function maybe_unset(k: Variable, v: Variable) {
-		if (!(k.assigned ||= v.assigned) && v.returntypes === undefined)
-			unset_vars.has(k) || unset_vars.set(k, v);
-	}
 	for (let [k, v] of Object.entries(doc.declaration)) {
 		let t = gvar[k];
 		if (t.kind === SymbolKind.Variable && !t.assigned)
@@ -49,10 +49,17 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	if (extsettings.Warn?.VarUnset)
 		for (let [k, v] of unset_vars)
 			k.assigned || doc.diagnostics.push({ message: warn.varisunset(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
-	if (doc.actived)
-		checksamename(doc), setTimeout(sendDiagnostics, 200);
-	return symbolcache[uri] = result.map(info => SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri));
+	if (doc.actived) {
+		checksamename(doc);
+		doc.sendDiagnostics(false, true);
+	}
+	doc.diags = doc.diagnostics.length;
+	return doc.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri));
 
+	function maybe_unset(k: Variable, v: Variable) {
+		if (!(k.assigned ||= v.assigned) && v.returntypes === undefined)
+			unset_vars.has(k) || unset_vars.set(k, v);
+	}
 	function flatTree(node: { children?: DocumentSymbol[], funccall?: CallInfo[] }, vars: { [key: string]: Variable } = {}, outer_is_global = false) {
 		const t: DocumentSymbol[] = [];
 		let tk: Token, iscls = (node as DocumentSymbol).kind === SymbolKind.Class;
@@ -353,17 +360,16 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 		return symbols;
 	let reg = new RegExp(query.match(/[^\w]/) ? query.replace(/(.)/g, '$1.*') : '(' + query.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	for (let uri in lexers)
-		if (await filterSymbols(uri)) return symbols;
-	if (!inBrowser) {
+		if (filterSymbols(uri)) return symbols;
+	if (!isBrowser) {
 		let uri: string, d: Lexer, t: TextDocument | undefined;
 		for (let dir of workspaceFolders) {
 			dir = URI.parse(dir).fsPath;
-			for (let path of getallahkfiles(dir)) {
+			for await (let path of enum_ahkfiles(dir)) {
 				uri = URI.file(path).toString().toLowerCase();
 				if (!lexers[uri] && (t = openFile(path))) {
-					d = new Lexer(t);
-					d.parseScript(), lexers[uri] = d;
-					if (await filterSymbols(uri)) return symbols;
+					if ((d = new Lexer(t)).parseScript(), d.maybev1) continue;
+					if (lexers[uri] = d, filterSymbols(uri)) return symbols;
 				}
 			}
 		}
@@ -375,12 +381,12 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 				let content = (await connection.sendRequest('ahk2.getWorkspaceFileContent', [uri_])) as string;
 				d = new Lexer(TextDocument.create(uri_, 'ahk2', -10, content));
 				d.parseScript(), lexers[uri] = d;
-				if (await filterSymbols(uri)) return symbols;
+				if (filterSymbols(uri)) return symbols;
 			}
 		}
 	}
 	return symbols;
-	async function filterSymbols(uri: string) {
+	function filterSymbols(uri: string) {
 		for (let it of symbolProvider({ textDocument: { uri } })) {
 			if (reg.test(it.name)) {
 				symbols.push(it);

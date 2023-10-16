@@ -88,7 +88,8 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 		if (tk.type === 'TK_WORD') {
 			if (tk.length > 1) {
 				s = tk.content.replace(/./g, (c) => chinese_punctuations[c] ?? c);
-				p.character -= (tk.length - 1);
+				p = doc.document.positionAt(tk.offset);
+				position.character = p.character + tk.length;
 			}
 			return [TextEdit.replace({ start: p, end: position }, s)];
 		}

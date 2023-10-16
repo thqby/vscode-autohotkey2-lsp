@@ -3,7 +3,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { allIdentifierChar, ClassNode, reset_detect_cache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Token, Variable, find_class, formatMarkdowndetail } from './Lexer';
 import { completionitem } from './localize';
-import { ahkuris, ahkvars, completionItemCache, dllcalltpe, extsettings, generate_fn_comment, inBrowser, inWorkspaceFolders, lexers, libfuncs, make_search_re, Maybe, pathenv, sendAhkRequest, utils, winapis } from './common';
+import { ahkuris, ahkvars, completionItemCache, dllcalltpe, extsettings, generate_fn_comment, isBrowser, lexers, libfuncs, make_search_re, Maybe, a_vars, sendAhkRequest, utils, winapis } from './common';
 import { URI } from 'vscode-uri';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
@@ -69,7 +69,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				case '#dllload': isdll = true;
 				case '#include':
 				case '#includeagain': {
-					if (inBrowser)
+					if (isBrowser)
 						return;
 					let l = doc.document.offsetAt(position) - token!.offset;
 					let pre = (text = token!.content).slice(0, l);
@@ -94,7 +94,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							return Object.values(ahkvars).filter(it =>
 								it.kind === SymbolKind.Variable && expg.test(it.name))
 								.map(convertNodeCompletion);
-						let t: any = { ...pathenv, scriptdir: doc.scriptdir, linefile: doc.fsPath };
+						let t: any = { ...a_vars, scriptdir: doc.scriptdir, linefile: doc.fsPath };
 						pre = pre.replace(/%a_(\w+)%/i, (m0, m1) => {
 							let a_ = t[m1.toLowerCase()];
 							return typeof a_ === 'string' ? a_ : '\0';
@@ -293,7 +293,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 									break;
 							case 'dllcall':
 								if (res.index === 0) {
-									if (inBrowser) break;
+									if (isBrowser) break;
 									let tk = doc.tokens[doc.document.offsetAt(res.pos)], offset = doc.document.offsetAt(position);
 									if (!tk) break;
 									while ((tk = doc.tokens[tk.next_token_offset]) && tk.content === '(')
@@ -704,7 +704,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// auto-include
 	if (extsettings.AutoLibInclude) {
 		let exportnum = 0, line = -1, libdirs = doc.libdirs, first_is_comment: boolean | undefined, cm: Token;
-		let dir = inWorkspaceFolders(doc.uri), caches: { [path: string]: TextEdit[] } = {};
+		let dir = doc.workspaceFolder, caches: { [path: string]: TextEdit[] } = {};
 		dir = dir ? URI.parse(dir).fsPath : doc.scriptdir.toLowerCase();
 		doc.includedir.forEach((v, k) => line = k);
 		for (const u in libfuncs) {

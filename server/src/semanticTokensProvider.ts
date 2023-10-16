@@ -31,22 +31,22 @@ function resolve_sem(tk: Token, doc: Lexer) {
 	}
 }
 
-export async function semanticTokensOnFull(params: SemanticTokensParams, token: CancellationToken): Promise<SemanticTokens> {
+export function semanticTokensOnFull(params: SemanticTokensParams, token?: CancellationToken): SemanticTokens {
 	let doc = lexers[params.textDocument.uri.toLowerCase()];
-	if (!doc || token.isCancellationRequested) return { data: [] };
+	if (!doc || token?.isCancellationRequested) return { data: [] };
 	doc.STB.previousResult(''), curclass = undefined, memscache.clear();
-	symbolProvider({ textDocument: params.textDocument });
+	symbolProvider({ textDocument: params.textDocument }, null);
 	Object.values(doc.tokens).forEach(tk => resolve_sem(tk, doc));
 	resolve_class_undefined_member(doc), memscache.clear();
 	return doc.STB.build();
 }
 
-export async function semanticTokensOnRange(params: SemanticTokensRangeParams, token: CancellationToken): Promise<SemanticTokens> {
+export function semanticTokensOnRange(params: SemanticTokensRangeParams, token?: CancellationToken): SemanticTokens {
 	let doc = lexers[params.textDocument.uri.toLowerCase()];
-	if (!doc || token.isCancellationRequested) return { data: [] };
+	if (!doc || token?.isCancellationRequested) return { data: [] };
 	let start = doc.document.offsetAt(params.range.start), end = doc.document.offsetAt(params.range.end);
 	doc.STB.previousResult(''), curclass = undefined, memscache.clear();
-	symbolProvider({ textDocument: params.textDocument });
+	symbolProvider({ textDocument: params.textDocument }, null);
 	for (let tk of Object.values(doc.tokens)) {
 		if (tk.offset < start)
 			continue;

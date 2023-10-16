@@ -5,7 +5,7 @@ import { URI } from 'vscode-uri';
 
 export async function defintionProvider(params: DefinitionParams, token: CancellationToken): Promise<Definition | LocationLink[] | undefined> {
 	if (token.isCancellationRequested) return;
-	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc?.buildContext(params.position), m: any;
+	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri], context = doc?.buildContext(params.position);
 	let nodes: [{ node: DocumentSymbol, uri: string }] | undefined | null, locas: LocationLink[] = [];
 	if (!context?.token)
 		return;

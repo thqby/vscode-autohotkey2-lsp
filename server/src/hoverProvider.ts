@@ -8,7 +8,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 	let context = doc?.buildContext(params.position), t: any, hover: any[] = [];
 	if (context) {
 		let word = context.text.toLowerCase(), kind: SymbolKind = SymbolKind.Variable;
-		let nodes: [{ node: DocumentSymbol, uri: string, scope?: DocumentSymbol }] | undefined | null, node: DocumentSymbol | undefined, uri: string = '';
+		let nodes: [{ node: DocumentSymbol, uri: string, scope?: DocumentSymbol }] | undefined | null;
 		if (!word || context.kind === SymbolKind.Null) {
 			if (context.token) {
 				if (t = hoverCache[context.token.content.toLowerCase()])

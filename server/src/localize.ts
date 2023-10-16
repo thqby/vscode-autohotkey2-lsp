@@ -1,4 +1,4 @@
-import { rootdir, getlocalefile, getwebfile, inBrowser } from './common';
+import { rootdir, getlocalefile, getwebfile, isBrowser } from './common';
 
 let loadedCollection: { [key: string]: string } = {};
 
@@ -100,7 +100,7 @@ export namespace response {
 }
 
 export function loadlocalize() {
-	if (inBrowser) {
+	if (isBrowser) {
 		let data = getwebfile(`${rootdir}/package.nls.<>.json`);
 		if (data)
 			loadedCollection = JSON.parse(data.text);

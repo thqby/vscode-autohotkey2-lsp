@@ -5,43 +5,33 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, BrowserMessageReader, BrowserMessageWriter, DidChangeConfigurationNotification,
-	FoldingRange, FoldingRangeParams, InitializeParams, InitializeResult, ExecuteCommandParams,
-	TextDocumentChangeEvent, TextDocuments, TextDocumentSyncKind, WorkspaceFoldersChangeEvent
+	ExecuteCommandParams, InitializeResult, TextDocuments, TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import {
-	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
-	exportSymbols, generateComment, hoverProvider, initahk2cache, Lexer, lexers,
-	loadahk2, loadlocalize, prepareRename, rangeFormatting, referenceProvider, renameProvider,
-	semanticTokensOnFull, semanticTokensOnRange, set_ahk_h, set_Connection,
-	set_dirname, set_locale, set_Workspacefolder, signatureProvider, symbolProvider, typeFormatting,
-	workspaceFolders, workspaceSymbolProvider, update_settings, update_version, SemanticTokenModifiers, SemanticTokenTypes
+	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, completionProvider,
+	defintionProvider, diagnosticFull, documentFormatting, enumNames, exportSymbols, generateComment,
+	hoverProvider, initahk2cache, Lexer, lexers, loadahk2, loadlocalize, prepareRename, rangeFormatting,
+	referenceProvider, renameProvider, SemanticTokenModifiers, semanticTokensOnFull, semanticTokensOnRange,
+	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
+	signatureProvider, symbolProvider, typeFormatting, update_settings, workspaceSymbolProvider
 } from './common';
 
-export const languageServer = 'ahk2-language-server';
+const languageServer = 'ahk2-language-server';
 const messageReader = new BrowserMessageReader(self);
 const messageWriter = new BrowserMessageWriter(self);
+const documents = new TextDocuments(TextDocument);
+const connection = set_Connection(createConnection(messageReader, messageWriter));
 
-const connection = createConnection(messageReader, messageWriter);
-set_Connection(connection);
-set_ahk_h(true);
+let hasConfigurationCapability = false, hasWorkspaceFolderCapability = false;
+let uri_switch_to_ahk2 = '', workspaceFolders = new Set<string>();
 
-let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
-let hasConfigurationCapability: boolean = false, hasWorkspaceFolderCapability: boolean = false, hasDiagnosticRelatedInformationCapability: boolean = false;
-let uri_switch_to_ahk2 = '';
-
-connection.onInitialize((params: InitializeParams) => {
-	let capabilities = params.capabilities;
-	set_Workspacefolder(params.workspaceFolders?.map(it => it.uri.toLowerCase() + '/'));
+connection.onInitialize(params => {
+	const capabilities = params.capabilities;
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
 	);
 	hasWorkspaceFolderCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.workspaceFolders
-	);
-	hasDiagnosticRelatedInformationCapability = !!(
-		capabilities.textDocument &&
-		capabilities.textDocument.publishDiagnostics &&
-		capabilities.textDocument.publishDiagnostics.relatedInformation
 	);
 
 	const result: InitializeResult = {
@@ -50,8 +40,8 @@ connection.onInitialize((params: InitializeParams) => {
 		},
 		capabilities: {
 			textDocumentSync: {
-				openClose: true,
-				change: TextDocumentSyncKind.Incremental
+				change: TextDocumentSyncKind.Incremental,
+				openClose: true
 			},
 			completionProvider: {
 				resolveProvider: false,
@@ -67,6 +57,7 @@ connection.onInitialize((params: InitializeParams) => {
 			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinese_punctuations)] },
 			executeCommandProvider: {
 				commands: [
+					'ahk2.diagnostic.full',
 					'ahk2.generate.comment'
 				]
 			},
@@ -77,8 +68,8 @@ connection.onInitialize((params: InitializeParams) => {
 			referencesProvider: { workDoneProgress: true },
 			semanticTokensProvider: {
 				legend: {
-					tokenTypes: Object.values(SemanticTokenTypes).filter(t => typeof t === 'string') as string[],
-					tokenModifiers: Object.values(SemanticTokenModifiers).filter(t => typeof t === 'string') as string[]
+					tokenTypes: enumNames(SemanticTokenTypes),
+					tokenModifiers: enumNames(SemanticTokenModifiers)
 				},
 				full: true,
 				range: true
@@ -87,6 +78,7 @@ connection.onInitialize((params: InitializeParams) => {
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
+		params.workspaceFolders?.forEach(it => workspaceFolders.add(it.uri.toLowerCase() + '/'));
 		result.capabilities.workspace = {
 			workspaceFolders: {
 				supported: true
@@ -94,12 +86,13 @@ connection.onInitialize((params: InitializeParams) => {
 		};
 	}
 
-	let configs: AHKLSSettings = params.initializationOptions;
+	const configs: AHKLSSettings = params.initializationOptions;
+	set_ahk_h(true);
 	set_locale(params.locale);
 	set_dirname((configs as any).extensionUri);
 	loadlocalize();
 	update_settings(configs);
-	update_version('3.0.0');
+	set_version('3.0.0');
 	initahk2cache();
 	loadahk2();
 	loadahk2('ahk2_h');
@@ -107,16 +100,16 @@ connection.onInitialize((params: InitializeParams) => {
 	return result;
 });
 
-connection.onInitialized(async () => {
+connection.onInitialized(() => {
 	if (hasConfigurationCapability) {
 		// Register for all configuration changes.
-		connection.client.register(DidChangeConfigurationNotification.type, undefined);
+		connection.client.register(DidChangeConfigurationNotification.type);
 	}
 	if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders((event: WorkspaceFoldersChangeEvent) => {
-			let del = event.removed.map(it => it.uri.toLowerCase() + '/') || [];
-			set_Workspacefolder(workspaceFolders.filter(it => !del.includes(it)));
-			event.added.forEach(it => workspaceFolders.push(it.uri.toLowerCase() + '/'));
+		connection.workspace.onDidChangeWorkspaceFolders(event => {
+			event.removed.forEach(it => workspaceFolders.delete(it.uri.toLowerCase() + '/'));
+			event.added.forEach(it => workspaceFolders.add(it.uri.toLowerCase() + '/'));
+			set_WorkspaceFolders(workspaceFolders);
 		});
 	}
 });
@@ -130,9 +123,10 @@ connection.onDidChangeConfiguration(async change => {
 		return;
 	}
 	update_settings(newset);
+	set_WorkspaceFolders(workspaceFolders);
 });
 
-documents.onDidOpen(async e => {
+documents.onDidOpen(e => {
 	let to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
 	let uri = e.document.uri.toLowerCase(), doc = lexers[uri];
 	if (doc) doc.document = e.document;
@@ -142,15 +136,8 @@ documents.onDidOpen(async e => {
 		doc.actionwhenv1 = 'Continue';
 });
 
-// Only keep settings for open documents
 documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
-
-documents.onDidChangeContent(async (change: TextDocumentChangeEvent<TextDocument>) => lexers[change.document.uri.toLowerCase()].update());
-
-connection.onDidChangeWatchedFiles(_change => {
-	// Monitored files have change in VSCode
-	// console.log('We received an file change event');
-});
+documents.onDidChangeContent(e => lexers[e.document.uri.toLowerCase()].update());
 
 connection.onCompletion(completionProvider);
 connection.onColorPresentation(colorPresentation);
@@ -160,7 +147,7 @@ connection.onDocumentFormatting(documentFormatting);
 connection.onDocumentRangeFormatting(rangeFormatting);
 connection.onDocumentOnTypeFormatting(typeFormatting);
 connection.onDocumentSymbol(symbolProvider);
-connection.onFoldingRanges(async (params: FoldingRangeParams): Promise<FoldingRange[]> => lexers[params.textDocument.uri.toLowerCase()].foldingranges);
+connection.onFoldingRanges(params => lexers[params.textDocument.uri.toLowerCase()].foldingranges);
 connection.onHover(hoverProvider);
 connection.onPrepareRename(prepareRename);
 connection.onReferences(referenceProvider);
@@ -170,7 +157,7 @@ connection.onExecuteCommand(executeCommandProvider);
 connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
-connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
+connection.onRequest('ahk2.exportSymbols', exportSymbols);
 connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
 connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
 	let doc = lexers[uri.toLowerCase()];
@@ -201,8 +188,11 @@ connection.listen();
 async function executeCommandProvider(params: ExecuteCommandParams) {
 	let args = params.arguments || [];
 	switch (params.command) {
+		case 'ahk2.diagnostic.full':
+			diagnosticFull();
+			break;
 		case 'ahk2.generate.comment':
-			generateComment(args);
+			generateComment();
 			break;
 	}
 }

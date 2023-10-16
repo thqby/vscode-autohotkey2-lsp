@@ -1,23 +1,28 @@
 import { existsSync, statSync } from 'fs';
 import { resolve } from 'path';
-import { argv0 } from 'process';
 import {
-	Position,
-	Range,
-	SymbolKind,
-	DocumentSymbol,
+	ColorInformation,
 	Diagnostic,
 	DiagnosticSeverity,
+	DocumentSymbol,
 	FoldingRange,
-	ColorInformation,
-	SemanticTokensBuilder
+	Position,
+	Range,
+	SemanticTokensBuilder,
+	SymbolInformation,
+	SymbolKind
 } from 'vscode-languageserver';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
-import { completionitem, diagnostic } from './localize';
-import { action, ActionType, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings, hoverCache, inBrowser, inWorkspaceFolders, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile, pathenv, restorePath, rootdir, sendDiagnostics, setTextDocumentLanguage, symbolProvider, utils, warn } from './common';
+import { action, completionitem, diagnostic, warn } from './localize';
+import {
+	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings,
+	hoverCache, isBrowser, isahk2_h, lexers, libdirs,
+	libfuncs, openAndParse, openFile, restorePath, rootdir,
+	setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
+} from './common';
 
 export interface ParamInfo {
 	offset: number
@@ -115,6 +120,7 @@ export interface Variable extends DocumentSymbol {
 	def?: boolean
 	decl?: boolean
 	ref?: boolean
+	typed?: boolean | 1				// typed properties
 	defaultVal?: string | false | null
 	full?: string
 	returntypes?: { [exp: string]: any } | null
@@ -230,42 +236,47 @@ class ParseStopError {
 	}
 }
 
+export type ActionType = 'Continue' | 'Warn' | 'SkipLine' | 'SwitchToV1' | 'Stop';
+
 export class Lexer {
+	public actionwhenv1?: ActionType;
 	public actived = false;
 	public beautify: (options?: FormatOptions, range?: Range) => string;
+	public checkmember: boolean | undefined;
 	public children: DocumentSymbol[] = [];
 	public d = 0;
+	public d_uri = '';
 	public declaration: { [name: string]: FuncNode | ClassNode | Variable } = {};
 	public diagnostics: Diagnostic[] = [];
 	public diags = 0;
-	public document: TextDocument;
-	public foldingranges: FoldingRange[] = [];
-	public funccall: CallInfo[] = [];
-	public get_token: (offset?: number, ignorecomment?: boolean) => Token;
-	public find_token: (offset: number, ignore?: boolean) => Token;
-	public include: { [uri: string]: string } = {};
-	public includedir: Map<number, string> = new Map();
+	public last_diags = 0;
 	public dlldir: Map<number, string> = new Map();
 	public dllpaths: string[] = [];
+	public document: TextDocument;
+	public find_token: (offset: number, ignore?: boolean) => Token;
+	public foldingranges: FoldingRange[] = [];
+	public fsPath = '';
+	public funccall: CallInfo[] = [];
+	public get_token: (offset?: number, ignorecomment?: boolean) => Token;
+	public include: { [uri: string]: string } = {};
+	public includedir: Map<number, string> = new Map();
+	public isparsed: boolean = false;
 	public labels: { [key: string]: DocumentSymbol[] } = {};
 	public libdirs: string[] = [];
+	public linepos: { [line: number]: number } = {};
+	public maybev1?: number;
 	public object: { method: { [key: string]: FuncNode[] }, property: { [key: string]: Variable[] } } = { method: {}, property: {} };
 	public parseScript: () => void;
-	public reflat = false;
-	public isparsed = false;
 	public relevance: { [uri: string]: string } | undefined;
 	public scriptdir = '';
 	public scriptpath = '';
-	public tokens: { [offset: number]: Token } = {};
 	public STB: SemanticTokensBuilder = new SemanticTokensBuilder;
-	public linepos: { [line: number]: number } = {};
-	public tokenranges: { start: number, end: number, type: number, previous?: number }[] = [];
+	public symbolInformation: SymbolInformation[] | undefined;
 	public texts: { [key: string]: string } = {};
+	public tokenranges: { start: number, end: number, type: number, previous?: number }[] = [];
+	public tokens: { [offset: number]: Token } = {};
 	public uri = '';
-	public fsPath = '';
-	public d_uri = '';
-	public maybev1?: number;
-	public actionwhenv1?: ActionType;
+	public workspaceFolder = '';
 	private anonymous: DocumentSymbol[] = [];
 	private hotstringExecuteAction = false;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
@@ -304,6 +315,7 @@ export class Lexer {
 		if (document.uri) {
 			allow_$ = false;
 			this.uri = document.uri.toLowerCase();
+			this.setWorkspaceFolder();
 			this.scriptpath = (this.fsPath = uri.fsPath).replace(/\\[^\\]+$/, '');
 			this.initlibdirs(scriptdir);
 		}
@@ -368,8 +380,7 @@ export class Lexer {
 
 		this.beautify = function (options?: FormatOptions, range?: Range) {
 			let sweet_code: string, end_pos: number;
-			if (!_this.isparsed)
-				_this.parseScript();
+			!_this.isparsed && _this.parseScript();
 
 			opt = Object.assign({
 				break_chained_methods: false,
@@ -540,7 +551,7 @@ export class Lexer {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
 				lst = EMPTY_TOKEN, begin_line = true, parser_pos = 0, last_LF = -1, currsymbol = last_comment_fr = undefined;
 				let _low = '', i = 0, j = 0, l = 0, isstatic = false, tk: Token, lk: Token;
-				this.clear(), this.reflat = true, customblocks = { region: [], bracket: [] }, this.maybev1 = undefined;
+				this.clear(), customblocks = { region: [], bracket: [] };
 				let blocks = 0, rg: Range, tokens: Token[] = [], cls: string[] = [], _cm: Token;
 				let p = [DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg = make_range(0, 0), rg, this.children) as ClassNode];
 				includetable = this.include, p[0].declaration = p[0].staticdeclaration = this.declaration, comments = {};
@@ -788,7 +799,7 @@ export class Lexer {
 		} else {
 			this.fsPath.replace(/^(.*)\.(ahk2?|ah2)$/i, (m, m0) => {
 				let path = m0 + '.d.ahk', uri = this.d_uri = URI.file(path).toString().toLowerCase();
-				if (!inBrowser && !lexers[this.d_uri]) {
+				if (!isBrowser && !lexers[this.d_uri]) {
 					let t = openFile(restorePath(path), false);
 					t && (lexers[uri] = new Lexer(t, undefined, 1)).parseScript();
 				}
@@ -798,7 +809,7 @@ export class Lexer {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
 				begin_line = true, requirev2 = false, lst = EMPTY_TOKEN, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
-				this.clear(), this.reflat = true, includetable = this.include, comments = {}, this.maybev1 = undefined;
+				this.clear(), includetable = this.include, comments = {};
 				callWithoutParentheses = extsettings.Warn?.CallWithoutParentheses;
 				try {
 					let rs = utils.get_RCDATA('#2');
@@ -2200,6 +2211,7 @@ export class Lexer {
 										let _p = _parent, static_init = (currsymbol as ClassNode).staticdeclaration.__INIT as FuncNode;
 										let scl = static_init.children!.length;
 										delete v.def;
+										v.typed = true;
 										if (ahk_version < alpha_3)
 											_this.addDiagnostic(diagnostic.requireversion('2.1-alpha.3'), lk.offset, lk.length, DiagnosticSeverity.Warning);
 										lk = tk, tk = get_next_token(), err = '';
@@ -3507,7 +3519,9 @@ export class Lexer {
 						let tc = it.static || it.kind === SymbolKind.Class ? sdec : dec;
 						if (!(t = tc[_low = it.name.toUpperCase()]))
 							return it.def === false || (tc[_low] = it);
-						if (t.children) {
+						if (t.typed === true && (it.typed || !it.children && (t.typed = 1)))
+							return;
+						if (t.children && (!it.typed || it.range.start.line < t.range.start.line)) {
 							let _ = t as any;
 							if (!_.val) return _.val = it;
 						}
@@ -3679,7 +3693,7 @@ export class Lexer {
 					if (!m.endsWith('.ahk'))
 						m += '.d.ahk';
 					if (m.startsWith('~/'))
-						u = inBrowser ? URI.parse(rootdir + m.slice(1)) : URI.file(rootdir + m.slice(1));
+						u = isBrowser ? URI.parse(rootdir + m.slice(1)) : URI.file(rootdir + m.slice(1));
 					else if (/^([a-z]:)?\//.test(m))
 						u = URI.file(m);
 					else if (!m.includes(':')) {
@@ -3715,7 +3729,7 @@ export class Lexer {
 						dlldir = '';
 					else if (tk)
 						_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
-				} else if (!inBrowser) {
+				} else if (!isBrowser) {
 					if (isdll) {
 						if (existsSync(m) && statSync(m).isDirectory())
 							dlldir = m.endsWith('/') || m.endsWith('\\') ? m : m + '\\';
@@ -5271,8 +5285,10 @@ export class Lexer {
 		this.funccall.length = this.diagnostics.length = this.foldingranges.length = 0;
 		this.children.length = this.dllpaths.length = this.tokenranges.length = this.anonymous.length = 0;
 		this.includedir = new Map(), this.dlldir = new Map();
-		this.hotstringExecuteAction = false;
-		delete (<any>this).checkmember;
+		this.hotstringExecuteAction = this.isparsed = false;
+		delete this.maybev1;
+		delete this.checkmember;
+		delete this.symbolInformation;
 	}
 
 	public searchNode(name: string, position?: Position, kind?: SymbolKind)
@@ -5615,7 +5631,7 @@ export class Lexer {
 	}
 
 	public initlibdirs(dir?: string) {
-		if (inBrowser)
+		if (isBrowser)
 			return;
 		let workfolder: string;
 		for (workfolder of extsettings.WorkingDirs)
@@ -5626,7 +5642,7 @@ export class Lexer {
 		if (dir)
 			this.scriptdir = restorePath(dir);
 		else if ((workfolder = resolve()).toLowerCase() !== this.scriptpath.toLowerCase()
-			&& workfolder.toLowerCase() !== argv0.toLowerCase() && this.scriptpath.toLowerCase().startsWith(workfolder)
+			&& workfolder.toLowerCase() !== process.argv0.toLowerCase() && this.scriptpath.toLowerCase().startsWith(workfolder)
 			&& !/\\lib(\\.+)?$/i.test(this.scriptpath)) {
 			if (existsSync(this.scriptpath + '\\Lib') && statSync(this.scriptpath + '\\Lib').isDirectory())
 				this.scriptdir = this.scriptpath;
@@ -5684,7 +5700,7 @@ export class Lexer {
 	public update() {
 		let uri = this.uri;
 		let initial = this.include, il = Object.keys(initial).length;
-		this.isparsed = false, this.parseScript();
+		this.parseScript();
 		if (libfuncs[uri]) {
 			libfuncs[uri].length = 0;
 			libfuncs[uri].push(...Object.values(this.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
@@ -5692,57 +5708,78 @@ export class Lexer {
 		if (Object.keys(this.include).length === il && Object.keys(Object.assign(initial, this.include)).length === il) {
 			if (!this.relevance)
 				this.update_relevance();
-			sendDiagnostics();
+			this.sendDiagnostics(true);
 			return;
 		}
 		parseinclude(this, this.scriptdir);
-		for (const t in initial)
-			if (!this.include[t] && lexers[t]?.diagnostics.length)
-				lexers[t].parseScript();
-		resetrelevance();
 		this.update_relevance();
-		sendDiagnostics();
-
-		function resetrelevance() {
-			for (const u in initial)
-				if (lexers[u])
-					lexers[u].relevance = getincludetable(u).list;
+		for (const u in initial) {
+			let t = lexers[u];
+			if (!t || this.relevance?.[u])
+				continue;
+			t.relevance = getincludetable(u).list;
+			!t.actived && t.close();
 		}
+		this.sendDiagnostics(true, true);
 	}
 
-	public close(force = false) {
-		let uri = this.uri;
-		this.actived = false;
-		if (!lexers[uri]) {
-			connection.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
+	public clearDiagnostics() {
+		if (!this.last_diags)
 			return;
-		}
-		let lexs = Object.values(lexers);
-		if (!force) {
-			if (this.d > 2 && !uri.includes('?'))
-				return;
-			if (this.d && lexers[uri.slice(0, -5) + 'ahk'])
-				return;
-			if (!inWorkspaceFolders(uri))
-				return;
-			for (let lex of lexs)
-				if (lex.actived && lex.relevance?.[uri])
-					return;
-		}
+		this.include = {}, this.last_diags = 0;
 		connection.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
-		delete lexers[uri];
-		let dels: string[] = [];
-		lexs.forEach(lex => {
-			if (!lex.actived && !(lex.d > 2 && !lex.uri.includes('?')) && !inWorkspaceFolders(lex.uri)) {
-				let del = true;
-				for (let u in lex.relevance)
-					if (lexers[u]?.actived) {
-						del = false; break;
-					}
-				del && dels.push(lex.uri);
-			}
-		});
-		dels.forEach(u => lexers[u]?.close(force));
+	}
+
+	public sendDiagnostics(update = false, all = false) {
+		let last_diags = this.last_diags;
+		if (last_diags !== this.diagnostics.length || update && last_diags) {
+			connection.sendDiagnostics({ uri: this.document.uri, diagnostics: this.diagnostics });
+			this.last_diags = this.diagnostics.length;
+		}
+		if (!all) return;
+		for (let u in this.relevance)
+			lexers[u]?.sendDiagnostics(update);
+	}
+
+	public setWorkspaceFolder() {
+		let uri = this.uri;
+		for (const u of workspaceFolders)
+			if (uri.startsWith(u))
+				return this.workspaceFolder = u;
+		return this.workspaceFolder = '';
+	}
+
+	public keepalive() {
+		if (this.actived)
+			return true;
+		let { uri, d } = this;
+		if (!lexers[uri])
+			return false;
+		if (d) {
+			if (d > 2 && !uri.includes('?'))
+				return true;
+			if (lexers[uri.slice(0, -5) + 'ahk']?.keepalive())
+				return true;
+		}
+		let uris = Object.keys(this.relevance ?? {}), it;
+		for (const u of uris)
+			if ((it = lexers[u])?.actived && it.relevance?.[uri])
+				return true;
+		return false;
+	}
+
+	public close(force = false, other = true) {
+		this.actived = false;
+		if (!force && this.keepalive())
+			return;
+		this.clearDiagnostics();
+		if (force || !this.workspaceFolder)
+			delete lexers[this.uri];
+		if (!other)
+			return;
+		lexers[this.d_uri]?.close(false, false);
+		for (const u of Object.keys(this.relevance ?? {}))
+			lexers[u]?.close(false, false);
 	}
 
 	public find_str_cmm(offset: number): Token | undefined {
@@ -5772,14 +5809,14 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 			for (const file of search)
 				if (existsSync(path = dir + file)) {
 					uri = URI.file(path).toString().toLowerCase();
-					return { uri, path, raw };
+					return { uri, path: lexers[uri]?.fsPath ?? path, raw };
 				}
 		}
 	} else {
 		while (m = path.match(/%a_(\w+)%/i)) {
 			let a_ = m[1].toLowerCase();
-			if (pathenv[a_])
-				path = path.replace(m[0], <string>pathenv[a_]);
+			if (a_vars[a_])
+				path = path.replace(m[0], <string>a_vars[a_]);
 			else return;
 		}
 		if (path.indexOf(':') < 0)
@@ -5789,7 +5826,7 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 		if (check_exists && !existsSync(path))
 			return;
 		uri = URI.file(path).toString().toLowerCase();
-		return { uri, path, raw };
+		return { uri, path: lexers[uri]?.fsPath ?? path, raw };
 	}
 }
 
@@ -6474,10 +6511,10 @@ export function getincludetable(fileuri: string): { count: number, list: { [uri:
 			if (fileuri === uri) {
 				has = true;
 				if (!list[cururi])
-					list[cururi] = URI.parse(cururi).fsPath, count++;
+					list[cururi] = lexers[cururi].fsPath, count++;
 			}
 			if (!list[uri] && (doc = lexers[uri])) {
-				list[uri] = include[uri], count++;
+				list[uri] = doc.fsPath, count++;
 				if (cururi !== uri)
 					traverseinclude(doc.include, uri);
 			}

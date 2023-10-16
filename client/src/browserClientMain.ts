@@ -12,12 +12,6 @@ let client: LanguageClient;
 export function activate(context: ExtensionContext) {
 	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
 	const request_handlers: { [cmd: string]: any } = {
-		'ahk2.executeCommands': async (params: { command: string, args?: string[], wait?: boolean }[]) => {
-			let result: any[] = [];
-			for (const cmd of params)
-				result.push(cmd.wait ? await commands.executeCommand(cmd.command, cmd.args) : commands.executeCommand(cmd.command, cmd.args));
-			return result;
-		},
 		'ahk2.getActiveTextEditorUriAndPosition': (params: any) => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
@@ -61,7 +55,6 @@ export function activate(context: ExtensionContext) {
 
 	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', {
 		documentSelector: [{ language: 'ahk2' }],
-		synchronize: {},
 		initializationOptions: {
 			extensionUri: context.extensionUri.toString(),
 			commands: Object.keys(request_handlers),
@@ -70,39 +63,36 @@ export function activate(context: ExtensionContext) {
 	}, new Worker(serverMain.toString()));
 
 	context.subscriptions.push(
-		commands.registerCommand('ahk2.updateversioninfo', async () => {
-			const editor = window.activeTextEditor;
-			if(editor) {
-				let info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', editor.document.uri.toString());
-				if (!info) {
-					await editor.insertSnippet(new SnippetString([
-						"/************************************************************************",
-						" * @description ${1:}",
-						" * @file $TM_FILENAME",
-						" * @author ${2:}",
-						" * @date ${3:$CURRENT_YEAR/$CURRENT_MONTH/$CURRENT_DATE}",
-						" * @version ${4:0.0.0}",
-						" ***********************************************************************/",
-						"", ""
-					].join('\n')), new Range(0, 0, 0, 0));
-				} else {
-					let d = new Date;
-					let content = info.content, ver;
-					content = content.replace(/(?<=^\s*[;*]?\s*@date[:\s]\s*)(\d+\/\d+\/\d+)/im, d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2));
-					if (content.match(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im) &&
-						(ver = await window.showInputBox({ prompt: 'Enter version info', value: content.match(/(?<=^[\s*]*@version[:\s]\s*)(\S*)/im)?.[1] })))
-						content = content.replace(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im, ver);
-					if (content !== info.content) {
-						let ed = new WorkspaceEdit();
-						ed.replace(Uri.parse(info.uri), info.range, content);
-						workspace.applyEdit(ed);
-					}
+		commands.registerTextEditorCommand('ahk2.updateversioninfo', async textEditor => {
+			let info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
+			if (!info) {
+				await textEditor.insertSnippet(new SnippetString([
+					"/************************************************************************",
+					" * @description ${1:}",
+					" * @file $TM_FILENAME",
+					" * @author ${2:}",
+					" * @date ${3:$CURRENT_YEAR/$CURRENT_MONTH/$CURRENT_DATE}",
+					" * @version ${4:0.0.0}",
+					" ***********************************************************************/",
+					"", ""
+				].join('\n')), new Range(0, 0, 0, 0));
+			} else {
+				let d = new Date;
+				let content = info.content, ver;
+				content = content.replace(/(?<=^\s*[;*]?\s*@date[:\s]\s*)(\d+\/\d+\/\d+)/im, d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2));
+				if (content.match(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im) &&
+					(ver = await window.showInputBox({ prompt: 'Enter version info', value: content.match(/(?<=^[\s*]*@version[:\s]\s*)(\S*)/im)?.[1] })))
+					content = content.replace(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im, ver);
+				if (content !== info.content) {
+					let ed = new WorkspaceEdit();
+					ed.replace(textEditor.document.uri, info.range, content);
+					workspace.applyEdit(ed);
 				}
 			}
 		}),
-		commands.registerCommand('ahk2.switch', () => {
-			const doc = window.activeTextEditor?.document;
-			if (doc) languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
+		commands.registerTextEditorCommand('ahk2.switch', textEditor => {
+			const doc = textEditor.document;
+			languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
 		}),
 		workspace.onDidCloseTextDocument(e => {
 			client.sendNotification('onDidCloseTextDocument', e.isClosed ?

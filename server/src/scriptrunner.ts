@@ -1,8 +1,7 @@
 import { execSync, spawnSync } from 'child_process';
-import { ahkpath_cur } from './common';
+import { ahkpath_cur, isWindows } from './common';
 import { lstatSync, readlinkSync } from 'fs';
 import { resolve } from 'path';
-import { type } from 'os';
 
 export function runscript(script: string) {
 	let executePath = resolvePath(ahkpath_cur, true);
@@ -29,7 +28,7 @@ export function resolvePath(path: string, resolveSymbolicLink = false): string {
 	let paths: string[] = [];
 	if (!path.includes(':'))
 		paths.push(resolve(path));
-	if (!/[\\/]/.test(path) && type() === 'Windows_NT')
+	if (isWindows && !/[\\/]/.test(path))
 		paths.push(execSync(`where ${path}`, { encoding: 'utf-8' }).trim());
 	paths.push(path);
 	for (let path of paths) {

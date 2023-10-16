@@ -1,3 +1,9 @@
+## 2.2.0
+- 修复[#402](https://github.com/thqby/vscode-autohotkey2-lsp/issues/402)
+- 修复[#403](https://github.com/thqby/vscode-autohotkey2-lsp/issues/403)
+- 修复[#405](https://github.com/thqby/vscode-autohotkey2-lsp/issues/405)
+- 修复[#407](https://github.com/thqby/vscode-autohotkey2-lsp/issues/407)
+
 ## 2.1.8
 - 修复[#399](https://github.com/thqby/vscode-autohotkey2-lsp/issues/399)
 - 修复[#400](https://github.com/thqby/vscode-autohotkey2-lsp/issues/400)

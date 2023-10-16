@@ -1,18 +1,12 @@
 import { DocumentSymbol, Position, Range, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, reset_detect_cache, detectExp, FuncNode, Token, Variable, find_class, Lexer } from './Lexer';
-import { connection, extsettings, lexers, restorePath } from './common';
+import { connection, extsettings, lexers, restorePath, semanticTokensOnFull } from './common';
 
 function checkCommand(cmd: string) {
 	if (extsettings.commands?.includes(cmd))
 		return true;
 	connection.console.warn(`Command '${cmd}' is not implemented!`);
 	return false;
-}
-
-export async function executeCommands(cmds: { command: string, args?: any[], wait?: boolean }[]) {
-	if (!checkCommand('ahk2.executeCommands'))
-		return;
-	return connection.sendRequest('ahk2.executeCommands', cmds);
 }
 
 export function insertSnippet(value: string, range?: Range) {
@@ -82,7 +76,7 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode) {
 	}
 }
 
-export async function generateComment(args: any[]) {
+export async function generateComment() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
 		return;
 	let { uri, position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
@@ -128,7 +122,7 @@ export function exportSymbols(uri: string) {
 		if (!(doc = lexers[uri]))
 			continue;
 		let includes;
-		includes = Object.values(doc.include).map(p => restorePath(p));
+		includes = Object.entries(doc.include).map(p => lexers[p[0]]?.fsPath ?? restorePath(p[1]));
 		!includes.length && (includes = undefined);
 		dump(Object.values(doc.declaration), result[doc.fsPath || doc.document.uri] = { includes });
 	}
@@ -194,4 +188,16 @@ export function exportSymbols(uri: string) {
 			return cache[`${cl.extendsuri},${s}`] ??= find_class(doc, s, cl.extendsuri)?.full || s;
 		}
 	}
+}
+
+export async function diagnosticFull() {
+	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
+		return;
+	let { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const doc = lexers[uri.toLowerCase()];
+	if (!doc) return;
+	doc.update(), doc.update_relevance();
+	for (let u in doc.relevance)
+		(u = lexers[u]?.document.uri) && semanticTokensOnFull({ textDocument: { uri: u } });
+	semanticTokensOnFull({ textDocument: { uri } });
 }

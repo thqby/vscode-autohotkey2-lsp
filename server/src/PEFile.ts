@@ -225,7 +225,7 @@ export class PEFile {
 		async function parseVersionInformation(resource: any, versionStruct: any) {
 			let nullindex = 0, offset = 0, startOffset = versionStruct.offsetToData;
 			const rawData = await fd.read(fd.RVA2Offset(startOffset), versionStruct.size);
-			let versionInfo = getString(offset);
+			getString(offset);	// skip VS_VERSION_INFO
 			offset = alignDword(2 + nullindex, startOffset);
 			const fixedFileInfo = {
 				Signature: rawData.readUInt32LE(offset), StrucVersion: rawData.readUInt32LE(offset + 4), FileVersionMS: rawData.readUInt32LE(offset + 8), FileVersionLS: rawData.readUInt32LE(offset + 12), ProductVersionMS: rawData.readUInt32LE(offset + 16), ProductVersionLS: rawData.readUInt32LE(offset + 20), FileFlagsMask: rawData.readUInt32LE(offset + 24), FileFlags: rawData.readUInt32LE(offset + 28), FileOS: rawData.readUInt32LE(offset + 32), FileType: rawData.readUInt32LE(offset + 36), FileSubtype: rawData.readUInt32LE(offset + 40), FileDateMS: rawData.readUInt32LE(offset + 44), FileDateLS: rawData.readUInt32LE(offset + 48)
@@ -288,7 +288,7 @@ export async function searchAndOpenPEFile(path: string, isBit64?: boolean): Prom
 				throw Error();
 			pe = new PEFile(path);
 			let is_bit64 = await pe.is_bit64;
-			if (isBit64 !== undefined && is_bit64 !== isBit64) {
+			if (file && isBit64 !== undefined && is_bit64 !== isBit64) {
 				pe.close();
 				throw Error();
 			}
