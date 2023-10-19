@@ -1164,7 +1164,7 @@ Hotkey(KeyName [, Callback, Options]) => void
 /**
  * 在脚本运行时创建, 修改, 启用或禁用热字串.
  */
-Hotstring(StringorOptions [, Replacement, OnOffToggle]) => void
+Hotstring(StringorOptions [, Replacement, OnOffToggle]) => String
 
 /**
  * 将图标或图片添加到指定的ImageListID并返回新图标的索引（1是第一个图标,2是第二个图标,依此类推）.

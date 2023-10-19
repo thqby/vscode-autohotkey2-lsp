@@ -1164,7 +1164,7 @@ Hotkey(KeyName [, Callback, Options]) => void
 /**
  * Create, modify, enable or disable hot strings while the script is running.
  */
-Hotstring(StringorOptions [, Replacement, OnOffToggle]) => void
+Hotstring(StringorOptions [, Replacement, OnOffToggle]) => String
 
 /**
  * Add the icon or picture to the specified ImageListID and return the index of the new icon (1 is the first icon, 2 is the second icon, and so on).
