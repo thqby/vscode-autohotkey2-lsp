@@ -1022,8 +1022,9 @@ export class Lexer {
 							if (tk.type !== 'TK_RESERVED' && allIdentifierChar.test(tk.content))
 								tk.type = 'TK_WORD', delete tk.semantic;
 						} else if (p = is_next_char(':')) {
-							if ((case_pos.length && tk.content.toLowerCase() === 'default') ||
-								(p === parser_pos && whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content))) {
+							if ((case_pos.length && tk.content.toLowerCase() === 'default' && _this.get_token(p).content === ':') ||
+								(p === parser_pos && whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content)
+									&& (!case_pos.length || tk.content.toLowerCase() !== 'case'))) {
 								if (_nk = tokens[p]) {
 									if ((tk.next_token_offset = _nk.next_token_offset) > 0)
 										tokens[_nk.next_token_offset].previous_token = tk;

@@ -180,37 +180,9 @@
     },
     "case_statement": {
       "name": "meta.conditional.case.ahk2",
-      "begin": "((?>(?:(?:(?>(?<!\\s)\\s+)|(\\/\\*)((?>(?:[^\\*]|(?>\\*+)[^\\/])*)((?>\\*+)\\/)))+|(?:(?:(?:(?:\\b|(?<=\\W))|(?=\\W))|\\A)|\\Z))))((?<!\\w)(?i:case)(?!\\w))",
+      "begin": "(?<=^\\s*\\{?\\s*)((?i:case))(?!\\w)",
       "beginCaptures": {
         "1": {
-          "patterns": [
-            {
-              "include": "#compiler_directive"
-            },
-            {
-              "include": "#comments"
-            }
-          ]
-        },
-        "2": {
-          "name": "comment.block.ahk2 punctuation.definition.comment.begin.ahk2"
-        },
-        "3": {
-          "name": "comment.block.ahk2"
-        },
-        "4": {
-          "patterns": [
-            {
-              "match": "\\*\\/",
-              "name": "comment.block.ahk2 punctuation.definition.comment.end.ahk2"
-            },
-            {
-              "match": "\\*",
-              "name": "comment.block.ahk2"
-            }
-          ]
-        },
-        "5": {
           "name": "keyword.control.case.ahk2"
         }
       },
@@ -937,40 +909,12 @@
     },
     "default_statement": {
       "name": "meta.conditional.default.ahk2",
-      "match": "((?>(?:(?:(?>(?<!\\s)\\s+)|(\\/\\*)((?>(?:[^\\*]|(?>\\*+)[^\\/])*)((?>\\*+)\\/)))+|(?:(?:(?:(?:\\b|(?<=\\W))|(?=\\W))|\\A)|\\Z))))((?<!\\w)(?i:default))\\s*(:?)",
+      "match": "(?<=^\\s*\\{?\\s*)((?i:default))\\s*(:)(?!=)",
       "captures": {
         "1": {
-          "patterns": [
-            {
-              "include": "#compiler_directive"
-            },
-            {
-              "include": "#comments"
-            }
-          ]
-        },
-        "2": {
-          "name": "comment.block.ahk2 punctuation.definition.comment.begin.ahk2"
-        },
-        "3": {
-          "name": "comment.block.ahk2"
-        },
-        "4": {
-          "patterns": [
-            {
-              "match": "\\*\\/",
-              "name": "comment.block.ahk2 punctuation.definition.comment.end.ahk2"
-            },
-            {
-              "match": "\\*",
-              "name": "comment.block.ahk2"
-            }
-          ]
-        },
-        "5": {
           "name": "keyword.control.default.ahk2"
         },
-        "6": {
+        "2": {
           "name": "punctuation.separator.colon.case.default.ahk2"
         }
       }
@@ -1627,10 +1571,12 @@
           ]
         },
         {
-          "match": "^\\s*\\w+(:)(?=\\s*(\\s;.*)?$)",
-          "name": "entity.name.label.ahk2",
+          "match": "(?<=^\\s*\\{?\\s*)(\\w+)(:)(?=\\s*(\\s;.*)?$)",
           "captures": {
             "1": {
+              "name": "entity.name.label.ahk2"
+            },
+            "2": {
               "name": "punctuation.definition.colon"
             }
           }
