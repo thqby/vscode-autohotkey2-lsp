@@ -5370,10 +5370,16 @@ export class Lexer {
 								return { node: t, uri, scope };
 							node = t, bak = scope;
 						}
-					} else if (fn_is_static && bak === scope) {
-						node = scope.children?.find(it => it.name.toUpperCase() === name);
-						if (node && (<Variable>node).static)
-							return { node, uri, scope };
+					} else if (fn_is_static) {
+						if (bak === scope) {
+							node = scope.children?.find(it => it.name.toUpperCase() === name);
+							if (node && (<Variable>node).static)
+								return { node, uri, scope };
+						}
+						if ((scope as FuncNode).parent?.kind === SymbolKind.Class) {
+							scope = bak;
+							break;
+						}
 					} else if ((scope as FuncNode).has_this_param && ['THIS', 'SUPER'].includes(name)) {
 						node = undefined;
 						break;
@@ -5386,7 +5392,7 @@ export class Lexer {
 						return { node: t, uri, scope };
 					else
 						return { node, uri, fn_is_static, scope: bak };
-				} else if (['THIS', 'SUPER'].includes(name)) {
+				} else if (!fn_is_static && ['THIS', 'SUPER'].includes(name)) {
 					scope = bak;
 					if (scope?.kind === SymbolKind.Class && position) {
 						let off = this.document.offsetAt(position);
