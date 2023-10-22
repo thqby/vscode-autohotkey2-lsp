@@ -76,6 +76,7 @@
 	"diagnostic.missingretval": "函数缺少返回值",
 	"diagnostic.missingspace": "前面缺少空格或运算符",
 	"diagnostic.objectliteralerr": "对象字面量存在错误",
+	"diagnostic.outofloop": "Break/Continue必须被循环包围",
 	"diagnostic.paramcounterr": "应有 {0} 个参数, 但获得 {1} 个",
 	"diagnostic.pathinvalid": "无效的文件路径",
 	"diagnostic.propdeclaraerr": "不是有效的方法, 类或属性定义",

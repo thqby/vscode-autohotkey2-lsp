@@ -53,6 +53,7 @@ export namespace diagnostic {
 	export const missingretval = localize('diagnostic.missingretval', 'The function missing a return value');
 	export const missingspace = localize('diagnostic.missingspace', 'Missing space or operator before this');
 	export const objectliteralerr = localize('diagnostic.objectliteralerr', 'Error in object literal');
+	export const outofloop = localize('diagnostic.outofloop', 'Break/Continue must be enclosed by a Loop');
 	export const paramcounterr = localize('diagnostic.paramcounterr', 'Expected {0} parameters, but got {1}');
 	export const pathinvalid = localize('diagnostic.pathinvalid', 'Invalid file path');
 	export const propdeclaraerr = localize('diagnostic.propdeclaraerr', 'Not a valid method, class or property definition');
