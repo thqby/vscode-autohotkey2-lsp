@@ -1794,7 +1794,7 @@ export class Lexer {
 								if (tk.type === 'TK_COMMA')
 									stop_parse(lk);
 								result.push(...parse_line(undefined, '{', _low, 1));
-								parse_body(false, beginpos);
+								parse_body(false, beginpos, _low === 'while');
 							}
 						}
 						break;
