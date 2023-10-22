@@ -1366,28 +1366,9 @@
                   "name": "comment.line.ahk2"
                 }
               },
-              "name": "hotstringline2.ahk2",
-              "end": "(?<=^\\s*)(})|(?=^\\s*([^\\s;/({]|\/(?!\\*)|\\(.*\\)(?<!\\b(?i:join)\\S*\\))))",
-              "endCaptures": {
-                "1": {
-                  "name": "punctuation.definition.block.hotstring.end.ahk2"
-                }
-              },
+              "name": "hotstring.ahk2",
+              "end": "(?=^\\s*([^\\s;/(]|\/(?!\\*)|\\(.*\\)(?<!\\b(?i:join)\\S*\\))))",
               "patterns": [
-                {
-                  "begin": "(?<=\\G\\s*){",
-                  "beginCaptures": {
-                    "0": {
-                      "name": "punctuation.definition.block.hotstring.begin.ahk2"
-                    }
-                  },
-                  "end": "(?=})",
-                  "patterns": [
-                    {
-                      "include": "$base"
-                    }
-                  ]
-                },
                 {
                   "include": "#comments"
                 },
@@ -1461,28 +1442,9 @@
               "name": "comment.line.ahk2"
             }
           },
-          "name": "hotstringline.ahk2",
-          "end": "(?<=^\\s*)(})|(?=^\\s*([^\\s;/({]|\/(?!\\*)|\\(.*\\)(?<!\\b(?i:join)\\S*\\))))",
-          "endCaptures": {
-            "1": {
-              "name": "punctuation.definition.block.hotstring.end.ahk2"
-            }
-          },
+          "name": "hotstring.ahk2",
+          "end": "(?=^\\s*([^\\s;/(]|\/(?!\\*)|\\(.*\\)(?<!\\b(?i:join)\\S*\\))))",
           "patterns": [
-            {
-              "begin": "(?<=\\G\\s*){",
-              "beginCaptures": {
-                "0": {
-                  "name": "punctuation.definition.block.hotstring.begin.ahk2"
-                }
-              },
-              "end": "(?=})",
-              "patterns": [
-                {
-                  "include": "$base"
-                }
-              ]
-            },
             {
               "include": "#comments"
             },
@@ -1521,52 +1483,14 @@
               "name": "punctuation.definition.colon"
             }
           },
-          "end": "(?<=^\\s*)(})|(?<=:[^:]*:(;|\\s*[^;\\s])[^\\n]*)\\n|(?<=[\\w})\\]]\\s*)\\n",
-          "endCaptures": {
-            "1": {
-              "name": "punctuation.definition.block.hotkey.end.ahk2"
-            }
-          },
-          "name": "meta.hotkeyline.ahk2",
+          "end": "(?=\\n)",
           "patterns": [
             {
-              "begin": "{",
-              "beginCaptures": {
-                "0": {
-                  "name": "punctuation.definition.block.hotkey.begin.ahk2"
-                }
-              },
-              "end": "(?=})",
-              "patterns": [
-                {
-                  "include": "$base"
-                }
-              ]
-            },
-            {
-              "include": "#compiler_directive"
-            },
-            {
-              "include": "#comments"
-            },
-            {
-              "match": "(?<=\\G\\s*)((?i:alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab)\\b|([<>]?[!+#^]){0,4}(`{|`?;|.|(?i:shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton[12]|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\\d]{1,2}(sc[a-f\\d]+)?|sc[a-f\\d]+))(?=(\\s+(;.*)?)?\\n))",
+              "match": "(?<=\\G\\s*)((?i:alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab)\\b|([<>]?[!+#^]){0,4}(`{|`?;|.|(?i:shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton[12]|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\\d]{1,2}(sc[a-f\\d]+)?|sc[a-f\\d]+))(?=(\\s+;.*|\\s*)\\n))",
               "name": "keyword.keys.ahk2"
             },
             {
-              "begin": "(?<=\\G\\s*)(?=\\S)",
-              "end": "(?=\\n)",
-              "patterns": [
-                {
-                  "include": "#line_continue"
-                },
-                {
-                  "include": "$base"
-                }
-              ]
-            },
-            {
-              "include": "$self"
+              "include": "$base"
             }
           ]
         },
@@ -1584,8 +1508,8 @@
       ]
     },
     "hotstring_execute": {
-      "begin": "^\\s*(:)([^:]*)(:)((`.|[^`])*?)(::)(\\s+;.*)?",
-      "beginCaptures": {
+      "match": "^\\s*(:)([^:]*)(:)((`.|[^`])*?)(::)",
+      "captures": {
         "1": {
           "name": "punctuation.definition.colon"
         },
@@ -1609,46 +1533,9 @@
         },
         "6": {
           "name": "punctuation.definition.colon"
-        },
-        "7": {
-          "name": "comment.line.ahk2"
         }
       },
-      "end": "(?<=^\\s*)(})|(?<=:[^:]*:(;|\\s*[^;\\s])[^\\n]*)\\n|(?<=[\\w})\\]]\\s*)\\n",
-      "endCaptures": {
-        "1": {
-          "name": "punctuation.definition.block.hotstring.end.ahk2"
-        }
-      },
-      "name": "meta.block.hotstring.ahk2",
-      "patterns": [
-        {
-          "begin": "\\G{",
-          "beginCaptures": {
-            "0": {
-              "name": "punctuation.definition.block.hotstring.begin.ahk2"
-            }
-          },
-          "end": "(?=})",
-          "patterns": [
-            {
-              "include": "$base"
-            }
-          ]
-        },
-        {
-          "begin": "(?<=::\\s*)",
-          "end": "(?=\\n)",
-          "patterns": [
-            {
-              "include": "#line_continue"
-            },
-            {
-              "include": "$base"
-            }
-          ]
-        }
-      ]
+      "name": "hotstring.ahk2"
     },
     "inline-tags": {
       "patterns": [
