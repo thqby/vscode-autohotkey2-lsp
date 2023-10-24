@@ -14,7 +14,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	if (token !== null && doc.symbolInformation)
 		return doc.symbolInformation;
 	let gvar: { [name: string]: Variable } = globalsymbolcache = { ...ahkvars };
-	let list = [uri, ...Object.keys(doc.relevance ?? {})], winapis: any = {};
+	let list = [uri, ...Object.keys(doc.relevance)], winapis: any = {};
 	list = list.map(u => lexers[u]?.d_uri).concat(list);
 	for (const uri of list) {
 		let lex = lexers[uri];

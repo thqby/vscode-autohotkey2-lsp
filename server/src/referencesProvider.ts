@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
 import { Lexer, FuncScope, FuncNode, searchNode, Variable, ClassNode } from './Lexer';
-import { lexers, ahkvars, ahkuris } from './common';
+import { lexers, ahkvars, ahkuris, Context } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
 	let result: any = [], doc = lexers[params.textDocument.uri.toLowerCase()];
@@ -11,9 +11,9 @@ export async function referenceProvider(params: ReferenceParams, token: Cancella
 	return result;
 }
 
-export function getAllReferences(doc: Lexer, context: any, allow_builtin = true): { [uri: string]: Range[] } | null | undefined {
+export function getAllReferences(doc: Lexer, context: Context, allow_builtin = true): { [uri: string]: Range[] } | null | undefined {
 	if (!context.text) return undefined;
-	let name: string = context.text.toUpperCase(), references: { [uri: string]: Range[] } = {};
+	let name = context.text.toUpperCase(), references: { [uri: string]: Range[] } = {};
 	let nodes = searchNode(doc, name, context.range.end, context.kind);
 	if (!nodes || nodes.length > 1)
 		return undefined;
@@ -21,11 +21,10 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 	if (!uri || !node.selectionRange.end.character)
 		return undefined;
 
-	if (ref === true) { // this.prop
-		return undefined;
-	} else if (ref === false) { // this.staticprop
+	if (ref !== undefined) {	// this or super
 		let cls = scope as ClassNode, range: Range[] = [];
-		for (let it of Object.values(cls.staticdeclaration ?? {}))
+		let decl = ref ? cls.declaration : cls.staticdeclaration;
+		for (let it of Object.values(decl ?? {}))
 			it.children?.length && findAllVar(it as FuncNode, name, range, false, false);
 		if (range.length)
 			return { [lexers[uri].document.uri]: range };
@@ -84,12 +83,16 @@ export function getAllReferences(doc: Lexer, context: any, allow_builtin = true)
 				if (node.kind === SymbolKind.Class)
 					name = (node as ClassNode).full.toUpperCase();
 				else {
-					let m = (node as FuncNode).full?.match(/^\(([^)]+)\)\sstatic\s([^(]+)($|[(\[])/);
-					if (!m) return;
-					name = `${m[1]}.${m[2]}`.toUpperCase();
+					let fn = node as FuncNode;
+					let m = fn.full?.match(/^\(([^)]+)\)\sstatic\s([^(]+)($|[(\[])/);
+					if (m)
+						name = `${m[1]}.${m[2]}`.toUpperCase();
+					else if (fn.parent?.kind === SymbolKind.Class)
+						name = `${(fn.parent as FuncNode).full}.${fn.name}`.toUpperCase();
+					else return;
 				}
 				let c = name.split('.'), l = c.length, i = 0, refs: { [uri: string]: Range[] } = {};
-				for (const uri of new Set([doc.uri, ...Object.keys(doc.relevance ?? {})]))
+				for (const uri of new Set([doc.uri, ...Object.keys(doc.relevance)]))
 					refs[lexers[uri].document.uri] = findAllFromDoc(lexers[uri], c[0], SymbolKind.Variable);
 				while (i < l) {
 					let name = c.slice(0, ++i).join('.');

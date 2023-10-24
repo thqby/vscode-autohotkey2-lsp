@@ -159,6 +159,16 @@ export interface Token {
 	type: string
 }
 
+export interface Context {
+	text: string;
+	word: string;
+	range: Range;
+	kind: SymbolKind;
+	linetext: string;
+	token: Token;
+	symbol?: DocumentSymbol;
+};
+
 export interface FormatOptions {
 	brace_style?: number
 	break_chained_methods?: boolean
@@ -267,7 +277,6 @@ export class Lexer {
 	public maybev1?: number;
 	public object: { method: { [key: string]: FuncNode[] }, property: { [key: string]: Variable[] } } = { method: {}, property: {} };
 	public parseScript: () => void;
-	public relevance: { [uri: string]: string } | undefined;
 	public scriptdir = '';
 	public scriptpath = '';
 	public STB: SemanticTokensBuilder = new SemanticTokensBuilder;
@@ -5305,6 +5314,12 @@ export class Lexer {
 		delete this.symbolInformation;
 	}
 
+	get relevance() {
+		let uri = this.uri, r = Object.assign({}, includecache[uri], includedcache[uri] ?? {});
+		delete r[uri];
+		return r;
+	}
+
 	public searchNode(name: string, position?: Position, kind?: SymbolKind)
 		: { node: DocumentSymbol, uri: string, ref?: boolean, scope?: DocumentSymbol, fn_is_static?: boolean } | undefined | false | null {
 		let node: DocumentSymbol | undefined, t: DocumentSymbol | undefined, uri = this.uri;
@@ -5447,7 +5462,7 @@ export class Lexer {
 		}
 	}
 
-	public buildContext(position: Position, ignoreright = false) {
+	public buildContext(position: Position, ignoreright = false): Context {
 		let kind: SymbolKind, symbol: DocumentSymbol | undefined, token: Token | undefined, start: number, is_end_expr = false;
 		let document = this.document, tokens = this.tokens, { line, character } = position;
 		let linetext = document.getText(Range.create(line, 0, line + 1, 0)).trimRight();
@@ -5635,21 +5650,6 @@ export class Lexer {
 		return vars;
 	}
 
-	public update_relevance() {
-		let uri = this.uri, { list, main } = getincludetable(uri), dir = (lexers[main.toLowerCase()] ?? this).scriptdir;
-		this.relevance = list;
-		if (dir !== this.scriptdir)
-			this.initlibdirs(dir), this.parseScript();
-		for (let u in { ...this.relevance, ...this.include }) {
-			let d = lexers[u];
-			if (d && !d.relevance?.[uri]) {
-				d.relevance = getincludetable(u).list;
-				if (d.scriptdir !== dir)
-					d.initlibdirs(dir), d.parseScript();
-			}
-		}
-	}
-
 	public initlibdirs(dir?: string) {
 		if (isBrowser)
 			return;
@@ -5718,27 +5718,38 @@ export class Lexer {
 	}
 
 	public update() {
-		let uri = this.uri;
-		let initial = this.include, il = Object.keys(initial).length;
+		const uri = this.uri, initial = this.include;
 		this.parseScript();
 		if (libfuncs[uri]) {
 			libfuncs[uri].length = 0;
 			libfuncs[uri].push(...Object.values(this.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
 		}
-		if (Object.keys(this.include).length === il && Object.keys(Object.assign(initial, this.include)).length === il) {
-			if (!this.relevance)
-				this.update_relevance();
-			this.sendDiagnostics(true);
-			return;
-		}
+		let after = this.include, change = 0;
+		let l = Object.keys(after).length;
+		for (const u in initial)
+			if (!after[u]) { change = 2; break; }
+		if (!change && (l > Object.keys(initial).length ||
+			!l && initial[''] === '' && Object.keys(includedcache[uri] ?? {}).length))
+			change = 1;
+		if (!change)
+			return this.sendDiagnostics(true);
 		parseinclude(this, this.scriptdir);
-		this.update_relevance();
+		change === 1 ? traverse_include(this) : update_includecache();
+		let main = this.scriptpath, max = Object.keys(includecache[uri]).length;
+		for (const u in includedcache[uri]) {
+			l = Object.keys(includecache[u]).length;
+			if (l > max || l === max && lexers[u].scriptpath.length < main.length)
+				main = lexers[u].scriptpath, max = l;
+		}
+		let lex: Lexer;
+		const relevance = this.relevance;
+		for (const u in relevance) {
+			delete initial[u];
+			(lex = lexers[u]).scriptdir !== main && lex.initlibdirs(main);
+		}
 		for (const u in initial) {
-			let t = lexers[u];
-			if (!t || this.relevance?.[u])
-				continue;
-			t.relevance = getincludetable(u).list;
-			!t.actived && t.close();
+			const t = lexers[u];
+			t && !t.actived && t.close();
 		}
 		this.sendDiagnostics(true, true);
 	}
@@ -5781,9 +5792,9 @@ export class Lexer {
 			if (lexers[uri.slice(0, -5) + 'ahk']?.keepalive())
 				return true;
 		}
-		let uris = Object.keys(this.relevance ?? {}), it;
-		for (const u of uris)
-			if ((it = lexers[u])?.actived && it.relevance?.[uri])
+		let it;
+		for (const u in this.relevance)
+			if ((it = lexers[u])?.actived && it.relevance[uri])
 				return true;
 		return false;
 	}
@@ -5793,13 +5804,21 @@ export class Lexer {
 		if (!force && this.keepalive())
 			return;
 		this.clearDiagnostics();
-		if (force || !this.workspaceFolder)
+		const relevance = this.relevance;
+		if (force || !this.workspaceFolder) {
 			delete lexers[this.uri];
+			delete includecache[this.uri];
+			!this.actived && lexers[this.d_uri]?.close(false, false);
+		}
 		if (!other)
 			return;
-		lexers[this.d_uri]?.close(false, false);
-		for (const u of Object.keys(this.relevance ?? {}))
-			lexers[u]?.close(false, false);
+		let o = true;
+		for (const u in relevance)
+			o = false, lexers[u]?.close(false, false);
+		if (o) {
+			if (!lexers[this.uri])
+				delete includedcache[this.uri];
+		} else update_includecache();
 	}
 
 	public find_str_cmm(offset: number): Token | undefined {
@@ -5851,25 +5870,18 @@ export function pathanalyze(path: string, libdirs: string[], workdir: string = '
 }
 
 export function parseinclude(lex: Lexer, dir: string) {
-	let include = lex.include, u = lex.uri;
-	let need_update: Lexer[] = [];
+	let include = lex.include;
 	for (const uri in include) {
-		let path = include[uri], ll = lexers[uri];
-		if (ll) {
-			if (!ll.relevance?.[u])
-				need_update.push(ll);
-		} else if (existsSync(path)) {
+		let path = include[uri];
+		if (!lexers[uri] && existsSync(path)) {
 			let t = openFile(restorePath(path));
 			if (!t)
 				continue;
 			let doc = new Lexer(t, dir);
 			lexers[uri] = doc, doc.parseScript();
 			parseinclude(doc, dir);
-			doc.relevance = getincludetable(uri).list;
 		}
 	}
-	for (let t of need_update)
-		t.update_relevance(), t.diagnostics.length && t.update();
 }
 
 export function getClassMembers(doc: Lexer, node: DocumentSymbol, staticmem: boolean = true): { [name: string]: DocumentSymbol } {
@@ -6431,9 +6443,9 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 			return undefined;
 		else if (res === false)
 			return null;
-		res = searchIncludeNode(doc.relevance ?? {}, name) ?? res;
+		res = searchIncludeNode(doc.relevance, name) ?? res;
 	} else if (res.node.kind === SymbolKind.Variable && (!res.scope || !(res.node as Variable).def)) {
-		let t = searchIncludeNode(doc.relevance ?? {}, name);
+		let t = searchIncludeNode(doc.relevance, name);
 		if (t && (t.node.kind !== SymbolKind.Variable || (t.node as Variable).def && !(res.node as Variable).def))
 			res = t;
 	}
@@ -6512,34 +6524,29 @@ export function getFuncCallInfo(doc: Lexer, position: Position, ci?: CallInfo) {
 	}
 }
 
-export function getincludetable(fileuri: string): { count: number, list: { [uri: string]: string }, main: string } {
-	let list: { [uri: string]: string } = {}, count = 0, has = false, doc: Lexer, res = { list, count, main: '' };
-	for (const uri in lexers) {
-		list = {}, count = 0, has = (uri === fileuri);
-		traverseinclude(lexers[uri].include, uri);
-		if (has && count > res.count)
-			res = { list, count, main: uri };
+let includecache: { [uri: string]: { [uri: string]: string } } = {};
+let includedcache: { [uri: string]: { [uri: string]: string } } = {};
+export function update_includecache() {
+	includecache = {}, includedcache = {};
+	for (const lex of Object.values(lexers))
+		traverse_include(lex);
+}
+export function traverse_include(lex: Lexer, included?: any) {
+	let { uri, include } = lex, cache = includecache[uri] ??= { [uri]: lex.fsPath };
+	included = (included ??= includedcache[uri]) ? Object.assign({}, included) : {};
+	included[uri] = lex.fsPath;
+	for (const u in include) {
+		Object.assign(includedcache[u] ??= {}, included);
+		if (!(lex = lexers[u])) continue;
+		if (!cache[u]) {
+			let c = traverse_include(lex, included);
+			if (c[uri]) {
+				cache = includecache[uri] = Object.assign(c, cache);
+			} else Object.assign(cache, c);
+		} else if (!included[u])
+			traverse_include(lex, included);
 	}
-	if (res.count) {
-		delete res.list[fileuri];
-		if (res.main && res.main !== fileuri)
-			res.list[res.main] ??= URI.parse(res.main).fsPath;
-	}
-	return res;
-	function traverseinclude(include: any, cururi: string) {
-		for (const uri in include) {
-			if (fileuri === uri) {
-				has = true;
-				if (!list[cururi])
-					list[cururi] = lexers[cururi].fsPath, count++;
-			}
-			if (!list[uri] && (doc = lexers[uri])) {
-				list[uri] = doc.fsPath, count++;
-				if (cururi !== uri)
-					traverseinclude(doc.include, uri);
-			}
-		}
-	}
+	return cache;
 }
 
 export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overloads?: string[]): string {

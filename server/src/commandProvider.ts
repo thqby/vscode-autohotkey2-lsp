@@ -1,6 +1,6 @@
 import { DocumentSymbol, Position, Range, SymbolKind } from 'vscode-languageserver';
 import { ClassNode, reset_detect_cache, detectExp, FuncNode, Token, Variable, find_class, Lexer } from './Lexer';
-import { connection, extsettings, lexers, restorePath, semanticTokensOnFull } from './common';
+import { connection, extsettings, lexers, restorePath, semanticTokensOnFull, update_includecache } from './common';
 
 function checkCommand(cmd: string) {
 	if (extsettings.commands?.includes(cmd))
@@ -116,9 +116,8 @@ export function exportSymbols(uri: string) {
 	let doc = lexers[uri.toLowerCase()], cache: any = {}, result: any = {};
 	if (!doc)
 		return;
-	if (!doc.relevance)
-		doc.update_relevance();
-	for (let uri of [doc.uri, ...Object.keys(doc.relevance!)]) {
+	update_includecache();
+	for (let uri of [doc.uri, ...Object.keys(doc.relevance)]) {
 		if (!(doc = lexers[uri]))
 			continue;
 		let includes;
@@ -196,7 +195,7 @@ export async function diagnosticFull() {
 	let { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
 	const doc = lexers[uri.toLowerCase()];
 	if (!doc) return;
-	doc.update(), doc.update_relevance();
+	update_includecache();
 	for (let u in doc.relevance)
 		(u = lexers[u]?.document.uri) && semanticTokensOnFull({ textDocument: { uri: u } });
 	semanticTokensOnFull({ textDocument: { uri } });

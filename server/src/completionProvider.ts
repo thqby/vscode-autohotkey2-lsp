@@ -59,7 +59,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	let commitCharacters = Object.fromEntries(Object.entries(extsettings.CompletionCommitCharacters ?? {})
 		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 	let { text, word, token, range, linetext, kind, symbol } = doc.buildContext(position, true);
-	let list = doc.relevance ?? {}, { line, character } = position;
+	let list = doc.relevance, { line, character } = position;
 	let isexpr = false, expg = make_search_re(word);
 
 	if (!token?.type || token.type === 'TK_EOF') {
@@ -705,7 +705,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	if (extsettings.AutoLibInclude) {
 		let exportnum = 0, line = -1, libdirs = doc.libdirs, first_is_comment: boolean | undefined, cm: Token;
 		let dir = doc.workspaceFolder, caches: { [path: string]: TextEdit[] } = {};
-		dir = dir ? URI.parse(dir).fsPath : doc.scriptdir.toLowerCase();
+		dir = (dir ? URI.parse(dir).fsPath : doc.scriptdir).toLowerCase();
 		doc.includedir.forEach((v, k) => line = k);
 		for (const u in libfuncs) {
 			if (!list[u] && (path = (lexers[u] ?? (<any>libfuncs[u])).fsPath) && ((extsettings.AutoLibInclude > 1 && (<any>libfuncs[u]).islib) ||

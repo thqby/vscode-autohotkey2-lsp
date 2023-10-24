@@ -13,7 +13,7 @@ import {
 	parseinclude, prepareRename, rangeFormatting, referenceProvider, renameProvider, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
 	set_dirname, set_locale, set_version, set_WorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
-	typeFormatting, update_settings, utils, winapis, workspaceSymbolProvider
+	traverse_include, typeFormatting, update_settings, utils, winapis, workspaceSymbolProvider
 } from './common';
 import { get_ahkProvider } from './ahkProvider';
 import { resolvePath, runscript } from './scriptrunner';
@@ -151,7 +151,10 @@ documents.onDidOpen(e => {
 	let to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
 	let uri = e.document.uri.toLowerCase(), doc = lexers[uri];
 	if (doc) doc.document = e.document;
-	else lexers[uri] = doc = new Lexer(e.document);
+	else {
+		lexers[uri] = doc = new Lexer(e.document);
+		Object.defineProperty(doc.include = {}, '', { value: '', enumerable: false });
+	}
 	doc.actived = true;
 	if (to_ahk2)
 		doc.actionwhenv1 = 'Continue';
@@ -398,7 +401,7 @@ async function parseproject(uri: string) {
 				if (!(d = lexers[uri])) {
 					if (!(t = openFile(path)) || (d = new Lexer(t)).d || (d.parseScript(), d.maybev1))
 						continue;
-					workspace && parseinclude(lexers[uri] = d, d.scriptdir);
+					workspace && (parseinclude(lexers[uri] = d, d.scriptdir), traverse_include(d));
 				}
 				if (d.d) continue;
 				libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
