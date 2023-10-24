@@ -5315,7 +5315,9 @@ export class Lexer {
 	}
 
 	get relevance() {
-		let uri = this.uri, r = Object.assign({}, includecache[uri], includedcache[uri] ?? {});
+		const uri = this.uri, r = Object.assign({}, includecache[uri]);
+		for (const u in includedcache[uri])
+			Object.assign(r, includecache[u]);
 		delete r[uri];
 		return r;
 	}
