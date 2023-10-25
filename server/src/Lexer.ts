@@ -6534,13 +6534,17 @@ export function update_includecache() {
 		traverse_include(lex);
 }
 export function traverse_include(lex: Lexer, included?: any) {
-	let { uri, include } = lex, cache = includecache[uri] ??= { [uri]: lex.fsPath };
+	let { uri, include } = lex, hascache = true;
+	let cache = includecache[uri] ??= (hascache = false, { [uri]: lex.fsPath });
 	included = (included ??= includedcache[uri]) ? Object.assign({}, included) : {};
 	included[uri] = lex.fsPath;
 	for (const u in include) {
 		Object.assign(includedcache[u] ??= {}, included);
-		if (!(lex = lexers[u])) continue;
+		if (!(lex = lexers[u]))
+			continue;
 		if (!cache[u]) {
+			if (hascache && included[u])
+				continue;
 			let c = traverse_include(lex, included);
 			if (c[uri]) {
 				cache = includecache[uri] = Object.assign(c, cache);
