@@ -705,11 +705,11 @@
           }
         },
         {
-          "match": "^\\s*;@(?i:ahk2exe-ignore(begin|end))",
+          "match": "(?<=^\\s*);\\s*@(?i:ahk2exe-ignore(begin|end))",
           "name": "keyword.control.directive.ahk2"
         },
         {
-          "begin": "^\\s*(;@(?i:ahk2exe-let))\\s",
+          "begin": "^\\s*(;\\s*@(?i:ahk2exe-let))\\s",
           "beginCaptures": {
             "0": {
               "name": "keyword.control.directive.ahk2"
@@ -738,16 +738,7 @@
           ]
         },
         {
-          "match": "^\\s*;@(?i:ahk2exe-\\w+)\\b(\\s.*)?",
-          "name": "keyword.control.directive.ahk2",
-          "captures": {
-            "1": {
-              "name": "string.literal.ahk2"
-            }
-          }
-        },
-        {
-          "begin": "^\\s*((;@)(?i:include))\\b",
+          "begin": "^\\s*((;\\s*@)(?i:include))\\b",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
@@ -769,6 +760,19 @@
               "name": "comment.line.ahk2"
             }
           ]
+        },
+        {
+          "match": "(?<=^\\s*);\\s*@(?i:ahk2exe-\\w+)\\b(\\s.*)?",
+          "name": "keyword.control.directive.ahk2",
+          "captures": {
+            "1": {
+              "name": "string.literal.ahk2"
+            }
+          }
+        },
+        {
+          "match": "(?<=^\\s*);\\s*@(?i:[\\w\\-]+)\\b",
+          "name": "keyword.control.directive.ahk2"
         }
       ]
     },

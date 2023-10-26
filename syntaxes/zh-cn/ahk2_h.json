@@ -12,18 +12,15 @@
 		},
 		{
 			"body": "#WindowClassGui ",
-			"description": "将Gui窗口类名称从AutoHotkey GUI更改为其他名称.",
-			"prefix": "#WindowClassGui"
+			"description": "将Gui窗口类名称从AutoHotkey GUI更改为其他名称."
 		},
 		{
 			"body": "#WindowClassMain ",
-			"description": "将主窗口类名称从AutoHotkey更改为其他名称.",
-			"prefix": "#WindowClassMain"
+			"description": "将主窗口类名称从AutoHotkey更改为其他名称."
 		},
 		{
 			"body": "#UseStdLib",
-			"description": "自动从标准库加载函数。搜索顺序是UserLib -> Resource LIB -> WinApi.",
-			"prefix": "#UseStdLib"
+			"description": "自动从标准库加载函数。搜索顺序是UserLib -> Resource LIB -> WinApi."
 		},
 		{
 			"body": "#MapCaseSense ${1|On,Off,Locale|}",
@@ -32,13 +29,11 @@
 		},
 		{
 			"body": "#TargetControlError",
-			"description": "当没有找到目标控件时, 不要抛出错误.",
-			"prefix": "#TargetControlError"
+			"description": "当没有找到目标控件时, 不要抛出错误."
 		},
 		{
 			"body": "#TargetWindowError",
-			"description": "当没有找到目标窗口时, 不要抛出错误.",
-			"prefix": "#TargetWindowError"
+			"description": "当没有找到目标窗口时, 不要抛出错误."
 		},
 		{
 			"body": "#InitExec ${1:Expression}",
@@ -49,57 +44,45 @@
 	"keywords": [
 		{
 			"body": "macro",
-			"description": "函数定义可以以'macro '作为前缀来创建宏函数. 宏函数内除参数和局部变量外的所有未声明变量来自调用者的作用域.",
-			"prefix": "macro"
+			"description": "函数定义可以以'macro '作为前缀来创建宏函数. 宏函数内除参数和局部变量外的所有未声明变量来自调用者的作用域."
 		}
 	],
 	"variables": [
 		{
 			"body": "A_AhkDir",
-			"description": "当前exe文件的目录.",
-			"prefix": "A_AhkDir"
+			"description": "当前exe文件的目录."
 		},
 		{
 			"body": "A_DllDir",
-			"description": "当前模块(dll或exe)的目录.",
-			"prefix": "A_DllDir"
+			"description": "当前模块(dll或exe)的目录."
 		},
 		{
 			"body": "A_DllPath",
-			"description": "当前模块(dll或exe)的路径.",
-			"prefix": "A_DllPath"
+			"description": "当前模块(dll或exe)的路径."
 		},
 		{
-			"body": "A_GlobalStruct",
-			"prefix": "A_GlobalStruct"
+			"body": "A_GlobalStruct"
 		},
 		{
-			"body": "A_IsDll",
-			"prefix": "A_IsDll"
+			"body": "A_IsDll"
 		},
 		{
-			"body": "A_MainThreadID",
-			"prefix": "A_MainThreadID"
+			"body": "A_MainThreadID"
 		},
 		{
-			"body": "A_MemoryModule",
-			"prefix": "A_MemoryModule"
+			"body": "A_MemoryModule"
 		},
 		{
-			"body": "A_ModuleHandle",
-			"prefix": "A_ModuleHandle"
+			"body": "A_ModuleHandle"
 		},
 		{
-			"body": "A_ScriptStruct",
-			"prefix": "A_ScriptStruct"
+			"body": "A_ScriptStruct"
 		},
 		{
-			"body": "A_ThreadID",
-			"prefix": "A_ThreadID"
+			"body": "A_ThreadID"
 		},
 		{
-			"body": "A_ZipCompressionLevel",
-			"prefix": "A_ZipCompressionLevel"
+			"body": "A_ZipCompressionLevel"
 		}
 	]
 }

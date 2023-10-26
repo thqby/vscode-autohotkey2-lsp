@@ -12,18 +12,15 @@
 		},
 		{
 			"body": "#WindowClassGui ",
-			"description": "Change the name of the Gui window class from AutoHotkey GUI to another name.",
-			"prefix": "#WindowClassGui"
+			"description": "Change the name of the Gui window class from AutoHotkey GUI to another name."
 		},
 		{
 			"body": "#WindowClassMain ",
-			"description": "Change the name of the main window class from AutoHotkey to another name.",
-			"prefix": "#WindowClassMain"
+			"description": "Change the name of the main window class from AutoHotkey to another name."
 		},
 		{
 			"body": "#UseStdLib",
-			"description": "Automatically load a functions from standard library. The search order is UserLib -> Resource LIB -> WinApi.",
-			"prefix": "#UseStdLib"
+			"description": "Automatically load a functions from standard library. The search order is UserLib -> Resource LIB -> WinApi."
 		},
 		{
 			"body": "#MapCaseSense ${1|On,Off,Locale|}",
@@ -32,13 +29,11 @@
 		},
 		{
 			"body": "#TargetControlError",
-			"description": "Don't throw error when target control is not found.",
-			"prefix": "#TargetControlError"
+			"description": "Don't throw error when target control is not found."
 		},
 		{
 			"body": "#TargetWindowError",
-			"description": "Don't throw error when target window  is not found.",
-			"prefix": "#TargetWindowError"
+			"description": "Don't throw error when target window  is not found."
 		},
 		{
 			"body": "#InitExec ${1:Expression}",
@@ -49,57 +44,45 @@
 	"keywords": [
 		{
 			"body": "macro",
-			"description": "A function definition can be prefixed with 'macro ' to create a macro function. All undeclared variables within a macro function except parameters and local variables come from the scope of the caller.",
-			"prefix": "macro"
+			"description": "A function definition can be prefixed with 'macro ' to create a macro function. All undeclared variables within a macro function except parameters and local variables come from the scope of the caller."
 		}
 	],
 	"variables": [
 		{
 			"body": "A_AhkDir",
-			"description": "The dir of current exe.",
-			"prefix": "A_AhkDir"
+			"description": "The dir of current exe."
 		},
 		{
 			"body": "A_DllDir",
-			"description": "the dir of current module (dll or exe)",
-			"prefix": "A_DllDir"
+			"description": "the dir of current module (dll or exe)"
 		},
 		{
 			"body": "A_DllPath",
-			"description": "The path of current module (dll or exe).",
-			"prefix": "A_DllPath"
+			"description": "The path of current module (dll or exe)."
 		},
 		{
-			"body": "A_GlobalStruct",
-			"prefix": "A_GlobalStruct"
+			"body": "A_GlobalStruct"
 		},
 		{
-			"body": "A_IsDll",
-			"prefix": "A_IsDll"
+			"body": "A_IsDll"
 		},
 		{
-			"body": "A_MainThreadID",
-			"prefix": "A_MainThreadID"
+			"body": "A_MainThreadID"
 		},
 		{
-			"body": "A_MemoryModule",
-			"prefix": "A_MemoryModule"
+			"body": "A_MemoryModule"
 		},
 		{
-			"body": "A_ModuleHandle",
-			"prefix": "A_ModuleHandle"
+			"body": "A_ModuleHandle"
 		},
 		{
-			"body": "A_ScriptStruct",
-			"prefix": "A_ScriptStruct"
+			"body": "A_ScriptStruct"
 		},
 		{
-			"body": "A_ThreadID",
-			"prefix": "A_ThreadID"
+			"body": "A_ThreadID"
 		},
 		{
-			"body": "A_ZipCompressionLevel",
-			"prefix": "A_ZipCompressionLevel"
+			"body": "A_ZipCompressionLevel"
 		}
 	]
 }

@@ -9,538 +9,419 @@
 			"prefix": "region end"
 		}
 	],
+	"directives": [
+		{
+			"body": ";@Debug-Breakpoint${1:(CONDITION)[HITCONDITION] => MESSAGE}",
+			"prefix": "@Debug-Breakpoint"
+		},
+		{
+			"body": ";@Debug-ClearConsole${1:(CONDITION)[HITCONDITION] => MESSAGE}",
+			"prefix": "@Debug-ClearConsole"
+		},
+		{
+			"body": ";@Debug-Output${1::GROUPING(CONDITION)[HITCONDITION] => MESSAGE}",
+			"prefix": "@Debug-Output"
+		}
+	],
 	"texts": [
 		{
-			"body": "Abort",
-			"prefix": "Abort"
+			"body": "Abort"
 		},
 		{
-			"body": "All",
-			"prefix": "All"
+			"body": "All"
 		},
 		{
-			"body": "AltSubmit",
-			"prefix": "AltSubmit"
+			"body": "AltSubmit"
 		},
 		{
-			"body": "Background",
-			"prefix": "Background"
+			"body": "Background"
 		},
 		{
-			"body": "BackgroundTrans",
-			"prefix": "BackgroundTrans"
+			"body": "BackgroundTrans"
 		},
 		{
-			"body": "bold",
-			"prefix": "bold"
+			"body": "bold"
 		},
 		{
-			"body": "Bottom",
-			"prefix": "Bottom"
+			"body": "Bottom"
 		},
 		{
-			"body": "Buttons",
-			"prefix": "Buttons"
+			"body": "Buttons"
 		},
 		{
-			"body": "Cancel",
-			"prefix": "Cancel"
+			"body": "Cancel"
 		},
 		{
-			"body": "Click",
-			"prefix": "Click"
+			"body": "Click"
 		},
 		{
-			"body": "Raw",
-			"prefix": "Raw"
+			"body": "Raw"
 		},
 		{
-			"body": "Checked",
-			"prefix": "Checked"
+			"body": "Checked"
 		},
 		{
-			"body": "CheckedGray",
-			"prefix": "CheckedGray"
+			"body": "CheckedGray"
 		},
 		{
-			"body": "Click",
-			"prefix": "Click"
+			"body": "Click"
 		},
 		{
-			"body": "Color",
-			"prefix": "Color"
+			"body": "Color"
 		},
 		{
-			"body": "Days",
-			"prefix": "Days"
+			"body": "Days"
 		},
 		{
-			"body": "Disabled",
-			"prefix": "Disabled"
+			"body": "Disabled"
 		},
 		{
-			"body": "DPIScale",
-			"prefix": "DPIScale"
+			"body": "DPIScale"
 		},
 		{
-			"body": "Expand",
-			"prefix": "Expand"
+			"body": "Expand"
 		},
 		{
-			"body": "ExStyle",
-			"prefix": "ExStyle"
+			"body": "ExStyle"
 		},
 		{
-			"body": "First",
-			"prefix": "First"
+			"body": "First"
 		},
 		{
-			"body": "Font",
-			"prefix": "Font"
+			"body": "Font"
 		},
 		{
-			"body": "Grid",
-			"prefix": "Grid"
+			"body": "Grid"
 		},
 		{
-			"body": "Hdr",
-			"prefix": "Hdr"
+			"body": "Hdr"
 		},
 		{
-			"body": "Hidden",
-			"prefix": "Hidden"
+			"body": "Hidden"
 		},
 		{
-			"body": "HKCC",
-			"prefix": "HKCC"
+			"body": "HKCC"
 		},
 		{
-			"body": "HKCR",
-			"prefix": "HKCR"
+			"body": "HKCR"
 		},
 		{
-			"body": "HKCU",
-			"prefix": "HKCU"
+			"body": "HKCU"
 		},
 		{
-			"body": "HKEY_CLASSES_ROOT",
-			"prefix": "HKEY_CLASSES_ROOT"
+			"body": "HKEY_CLASSES_ROOT"
 		},
 		{
-			"body": "HKEY_CURRENT_CONFIG",
-			"prefix": "HKEY_CURRENT_CONFIG"
+			"body": "HKEY_CURRENT_CONFIG"
 		},
 		{
-			"body": "HKEY_CURRENT_USER",
-			"prefix": "HKEY_CURRENT_USER"
+			"body": "HKEY_CURRENT_USER"
 		},
 		{
-			"body": "HKEY_LOCAL_MACHINE",
-			"prefix": "HKEY_LOCAL_MACHINE"
+			"body": "HKEY_LOCAL_MACHINE"
 		},
 		{
-			"body": "HKEY_USERS",
-			"prefix": "HKEY_USERS"
+			"body": "HKEY_USERS"
 		},
 		{
-			"body": "HKLM",
-			"prefix": "HKLM"
+			"body": "HKLM"
 		},
 		{
-			"body": "HKU",
-			"prefix": "HKU"
+			"body": "HKU"
 		},
 		{
-			"body": "Hours",
-			"prefix": "Hours"
+			"body": "Hours"
 		},
 		{
-			"body": "HScroll",
-			"prefix": "HScroll"
+			"body": "HScroll"
 		},
 		{
-			"body": "Hwnd",
-			"prefix": "Hwnd"
+			"body": "Hwnd"
 		},
 		{
-			"body": "Icon",
-			"prefix": "Icon"
+			"body": "Icon"
 		},
 		{
-			"body": "IconSmall",
-			"prefix": "IconSmall"
+			"body": "IconSmall"
 		},
 		{
-			"body": "Ignore",
-			"prefix": "Ignore"
+			"body": "Ignore"
 		},
 		{
-			"body": "ImageList",
-			"prefix": "ImageList"
+			"body": "ImageList"
 		},
 		{
-			"body": "italic",
-			"prefix": "italic"
+			"body": "italic"
 		},
 		{
-			"body": "Join",
-			"prefix": "Join"
+			"body": "Join"
 		},
 		{
-			"body": "LastFound",
-			"prefix": "LastFound"
+			"body": "LastFound"
 		},
 		{
-			"body": "LastFoundExist",
-			"prefix": "LastFoundExist"
+			"body": "LastFoundExist"
 		},
 		{
-			"body": "Limit",
-			"prefix": "Limit"
+			"body": "Limit"
 		},
 		{
-			"body": "Lines",
-			"prefix": "Lines"
+			"body": "Lines"
 		},
 		{
-			"body": "Logoff",
-			"prefix": "Logoff"
+			"body": "Logoff"
 		},
 		{
-			"body": "Lowercase",
-			"prefix": "Lowercase"
+			"body": "Lowercase"
 		},
 		{
-			"body": "LTrim",
-			"prefix": "LTrim"
+			"body": "LTrim"
 		},
 		{
-			"body": "MainWindow",
-			"prefix": "MainWindow"
+			"body": "MainWindow"
 		},
 		{
-			"body": "Maximize",
-			"prefix": "Maximize"
+			"body": "Maximize"
 		},
 		{
-			"body": "MaximizeBox",
-			"prefix": "MaximizeBox"
+			"body": "MaximizeBox"
 		},
 		{
-			"body": "MaxSize",
-			"prefix": "MaxSize"
+			"body": "MaxSize"
 		},
 		{
-			"body": "Minimize",
-			"prefix": "Minimize"
+			"body": "Minimize"
 		},
 		{
-			"body": "MinimizeBox",
-			"prefix": "MinimizeBox"
+			"body": "MinimizeBox"
 		},
 		{
-			"body": "MinSize",
-			"prefix": "MinSize"
+			"body": "MinSize"
 		},
 		{
-			"body": "Minutes",
-			"prefix": "Minutes"
+			"body": "Minutes"
 		},
 		{
-			"body": "Multi",
-			"prefix": "Multi"
+			"body": "Multi"
 		},
 		{
-			"body": "NA",
-			"prefix": "NA"
+			"body": "NA"
 		},
 		{
-			"body": "No",
-			"prefix": "No"
+			"body": "No"
 		},
 		{
-			"body": "NoActivate",
-			"prefix": "NoActivate"
+			"body": "NoActivate"
 		},
 		{
-			"body": "NoDefault",
-			"prefix": "NoDefault"
+			"body": "NoDefault"
 		},
 		{
-			"body": "NoHide",
-			"prefix": "NoHide"
+			"body": "NoHide"
 		},
 		{
-			"body": "NoIcon",
-			"prefix": "NoIcon"
+			"body": "NoIcon"
 		},
 		{
-			"body": "NoMainWindow",
-			"prefix": "NoMainWindow"
+			"body": "NoMainWindow"
 		},
 		{
-			"body": "norm",
-			"prefix": "norm"
+			"body": "norm"
 		},
 		{
-			"body": "NoSort",
-			"prefix": "NoSort"
+			"body": "NoSort"
 		},
 		{
-			"body": "NoSortHdr",
-			"prefix": "NoSortHdr"
+			"body": "NoSortHdr"
 		},
 		{
-			"body": "NoStandard",
-			"prefix": "NoStandard"
+			"body": "NoStandard"
 		},
 		{
-			"body": "NoTab",
-			"prefix": "NoTab"
+			"body": "NoTab"
 		},
 		{
-			"body": "Number",
-			"prefix": "Number"
+			"body": "Number"
 		},
 		{
-			"body": "Ok",
-			"prefix": "Ok"
+			"body": "Ok"
 		},
 		{
-			"body": "On",
-			"prefix": "On"
+			"body": "On"
 		},
 		{
-			"body": "OwnDialogs",
-			"prefix": "OwnDialogs"
+			"body": "OwnDialogs"
 		},
 		{
-			"body": "Owner",
-			"prefix": "Owner"
+			"body": "Owner"
 		},
 		{
-			"body": "Parent",
-			"prefix": "Parent"
+			"body": "Parent"
 		},
 		{
-			"body": "Parse",
-			"prefix": "Parse"
+			"body": "Parse"
 		},
 		{
-			"body": "Password",
-			"prefix": "Password"
+			"body": "Password"
 		},
 		{
-			"body": "Radio",
-			"prefix": "Radio"
+			"body": "Radio"
 		},
 		{
-			"body": "Range",
-			"prefix": "Range"
+			"body": "Range"
 		},
 		{
-			"body": "ReadOnly",
-			"prefix": "ReadOnly"
+			"body": "ReadOnly"
 		},
 		{
-			"body": "REG_BINARY",
-			"prefix": "REG_BINARY"
+			"body": "REG_BINARY"
 		},
 		{
-			"body": "REG_DWORD",
-			"prefix": "REG_DWORD"
+			"body": "REG_DWORD"
 		},
 		{
-			"body": "REG_EXPAND_SZ",
-			"prefix": "REG_EXPAND_SZ"
+			"body": "REG_EXPAND_SZ"
 		},
 		{
-			"body": "REG_MULTI_SZ",
-			"prefix": "REG_MULTI_SZ"
+			"body": "REG_MULTI_SZ"
 		},
 		{
-			"body": "REG_SZ",
-			"prefix": "REG_SZ"
+			"body": "REG_SZ"
 		},
 		{
-			"body": "Region",
-			"prefix": "Region"
+			"body": "Region"
 		},
 		{
-			"body": "Report",
-			"prefix": "Report"
+			"body": "Report"
 		},
 		{
-			"body": "Resize",
-			"prefix": "Resize"
+			"body": "Resize"
 		},
 		{
-			"body": "Restore",
-			"prefix": "Restore"
+			"body": "Restore"
 		},
 		{
-			"body": "Retry",
-			"prefix": "Retry"
+			"body": "Retry"
 		},
 		{
-			"body": "RGB",
-			"prefix": "RGB"
+			"body": "RGB"
 		},
 		{
-			"body": "Seconds",
-			"prefix": "Seconds"
+			"body": "Seconds"
 		},
 		{
-			"body": "Section",
-			"prefix": "Section"
+			"body": "Section"
 		},
 		{
-			"body": "Single",
-			"prefix": "Single"
+			"body": "Single"
 		},
 		{
-			"body": "SortDesc",
-			"prefix": "SortDesc"
+			"body": "SortDesc"
 		},
 		{
-			"body": "Standard",
-			"prefix": "Standard"
+			"body": "Standard"
 		},
 		{
-			"body": "StatusBar",
-			"prefix": "StatusBar"
+			"body": "StatusBar"
 		},
 		{
-			"body": "strike",
-			"prefix": "strike"
+			"body": "strike"
 		},
 		{
-			"body": "Style",
-			"prefix": "Style"
+			"body": "Style"
 		},
 		{
-			"body": "SysMenu",
-			"prefix": "SysMenu"
+			"body": "SysMenu"
 		},
 		{
-			"body": "TabStop",
-			"prefix": "TabStop"
+			"body": "TabStop"
 		},
 		{
-			"body": "Theme",
-			"prefix": "Theme"
+			"body": "Theme"
 		},
 		{
-			"body": "Tile",
-			"prefix": "Tile"
+			"body": "Tile"
 		},
 		{
-			"body": "Tip",
-			"prefix": "Tip"
+			"body": "Tip"
 		},
 		{
-			"body": "ToolWindow",
-			"prefix": "ToolWindow"
+			"body": "ToolWindow"
 		},
 		{
-			"body": "Top",
-			"prefix": "Top"
+			"body": "Top"
 		},
 		{
-			"body": "Topmost",
-			"prefix": "Topmost"
+			"body": "Topmost"
 		},
 		{
-			"body": "TransColor",
-			"prefix": "TransColor"
+			"body": "TransColor"
 		},
 		{
-			"body": "Transparent",
-			"prefix": "Transparent"
+			"body": "Transparent"
 		},
 		{
-			"body": "Tray",
-			"prefix": "Tray"
+			"body": "Tray"
 		},
 		{
-			"body": "TreeView",
-			"prefix": "TreeView"
+			"body": "TreeView"
 		},
 		{
-			"body": "TryAgain",
-			"prefix": "TryAgain"
+			"body": "TryAgain"
 		},
 		{
-			"body": "underline",
-			"prefix": "underline"
+			"body": "underline"
 		},
 		{
-			"body": "Uppercase",
-			"prefix": "Uppercase"
+			"body": "Uppercase"
 		},
 		{
-			"body": "Vis",
-			"prefix": "Vis"
+			"body": "Vis"
 		},
 		{
-			"body": "VisFirst",
-			"prefix": "VisFirst"
+			"body": "VisFirst"
 		},
 		{
-			"body": "VScroll",
-			"prefix": "VScroll"
+			"body": "VScroll"
 		},
 		{
-			"body": "Wait",
-			"prefix": "Wait"
+			"body": "Wait"
 		},
 		{
-			"body": "WaitClose",
-			"prefix": "WaitClose"
+			"body": "WaitClose"
 		},
 		{
-			"body": "WantCtrlA",
-			"prefix": "WantCtrlA"
+			"body": "WantCtrlA"
 		},
 		{
-			"body": "WantF2",
-			"prefix": "WantF2"
+			"body": "WantF2"
 		},
 		{
-			"body": "WantReturn",
-			"prefix": "WantReturn"
+			"body": "WantReturn"
 		},
 		{
-			"body": "Wrap",
-			"prefix": "Wrap"
+			"body": "Wrap"
 		},
 		{
-			"body": "xm",
-			"prefix": "xm"
+			"body": "xm"
 		},
 		{
-			"body": "xp",
-			"prefix": "xp"
+			"body": "xp"
 		},
 		{
-			"body": "xs",
-			"prefix": "xs"
+			"body": "xs"
 		},
 		{
-			"body": "Yes",
-			"prefix": "Yes"
+			"body": "Yes"
 		},
 		{
-			"body": "ym",
-			"prefix": "ym"
+			"body": "ym"
 		},
 		{
-			"body": "yp",
-			"prefix": "yp"
+			"body": "yp"
 		},
 		{
-			"body": "ys",
-			"prefix": "ys"
+			"body": "ys"
 		}
 	],
 	"constants": [

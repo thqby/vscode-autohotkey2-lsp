@@ -56,6 +56,17 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		return items;
 	}
 
+	// ;@| /*@|
+	if (triggerCharacter === '@') {
+		let tk = doc.find_str_cmm(doc.document.offsetAt(position) - 1);
+		if (tk?.type.endsWith('COMMENT')) {
+			let is_same_line = doc.document.positionAt(tk.offset).line === position.line;
+			let comment_prefix = tk.type === 'TK_BLOCK_COMMENT' ? '/*' : ';';
+			return completionItemCache.directive['@'].filter(it => comment_prefix.includes(l = it.data) && (is_same_line || l !== '/'));
+		}
+		return;
+	}
+
 	let commitCharacters = Object.fromEntries(Object.entries(extsettings.CompletionCommitCharacters ?? {})
 		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 	let { text, word, token, range, linetext, kind, symbol } = doc.buildContext(position, true);
@@ -165,7 +176,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return completionItemCache.key.filter(it => !it.label.toLowerCase().includes('alttab'));
 		return;
 	} else if (token.type === 'TK_SHARP' || token.content === '#') {
-		token.topofline && items.push(...completionItemCache.directive, ...completionItemCache.snippet);
+		token.topofline && items.push(...completionItemCache.directive['#']);
 		return items;
 	} else if (!token.callinfo && (pt = token).topofline <= 0) {
 		let tp = ['TK_COMMA', 'TK_DOT', 'TK_EQUALS', 'TK_NUMBER', 'TK_OPERATOR', 'TK_RESERVED', 'TK_STRING', 'TK_WORD'];
@@ -659,9 +670,6 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			items.push({ label, kind, insertTextFormat, insertText: uppercase(arr.join(join_c)) });
 		for (let it of completionItemCache.keyword)
 			expg.test(it.label) && addkeyword(it);
-		// ;@ahk2exe
-		for (let it of completionItemCache.directive)
-			!it.label.startsWith('#') && expg.test(it.label) && items.push(it);
 	}
 
 	// hotkey

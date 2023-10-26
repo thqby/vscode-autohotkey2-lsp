@@ -2,13 +2,11 @@
 	"directives": [
 		{
 			"body": "#ClipboardTimeout ",
-			"description": "更改首次尝试访问剪贴板失败时脚本继续尝试访问剪贴板的时间.",
-			"prefix": "#ClipboardTimeout"
+			"description": "更改首次尝试访问剪贴板失败时脚本继续尝试访问剪贴板的时间."
 		},
 		{
 			"body": "#DllLoad ",
-			"description": "在脚本开始执行之前加载 DLL 或 EXE 文件.",
-			"prefix": "#DllLoad"
+			"description": "在脚本开始执行之前加载 DLL 或 EXE 文件."
 		},
 		{
 			"body": "#ErrorStdOut ${1|'UTF-8','CP0'|}",
@@ -17,13 +15,11 @@
 		},
 		{
 			"body": "#HotIf",
-			"description": "创建上下文相关的热键和热字串. 这样的热键会根据表达式的结果执行不同的操作(或什么都不做).",
-			"prefix": "#HotIf"
+			"description": "创建上下文相关的热键和热字串. 这样的热键会根据表达式的结果执行不同的操作(或什么都不做)."
 		},
 		{
 			"body": "#HotIfTimeout ",
-			"description": "设置计算单个 #HotIf 表达式可以使用的最大时间.",
-			"prefix": "#HotIfTimeout"
+			"description": "设置计算单个 #HotIf 表达式可以使用的最大时间."
 		},
 		{
 			"body": "#Hotstring ${1|NoMouse,EndChars |}",
@@ -32,43 +28,35 @@
 		},
 		{
 			"body": "#Include ",
-			"description": "使脚本的行为与指定文件的内容位于此确切位置一样.",
-			"prefix": "#Include"
+			"description": "使脚本的行为与指定文件的内容位于此确切位置一样."
 		},
 		{
 			"body": "#IncludeAgain ",
-			"description": "使脚本的行为与指定文件的内容位于此确切位置一样.",
-			"prefix": "#IncludeAgain"
+			"description": "使脚本的行为与指定文件的内容位于此确切位置一样."
 		},
 		{
 			"body": "#InputLevel ",
-			"description": "控制热键和热字串是否忽略模拟的键盘和鼠标事件.",
-			"prefix": "#InputLevel"
+			"description": "控制热键和热字串是否忽略模拟的键盘和鼠标事件."
 		},
 		{
 			"body": "#MaxThreads ",
-			"description": "设置可同时存在的线程的最大数目.",
-			"prefix": "#MaxThreads"
+			"description": "设置可同时存在的线程的最大数目."
 		},
 		{
 			"body": "#MaxThreadsBuffer",
-			"description": "当某些或所有的热键达到 #MaxThreadsPerHotkey 限制时, 这个指令让它们缓冲而不是忽略键击.",
-			"prefix": "#MaxThreadsBuffer"
+			"description": "当某些或所有的热键达到 #MaxThreadsPerHotkey 限制时, 这个指令让它们缓冲而不是忽略键击."
 		},
 		{
 			"body": "#MaxThreadsPerHotkey ",
-			"description": "设置每个热键或热字串可同时存在的最大线程数.",
-			"prefix": "#MaxThreadsPerHotkey"
+			"description": "设置每个热键或热字串可同时存在的最大线程数."
 		},
 		{
 			"body": "#NoTrayIcon",
-			"description": "禁止显示托盘图标.",
-			"prefix": "#NoTrayIcon"
+			"description": "禁止显示托盘图标."
 		},
 		{
 			"body": "#Requires ",
-			"description": "如果不符合版本要求, 则显示错误并退出.",
-			"prefix": "#Requires"
+			"description": "如果不符合版本要求, 则显示错误并退出."
 		},
 		{
 			"body": "#SingleInstance ${1|Force,Ignore,Prompt,Off|}",
@@ -92,115 +80,105 @@
 		},
 		{
 			"body": "#WinActivateForce",
-			"description": "跳过温和的方法而直接使用强制的方法激活窗口.",
-			"prefix": "#WinActivateForce"
+			"description": "跳过温和的方法而直接使用强制的方法激活窗口."
 		},
 		{
 			"body": ";@Ahk2Exe-${1|IgnoreBegin,IgnoreEnd|}",
 			"description": "可以通过将已编译脚本中的代码片段包装在指令中来删除它们.",
-			"prefix": "_Ignore"
+			"prefix": "@Ahk2Exe-Ignore"
 		},
 		{
-			"body": "/*Ahk2Exe-Keep\n$0\n*/",
+			"body": "/*@Ahk2Exe-Keep",
 			"description": "标记代码片段只在编译后的脚本中执行.",
-			"prefix": "_Keep"
+			"prefix": "@Ahk2Exe-Keep"
 		},
 		{
 			"body": ";@Ahk2Exe-AddResource ${1:FileName [, ResourceName]}",
 			"description": "将资源添加到已编译的可执行文件中.",
-			"prefix": "_AddResource"
+			"prefix": "@Ahk2Exe-AddResource"
 		},
 		{
 			"body": ";@Ahk2Exe-Base ${1:[Path\\]Name [, [Exe_path\\][Name], Codepage]}",
 			"description": "指定要包含在生成的 .exe 文件中的 AutoHotkey 的二进制版本.",
-			"prefix": "_Base"
+			"prefix": "@Ahk2Exe-Base"
 		},
 		{
 			"body": ";@Ahk2Exe-ConsoleApp",
 			"description": "将可执行子系统更改为控制台模式.",
-			"prefix": "_ConsoleApp"
+			"prefix": "@Ahk2Exe-ConsoleApp"
 		},
 		{
 			"body": ";@Ahk2Exe-Cont ${1:Text}",
 			"description": "为前指令指定一个延续行. 这允许格式化一个长行指令, 以便在源代码中容易阅读.",
-			"prefix": "_Cont"
+			"prefix": "@Ahk2Exe-Cont"
 		},
 		{
 			"body": ";@Ahk2Exe-Debug ${1:Text}",
 			"description": "显示带有支持文本的 msgbox, 用于调试.",
-			"prefix": "_Debug"
+			"prefix": "@Ahk2Exe-Debug"
 		},
 		{
 			"body": ";@Ahk2Exe-ExeName ${1:[Path\\][Name]}",
 			"description": "指定生成的 .exe 文件的位置和名称.",
-			"prefix": "_ExeName"
+			"prefix": "@Ahk2Exe-ExeName"
 		},
 		{
 			"body": ";@Ahk2Exe-Let ${1:Name = Value [, Name = Value, ...]}",
 			"description": "创建(或修改) 一个或多个用户变量, 这些变量可以通过 %U_Name% 来访问, 类似于内置变量(见上文).",
-			"prefix": "_Let"
+			"prefix": "@Ahk2Exe-Let"
 		},
 		{
 			"body": ";@Ahk2Exe-Obey ${1:Name}, ${2:CmdOrExp [, Extra]}",
 			"description": "执行独立于 AutoHotkey 的命令或表达式, 结果为 U_Name.",
-			"prefix": "_Obey"
+			"prefix": "@Ahk2Exe-Obey"
 		},
 		{
 			"body": ";@Ahk2Exe-PostExec ${1:Program [parameters] [, When]}",
 			"description": "指定在编译成功后, 在任何压缩程序应用于 .exe 文件之前(或之后) 要执行的程序.",
-			"prefix": "_PostExec"
+			"prefix": "@Ahk2Exe-PostExec"
 		},
 		{
 			"body": ";@Ahk2Exe-Set${1|CompanyName,Copyright,Description,FileVersion,InternalName,Language,LegalTrademarks,Name,OrigFilename,ProductName,ProductVersion,Version|} ${2:Value}",
 			"description": "更改已编译可执行文件的版本信息中的属性. 注意, 无论指定属性的顺序如何, 所有属性都按字母顺序处理.",
-			"prefix": "_Set"
+			"prefix": "@Ahk2Exe-Set"
 		},
 		{
 			"body": ";@Ahk2Exe-SetMainIcon ${1:[IcoFile]}",
 			"description": "覆盖用于编译的自定义 EXE 图标.",
-			"prefix": "_SetMainIcon"
+			"prefix": "@Ahk2Exe-SetMainIcon"
 		}
 	],
 	"keywords": [
 		{
-			"body": "and",
-			"prefix": "and"
+			"body": "and"
 		},
 		{
-			"body": "as",
-			"prefix": "as"
+			"body": "as"
 		},
 		{
-			"body": "in",
-			"prefix": "in"
+			"body": "in"
 		},
 		{
 			"body": "is",
-			"description": "如果Value是Class的实例,则返回true,否则返回false.",
-			"prefix": "is"
+			"description": "如果Value是Class的实例,则返回true,否则返回false."
 		},
 		{
-			"body": "not",
-			"prefix": "not"
+			"body": "not"
 		},
 		{
-			"body": "or",
-			"prefix": "or"
+			"body": "or"
 		},
 		{
 			"body": "break",
-			"description": "退出（终止）任何类型的循环语句.",
-			"prefix": "break"
+			"description": "退出（终止）任何类型的循环语句."
 		},
 		{
 			"body": "catch",
-			"description": "指定在try语句执行期间引发异常时要执行的代码.",
-			"prefix": "catch"
+			"description": "指定在try语句执行期间引发异常时要执行的代码."
 		},
 		{
 			"body": "continue",
-			"description": "跳过循环语句当前迭代的其余部分,然后开始一个新的循环.",
-			"prefix": "continue"
+			"description": "跳过循环语句当前迭代的其余部分,然后开始一个新的循环."
 		},
 		{
 			"body": "else if ",
@@ -208,13 +186,11 @@
 		},
 		{
 			"body": "else",
-			"description": "如果if语句的结果为false,则指定要执行的一个或多个语句.",
-			"prefix": "else"
+			"description": "如果if语句的结果为false,则指定要执行的一个或多个语句."
 		},
 		{
 			"body": "finally",
-			"description": "确保在执行try语句之后始终执行一个或多个语句（函数或表达式）.",
-			"prefix": "finally"
+			"description": "确保在执行try语句之后始终执行一个或多个语句（函数或表达式）."
 		},
 		{
 			"body": "for $1 in $0",
@@ -223,18 +199,15 @@
 		},
 		{
 			"body": "global",
-			"description": "要引用函数内部的现有全局变量（或创建一个新的全局变量）,请在使用变量之前将其声明为全局变量.",
-			"prefix": "global"
+			"description": "要引用函数内部的现有全局变量（或创建一个新的全局变量）,请在使用变量之前将其声明为全局变量."
 		},
 		{
 			"body": "goto",
-			"description": "跳转到指定的标签并继续执行.",
-			"prefix": "goto"
+			"description": "跳转到指定的标签并继续执行."
 		},
 		{
 			"body": "if ",
-			"description": "指定在表达式计算为true时要执行的一个或多个语句.",
-			"prefix": "if"
+			"description": "指定在表达式计算为true时要执行的一个或多个语句."
 		},
 		{
 			"body": "loop files ${1:FilePattern [, Mode]}",
@@ -258,13 +231,11 @@
 		},
 		{
 			"body": "loop ",
-			"description": "重复执行一系列函数: 可以指定表示重复次数的数字或直到遇到 break.",
-			"prefix": "loop"
+			"description": "重复执行一系列函数: 可以指定表示重复次数的数字或直到遇到 break."
 		},
 		{
 			"body": "local",
-			"description": "局部变量特定于单个函数,并且仅在该函数内部可见.因此,局部变量可能与全局变量具有相同的名称,并且两者将具有单独的内容.单独的函数也可以安全地使用相同的变量名.",
-			"prefix": "local"
+			"description": "局部变量特定于单个函数,并且仅在该函数内部可见.因此,局部变量可能与全局变量具有相同的名称,并且两者将具有单独的内容.单独的函数也可以安全地使用相同的变量名."
 		},
 		{
 			"body": "case $0:",
@@ -276,1449 +247,1131 @@
 		},
 		{
 			"body": "return",
-			"description": "从先前通过函数调用,热键激活或其他方式跳转到执行的子例程返回.",
-			"prefix": "return"
+			"description": "从先前通过函数调用,热键激活或其他方式跳转到执行的子例程返回."
 		},
 		{
 			"body": "static",
-			"description": "静态变量始终是隐式局部变量,但与局部变量有所不同,因为它们的值在两次调用之间被记住.",
-			"prefix": "static"
+			"description": "静态变量始终是隐式局部变量,但与局部变量有所不同,因为它们的值在两次调用之间被记住."
 		},
 		{
 			"body": "throw ",
-			"description": "表示发生错误.可以通过try-catch语句捕获该信号.",
-			"prefix": "throw"
+			"description": "表示发生错误.可以通过try-catch语句捕获该信号."
 		},
 		{
 			"body": "try",
-			"description": "保护一个或多个语句（函数或表达式）以防止运行时错误和throw语句引发的异常.",
-			"prefix": "try"
+			"description": "保护一个或多个语句（函数或表达式）以防止运行时错误和throw语句引发的异常."
 		},
 		{
 			"body": "until ",
-			"description": "将条件应用于循环或for循环的继续.",
-			"prefix": "until"
+			"description": "将条件应用于循环或for循环的继续."
 		},
 		{
 			"body": "while ",
-			"description": "重复执行一系列功能,直到指定的表达式计算为false.",
-			"prefix": "while"
+			"description": "重复执行一系列功能,直到指定的表达式计算为false."
 		}
 	],
 	"variables": [
 		{
 			"body": "A_AhkPath",
-			"description": "对于未编译脚本: 实际运行当前脚本的 EXE 文件的完整路径和名称.\n对于已编译脚本: 除了通过注册表条目 HKLM\\SOFTWARE\\AutoHotkey\\InstallDir 获取 AutoHotkey 目录.",
-			"prefix": "A_AhkPath"
+			"description": "对于未编译脚本: 实际运行当前脚本的 EXE 文件的完整路径和名称.\n对于已编译脚本: 除了通过注册表条目 HKLM\\SOFTWARE\\AutoHotkey\\InstallDir 获取 AutoHotkey 目录."
 		},
 		{
 			"body": "A_AhkVersion",
-			"description": "包含了运行当前脚本的 AutoHotkey 主程序的版本号, 例如 1.0.22.\n在已编译脚本中, 它包含了原来编译时使用的主程序的版本号.",
-			"prefix": "A_AhkVersion"
+			"description": "包含了运行当前脚本的 AutoHotkey 主程序的版本号, 例如 1.0.22.\n在已编译脚本中, 它包含了原来编译时使用的主程序的版本号."
 		},
 		{
 			"body": "A_AllowMainWindow",
-			"description": "可以用来获取或设置是否允许通过托盘图标打开脚本的主窗口.\n对于已编译脚本, 此变量默认为 0, 但可以通过给该变量赋值来覆盖它. 将其设置为 1 会激活主窗口 View 菜单下的项目(如 'Lines most recently executed'), 它允许查看脚本的源代码和其他信息.\n如果脚本没有被编译, 那么这个变量的值始终是 1, 任何对它进行更改的尝试都会被忽略.",
-			"prefix": "A_AllowMainWindow"
+			"description": "可以用来获取或设置是否允许通过托盘图标打开脚本的主窗口.\n对于已编译脚本, 此变量默认为 0, 但可以通过给该变量赋值来覆盖它. 将其设置为 1 会激活主窗口 View 菜单下的项目(如 'Lines most recently executed'), 它允许查看脚本的源代码和其他信息.\n如果脚本没有被编译, 那么这个变量的值始终是 1, 任何对它进行更改的尝试都会被忽略."
 		},
 		{
 			"body": "A_AppData",
-			"description": "当前用户的应用程序数据文件夹的完整路径和名称.例如:\nC:\\Users\\<UserName>\\AppData\\Roaming",
-			"prefix": "A_AppData"
+			"description": "当前用户的应用程序数据文件夹的完整路径和名称.例如:\nC:\\Users\\<UserName>\\AppData\\Roaming"
 		},
 		{
 			"body": "A_AppDataCommon",
-			"description": "所有用户的应用程序数据文件夹的完整路径和名称. 例如:\nC:\\ProgramData",
-			"prefix": "A_AppDataCommon"
+			"description": "所有用户的应用程序数据文件夹的完整路径和名称. 例如:\nC:\\ProgramData"
 		},
 		{
 			"body": "A_Args",
-			"description": "包含一个命令行参数数组.",
-			"prefix": "A_Args"
+			"description": "包含一个命令行参数数组."
 		},
 		{
 			"body": "A_Clipboard",
-			"description": "可用于获取或设置系统剪贴板的内容.",
-			"prefix": "A_Clipboard"
+			"description": "可用于获取或设置系统剪贴板的内容."
 		},
 		{
 			"body": "A_ComSpec",
-			"description": "包含与环境的 ComSpec 变量相同的字符串.例如:\nC:\\Windows\\system32\\cmd.exe",
-			"prefix": "A_ComSpec"
+			"description": "包含与环境的 ComSpec 变量相同的字符串.例如:\nC:\\Windows\\system32\\cmd.exe"
 		},
 		{
 			"body": "A_ComputerName",
-			"description": "在网络上看到的计算机名称.",
-			"prefix": "A_ComputerName"
+			"description": "在网络上看到的计算机名称."
 		},
 		{
 			"body": "A_ControlDelay",
-			"description": "可用于获取或设置控件修改函数的延迟, 单位为毫秒.",
-			"prefix": "A_ControlDelay"
+			"description": "可用于获取或设置控件修改函数的延迟, 单位为毫秒."
 		},
 		{
 			"body": "A_CoordModeCaret",
-			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
-			"prefix": "A_CoordModeCaret"
+			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen."
 		},
 		{
 			"body": "A_CoordModeMenu",
-			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
-			"prefix": "A_CoordModeMenu"
+			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen."
 		},
 		{
 			"body": "A_CoordModeMouse",
-			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
-			"prefix": "A_CoordModeMouse"
+			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen."
 		},
 		{
 			"body": "A_CoordModePixel",
-			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
-			"prefix": "A_CoordModePixel"
+			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen."
 		},
 		{
 			"body": "A_CoordModeToolTip",
-			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen.",
-			"prefix": "A_CoordModeToolTip"
+			"description": "可以用来获取或设置相对坐标的区域. 可能的值是 Window, Client 或 Screen."
 		},
 		{
 			"body": "A_Cursor",
-			"description": "当前显示的鼠标光标类型. 其值为下列单词的其中一个:\nAppStarting(程序启动, 后台运行--箭头+等待)\nArrow(箭头, 正常选择--标准光标)\nCross(十字, 精确选择)\nHelp(帮助, 帮助选择--箭头+问号)\nIBeam(工字光标, 文本选择--输入)\nIcon\nNo(No, 不可用--圆圈加反斜杠)\nSize, SizeAll(所有尺寸,移动--四向箭头)\nSizeNESW(东南和西北尺寸, 沿对角线调整 2--双箭头指向东南和西北)\nSizeNS(南北尺寸, 垂直调整--双箭头指向南北)\nSizeNWSE(西北和东南尺寸, 沿对角线调整 1--双箭头指向西北和东南)\nSizeWE(东西尺寸, 水平调整--双箭头指向东西)\nUpArrow(向上箭头, 候选--指向上的箭头)\nWait(等待, 忙--沙漏或圆圈)\nUnknown(未知).手型指针(点击和抓取) 属于 Unknown 类别.",
-			"prefix": "A_Cursor"
+			"description": "当前显示的鼠标光标类型. 其值为下列单词的其中一个:\nAppStarting(程序启动, 后台运行--箭头+等待)\nArrow(箭头, 正常选择--标准光标)\nCross(十字, 精确选择)\nHelp(帮助, 帮助选择--箭头+问号)\nIBeam(工字光标, 文本选择--输入)\nIcon\nNo(No, 不可用--圆圈加反斜杠)\nSize, SizeAll(所有尺寸,移动--四向箭头)\nSizeNESW(东南和西北尺寸, 沿对角线调整 2--双箭头指向东南和西北)\nSizeNS(南北尺寸, 垂直调整--双箭头指向南北)\nSizeNWSE(西北和东南尺寸, 沿对角线调整 1--双箭头指向西北和东南)\nSizeWE(东西尺寸, 水平调整--双箭头指向东西)\nUpArrow(向上箭头, 候选--指向上的箭头)\nWait(等待, 忙--沙漏或圆圈)\nUnknown(未知).手型指针(点击和抓取) 属于 Unknown 类别."
 		},
 		{
 			"body": "A_DD",
-			"description": "2 位数表示的当前月份的日期(01-31). 与 A_MDay 含义相同.",
-			"prefix": "A_DD"
+			"description": "2 位数表示的当前月份的日期(01-31). 与 A_MDay 含义相同."
 		},
 		{
 			"body": "A_DDD",
-			"description": "使用当前用户语言表示的当前星期几的简称, 例如 Sun",
-			"prefix": "A_DDD"
+			"description": "使用当前用户语言表示的当前星期几的简称, 例如 Sun"
 		},
 		{
 			"body": "A_DDDD",
-			"description": "使用当前用户语言表示的当前星期几的全称, 例如, Sunday",
-			"prefix": "A_DDDD"
+			"description": "使用当前用户语言表示的当前星期几的全称, 例如, Sunday"
 		},
 		{
 			"body": "A_DefaultMouseSpeed",
-			"description": "可以用来获取或设置默认的鼠标速度, 从 0(最快) 到 100(最慢) 的整数.",
-			"prefix": "A_DefaultMouseSpeed"
+			"description": "可以用来获取或设置默认的鼠标速度, 从 0(最快) 到 100(最慢) 的整数."
 		},
 		{
 			"body": "A_Desktop",
-			"description": "当前用户的桌面文件夹的完整路径和名称. 例如:\nC:\\Users\\<UserName>\\Desktop",
-			"prefix": "A_Desktop"
+			"description": "当前用户的桌面文件夹的完整路径和名称. 例如:\nC:\\Users\\<UserName>\\Desktop"
 		},
 		{
 			"body": "A_DesktopCommon",
-			"description": "所有用户的桌面文件夹的完整路径和名称. 例如:\nC:\\Users\\Public\\Desktop",
-			"prefix": "A_DesktopCommon"
+			"description": "所有用户的桌面文件夹的完整路径和名称. 例如:\nC:\\Users\\Public\\Desktop"
 		},
 		{
 			"body": "A_DetectHiddenText",
-			"description": "可以用来获取或设置是否检测窗口中的隐藏文本.",
-			"prefix": "A_DetectHiddenText"
+			"description": "可以用来获取或设置是否检测窗口中的隐藏文本."
 		},
 		{
 			"body": "A_DetectHiddenWindows",
-			"description": "可用于获取或设置是否检测隐藏窗口.",
-			"prefix": "A_DetectHiddenWindows"
+			"description": "可用于获取或设置是否检测隐藏窗口."
 		},
 		{
 			"body": "A_EndChar",
-			"description": "用户最近按下的触发了非自动替换热字串的终止字符.",
-			"prefix": "A_EndChar"
+			"description": "用户最近按下的触发了非自动替换热字串的终止字符."
 		},
 		{
 			"body": "A_EventInfo",
-			"description": "每个线程保留自身的 A_EventInfo 值.包含下列事件的额外信息:\n鼠标滚轮热键(WheelDown/Up/Left/Right)\nOnMessage\nRegular Expression Callouts",
-			"prefix": "A_EventInfo"
+			"description": "每个线程保留自身的 A_EventInfo 值.包含下列事件的额外信息:\n鼠标滚轮热键(WheelDown/Up/Left/Right)\nOnMessage\nRegular Expression Callouts"
 		},
 		{
 			"body": "A_FileEncoding",
-			"description": "可以用来获取或设置各种内置函数的默认编码.",
-			"prefix": "A_FileEncoding"
+			"description": "可以用来获取或设置各种内置函数的默认编码."
 		},
 		{
 			"body": "A_HotkeyModifierTimeout",
-			"description": "定义在按下热键后多长时间假定(Alt/Ctrl/Win/Shift)仍处于按下状态.",
-			"prefix": "A_HotkeyModifierTimeout"
+			"description": "定义在按下热键后多长时间假定(Alt/Ctrl/Win/Shift)仍处于按下状态."
 		},
 		{
 			"body": "A_HotkeyInterval",
-			"description": "A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框.",
-			"prefix": "A_HotkeyInterval"
+			"description": "A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框."
 		},
 		{
 			"body": "A_Hour",
-			"description": "在 24 小时制(例如, 17 表示 5pm) 中 2 位数表示的当前小时数(00-23). 要获取带 AM/PM 提示的 12 小时制的时间, 请参照此例: FormatTime(, 'h:mm:ss tt')",
-			"prefix": "A_Hour"
+			"description": "在 24 小时制(例如, 17 表示 5pm) 中 2 位数表示的当前小时数(00-23). 要获取带 AM/PM 提示的 12 小时制的时间, 请参照此例: FormatTime(, 'h:mm:ss tt')"
 		},
 		{
 			"body": "A_IconFile",
-			"description": "如果通过 TraySetIcon 指定自定义的托盘图标时, 变量的值为图标文件的完整路径和名称, 否则为空.",
-			"prefix": "A_IconFile"
+			"description": "如果通过 TraySetIcon 指定自定义的托盘图标时, 变量的值为图标文件的完整路径和名称, 否则为空."
 		},
 		{
 			"body": "A_IconHidden",
-			"description": "可以用来获取或设置是否隐藏托盘图标.",
-			"prefix": "A_IconHidden"
+			"description": "可以用来获取或设置是否隐藏托盘图标."
 		},
 		{
 			"body": "A_IconNumber",
-			"description": "如果 A_IconFile 为空时, 值为空. 否则, 它的值为 A_IconFile 中的图标的编号(通常为 1).",
-			"prefix": "A_IconNumber"
+			"description": "如果 A_IconFile 为空时, 值为空. 否则, 它的值为 A_IconFile 中的图标的编号(通常为 1)."
 		},
 		{
 			"body": "A_IconTip",
-			"description": "可用于获取或设置托盘图标的工具提示文字, 当鼠标悬停在其上时显示该文本. 如果为空, 则使用脚本的名称.\n要创建多行工具提示, 请在每行之间使用换行符(`n), 例如 'Line1`nLine2'. 只显示前 127 个字符, 并且文本在第一个制表符(如果存在) 处被截断.",
-			"prefix": "A_IconTip"
+			"description": "可用于获取或设置托盘图标的工具提示文字, 当鼠标悬停在其上时显示该文本. 如果为空, 则使用脚本的名称.\n要创建多行工具提示, 请在每行之间使用换行符(`n), 例如 'Line1`nLine2'. 只显示前 127 个字符, 并且文本在第一个制表符(如果存在) 处被截断."
 		},
 		{
 			"body": "A_Index",
-			"description": "包含当前循环迭代的次数,可以由脚本赋值为任何整数值.",
-			"prefix": "A_Index"
+			"description": "包含当前循环迭代的次数,可以由脚本赋值为任何整数值."
 		},
 		{
 			"body": "A_InitialWorkingDir",
-			"description": "脚本的初始工作目录, 由它的启动方式决定.",
-			"prefix": "A_InitialWorkingDir"
+			"description": "脚本的初始工作目录, 由它的启动方式决定."
 		},
 		{
 			"body": "A_Is64bitOS",
-			"description": "当操作系统为 64 位则值为 1(true), 为 32 位则为 0(false).",
-			"prefix": "A_Is64bitOS"
+			"description": "当操作系统为 64 位则值为 1(true), 为 32 位则为 0(false)."
 		},
 		{
 			"body": "A_IsAdmin",
-			"description": "如果当前用户有管理员权限, 则此变量的值为 1. 否则为 0.",
-			"prefix": "A_IsAdmin"
+			"description": "如果当前用户有管理员权限, 则此变量的值为 1. 否则为 0."
 		},
 		{
 			"body": "A_IsCompiled",
-			"description": "如果当前运行的脚本为已编译 EXE 时, 此变量值为 1, 否则为空字符串(这会被视为 false).",
-			"prefix": "A_IsCompiled"
+			"description": "如果当前运行的脚本为已编译 EXE 时, 此变量值为 1, 否则为空字符串(这会被视为 false)."
 		},
 		{
 			"body": "A_IsCritical",
-			"description": "如果当前线程的 Critical 是关闭时值为 0. 否则值为大于零的整数, 即为 Critical 使用的消息检查频率.",
-			"prefix": "A_IsCritical"
+			"description": "如果当前线程的 Critical 是关闭时值为 0. 否则值为大于零的整数, 即为 Critical 使用的消息检查频率."
 		},
 		{
 			"body": "A_IsPaused",
-			"description": "如果在当前线程之后的线程是暂停时值为 1, 否则为 0.",
-			"prefix": "A_IsPaused"
+			"description": "如果在当前线程之后的线程是暂停时值为 1, 否则为 0."
 		},
 		{
 			"body": "A_IsSuspended",
-			"description": "如果脚本挂起时值为 1, 否则为 0.",
-			"prefix": "A_IsSuspended"
+			"description": "如果脚本挂起时值为 1, 否则为 0."
 		},
 		{
 			"body": "A_KeyDelay",
-			"description": "可以用来获取或设置按键的延迟时间, 单位为毫秒.",
-			"prefix": "A_KeyDelay"
+			"description": "可以用来获取或设置按键的延迟时间, 单位为毫秒."
 		},
 		{
 			"body": "A_KeyDelayPlay",
-			"description": "可以用来获取或设置通过 SendPlay 模式发送的按键的延迟时间, 单位为毫秒.",
-			"prefix": "A_KeyDelayPlay"
+			"description": "可以用来获取或设置通过 SendPlay 模式发送的按键的延迟时间, 单位为毫秒."
 		},
 		{
 			"body": "A_KeyDuration",
-			"description": "可以用来获取或设置按键的持续时间, 单位为毫秒.",
-			"prefix": "A_KeyDuration"
+			"description": "可以用来获取或设置按键的持续时间, 单位为毫秒."
 		},
 		{
 			"body": "A_KeyDurationPlay",
-			"description": "可以用来获取或设置通过 SendPlay 模式发送的按键的持续时间, 单位为毫秒.",
-			"prefix": "A_KeyDurationPlay"
+			"description": "可以用来获取或设置通过 SendPlay 模式发送的按键的持续时间, 单位为毫秒."
 		},
 		{
 			"body": "A_Language",
-			"description": "当前系统的默认语言, 值为这些 4 位数字编码的其中一个.例如, 如果 A_Language 的值为 0436, 则系统的默认语言为 Afrikaans.",
-			"prefix": "A_Language"
+			"description": "当前系统的默认语言, 值为这些 4 位数字编码的其中一个.例如, 如果 A_Language 的值为 0436, 则系统的默认语言为 Afrikaans."
 		},
 		{
 			"body": "A_LastError",
-			"description": "这通常是脚本调用某些函数(如 DllCall 或 Run/RunWait), 或上一次 COM 对象调用的 HRESULT 之后, 系统的 GetLastError() 函数的结果.",
-			"prefix": "A_LastError"
+			"description": "这通常是脚本调用某些函数(如 DllCall 或 Run/RunWait), 或上一次 COM 对象调用的 HRESULT 之后, 系统的 GetLastError() 函数的结果."
 		},
 		{
 			"body": "A_LineFile",
-			"description": "A_LineNumber 所属文件的完整路径和名称, 除非当前行属于未编译脚本的某个 #Include 文件, 否则它将和 A_ScriptFullPath 相同.",
-			"prefix": "A_LineFile"
+			"description": "A_LineNumber 所属文件的完整路径和名称, 除非当前行属于未编译脚本的某个 #Include 文件, 否则它将和 A_ScriptFullPath 相同."
 		},
 		{
 			"body": "A_LineNumber",
-			"description": "脚本(或其 #Include 文件) 中正在执行的行的行号. 这个行号与 ListLines 显示的一致; 它对于错误报告非常有用, 比如这个例子: MsgBox 'Could not write to log file (line number ' A_LineNumber ')'.\n由于已编译脚本已经把它所有的 #Include 文件合并成一个大脚本, 所以它的行号可能与它在未编译模式运行时不一样.",
-			"prefix": "A_LineNumber"
+			"description": "脚本(或其 #Include 文件) 中正在执行的行的行号. 这个行号与 ListLines 显示的一致; 它对于错误报告非常有用, 比如这个例子: MsgBox 'Could not write to log file (line number ' A_LineNumber ')'.\n由于已编译脚本已经把它所有的 #Include 文件合并成一个大脚本, 所以它的行号可能与它在未编译模式运行时不一样."
 		},
 		{
 			"body": "A_ListLines",
-			"description": "可用于获取或设置是否记录行.",
-			"prefix": "A_ListLines"
+			"description": "可用于获取或设置是否记录行."
 		},
 		{
 			"body": "A_LoopField",
-			"description": "存在于任何解析循环中,它包含当前子字符串(字段)的内容.",
-			"prefix": "A_LoopField"
+			"description": "存在于任何解析循环中,它包含当前子字符串(字段)的内容."
 		},
 		{
 			"body": "A_LoopFileAttrib",
-			"description": "当前检索文件的属性.",
-			"prefix": "A_LoopFileAttrib"
+			"description": "当前检索文件的属性."
 		},
 		{
 			"body": "A_LoopFileDir",
-			"description": "A_LoopFileName 所在目录的路径. 如果 FilePattern 包含相对路径而不是绝对路径, 那么这里的路径也将是相对路径. 根目录不会包含反斜杠. 例如: C:",
-			"prefix": "A_LoopFileDir"
+			"description": "A_LoopFileName 所在目录的路径. 如果 FilePattern 包含相对路径而不是绝对路径, 那么这里的路径也将是相对路径. 根目录不会包含反斜杠. 例如: C:"
 		},
 		{
 			"body": "A_LoopFileExt",
-			"description": "文件的扩展名(例如 TXT, DOC 或 EXE). 不包括点号(.).",
-			"prefix": "A_LoopFileExt"
+			"description": "文件的扩展名(例如 TXT, DOC 或 EXE). 不包括点号(.)."
 		},
 		{
 			"body": "A_LoopFileFullPath",
-			"description": "这与 A_LoopFilePath 有以下不同: 1) 它总是包含文件的绝对/完整路径, 即使 FilePattern 包含相对路径; 2) FilePattern 本身的任何短(8.3) 文件夹名都会被转换为长文件名; 3) FilePattern 中的字符会被转换为大写或小写以匹配文件系统中存储的大小写. 这对于将文件名 -- 例如作为命令行参数传入脚本的文件名 -- 转换为资源管理器显示的准确路径名很有用.",
-			"prefix": "A_LoopFileFullPath"
+			"description": "这与 A_LoopFilePath 有以下不同: 1) 它总是包含文件的绝对/完整路径, 即使 FilePattern 包含相对路径; 2) FilePattern 本身的任何短(8.3) 文件夹名都会被转换为长文件名; 3) FilePattern 中的字符会被转换为大写或小写以匹配文件系统中存储的大小写. 这对于将文件名 -- 例如作为命令行参数传入脚本的文件名 -- 转换为资源管理器显示的准确路径名很有用."
 		},
 		{
 			"body": "A_LoopFileName",
-			"description": "当前检索的文件或文件夹的名称(不包括路径).",
-			"prefix": "A_LoopFileName"
+			"description": "当前检索的文件或文件夹的名称(不包括路径)."
 		},
 		{
 			"body": "A_LoopFilePath",
-			"description": "当前检索的文件/文件夹的路径和名称. 如果 FilePattern 包含相对路径而不是绝对路径, 这里的路径也将是相对路径.",
-			"prefix": "A_LoopFilePath"
+			"description": "当前检索的文件/文件夹的路径和名称. 如果 FilePattern 包含相对路径而不是绝对路径, 这里的路径也将是相对路径."
 		},
 		{
 			"body": "A_LoopFileShortName",
-			"description": "文件的 8.3 短名称, 或备用名称. 如果文件没有短文件名(由于长文件比 8.3 短, 或者可能因为 NTFS 文件系统禁用了短文件名的生成), 将检索 A_LoopFileName.",
-			"prefix": "A_LoopFileShortName"
+			"description": "文件的 8.3 短名称, 或备用名称. 如果文件没有短文件名(由于长文件比 8.3 短, 或者可能因为 NTFS 文件系统禁用了短文件名的生成), 将检索 A_LoopFileName."
 		},
 		{
 			"body": "A_LoopFileShortPath",
-			"description": "当前检索文件/文件夹的 8.3 短路径和名称. 例如: C:\\MYDOCU~1\\ADDRES~1.txt. 如果 FilePattern 包含相对路径而不是绝对路径, 这里的路径也将是相对路径.",
-			"prefix": "A_LoopFileShortPath"
+			"description": "当前检索文件/文件夹的 8.3 短路径和名称. 例如: C:\\MYDOCU~1\\ADDRES~1.txt. 如果 FilePattern 包含相对路径而不是绝对路径, 这里的路径也将是相对路径."
 		},
 		{
 			"body": "A_LoopFileSize",
-			"description": "当前检索文件的大小, 以 KB 为单位, 向下取整到最近的整数.",
-			"prefix": "A_LoopFileSize"
+			"description": "当前检索文件的大小, 以 KB 为单位, 向下取整到最近的整数."
 		},
 		{
 			"body": "A_LoopFileSizeKB",
-			"description": "当前检索文件的大小, 以 KB 为单位, 向下取整到最近的整数.",
-			"prefix": "A_LoopFileSizeKB"
+			"description": "当前检索文件的大小, 以 KB 为单位, 向下取整到最近的整数."
 		},
 		{
 			"body": "A_LoopFileSizeMB",
-			"description": "当前检索文件的大小, 以 Mb 为单位, 向下取整到最近的整数.",
-			"prefix": "A_LoopFileSizeMB"
+			"description": "当前检索文件的大小, 以 Mb 为单位, 向下取整到最近的整数."
 		},
 		{
 			"body": "A_LoopFileTimeAccessed",
-			"description": "文件最后访问的时间. 格式为 YYYYMMDDHH24MISS.",
-			"prefix": "A_LoopFileTimeAccessed"
+			"description": "文件最后访问的时间. 格式为 YYYYMMDDHH24MISS."
 		},
 		{
 			"body": "A_LoopFileTimeCreated",
-			"description": "文件创建的时间. 格式为 YYYYMMDDHH24MISS.",
-			"prefix": "A_LoopFileTimeCreated"
+			"description": "文件创建的时间. 格式为 YYYYMMDDHH24MISS."
 		},
 		{
 			"body": "A_LoopFileTimeModified",
-			"description": "文件最后修改的时间. 格式为 YYYYMMDDHH24MISS.",
-			"prefix": "A_LoopFileTimeModified"
+			"description": "文件最后修改的时间. 格式为 YYYYMMDDHH24MISS."
 		},
 		{
 			"body": "A_LoopReadLine",
-			"description": "存在于任何文件读取循环中,它包含当前行的内容,不包括回车符和标记行尾的换行符(` r`n).",
-			"prefix": "A_LoopReadLine"
+			"description": "存在于任何文件读取循环中,它包含当前行的内容,不包括回车符和标记行尾的换行符(` r`n)."
 		},
 		{
 			"body": "A_LoopRegKey",
-			"description": "包含当前循环项的键的全名.对于远程注册表访问,该值将不包括计算机名.",
-			"prefix": "A_LoopRegKey"
+			"description": "包含当前循环项的键的全名.对于远程注册表访问,该值将不包括计算机名."
 		},
 		{
 			"body": "A_LoopRegName",
-			"description": "当前检索到的项的名称,可以是值名或子项的名称.",
-			"prefix": "A_LoopRegName"
+			"description": "当前检索到的项的名称,可以是值名或子项的名称."
 		},
 		{
 			"body": "A_LoopRegTimeModified",
-			"description": "上次修改当前子项或其任何值的时间.格式为YYYYMMDDHH24MISS.",
-			"prefix": "A_LoopRegTimeModified"
+			"description": "上次修改当前子项或其任何值的时间.格式为YYYYMMDDHH24MISS."
 		},
 		{
 			"body": "A_LoopRegType",
-			"description": "当前检索到的项目的类型.",
-			"prefix": "A_LoopRegType"
+			"description": "当前检索到的项目的类型."
 		},
 		{
 			"body": "A_MaxHotkeysPerInterval",
-			"description": "A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框.",
-			"prefix": "A_MaxHotkeysPerInterval"
+			"description": "A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框."
 		},
 		{
 			"body": "A_MDay",
-			"description": "2 位数表示的当前月份的日期(01-31).",
-			"prefix": "A_MDay"
+			"description": "2 位数表示的当前月份的日期(01-31)."
 		},
 		{
 			"body": "A_MenuMaskKey",
-			"description": "控制使用哪个键来掩盖Win或Alt键事件.",
-			"prefix": "A_MenuMaskKey"
+			"description": "控制使用哪个键来掩盖Win或Alt键事件."
 		},
 		{
 			"body": "A_MM",
-			"description": "2 位数表示的当前月份(01-12). 与 A_Mon 含义相同.",
-			"prefix": "A_MM"
+			"description": "2 位数表示的当前月份(01-12). 与 A_Mon 含义相同."
 		},
 		{
 			"body": "A_MMM",
-			"description": "使用当前用户语言表示的当前月份的简称, 例如 Jul",
-			"prefix": "A_MMM"
+			"description": "使用当前用户语言表示的当前月份的简称, 例如 Jul"
 		},
 		{
 			"body": "A_MMMM",
-			"description": "使用当前用户语言表示的当前月份的全称, 例如 July",
-			"prefix": "A_MMMM"
+			"description": "使用当前用户语言表示的当前月份的全称, 例如 July"
 		},
 		{
 			"body": "A_MSec",
-			"description": "3 位数表示的当前毫秒数(000-999).",
-			"prefix": "A_MSec"
+			"description": "3 位数表示的当前毫秒数(000-999)."
 		},
 		{
 			"body": "A_Min",
-			"description": "2 位数表示的当前分钟数(00-59).",
-			"prefix": "A_Min"
+			"description": "2 位数表示的当前分钟数(00-59)."
 		},
 		{
 			"body": "A_Mon",
-			"description": "2 位数表示的当前月份(01-12).",
-			"prefix": "A_Mon"
+			"description": "2 位数表示的当前月份(01-12)."
 		},
 		{
 			"body": "A_MouseDelay",
-			"description": "可以用来获取或设置鼠标延迟, 单位为毫秒.",
-			"prefix": "A_MouseDelay"
+			"description": "可以用来获取或设置鼠标延迟, 单位为毫秒."
 		},
 		{
 			"body": "A_MouseDelayPlay",
-			"description": "可以用来获取或设置SendPlay的鼠标延迟, 单位为毫秒.",
-			"prefix": "A_MouseDelayPlay"
+			"description": "可以用来获取或设置SendPlay的鼠标延迟, 单位为毫秒."
 		},
 		{
 			"body": "A_MyDocuments",
-			"description": "当前用户 '我的文档' 文件夹的完整路径和名称.",
-			"prefix": "A_MyDocuments"
+			"description": "当前用户 '我的文档' 文件夹的完整路径和名称."
 		},
 		{
 			"body": "A_Now",
-			"description": "以 YYYYMMDDHH24MISS 格式表示的当前本地时间.",
-			"prefix": "A_Now"
+			"description": "以 YYYYMMDDHH24MISS 格式表示的当前本地时间."
 		},
 		{
 			"body": "A_NowUTC",
-			"description": "以 YYYYMMDDHH24MISS 格式表示的当前的协调世界时(UTC). UTC 本质上和格林威治标准时间(GMT) 一致.",
-			"prefix": "A_NowUTC"
+			"description": "以 YYYYMMDDHH24MISS 格式表示的当前的协调世界时(UTC). UTC 本质上和格林威治标准时间(GMT) 一致."
 		},
 		{
 			"body": "A_OSVersion",
-			"description": "操作系统的版本号, 格式为 'major.minor.build'. 例如, Windows 7 SP1 为 6.1.7601.\n在 AutoHotkey 可执行文件或已编译脚本的属性中应用兼容性设置会导致系统报告不同的版本号, 这将体现在 A_OSVersion 中.",
-			"prefix": "A_OSVersion"
+			"description": "操作系统的版本号, 格式为 'major.minor.build'. 例如, Windows 7 SP1 为 6.1.7601.\n在 AutoHotkey 可执行文件或已编译脚本的属性中应用兼容性设置会导致系统报告不同的版本号, 这将体现在 A_OSVersion 中."
 		},
 		{
 			"body": "A_PriorHotkey",
-			"description": "除了保存前一次热键的名称外, 其他的与上面相同. 如果没有它会为空.",
-			"prefix": "A_PriorHotkey"
+			"description": "除了保存前一次热键的名称外, 其他的与上面相同. 如果没有它会为空."
 		},
 		{
 			"body": "A_PriorKey",
-			"description": "在最近一次键-按下或键-释放之前按下的最后一个键的名称, 如果在按键历史中找不到合适的键-按下则为空. 不包括由 AutoHotkey 脚本生成的所有输入.要使用此变量, 首先必须安装键盘或鼠标钩子并且启用了key history(按键历史).",
-			"prefix": "A_PriorKey"
+			"description": "在最近一次键-按下或键-释放之前按下的最后一个键的名称, 如果在按键历史中找不到合适的键-按下则为空. 不包括由 AutoHotkey 脚本生成的所有输入.要使用此变量, 首先必须安装键盘或鼠标钩子并且启用了key history(按键历史)."
 		},
 		{
 			"body": "A_PriorLine",
-			"description": "包含了紧接当前编译器指令之前的源代码行. 只忽略中间的空白行和注释, 以及任何中间的编译器指令行.",
-			"prefix": "A_PriorLine"
+			"description": "包含了紧接当前编译器指令之前的源代码行. 只忽略中间的空白行和注释, 以及任何中间的编译器指令行."
 		},
 		{
 			"body": "A_ProgramFiles",
-			"description": "Program Files 目录(例如 C:\\Program Files 或 C:\\Program Files (x86)). 这通常与 ProgramFiles 环境变量相同.",
-			"prefix": "A_ProgramFiles"
+			"description": "Program Files 目录(例如 C:\\Program Files 或 C:\\Program Files (x86)). 这通常与 ProgramFiles 环境变量相同."
 		},
 		{
 			"body": "A_Programs",
-			"description": "当前用户的开始菜单中程序文件夹的完整路径和名称. 例如:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs",
-			"prefix": "A_Programs"
+			"description": "当前用户的开始菜单中程序文件夹的完整路径和名称. 例如:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs"
 		},
 		{
 			"body": "A_ProgramsCommon",
-			"description": "所有用户的开始菜单中程序文件夹的完整路径和名称. 例如:\nC:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs",
-			"prefix": "A_ProgramsCommon"
+			"description": "所有用户的开始菜单中程序文件夹的完整路径和名称. 例如:\nC:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs"
 		},
 		{
 			"body": "A_PtrSize",
-			"description": "包含指针的大小值, 单位为字节. 值为 4(32 位) 或 8(64 位), 取决于运行当前脚本的执行程序的类型.",
-			"prefix": "A_PtrSize"
+			"description": "包含指针的大小值, 单位为字节. 值为 4(32 位) 或 8(64 位), 取决于运行当前脚本的执行程序的类型."
 		},
 		{
 			"body": "A_RegView",
-			"description": "可用于获取或设置注册表视图. 可能的值是 32, 64 和 Default.",
-			"prefix": "A_RegView"
+			"description": "可用于获取或设置注册表视图. 可能的值是 32, 64 和 Default."
 		},
 		{
 			"body": "A_ScreenDPI",
-			"description": "屏幕宽度每逻辑英寸的像素数. 在具有多个显示监视器的系统中, 此值对于所有监视器都是相同的.",
-			"prefix": "A_ScreenDPI"
+			"description": "屏幕宽度每逻辑英寸的像素数. 在具有多个显示监视器的系统中, 此值对于所有监视器都是相同的."
 		},
 		{
 			"body": "A_ScreenHeight",
-			"description": "主监视器的高度,单位为像素",
-			"prefix": "A_ScreenHeight"
+			"description": "主监视器的高度,单位为像素"
 		},
 		{
 			"body": "A_ScreenWidth",
-			"description": "主监视器的宽度,单位为像素",
-			"prefix": "A_ScreenWidth"
+			"description": "主监视器的宽度,单位为像素"
 		},
 		{
 			"body": "A_ScriptDir",
-			"description": "当前脚本所在目录的完整路径. 不包含最后的反斜杠(根目录同样如此).\n如果脚本文字是从标准输入中读取的而不是从文件中读取的, 变量值为初始工作目录.",
-			"prefix": "A_ScriptDir"
+			"description": "当前脚本所在目录的完整路径. 不包含最后的反斜杠(根目录同样如此).\n如果脚本文字是从标准输入中读取的而不是从文件中读取的, 变量值为初始工作目录."
 		},
 		{
 			"body": "A_ScriptFullPath",
-			"description": "当前脚本的完整路径, 例如 C:\\My Documents\\My Script.ahk\n如果脚本文字是从标准输入中读取的而不是从文件中读取的, 值为 '*'.",
-			"prefix": "A_ScriptFullPath"
+			"description": "当前脚本的完整路径, 例如 C:\\My Documents\\My Script.ahk\n如果脚本文字是从标准输入中读取的而不是从文件中读取的, 值为 '*'."
 		},
 		{
 			"body": "A_ScriptHwnd",
-			"description": "脚本的主窗口(隐藏的) 的唯一 ID(HWND/句柄).",
-			"prefix": "A_ScriptHwnd"
+			"description": "脚本的主窗口(隐藏的) 的唯一 ID(HWND/句柄)."
 		},
 		{
 			"body": "A_ScriptName",
-			"description": "可以用来获取或设置 MsgBox, InputBox, FileSelect, DirSelect 和 Gui.New 的默认标题. 如果脚本没有设置, 它默认为当前脚本的文件名, 不包括路径, 例如 MyScript.ahk.",
-			"prefix": "A_ScriptName"
+			"description": "可以用来获取或设置 MsgBox, InputBox, FileSelect, DirSelect 和 Gui.New 的默认标题. 如果脚本没有设置, 它默认为当前脚本的文件名, 不包括路径, 例如 MyScript.ahk."
 		},
 		{
 			"body": "A_Sec",
-			"description": "2 位数表示的当前秒数(00-59).",
-			"prefix": "A_Sec"
+			"description": "2 位数表示的当前秒数(00-59)."
 		},
 		{
 			"body": "A_SendLevel",
-			"description": "可用于获取或设置发送级别, 为 0 至 100 之间的整数, 包括 0 和 100.",
-			"prefix": "A_SendLevel"
+			"description": "可用于获取或设置发送级别, 为 0 至 100 之间的整数, 包括 0 和 100."
 		},
 		{
 			"body": "A_SendMode",
-			"description": "可用于获取或设置发送模式. 可能的值是 Event, Input, Play 和 InputThenPlay.",
-			"prefix": "A_SendMode"
+			"description": "可用于获取或设置发送模式. 可能的值是 Event, Input, Play 和 InputThenPlay."
 		},
 		{
 			"body": "A_Space",
-			"description": "包含单个空格字符.",
-			"prefix": "A_Space"
+			"description": "包含单个空格字符."
 		},
 		{
 			"body": "A_StartMenu",
-			"description": "当前用户的开始菜单文件夹的完整路径和名称. 例如:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu",
-			"prefix": "A_StartMenu"
+			"description": "当前用户的开始菜单文件夹的完整路径和名称. 例如:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu"
 		},
 		{
 			"body": "A_StartMenuCommon",
-			"description": "所有用户的开始菜单文件夹的完整路径和名称. 例如:\nC:\\ProgramData\\Microsoft\\Windows\\Start Menu",
-			"prefix": "A_StartMenuCommon"
+			"description": "所有用户的开始菜单文件夹的完整路径和名称. 例如:\nC:\\ProgramData\\Microsoft\\Windows\\Start Menu"
 		},
 		{
 			"body": "A_Startup",
-			"description": "当前用户的开始菜单中启动文件夹的完整路径和名称. 例如:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
-			"prefix": "A_Startup"
+			"description": "当前用户的开始菜单中启动文件夹的完整路径和名称. 例如:\nC:\\Users\\<UserName>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
 		},
 		{
 			"body": "A_StartupCommon",
-			"description": "所有用户的开始菜单中启动文件夹的完整路径和名称. 例如:\nC:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
-			"prefix": "A_StartupCommon"
+			"description": "所有用户的开始菜单中启动文件夹的完整路径和名称. 例如:\nC:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
 		},
 		{
 			"body": "A_StoreCapsLockMode",
-			"description": "可以用来获取或设置是否在 Send 后恢复 CapsLock 的状态.",
-			"prefix": "A_StoreCapsLockMode"
+			"description": "可以用来获取或设置是否在 Send 后恢复 CapsLock 的状态."
 		},
 		{
 			"body": "A_StringCaseSense",
-			"description": "检索或设置大小写敏感性设置.",
-			"prefix": "A_StringCaseSense"
+			"description": "检索或设置大小写敏感性设置."
 		},
 		{
 			"body": "A_Tab",
-			"description": "包含单个 tab(制表符) 字符.",
-			"prefix": "A_Tab"
+			"description": "包含单个 tab(制表符) 字符."
 		},
 		{
 			"body": "A_Temp",
-			"description": "存放临时文件的文件夹的完整路径和名称. 它的值从下列的其中一个位置检索(按顺序): 1) 环境变量 TMP, TEMP 或 USERPROFILE; 2) Windows 目录. 例如:\nC:\\Users\\<UserName>\\AppData\\Local\\Temp",
-			"prefix": "A_Temp"
+			"description": "存放临时文件的文件夹的完整路径和名称. 它的值从下列的其中一个位置检索(按顺序): 1) 环境变量 TMP, TEMP 或 USERPROFILE; 2) Windows 目录. 例如:\nC:\\Users\\<UserName>\\AppData\\Local\\Temp"
 		},
 		{
 			"body": "A_ThisFunc",
-			"description": "当前正在执行的自定义函数的名称(没有则为空); 例如: MyFunction.",
-			"prefix": "A_ThisFunc"
+			"description": "当前正在执行的自定义函数的名称(没有则为空); 例如: MyFunction."
 		},
 		{
 			"body": "A_ThisHotkey",
-			"description": "最近执行的热键或非自动替换热字串(如果没有则为空), 例如 #z. 如果当前线程被其他热键或热字串中断, 那么此变量的值会变化, 所以一般情况下, 最好使用 ThisHotkey 参数.",
-			"prefix": "A_ThisHotkey"
+			"description": "最近执行的热键或非自动替换热字串(如果没有则为空), 例如 #z. 如果当前线程被其他热键或热字串中断, 那么此变量的值会变化, 所以一般情况下, 最好使用 ThisHotkey 参数."
 		},
 		{
 			"body": "A_TickCount",
-			"description": "计算机自启动以来经过的毫秒数, 最多为 49.7 天.通过把 A_TickCount 保存到变量中, 经过一段时间后从最近的 A_TickCount 值中减去那个变量, 可以计算出所经过的时间.",
-			"prefix": "A_TickCount"
+			"description": "计算机自启动以来经过的毫秒数, 最多为 49.7 天.通过把 A_TickCount 保存到变量中, 经过一段时间后从最近的 A_TickCount 值中减去那个变量, 可以计算出所经过的时间."
 		},
 		{
 			"body": "A_TimeIdle",
-			"description": "从系统最后一次接收到键盘, 鼠标或其他输入后所经过的毫秒数. 这可以用来判断用户是否离开. 用户的物理输入和由 任何 程序或脚本生成的模拟输入(例如 Send 或 MouseMove 函数) 会让此变量重置为零.",
-			"prefix": "A_TimeIdle"
+			"description": "从系统最后一次接收到键盘, 鼠标或其他输入后所经过的毫秒数. 这可以用来判断用户是否离开. 用户的物理输入和由 任何 程序或脚本生成的模拟输入(例如 Send 或 MouseMove 函数) 会让此变量重置为零."
 		},
 		{
 			"body": "A_TimeIdleKeyboard",
-			"description": "如果安装了键盘钩子, 这是自系统上次接收物理键盘输入以来所经过的毫秒数. 否则, 这个变量就等于 A_TimeIdle.",
-			"prefix": "A_TimeIdleKeyboard"
+			"description": "如果安装了键盘钩子, 这是自系统上次接收物理键盘输入以来所经过的毫秒数. 否则, 这个变量就等于 A_TimeIdle."
 		},
 		{
 			"body": "A_TimeIdleMouse",
-			"description": "如果安装了鼠标钩子, 这是自系统上次收到物理鼠标输入以来所经过的毫秒数. 否则, 这个变量就等于 A_TimeIdle.",
-			"prefix": "A_TimeIdleMouse"
+			"description": "如果安装了鼠标钩子, 这是自系统上次收到物理鼠标输入以来所经过的毫秒数. 否则, 这个变量就等于 A_TimeIdle."
 		},
 		{
 			"body": "A_TimeIdlePhysical",
-			"description": "与上面类似, 但在安装了相应的钩子(键盘或鼠标) 后会忽略模拟的键击和/或鼠标点击; 即此变量仅对物理事件做出响应. (这样避免了由于模拟键击和鼠标点击而误以为用户存在.) 如果两种钩子都没有安装, 则此变量等同于 A_TimeIdle.如果仅安装了一种钩子, 那么仅此类型的物理输入才会对 A_TimeIdlePhysical 起作用(另一种/未安装钩子的输入, 包括物理的和模拟的, 都会被忽略).",
-			"prefix": "A_TimeIdlePhysical"
+			"description": "与上面类似, 但在安装了相应的钩子(键盘或鼠标) 后会忽略模拟的键击和/或鼠标点击; 即此变量仅对物理事件做出响应. (这样避免了由于模拟键击和鼠标点击而误以为用户存在.) 如果两种钩子都没有安装, 则此变量等同于 A_TimeIdle.如果仅安装了一种钩子, 那么仅此类型的物理输入才会对 A_TimeIdlePhysical 起作用(另一种/未安装钩子的输入, 包括物理的和模拟的, 都会被忽略)."
 		},
 		{
 			"body": "A_TimeSincePriorHotkey",
-			"description": "从 A_PriorHotkey 按下后到现在经过的毫秒数. 如果 A_PriorHotkey 为空, 则此变量的值为 -1.",
-			"prefix": "A_TimeSincePriorHotkey"
+			"description": "从 A_PriorHotkey 按下后到现在经过的毫秒数. 如果 A_PriorHotkey 为空, 则此变量的值为 -1."
 		},
 		{
 			"body": "A_TimeSinceThisHotkey",
-			"description": "从 A_ThisHotkey 按下后到现在经过的毫秒数. 如果 A_ThisHotkey 为空, 则此变量的值为 -1.",
-			"prefix": "A_TimeSinceThisHotkey"
+			"description": "从 A_ThisHotkey 按下后到现在经过的毫秒数. 如果 A_ThisHotkey 为空, 则此变量的值为 -1."
 		},
 		{
 			"body": "A_TitleMatchMode",
-			"description": "可用于获取或设置标题匹配模式. 可能的值是 1, 2, 3 和 RegEx.",
-			"prefix": "A_TitleMatchMode"
+			"description": "可用于获取或设置标题匹配模式. 可能的值是 1, 2, 3 和 RegEx."
 		},
 		{
 			"body": "A_TitleMatchModeSpeed",
-			"description": "可用于获取或设置标题匹配速度. 可能的值是 fast 和 slow.",
-			"prefix": "A_TitleMatchModeSpeed"
+			"description": "可用于获取或设置标题匹配速度. 可能的值是 fast 和 slow."
 		},
 		{
 			"body": "A_TrayMenu",
-			"description": "返回可用于修改或显示托盘菜单的菜单对象.",
-			"prefix": "A_TrayMenu"
+			"description": "返回可用于修改或显示托盘菜单的菜单对象."
 		},
 		{
 			"body": "A_UserName",
-			"description": "运行当前脚本的用户的登录名.",
-			"prefix": "A_UserName"
+			"description": "运行当前脚本的用户的登录名."
 		},
 		{
 			"body": "A_WDay",
-			"description": "1 位数表示的当前星期经过的天数(1-7). 在所有区域设置中 1 都表示星期天.",
-			"prefix": "A_WDay"
+			"description": "1 位数表示的当前星期经过的天数(1-7). 在所有区域设置中 1 都表示星期天."
 		},
 		{
 			"body": "A_WinDelay",
-			"description": "可用于获取或设置窗口函数的延迟, 单位为毫秒.",
-			"prefix": "A_WinDelay"
+			"description": "可用于获取或设置窗口函数的延迟, 单位为毫秒."
 		},
 		{
 			"body": "A_WinDir",
-			"description": "Windows 目录. 例如: C:\\Windows",
-			"prefix": "A_WinDir"
+			"description": "Windows 目录. 例如: C:\\Windows"
 		},
 		{
 			"body": "A_WorkFileName",
-			"description": "特殊变量 A_WorkFileName 还保存着处理后的 .exe 文件的临时名称. 这可以用来将文件名作为参数传递给任何需要访问生成的 .exe 文件的 PostExec 指令.",
-			"prefix": "A_WorkFileName"
+			"description": "特殊变量 A_WorkFileName 还保存着处理后的 .exe 文件的临时名称. 这可以用来将文件名作为参数传递给任何需要访问生成的 .exe 文件的 PostExec 指令."
 		},
 		{
 			"body": "A_WorkingDir",
-			"description": "可以用来获取或设置脚本当前工作目录, 这是访问文件的默认路径. 除非是根目录, 否则路径末尾不包含反斜杠. 两个示例: C:\\ and C:\\My Documents.使用 SetWorkingDir 或赋值路径到 A_WorkingDir 可以改变当前工作目录.\n无论脚本是如何启动的, 脚本的工作目录默认为 A_ScriptDir.",
-			"prefix": "A_WorkingDir"
+			"description": "可以用来获取或设置脚本当前工作目录, 这是访问文件的默认路径. 除非是根目录, 否则路径末尾不包含反斜杠. 两个示例: C:\\ and C:\\My Documents.使用 SetWorkingDir 或赋值路径到 A_WorkingDir 可以改变当前工作目录.\n无论脚本是如何启动的, 脚本的工作目录默认为 A_ScriptDir."
 		},
 		{
 			"body": "A_YDay",
-			"description": "当前年份中经过的天数(1-366). 不会使用零对变量的值进行填充, 例如检索到 9, 而不是 009.",
-			"prefix": "A_YDay"
+			"description": "当前年份中经过的天数(1-366). 不会使用零对变量的值进行填充, 例如检索到 9, 而不是 009."
 		},
 		{
 			"body": "A_YWeek",
-			"description": "符合 ISO 8601 标准的当前的年份和周数(例如 200453).",
-			"prefix": "A_YWeek"
+			"description": "符合 ISO 8601 标准的当前的年份和周数(例如 200453)."
 		},
 		{
 			"body": "A_YYYY",
-			"description": "4 位数表示的当前年份(例如 2004). 与 A_Year 含义相同.",
-			"prefix": "A_YYYY"
+			"description": "4 位数表示的当前年份(例如 2004). 与 A_Year 含义相同."
 		},
 		{
 			"body": "A_Year",
-			"description": "4 位数表示的当前年份(例如 2004).",
-			"prefix": "A_Year"
+			"description": "4 位数表示的当前年份(例如 2004)."
 		},
 		{
 			"body": "true",
-			"description": "布尔值'真', 同数值1.",
-			"prefix": "true"
+			"description": "布尔值'真', 同数值1."
 		},
 		{
 			"body": "false",
-			"description": "布尔值'假', 同数值0.",
-			"prefix": "false"
+			"description": "布尔值'假', 同数值0."
 		},
 		{
 			"body": "unset",
-			"description": "在函数调用、数组字面值或对象字面值中, 关键字unset可用于显式省略形参或值.",
-			"prefix": "unset"
+			"description": "在函数调用、数组字面值或对象字面值中, 关键字unset可用于显式省略形参或值."
 		}
 	],
 	"texts": [
 		{
 			"body": "ahk_class",
-			"description": "窗口类是系统用作创建窗口的模板的一组属性.换句话说,窗口的类名标识了窗口的类型.若要使用窗口类,请指定ahk_class ExactClassName,如Window Spy所示.可以通过WinGetClass检索ExactClassName.",
-			"prefix": "ahk_class"
+			"description": "窗口类是系统用作创建窗口的模板的一组属性.换句话说,窗口的类名标识了窗口的类型.若要使用窗口类,请指定ahk_class ExactClassName,如Window Spy所示.可以通过WinGetClass检索ExactClassName."
 		},
 		{
 			"body": "ahk_exe",
-			"description": "使用ahk_exe来标识属于具有给定名称或路径的任何进程的窗口.",
-			"prefix": "ahk_exe"
+			"description": "使用ahk_exe来标识属于具有给定名称或路径的任何进程的窗口."
 		},
 		{
 			"body": "ahk_group",
-			"description": "使用ahk_group标识一个或多个与先前定义的窗口组所包含的规则匹配的窗口.",
-			"prefix": "ahk_group"
+			"description": "使用ahk_group标识一个或多个与先前定义的窗口组所包含的规则匹配的窗口."
 		},
 		{
 			"body": "ahk_id",
-			"description": "每个窗口或控件都有唯一的ID,也称为HWND（窗口句柄的缩写）.",
-			"prefix": "ahk_id"
+			"description": "每个窗口或控件都有唯一的ID,也称为HWND（窗口句柄的缩写）."
 		},
 		{
 			"body": "ahk_pid",
-			"description": "使用ahk_pid标识属于特定进程的窗口.进程标识符（PID）通常由WinGet,Run或Process检索.",
-			"prefix": "ahk_pid"
+			"description": "使用ahk_pid标识属于特定进程的窗口.进程标识符（PID）通常由WinGet,Run或Process检索."
 		},
 		{
 			"body": "AlwaysOnTop",
-			"description": "使窗口保持在所有其他窗口之上.",
-			"prefix": "AlwaysOnTop"
+			"description": "使窗口保持在所有其他窗口之上."
 		},
 		{
 			"body": "AutoSize",
-			"description": "调整窗口大小以仅容纳其当前可见的控件.这对于在添加新控件或调整现有控件的大小、隐藏或取消隐藏后调整窗口大小很有用.",
-			"prefix": "AutoSize"
+			"description": "调整窗口大小以仅容纳其当前可见的控件.这对于在添加新控件或调整现有控件的大小、隐藏或取消隐藏后调整窗口大小很有用."
 		},
 		{
 			"body": "Border",
-			"description": "在控件周围提供细线边框.大多数控件不需要这样,因为它们已经有了特定于类型的边框.向现有控件添加边框时,可能需要将控件的宽度和高度增加1个像素.",
-			"prefix": "Border"
+			"description": "在控件周围提供细线边框.大多数控件不需要这样,因为它们已经有了特定于类型的边框.向现有控件添加边框时,可能需要将控件的宽度和高度增加1个像素."
 		},
 		{
 			"body": "Caption",
-			"description": "提供标题栏和厚窗口边框/边缘.",
-			"prefix": "Caption"
+			"description": "提供标题栏和厚窗口边框/边缘."
 		},
 		{
 			"body": "Center",
-			"description": "将控件的文本在其可用宽度内居中.",
-			"prefix": "Center"
+			"description": "将控件的文本在其可用宽度内居中."
 		},
 		{
 			"body": "DropFiles",
-			"description": "当文件/文件夹作为拖放操作的一部分被拖放到窗口上时启动(但是如果这个回调已经在运行,拖放事件将被忽略).",
-			"prefix": "DropFiles"
+			"description": "当文件/文件夹作为拖放操作的一部分被拖放到窗口上时启动(但是如果这个回调已经在运行,拖放事件将被忽略)."
 		}
 	],
 	"keys": [
 		{
-			"body": "Alt",
-			"prefix": "Alt"
+			"body": "Alt"
 		},
 		{
 			"body": "AltTab",
-			"description": "如果 alt-tab 菜单可见, 那么在菜单中前移. 否则, 显示菜单(仅当热键是 '&' 连接的两个按键时; 否则, 它什么都不做).",
-			"prefix": "AltTab"
+			"description": "如果 alt-tab 菜单可见, 那么在菜单中前移. 否则, 显示菜单(仅当热键是 '&' 连接的两个按键时; 否则, 它什么都不做)."
 		},
 		{
 			"body": "AltTabAndMenu",
-			"description": "如果 alt-tab 菜单可见, 则向前移动. 否则, 显示菜单.",
-			"prefix": "AltTabAndMenu"
+			"description": "如果 alt-tab 菜单可见, 则向前移动. 否则, 显示菜单."
 		},
 		{
 			"body": "AltTabMenu",
-			"description": "显示或隐藏 alt-tab 菜单.",
-			"prefix": "AltTabMenu"
+			"description": "显示或隐藏 alt-tab 菜单."
 		},
 		{
 			"body": "AltTabMenuDismiss",
-			"description": "关闭 Alt-tab 菜单.",
-			"prefix": "AltTabMenuDismiss"
+			"description": "关闭 Alt-tab 菜单."
 		},
 		{
 			"body": "AppsKey",
-			"description": "Menu. 这是调用右键上下文菜单的按键.",
-			"prefix": "AppsKey"
+			"description": "Menu. 这是调用右键上下文菜单的按键."
 		},
 		{
-			"body": "BackSpace",
-			"prefix": "BackSpace"
+			"body": "BackSpace"
 		},
 		{
 			"body": "Browser_Back",
-			"description": "后退",
-			"prefix": "Browser_Back"
+			"description": "后退"
 		},
 		{
 			"body": "Browser_Favorites",
-			"description": "收藏夹",
-			"prefix": "Browser_Favorites"
+			"description": "收藏夹"
 		},
 		{
 			"body": "Browser_Forward",
-			"description": "前进",
-			"prefix": "Browser_Forward"
+			"description": "前进"
 		},
 		{
 			"body": "Browser_Home",
-			"description": "主页",
-			"prefix": "Browser_Home"
+			"description": "主页"
 		},
 		{
 			"body": "Browser_Refresh",
-			"description": "刷新",
-			"prefix": "Browser_Refresh"
+			"description": "刷新"
 		},
 		{
 			"body": "Browser_Search",
-			"description": "搜索",
-			"prefix": "Browser_Search"
+			"description": "搜索"
 		},
 		{
 			"body": "Browser_Stop",
-			"description": "停止",
-			"prefix": "Browser_Stop"
+			"description": "停止"
 		},
 		{
-			"body": "CapsLock",
-			"prefix": "CapsLock"
+			"body": "CapsLock"
 		},
 		{
-			"body": "Ctrl",
-			"prefix": "Ctrl"
+			"body": "Ctrl"
 		},
 		{
 			"body": "CtrlBreak",
-			"description": "Ctrl+Pause 或 Ctrl+ScrollLock",
-			"prefix": "CtrlBreak"
+			"description": "Ctrl+Pause 或 Ctrl+ScrollLock"
 		},
 		{
-			"body": "Del",
-			"prefix": "Del"
+			"body": "Del"
 		},
 		{
-			"body": "Delete",
-			"prefix": "Delete"
+			"body": "Delete"
 		},
 		{
-			"body": "Down",
-			"prefix": "Down"
+			"body": "Down"
 		},
 		{
-			"body": "End",
-			"prefix": "End"
+			"body": "End"
 		},
 		{
-			"body": "Enter",
-			"prefix": "Enter"
+			"body": "Enter"
 		},
 		{
-			"body": "Esc",
-			"prefix": "Esc"
+			"body": "Esc"
 		},
 		{
-			"body": "Escape",
-			"prefix": "Escape"
+			"body": "Escape"
 		},
 		{
-			"body": "F1",
-			"prefix": "F1"
+			"body": "F1"
 		},
 		{
-			"body": "F10",
-			"prefix": "F10"
+			"body": "F10"
 		},
 		{
-			"body": "F11",
-			"prefix": "F11"
+			"body": "F11"
 		},
 		{
-			"body": "F12",
-			"prefix": "F12"
+			"body": "F12"
 		},
 		{
-			"body": "F13",
-			"prefix": "F13"
+			"body": "F13"
 		},
 		{
-			"body": "F14",
-			"prefix": "F14"
+			"body": "F14"
 		},
 		{
-			"body": "F15",
-			"prefix": "F15"
+			"body": "F15"
 		},
 		{
-			"body": "F16",
-			"prefix": "F16"
+			"body": "F16"
 		},
 		{
-			"body": "F17",
-			"prefix": "F17"
+			"body": "F17"
 		},
 		{
-			"body": "F18",
-			"prefix": "F18"
+			"body": "F18"
 		},
 		{
-			"body": "F19",
-			"prefix": "F19"
+			"body": "F19"
 		},
 		{
-			"body": "F2",
-			"prefix": "F2"
+			"body": "F2"
 		},
 		{
-			"body": "F20",
-			"prefix": "F20"
+			"body": "F20"
 		},
 		{
-			"body": "F21",
-			"prefix": "F21"
+			"body": "F21"
 		},
 		{
-			"body": "F22",
-			"prefix": "F22"
+			"body": "F22"
 		},
 		{
-			"body": "F23",
-			"prefix": "F23"
+			"body": "F23"
 		},
 		{
-			"body": "F24",
-			"prefix": "F24"
+			"body": "F24"
 		},
 		{
-			"body": "F3",
-			"prefix": "F3"
+			"body": "F3"
 		},
 		{
-			"body": "F4",
-			"prefix": "F4"
+			"body": "F4"
 		},
 		{
-			"body": "F5",
-			"prefix": "F5"
+			"body": "F5"
 		},
 		{
-			"body": "F6",
-			"prefix": "F6"
+			"body": "F6"
 		},
 		{
-			"body": "F7",
-			"prefix": "F7"
+			"body": "F7"
 		},
 		{
-			"body": "F8",
-			"prefix": "F8"
+			"body": "F8"
 		},
 		{
-			"body": "F9",
-			"prefix": "F9"
+			"body": "F9"
 		},
 		{
-			"body": "Home",
-			"prefix": "Home"
+			"body": "Home"
 		},
 		{
-			"body": "Ins",
-			"prefix": "Ins"
+			"body": "Ins"
 		},
 		{
-			"body": "Insert",
-			"prefix": "Insert"
+			"body": "Insert"
 		},
 		{
-			"body": "Joy1",
-			"prefix": "Joy1"
+			"body": "Joy1"
 		},
 		{
-			"body": "Joy10",
-			"prefix": "Joy10"
+			"body": "Joy10"
 		},
 		{
-			"body": "Joy11",
-			"prefix": "Joy11"
+			"body": "Joy11"
 		},
 		{
-			"body": "Joy12",
-			"prefix": "Joy12"
+			"body": "Joy12"
 		},
 		{
-			"body": "Joy13",
-			"prefix": "Joy13"
+			"body": "Joy13"
 		},
 		{
-			"body": "Joy14",
-			"prefix": "Joy14"
+			"body": "Joy14"
 		},
 		{
-			"body": "Joy15",
-			"prefix": "Joy15"
+			"body": "Joy15"
 		},
 		{
-			"body": "Joy16",
-			"prefix": "Joy16"
+			"body": "Joy16"
 		},
 		{
-			"body": "Joy17",
-			"prefix": "Joy17"
+			"body": "Joy17"
 		},
 		{
-			"body": "Joy18",
-			"prefix": "Joy18"
+			"body": "Joy18"
 		},
 		{
-			"body": "Joy19",
-			"prefix": "Joy19"
+			"body": "Joy19"
 		},
 		{
-			"body": "Joy2",
-			"prefix": "Joy2"
+			"body": "Joy2"
 		},
 		{
-			"body": "Joy20",
-			"prefix": "Joy20"
+			"body": "Joy20"
 		},
 		{
-			"body": "Joy21",
-			"prefix": "Joy21"
+			"body": "Joy21"
 		},
 		{
-			"body": "Joy22",
-			"prefix": "Joy22"
+			"body": "Joy22"
 		},
 		{
-			"body": "Joy23",
-			"prefix": "Joy23"
+			"body": "Joy23"
 		},
 		{
-			"body": "Joy24",
-			"prefix": "Joy24"
+			"body": "Joy24"
 		},
 		{
-			"body": "Joy25",
-			"prefix": "Joy25"
+			"body": "Joy25"
 		},
 		{
-			"body": "Joy26",
-			"prefix": "Joy26"
+			"body": "Joy26"
 		},
 		{
-			"body": "Joy27",
-			"prefix": "Joy27"
+			"body": "Joy27"
 		},
 		{
-			"body": "Joy28",
-			"prefix": "Joy28"
+			"body": "Joy28"
 		},
 		{
-			"body": "Joy29",
-			"prefix": "Joy29"
+			"body": "Joy29"
 		},
 		{
-			"body": "Joy3",
-			"prefix": "Joy3"
+			"body": "Joy3"
 		},
 		{
-			"body": "Joy30",
-			"prefix": "Joy30"
+			"body": "Joy30"
 		},
 		{
-			"body": "Joy31",
-			"prefix": "Joy31"
+			"body": "Joy31"
 		},
 		{
-			"body": "Joy32",
-			"prefix": "Joy32"
+			"body": "Joy32"
 		},
 		{
-			"body": "Joy4",
-			"prefix": "Joy4"
+			"body": "Joy4"
 		},
 		{
-			"body": "Joy5",
-			"prefix": "Joy5"
+			"body": "Joy5"
 		},
 		{
-			"body": "Joy6",
-			"prefix": "Joy6"
+			"body": "Joy6"
 		},
 		{
-			"body": "Joy7",
-			"prefix": "Joy7"
+			"body": "Joy7"
 		},
 		{
-			"body": "Joy8",
-			"prefix": "Joy8"
+			"body": "Joy8"
 		},
 		{
-			"body": "Joy9",
-			"prefix": "Joy9"
+			"body": "Joy9"
 		},
 		{
-			"body": "JoyAxes",
-			"prefix": "JoyAxes"
+			"body": "JoyAxes"
 		},
 		{
-			"body": "JoyButtons",
-			"prefix": "JoyButtons"
+			"body": "JoyButtons"
 		},
 		{
-			"body": "JoyInfo",
-			"prefix": "JoyInfo"
+			"body": "JoyInfo"
 		},
 		{
-			"body": "JoyName",
-			"prefix": "JoyName"
+			"body": "JoyName"
 		},
 		{
-			"body": "JoyPOV",
-			"prefix": "JoyPOV"
+			"body": "JoyPOV"
 		},
 		{
-			"body": "JoyR",
-			"prefix": "JoyR"
+			"body": "JoyR"
 		},
 		{
-			"body": "JoyU",
-			"prefix": "JoyU"
+			"body": "JoyU"
 		},
 		{
-			"body": "JoyV",
-			"prefix": "JoyV"
+			"body": "JoyV"
 		},
 		{
-			"body": "JoyX",
-			"prefix": "JoyX"
+			"body": "JoyX"
 		},
 		{
-			"body": "JoyY",
-			"prefix": "JoyY"
+			"body": "JoyY"
 		},
 		{
-			"body": "JoyZ",
-			"prefix": "JoyZ"
+			"body": "JoyZ"
 		},
 		{
-			"body": "LAlt",
-			"prefix": "LAlt"
+			"body": "LAlt"
 		},
 		{
-			"body": "Launch_App1",
-			"prefix": "Launch_App1"
+			"body": "Launch_App1"
 		},
 		{
-			"body": "Launch_App2",
-			"prefix": "Launch_App2"
+			"body": "Launch_App2"
 		},
 		{
-			"body": "Launch_Mail",
-			"prefix": "Launch_Mail"
+			"body": "Launch_Mail"
 		},
 		{
-			"body": "Launch_Media",
-			"prefix": "Launch_Media"
+			"body": "Launch_Media"
 		},
 		{
-			"body": "LButton",
-			"prefix": "LButton"
+			"body": "LButton"
 		},
 		{
-			"body": "LControl",
-			"prefix": "LControl"
+			"body": "LControl"
 		},
 		{
-			"body": "LCtrl",
-			"prefix": "LCtrl"
+			"body": "LCtrl"
 		},
 		{
-			"body": "Left",
-			"prefix": "Left"
+			"body": "Left"
 		},
 		{
-			"body": "LShift",
-			"prefix": "LShift"
+			"body": "LShift"
 		},
 		{
-			"body": "LWin",
-			"prefix": "LWin"
+			"body": "LWin"
 		},
 		{
-			"body": "MButton",
-			"prefix": "MButton"
+			"body": "MButton"
 		},
 		{
-			"body": "Media_Next",
-			"prefix": "Media_Next"
+			"body": "Media_Next"
 		},
 		{
-			"body": "Media_Play_Pause",
-			"prefix": "Media_Play_Pause"
+			"body": "Media_Play_Pause"
 		},
 		{
-			"body": "Media_Prev",
-			"prefix": "Media_Prev"
+			"body": "Media_Prev"
 		},
 		{
-			"body": "Media_Stop",
-			"prefix": "Media_Stop"
+			"body": "Media_Stop"
 		},
 		{
-			"body": "NumLock",
-			"prefix": "NumLock"
+			"body": "NumLock"
 		},
 		{
-			"body": "Numpad0",
-			"prefix": "Numpad0"
+			"body": "Numpad0"
 		},
 		{
-			"body": "Numpad1",
-			"prefix": "Numpad1"
+			"body": "Numpad1"
 		},
 		{
-			"body": "Numpad2",
-			"prefix": "Numpad2"
+			"body": "Numpad2"
 		},
 		{
-			"body": "Numpad3",
-			"prefix": "Numpad3"
+			"body": "Numpad3"
 		},
 		{
-			"body": "Numpad4",
-			"prefix": "Numpad4"
+			"body": "Numpad4"
 		},
 		{
-			"body": "Numpad5",
-			"prefix": "Numpad5"
+			"body": "Numpad5"
 		},
 		{
-			"body": "Numpad6",
-			"prefix": "Numpad6"
+			"body": "Numpad6"
 		},
 		{
-			"body": "Numpad7",
-			"prefix": "Numpad7"
+			"body": "Numpad7"
 		},
 		{
-			"body": "Numpad8",
-			"prefix": "Numpad8"
+			"body": "Numpad8"
 		},
 		{
-			"body": "Numpad9",
-			"prefix": "Numpad9"
+			"body": "Numpad9"
 		},
 		{
-			"body": "NumpadAdd",
-			"prefix": "NumpadAdd"
+			"body": "NumpadAdd"
 		},
 		{
-			"body": "NumpadClear",
-			"prefix": "NumpadClear"
+			"body": "NumpadClear"
 		},
 		{
-			"body": "NumpadDel",
-			"prefix": "NumpadDel"
+			"body": "NumpadDel"
 		},
 		{
-			"body": "NumpadDiv",
-			"prefix": "NumpadDiv"
+			"body": "NumpadDiv"
 		},
 		{
-			"body": "NumpadDot",
-			"prefix": "NumpadDot"
+			"body": "NumpadDot"
 		},
 		{
-			"body": "NumpadDown",
-			"prefix": "NumpadDown"
+			"body": "NumpadDown"
 		},
 		{
-			"body": "NumpadEnd",
-			"prefix": "NumpadEnd"
+			"body": "NumpadEnd"
 		},
 		{
-			"body": "NumpadEnter",
-			"prefix": "NumpadEnter"
+			"body": "NumpadEnter"
 		},
 		{
-			"body": "NumpadHome",
-			"prefix": "NumpadHome"
+			"body": "NumpadHome"
 		},
 		{
-			"body": "NumpadIns",
-			"prefix": "NumpadIns"
+			"body": "NumpadIns"
 		},
 		{
-			"body": "NumpadLeft",
-			"prefix": "NumpadLeft"
+			"body": "NumpadLeft"
 		},
 		{
-			"body": "NumpadMult",
-			"prefix": "NumpadMult"
+			"body": "NumpadMult"
 		},
 		{
-			"body": "NumpadPgdn",
-			"prefix": "NumpadPgdn"
+			"body": "NumpadPgdn"
 		},
 		{
-			"body": "NumpadPgup",
-			"prefix": "NumpadPgup"
+			"body": "NumpadPgup"
 		},
 		{
-			"body": "NumpadRight",
-			"prefix": "NumpadRight"
+			"body": "NumpadRight"
 		},
 		{
-			"body": "NumpadSub",
-			"prefix": "NumpadSub"
+			"body": "NumpadSub"
 		},
 		{
-			"body": "NumpadUp",
-			"prefix": "NumpadUp"
+			"body": "NumpadUp"
 		},
 		{
-			"body": "PgDn",
-			"prefix": "PgDn"
+			"body": "PgDn"
 		},
 		{
-			"body": "PgUp",
-			"prefix": "PgUp"
+			"body": "PgUp"
 		},
 		{
-			"body": "PrintScreen",
-			"prefix": "PrintScreen"
+			"body": "PrintScreen"
 		},
 		{
-			"body": "RAlt",
-			"prefix": "RAlt"
+			"body": "RAlt"
 		},
 		{
-			"body": "RButton",
-			"prefix": "RButton"
+			"body": "RButton"
 		},
 		{
-			"body": "RControl",
-			"prefix": "RControl"
+			"body": "RControl"
 		},
 		{
-			"body": "RCtrl",
-			"prefix": "RCtrl"
+			"body": "RCtrl"
 		},
 		{
-			"body": "Right",
-			"prefix": "Right"
+			"body": "Right"
 		},
 		{
-			"body": "RShift",
-			"prefix": "RShift"
+			"body": "RShift"
 		},
 		{
-			"body": "RWin",
-			"prefix": "RWin"
+			"body": "RWin"
 		},
 		{
-			"body": "ScrollLock",
-			"prefix": "ScrollLock"
+			"body": "ScrollLock"
 		},
 		{
-			"body": "Shift",
-			"prefix": "Shift"
+			"body": "Shift"
 		},
 		{
-			"body": "ShiftAltTab",
-			"prefix": "ShiftAltTab"
+			"body": "ShiftAltTab"
 		},
 		{
-			"body": "Space",
-			"prefix": "Space"
+			"body": "Space"
 		},
 		{
-			"body": "Tab",
-			"prefix": "Tab"
+			"body": "Tab"
 		},
 		{
-			"body": "Up",
-			"prefix": "Up"
+			"body": "Up"
 		},
 		{
-			"body": "Volume_Down",
-			"prefix": "Volume_Down"
+			"body": "Volume_Down"
 		},
 		{
-			"body": "Volume_Mute",
-			"prefix": "Volume_Mute"
+			"body": "Volume_Mute"
 		},
 		{
-			"body": "Volume_Up",
-			"prefix": "Volume_Up"
+			"body": "Volume_Up"
 		},
 		{
-			"body": "WheelDown",
-			"prefix": "WheelDown"
+			"body": "WheelDown"
 		},
 		{
-			"body": "WheelLeft",
-			"prefix": "WheelLeft"
+			"body": "WheelLeft"
 		},
 		{
-			"body": "WheelRight",
-			"prefix": "WheelRight"
+			"body": "WheelRight"
 		},
 		{
-			"body": "WheelUp",
-			"prefix": "WheelUp"
+			"body": "WheelUp"
 		},
 		{
-			"body": "XButton1",
-			"prefix": "XButton1"
+			"body": "XButton1"
 		},
 		{
-			"body": "XButton2",
-			"prefix": "XButton2"
+			"body": "XButton2"
 		}
 	]
 }

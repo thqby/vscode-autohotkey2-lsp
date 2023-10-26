@@ -106,13 +106,13 @@ export let ahkvars: { [key: string]: DocumentSymbol } = {};
 export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
 export let hoverCache: { [key: string]: [string, Hover | undefined] } = {};
 export let libdirs: string[] = [], workspaceFolders: string[] = [];
-export let completionItemCache = {
-	constant: [] as CompletionItem[],
-	directive: [] as CompletionItem[],
-	key: [] as CompletionItem[],
-	keyword: [] as CompletionItem[],
-	snippet: [] as CompletionItem[],
-	text: [] as CompletionItem[]
+export let completionItemCache: {
+	constant: CompletionItem[];
+	directive: { [c: string]: CompletionItem[] };
+	key: CompletionItem[];
+	keyword: CompletionItem[];
+	snippet: CompletionItem[];
+	text: CompletionItem[];
 };
 
 export function openFile(path: string, showError = true): TextDocument | undefined {
@@ -225,10 +225,15 @@ export function getwebfile(filepath: string) {
 }
 
 export function initahk2cache() {
+	let kind = CompletionItemKind.Keyword, data = '*';
 	ahkvars = {}, ahkuris = {};
 	completionItemCache = {
 		constant: [],
-		directive: [],
+		directive: {
+			'#': [],
+			'@': 'author,copyright,date,description,deprecated,enum,event,example,extends,file,license,override,param,prop,property,returns,see,since,throws,todo,type,var,version'
+				.split(',').map(label => ({ label, kind, data }))
+		},
 		key: [],
 		keyword: [],
 		snippet: [],
@@ -270,7 +275,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 	}
 	function build_item_cache(ahk2: any) {
 		let insertTextFormat: InsertTextFormat, kind: CompletionItemKind;
-		let snip: { prefix: string, body: string, description?: string };
+		let snip: { prefix?: string, body: string, description?: string };
 		let rg = Range.create(0, 0, 0, 0);
 		for (const key in ahk2) {
 			let arr: any[] = ahk2[key];
@@ -280,31 +285,38 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					insertTextFormat = InsertTextFormat.Snippet;
 					for (snip of arr) {
 						completionItemCache.constant.push({
-							label: snip.prefix, kind, insertTextFormat,
+							label: snip.prefix!, kind, insertTextFormat,
 							insertText: `\${1:${snip.prefix} := }${snip.body}$0`,
 							detail: snip.description ?? snip.body
 						});
 					}
 					break;
 				case 'directives':
-					let re = /^#/;
+					let c = '';
 					kind = CompletionItemKind.Keyword;
 					insertTextFormat = InsertTextFormat.Snippet;
 					for (snip of arr) {
-						completionItemCache.directive.push({
-							label: snip.prefix,
-							insertText: snip.body.replace(re, ''),
+						snip.prefix ??= snip.body.trim();
+						if (!'@#'.includes(c = snip.prefix.charAt(0)))
+							continue;
+						completionItemCache.directive[c].push({
+							label: snip.prefix.replace(/^[^#\w]/, ''),
+							insertText: snip.body.replace(/^\W+/, ''),
 							kind, insertTextFormat,
-							detail: snip.description
+							detail: snip.description,
+							data: snip.body.charAt(0)
 						});
-						hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, { contents: { kind: 'markdown', value: '```ahk2\n' + trim(snip.body) + '\n```\n\n' + (snip.description ?? '') } }];
+						if (c === '#')
+							hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, {
+								contents: { kind: 'markdown', value: '```ahk2\n' + trim(snip.body) + '\n```\n\n' + (snip.description ?? '') }
+							}];
 					}
 					break;
 				case 'keys':
 					kind = CompletionItemKind.Keyword;
 					for (snip of arr) {
 						completionItemCache.key.push({
-							label: snip.prefix, kind,
+							label: snip.body, kind,
 							detail: snip.description
 						});
 					}
@@ -313,6 +325,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					kind = CompletionItemKind.Keyword;
 					insertTextFormat = InsertTextFormat.Snippet;
 					for (snip of arr) {
+						snip.prefix ??= snip.body.trim();
 						completionItemCache.keyword.push({
 							label: snip.prefix, kind, insertTextFormat,
 							insertText: snip.body,
@@ -327,7 +340,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					insertTextFormat = InsertTextFormat.Snippet;
 					for (snip of arr) {
 						completionItemCache.snippet.push({
-							label: snip.prefix,
+							label: snip.prefix!,
 							insertText: bodytostring(snip.body),
 							detail: snip.description,
 							kind, insertTextFormat
@@ -336,8 +349,8 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					break;
 				case 'variables':
 					for (snip of arr) {
-						ahkvars[snip.prefix.toUpperCase()] = {
-							name: snip.prefix,
+						ahkvars[snip.body.toUpperCase()] = {
+							name: snip.body,
 							kind: SymbolKind.Variable,
 							range: rg, selectionRange: rg,
 							detail: snip.description
@@ -347,7 +360,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 				case 'texts':
 					kind = CompletionItemKind.Text;
 					for (snip of arr)
-						completionItemCache.text.push({ label: snip.prefix, kind });
+						completionItemCache.text.push({ label: snip.body, kind });
 					break;
 				default: break;
 			}
@@ -379,7 +392,7 @@ export function enum_ahkfiles(dirpath: string) {
 						yield path;
 				}
 			}
-		} catch (e) {}
+		} catch (e) { }
 	}
 }
 
