@@ -260,7 +260,7 @@ export class Lexer {
 	public diagnostics: Diagnostic[] = [];
 	public diags = 0;
 	public last_diags = 0;
-	public dlldir: Map<number, string> = new Map();
+	public dlldir = new Map<number, string>();
 	public dllpaths: string[] = [];
 	public document: TextDocument;
 	public find_token: (offset: number, ignore?: boolean) => Token;
@@ -269,8 +269,8 @@ export class Lexer {
 	public funccall: CallInfo[] = [];
 	public get_token: (offset?: number, ignorecomment?: boolean) => Token;
 	public include: { [uri: string]: string } = {};
-	public includedir: Map<number, string> = new Map();
-	public isparsed: boolean = false;
+	public includedir = new Map<number, string>();
+	public isparsed = false;
 	public labels: { [key: string]: DocumentSymbol[] } = {};
 	public libdirs: string[] = [];
 	public linepos: { [line: number]: number } = {};
@@ -279,7 +279,7 @@ export class Lexer {
 	public parseScript: () => void;
 	public scriptdir = '';
 	public scriptpath = '';
-	public STB: SemanticTokensBuilder = new SemanticTokensBuilder;
+	public STB = new SemanticTokensBuilder;
 	public symbolInformation: SymbolInformation[] | undefined;
 	public texts: { [key: string]: string } = {};
 	public tokenranges: { start: number, end: number, type: number, previous?: number }[] = [];
@@ -5307,13 +5307,14 @@ export class Lexer {
 		this.labels = {}, this.object = { method: {}, property: {} };
 		this.funccall.length = this.diagnostics.length = this.foldingranges.length = 0;
 		this.children.length = this.dllpaths.length = this.tokenranges.length = this.anonymous.length = 0;
-		this.includedir = new Map(), this.dlldir = new Map();
+		this.includedir.clear(), this.dlldir.clear();
 		this.hotstringExecuteAction = this.isparsed = false;
 		delete this.maybev1;
 		delete this.checkmember;
 		delete this.symbolInformation;
 	}
 
+	get included() { return includedcache[this.uri] ?? {}; }
 	get relevance() {
 		const uri = this.uri, r = Object.assign({}, includecache[uri]);
 		for (const u in includedcache[uri])
@@ -5743,11 +5744,15 @@ export class Lexer {
 			if (l > max || l === max && lexers[u].scriptpath.length < main.length)
 				main = lexers[u].scriptpath, max = l;
 		}
-		let lex: Lexer;
+		let lex: Lexer, m = main.toLowerCase();
 		const relevance = this.relevance;
+		if ((m + '\\').startsWith(this.scriptdir.toLowerCase() + '\\lib\\'))
+			main = this.scriptdir, m = main.toLowerCase();
+		else if (m !== this.scriptdir.toLowerCase())
+			this.initlibdirs(main);
 		for (const u in relevance) {
 			delete initial[u];
-			(lex = lexers[u]).scriptdir !== main && lex.initlibdirs(main);
+			(lex = lexers[u]).scriptdir.toLowerCase() !== m && lex.initlibdirs(main);
 		}
 		for (const u in initial) {
 			const t = lexers[u];

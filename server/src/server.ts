@@ -81,11 +81,7 @@ connection.onInitialize(async params => {
 	};
 	if (hasWorkspaceFolderCapability) {
 		params.workspaceFolders?.forEach(it => workspaceFolders.add(it.uri.toLowerCase() + '/'));
-		result.capabilities.workspace = {
-			workspaceFolders: {
-				supported: true
-			}
-		};
+		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
 	let configs: AHKLSSettings | undefined;
@@ -104,6 +100,7 @@ connection.onInitialize(async params => {
 		update_settings(configs);
 	if (!(await setInterpreter(resolvePath(extsettings.InterpreterPath ??= ''))))
 		connection.window.showErrorMessage(setting.ahkpatherr());
+	set_WorkspaceFolders(workspaceFolders);
 	loadahk2();
 	return result;
 });
@@ -140,9 +137,9 @@ connection.onDidChangeConfiguration(async change => {
 			connection.sendRequest('ahk2.updateStatusBar', [extsettings.InterpreterPath]);
 	}
 	if (AutoLibInclude !== extsettings.AutoLibInclude) {
-		if (extsettings.AutoLibInclude > 1)
+		if ((extsettings.AutoLibInclude > 1) && (AutoLibInclude <= 1))
 			parseuserlibs();
-		if (extsettings.AutoLibInclude & 1)
+		if ((extsettings.AutoLibInclude & 1) && !(AutoLibInclude & 1))
 			documents.all().forEach(e => parseproject(e.uri.toLowerCase()));
 	}
 });
@@ -159,7 +156,8 @@ documents.onDidOpen(e => {
 	if (to_ahk2)
 		doc.actionwhenv1 = 'Continue';
 	if (extsettings.AutoLibInclude & 1)
-		parseproject(uri);
+		parseproject(uri).then(() => doc.last_diags &&
+			Object.keys(doc.included).length && doc.update());
 });
 
 documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
@@ -226,21 +224,6 @@ function executeCommandProvider(params: ExecuteCommandParams, token?: Cancellati
 			setInterpreter(args[0]);
 			break;
 	}
-}
-
-function validateTextDocument(textDocument: TextDocument) {
-	let uri = textDocument.uri, doc: Lexer;
-	if (doc = lexers[uri = uri.toLowerCase()]) {
-		doc.initlibdirs();
-		if (doc.diagnostics.length)
-			doc.parseScript();
-		if (libfuncs[uri]) {
-			libfuncs[uri].length = 0;
-			libfuncs[uri].push(...Object.values(doc.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
-		}
-	}
-	if (extsettings.AutoLibInclude & 1)
-		parseproject(uri);
 }
 
 async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
@@ -362,14 +345,15 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 	let samefolder = resolve(oldpath, '..').toLowerCase() === resolve(newpath, '..').toLowerCase();
 	if (!(await initpathenv(samefolder)))
 		return false;
-	if (!samefolder) {
-		let uri = URI.file(resolve(oldpath, '../lib')).toString().toLowerCase();
-		for (const u in libfuncs) {
-			if (u.startsWith(uri))
-				delete libfuncs[u];
-		}
-	}
-	documents.all().forEach(validateTextDocument);
+	if (samefolder)
+		return true;
+	documents.all().forEach(td => {
+		let doc = lexers[td.uri.toLowerCase()];
+		if (!doc) return;
+		doc.initlibdirs(doc.scriptdir);
+		if (extsettings.AutoLibInclude & 1)
+			parseproject(doc.uri);
+	});
 	return true;
 }
 
@@ -384,35 +368,40 @@ async function setInterpreter(path: string) {
 }
 
 async function parseproject(uri: string) {
-	let doc: Lexer = lexers[uri];
-	if (!doc.d && !libfuncs[uri])
-		Object.defineProperties(libfuncs[uri] = [], {
-			islib: { value: inlibdirs(doc.fsPath), enumerable: false },
-			fsPath: { value: doc.fsPath, enumerable: false }
+	let lex = lexers[uri];
+	if (!lex || !uri.startsWith('file:'))
+		return;
+	if (!lex.d && !libfuncs[uri]) {
+		Object.defineProperties(libfuncs[uri] = Object.values(lex.declaration)
+			.filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function), {
+			islib: { value: inlibdirs(lex.fsPath), enumerable: false },
+			fsPath: { value: lex.fsPath, enumerable: false }
 		});
-	setTimeout(async () => {
-		let searchdir = '', workspace = false, uri: string, path: string, d: Lexer, t: TextDocument | undefined;
-		if (searchdir = doc.workspaceFolder)
-			searchdir = URI.parse(searchdir).fsPath, workspace = true;
-		else
-			searchdir = doc.scriptdir + '\\lib';
-		for await (path of enum_ahkfiles(searchdir)) {
-			if (!libfuncs[uri = URI.file(path).toString().toLowerCase()]) {
-				if (!(d = lexers[uri])) {
-					if (!(t = openFile(path)) || (d = new Lexer(t)).d || (d.parseScript(), d.maybev1))
-						continue;
-					workspace && (parseinclude(lexers[uri] = d, d.scriptdir), traverse_include(d));
+	}
+	let searchdir = '', workspace = false, path: string, t: TextDocument | undefined;
+	if (searchdir = lex.workspaceFolder)
+		searchdir = URI.parse(searchdir).fsPath, workspace = true;
+	else
+		searchdir = lex.scriptdir + '\\lib';
+	for await (path of enum_ahkfiles(searchdir)) {
+		if (!libfuncs[uri = URI.file(path).toString().toLowerCase()]) {
+			if (!(lex = lexers[uri])) {
+				if (!(t = openFile(path)) || (lex = new Lexer(t)).d || (lex.parseScript(), lex.maybev1))
+					continue;
+				if (workspace) {
+					parseinclude(lexers[uri] = lex, lex.scriptdir);
+					traverse_include(lex);
 				}
-				if (d.d) continue;
-				libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
-				Object.defineProperties(libfuncs[uri], {
-					islib: { value: inlibdirs(path), enumerable: false },
-					fsPath: { value: path, enumerable: false }
-				});
-				await sleep(50);
 			}
+			if (lex.d) continue;
+			libfuncs[uri] = Object.values(lex.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
+			Object.defineProperties(libfuncs[uri], {
+				islib: { value: inlibdirs(path), enumerable: false },
+				fsPath: { value: path, enumerable: false }
+			});
+			await sleep(50);
 		}
-	}, 500);
+	}
 }
 
 async function getAHKversion(params: string[]) {

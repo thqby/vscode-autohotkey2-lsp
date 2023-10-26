@@ -79,11 +79,7 @@ connection.onInitialize(params => {
 	};
 	if (hasWorkspaceFolderCapability) {
 		params.workspaceFolders?.forEach(it => workspaceFolders.add(it.uri.toLowerCase() + '/'));
-		result.capabilities.workspace = {
-			workspaceFolders: {
-				supported: true
-			}
-		};
+		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
 	const configs: AHKLSSettings = params.initializationOptions;
@@ -92,6 +88,7 @@ connection.onInitialize(params => {
 	set_dirname((configs as any).extensionUri);
 	loadlocalize();
 	update_settings(configs);
+	set_WorkspaceFolders(workspaceFolders);
 	set_version('3.0.0');
 	initahk2cache();
 	loadahk2();
