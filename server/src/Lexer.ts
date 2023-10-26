@@ -1515,7 +1515,7 @@ export class Lexer {
 								if (m = (tn.detail = trim_comment(_cm.content)).match(/^\s*@extends\s+(.+)/m))
 									set_extends(tn, m[1]);
 							tn.extends = ex.toLowerCase(), tn.uri ??= _this.uri;
-							let t: any = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
+							let t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
 							(tn.declaration.__INIT = t).ranges = [], t.parent = tn;
 							t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
 							(tn.staticdeclaration.__INIT = t).ranges = [], t.parent = tn;
@@ -5601,7 +5601,7 @@ export class Lexer {
 	}
 
 	public searchScopedNode(position: Position, root?: DocumentSymbol[]): DocumentSymbol | undefined {
-		let { line, character } = position, its: DocumentSymbol[] | undefined;
+		let { line, character } = position, its: DocumentSymbol[] | undefined, cls: ClassNode, fn: FuncNode, offset: number;
 		for (let item of (root ?? this.children)) {
 			if (!(its = item.children) || line > item.range.end.line || line < item.selectionRange.start.line ||
 				(line === item.selectionRange.start.line && character < item.selectionRange.start.character) ||
@@ -5610,12 +5610,12 @@ export class Lexer {
 			if (position.line > item.selectionRange.start.line || position.character > item.selectionRange.end.character) {
 				item = this.searchScopedNode(position, its) ?? item;
 				if (item.kind === SymbolKind.Class) {
-					let offset = this.document.offsetAt(position);
-					for (let dec of [(item as any).staticdeclaration, (item as any).declaration])
-						for (let rg of dec.__INIT?.ranges ?? [])
+					offset = this.document.offsetAt(position), cls = item as ClassNode;
+					for (fn of [cls.staticdeclaration.__INIT, cls.declaration.__INIT] as FuncNode[])
+						for (let rg of fn?.ranges ?? [])
 							if (offset <= rg[0]) break;
 							else if (offset <= rg[1])
-								return dec.__INIT;
+								return this.searchScopedNode(position, fn.children) ?? fn;
 				}
 				return item;
 			}
