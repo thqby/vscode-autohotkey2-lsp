@@ -2502,7 +2502,7 @@ export class Lexer {
 									} else fc = lk;
 								let _t = !fc || (input.charAt(fc.offset - 1) !== '%' || fc.previous_token?.previous_pair_pos === undefined);
 								parse_pair('(', ')', undefined, tpe), quoteend = parser_pos;
-								if (_t && ((nk = _this.get_token(parser_pos)).content === '=>' ||
+								if (_t && ((nk = _this.get_token(parser_pos, true)).content === '=>' ||
 									!nk.topofline && end !== '{' && nk.content === '{')) {
 									result.splice(rl), lk = (tk = ttk).previous_token ?? EMPTY_TOKEN;
 									parser_pos = tk.offset + 1;
@@ -4056,7 +4056,8 @@ export class Lexer {
 					} else if (_tk.type === 'TK_END_EXPR') {
 						continuation_sections_mode = false;
 						next = !format_mode;
-					}
+					} else if (_tk.type.endsWith('COMMENT'))
+						lst = _tk.previous_token ?? EMPTY_TOKEN;
 				} else if (_tk.type.endsWith('COMMENT'))
 					lst = _tk.previous_token ?? EMPTY_TOKEN;
 				if (!format_mode) {
