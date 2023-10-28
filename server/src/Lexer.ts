@@ -5737,7 +5737,11 @@ export class Lexer {
 		if (!change)
 			return this.sendDiagnostics(true);
 		parseinclude(this, this.scriptdir);
-		change === 1 ? traverse_include(this) : update_includecache();
+		if (change === 1) {
+			const c = traverse_include(this);
+			for (const u in this.included)
+				Object.assign(includecache[u], c);
+		} else update_includecache();
 		let main = this.scriptpath, max = Object.keys(includecache[uri]).length;
 		for (const u in includedcache[uri]) {
 			l = Object.keys(includecache[u]).length;

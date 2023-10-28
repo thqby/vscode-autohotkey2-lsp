@@ -272,7 +272,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	set_version(a_vars.ahkversion ??= '2.0.0');
 	if (a_vars.ahkversion.startsWith('1.'))
 		connection.window.showErrorMessage(setting.versionerr());
-	if (!samefolder) {
+	if (!samefolder || !libdirs.length) {
 		libdirs.length = 0;
 		libdirs.push(a_vars.mydocuments + '\\AutoHotkey\\Lib\\',
 			a_vars.ahkpath.replace(/[^\\/]+$/, 'Lib\\'));
@@ -342,7 +342,7 @@ function inlibdirs(path: string) {
 }
 
 async function changeInterpreter(oldpath: string, newpath: string) {
-	let samefolder = resolve(oldpath, '..').toLowerCase() === resolve(newpath, '..').toLowerCase();
+	let samefolder = !!oldpath && resolve(oldpath, '..').toLowerCase() === resolve(newpath, '..').toLowerCase();
 	if (!(await initpathenv(samefolder)))
 		return false;
 	if (samefolder)
