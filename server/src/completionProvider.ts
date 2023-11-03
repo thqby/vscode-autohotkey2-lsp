@@ -621,7 +621,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 		for (const obj of objs) {
 			for (const arr of Object.values(obj))
-				for (const [k, its] of Object.entries(arr))
+				for (const [k, its] of Object.entries(arr) as [string, Variable[]][])
 					if (expg.test(k)) {
 						if (!(temp = props[k])) {
 							items.push(props[k] = temp = convertNodeCompletion(its[0]));
@@ -629,7 +629,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								continue;
 						} else if (temp.detail?.endsWith(its[0].full ?? ''))
 							continue;
-						temp.detail = '(...) ' + (temp.insertText = temp.label);
+						temp.detail = '(...) ' + temp.label;
+						if (temp.insertText?.endsWith(')') && its.some(it => it.kind === SymbolKind.Property))
+							temp.insertText = temp.label, temp.kind = CompletionItemKind.Property;
 						temp.commitCharacters = temp.command = temp.documentation = undefined;
 					}
 		}
