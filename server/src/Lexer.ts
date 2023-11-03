@@ -5573,13 +5573,13 @@ export class Lexer {
 			kind ??= linetext[character] === '(' ? SymbolKind.Method : SymbolKind.Property;
 		} else if (token) {
 			if (token.type === 'TK_WORD') {
-				let sk = token.semantic, fc: FuncNode;
-				if (symbol = token.symbol ?? token.definition) {
-					kind = symbol.kind;
+				let sk = token.semantic, sym = (symbol = token.symbol) ?? token.definition, fc: FuncNode;
+				if (sym) {
+					kind = sym.kind;
 					if (kind === SymbolKind.Class)
-						text = (symbol as ClassNode).full;
+						text = (sym as ClassNode).full;
 					else if (kind === SymbolKind.Property || kind === SymbolKind.Method)
-						text = (fc = symbol as FuncNode).full.replace(/^\((\S+)\).*$/i, (...m) =>
+						text = (fc = sym as FuncNode).full.replace(/^\((\S+)\).*$/i, (...m) =>
 							`${fc.static ? m[1] : m[1].replace(/([^.]+)$/, '@$1')}.${fc.name}`);
 				} else if (sk) {
 					switch (sk.type) {
