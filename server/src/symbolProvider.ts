@@ -346,7 +346,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 		while (j >= 0) {
 			// Skip negligible parameters
 			for (; j >= 0 && params[j].defaultVal === false; j--, i++);
-			if (params[i].defaultVal !== undefined)
+			if (!params[i] || params[i].defaultVal !== undefined)
 				return false;
 			for (; j >= 0 && params[j].defaultVal !== false; j--);
 		}

@@ -231,7 +231,7 @@ export function initahk2cache() {
 		constant: [],
 		directive: {
 			'#': [],
-			'@': 'author,copyright,date,description,deprecated,enum,event,example,extends,file,license,override,param,prop,property,returns,see,since,throws,todo,type,var,version'
+			'@': 'arg,author,copyright,date,description,deprecated,enum,event,example,extends,file,global,instance,license,link,member,override,param,prop,property,returns,see,since,static,throws,todo,tutorial,type,var,version,virtual'
 				.split(',').map(label => ({ label, kind, data }))
 		},
 		key: [],

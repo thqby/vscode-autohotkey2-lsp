@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.2.4",
+	"version": "2.2.5",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -27,11 +27,8 @@
 		"url": "https://github.com/thqby/vscode-autohotkey2-lsp/issues"
 	},
 	"engines": {
-		"vscode": "^1.66.0"
+		"vscode": "^1.82.0"
 	},
-	"activationEvents": [
-		"onLanguage:ahk2"
-	],
 	"main": "./client/dist/extension",
 	"browser": "./client/dist/browserClientMain",
 	"contributes": {
@@ -541,7 +538,7 @@
 		"chrome": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ./test-data"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.66.0",
+		"@types/vscode": "^1.82.0",
 		"path-browserify": "^1.0.1",
 		"ts-loader": "^9.4.0",
 		"typescript": "^5.1.0",

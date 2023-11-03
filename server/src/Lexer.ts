@@ -6593,7 +6593,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 							let t = m[4].replace(/^\s*[-—]\s*|\s*$/g, '');
 							if ((lastparam = m[3]).startsWith('['))
 								m[3] = m[3].substring(1).replace(/^((\w|\.|[^\x00-\x7f])+).*$/, '$1'), lastparam = m[3].replace(/\..*$/, '');
-							s = `\n*@param* \`${m[3]}\`${m[2] ? `: *${m[2]}*` : ''}` + (t ? ' — ' + t : '');
+							s = `\n*@param* \`${m[3]}\`${m[2] ? `: *\`${m[2]}\`*` : ''}` + (t ? ' — ' + t : '');
 							name ?? details.push(s);
 							lastparam = lastparam.toUpperCase();
 							(params[lastparam] ??= []).push(s);
@@ -6630,7 +6630,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overlo
 							return '';
 						});
 					default:
-						s = m[2].replace(/^\s*({(.*?)}(?=\s|$))?(\s*[-—])?\s*/, '*$2* — ').replace(/\*\*(?= — )|\s*—\s*$/g, '');
+						s = m[2].replace(/^\s*({(.*?)}(?=\s|$))?(\s*[-—])?\s*/, '*`$2`* — ').replace(/\*\*(?= — )|\s*—\s*$/g, '');
 						details.push(`\n*@${m[1].toLowerCase()}* ${s}`);
 						break;
 				}
