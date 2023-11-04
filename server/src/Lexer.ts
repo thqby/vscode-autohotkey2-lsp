@@ -6565,21 +6565,28 @@ export function traverse_include(lex: Lexer, included?: any) {
 	return cache;
 }
 
-export function formatMarkdowndetail(node: DocumentSymbol, name?: string, overloads?: string[]): string {
+export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: string, overloads?: string[]): string {
 	let params: { [name: string]: string[] } = {}, details: string[] = [], lastparam = '', m: RegExpMatchArray | null;
 	let detail = node.detail, ols = overloads ?? [], s, code = 0;
 	if (!detail)
 		return '';
-	detail.replace(/\{@link\s+(.*)\}/g, (...m) => {
-		let s: string = m[1]?.trim() ?? '';
-		let p = s.search(/[|\s]/);
-		if (p !== -1) {
-			let tag = s.substring(p + 1).trim();
-			s = s.slice(0, p);
-			if (tag)
-				return `[${tag}](${s})`;
+	detail.replace(/\{@link(code|plain)?\s+([^{}\n]*)\}/g, (...m) => {
+		let link = m[2]?.trim() ?? '', tag = '', name: string | undefined;
+		const p = link.search(/[|\s]/);
+		if (p !== -1)
+			tag = link.substring(p + 1).trim(), link = link.slice(0, p).trim();
+		if (lex && (name = link.match(/^(([\w.@]|[^\x00-\x7f])+)(\(\))?$/)?.[1])) {
+			const n = searchNode(lex, name, undefined, SymbolKind.Variable)?.[0];
+			if (n && (lex = lexers[n.uri])) {
+				const { start: { line, character } } = n.node.selectionRange;
+				const encode_params = encodeURIComponent(JSON.stringify([
+					URI.parse(lex.document.uri).toJSON(),
+					[-1, { selection: { startLineNumber: line + 1, startColumn: character + 1 } }]
+				]));
+				tag ||= link, link = `command:_workbench.open?${encode_params}`;
+			}
 		}
-		return ` ${s} `;
+		return tag ? `[${m[1] === 'code' ? `\`${tag}\`` : tag}](${link})` : ` ${link} `;
 	}).split(/\r?\n/).forEach(line => {
 		if (line.startsWith('@')) {
 			lastparam = '';

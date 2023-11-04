@@ -55,6 +55,7 @@ export function activate(context: ExtensionContext) {
 
 	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', {
 		documentSelector: [{ language: 'ahk2' }],
+		markdown: { isTrusted: true, supportHtml: true },
 		initializationOptions: {
 			extensionUri: context.extensionUri.toString(),
 			commands: Object.keys(request_handlers),

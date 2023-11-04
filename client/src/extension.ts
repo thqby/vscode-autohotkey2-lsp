@@ -92,6 +92,7 @@ export async function activate(context: ExtensionContext) {
 	// Options to control the language client
 	let clientOptions: LanguageClientOptions = {
 		documentSelector: [{ language: 'ahk2' }],
+		markdown: { isTrusted: true, supportHtml: true },
 		outputChannel: outputchannel = window.createOutputChannel('AutoHotkey2', '~ahk2-output'),
 		outputChannelName: 'AutoHotkey2',
 		initializationOptions: {

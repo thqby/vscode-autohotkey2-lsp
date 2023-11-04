@@ -44,19 +44,19 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 						hover.push({ kind: 'ahk2', value: (<any>(it.node)).full })
 				});
 			} else {
-				let { node, scope } = nodes[0], fn = node as FuncNode;
+				let { node, scope, uri } = nodes[0], fn = node as FuncNode;
 				if (node.kind === SymbolKind.Class && !fn.full?.startsWith('('))
 					hover.push({ kind: 'ahk2', value: 'class ' + (fn.full || node.name) });
 				else if (scope && node.kind === SymbolKind.TypeParameter) {
 					let p = (scope as any).parent;
 					if (p?.kind === SymbolKind.Property && p.parent?.kind === SymbolKind.Class)
 						scope = p as DocumentSymbol;
-					formatMarkdowndetail(scope);
+					formatMarkdowndetail(scope, lexers[uri]);
 				} else if (fn.full)
 					hover.push({ kind: 'ahk2', value: fn.full });
 
 				if (node.detail || node.kind === SymbolKind.Variable) {
-					let md = formatMarkdowndetail(node);
+					let md = formatMarkdowndetail(node, lexers[uri]);
 					if (node.kind === SymbolKind.Variable) {
 						let re = /^/;
 						if (md.startsWith('\n*@var* ')) {

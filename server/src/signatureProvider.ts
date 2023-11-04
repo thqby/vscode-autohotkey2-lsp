@@ -135,7 +135,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		} else return undefined;
 	}
 	nodes.forEach((it: any) => {
-		const node = it.node as FuncNode, overloads: string[] = [], needthis = it.needthis ?? 0;
+		const node = it.node as FuncNode, ll = lexers[it.uri], overloads: string[] = [], needthis = it.needthis ?? 0;
 		let params: Variable[] | undefined, name: string | undefined, paramindex: number;
 		if (params = node.params) {
 			let label = node.full, parameters = params.map(param =>
@@ -149,7 +149,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				parameters,
 				documentation: node.detail ? {
 					kind: 'markdown',
-					value: formatMarkdowndetail(node, name = params[paramindex]?.name ?? '', overloads)
+					value: formatMarkdowndetail(node, ll, name = params[paramindex]?.name ?? '', overloads)
 				} : undefined
 			});
 			if (overloads.length) {
@@ -170,7 +170,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 							parameters,
 							documentation: (name === params[paramindex]?.name) ? documentation : {
 								kind: 'markdown',
-								value: formatMarkdowndetail(n, params[paramindex]?.name ?? '', [])
+								value: formatMarkdowndetail(n, ll, params[paramindex]?.name ?? '', [])
 							}
 						});
 					}

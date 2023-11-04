@@ -6,7 +6,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, DocumentSymbol, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
 import { ActionType, FormatOptions, Lexer, update_commentTags } from './Lexer';
 import { diagnostic } from './localize';
-import { isBrowser } from './constants';
+import { isBrowser, jsDocTagNames } from './constants';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -231,8 +231,7 @@ export function initahk2cache() {
 		constant: [],
 		directive: {
 			'#': [],
-			'@': 'arg,author,copyright,date,description,deprecated,enum,event,example,extends,file,global,instance,license,link,member,override,param,prop,property,returns,see,since,static,throws,todo,tutorial,type,var,version,virtual'
-				.split(',').map(label => ({ label, kind, data }))
+			'@': jsDocTagNames.map(label => ({ label, kind, data }))
 		},
 		key: [],
 		keyword: [],
