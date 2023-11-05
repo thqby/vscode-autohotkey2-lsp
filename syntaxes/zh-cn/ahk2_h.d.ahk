@@ -367,9 +367,14 @@ class Worker {
 	ExitApp() => void
 
 	/**
+     * 暂停/取消暂停脚本的当前线程.
+     */
+	Pause(NewState) => Integer
+
+	/**
 	 * 线程准备就绪.
 	 */
-	Ready => Number
+	Ready => Integer
 
 	/**
 	 * 异步方法重启线程.
@@ -379,13 +384,13 @@ class Worker {
 	/**
 	 * 返回线程ID.
 	 */
-	ThreadID => Number
+	ThreadID => Integer
 
 	/**
 	 * 等待线程退出, 超时返回0, 否则为1.
 	 * @param Timeout 等待的毫秒数, Timeout为0时一直等待至线程退出.
 	 */
-	Wait(Timeout := 0) => Number
+	Wait(Timeout := 0) => Integer
 
 	class Promise {
 		/**

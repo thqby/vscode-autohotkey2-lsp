@@ -372,9 +372,14 @@ class Worker {
 	ExitApp() => void
 
 	/**
+     * Pauses/Unpauses the script's current thread.
+     */
+	Pause(NewState) => Integer
+
+	/**
 	 * Thread ready.
 	 */
-	Ready => Number
+	Ready => Integer
 
 	/**
 	 * Reload the thread asynchronously.
@@ -384,13 +389,13 @@ class Worker {
 	/**
 	 * Returns the thread ID.
 	 */
-	ThreadID => Number
+	ThreadID => Integer
 
 	/**
 	 * Wait for the thread to exit, return 0 for timeout, or 1 otherwise.
 	 * @param Timeout The number of milliseconds, waitting until the thread exits when Timeout is 0.
 	 */
-	Wait(Timeout := 0) => Number
+	Wait(Timeout := 0) => Integer
 
 	class Promise {
 		/**
