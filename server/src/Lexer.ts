@@ -1048,6 +1048,7 @@ export class Lexer {
 									delete tokens[p];
 								}
 								tk.content += ':', tk.length = (parser_pos = p + 1) - tk.offset, tk.type = 'TK_LABEL';
+								delete tk.semantic;
 								line_begin_pos = undefined;
 							}
 						}
