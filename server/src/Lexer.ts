@@ -331,7 +331,7 @@ export class Lexer {
 			allow_$ = false;
 			this.uri = document.uri.toLowerCase();
 			this.setWorkspaceFolder();
-			this.scriptpath = (this.fsPath = uri.fsPath).replace(/\\[^\\]+$/, '');
+			this.scriptpath = (this.fsPath = uri.fsPath).replace(/[\\/][^\\/]+$/, '');
 			this.initlibdirs(scriptdir);
 		}
 
@@ -5661,7 +5661,7 @@ export class Lexer {
 		let workfolder: string;
 		for (workfolder of extsettings.WorkingDirs)
 			if (this.uri.startsWith(workfolder)) {
-				dir = URI.parse(workfolder).fsPath.replace(/\\$/, '');
+				dir = URI.parse(workfolder).fsPath.replace(/[\\/]$/, '');
 				break;
 			}
 		if (dir)
