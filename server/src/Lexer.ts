@@ -2922,7 +2922,7 @@ export class Lexer {
 					lk = l, tk = b, result.splice(rl);
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
 					if (must) {
-						parse_errobj(), tk.previous_pair_pos = b.offset;
+						parse_errobj(), tk.previous_pair_pos = b.offset, b.next_pair_pos = tk.offset;
 						_this.addDiagnostic(diagnostic.objectliteralerr(), e.offset, parser_pos - e.offset);
 						return true;
 					}
