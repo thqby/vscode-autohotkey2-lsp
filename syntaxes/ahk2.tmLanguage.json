@@ -880,14 +880,8 @@
               "name": "support.class.ahk2"
             }
           },
-          "end": "(?=([^\\s.;]|\\.[^\\w]))",
+          "end": "(?=(\\n|[^\\s.;]|\\.[^\\w]))",
           "patterns": [
-            {
-              "include": "#compiler_directive"
-            },
-            {
-              "include": "#comments"
-            },
             {
               "match": "(\\.)(?i)(ActiveX|Button|CheckBox|ComboBox|Control|Custom|DateTime|DDL|Edit|GroupBox|Hotkey|Link|List|ListBox|ListView|MonthCal|Pic|Progress|Radio|Slider|StatusBar|Tab|Text|TreeView|UpDown)\\b",
               "captures": {
@@ -898,10 +892,6 @@
                   "name": "support.class.guicontrol.ahk2"
                 }
               }
-            },
-            {
-              "match": "\\.",
-              "name": "punctuation.accessor.ahk2"
             }
           ]
         },
@@ -1195,7 +1185,21 @@
           ]
         },
         {
-          "match": "(?x)\n(\n  (@)\n  (?:alias|augments|callback|constructs|emits|event|fires|exports?\n  |extends|external|function|func|host|lends|listens|interface|memberof!?\n  |method|module|mixes|mixin|name|requires|see|this|typedef|uses)\n)\n\\s+\n(\n  (?:\n    [^{}@\\s*] | \\*[^/]\n  )+\n)",
+          "match": "((@)method)\\b\\s*((\\w|[^\\x00-\\x7f])+)?",
+          "captures": {
+            "1": {
+              "name": "storage.type.class.jsdoc"
+            },
+            "2": {
+              "name": "punctuation.definition.block.tag.jsdoc"
+            },
+            "3": {
+              "name": "entity.name.function.method.ahk2"
+            }
+          }
+        },
+        {
+          "match": "(?x)\n(\n  (@)\n  (?:alias|augments|callback|constructs|emits|event|fires|exports?\n  |extends|external|function|func|host|lends|listens|interface|memberof!?\n  |module|mixes|mixin|name|requires|see|this|typedef|uses)\n)\n\\s+\n(\n  (?:\n    [^{}@\\s*] | \\*[^/]\n  )+\n)",
           "captures": {
             "1": {
               "name": "storage.type.class.jsdoc"
