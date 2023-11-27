@@ -1436,8 +1436,11 @@ export class Lexer {
 							break;
 
 						default:
-							if (tk.topofline)
-								lk = EMPTY_TOKEN;
+							if (tk.topofline === 1) {
+								if (lk !== EMPTY_TOKEN && is_line_continue(lk, tk, _parent))
+									tk.topofline = -1;
+								else lk = EMPTY_TOKEN;
+							}
 							if (next = false, mode === 2)
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length), parse_line();
 							else {
