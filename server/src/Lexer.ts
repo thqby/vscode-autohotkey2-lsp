@@ -3324,7 +3324,7 @@ export class Lexer {
 					else if (tk.type === 'TK_OPERATOR') {
 						if (allIdentifierChar.test(tk.content) && (input[tk.offset - 1] === '%' || input[tk.offset + tk.length] === '%')) {
 							next = false, tk.type = 'TK_WORD', tk.semantic = { type: SemanticTokenTypes.variable };
-							break;
+							continue;
 						}
 						tpexp += ' ' + tk.content;
 						if (tk.content === ':') {
