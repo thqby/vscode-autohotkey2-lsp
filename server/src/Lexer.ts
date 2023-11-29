@@ -6419,7 +6419,7 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 						if (full === '(Class) Prototype') {
 							let cls = Object.assign({}, node) as ClassNode, p = { line: 0, character: 0 }, range = { start: p, end: p };
 							cls.kind = SymbolKind.Class, cls.declaration = {};
-							cls.staticdeclaration = { __CLASS: Variable.create('__Class', SymbolKind.Property, range) };
+							cls.staticdeclaration = Object.assign({ __CLASS: Variable.create('__Class', SymbolKind.Property, range) }, (n as ClassNode).declaration);
 							if (n !== (node as any).parent)
 								cls.extends = (n as ClassNode).full.replace(/(^|\.)([^.]+)$/, '$1@$2');
 							else cls.extends = '@object';

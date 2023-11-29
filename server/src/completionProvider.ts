@@ -259,6 +259,33 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					let ismethod = res.kind === SymbolKind.Method;
 					if (ismethod) {
 						switch (res.name.toLowerCase()) {
+							case 'getownpropdesc':
+								if (res.index === 0) {
+									let c = doc.buildContext(res.pos);
+									reset_detect_cache(), detectExpType(doc, c.text.toLowerCase(), c.range.end, ts = {});
+									if (ts['@object.getownpropdesc'] !== undefined) {
+										detectExpType(doc, c.text.toLowerCase().slice(0, -15), c.range.end, ts = {});
+										if (ts['#any'] === undefined) {
+											for (const tp in ts) {
+												let ns;
+												if (ts[tp] === false) {
+													ns = searchNode(doc, tp, position, SymbolKind.Class);
+												} else if (ts[tp]?.node)
+													ns = [ts[tp]];
+												ns?.forEach((it: any) => {
+													if (it.node.kind !== SymbolKind.Class)
+														return;
+													let cls = it.node as ClassNode;
+													Object.values(!/[@#][^.]+$/.test(tp) ? cls.staticdeclaration : cls.declaration).forEach(it => {
+														if (expg.test(it.name))
+															additem(it.name, it.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Property);
+													});
+												});
+											}
+										}
+									}
+								}
+								break;
 							case 'add':
 								if (res.index === 0) {
 									let c = doc.buildContext(res.pos);
