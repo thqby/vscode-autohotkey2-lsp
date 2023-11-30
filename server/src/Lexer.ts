@@ -4632,9 +4632,12 @@ export class Lexer {
 						while (' \t'.includes(input.charAt(offset) || '\0'))
 							offset++;
 						let content = input.substring(offset, parser_pos).trimRight().replace(/(^|\s+);.*$/, '');
-						lst.skip_pos = parser_pos = offset + content.length;
 						lst.data = { content, offset, length: content.length };
-						_this.tokenranges.push({ start: offset, end: offset + content.length, type: 3, previous: lst.offset });
+						parser_pos = offset + content.length;
+						if (content) {
+							lst.skip_pos = parser_pos;
+							_this.tokenranges.push({ start: offset, end: offset + content.length, type: 3, previous: lst.offset });
+						}
 					}
 				} else
 					lst.type = 'TK_UNKNOWN', lst.content += input.substring(offset, parser_pos).trimRight(), lst.length += parser_pos - offset;
