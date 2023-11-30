@@ -5594,8 +5594,8 @@ export class Lexer {
 						case SemanticTokenTypes.method: kind = SymbolKind.Method; break;
 						case SemanticTokenTypes.class: kind = SymbolKind.Class; break;
 						case SemanticTokenTypes.property: kind = SymbolKind.Property; break;
-						case SemanticTokenTypes.parameter:
-						case SemanticTokenTypes.variable: kind = SymbolKind.Variable; break;
+						case SemanticTokenTypes.variable: if (token.ignore) break;
+						case SemanticTokenTypes.parameter: kind = SymbolKind.Variable; break;
 					}
 				} else
 					kind = token.previous_token?.type === 'TK_DOT' ? SymbolKind.Property : SymbolKind.Variable;

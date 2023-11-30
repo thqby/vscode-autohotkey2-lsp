@@ -152,11 +152,13 @@ ZipCloseFile(ZipHandle) => void
 
 /**
  * This function is used to create a new empty zip file in memory, use ZipAddBuffer or ZipAddFile to add the file to the zip archive
+ * @param CompressionLevel [@since v2.1-alpha.7]
  */
 ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Number
 
 /**
  * This function is used to create a new empty zip file, use ZipAddFile or ZipAddBuffer to add the file to the zip archive.
+ * @param CompressionLevel [@since v2.1-alpha.7]
  */
 ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Number
 
@@ -173,8 +175,9 @@ ZipOptions(ZipHandle, Options) => void
 
 /**
  * This function is used to compress and decrypt raw memory, for example for resources.
+ * @param CompressionLevel [@since v2.1-alpha.7]
  */
-ZipRawMemory(AddOrBuf [, Size], Password?) => Buffer
+ZipRawMemory(AddOrBuf [, Size], Password?, CompressionLevel := 5) => Buffer
 
 ; dll/exe export functions
 ; https://hotkeyit.github.io/v2/docs/commands/NewThread.htm

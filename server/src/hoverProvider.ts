@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
 import { reset_detect_cache, detectExpType, formatMarkdowndetail, FuncNode, searchNode, Variable } from './Lexer';
-import { lexers, hoverCache, Maybe } from './common';
+import { lexers, hoverCache, Maybe, SemanticTokenTypes } from './common';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return;
@@ -10,7 +10,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		let word = context.text.toLowerCase(), kind: SymbolKind = SymbolKind.Variable;
 		let nodes: [{ node: DocumentSymbol, uri: string, scope?: DocumentSymbol }] | undefined | null;
 		if (!word || context.kind === SymbolKind.Null) {
-			if (context.token) {
+			if (context.token && context.token.semantic?.type !== SemanticTokenTypes.variable) {
 				if (t = hoverCache[context.token.content.toLowerCase()])
 					return t[1];
 			}

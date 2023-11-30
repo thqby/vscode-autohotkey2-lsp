@@ -3,7 +3,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { CancellationToken, CompletionItem, CompletionItemKind, CompletionParams, DocumentSymbol, InsertTextFormat, SymbolKind, TextEdit } from 'vscode-languageserver';
 import { allIdentifierChar, ClassNode, reset_detect_cache, detectExpType, FuncNode, getClassMembers, getFuncCallInfo, searchNode, Token, Variable, find_class, formatMarkdowndetail } from './Lexer';
 import { completionitem } from './localize';
-import { ahkuris, ahkvars, completionItemCache, dllcalltpe, extsettings, generate_fn_comment, isBrowser, lexers, libfuncs, make_search_re, Maybe, a_vars, sendAhkRequest, utils, winapis } from './common';
+import { ahkuris, ahkvars, completionItemCache, dllcalltpe, extsettings, generate_fn_comment, isBrowser, lexers, libfuncs, make_search_re, Maybe, a_vars, sendAhkRequest, utils, winapis, Lexer } from './common';
 import { URI } from 'vscode-uri';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
@@ -258,13 +258,21 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				if (res) {
 					let ismethod = res.kind === SymbolKind.Method;
 					if (ismethod) {
-						switch (res.name.toLowerCase()) {
+						switch (l = res.name.toLowerCase()) {
+							case 'deleteprop':
+							case 'getmethod':
 							case 'getownpropdesc':
+							case 'hasownprop':
+							case 'hasmethod':
+							case 'hasprop':
 								if (res.index === 0) {
 									let c = doc.buildContext(res.pos);
+									let getmems = !l.includes('ownprop') ? getClassMembers :
+										(_: Lexer, cls: ClassNode, isstatic: boolean) => isstatic ? cls.staticdeclaration : cls.declaration;
+									let filter = l.endsWith('method') ? (kind: SymbolKind) => kind !== SymbolKind.Method : undefined;
 									reset_detect_cache(), detectExpType(doc, c.text.toLowerCase(), c.range.end, ts = {});
-									if (ts['@object.getownpropdesc'] !== undefined) {
-										detectExpType(doc, c.text.toLowerCase().slice(0, -15), c.range.end, ts = {});
+									if ((ts[`@object.${l}`] ?? ts[`@any.${l}`]) !== undefined) {
+										detectExpType(doc, c.text.toLowerCase().slice(0, -1 - l.length), c.range.end, ts = {});
 										if (ts['#any'] === undefined) {
 											for (const tp in ts) {
 												let ns;
@@ -275,14 +283,14 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 												ns?.forEach((it: any) => {
 													if (it.node.kind !== SymbolKind.Class)
 														return;
-													let cls = it.node as ClassNode;
-													Object.values(!/[@#][^.]+$/.test(tp) ? cls.staticdeclaration : cls.declaration).forEach(it => {
-														if (expg.test(it.name))
+													Object.values(getmems(doc, it.node, !/[@#][^.]+$/.test(tp))).forEach(it => {
+														if (expg.test(it.name) && !filter?.(it.kind))
 															additem(it.name, it.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Property);
 													});
 												});
 											}
 										}
+										return items;
 									}
 								}
 								break;
@@ -534,7 +542,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 									});
 								}
 					}
-					if (items.length){
+					if (items.length) {
 						if (!text.substring(1).endsWith(text[0])) {
 							let c = text[0];
 							for (let t of items)

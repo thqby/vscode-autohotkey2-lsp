@@ -152,11 +152,13 @@ ZipCloseFile(ZipHandle) => void
 
 /**
  * 此函数用于在内存中创建一个新的空zip文件, 使用ZipAddBuffer或ZipAddFile将文件添加到zip存档中
+ * @param CompressionLevel [@since v2.1-alpha.7]
  */
 ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Number
 
 /**
  * 此函数用于创建一个新的空zip文件, 使用ZipAddFile或ZipAddBuffer将文件添加到zip存档中.
+ * @param CompressionLevel [@since v2.1-alpha.7]
  */
 ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Number
 
@@ -173,8 +175,9 @@ ZipOptions(ZipHandle, Options) => void
 
 /**
  * 此功能用于压缩和解密原始内存, 例如用于资源.
+ * @param CompressionLevel [@since v2.1-alpha.7]
  */
-ZipRawMemory(AddOrBuf [, Size], Password?) => Buffer
+ZipRawMemory(AddOrBuf [, Size], Password?, CompressionLevel := 5) => Buffer
 
 ; dll/exe export functions
 ; https://hotkeyit.github.io/v2/docs/commands/NewThread.htm

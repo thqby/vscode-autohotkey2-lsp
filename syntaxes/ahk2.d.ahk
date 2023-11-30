@@ -3942,7 +3942,7 @@ class Map extends Object {
 	/**
 	 * The Map object associates or maps a set of values called keys to another set of values.
 	 */
-	__New([Key1, Value1, * ]) => Map
+	__New([Key1, Value1, *]) => Map
 
 	/**
 	 * Enumerates key-value pairs.
