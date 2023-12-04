@@ -4153,14 +4153,35 @@ class PropertyError extends MemberError {
 
 class RegExMatchInfo extends Object {
 	/**
+	 * 返回整体匹配或捕获的子模式.
+	 * @param {Integer|String} N
+	 */
+	__Item[N?] => String
+
+	/**
 	 * 返回整体匹配或捕获的子模式的位置.
 	 */
-	Pos([N]) => Number
+	Pos[N?] => Number
+
+	/**
+	 * 返回整体匹配或捕获的子模式的位置.
+	 */
+	Pos(N?) => Number
 
 	/**
 	 * 返回整体匹配或捕获的子模式的长度.
 	 */
-	Len([N]) => Number
+	Len[N?] => Number
+
+	/**
+	 * 返回整体匹配或捕获的子模式的长度.
+	 */
+	Len(N?) => Number
+
+	/**
+	 * 返回给定子模式的名称(如果有的话).
+	 */
+	Name[N] => String
 
 	/**
 	 * 返回给定子模式的名称(如果有的话).

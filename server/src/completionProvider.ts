@@ -887,7 +887,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.slice(0, -1); break;
 			case SymbolKind.Property:
 				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label, ci.documentation = { kind: 'markdown', value: formatMarkdowndetail(info) };
-				if (info.get?.params.length)
+				if (!info.call && info.get?.params.length)
 					ci.insertTextFormat = InsertTextFormat.Snippet, ci.insertText = ci.label + '[$0]';
 				break;
 			case SymbolKind.Interface:

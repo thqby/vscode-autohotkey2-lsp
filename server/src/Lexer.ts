@@ -731,7 +731,10 @@ export class Lexer {
 									if (_cm = comments[tn.selectionRange.start.line])
 										tn.detail = trim_comment(_cm.content);
 									p[blocks].children?.push(tn);
-									p[blocks][isstatic ? 'staticdeclaration' : 'declaration'][tn.name.toUpperCase()] = tn;
+									let decl = p[blocks][isstatic ? 'staticdeclaration' : 'declaration'], u = tn.name.toUpperCase();
+									if (decl[u])
+										(decl[u] as any).call = tn;
+									else decl[u] = tn;
 								}
 							}
 							i = j + 1, isstatic = false;

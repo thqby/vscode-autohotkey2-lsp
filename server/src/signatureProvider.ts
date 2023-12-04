@@ -155,7 +155,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			if (overloads.length) {
 				let lex = new Lexer(TextDocument.create('', 'ahk2', -10, overloads.join('\n')), undefined, -1);
 				let { label, documentation } = signinfo.signatures[0], n = node;
-				let fn = label.substring(0, label.indexOf('(', 1));
+				let fn = label.substring(0, label.indexOf(n.kind === SymbolKind.Property ? '[' : '(', 1));
 				lex.parseScript();
 				lex.children.forEach((node: any) => {
 					if (params = node.params) {

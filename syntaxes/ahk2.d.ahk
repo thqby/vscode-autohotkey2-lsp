@@ -4168,14 +4168,35 @@ class PropertyError extends MemberError {
 
 class RegExMatchInfo extends Object {
 	/**
+	 * Returns the overall match or a captured subpattern.
+	 * @param {Integer|String} N
+	 */
+	__Item[N?] => String
+
+	/**
 	 * Returns the position of the overall matched or captured sub-pattern.
 	 */
-	Pos([N]) => Number
+	Pos[N?] => Number
+
+	/**
+	 * Returns the position of the overall matched or captured sub-pattern.
+	 */
+	Pos(N?) => Number
 
 	/**
 	 * Returns the length of the overall matched or captured sub-pattern.
 	 */
-	Len([N]) => Number
+	Len[N?] => Number
+
+	/**
+	 * Returns the length of the overall matched or captured sub-pattern.
+	 */
+	Len(N?) => Number
+
+	/**
+	 * Return the name of the given submode (if any).
+	 */
+	Name[N] => String
 
 	/**
 	 * Return the name of the given submode (if any).
