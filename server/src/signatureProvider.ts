@@ -134,6 +134,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			if (!nodes.length) return undefined;
 		} else return undefined;
 	}
+	let is_variadic = 0, pc;
 	nodes.forEach((it: any) => {
 		const node = it.node as FuncNode, ll = lexers[it.uri], overloads: string[] = [], needthis = it.needthis ?? 0;
 		let params: Variable[] | undefined, name: string | undefined, paramindex: number;
@@ -143,6 +144,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			if (needthis)
 				label = label.replace(/((\w|[^\x00-\x7f])+)\(/, '$1(@this' + (params.length ? ', ' : '')),
 					parameters.unshift({ label: '@this' });
+			is_variadic += node.variadic && params[(pc ??= params.length) - 1].arr ? 1 : 2;
 			paramindex = index - needthis;
 			signinfo.signatures.push({
 				label,
@@ -157,6 +159,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				let { label, documentation } = signinfo.signatures[0], n = node;
 				let fn = label.substring(0, label.indexOf(n.kind === SymbolKind.Property ? '[' : '(', 1));
 				lex.parseScript();
+				is_variadic++;
 				lex.children.forEach((node: any) => {
 					if (params = node.params) {
 						parameters = params.map(param => ({ label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...') }));
@@ -178,6 +181,6 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			}
 		}
 	});
-	signinfo.activeParameter = index;
+	signinfo.activeParameter = is_variadic === 1 ? Math.min(index, pc! - 1) : index;
 	return signinfo;
 }
