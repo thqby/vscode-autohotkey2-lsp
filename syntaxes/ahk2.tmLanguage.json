@@ -1091,20 +1091,6 @@
           }
         },
         {
-          "match": "(?x)\n(\n  (@)\n  (?:arg|argument|const|constant|member|namespace|param|var)\n)\n\\s+\n(\n  [A-Za-z_$]\n  [\\w$.\\[\\]]*\n)",
-          "captures": {
-            "1": {
-              "name": "storage.type.class.jsdoc"
-            },
-            "2": {
-              "name": "punctuation.definition.block.tag.jsdoc"
-            },
-            "3": {
-              "name": "variable.other.jsdoc"
-            }
-          }
-        },
-        {
           "begin": "((@)typedef)\\s+(?={)",
           "beginCaptures": {
             "1": {
@@ -1126,7 +1112,7 @@
           ]
         },
         {
-          "begin": "((@)(?:arg|argument|const|constant|member|namespace|param|prop|property|var))\\s+(?={)",
+          "begin": "((@)(?:arg|argument|const|constant|member|namespace|param|prop|property|var))\\s+(?=[\\[{]|(?!\\d)\\w)",
           "beginCaptures": {
             "1": {
               "name": "storage.type.class.jsdoc"
@@ -1135,18 +1121,18 @@
               "name": "punctuation.definition.block.tag.jsdoc"
             }
           },
-          "end": "(?=\\s|\\*/|[^{}\\[\\]A-Za-z_$])",
+          "end": "(?=\\s|\\*/|[^{}\\[\\]\\w])",
           "patterns": [
             {
               "include": "#jsdoctype"
             },
             {
               "name": "variable.other.jsdoc",
-              "match": "([A-Za-z_$][\\w$.\\[\\]]*)"
+              "match": "((?!\\d)\\w[\\w.\\[\\]]*)"
             },
             {
               "name": "variable.other.jsdoc",
-              "match": "(?x)\n(\\[)\\s*\n[\\w$]+\n(?:\n  (?:\\[\\])?                                        # Foo[ ].bar properties within an array\n  \\.                                                # Foo.Bar namespaced parameter\n  [\\w$]+\n)*\n(?:\n  \\s*\n  (=)                                                # [foo=bar] Default parameter value\n  \\s*\n  (\n    # The inner regexes are to stop the match early at */ and to not stop at escaped quotes\n    (?>\n      \"(?:(?:\\*(?!/))|(?:\\\\(?!\"))|[^*\\\\])*?\" |                      # [foo=\"bar\"] Double-quoted\n      '(?:(?:\\*(?!/))|(?:\\\\(?!'))|[^*\\\\])*?' |                      # [foo='bar'] Single-quoted\n      \\[ (?:(?:\\*(?!/))|[^*])*? \\] |                                # [foo=[1,2]] Array literal\n      (?:(?:\\*(?!/))|\\s(?!\\s*\\])|\\[.*?(?:\\]|(?=\\*/))|[^*\\s\\[\\]])*   # Everything else\n    )*\n  )\n)?\n\\s*(?:(\\])((?:[^*\\s]|\\*[^\\s/])+)?|(?=\\*/))",
+              "match": "(?x)\n(\\[)\\s*\n\\w+\n(?:\n  (?:\\[\\])?                                        # Foo[ ].bar properties within an array\n  \\.                                                # Foo.Bar namespaced parameter\n  [\\w$]+\n)*\n(?:\n  \\s*\n  (=)                                                # [foo=bar] Default parameter value\n  \\s*\n  (\n    # The inner regexes are to stop the match early at */ and to not stop at escaped quotes\n    (?>\n      \"(?:(?:\\*(?!/))|(?:\\\\(?!\"))|[^*\\\\])*?\" |                      # [foo=\"bar\"] Double-quoted\n      '(?:(?:\\*(?!/))|(?:\\\\(?!'))|[^*\\\\])*?' |                      # [foo='bar'] Single-quoted\n      \\[ (?:(?:\\*(?!/))|[^*])*? \\] |                                # [foo=[1,2]] Array literal\n      (?:(?:\\*(?!/))|\\s(?!\\s*\\])|\\[.*?(?:\\]|(?=\\*/))|[^*\\s\\[\\]])*   # Everything else\n    )*\n  )\n)?\n\\s*(?:(\\])((?:[^*\\s]|\\*[^\\s/])+)?|(?=\\*/))",
               "captures": {
                 "1": {
                   "name": "punctuation.definition.optional-value.begin.bracket.square.jsdoc"

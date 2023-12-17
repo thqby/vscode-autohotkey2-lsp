@@ -6603,21 +6603,24 @@ export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: s
 			if (code)
 				code === 2 && details.push('```'), code = 0;
 			if (m = line.match(/^@(\S+)(.*)$/)) {
-				switch (m[1].toLowerCase()) {
+				switch (s = m[1].toLowerCase()) {
 					case 'param':
 					case 'arg':
-						m[2].replace(/^\s*({(.*?)}\s+)?(\[.*?\]|\S+)(.*)$/, (...m) => {
-							let t: string = m[4].replace(/^\s*[-—]\s*/, '');
-							if ((lastparam = m[3]).startsWith('['))
-								m[3] = m[3].substring(1).replace(/^((\w|\.|[^\x00-\x7f])+).*$/, '$1'), lastparam = m[3].replace(/\..*$/, '');
-							s = `\n*@param* \`${m[3]}\`${m[2] ? `: *\`${m[2]}\`*` : ''}` + (t.trimRight() ? ' — ' + t : '');
+						if (m = m[2].match(/^\s*({(.*?)}\s+)?(\[.*\]|(?!\d)\w(\w|(\[\])?\.|[^\x00-\x7f])*)?(\s*[-—])?(.*)$/)) {
+							let defval = '';
+							if ((lastparam = m[3])?.startsWith('['))
+								m[3] = lastparam.slice(1, -1).replace(/^((\w|(\[\])?\.|[^\x00-\x7f])*)(.*)$/, (...t) => {
+									if ((s = t[4].trimLeft()).startsWith('='))
+										defval = s.substring(1);
+									return lastparam = t[1];
+								});
+							lastparam = lastparam?.replace(/(\[\])?\..*$/, '').toUpperCase() || ' ';
+							s = `\n*@param* \`${m[3]}\`${m[2] ? `: *\`${m[2]}\`*` : ''}${defval && ` := \`${defval}\``}\0${m[7]}`;
 							name ?? details.push(s);
-							lastparam = lastparam.toUpperCase();
 							(params[lastparam] ??= []).push(s);
-							if (m[3].toUpperCase() === lastparam)
+							if (m[3].length === lastparam.length)
 								(params[lastparam] as any).types ??= m[2];
-							return '';
-						});
+						}
 						break;
 					case 'overload': ols.push('_' + m[2].trim()); break;
 					case 'example':
@@ -6628,31 +6631,33 @@ export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: s
 								break;
 							details.push('\n*@example*');
 						}
-						details.push('```ahk2' + (s ? '\n' + s : '')), code = 2;
+						details.push('```ahk2' + (s && `\n${s}`)), code = 2;
 						break;
 					case 'var':
 					case 'prop':
 					case 'property':
-						s = m[2].replace(/^\s*({(.*?)}\s+)?(\S+)(\s*[-—])?\s*/, (...m) => {
-							return m[2] ? `\`${m[3]}\`: *${m[2]}* — ` : m[3] + ' — ';
-						}).replace(/\s*—\s*$/, '');
-						details.push(`\n*@${m[1].toLowerCase()}* ${s}`);
+						if (m = m[2].match(/^\s*({(.*?)}\s+)?(\S+)(\s*[-—])?(.*)/))
+							details.push(`\n*@${s}* ${m[2] ? `\`${m[3]}\`: *${m[2]}*` : m[3]}\0${m[5]}`);
 						break;
 					case 'return':
 					case 'returns':
-						m[2].replace(/^\s*{(.+?)}/, (...m) => {
-							let o: any = {}, tps = cvt_types(m[1]);
-							if (tps)
-								tps.forEach(t => o[t] = true), (node as FuncNode).returntypes = o;
-							return '';
-						});
+						if (m = m[2].match(/^\s*({(.*?)}(?=\s|$))?(\s*[-—])?(.*)/)) {
+							let t = m[2] ?? '';
+							if (t) {
+								let o: any = {}, tps = cvt_types(t);
+								if (tps)
+									tps.forEach(t => o[t] = true), (node as FuncNode).returntypes = o;
+								t = `*\`${t}\`*`;
+							}
+							details.push(`\n*@${s}* ${t}\0${m[4]}`);
+						}
+						break;
 					default:
-						s = m[2].replace(/^\s*({(.*?)}(?=\s|$))?(\s*[-—])?\s*/, '*`$2`* — ').replace(/^\*``\*|\s*—\s*$/g, '');
-						details.push(`\n*@${m[1].toLowerCase()}* ${s}`);
+						details.push(`\n*@${s}*\0${m[2].replace(/^(\s*[-—])?/, '')}`);
 						break;
 				}
 			} else details.push(line);
-		} else if (lastparam)
+		} else if (line.startsWith('*') && (line = ` ${line}`), lastparam)
 			params[lastparam].push(line), name ?? details.push(line);
 		else if (code === 1 && (s = line.indexOf('</caption>')) > -1)
 			details.push(line.substring(0, s), '```ahk2' + ((s = line.substring(s + 10).trimLeft()) ? '\n' + s : '')), code = 2;
@@ -6665,17 +6670,18 @@ export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: s
 		let p = params[it.name.toUpperCase()];
 		if (p) {
 			if (p.length)
-				it.detail = p.join('\n').replace(/ — ?/, '\n___\n').replace(/(?<!\\)\\@/g, '\n@').trimLeft();
+				it.detail = p.join('\n').replace(/\0\s*/, '\n___\n').replace(/(?<!\\)\\@/g, '\n@').trimLeft();
 			let o: any = {}, types = cvt_types((p as any).types ?? '');
 			if (types)
 				it.returntypes = o, types.forEach(t => o[t] = true);
 		}
 	});
+	let replacer = (s: string, m1: string) => m1 && (s.endsWith('\n\n*') ? '\n\n*' : ` — ${m1}`);
+	detail = details.join('\n').replace(/\0\s*(\S?)/g, replacer);
 	if (name !== undefined)
-		s = params[name.toUpperCase()]?.join('\n') ?? '', detail = s + '\n\n' + details.join('\n');
+		s = params[name.toUpperCase()]?.join('\n').replace(/\0\s*(\S?)/, replacer) ?? '', detail = `${s}\n\n${detail}`;
 	else if (!overloads && ols.length)
-		detail = '*@overload*\n```ahk2\n' + ols.map(it => it.replace(/^_[^\W]*/, node.name)).join('\n') + '\n```\n' + (details.length ? '___\n' + details.join('\n') : '');
-	else detail = details.join('\n');
+		detail = '*@overload*\n```ahk2\n' + ols.map(it => it.replace(/^_[^\W]*/, node.name)).join('\n') + '\n```\n' + (detail && `___\n${detail}`);
 	return detail;
 }
 
