@@ -142,8 +142,13 @@
 				},
 				"AutoHotkey2.Warn.CallWithoutParentheses": {
 					"scope": "window",
-					"type": "boolean",
-					"default": false,
+					"type": "string",
+					"enum": [
+						"Off",
+						"Parentheses",
+						"On"
+					],
+					"default": "Off",
 					"description": "%ahk2.warn.callwithoutparentheses%"
 				},
 				"AutoHotkey2.ActionWhenV1IsDetected": {

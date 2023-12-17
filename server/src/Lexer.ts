@@ -289,7 +289,7 @@ export class Lexer {
 	private anonymous: DocumentSymbol[] = [];
 	private hotstringExecuteAction = false;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
-		let begin_line: boolean, callWithoutParentheses: boolean, comments: { [line: number]: Token };
+		let begin_line: boolean, callWithoutParentheses: boolean | 1, comments: { [line: number]: Token };
 		let continuation_sections_mode: boolean, currsymbol: DocumentSymbol | undefined;
 		let customblocks: { region: number[], bracket: number[] };
 		let dlldir: string, includedir: string, includetable: { [uri: string]: string };
@@ -1982,14 +1982,14 @@ export class Lexer {
 			}
 
 			function parse_funccall(type: SymbolKind, nextc: string) {
-				let tn: CallInfo, sub: DocumentSymbol[], fc = lk;
+				let tn: CallInfo, sub: DocumentSymbol[], fc = lk, tp;
 				let pi: ParamInfo = { offset: fc.offset, miss: [], comma: [], count: 0, unknown: false, name: fc.content };
 				if (nextc === ',') {
 					if (type === SymbolKind.Function && builtin_ahkv1_commands.includes(fc.content.toLowerCase()) && stop_parse(fc, true))
 						return;
 					_this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
 				}
-				if (tk.type === 'TK_OPERATOR' && !tk.content.match(/^(not|\+\+?|--?|!|~|%|&)$/i))
+				if ((tp = tk.type) === 'TK_OPERATOR' && !tk.content.match(/^(not|\+\+?|--?|!|~|%|&)$/i))
 					_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 				fc.paraminfo = pi;
 				sub = parse_line(undefined, undefined, undefined, undefined, undefined, pi);
@@ -2010,7 +2010,7 @@ export class Lexer {
 				}
 				if (type === SymbolKind.Method)
 					maybeclassprop(fc, true);
-				if (callWithoutParentheses)
+				if (callWithoutParentheses && (callWithoutParentheses === true || tp === 'TK_START_EXPR'))
 					_this.diagnostics.push({ message: warn.callwithoutparentheses(), range: tn.selectionRange, severity: DiagnosticSeverity.Warning });
 			}
 

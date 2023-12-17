@@ -56,7 +56,7 @@ export interface AHKLSSettings {
 	Warn: {
 		VarUnset: boolean
 		LocalSameAsGlobal: boolean
-		CallWithoutParentheses: boolean
+		CallWithoutParentheses: boolean | /* Parentheses */ 1
 	}
 	WorkingDirs: string[]
 }
@@ -400,6 +400,8 @@ export function update_settings(configs: AHKLSSettings) {
 		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as any;
 	else if (typeof configs.AutoLibInclude === 'boolean')
 		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
+	if (typeof configs.Warn?.CallWithoutParentheses === 'string')
+		configs.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[configs.Warn.CallWithoutParentheses];
 	if (typeof configs.FormatOptions?.brace_style === 'string')
 		switch (configs.FormatOptions.brace_style) {
 			case '0':
