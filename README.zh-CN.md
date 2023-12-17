@@ -246,7 +246,8 @@ node install.js
 
 ### Vim 和 Neovim
 
-- 下载[coc.nvim 插件](https://github.com/neoclide/coc.nvim)或[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)。
+#### COC
+- 下载[coc.nvim 插件](https://github.com/neoclide/coc.nvim)。
 
 ```bat
 cd $VIMRUNTIME\plugin
@@ -268,6 +269,46 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
     }
   }
 }
+```
+
+#### nvim-lspconfig
+- 下载[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)。
+- 将以下内容添加到您的NVIM配置中(init.lua 等). 确定`cmd`指向vscode-autohotkey2-lsp的安装路径，`InterpreterPath`指向AHK exe.
+
+```lua
+local function custom_attach(client, bufnr)
+  require("lsp_signature").on_attach({
+    bind = true,
+    use_lspsaga = false,
+    floating_window = true,
+    fix_pos = true,
+    hint_enable = true,
+    hi_parameter = "Search",
+    handler_opts = { "double" },
+  })
+end
+
+local ahk2_configs = {
+  autostart = true,
+  cmd = {
+    "node",
+    vim.fn.expand("$HOME/vscode-autohotkey2-lsp/server/dist/server.js"),
+    "--stdio"
+  },
+  filetypes = { "ahk", "autohotkey", "ah2" },
+  init_options = {
+    locale = "en-us",
+    InterpreterPath = "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+    -- Same as initializationOptions for Sublime Text4, convert json literal to lua dictionary literal
+  },
+  single_file_support = true,
+  flags = { debounce_text_changes = 500 },
+  capabilities = capabilities,
+  on_attach = custom_attach,
+}
+local configs = require "lspconfig.configs"
+configs["ahk2"] = { default_config = ahk2_configs }
+nvim_lsp.ahk2.setup({})
 ```
 
 ## 在 Web 浏览器中使用

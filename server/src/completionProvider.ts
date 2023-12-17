@@ -570,7 +570,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (token.topofline === 1)
 				items.push({ label: 'static', insertText: 'static', kind: CompletionItemKind.Keyword }, {
 					label: 'class', insertText: ['class $1', '{\n\t$0\n}'].join(join_c),
-					kind: CompletionItemKind.Keyword, insertTextFormat: InsertTextFormat.Snippet
+					kind: CompletionItemKind.Snippet, insertTextFormat: InsertTextFormat.Snippet
 				});
 			if (doc.tokens[token.next_token_offset]?.topofline === 0)
 				return token.topofline === 1 ? (items.pop(), items) : undefined;
@@ -580,12 +580,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (token.topofline)
 				metafns.forEach(s => {
 					let label = s.replace(/[(\[].*$/, '');
-					if (!vars[label.toUpperCase()])
-						items.push({
-							label, kind: CompletionItemKind.Method,
-							insertTextFormat: InsertTextFormat.Snippet,
-							insertText: s + join_c + '{\n\t$0\n}'
-						});
+					items.push({
+						label, kind: CompletionItemKind.Snippet,
+						insertTextFormat: InsertTextFormat.Snippet,
+						insertText: s + join_c + '{\n\t$0\n}'
+					});
 				});
 			for (let it of Object.values(getClassMembers(doc, cls, is_static)))
 				additem(it.name, it.kind === SymbolKind.Method ?
@@ -693,7 +692,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			expg.test(it.label) && addkeyword(it);
 		}
 	} else {
-		let kind = CompletionItemKind.Keyword, insertTextFormat = InsertTextFormat.Snippet;
+		let kind = CompletionItemKind.Snippet, insertTextFormat = InsertTextFormat.Snippet;
 		let uppercase = (s: string) => s, remove_indent = uppercase;
 		if (keyword_start_with_uppercase)
 			uppercase = (s: string) => s.replace(/\b[a-z](?=\w)/g, m => m.toUpperCase());

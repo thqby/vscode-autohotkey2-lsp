@@ -250,7 +250,7 @@ node install.js
 ### Vim and Neovim
 
 #### COC
-- Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim) or [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig).
+- Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim).
 
 ```bat
 cd $VIMRUNTIME\plugin
@@ -273,9 +273,12 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
   }
 }
 ```
+
 #### nvim-lspconfig
-Add the following to your NVIM configuration (init.lua e.g.). Ensure that `cmd` points to the path of your vscode-autohotkey2-lsp installation and `InterpreterPath` points to your AHK exe.
-```
+- Download [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig).
+- Add the following to your NVIM configuration (init.lua e.g.). Ensure that `cmd` points to the path of your vscode-autohotkey2-lsp installation and `InterpreterPath` points to your AHK exe.
+
+```lua
 local function custom_attach(client, bufnr)
   require("lsp_signature").on_attach({
     bind = true,
@@ -298,30 +301,8 @@ local ahk2_configs = {
   filetypes = { "ahk", "autohotkey", "ah2" },
   init_options = {
     locale = "en-us",
-    AutoLibInclude = "Disabled",
-    CommentTags = "^;;\\s*(?<tag>.+)",
-    CompleteFunctionParens = false,
-    Diagnostics = {
-      ClassStaticMemberCheck = true,
-      ParamsCheck = true
-    },
-    DisableV1Script = true,
-    FormatOptions = {
-      break_chained_methods = false,
-      ignore_comment = false,
-      indent_string = "\t",
-      keep_array_indentation = true,
-      max_preserve_newlines = 2,
-      one_true_brace = "1",
-      preserve_newlines = true,
-      space_before_conditional = true,
-      space_in_empty_paren = false,
-      space_in_other = true,
-      space_in_paren = false,
-      wrap_line_length = 0
-    },
     InterpreterPath = "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
-    SymbolFoldingFromOpenBrace = false
+    -- Same as initializationOptions for Sublime Text4, convert json literal to lua dictionary literal
   },
   single_file_support = true,
   flags = { debounce_text_changes = 500 },
