@@ -134,21 +134,21 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			if (!nodes.length) return undefined;
 		} else return undefined;
 	}
-	let is_variadic = 0, pc;
 	nodes.forEach((it: any) => {
 		const node = it.node as FuncNode, ll = lexers[it.uri], overloads: string[] = [], needthis = it.needthis ?? 0;
-		let params: Variable[] | undefined, name: string | undefined, paramindex: number;
+		let params: Variable[] | undefined, name: string | undefined, paramindex: number, pc: number;
 		if (params = node.params) {
 			let label = node.full, parameters = params.map(param =>
 				({ label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...') }));
 			if (needthis)
 				label = label.replace(/((\w|[^\x00-\x7f])+)\(/, '$1(@this' + (params.length ? ', ' : '')),
 					parameters.unshift({ label: '@this' });
-			is_variadic += node.variadic && params[(pc ??= params.length) - 1].arr ? 1 : 2;
 			paramindex = index - needthis;
+			paramindex = node.variadic && params[(pc = params.length) - 1].arr ? Math.min(paramindex, pc - 1) : paramindex;
 			signinfo.signatures.push({
 				label,
 				parameters,
+				activeParameter: paramindex + needthis,
 				documentation: node.detail ? {
 					kind: 'markdown',
 					value: formatMarkdowndetail(node, ll, name = params[paramindex]?.name ?? '', overloads)
@@ -159,7 +159,6 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				let { label, documentation } = signinfo.signatures[0], n = node;
 				let fn = label.substring(0, label.indexOf(n.kind === SymbolKind.Property ? '[' : '(', 1));
 				lex.parseScript();
-				is_variadic++;
 				lex.children.forEach((node: any) => {
 					if (params = node.params) {
 						parameters = params.map(param => ({ label: param.name.trim().replace(/(['\w]*\|['\w]*)(\|['\w]*)+/, '$1|...') }));
@@ -171,6 +170,8 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 						signinfo.signatures.push({
 							label,
 							parameters,
+							activeParameter: needthis +
+								(node.variadic && params[(pc = params.length) - 1].arr ? Math.min(paramindex, pc - 1) : paramindex),
 							documentation: (name === params[paramindex]?.name) ? documentation : {
 								kind: 'markdown',
 								value: formatMarkdowndetail(n, ll, params[paramindex]?.name ?? '', [])
@@ -181,6 +182,5 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			}
 		}
 	});
-	signinfo.activeParameter = is_variadic === 1 ? Math.min(index, pc! - 1) : index;
 	return signinfo;
 }
