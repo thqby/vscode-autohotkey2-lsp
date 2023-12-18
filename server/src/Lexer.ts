@@ -6657,7 +6657,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: s
 						break;
 				}
 			} else details.push(line);
-		} else if (line.startsWith('*') && (line = ` ${line}`), lastparam)
+		} else if (lastparam)
 			params[lastparam].push(line), name ?? details.push(line);
 		else if (code === 1 && (s = line.indexOf('</caption>')) > -1)
 			details.push(line.substring(0, s), '```ahk2' + ((s = line.substring(s + 10).trimLeft()) ? '\n' + s : '')), code = 2;
@@ -6676,10 +6676,10 @@ export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: s
 				it.returntypes = o, types.forEach(t => o[t] = true);
 		}
 	});
-	let replacer = (s: string, m1: string) => m1 && (s.endsWith('\n\n*') ? '\n\n*' : ` — ${m1}`);
+	let replacer = (s: string, m1: string) => m1 && (/  \n|\n\n/.test(s) ? `\n\n${m1}` : ` — ${m1}`);
 	detail = details.join('\n').replace(/\0\s*(\S?)/g, replacer);
 	if (name !== undefined)
-		s = params[name.toUpperCase()]?.join('\n').replace(/\0\s*(\S?)/, replacer) ?? '', detail = `${s}\n\n${detail}`;
+		s = params[name.toUpperCase()]?.join('\n').replace(/\0\s*(\S?)/g, replacer) ?? '', detail = `${s}\n\n${detail}`;
 	else if (!overloads && ols.length)
 		detail = '*@overload*\n```ahk2\n' + ols.map(it => it.replace(/^_[^\W]*/, node.name)).join('\n') + '\n```\n' + (detail && `___\n${detail}`);
 	return detail;
