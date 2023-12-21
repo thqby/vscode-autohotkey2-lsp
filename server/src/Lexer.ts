@@ -222,7 +222,7 @@ export function isIdentifierChar(code: number) {
 	if (code < 123) return true;
 	return code > 127;
 }
-export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b\x5c\x5d\x5e\x60\x7b-\x7f]+$');
+export let allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+$');
 let commentTags = new RegExp('^;;\\s*(?<tag>.+)');
 
 const colorregexp = new RegExp(/['"\s](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
@@ -5490,7 +5490,7 @@ export class Lexer {
 		if (pt?.content === '.' && pt.type !== 'TK_OPERATOR' ||
 			(is_end_expr = pt?.type === 'TK_END_EXPR' && token?.type === 'TK_START_EXPR' && token.prefix_is_whitespace === undefined)) {
 			let s = '', pre = '', end = pt.offset, tk = pt, lk = pt.previous_token;
-			let ps: any = { ')': 0, ']': 0, '}': 0 }, psn = 0;
+			let ps: any = { ')': 0, ']': 0, '}': 0 }, psn = 0, iscall = Boolean(token?.paraminfo);
 			if (is_end_expr) {
 				lk = tokens[pt.previous_pair_pos!];
 				++ps[pt.content], ++psn, kind = SymbolKind.Null;
@@ -5580,7 +5580,7 @@ export class Lexer {
 					text = s.trim();
 				else text = pre + s.trim() + '.' + text;
 			} else text = '#any';
-			kind ??= linetext[character] === '(' ? SymbolKind.Method : SymbolKind.Property;
+			kind ??= iscall || linetext[character] === '(' ? SymbolKind.Method : SymbolKind.Property;
 		} else if (token) {
 			if (token.type === 'TK_WORD') {
 				let sk = token.semantic, sym = (symbol = token.symbol) ?? token.definition, fc: FuncNode;
@@ -6606,7 +6606,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: s
 				switch (s = m[1].toLowerCase()) {
 					case 'param':
 					case 'arg':
-						if (m = m[2].match(/^\s*({(.*?)}\s+)?(\[.*\]|(?!\d)\w(\w|(\[\])?\.|[^\x00-\x7f])*)?(\s*[-—])?(.*)$/)) {
+						if (m = m[2].match(/^\s*({(.*?)}\s+)?(\[.*\]|[^\x00-\x40\x5b-\x5e\x60\x7b-\x7f](\w|(\[\])?\.|[^\x00-\x7f])*)?(\s*[-—])?(.*)$/)) {
 							let defval = '';
 							if ((lastparam = m[3])?.startsWith('['))
 								m[3] = lastparam.slice(1, -1).replace(/^((\w|(\[\])?\.|[^\x00-\x7f])*)(.*)$/, (...t) => {
@@ -6618,7 +6618,7 @@ export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: s
 							s = `\n*@param* \`${m[3]}\`${m[2] ? `: *\`${m[2]}\`*` : ''}${defval && ` := \`${defval}\``}\0${m[7]}`;
 							name ?? details.push(s);
 							(params[lastparam] ??= []).push(s);
-							if (m[3].length === lastparam.length)
+							if (m[3]?.length === lastparam.length)
 								(params[lastparam] as any).types ??= m[2];
 						}
 						break;
