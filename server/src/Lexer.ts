@@ -1337,7 +1337,8 @@ export class Lexer {
 								break;
 							}
 							tk.symbol = tn = SymbolNode.create(tk.content, SymbolKind.Field,
-								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1))
+								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1));
+							(tn as any).data = blockpos[blockpos.length - 1];
 							result.push(tn);
 							if (_parent.labels) {
 								_low = tk.content.toUpperCase().slice(0, -1), (<any>tn).def = true;
@@ -1823,6 +1824,7 @@ export class Lexer {
 							_parent.labels[_low] = [];
 						let rg = make_range(tk.offset, tk.length);
 						_parent.labels[_low].push(tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field, rg, rg));
+						(tn as any).data = blockpos[blockpos.length - 1];
 					}
 				}
 			}

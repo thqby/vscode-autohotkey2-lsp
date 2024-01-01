@@ -420,7 +420,9 @@ export function update_settings(configs: AHKLSSettings) {
 		console.log(e);
 	}
 	if (configs.WorkingDirs instanceof Array)
-		configs.WorkingDirs = configs.WorkingDirs.map(dir => (dir = URI.file(dir).toString().toLowerCase()).endsWith('/') ? dir : dir + '/');
+		configs.WorkingDirs = configs.WorkingDirs.map(dir =>
+			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
+				.endsWith('/') ? dir : dir + '/');
 	else delete (configs as any).WorkingDirs;
 	scanExclude = {};
 	if (configs.Files) {
