@@ -2417,7 +2417,7 @@ export class Lexer {
 								} else if (predot) {
 									tpexp += '.#any', maybeclassprop(lk, null);
 									tk = lk, lk = tk.previous_token ?? EMPTY_TOKEN;
-									parse_prop(), nexttoken(), suf ||= !tk.topofline && ['++', '--'].includes(tk.content);
+									parse_prop(inpair), nexttoken(), suf ||= !tk.topofline && ['++', '--'].includes(tk.content);
 								} else
 									tpexp += check_concat(lk) + '#any', lk.ignore = true;
 								if (!suf)
@@ -2881,34 +2881,32 @@ export class Lexer {
 				}
 			}
 
-			function parse_prop() {
+			function parse_prop(end?: string) {
 				next = false, parser_pos = tk.offset + tk.length;
 				while (nexttoken()) {
 					switch (tk.type) {
 						case 'TK_OPERATOR':
 							if (tk.content === '%') {
+								if (end === '%')
+									return next = false;
 								parse_pair('%', '%');
 								if (isIdentifierChar(input.charCodeAt(parser_pos)))
-									continue;
-								break;
+									break;
+								return;
 							}
 						case 'TK_NUMBER':
-							if (!allIdentifierChar.test(tk.content)) {
-								next = false;
-								break;
-							}
+							if (!allIdentifierChar.test(tk.content))
+								return next = false;
 						case 'TK_RESERVED':
 						case 'TK_WORD':
 							tk.type = 'TK_WORD';
 							tk.semantic = { type: SemanticTokenTypes.property };
 							if (input.charAt(parser_pos) === '%')
-								continue;
-							break;
+								break;
+							return;
 						default:
-							next = false;
-							break;
+							return next = false;
 					}
-					break;
 				}
 			}
 
@@ -3285,7 +3283,7 @@ export class Lexer {
 							tpexp = tpexp.replace(/\S+$/, '#any');
 						else
 							tpexp += check_concat(tk) + '#any';
-						prec === '.' ? (maybeclassprop(tk, null), parse_prop()) : parse_pair('%', '%');
+						prec === '.' ? (maybeclassprop(tk, null), parse_prop(e)) : parse_pair('%', '%');
 					} else if (tk.type.startsWith('TK_END_')) {
 						_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, 1);
 						pairMiss(), next = false, exps.push(tpexp);
