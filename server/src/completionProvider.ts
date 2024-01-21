@@ -174,6 +174,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	} else if (token.type.startsWith('TK_HOT')) {
 		if (!token.ignore)
 			return completionItemCache.key.filter(it => !it.label.toLowerCase().includes('alttab'));
+		let o = doc.document.offsetAt(position) - token.offset;
+		if (0 < o && o <= text.indexOf(':', 1))
+			return completionItemCache.option.hotstring;
 		return;
 	} else if (token.type === 'TK_SHARP' || token.content === '#') {
 		token.topofline && items.push(...completionItemCache.directive['#']);

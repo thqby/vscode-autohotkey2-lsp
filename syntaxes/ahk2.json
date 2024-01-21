@@ -824,6 +824,74 @@
 			"description": "Within a function call, array literal or object literal, the keyword unset can be used to explicitly omit the parameter or value."
 		}
 	],
+	"options": {
+		"hotstring": [
+			{
+				"body": "*",
+				"description": "An ending character (e.g. `Space`, `.`, or `Enter`) is not required to trigger the hotstring. For example:\n```ahk2\n:*:j@::jsmith@somedomain.com\n```"
+			},
+			{
+				"body": "?",
+				"description": "The hotstring will be triggered even when it is inside another word; that is, when the character typed immediately before it is alphanumeric. For example, if `:?:al::airline` is a hotstring, typing \"practical \" would produce \"practicairline \". Use `?0` to turn this option back off."
+			},
+			{
+				"body": "B0",
+				"description": "Automatic backspacing is not done to erase the abbreviation you type. Use a plain `B` to turn backspacing back on after it was previously turned off. A script may also do its own backspacing via {bs 5}, which sends `Backspace` five times. Similarly, it may send `←` five times via {left 5}. For example, the following hotstring produces \"<em></em>\" and moves the caret 5 places to the left (so that it's between the tags):\n```ahk2\n:*b0:<em>::</em>{left 5}\n```"
+			},
+			{
+				"body": "C",
+				"description": "Case-sensitive: When you type an abbreviation, it must exactly match the case defined in the script. Use `C0` to turn case sensitivity back off."
+			},
+			{
+				"body": "C1",
+				"description": "Do not conform to typed case. Use this option to make auto-replace hotstrings case-insensitive and prevent them from conforming to the case of the characters you actually type. Case-conforming hotstrings (which are the default) produce their replacement text in all caps if you type the abbreviation in all caps. If you type the first letter in caps, the first letter of the replacement will also be capitalized (if it is a letter). If you type the case in any other way, the replacement is sent exactly as defined."
+			},
+			{
+				"body": "Kn",
+				"description": "Key-delay: This rarely-used option sets the delay between keystrokes produced by auto-backspacing or auto-replacement. Specify the new delay for n; for example, specify `k10` to have a 10 ms delay and `k-1` to have no delay."
+			},
+			{
+				"body": "O",
+				"description": "Omit the ending character of auto-replace hotstrings when the replacement is produced. This is useful when you want a hotstring to be kept unambiguous by still requiring an ending character, but don't actually want the ending character to be shown on the screen. Use `O0` to turn this option back off."
+			},
+			{
+				"body": "Pn",
+				"description": "The priority of the hotstring (e.g. `P1`). This rarely-used option has no effect on auto-replace hotstrings."
+			},
+			{
+				"body": "R",
+				"description": "Send the replacement text raw; that is, without translating `{Enter}` to `Enter`, `^c` to `Ctrl+C`, etc. Use `R0` to turn this option back off, or override it with `T`."
+			},
+			{
+				"body": "S",
+				"description": "Specify the letter `S` to make the hotstring exempt from Suspend. Specify `S0` to remove the exemption, allowing the hotstring to be suspended."
+			},
+			{
+				"body": "SI",
+				"description": "SendInput"
+			},
+			{
+				"body": "SP",
+				"description": "SendPlay"
+			},
+			{
+				"body": "SE",
+				"description": "SendEvent"
+			},
+			{
+				"body": "T",
+				"description": "Send the replacement text using Text mode. Use `T0` or `R0` to turn this option back off, or override it with R."
+			},
+			{
+				"body": "X",
+				"description": "Instead of replacement text, the hotstring accepts a function call or expression to execute."
+			},
+			{
+				"body": "Z",
+				"description": "This rarely-used option resets the hotstring recognizer after each triggering of the hotstring. In other words, the script will begin waiting for an entirely new hotstring, eliminating from consideration anything you previously typed. This can prevent unwanted triggerings of hotstrings."
+			}
+		]
+	},
 	"texts": [
 		{
 			"body": "ahk_class",

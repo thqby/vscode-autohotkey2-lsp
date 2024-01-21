@@ -236,7 +236,7 @@
     },
     "class_block": {
       "name": "meta.block.class.ahk2",
-      "begin": "(^|(?<=^\\s*\\*/))\\s*((?i:class))\\s+(\\w+(\\.\\w+)*)",
+      "begin": "(^|(?<=^\\s*\\*/))\\s*((?i:class))\\s+(\\$?\\w+(\\.\\w+)*)",
       "beginCaptures": {
         "2": {
           "name": "storage.type.class.ahk2"
@@ -1339,7 +1339,7 @@
                       "name": "string.options.ahk2 markup.italic"
                     },
                     {
-                      "match": ".",
+                      "match": "[^\\s]",
                       "name": "invalid.options.ahk2 markup.strikethrough"
                     }
                   ]
@@ -1415,7 +1415,7 @@
                   "name": "string.options.ahk2 markup.italic"
                 },
                 {
-                  "match": ".",
+                  "match": "[^\\s]",
                   "name": "invalid.options.ahk2 markup.strikethrough"
                 }
               ]
@@ -1514,7 +1514,7 @@
               "name": "string.options.ahk2 markup.italic"
             },
             {
-              "match": ".",
+              "match": "[^\\s]",
               "name": "invalid.options.ahk2 markup.strikethrough"
             }
           ]

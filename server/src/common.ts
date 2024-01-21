@@ -113,6 +113,7 @@ export let completionItemCache: {
 	keyword: CompletionItem[];
 	snippet: CompletionItem[];
 	text: CompletionItem[];
+	option: { [k: string]: CompletionItem[] };
 };
 
 export function openFile(path: string, showError = true): TextDocument | undefined {
@@ -236,7 +237,8 @@ export function initahk2cache() {
 		key: [],
 		keyword: [],
 		snippet: [],
-		text: []
+		text: [],
+		option: {}
 	};
 }
 
@@ -360,6 +362,17 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					kind = CompletionItemKind.Text;
 					for (snip of arr)
 						completionItemCache.text.push({ label: snip.body, kind });
+					break;
+				case 'options':
+					kind = CompletionItemKind.Value;
+					for (let k in arr) {
+						let t = completionItemCache.option[k] ??= [];
+						for (snip of arr[k])
+							t.push({
+								label: snip.body, kind,
+								documentation: snip.description && { kind: 'markdown', value: snip.description }
+							});
+					}
 					break;
 				default: break;
 			}
