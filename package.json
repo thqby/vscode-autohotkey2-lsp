@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.3.0",
+	"version": "2.3.1",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -102,13 +102,13 @@
 					"scope": "window",
 					"type": "string",
 					"default": "/compress 0 /base ${execPath}",
-					"description": "%ahk2.compilercmd%"
+					"markdownDescription": "%ahk2.compilercmd%"
 				},
 				"AutoHotkey2.CompleteFunctionParens": {
 					"scope": "window",
 					"type": "boolean",
 					"default": false,
-					"description": "%ahk2.completefunctionparens%"
+					"markdownDescription": "%ahk2.completefunctionparens%"
 				},
 				"AutoHotkey2.DefaultDebugger": {
 					"scope": "window",
@@ -182,7 +182,7 @@
 						"Class": ".(",
 						"Function": "("
 					},
-					"description": "%ahk2.completioncommitcharacters%"
+					"markdownDescription": "%ahk2.completioncommitcharacters%"
 				},
 				"AutoHotkey2.Files.Exclude": {
 					"scope": "window",
@@ -293,7 +293,7 @@
 					"scope": "window",
 					"type": "string",
 					"default": "C:\\Program Files\\Autohotkey\\v2\\AutoHotkey.exe",
-					"description": "%ahk2.interpreterpath%"
+					"markdownDescription": "%ahk2.interpreterpath%"
 				},
 				"AutoHotkey2.SymbolFoldingFromOpenBrace": {
 					"scope": "window",
@@ -310,6 +310,11 @@
 					},
 					"uniqueItems": true,
 					"description": "%ahk2.workingdirs%"
+				},
+				"AutoHotkey2.Syntaxes": {
+					"scope": "window",
+					"type": "string",
+					"markdownDescription": "%ahk2.syntaxes%"
 				}
 			}
 		},
@@ -409,6 +414,12 @@
 				"enablement": "editorLangId == ahk2 || editorLangId == ahk",
 				"command": "ahk2.switch",
 				"title": "Switch v1/v2",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.selectsyntaxes",
+				"title": "Select syntaxes",
 				"category": "ahk2"
 			}
 		],

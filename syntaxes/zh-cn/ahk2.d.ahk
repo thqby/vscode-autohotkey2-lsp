@@ -876,7 +876,7 @@ FileRecycleEmpty(DriveLetter := '') => void
  * 
  * 由于 "提示覆盖" 选项只有保存对话框支持, 因此在没有 "提示创建" 选项的情况下指定该选项也会使 "S" 选项生效. 同样, 当 "S" 选项存在时, "提示创建" 选项也没有效果. 指定数字 24 可以启用对话框支持的任何一种提示类型.
  */
-FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Files (*.*)') => String
+FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Files (*.*)') => String | Array
 
 /**
  * 改变一个或多个文件或文件夹的属性. 支持通配符.
@@ -1237,7 +1237,7 @@ IniWrite(Value, Filename, Section [, Key]) => void
  * 
  * Password: 屏蔽用户的输入. 要指定使用哪个字符, 如此例所示: Password
  */
-InputBox([Prompt, Title, Options, Default]) => Object
+InputBox([Prompt, Title, Options, Default]) => $InputBoxResult
 
 /**
  * 安装鼠标钩子
@@ -2636,7 +2636,7 @@ class Array extends Object {
 	/**
 	 * 数组对象包含值的列表或序列.
 	 */
-	__New(Values*) => Array
+	__New(Values*)
 
 	/**
 	 * 枚举数组元素.
@@ -2747,7 +2747,7 @@ class ClipboardAll extends Buffer {
 	/**
 	 * 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
 	 */
-	__New([Data, Size]) => Buffer
+	__New([Data, Size])
 }
 
 class Closure extends Func {
@@ -2888,7 +2888,7 @@ class Error extends Object {
 	/**
 	 * 构造 Error 对象.
 	 */
-	__New([Message, What, Extra]) => Error
+	__New([Message, What, Extra])
 }
 
 class File extends Object {
@@ -3151,7 +3151,7 @@ class Gui extends Object {
 	/**
 	 * 创建一个新的Gui对象.
 	 */
-	__New([Options, Title := A_ScriptName, EventObj]) => Gui
+	__New([Options, Title := A_ScriptName, EventObj])
 
 	/**
 	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
@@ -3875,7 +3875,7 @@ class InputHook extends Object {
 	 * 
 	 * 因为 MatchList 中的项目不被视为单独的参数, 所以列表可以完全包含在一个变量中. 事实上, 如果此列表的长度超过 16383, 那么列表的全部或部分必须包含在变量中, 因为这个长度是任何脚本行的最大长度. 例如, MatchList 可能由 List1 "," List2 "," List3 组成 -- 其中每个变量都包含匹配词组的子列表.
 	 */
-	__New(Options := '', EndKeys := '', MatchList := '') => Inputhook
+	__New(Options := '', EndKeys := '', MatchList := '')
 
 	/**
 	 * 设置按键或按键列表的选项.
@@ -3927,7 +3927,7 @@ class Map extends Object {
 	/**
 	 * Map对象将一组称为键的值关联或映射到另一组值.
 	 */
-	__New([Key1, Value1, *]) => Map
+	__New([Key1, Value1, *])
 
 	/**
 	 * 枚举键值对.
@@ -4015,7 +4015,7 @@ class Menu extends Object {
 	/**
 	 * 创建一个新的Menu或MenuBar对象.
 	 */
-	__New() => Menu
+	__New()
 
 	/**
 	 * 添加或修改菜单项.
@@ -4142,7 +4142,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	__New(code := A_LastError, What?, Extra?) => OSError
+	__New(ErrorCode := A_LastError, What?, Extra?)
 }
 
 class Primitive extends Any {
@@ -4228,5 +4228,20 @@ class VarRef extends Any {
 }
 
 class ZeroDivisionError extends Error {
+}
+;#endregion
+
+;#region typedef
+
+class $InputBoxResult {
+	/**
+	 * 用户输入的文本.
+	 */
+	Value => String
+
+	/**
+	 * 以下单词之一表示输入框是如何关闭的: OK, Cancel 或 Timeout.
+	 */
+	Result => String
 }
 ;#endregion

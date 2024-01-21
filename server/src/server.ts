@@ -99,7 +99,7 @@ connection.onInitialize(async params => {
 	if (configs)
 		update_settings(configs);
 	if (!(await setInterpreter(resolvePath(extsettings.InterpreterPath ??= ''))))
-		connection.window.showErrorMessage(setting.ahkpatherr());
+		patherr(setting.ahkpatherr());
 	set_WorkspaceFolders(workspaceFolders);
 	loadahk2();
 	return result;
@@ -129,7 +129,7 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	let { AutoLibInclude, InterpreterPath } = extsettings;
+	let { AutoLibInclude, InterpreterPath, Syntaxes } = extsettings;
 	update_settings(newset);
 	set_WorkspaceFolders(workspaceFolders);
 	if (InterpreterPath !== extsettings.InterpreterPath) {
@@ -141,6 +141,11 @@ connection.onDidChangeConfiguration(async change => {
 			parseuserlibs();
 		if ((extsettings.AutoLibInclude & 1) && !(AutoLibInclude & 1))
 			documents.all().forEach(e => parseproject(e.uri.toLowerCase()));
+	}
+	if (Syntaxes !== extsettings.Syntaxes) {
+		initahk2cache(), loadahk2();
+		if (isahk2_h)
+			loadahk2('ahk_h'), loadahk2('winapi', 4);
 	}
 });
 
@@ -226,6 +231,13 @@ function executeCommandProvider(params: ExecuteCommandParams, token?: Cancellati
 	}
 }
 
+async function patherr(msg: string) {
+	if (!extsettings.commands?.includes('ahk2.executeCommand'))
+		return connection.window.showErrorMessage(msg);
+	if (await connection.window.showErrorMessage(msg, { title: 'Select Interpreter' }))
+		connection.sendRequest('ahk2.executeCommand', ['ahk2.setinterpreter']);
+}
+
 async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	let script = `
 	#NoTrayIcon
@@ -242,7 +254,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	if (data === undefined) {
 		if (retry)
 			return initpathenv(samefolder, false);
-		connection.window.showErrorMessage(setting.ahkpatherr());
+		patherr(setting.ahkpatherr());
 		return false;
 	}
 	if (!(data = data.trim())) {
@@ -271,7 +283,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	a_vars.ahkpath = ahkpath_cur;
 	set_version(a_vars.ahkversion ??= '2.0.0');
 	if (a_vars.ahkversion.startsWith('1.'))
-		connection.window.showErrorMessage(setting.versionerr());
+		patherr(setting.versionerr());
 	if (!samefolder || !libdirs.length) {
 		libdirs.length = 0;
 		libdirs.push(a_vars.mydocuments + '\\AutoHotkey\\Lib\\',

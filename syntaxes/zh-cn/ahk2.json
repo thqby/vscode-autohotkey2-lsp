@@ -1,62 +1,75 @@
 {
 	"directives": [
 		{
-			"body": "#ClipboardTimeout ",
-			"description": "更改首次尝试访问剪贴板失败时脚本继续尝试访问剪贴板的时间."
+			"body": "#ClipboardTimeout ${1:Milliseconds}",
+			"description": "更改首次尝试访问剪贴板失败时脚本继续尝试访问剪贴板的时间.",
+			"prefix": "#ClipboardTimeout"
 		},
 		{
-			"body": "#DllLoad ",
-			"description": "在脚本开始执行之前加载 DLL 或 EXE 文件."
+			"body": "#DllLoad",
+			"description": "在脚本开始执行之前加载 DLL 或 EXE 文件.",
+			"syntax": "#DllLoad [FileOrDirName]"
 		},
 		{
-			"body": "#ErrorStdOut ${1|'UTF-8','CP0'|}",
+			"body": "#ErrorStdOut ${1|'CP0','UTF-8','UTF-16','CP###'|}",
 			"description": "把任何阻止脚本运行的语法错误发送到 stderr, 而不是显示一个对话框.",
-			"prefix": "#ErrorStdOut"
+			"prefix": "#ErrorStdOut",
+			"syntax": "#ErrorStdOut [Encoding]"
 		},
 		{
 			"body": "#HotIf",
-			"description": "创建上下文相关的热键和热字串. 这样的热键会根据表达式的结果执行不同的操作(或什么都不做)."
+			"description": "创建上下文相关的热键和热字串. 这样的热键会根据表达式的结果执行不同的操作(或什么都不做).",
+			"syntax": "HotIf [Expression]"
 		},
 		{
-			"body": "#HotIfTimeout ",
-			"description": "设置计算单个 #HotIf 表达式可以使用的最大时间."
+			"body": "#HotIfTimeout ${1:Timeout}",
+			"description": "设置计算单个 #HotIf 表达式可以使用的最大时间.",
+			"prefix": "#HotIfTimeout"
 		},
 		{
 			"body": "#Hotstring ${1|NoMouse,EndChars |}",
-			"description": "改变热字串的选项或终止符.",
-			"prefix": "#Hotstring"
+			"description": "```ahk2\n#Hotstring EndChars NewChars\n#Hotstring NewOptions\n```\n改变热字串的选项或终止符.\n```ahk2\n#Hotstring NoMouse\n```\n防止鼠标单击重置热串识别器.",
+			"prefix": "#Hotstring",
+			"syntax": ""
 		},
 		{
-			"body": "#Include ",
-			"description": "使脚本的行为与指定文件的内容位于此确切位置一样."
+			"body": "#Include ${1:File_Dir_Or_LibName}",
+			"description": "使脚本的行为与指定文件的内容位于此确切位置一样.",
+			"prefix": "#Include"
 		},
 		{
-			"body": "#IncludeAgain ",
-			"description": "使脚本的行为与指定文件的内容位于此确切位置一样."
+			"body": "#IncludeAgain ${1:File_Or_Dir}",
+			"description": "使脚本的行为与指定文件的内容位于此确切位置一样.",
+			"prefix": "#IncludeAgain"
 		},
 		{
-			"body": "#InputLevel ",
-			"description": "控制热键和热字串是否忽略模拟的键盘和鼠标事件."
+			"body": "#InputLevel ${1:0_to_100}",
+			"description": "控制热键和热字串是否忽略模拟的键盘和鼠标事件.",
+			"prefix": "#InputLevel"
 		},
 		{
-			"body": "#MaxThreads ",
-			"description": "设置可同时存在的线程的最大数目."
+			"body": "#MaxThreads ${1:1_to_255}",
+			"description": "设置可同时存在的线程的最大数目.",
+			"prefix": "#MaxThreads"
 		},
 		{
-			"body": "#MaxThreadsBuffer",
-			"description": "当某些或所有的热键达到 #MaxThreadsPerHotkey 限制时, 这个指令让它们缓冲而不是忽略键击."
+			"body": "#MaxThreadsBuffer ${1|true,false|}",
+			"description": "当某些或所有的热键达到 #MaxThreadsPerHotkey 限制时, 这个指令让它们缓冲而不是忽略键击.",
+			"prefix": "#MaxThreadsBuffer"
 		},
 		{
-			"body": "#MaxThreadsPerHotkey ",
-			"description": "设置每个热键或热字串可同时存在的最大线程数."
+			"body": "#MaxThreadsPerHotkey ${1:1_to_255}",
+			"description": "设置每个热键或热字串可同时存在的最大线程数.",
+			"prefix": "#MaxThreadsPerHotkey"
 		},
 		{
 			"body": "#NoTrayIcon",
 			"description": "禁止显示托盘图标."
 		},
 		{
-			"body": "#Requires ",
-			"description": "如果不符合版本要求, 则显示错误并退出."
+			"body": "#Requires AutoHotkey${1| , >, >=, <, <=, =|}v2.${2:0}${3| , 32-bit, 64-bit|}",
+			"description": "如果不符合版本要求, 则显示错误并退出.",
+			"prefix": "#Requires"
 		},
 		{
 			"body": "#SingleInstance ${1|Force,Ignore,Prompt,Off|}",
@@ -74,7 +87,7 @@
 			"prefix": "#UseHook"
 		},
 		{
-			"body": "#Warn ${1|All,UseUnsetLocal,UseUnsetGlobal,VarUnset,LocalSameAsGlobal,Unreachable|}, ${2|MsgBox,StdOut,OutputDebug,Off|}",
+			"body": "#Warn ${1|All,VarUnset,LocalSameAsGlobal,Unreachable|}, ${2|MsgBox,StdOut,OutputDebug,Off|}",
 			"description": "启用或禁用特定条件下的警告, 这些条件可能会产生错误, 例如书写错误或缺少 '全局' 声明.",
 			"prefix": "#Warn"
 		},
@@ -170,15 +183,18 @@
 		},
 		{
 			"body": "break",
-			"description": "退出（终止）任何类型的循环语句."
+			"description": "退出（终止）任何类型的循环语句.",
+			"syntax": "break [LoopLabel]\nbreak('Label')"
 		},
 		{
 			"body": "catch",
-			"description": "指定在try语句执行期间引发异常时要执行的代码."
+			"description": "指定在try语句执行期间引发异常时要执行的代码.",
+			"syntax": "catch [ErrorClass] [as OutputVar] {\n\tStatements\n}"
 		},
 		{
 			"body": "continue",
-			"description": "跳过循环语句当前迭代的其余部分,然后开始一个新的循环."
+			"description": "跳过循环语句当前迭代的其余部分,然后开始一个新的循环.",
+			"syntax": "continue [LoopLabel]\ncontinue('Label')"
 		},
 		{
 			"body": "else if ",
@@ -195,19 +211,23 @@
 		{
 			"body": "for $1 in $0",
 			"description": "对对象中的每个键值对重复一系列功能.",
-			"prefix": "for"
+			"prefix": "for",
+			"syntax": "for value1 [, value2...] in Expression"
 		},
 		{
 			"body": "global",
-			"description": "要引用函数内部的现有全局变量（或创建一个新的全局变量）,请在使用变量之前将其声明为全局变量."
+			"description": "要引用函数内部的现有全局变量（或创建一个新的全局变量）,请在使用变量之前将其声明为全局变量.",
+			"syntax": "global [Var]"
 		},
 		{
 			"body": "goto",
-			"description": "跳转到指定的标签并继续执行."
+			"description": "跳转到指定的标签并继续执行.",
+			"syntax": "goto Label\ngoto('Label')"
 		},
 		{
 			"body": "if ",
-			"description": "指定在表达式计算为true时要执行的一个或多个语句."
+			"description": "指定在表达式计算为true时要执行的一个或多个语句.",
+			"syntax": "if Expression"
 		},
 		{
 			"body": "loop files ${1:FilePattern [, Mode]}",
@@ -215,7 +235,7 @@
 			"prefix": "loop files"
 		},
 		{
-			"body": "loop parse ${1:String [, Delimiters|CSV, OmitChars]}",
+			"body": "loop parse ${1:String [, Delimiters|'CSV', OmitChars]}",
 			"description": "从一个字符串中一次检索一个子字符串（字段）.",
 			"prefix": "loop parse"
 		},
@@ -230,16 +250,18 @@
 			"prefix": "loop reg"
 		},
 		{
-			"body": "loop ",
-			"description": "重复执行一系列函数: 可以指定表示重复次数的数字或直到遇到 break."
+			"body": "loop",
+			"description": "重复执行一系列函数: 可以指定表示重复次数的数字或直到遇到 break.",
+			"syntax": "loop [Count]"
 		},
 		{
-			"body": "local",
+			"body": "local ${1:Var}",
 			"description": "局部变量特定于单个函数,并且仅在该函数内部可见.因此,局部变量可能与全局变量具有相同的名称,并且两者将具有单独的内容.单独的函数也可以安全地使用相同的变量名."
 		},
 		{
-			"body": "case $0:",
-			"prefix": "case"
+			"body": "case $1:",
+			"prefix": "case",
+			"syntax": "case ExpressionOrValue:"
 		},
 		{
 			"body": "default:",
@@ -247,15 +269,18 @@
 		},
 		{
 			"body": "return",
-			"description": "从先前通过函数调用,热键激活或其他方式跳转到执行的子例程返回."
+			"description": "从先前通过函数调用,热键激活或其他方式跳转到执行的子例程返回.",
+			"syntax": "return [Expression]"
 		},
 		{
 			"body": "static",
-			"description": "静态变量始终是隐式局部变量,但与局部变量有所不同,因为它们的值在两次调用之间被记住."
+			"description": "静态变量始终是隐式局部变量,但与局部变量有所不同,因为它们的值在两次调用之间被记住.",
+			"syntax": "static [Var]\nstatic Method()\nstatic Property"
 		},
 		{
-			"body": "throw ",
-			"description": "表示发生错误.可以通过try-catch语句捕获该信号."
+			"body": "throw",
+			"description": "表示发生错误.可以通过try-catch语句捕获该信号.",
+			"syntax": "throw Expression"
 		},
 		{
 			"body": "try",
@@ -263,11 +288,13 @@
 		},
 		{
 			"body": "until ",
-			"description": "将条件应用于循环或for循环的继续."
+			"description": "将条件应用于循环或for循环的继续.",
+			"syntax": "until Expression"
 		},
 		{
 			"body": "while ",
-			"description": "重复执行一系列功能,直到指定的表达式计算为false."
+			"description": "重复执行一系列功能,直到指定的表达式计算为false.",
+			"syntax": "while Expression"
 		}
 	],
 	"variables": [
@@ -825,6 +852,28 @@
 		}
 	],
 	"options": {
+		"ahk_criteria": [
+			{
+				"body": "ahk_class",
+				"description": "窗口类是系统用作创建窗口的模板的一组属性.换句话说,窗口的类名标识了窗口的类型.若要使用窗口类,请指定ahk_class ExactClassName,如Window Spy所示.可以通过WinGetClass检索ExactClassName."
+			},
+			{
+				"body": "ahk_exe",
+				"description": "使用ahk_exe来标识属于具有给定名称或路径的任何进程的窗口."
+			},
+			{
+				"body": "ahk_group",
+				"description": "使用ahk_group标识一个或多个与先前定义的窗口组所包含的规则匹配的窗口."
+			},
+			{
+				"body": "ahk_id",
+				"description": "每个窗口或控件都有唯一的ID,也称为HWND（窗口句柄的缩写）."
+			},
+			{
+				"body": "ahk_pid",
+				"description": "使用ahk_pid标识属于特定进程的窗口.进程标识符（PID）通常由WinGet,Run或Process检索."
+			}
+		],
 		"hotstring": [
 			{
 				"body": "*",
@@ -894,26 +943,6 @@
 	},
 	"texts": [
 		{
-			"body": "ahk_class",
-			"description": "窗口类是系统用作创建窗口的模板的一组属性.换句话说,窗口的类名标识了窗口的类型.若要使用窗口类,请指定ahk_class ExactClassName,如Window Spy所示.可以通过WinGetClass检索ExactClassName."
-		},
-		{
-			"body": "ahk_exe",
-			"description": "使用ahk_exe来标识属于具有给定名称或路径的任何进程的窗口."
-		},
-		{
-			"body": "ahk_group",
-			"description": "使用ahk_group标识一个或多个与先前定义的窗口组所包含的规则匹配的窗口."
-		},
-		{
-			"body": "ahk_id",
-			"description": "每个窗口或控件都有唯一的ID,也称为HWND（窗口句柄的缩写）."
-		},
-		{
-			"body": "ahk_pid",
-			"description": "使用ahk_pid标识属于特定进程的窗口.进程标识符（PID）通常由WinGet,Run或Process检索."
-		},
-		{
 			"body": "AlwaysOnTop",
 			"description": "使窗口保持在所有其他窗口之上."
 		},
@@ -966,6 +995,9 @@
 			"body": "BackSpace"
 		},
 		{
+			"body": "BS"
+		},
+		{
 			"body": "Browser_Back",
 			"description": "后退"
 		},
@@ -995,6 +1027,9 @@
 		},
 		{
 			"body": "CapsLock"
+		},
+		{
+			"body": "Control"
 		},
 		{
 			"body": "Ctrl"

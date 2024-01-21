@@ -52,6 +52,7 @@ export interface AHKLSSettings {
 	FormatOptions: FormatOptions
 	InterpreterPath: string
 	GlobalStorage?: string
+	Syntaxes?: string
 	SymbolFoldingFromOpenBrace: boolean
 	Warn: {
 		VarUnset: boolean
@@ -258,25 +259,30 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		if (data = getwebfile(file + '.json'))
 			build_item_cache(JSON.parse(data.text));
 	} else {
+		const syntaxes = extsettings.Syntaxes && existsSync(extsettings.Syntaxes) ? extsettings.Syntaxes : '';
+		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
-		if ((path = getlocalefilepath(file + '.d.ahk')) && (td = openFile(restorePath(path)))) {
+		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
 			let doc = new Lexer(td, undefined, d);
 			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
 		}
-		if (path = getlocalefilepath(file + '.json'))
+		if (path = getfilepath('.json'))
 			build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
 		if (filename === 'ahk2') {
 			build_item_cache(JSON.parse(readFileSync(`${rootdir}/syntaxes/ahk2_common.json`, { encoding: 'utf8' })));
-			if ((path = extsettings.GlobalStorage) && existsSync(path))
-				for (let file of readdirSync(path)) {
+			if (syntaxes)
+				for (let file of readdirSync(syntaxes)) {
 					if (file.toLowerCase().endsWith('.snippet.json') && !statSync(file = `${path}/${file}`).isDirectory())
 						build_item_cache(JSON.parse(readFileSync(file, { encoding: 'utf8' })));
 				}
 		}
+		function getfilepath(ext: string) {
+			return getlocalefilepath(file2 + ext) || (file2 !== file ? getlocalefilepath(file + ext) : undefined);
+		}
 	}
 	function build_item_cache(ahk2: any) {
 		let insertTextFormat: InsertTextFormat, kind: CompletionItemKind;
-		let snip: { prefix?: string, body: string, description?: string };
+		let snip: { prefix?: string, body: string, description?: string, syntax?: string };
 		let rg = Range.create(0, 0, 0, 0);
 		for (const key in ahk2) {
 			let arr: any[] = ahk2[key];
@@ -304,12 +310,12 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 							label: snip.prefix.replace(/^[^#\w]/, ''),
 							insertText: snip.body.replace(/^\W+/, ''),
 							kind, insertTextFormat,
-							detail: snip.description,
+							documentation: snip.description && { kind: 'markdown', value: snip.description },
 							data: snip.body.charAt(0)
 						});
 						if (c === '#')
 							hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, {
-								contents: { kind: 'markdown', value: '```ahk2\n' + trim(snip.body) + '\n```\n\n' + (snip.description ?? '') }
+								contents: { kind: 'markdown', value: '```ahk2\n' + (snip.syntax ?? trim(snip.body)) + '\n```\n\n' + (snip.description ?? '') }
 							}];
 					}
 					break;
@@ -318,7 +324,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					for (snip of arr) {
 						completionItemCache.key.push({
 							label: snip.body, kind,
-							detail: snip.description
+							documentation: snip.description
 						});
 					}
 					break;
@@ -330,10 +336,10 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						completionItemCache.keyword.push({
 							label: snip.prefix, kind, insertTextFormat,
 							insertText: snip.body,
-							detail: snip.description,
+							documentation: snip.description,
 							preselect: true
 						});
-						hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, { contents: { kind: 'markdown', value: '```ahk2\n' + trim(snip.body) + '\n```\n\n' + (snip.description ?? '') } }];
+						hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, { contents: { kind: 'markdown', value: '```ahk2\n' + (snip.syntax ?? trim(snip.body)) + '\n```\n\n' + (snip.description ?? '') } }];
 					}
 					break;
 				case 'snippet':
@@ -343,7 +349,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						completionItemCache.snippet.push({
 							label: snip.prefix!,
 							insertText: bodytostring(snip.body),
-							detail: snip.description,
+							documentation: snip.description,
 							kind, insertTextFormat
 						});
 					}
@@ -436,7 +442,7 @@ export function update_settings(configs: AHKLSSettings) {
 		configs.WorkingDirs = configs.WorkingDirs.map(dir =>
 			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
 				.endsWith('/') ? dir : dir + '/');
-	else delete (configs as any).WorkingDirs;
+	else configs.WorkingDirs = [];
 	scanExclude = {};
 	if (configs.Files) {
 		let file: RegExp[] = [], folder: RegExp[] = [];
@@ -453,6 +459,8 @@ export function update_settings(configs: AHKLSSettings) {
 		if ((configs.Files.MaxDepth ??= 2) < 0)
 			configs.Files.MaxDepth = Infinity;
 	}
+	if (configs.Syntaxes)
+		configs.Syntaxes = resolve(configs.Syntaxes).toLowerCase();
 	Object.assign(extsettings, configs);
 }
 
@@ -470,11 +478,11 @@ export async function sendAhkRequest(method: string, params: any[]) {
 	return utils.get_ahkProvider().then((server: any) => server?.sendRequest(method, ...params));
 }
 
-export function make_search_re(search: string) {
+export function make_search_re(search: string, re = '') {
 	let t = undefined;
 	search = search.replace(/([*.?+^$|\\/\[\](){}])|([^\x00-\x7f])|(.)/g,
 		(_, m1, m2, m3) => `${m3 || (t ??= m2) || `\\${m1}`}.*`);
-	return new RegExp(t ? search : `([^\x00-\x7f]|${search})`, 'i');
+	return new RegExp(t ? re + search : `${re}([^\x00-\x7f]|${search})`, 'i');
 }
 
 export function enumNames(enumType: object): string[] {

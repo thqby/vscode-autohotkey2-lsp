@@ -11,7 +11,8 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		let nodes: [{ node: DocumentSymbol, uri: string, scope?: DocumentSymbol }] | undefined | null;
 		if (!word || context.kind === SymbolKind.Null) {
 			if (context.token && context.token.semantic?.type !== SemanticTokenTypes.variable) {
-				if (t = hoverCache[context.token.content.toLowerCase()])
+				t = context.token;
+				if (t = hoverCache[(t.hover_word || t.content).toLowerCase()])
 					return t[1];
 			}
 			return undefined;

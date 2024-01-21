@@ -59,6 +59,7 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	const request_handlers: { [cmd: string]: any } = {
+		'ahk2.executeCommand': (params: any[]) => commands.executeCommand(params.shift(), ...params),
 		'ahk2.getActiveTextEditorUriAndPosition': (params: any) => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
@@ -135,8 +136,11 @@ export async function activate(context: ExtensionContext) {
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 	ahkStatusBarItem.command = 'ahk2.setinterpreter';
+	const ahkLanguageStatusItem = languages.createLanguageStatusItem('AutoHotkey2', { language: 'ahk2' });
+	ahkLanguageStatusItem.text = '$(folder)syntaxes';
+	ahkLanguageStatusItem.command = { title: 'Select Syntaxes', command: 'ahk2.selectsyntaxes' };
 	context.subscriptions.push(
-		ahkStatusBarItem, outputchannel,
+		ahkStatusBarItem, ahkLanguageStatusItem, outputchannel,
 		extensions.onDidChange(update_extensions_info),
 		commands.registerTextEditorCommand('ahk2.help', quickHelp),
 		commands.registerTextEditorCommand('ahk2.compile', compileScript),
@@ -147,6 +151,7 @@ export async function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.debug', () => beginDebug(extlist, debugexts)),
 		commands.registerCommand('ahk2.debug.params', () => beginDebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk2.debug.attach', () => beginDebug(extlist, debugexts, false, true)),
+		commands.registerCommand('ahk2.selectsyntaxes', selectSyntaxes),
 		commands.registerTextEditorCommand('ahk2.updateversioninfo', async textEditor => {
 			if (!server_is_ready)
 				return;
@@ -226,7 +231,8 @@ function runScript(textEditor: TextEditor, selection = false) {
 	let executePath = resolvePath(ahkpath_cur, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
 	if (!executePath) {
 		let s = ahkpath_cur || 'AutoHotkey.exe';
-		window.showErrorMessage(zhcn ? `"${s}"未找到!` : `"${s}" not find!`);
+		window.showErrorMessage(zhcn ? `"${s}"未找到!` : `"${s}" not find!`, 'Select Interpreter')
+			.then(r => r && setInterpreter());
 		return;
 	}
 	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
@@ -577,6 +583,19 @@ async function setInterpreter() {
 				list.push({ label, detail: paths[i] });
 		});
 	}
+}
+
+async function selectSyntaxes() {
+	let path = (await window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true }))?.[0].fsPath;
+	let t = ahkconfig.inspect('Syntaxes'), v = '', f = ConfigurationTarget.Global;
+	if (t) {
+		v = ((f = ConfigurationTarget.WorkspaceFolder, t.workspaceFolderValue) ??
+			(f = ConfigurationTarget.Workspace, t.workspaceValue) ??
+			(f = ConfigurationTarget.Global, t.globalValue) ?? '') as string;
+	}
+	if (path === undefined || v.toLowerCase() === path.toLowerCase())
+		return;
+	ahkconfig.update('Syntaxes', path || undefined, f);
 }
 
 function getAHKversion(paths: string[]): Thenable<string[]> {

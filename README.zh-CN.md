@@ -308,6 +308,7 @@ local ahk2_configs = {
 }
 local configs = require "lspconfig.configs"
 configs["ahk2"] = { default_config = ahk2_configs }
+local nvim_lsp = require("lspconfig")
 nvim_lsp.ahk2.setup({})
 ```
 

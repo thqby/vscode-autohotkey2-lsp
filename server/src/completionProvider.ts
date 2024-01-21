@@ -71,7 +71,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 	let { text, word, token, range, linetext, kind, symbol } = doc.buildContext(position, true);
 	let list = doc.relevance, { line, character } = position;
-	let isexpr = false, expg = make_search_re(word);
+	let isexpr = false, expg = make_search_re(word, doc.d ? '' : '(?<!^\\$)');
 
 	if (!token?.type || token.type === 'TK_EOF') {
 		if ((pt = token?.previous_token)?.type === 'TK_SHARP') {
@@ -208,7 +208,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (['goto', 'continue', 'break'].includes(l)) {
 				if (i === 1 && token.type !== 'TK_WORD')
 					return;
-				let ts: any[] = [];
+				let ts: any[] = [], tokens = doc.tokens, lk = pt.previous_token, data;
 				if (scope = doc.searchScopedNode(position)) {
 					(temp = (scope as FuncNode).labels) && ts.push(temp);
 				} else {
@@ -216,9 +216,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					for (let u in list)
 						(temp = lexers[u]?.labels) && ts.push(temp);
 				}
+				while (lk && lk.type !== 'TK_START_BLOCK') {
+					if (lk.previous_pair_pos !== undefined)
+						lk = tokens[lk.previous_pair_pos];
+					lk = lk.previous_token;
+				}
+				data = lk?.offset;
 				for (let o of ts)
 					for (let _ in o)
-						expg.test(_) && (temp = o[_][0]).def && items.push(convertNodeCompletion(temp));
+						expg.test(_) && (temp = o[_][0]).def && (data === temp.data) && items.push(convertNodeCompletion(temp));
 				if (i === 1 || i === 2 && !maxn)
 					return items;
 				if (maxn)
@@ -517,6 +523,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 									break;
 								items.push(...completionItemCache.key);
 								return items;
+							default:
+								if ((ahkvars[res.name.toUpperCase()] as FuncNode)?.params[res.index]?.name === 'WinTitle')
+									return completionItemCache.option.ahk_criteria;
 						}
 					}
 					let fns: FuncNode[] = [];
@@ -734,7 +743,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		let all = !!list[uri];
 		for (const n in temp) {
 			let it = temp[n];
-			if ((all || it.kind !== SymbolKind.Interface) && expg.test(n) && (!vars[n] || (vars[n].kind === CompletionItemKind.Variable && it.kind !== SymbolKind.Variable)))
+			if (all && expg.test(n) && (!vars[n] || (vars[n].kind === CompletionItemKind.Variable && it.kind !== SymbolKind.Variable)))
 				vars[n] = cpitem = convertNodeCompletion(it), cpitem.detail = `${completionitem.include(path)}\n\n${cpitem.detail ?? ''}`;
 		}
 	}
@@ -897,6 +906,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			default:
 				ci.kind = CompletionItemKind.Text; break;
 		}
+		if (info.tags)
+			ci.tags = info.tags;
 		return ci;
 	}
 }

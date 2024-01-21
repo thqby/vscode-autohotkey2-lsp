@@ -876,7 +876,7 @@ FileRecycleEmpty(DriveLetter := '') => void
  * 
  * Because the "Prompt Overwrite" option is only supported by the save dialog, specifying this option without the "Prompt to Create" option will also make the "S" option effective. Similarly, when the "S" option exists, "Prompt to create" The option has no effect. Specify the number 24 to enable any prompt type supported by the dialog box.
  */
-FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Files (*.*)') => String
+FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Files (*.*)') => String | Array
 
 /**
  * Change the attributes of one or more files or folders. Wildcards are supported.
@@ -1237,7 +1237,7 @@ IniWrite(Value, Filename, Section [, Key]) => void
  * 
  * Password: shield the user's input. To specify which character to use, as shown in this example: Password
  */
-InputBox([Prompt, Title, Options, Default]) => Object
+InputBox([Prompt, Title, Options, Default]) => $InputBoxResult
 
 /**
  * Install mouse hook
@@ -2636,7 +2636,7 @@ class Array extends Object {
 	/**
 	 * An array object contains a list or sequence of values.
 	 */
-	__New(Values*) => Array
+	__New(Values*)
 
 	/**
 	 * Enumerates array elements.
@@ -2747,7 +2747,7 @@ class ClipboardAll extends Buffer {
 	/**
 	 * Create an object (such as pictures and formats) that contains all the content on the clipboard.
 	 */
-	__New([Data, Size]) => Buffer
+	__New([Data, Size])
 }
 
 class Closure extends Func {
@@ -2837,7 +2837,7 @@ class Error extends Object {
 	/**
 	 * Create an Error object.
 	 */
-	__New([Message, What, Extra]) => Error
+	__New([Message, What, Extra])
 }
 
 class File extends Object {
@@ -3106,7 +3106,7 @@ class Gui extends Object {
 	 * @param Title The window title. If omitted, it defaults to the current value of A_ScriptName.
 	 * @param EventObj OnEvent, OnNotify and OnCommand can be used to register methods of EventObj to be called when an event is raised
 	 */
-	__New([Options, Title := A_ScriptName, EventObj]) => Gui
+	__New([Options, Title := A_ScriptName, EventObj])
 
 	/**
 	 * Create controls such as text, buttons or checkboxes, and return a GuiControl object.
@@ -3890,7 +3890,7 @@ class InputHook extends Object {
 	 * 
 	 * Because the items in MatchList are not treated as separate parameters, the list can be completely contained in a variable. In fact, if the length of this list exceeds 16383, then all or part of the list must be contained in the variable because of this length Is the maximum length of any script line. For example, MatchList may consist of List1 "," List2 "," List3 - each of these variables contains a sublist of matching phrases.
 	 */
-	__New(Options := '', EndKeys := '', MatchList := '') => Inputhook
+	__New(Options := '', EndKeys := '', MatchList := '')
 
 	/**
 	 * Set the options of the key or key list.
@@ -3942,7 +3942,7 @@ class Map extends Object {
 	/**
 	 * The Map object associates or maps a set of values called keys to another set of values.
 	 */
-	__New([Key1, Value1, *]) => Map
+	__New([Key1, Value1, *])
 
 	/**
 	 * Enumerates key-value pairs.
@@ -4030,7 +4030,7 @@ class Menu extends Object {
 	/**
 	 * Create a new Menu or MenuBar object.
 	 */
-	__New() => Menu
+	__New()
 
 	/**
 	 * Add or modify menu items.
@@ -4157,7 +4157,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	__New(code := A_LastError, What?, Extra?) => OSError
+	__New(ErrorCode := A_LastError, What?, Extra?)
 }
 
 class Primitive extends Any {
@@ -4243,5 +4243,20 @@ class VarRef extends Any {
 }
 
 class ZeroDivisionError extends Error {
+}
+;#endregion
+
+;#region typedef
+
+class $InputBoxResult {
+	/**
+	 * The text entered by the user.
+	 */
+	Value => String
+
+	/**
+	 * One of the following words indicating how the input box was closed: "OK", "Cancel", "Timeout".
+	 */
+	Result => String
 }
 ;#endregion

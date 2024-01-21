@@ -1,62 +1,86 @@
 {
 	"directives": [
 		{
-			"body": "#ClipboardTimeout ",
-			"description": "Change the time the script continues to try to access the clipboard when the first attempt to access the clipboard fails."
+			"body": "#ClipboardTimeout ${1:Milliseconds}",
+			"description": "Set time between retrying the clipboard in milliseconds. 0 = try once, -1 = try indefinitely, omit = default search restored.",
+			"prefix": "#ClipboardTimeout"
 		},
 		{
-			"body": "#DllLoad ",
-			"description": "Load the DLL or EXE file before the script starts executing."
+			"body": "#DllLoad",
+			"description": "Load the DLL or EXE file before the script starts executing or omit to to reset default search strategy.",
+			"syntax": "#DllLoad [FileOrDirName]"
 		},
 		{
-			"body": "#ErrorStdOut ${1|'UTF-8','CP0'|}",
+			"body": "#ErrorStdOut ${1|'CP0','UTF-8','UTF-16','CP###'|}",
 			"description": "Send any syntax errors that prevent the script from running to stderr instead of displaying a dialog box.",
-			"prefix": "#ErrorStdOut"
+			"prefix": "#ErrorStdOut",
+			"syntax": "#ErrorStdOut [Encoding]"
 		},
 		{
 			"body": "#HotIf",
-			"description": "Create context-sensitive hotkeys and hotstrings. Such hotkeys will perform different operations (or do nothing) based on the result of the expression."
+			"description": "Create context-sensitive hotkeys and hotstrings that are enabled when the criteria is true. Use #HotIf to reset criteria.",
+			"syntax": "HotIf [Expression]"
 		},
 		{
-			"body": "#HotIfTimeout ",
-			"description": "Set the maximum time that can be used to calculate a single #HotIf expression."
+			"body": "#HotIf WinActive('$0')",
+			"description": "Create context-sensitive hotkeys and hotstrings that work when the specified window is active. Use #HotIf to reset criteria.",
+			"prefix": "#HotIfWinActive"
+		},
+		{
+			"body": "#HotIf WinExist('$0')",
+			"description": "Create context-sensitive hotkeys and hotstrings that work when the specified window exists. Use #HotIf to reset criteria.",
+			"prefix": "#HotIfWinExist"
+		},
+		{
+			"body": "#HotIfTimeout ${1:Timeout}",
+			"description": "Max time spent evaluating #HotIf criteria. Default is 1000.",
+			"prefix": "#HotIfTimeout"
 		},
 		{
 			"body": "#Hotstring ${1|NoMouse,EndChars |}",
-			"description": "Change the option or terminator of the hot string.",
-			"prefix": "#Hotstring"
+			"description": "```ahk2\n#Hotstring EndChars NewChars\n#Hotstring NewOptions\n```\nChange the default options for hotstrings or their ending char.\n```ahk2\n#Hotstring NoMouse\n```\nPrevents mouse clicks from resetting the hotstring recognizer.",
+			"prefix": "#Hotstring",
+			"syntax": ""
 		},
 		{
-			"body": "#Include ",
-			"description": "Make the script behave as if the content of the specified file is located at this exact location."
+			"body": "#Include ${1:File_Dir_Or_LibName}",
+			"description": "File contents are inserted here when script runs, but not if already included earlier.",
+			"prefix": "#Include"
 		},
 		{
-			"body": "#IncludeAgain ",
-			"description": "Make the script behave as if the content of the specified file is located at this exact location."
+			"body": "#IncludeAgain ${1:File_Or_Dir}",
+			"description": "File contents are inserted here when script runs, even if inserted before.",
+			"prefix": "#IncludeAgain"
 		},
 		{
-			"body": "#InputLevel ",
-			"description": "Controls whether hotkeys and hotstrings ignore simulated keyboard and mouse events."
+			"body": "#InputLevel ${1:0_to_100}",
+			"description": "Set Input Level of any subsequently created hotkeys/hotstrings. Omit for 0.",
+			"prefix": "#InputLevel"
 		},
 		{
-			"body": "#MaxThreads ",
-			"description": "Set the maximum number of threads that can exist simultaneously."
+			"body": "#MaxThreads ${1:1_to_255}",
+			"description": "Sets the maximum number of simultaneous threads. Default is 10.",
+			"prefix": "#MaxThreads"
 		},
 		{
-			"body": "#MaxThreadsBuffer",
-			"description": "When some or all hotkeys reach the #MaxThreadsPerHotkey limit, this instruction makes them buffer instead of ignoring keystrokes."
+			"body": "#MaxThreadsBuffer ${1|true,false|}",
+			"description": "Set if hotkeys are buffered or ignored when max threads reached. Default and omit value is 1.",
+			"prefix": "#MaxThreadsBuffer"
 		},
 		{
-			"body": "#MaxThreadsPerHotkey ",
-			"description": "Set the maximum number of threads that can exist simultaneously for each hotkey or hotstring."
+			"body": "#MaxThreadsPerHotkey ${1:1_to_255}",
+			"description": "Set the maximum number of threads that can exist simultaneously for each hotkey or hotstring.",
+			"prefix": "#MaxThreadsPerHotkey"
 		},
 		{
 			"body": "#NoTrayIcon",
-			"description": "Suppresses the display of tray icons."
+			"description": "Disables the showing of a tray icon."
 		},
 		{
-			"body": "#Requires ",
-			"description": "If the version requirements are not met, display an error and exit."
+			"body": "#Requires AutoHotkey${1| , >, >=, <, <=, =|}v2.${2:0}${3| , 32-bit, 64-bit|}",
+			"description": "The required version of AutoHotkey for the script to run otherwise script s and quits.",
+			"prefix": "#Requires",
+			"syntax": "#Requires Requirement"
 		},
 		{
 			"body": "#SingleInstance ${1|Force,Ignore,Prompt,Off|}",
@@ -65,22 +89,22 @@
 		},
 		{
 			"body": "#SuspendExempt ${1|true,false|}",
-			"description": "Exempt subsequent hotkeys and hotkey strings from being suspended.",
+			"description": "Sets if subsequent hotkeys and hotstrings are marked as exempt from Suspend().",
 			"prefix": "#SuspendExempt"
 		},
 		{
 			"body": "#UseHook ${1|true,false|}",
-			"description": "Force the use of hooks to implement all or part of the keyboard hotkeys.",
+			"description": "Force the use of the hook with some/all hotkeys.",
 			"prefix": "#UseHook"
 		},
 		{
-			"body": "#Warn ${1|All,UseUnsetLocal,UseUnsetGlobal,VarUnset,LocalSameAsGlobal,Unreachable|}, ${2|MsgBox,StdOut,OutputDebug,Off|}",
-			"description": "Enable or disable warnings under certain conditions, which may cause errors, such as typos or missing'global' declarations.",
+			"body": "#Warn ${1|All,VarUnset,LocalSameAsGlobal,Unreachable|}, ${2|MsgBox,StdOut,OutputDebug,Off|}",
+			"description": "Enable or disable warnings for certain critera. Can catch multiple types of s.",
 			"prefix": "#Warn"
 		},
 		{
 			"body": "#WinActivateForce",
-			"description": "Skip the gentle method and directly use the mandatory method to activate the window."
+			"description": "Use forceful activation by default instead of gentle activation first."
 		},
 		{
 			"body": ";@Ahk2Exe-${1|IgnoreBegin,IgnoreEnd|}",
@@ -93,7 +117,7 @@
 			"prefix": "@Ahk2Exe-Keep"
 		},
 		{
-			"body": ";@Ahk2Exe-AddResource ${1:FileName [, ResourceName]}",
+			"body": ";@Ahk2Exe-AddResource ${2:FileName}${1| , RT_BITMAP, RT_MENU, RT_DIALOG, RT_STRING, RT_ACCELERATORS, RT_RCDATA, RT_MESSAGETABLE, RT_GROUP_CURSOR, RT_GROUP_ICON, RT_HTML, RT_MANIFEST|}",
 			"description": "Add resources to the compiled executable file.",
 			"prefix": "@Ahk2Exe-AddResource"
 		},
@@ -118,12 +142,12 @@
 			"prefix": "@Ahk2Exe-Debug"
 		},
 		{
-			"body": ";@Ahk2Exe-ExeName ${1:[Path\\][Name]}",
+			"body": ";@Ahk2Exe-ExeName ${1:[Path\\]Name}",
 			"description": "Specify the location and name of the generated .exe file.",
 			"prefix": "@Ahk2Exe-ExeName"
 		},
 		{
-			"body": ";@Ahk2Exe-Let ${1:Name = Value [, Name = Value, ...]}",
+			"body": ";@Ahk2Exe-Let ${1:Name = Value [, NameN = ValueN]}",
 			"description": "Create (or modify) one or more user variables, these variables can be accessed through %U_Name%, similar to built-in variables (see above).",
 			"prefix": "@Ahk2Exe-Let"
 		},
@@ -138,19 +162,85 @@
 			"prefix": "@Ahk2Exe-PostExec"
 		},
 		{
-			"body": ";@Ahk2Exe-Set${1|CompanyName,Copyright,Description,FileVersion,InternalName,Language,LegalTrademarks,Name,OrigFilename,ProductName,ProductVersion,Version|} ${2:Value}",
-			"description": "Change the attributes in the version information of the compiled executable file. Note that regardless of the order in which the attributes are specified, all attributes are processed in alphabetical order.",
-			"prefix": "@Ahk2Exe-Set"
-		},
-		{
 			"body": ";@Ahk2Exe-SetMainIcon ${1:[IcoFile]}",
 			"description": "Overwrite the custom EXE icon used for compilation.",
 			"prefix": "@Ahk2Exe-SetMainIcon"
+		},
+		{
+			"body": ";@Ahk2Exe-SetCompanyName ${1:CompanyName}",
+			"description": "Changes the company name.",
+			"prefix": "@Ahk2Exe-SetCompanyName"
+		},
+		{
+			"body": ";@Ahk2Exe-SetCopyright ${1:CopyrightInfo}",
+			"description": "Changes the legal copyright information.",
+			"prefix": "@Ahk2Exe-SetCopyright"
+		},
+		{
+			"body": ";@Ahk2Exe-SetDescription ${1:Description}",
+			"description": "Changes the file description and changes script's name in Task Manager under \"Processes\".",
+			"prefix": "@Ahk2Exe-SetDescription"
+		},
+		{
+			"body": ";@Ahk2Exe-SetFileVersion ${1:Version}",
+			"description": "Changes the file version, in both text and raw binary format.",
+			"prefix": "@Ahk2Exe-SetFileVersion"
+		},
+		{
+			"body": ";@Ahk2Exe-SetInternalName ${1:InternalName}",
+			"description": "Changes the internal name.",
+			"prefix": "@Ahk2Exe-SetInternalName"
+		},
+		{
+			"body": ";@Ahk2Exe-SetLanguage ${1:0x0409}",
+			"description": "Changes the language code. Must include 0x prefix.",
+			"prefix": "@Ahk2Exe-SetLanguage"
+		},
+		{
+			"body": ";@Ahk2Exe-SetLegalTrademarks ${1:Trademark}",
+			"description": "Changes the legal trademarks information.",
+			"prefix": "@Ahk2Exe-SetLegalTrademarks"
+		},
+		{
+			"body": ";@Ahk2Exe-SetName ${1:Name}",
+			"description": "Changes the product name and the internal name.",
+			"prefix": "@Ahk2Exe-SetName"
+		},
+		{
+			"body": ";@Ahk2Exe-SetOrigFilename ${1:OriginalFilename}",
+			"description": "Changes the original filename information.",
+			"prefix": "@Ahk2Exe-SetOrigFilename"
+		},
+		{
+			"body": ";@Ahk2Exe-SetProductName ${1:ProductName}",
+			"description": "Changes the product name.",
+			"prefix": "@Ahk2Exe-SetProductName"
+		},
+		{
+			"body": ";@Ahk2Exe-SetProductVersion ${1:Version}",
+			"description": "Changes the product version, in both text and raw binary format.",
+			"prefix": "@Ahk2Exe-SetProductVersion"
+		},
+		{
+			"body": ";@Ahk2Exe-SetVersion ${1:Version}",
+			"description": "Changes the file version and the product version, in both text and raw binary format.",
+			"prefix": "@Ahk2Exe-SetVersion"
+		},
+		{
+			"body": ";@Ahk2Exe-UpdateManifest ${1|0,1,2|}${2| ,[\\, Name\\, Version\\, UIAccess]|}",
+			"description": "Changes details in the .exe's manifest. This directive is for specialised use only.",
+			"prefix": "@Ahk2Exe-UpdateManifest"
+		},
+		{
+			"body": ";@Ahk2Exe-UseResourceLang ${1:0x0409}",
+			"description": "Changes the resource language used by ;@Ahk2Exe-AddResource.",
+			"prefix": "@Ahk2Exe-UseResourceLang"
 		}
 	],
 	"keywords": [
 		{
-			"body": "and"
+			"body": "and",
+			"description": "`(x and y)` Both items must be true. Same as: `&&`"
 		},
 		{
 			"body": "as"
@@ -160,63 +250,73 @@
 		},
 		{
 			"body": "is",
-			"description": "If Value is an instance of Class, it returns true (1), otherwise it returns false (0)."
+			"description": "`(Var is Type)` Compare value to a class type. String, Array, etc."
 		},
 		{
-			"body": "not"
+			"body": "not",
+			"description": "`(not Expression)` Item must not be true. Same as: `!`."
 		},
 		{
-			"body": "or"
+			"body": "or",
+			"description": "`(x or y)` One or other must be true. Same as: `||`."
 		},
 		{
 			"body": "break",
-			"description": "Exit (terminate) any type of loop statement."
+			"description": "End any [Loop/While/For] loop immediately.",
+			"syntax": "break [LoopLabel]\nbreak('Label')"
 		},
 		{
 			"body": "catch",
-			"description": "Specify the code to be executed when an exception is raised during the execution of the try statement."
+			"description": "Specify the code to be executed when an exception is raised during the execution of the try statement.",
+			"syntax": "catch [ErrorClass] [as OutputVar] {\n\tStatements\n}"
 		},
 		{
 			"body": "continue",
-			"description": "Skip the rest of the current iteration of the loop statement, and then start a new loop."
+			"description": "Skip the rest of the current iteration of the loop statement, and then start a new loop.",
+			"syntax": "continue [LoopLabel]\ncontinue('Label')"
 		},
 		{
 			"body": "else if ",
+			"description": "Adds another decision to check if prior were false.",
 			"prefix": "elif"
 		},
 		{
 			"body": "else",
-			"description": "If the result of the if statement is false, specify one or more statements to be executed."
+			"description": "Specifies one or more statements to execute if the associated statement's body did not execute.\nThe condition for an Else statement executing depends on the associated statement:\n- If expression: The expression evaluated to false.\n- For, Loop (any kind), While: The loop had zero iterations.\n- Loop Read: As above, but the presence of Else also prevents an error from being thrown if the file or path is not found. Therefore, Else executes if the file is empty or does not exist.\n- Try...Catch: No exception was thrown within the Try block."
 		},
 		{
 			"body": "finally",
-			"description": "Ensure that one or more statements (functions or expressions) are always executed after the try statement is executed."
+			"description": "Code block to run after a try/catch has completed."
 		},
 		{
 			"body": "for $1 in $0",
 			"description": "Repeat a series of functions for each key-value pair in the object.",
-			"prefix": "for"
+			"prefix": "for",
+			"syntax": "for value1 [, value2...] in Expression"
 		},
 		{
 			"body": "global",
-			"description": "To refer to an existing global variable inside a function (or create a new global variable), please declare it as a global variable before using the variable."
+			"description": "Mark a variable or function as global so it can be changed from inside a function or method.",
+			"syntax": "global [Var]"
 		},
 		{
 			"body": "goto",
-			"description": "Jump to the specified label and continue execution."
+			"description": "Jump to the specified label and continue execution.",
+			"syntax": "goto Label\ngoto('Label')"
 		},
 		{
 			"body": "if ",
-			"description": "Specify one or more statements to be executed when the expression evaluates to true."
+			"description": "Specify one or more statements to be executed when the expression evaluates to true.",
+			"syntax": "if Expression"
 		},
 		{
 			"body": "loop files ${1:FilePattern [, Mode]}",
-			"description": "Retrieve the specified file or folder, one at a time.",
+			"description": "Loop through a directory. MODES: D=Get Directories, F=Get Files, R=Recurse",
 			"prefix": "loop files"
 		},
 		{
-			"body": "loop parse ${1:String [, Delimiters|CSV, OmitChars]}",
-			"description": "Retrieve one substring (field) from a string at a time.",
+			"body": "loop parse ${1:String [, Delimiters|'CSV', OmitChars]}",
+			"description": "Loop through a string by substrings. String is parsed by each char if no Delimiter is provided.",
 			"prefix": "loop parse"
 		},
 		{
@@ -226,48 +326,57 @@
 		},
 		{
 			"body": "loop reg ${1:KeyName [, Mode]}",
-			"description": "Retrieve the contents of the specified registry subkey, one item at a time.",
+			"description": "Retrieve the contents of the specified registry subkey. Modes: K=Key, V=Value, R=Recurse",
 			"prefix": "loop reg"
 		},
 		{
-			"body": "loop ",
-			"description": "Repeat a series of functions: you can specify a number representing the number of repetitions or until a break is encountered."
+			"body": "loop",
+			"description": "Repeat a series of functions: you can specify a number representing the number of repetitions or until a break is encountered.",
+			"syntax": "loop [Count]"
 		},
 		{
-			"body": "local",
-			"description": "Local variables are specific to a single function and are only visible inside that function. Therefore, local variables may have the same name as global variables, and the two will have separate contents. Separate functions can also be used safely The same variable name."
+			"body": "local ${1:Var}",
+			"description": "Sets a variable or all function variables to local scope, causing them to be private to the function. Local variables can be the same as globals."
 		},
 		{
-			"body": "case $0:",
-			"prefix": "case"
+			"body": "case $1:",
+			"description": "One or more values to compare against the Switch value or evaluate if no value is provided.",
+			"prefix": "case",
+			"syntax": "case ExpressionOrValue:"
 		},
 		{
 			"body": "default:",
+			"description": "The default code block to run if no Switch cases match.",
 			"prefix": "default"
 		},
 		{
 			"body": "return",
-			"description": "Return from the previously executed subroutine through function call, hotkey activation or other means."
+			"description": "Return the flow of code to the original caller, along with an optional return value.",
+			"syntax": "return [Expression]"
 		},
 		{
 			"body": "static",
-			"description": "Static variables are always implicit local variables, but they are different from local variables because their values ??are remembered between calls."
+			"description": "A static variable or function persists through the life of the script and does not get erased at the end of a function call.",
+			"syntax": "static [Var]\nstatic Method()\nstatic Property"
 		},
 		{
 			"body": "throw",
-			"description": "Indicates that an error occurred. The signal can be caught by a try-catch statement."
+			"description": "Indicates that an error has occurred. The signal can be caught by a try-catch statement.",
+			"syntax": "throw Expression"
 		},
 		{
 			"body": "try",
-			"description": "Protect one or more statements (functions or expressions) to prevent runtime errors and exceptions raised by the throw statement."
+			"description": "Guards one or more statements against runtime errors and values thrown by the Throw statement."
 		},
 		{
 			"body": "until ",
-			"description": "Apply the condition to the continuation of the loop or for loop."
+			"description": "Apply the condition to the continuation of the loop or for loop.",
+			"syntax": "until Expression"
 		},
 		{
 			"body": "while ",
-			"description": "Repeat a series of functions until the specified expression evaluates to false."
+			"description": "While expression evaluates to true, continue to run code block",
+			"syntax": "while Expression"
 		}
 	],
 	"variables": [
@@ -825,6 +934,28 @@
 		}
 	],
 	"options": {
+		"ahk_criteria": [
+			{
+				"body": "ahk_class",
+				"description": "ahk_class is used to match one or more windows using the class name of the application."
+			},
+			{
+				"body": "ahk_exe",
+				"description": "ahk_exe is used to match one or more windows using the exe name of the process that owns the window."
+			},
+			{
+				"body": "ahk_group",
+				"description": "ahk_group is used to match a group of one or more windows that have been previously defined using GroupAdd()."
+			},
+			{
+				"body": "ahk_id",
+				"description": "ahk_id is used to match a window using the window's unique ID (HWND). This number is not static and changes every time the application is launched."
+			},
+			{
+				"body": "ahk_pid",
+				"description": "ahk_pid is used to match one or more windows using the process ID of that application. This number is not static and changes every time the application is launched."
+			}
+		],
 		"hotstring": [
 			{
 				"body": "*",
@@ -894,26 +1025,6 @@
 	},
 	"texts": [
 		{
-			"body": "ahk_class",
-			"description": "The window class is a set of attributes used by the system as a template for creating windows. In other words, the class name of the window identifies the type of window. To use the window class, please specify ahk_class ExactClassName, as shown in Window Spy .ExactClassName can be retrieved through WinGetClass."
-		},
-		{
-			"body": "ahk_exe",
-			"description": "Use ahk_exe to identify windows belonging to any process with a given name or path."
-		},
-		{
-			"body": "ahk_group",
-			"description": "Use ahk_group to identify one or more windows that match the rules contained in the previously defined window group."
-		},
-		{
-			"body": "ahk_id",
-			"description": "Each window or control has a unique ID, also known as HWND (short for window handle)."
-		},
-		{
-			"body": "ahk_pid",
-			"description": "Use ahk_pid to identify the window belonging to a specific process. The process identifier (PID) is usually retrieved by WinGet, Run or Process."
-		},
-		{
 			"body": "AlwaysOnTop",
 			"description": "Keep the window above all other windows."
 		},
@@ -960,10 +1071,14 @@
 		},
 		{
 			"body": "AppsKey",
-			"description": "Menu. This is the key to call the right-click context menu."
+			"description": "Activates the right-click context menu."
 		},
 		{
 			"body": "BackSpace"
+		},
+		{
+			"body": "BS",
+			"description": "Short version of Backspace."
 		},
 		{
 			"body": "Browser_Back",
@@ -997,6 +1112,9 @@
 			"body": "CapsLock"
 		},
 		{
+			"body": "Control"
+		},
+		{
 			"body": "Ctrl"
 		},
 		{
@@ -1004,7 +1122,8 @@
 			"description": "Ctrl+Pause or Ctrl+ScrollLock"
 		},
 		{
-			"body": "Del"
+			"body": "Del",
+			"description": "Short version of Delete."
 		},
 		{
 			"body": "Delete"
@@ -1019,7 +1138,8 @@
 			"body": "Enter"
 		},
 		{
-			"body": "Esc"
+			"body": "Esc",
+			"description": "Short version of Escape."
 		},
 		{
 			"body": "Escape"
@@ -1100,7 +1220,8 @@
 			"body": "Home"
 		},
 		{
-			"body": "Ins"
+			"body": "Ins",
+			"description": "Short version of Insert."
 		},
 		{
 			"body": "Insert"

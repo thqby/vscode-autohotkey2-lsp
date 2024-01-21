@@ -71,7 +71,13 @@ export enum SemanticTokenModifiers {
 	deprecated = 16,
 }
 
-export interface FuncNode extends DocumentSymbol {
+export interface AHKSymbol extends DocumentSymbol {
+	returntypes?: { [exp: string]: any } | null
+	ignore?: boolean
+	uri?: string
+}
+
+export interface FuncNode extends AHKSymbol {
 	assume: FuncScope
 	closure?: boolean
 	static?: boolean
@@ -81,7 +87,7 @@ export interface FuncNode extends DocumentSymbol {
 	full: string
 	hasref: boolean
 	variadic: boolean
-	parent?: DocumentSymbol
+	parent?: AHKSymbol
 	funccall?: CallInfo[]
 	labels: { [key: string]: DocumentSymbol[] }
 	declaration: { [name: string]: FuncNode | ClassNode | Variable };
@@ -90,30 +96,27 @@ export interface FuncNode extends DocumentSymbol {
 	has_this_param?: boolean
 	unresolved_vars?: { [name: string]: Variable }
 	resolved?: boolean
-	uri?: string
 	ranges?: [number, number][]	// class's __init
 	def?: boolean	// not use
 }
 
-export interface ClassNode extends DocumentSymbol {
+export interface ClassNode extends AHKSymbol {
 	full: string
 	extends: string
 	extendsuri?: string
-	parent?: DocumentSymbol
+	parent?: AHKSymbol
 	funccall: CallInfo[]
 	declaration: { [name: string]: FuncNode | Variable };
 	staticdeclaration: { [name: string]: FuncNode | ClassNode | Variable };
 	cache: Variable[]
-	returntypes?: { [exp: string]: any }
 	overwrite?: number
 	undefined?: { [name: string]: Token[] }
-	uri?: string
 	checkmember?: boolean
 	static?: boolean	// not use
 	def?: boolean		// not use
 }
 
-export interface Variable extends DocumentSymbol {
+export interface Variable extends AHKSymbol {
 	assigned?: boolean | 1		// 1, ??=
 	static?: boolean | null		// null, maybe static
 	arr?: boolean
@@ -123,9 +126,7 @@ export interface Variable extends DocumentSymbol {
 	typed?: boolean | 1				// typed properties
 	defaultVal?: string | false | null
 	full?: string
-	returntypes?: { [exp: string]: any } | null
 	range_offset?: [number, number]
-	uri?: string
 }
 
 export interface SemanticToken {
@@ -139,6 +140,7 @@ export interface Token {
 	data?: any
 	definition?: DocumentSymbol
 	fat_arrow_end?: boolean
+	hover_word?: string
 	ignore?: boolean
 	in_exp?: boolean
 	length: number
@@ -705,7 +707,7 @@ export class Lexer {
 											while ((lk = tokens[j + 1]) && (lk.type === 'TK_WORD' || lk.type === 'TK_DOT') && (!lk.topofline && lt !== lk.type))
 												r += lk.content, j++, lt = lk.type, lk.semantic = { type: SemanticTokenTypes.class };
 											if (r)
-												rets.push(r = r.replace(/(^|\.)([^.$@#]+)$/, '$1@$2').replace('$', '').toLowerCase()), r === '@void' && rets.pop();
+												rets.push(r = r.replace(/(^|\.)([^.@#]+)$/, '$1@$2').toLowerCase()), r === '@void' && rets.pop();
 										} while (tokens[j + 1]?.content === '|');
 										lk?.type !== 'TK_END_EXPR' && (lk = tokens[j]);
 									}
@@ -745,14 +747,13 @@ export class Lexer {
 								isstatic = true, i++;
 							} else if (i < l - 4 && _low === 'class') {
 								let extends_ = '', m: any;
-								let cl = DocumentSymbol.create((tk = tokens[++i]).content, undefined,
-									SymbolKind.Class, make_range(tokens[i - 1].offset, 0), make_range(tk.offset, tk.length), []) as ClassNode;
+								let cl = DocumentSymbol.create((tk = tokens[++i]).content, undefined, SymbolKind.Class,
+									make_range(tokens[i - 1].offset, 0), make_range(tk.offset, tk.length), []) as ClassNode;
 								cl.declaration = {}, cl.staticdeclaration = {}, j = i + 1, cls.push(cl.name), cl.full = cls.join('.');
 								cl.returntypes = { [(cl.full.replace(/([^.]+)$/, '@$1')).toLowerCase()]: true };
 								tk.semantic = { type: SemanticTokenTypes.class, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
 								tk.symbol = tk.definition = cl, cl.funccall = [], cl.extends = '', cl.uri ??= _this.uri, p[blocks].children?.push(cl);
 								p[blocks].staticdeclaration[cl.name.toUpperCase()] = cl;
-								cl.name.startsWith('_') && (cl.kind = SymbolKind.Interface);
 								if (_cm = comments[cl.selectionRange.start.line])
 									cl.detail = trim_comment(_cm.content);
 								if ((lk = tokens[j])?.content.toLowerCase() === 'extends') {
@@ -1299,7 +1300,7 @@ export class Lexer {
 
 						case 'TK_END_BLOCK':
 							if ((--blocks) >= 0 && blockpos.length) {
-								let p = blockpos.pop() as number;
+								let p = blockpos.pop()!;
 								_this.addFoldingRange(tk.previous_pair_pos = p, parser_pos - 1);
 								tokens[p].next_pair_pos = tk.offset;
 								if (tk.topofline === 1)
@@ -1310,7 +1311,7 @@ export class Lexer {
 									_this.addDiagnostic(diagnostic.unexpected('}'), tk.offset, 1),
 										blocks = 0, blockpos.length = 0;
 								else {
-									if (blockpos.length)
+									if (blockpos.length && tk.previous_pair_pos === undefined)
 										tokens[tk.previous_pair_pos = blockpos[blockpos.length - 1]].next_pair_pos = tk.offset;
 									return;
 								}
@@ -1611,9 +1612,10 @@ export class Lexer {
 						} else if (mode === 2) {
 							_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
 							break;
-						} else if (bak = lk, next = (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(sub = tk.content.toLowerCase()))) {
+						} else if (bak = lk, next = ' \t,'.includes(input.charAt(parser_pos) || '\0') && (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(sub = tk.content.toLowerCase()))) {
 							min = 1, max = sub === 'parse' ? 3 : 2;
-							tk.type = 'TK_RESERVED', act += ' ' + sub, nexttoken();
+							tk.type = 'TK_RESERVED', act += ' ' + sub, lk.hover_word = tk.hover_word = act;
+							nexttoken();
 							if (tk.type === 'TK_COMMA' && nexttoken())
 								tk.topofline = 0;
 							next = false;
@@ -4513,7 +4515,7 @@ export class Lexer {
 							if (bg)
 								continue;
 						} else if (bg) {
-							if (t = line.match(/^;\s*#(end)?region\b/i)) {
+							if (t = line.match(/^;\s*[@#](end)?region\b/i)) {
 								ignore = true;
 								if (!t[1]) {
 									customblocks.region.push(parser_pos + 1);
@@ -6471,11 +6473,10 @@ export function searchNode(doc: Lexer, name: string, pos: Position | undefined, 
 		if (t && (t.node.kind !== SymbolKind.Variable || (t.node as Variable).def && !(res.node as Variable).def))
 			res = t;
 	}
-	name = name.replace(/^[#$]/, '');
 	let tt = true, u;
 	if (kind !== SymbolKind.Field && (!res || res.node.kind === SymbolKind.Variable &&
 		((tt = !(res.node as Variable).def) || !res.scope)) &&
-		(t = ahkvars[name] ?? (tt ? lexers[u = ahkuris.winapi]?.declaration[name] : undefined)))
+		(t = ahkvars[name.replace(/^#/, '')] ?? (tt ? lexers[u = ahkuris.winapi]?.declaration[name] : undefined)))
 		return [{ uri: t.uri ?? u, node: t }];
 	return res ? [res] : undefined;
 	function searchIncludeNode(list: { [uri: string]: string }, name: string) {
@@ -6516,7 +6517,7 @@ export function getFuncCallInfo(doc: Lexer, position: Position, ci?: CallInfo) {
 		return;
 	if (tk.callinfo && offset > tk.offset + tk.length && position.line <= tk.callinfo.range.end.line)
 		return get(tk.paraminfo!);
-	if (tk.topofline > 0)
+	if (tk.topofline > 0 || position.line > doc.document.positionAt(tk.offset + tk.length).line && !is_line_continue(tk, EMPTY_TOKEN))
 		return;
 	while (tk.topofline <= 0) {
 		switch (tk.type) {
@@ -6575,7 +6576,7 @@ export function traverse_include(lex: Lexer, included?: any) {
 	return cache;
 }
 
-export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: string, overloads?: string[]): string {
+export function formatMarkdowndetail(node: AHKSymbol, lex?: Lexer, name?: string, overloads?: string[]): string {
 	let params: { [name: string]: string[] } = {}, details: string[] = [], lastparam = '', m: RegExpMatchArray | null;
 	let detail = node.detail, ols = overloads ?? [], s, code = 0;
 	if (!detail)
@@ -6653,6 +6654,10 @@ export function formatMarkdowndetail(node: DocumentSymbol, lex?: Lexer, name?: s
 						}
 						break;
 					default:
+						switch (s) {
+							case 'ignore': node.ignore = true; break;
+							case 'deprecated': node.tags ??= [1]; break;
+						}
 						details.push(`\n*@${s}*\0${m[2].replace(/^(\s*[-—])?/, '')}`);
 						break;
 				}
@@ -6811,7 +6816,7 @@ function cvt_types(tps: string) {
 			tps = t;
 		tps.toLowerCase().split(/(?<!=>\s*[^)]*)\|/)
 			.forEach(tp => o[tp === 'void' ? '#void' : tp.includes('=>') ? tp :
-				tp.replace(/(^|\.)([^.$@#]+(<[^>]+>)?)$/, '$1@$2').replace('$', '')] = true);
+				tp.replace(/(^|\.)([^.@#]+(<[^>]+>)?)$/, '$1@$2')] = true);
 		delete o[''];
 		let a = Object.keys(o);
 		if (a.length)
