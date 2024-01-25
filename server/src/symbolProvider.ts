@@ -261,7 +261,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					doc.addDiagnostic(samenameerr(it, { kind } as DocumentSymbol), offset, it.name.length), delete (<Variable>it).def;
 				if (!tk.callinfo && st === SemanticTokenTypes.function) {
 					let nk = doc.tokens[tk.next_token_offset];
-					if (nk && nk.topofline < 1 && !(':?.+-*/=%<>,)]}'.includes(nk.content.charAt(0)) || !nk.data && nk.content === '{'))
+					if (nk && nk.topofline < 1 && !(nk.op_type! >= 0 || ':?.+-*/=%<>,)]}'.includes(nk.content.charAt(0)) || !nk.data && nk.content === '{'))
 						doc.addDiagnostic(diagnostic.funccallerr2(), tk.offset, tk.length, 2);
 				}
 			} else if (kind !== undefined)
