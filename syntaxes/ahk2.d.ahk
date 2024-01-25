@@ -2,28 +2,28 @@
 /**
  * Returns the absolute value of Number.
  */
-Abs(Number) => Number
+Abs(Number) => Float | Integer
 
 /**
  * Returns the arc cosine value expressed in radians (the cosine value is Number).
  */
-ACos(Number) => Number
+ACos(Number) => Float
 
 /**
  * Returns the arc sine value expressed in radians (its sine value is Number).
  */
-ASin(Number) => Number
+ASin(Number) => Float
 
 /**
  * Returns the arctangent value expressed in radians (its tangent value is Number).
  */
-ATan(Number) => Number
+ATan(Number) => Float
 
 /**
  * Returns the inverse tangent of y/x in radians.
  * @since v2.1-alpha.1
  */
-ATan2(Y, X) => Number
+ATan2(Y, X) => Float
 
 /**
  * Disable or enable the user's ability to interact with the computer through the keyboard and mouse.
@@ -43,7 +43,7 @@ BlockInput(Option) => void
  * &: The address of the parameter list (a single integer) is passed to the Function instead of each parameter. You can use Numget to retrieve the parameter value. When using the standard 32-bit calling convention, ParamCount must specify the size of the parameter list in DWORDs ( Divide the number of bytes by 4).
  * @param ParamCount Address The number of parameters that the caller will pass to it. If omitted, it defaults to Function.MinParams, which is usually the number of mandatory parameters in the Function definition. In both cases, you must ensure that the caller is accurate Pass this number of parameters.
  */
-CallbackCreate(Function [, Options, ParamCount]) => Number
+CallbackCreate(Function [, Options, ParamCount]) => Integer
 
 /**
  * Release the reference of the callback to the script function object.
@@ -53,12 +53,12 @@ CallbackFree(Address) => void
 /**
  * Retrieve the current position of the caret (text insertion point).
  */
-CaretGetPos([&OutputVarX, &OutputVarY]) => Number
+CaretGetPos([&OutputVarX, &OutputVarY]) => Integer
 
 /**
  * Return Number rounded up to integer (without any .00 suffix).
  */
-Ceil(Number) => Number
+Ceil(Number) => Integer
 
 /**
  * Returns the string (usually a single character) corresponding to the code represented by the specified number.
@@ -82,7 +82,7 @@ Click(Options*) => void
  * @param WaitForanyData If this parameter is omitted or 0 (false), this command will be more selective, explicitly waiting for the text or file to appear in the clipboard ("text" includes anything that will produce text when you paste it into Notepad content).
  * If this parameter is 1 (true), the function waits for any type of data to appear on the clipboard.
  */
-ClipWait([Timeout, WaitForanyData]) => Number
+ClipWait([Timeout, WaitForanyData]) => Integer
 
 /**
  * Call native COM interface methods by index.
@@ -94,7 +94,7 @@ ClipWait([Timeout, WaitForanyData]) => Number
  * @param ComObject The target COM object; that is, a COM interface pointer.
  * The pointer value can be passed directly or encapsulated in an object with Ptr attribute, such as ComObj with VT_UNKNOWN variable type.
  */
-ComCall(Index, ComObject [, Type1, arg1, *, ReturnType]) => Number | string
+ComCall(Index, ComObject [, Type1, arg1, *, ReturnType]) => Float | Integer | String
 
 /**
  * Retrieve running objects that have been registered using OLE (Object Connection and Embedding).
@@ -120,7 +120,7 @@ ComObjFromPtr(DispPtr) => ComObject
  * @param Mask changes the bit mask of flags.
  * @returns This function returns the current flags of the specified COM object (if specified, after applying NewFlags).
  */
-ComObjFlags(ComObject [, NewFlags, Mask]) => Number
+ComObjFlags(ComObject [, NewFlags, Mask]) => Integer
 
 /**
  * Returns a reference to the object provided by the COM component.
@@ -143,19 +143,19 @@ ComObjQuery(ComObject [, SID], IID) => ComObject
  * @param Type The second parameter is a string indicating the type information returned.
  * Name, IID, Class, CLSID
  */
-ComObjType(ComObject [, Type]) => Number | String
+ComObjType(ComObject [, Type]) => Integer | String
 
 /**
  * Retrieve the value or pointer stored in the COM wrapper object.
  * @param ComObject contains a COM object or a wrapper object for typed values.
  * @returns returns a 64-bit signed integer.
  */
-ComObjValue(ComObject) => Number
+ComObjValue(ComObject) => Integer
 
 /**
  * Add the specified string as a new entry at the bottom of the ListBox or ComboBox.
  */
-ControlAddItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlAddItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Set the selection in the list box, combo box or tab page control to the specified item or tab number.
@@ -168,7 +168,7 @@ ControlChooseIndex(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) 
  * Set the selection in ListBox or ComboBox to the first entry whose leading part matches the specified string.
  * @param String The string to select. The search is not case sensitive. For example, if a ListBox/ComboBox contains the item "UNIX Text", specifying the word "unix" (lower case) is sufficient to select it.
  */
-ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => number
+ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Send mouse button or mouse wheel events to the control.
@@ -207,7 +207,7 @@ ControlDeleteItem(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) =
  * Returns the entry number of the ListBox or ComboBox that exactly matches the specified string.
  * @param String The string to find. The search is not case sensitive. Unlike ControlChooseString, the entire text of the entry must match, not just the beginning.
  */
-ControlFindItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlFindItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Set the input focus to the specified control of the window.
@@ -217,7 +217,7 @@ ControlFocus(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * If the check box or radio button is selected, a non-zero value is returned.
  */
-ControlGetChecked(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetChecked(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns the name of the currently selected item in the ListBox or ComboBox.
@@ -232,27 +232,27 @@ ControlGetClassNN(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => S
 /**
  * If the specified control is enabled, it returns a non-zero value.
  */
-ControlGetEnabled(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetEnabled(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns an integer representing the specified control style or extended style.
  */
-ControlGetExStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetExStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * If there is, get the control that has the input focus in the target window.
  */
-ControlGetFocus([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetFocus([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns the unique ID of the specified control.
  */
-ControlGetHwnd(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetHwnd(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns the index of the currently selected item or label in the ListBox, ComboBox or Tab control.
  */
-ControlGetIndex(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetIndex(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Return an array of items/rows from a list box, combo box or drop-down list.
@@ -267,7 +267,7 @@ ControlGetPos([&X, &Y, &Width, &Height, Control, WinTitle, WinText, ExcludeTitle
 /**
  * Returns an integer representing the specified control style or extended style.
  */
-ControlGetStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Retrieve the text of the control.
@@ -277,7 +277,7 @@ ControlGetText(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Stri
 /**
  * If the specified control is visible, it returns a non-zero value.
  */
-ControlGetVisible(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetVisible(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Hide designated controls.
@@ -371,7 +371,7 @@ CoordMode(TargetType, RelativeTo := 'Screen') => String
 /**
  * Returns the cosine value of Number.
  */
-Cos(Number) => Number
+Cos(Number) => Float
 
 /**
  * Prevent the current thread from being interrupted by other threads, or enable it to be interrupted.
@@ -391,7 +391,7 @@ DateAdd(DateTime, Time, TimeUnits) => String
  * Compare two date-times and return their difference value.
  * @param TimeUnits The unit of the Time parameter. TimeUnits can be one of the following strings (or the first letter): Seconds, Minutes, Hours or Days.
  */
-DateDiff(DateTime1, DateTime2, TimeUnits) => Number
+DateDiff(DateTime1, DateTime2, TimeUnits) => Integer
 
 /**
  * Set whether to'see' hidden text when searching for windows. This will affect built-in functions such as WinExist and Winactivate.
@@ -491,7 +491,7 @@ DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
 /**
  * Call functions in DLL files, such as standard Windows API functions.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number | String
+DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Float | Integer | String
 
 /**
  * Download files from the Internet.
@@ -507,7 +507,7 @@ DriveEject(Drive := '') => void
 /**
  * Returns the total capacity of the drive containing the specified path, in mb (megabytes).
  */
-DriveGetCapacity(Path) => Number
+DriveGetCapacity(Path) => Integer
 
 /**
  * Returns the type of the file system of the specified drive.
@@ -529,12 +529,12 @@ DriveGetList(Type := '') => String
 /**
  * Returns the volume serial number of the specified drive.
  */
-DriveGetSerial(Drive) => Number
+DriveGetSerial(Drive) => Integer
 
 /**
  * The free disk space of the drive containing the specified path, in mb (megabytes).
  */
-DriveGetSpaceFree(Path) => Number
+DriveGetSpaceFree(Path) => Integer
 
 /**
  * Returns the status of the drive containing the specified path.
@@ -593,12 +593,12 @@ Edit(Filename?) => void
 /**
  * Returns the column number of the caret (text insertion point) in the Edit control.
  */
-EditGetCurrentCol(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetCurrentCol(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns the line number of the caret (insertion point) in the Edit control.
  */
-EditGetCurrentLine(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetCurrentLine(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns the text of the specified line in the Edit control.
@@ -608,7 +608,7 @@ EditGetLine(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Stri
 /**
  * Returns the number of rows of the Edit control.
  */
-EditGetLineCount(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetLineCount(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Return the selected text in the Edit control.
@@ -643,7 +643,7 @@ ExitApp(ExitCode := 0) => void
 /**
  * Returns e (approximately 2.71828182845905) raised to the power of N.
  */
-Exp(N) => Number
+Exp(N) => Float
 
 /**
  * Append (write) text or binary data at the end of the file (if necessary, create the file first).
@@ -769,7 +769,7 @@ FileGetShortcut(LinkFile [, &OutTarget, &OutDir, &OutArgs, &OutDescription, &Out
 /**
  * Get the size of the file.
  */
-FileGetSize([Filename, Units]) => Number
+FileGetSize([Filename, Units]) => Integer
 
 /**
  * Get the timestamp of a file or folder.
@@ -931,7 +931,7 @@ FileSetTime(YYYYMMDDHH24MISS := '', FilePattern := '', WhichTime := 'M', Mode :=
 /**
  * Return Number rounded down to integer (without any .00 suffix).
  */
-Floor(Number) => Number
+Floor(Number) => Integer
 
 /**
  * Format a variable number of input values according to the format string.
@@ -997,7 +997,7 @@ Floor(Number) => Number
  * 
  * c character encoding output a single character in encoding order, similar to Chr(n). If the input value is not within the expected range, it will be reversed. For example, Format("{:c}", 116) returns t.
  */
-Format(FormatStr, Values*) => Number | String
+Format(FormatStr, Values*) => String
 
 /**
  * Convert YYYYMMDDHH24MISS timestamp to the specified date/time format.
@@ -1012,7 +1012,7 @@ GetKeyName(KeyName) => String
 /**
  * Retrieve the scan code of the button.
  */
-GetKeySC(KeyName) => Number
+GetKeySC(KeyName) => Integer
 
 /**
  * Check whether the keyboard button or mouse/joystick button is pressed or released. The state of the joystick can also be obtained.
@@ -1045,7 +1045,7 @@ GetKeyState(KeyName, Mode := '') => String
 /**
  * Retrieve the virtual key code of the button.
  */
-GetKeyVK(KeyName) => Number
+GetKeyVK(KeyName) => Integer
 
 /**
  * The implementation function of the retrieval method.
@@ -1058,7 +1058,7 @@ GetMethod(Value [, Name, ParamCount]) => Func
  * 
  * R: The most recent window (the most recently activated window) is activated, but only when there are no active members in the group when the function is running. "R" is very useful when temporarily switching to handling irrelevant tasks. When When you use GroupActivate, GroupDeactivate or GroupClose to return to the target group, the most recently worked window will be activated instead of the oldest window.
  */
-GroupActivate(GroupName, Mode := '') => Number
+GroupActivate(GroupName, Mode := '') => Integer
 
 /**
  * Add the window specification to the window group, if necessary, create the group.
@@ -1097,17 +1097,17 @@ GuiFromHwnd(Hwnd, RecurseParent := false) => Gui
 /**
  * If the specified value is derived from the specified base object, a non-zero number is returned.
  */
-HasBase(Value, BaseObj) => Number
+HasBase(Value, BaseObj) => Integer
 
 /**
  * If the specified value has a method with the specified name, a non-zero number is returned.
  */
-HasMethod(Value [, Name, ParamCount]) => Number
+HasMethod(Value [, Name, ParamCount]) => Integer
 
 /**
  * If the specified value has an attribute with the specified name, a non-zero number is returned.
  */
-HasProp(Value, Name) => Number
+HasProp(Value, Name) => Integer
 
 /**
  * Specify the conditions for subsequent creation or modification of hotkey variants.
@@ -1175,7 +1175,7 @@ Hotstring(StringorOptions [, Replacement, OnOffToggle]) => String
  * 
  * Supported image types include ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF and WMF.
  */
-IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Number
+IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Integer
 
 /**
  * Create a new ImageList, initially empty, and return the unique ID of the ImageList (return 0 on failure).
@@ -1183,12 +1183,12 @@ IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Number
  * @param GrowCount The number of icons in the list, each time it exceeds the capacity of the current list, the number of icons in the list will increase (if omitted, the default is 5).
  * @param LargeIcons If this parameter is 1 (true), the image list will contain large icons. If it is 0 (false), then it will contain small icons (this is the default when omitted). Will be added to the list proportionally The icons in are automatically scaled to fit the size of the large and small icons in the system.
  */
-IL_Create(InitialCount := 2, GrowCount := 5, LargeIcons := false) => Number
+IL_Create(InitialCount := 2, GrowCount := 5, LargeIcons := false) => Integer
 
 /**
  * Delete the specified ImageList, return 1 if it succeeds, and return 0 if it fails.
  */
-IL_Destroy(ImageListID) => Number
+IL_Destroy(ImageListID) => Integer
 
 /**
  * Search for images in the screen area.
@@ -1208,7 +1208,7 @@ IL_Destroy(ImageListID) => Number
  * 
  * Bitmap or icon handles can be used to replace file names. For example, "HBITMAP:*" handle.
  */
-ImageSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ImageFile) => Number
+ImageSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ImageFile) => Integer
 
 /**
  * Delete the value in the standard format .ini file.
@@ -1263,97 +1263,97 @@ InstallKeybdHook(Install := true, Force := false) => void
  * Regardless of the value of StartingPos, the return value is always relative to the first character in Haystack. For example, the position of "abc" in "123abc789" is always 4.
  * @param Occurrence If Occurrence is omitted, it defaults to 1, and the function returns the first matching position of Needle in Haystack. Specifying Occurrence as 2, returns the second matching position, 3 returns the third matching position, and so on.
  */
-InStr(Haystack, Needle, CaseSense := false, StartingPos := 1, Occurrence := 1) => Number
+InStr(Haystack, Needle, CaseSense := false, StartingPos := 1, Occurrence := 1) => Integer
 
 /**
  * Except that numbers from 0 to 9 are allowed, the others are the same as IsAlpha.
  */
-IsAlnum(Value, Mode?) => Number
+IsAlnum(Value, Mode?) => Integer
 
 /**
  * If Value is a string, it can be an empty string or only contain alphabetic characters. If there are any digits, spaces, tabs, punctuation or other non-letter characters anywhere in the string, it will be False. For example, if Value If it contains a space followed by a letter, it is not considered as an alpha.
  * By default, only ASCII letters are considered. If you want to perform the check according to the current user's regional rules, please use IsAlpha(Value,'Locale').
  */
-IsAlpha(Value, Mode?) => Number
+IsAlpha(Value, Mode?) => Integer
 
 /**
  * If Value is a valid date and time stamp, it can be all or the beginning of the YYYYMMDDHH24MISS format, then it is True. For example, a 4-digit string like 2004 is considered valid. Use StrLen to determine whether there are other time components.
  * Years less than 1601 will be considered invalid because the operating system usually does not support them. The maximum year that is considered valid is 9999.
  */
-IsDate(Value) => Number
+IsDate(Value) => Integer
 
 /**
  * If Value is a positive integer, an empty string, or a string containing only characters 0 to 9, then it is True. Other characters are not allowed, such as the following characters: space, tab, plus, minus, Decimal point, hexadecimal number, and 0x prefix.
  */
-IsDigit(Value) => Number
+IsDigit(Value) => Integer
 
 /**
  * True if Value is a floating-point number or a pure numeric string containing a decimal point. Leading and trailing spaces and tabs are allowed. The string can start with a plus sign, a minus sign or a decimal point, and it cannot be empty.
  */
-IsFloat(Value) => Number
+IsFloat(Value) => Integer
 
 /**
  * If Value is an integer or a pure numeric string (decimal or hexadecimal) without a decimal point, it is True. Leading and trailing spaces and tabs are allowed. The string can start with a plus or minus sign, and Can not be empty.
  */
-IsInteger(Value) => Number
+IsInteger(Value) => Integer
 
 /**
  * If Value is the name of a label defined in the current scope, IsLabel is True.
  */
-IsLabel(Value) => Number
+IsLabel(Value) => Integer
 
 /**
  * If Value is a string, it can be an empty string or only contains lowercase alphabetic characters, then it is True. If there are any digits, spaces, tabs, punctuation or other non-lowercase alphabetic characters anywhere in the string, it is False.
  * By default, only ASCII letters are considered. If you want to perform the check according to the current user's regional rules, please use IsLower(Value,'Locale').
  */
-IsLower(Value, Mode?) => Number
+IsLower(Value, Mode?) => Integer
 
 /**
  * If IsInteger(Value) or IsFloat(Value) is true, then it is True.
  */
-IsNumber(Value) => Number
+IsNumber(Value) => Integer
 
 /**
  * If Value is an object. This includes objects derived from Object, prototype objects (such as 0.base) and COM objects, but does not include numbers or strings.
  */
-IsObject(Value) => Number
+IsObject(Value) => Integer
 
 /**
  * If the variable Value has been assigned, then IsSet is True.
  * 
  * @param Var A variable. For example: `IsSet(MyVar)`.
  */
-IsSet(Var) => Number
+IsSet(Var) => Integer
 
 /**
  * If the variable Value has been assigned, then IsSet is True.
  * 
  * @param Ref An indirect reference to a variable. Usually it is not passed directly as in `IsSetRef(&MyVar)`, but indirectly, such as checking a parameter containing VarRef before dereferencing it.
  */
-IsSetRef(Ref) => Number
+IsSetRef(Ref) => Integer
 
 /**
  * If Value is a string, it can be an empty string or only contain the following blank characters: space (A_Space or `s), tab (A_Tab or `t), line feed (`n), carriage return (`r ), vertical tab character (`v) and paper feed character (`f), then True.
  */
-IsSpace(Value) => Number
+IsSpace(Value) => Integer
 
 /**
  * If Value is a valid date and time stamp, it can be all or the beginning of the YYYYMMDDHH24MISS format, then it is True. For example, a 4-digit string like 2004 is considered valid. Use StrLen to determine whether there are other time components.
  * Years less than 1601 will be considered invalid because the operating system usually does not support them. The maximum year that is considered valid is 9999.
  * You can use the word DATE instead of TIME, the effect is the same.
  */
-IsTime(Value) => Number
+IsTime(Value) => Integer
 
 /**
  * If Value is a string, it can be an empty string or only contains uppercase alphabetic characters, then it is True. If there are any digits, spaces, tabs, punctuations or other non-uppercase alphabetic characters anywhere in the string, it is False.
  * By default, only ASCII letters are considered. If you want to perform the check according to the current user's regional rules, please use IsUpper(Value,'Locale').
  */
-IsUpper(Value, Mode?) => Number
+IsUpper(Value, Mode?) => Integer
 
 /**
  * Hexadecimal digits: Same as digit, but the characters A to F (uppercase or lowercase) are also allowed. If the prefix 0x is present, it is acceptable.
  */
-IsXDigit(Value) => Number
+IsXDigit(Value) => Integer
 
 /**
  * Display script information and the history of recent keystrokes and mouse clicks.
@@ -1375,7 +1375,7 @@ KeyHistory([MaxEvents]) => void
  * 
  * This timeout value can be a floating point number (e.g. 2.5), but cannot be a hexadecimal value (e.g. 0x03).
  */
-KeyWait(KeyName, Options := '') => Number
+KeyWait(KeyName, Options := '') => Integer
 
 /**
  * Displays the hotkeys in use by the current script, whether their subroutines are currently running, and whether or not they use the keyboard or mouse hook.
@@ -1415,7 +1415,7 @@ ListViewGetContent([Options, Control, WinTitle, WinText, ExcludeTitle, ExcludeTe
 /**
  * Returns the natural logarithm of Number (base e).
  */
-Ln(Number) => Number
+Ln(Number) => Float
 
 /**
  * Load the image file and return the bitmap or icon handle.
@@ -1431,12 +1431,12 @@ Ln(Number) => Number
  * If this parameter is omitted, the return value is always a bitmap handle (icon/cursor type will be converted as needed). This is because reliable use or deletion of bitmap/icon/cursor handle requires knowing which type it is.
  * The @returns function returns the bitmap or icon handle according to the specified image or icon.
  */
-LoadPicture(Filename [, Options, &ImageType]) => Number
+LoadPicture(Filename [, Options, &ImageType]) => Integer
 
 /**
  * Returns the logarithm of Number (base 10).
  */
-Log(Number) => Number
+Log(Number) => Float
 
 /**
  * Trim characters from the beginning of the string.
@@ -1446,7 +1446,7 @@ LTrim(String, OmitChars := ' `t') => String
 /**
  * Returns the maximum value of one or more numbers.
  */
-Max(Numbers*) => Number
+Max(Numbers*) => Float | Integer
 
 /**
  * Retrieve the menu or menu bar object corresponding to the Win32 menu handle.
@@ -1468,22 +1468,22 @@ MenuSelect(WinTitle, WinText?, Menu [, SubMenu1, SubMenu2, SubMenu3, SubMenu4, S
 /**
  * Returns the minimum value of one or more numbers.
  */
-Min(Numbers*) => Number
+Min(Numbers*) => Float | Integer
 
 /**
  * Returns the remainder of Dividend divided by Divisor.
  */
-Mod(Dividend, Divisor) => Number
+Mod(Dividend, Divisor) => Float | Integer
 
 /**
  * Check whether the specified monitor exists, and optionally retrieve its boundary coordinates.
  */
-MonitorGet([N, &Left, &Top, &Right, &Bottom]) => Number
+MonitorGet([N, &Left, &Top, &Right, &Bottom]) => Integer
 
 /**
  * Returns the number of monitors.
  */
-MonitorGetCount() => Number
+MonitorGetCount() => Integer
 
 /**
  * Returns the operating system name of the specified monitor.
@@ -1493,12 +1493,12 @@ MonitorGetName([N]) => String
 /**
  * Returns the number of the main monitor.
  */
-MonitorGetPrimary() => Number
+MonitorGetPrimary() => Integer
 
 /**
  * Check whether the specified monitor exists, and optionally retrieve the boundary coordinates of its working area.
  */
-MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Number
+MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Integer
 
 /**
  * Click or hold the mouse button, or turn the mouse wheel. Note: The click function is usually more flexible and easier to use.
@@ -1605,17 +1605,17 @@ MsgBox([Text, Title, Options]) => String
 /**
  * Returns the binary number stored at the specified address + offset.
  */
-NumGet(Source [, Offset], Type) => Number
+NumGet(Source [, Offset], Type) => Float | Integer
 
 /**
  * Store one or more numbers in binary format to the specified address + offset location.
  */
-NumPut(Type1, Number1, *, Target [, Offset]) => Number
+NumPut(Type1, Number1, *, Target [, Offset]) => Integer
 
 /**
  * Increase the reference count of the object.
  */
-ObjAddRef(Ptr) => Number
+ObjAddRef(Ptr) => Integer
 
 /**
  * Create a binding function object, which can call methods of the specified object.
@@ -1640,29 +1640,29 @@ ObjGetBase(Value) => Object
 /**
  * The current capacity of the internal attribute array of the object.
  */
-ObjGetCapacity(Obj) => Number
+ObjGetCapacity(Obj) => Integer
 
 /**
  * Returns the address of the object's structured data (typed properties).
  * @since v2.1-alpha.3
  */
-ObjGetDataPtr(Obj) => Number
+ObjGetDataPtr(Obj) => Integer
 
 /**
  * Returns the size of the object's structure (typed properties), in bytes.
  * @since v2.1-alpha.3
  */
-ObjGetDataSize(Obj) => Number
+ObjGetDataSize(Obj) => Integer
 
 /**
  * If the object has the attribute of this name, it returns true, otherwise it returns false.
  */
-ObjHasOwnProp(Obj, Name) => Number
+ObjHasOwnProp(Obj, Name) => Integer
 
 /**
  * Returns the number of attributes owned by the object.
  */
-ObjOwnPropCount(Obj) => Number
+ObjOwnPropCount(Obj) => Integer
 
 /**
  * Return the attributes owned by the object.
@@ -1672,17 +1672,17 @@ ObjOwnProps(Obj) => Enumerator
 /**
  * Retrieve the address of the object.
  */
-ObjPtr(Obj) => Number
+ObjPtr(Obj) => Integer
 
 /**
  * Retrieve the address of the object and increase the reference count.
  */
-ObjPtrAddRef(Obj) => Number
+ObjPtrAddRef(Obj) => Integer
 
 /**
  * Reduce the reference count of the object.
  */
-ObjRelease(Ptr) => Number
+ObjRelease(Ptr) => Integer
 
 /**
  * Set the Base object of the object.
@@ -1693,7 +1693,7 @@ ObjSetBase(Obj, BaseObj) => void
  * Set the current capacity of the internal array of the object's own properties.
  * @param MaxProps new capacity. If it is less than the current number of own properties, use that number and release all unused space.
  */
-ObjSetCapacity(Obj, MaxProps) => void
+ObjSetCapacity(Obj, MaxProps) => Integer
 
 /**
  * Sets the address of the object's structured data (typed properties).
@@ -1742,7 +1742,7 @@ OnMessage(MsgNumber, Function, MaxThreads := 1) => void
 /**
  * Returns the serial number value (digital character code) of the first character in the specified string.
  */
-Ord(String) => Number
+Ord(String) => Integer
 
 /**
  * Send the string to the debugger (if available) to display it.
@@ -1778,7 +1778,7 @@ PixelGetColor(X, Y, Mode := '') => String
  * @param ColorID The color ID to be searched. It is usually represented by a hexadecimal number in red, green and blue (RGB) format. For example: 0x9d6346. The color ID can be determined by Window Spy (accessible from the tray menu) or PixelGetColor.
  * @param Variation is a number between 0 and 255 (inclusive), used to indicate the permissible gradient value of the red/green/blue channel intensity of each pixel color in any direction. If the color you are looking for is not always exactly the same This parameter is very useful. If you specify 255 as the gradient value, all colors will be matched. The default gradient value is 0.
  */
-PixelSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ColorID, Variation := 0) => Number
+PixelSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ColorID, Variation := 0) => Integer
 
 /**
  * Place the message in the message queue of the window or control.
@@ -1793,7 +1793,7 @@ PostMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, Exclude
  * 
  * Name: The name of the process, usually the same as its executable file name (without path), such as notepad.exe or winword.exe. Since a name may match multiple running processes, it will only be the first The operation is performed by each process. The name is not case sensitive.
  */
-ProcessClose(PIDOrName) => Number
+ProcessClose(PIDOrName) => Integer
 
 /**
  * Check if the specified process exists.
@@ -1803,7 +1803,7 @@ ProcessClose(PIDOrName) => Number
  * 
  * Name: The name of the process is usually the same as its executable file (no path), such as notepad.exe or winword.exe. Since the name may match multiple running processes, only the first matching process is operated on. The name is not case sensitive.
  */
-ProcessExist(PIDOrName?) => Number
+ProcessExist(PIDOrName?) => Integer
 
 /**
  * Returns the name of the specified process.
@@ -1823,17 +1823,17 @@ ProcessGetPath(PIDOrName?) => String
 /**
  * Change the priority of the first matching process.
  */
-ProcessSetPriority(Level, PIDOrName?) => Number
+ProcessSetPriority(Level, PIDOrName?) => Integer
 
 /**
  * Wait for the specified process to exist.
  */
-ProcessWait(PIDOrName [, Timeout]) => Number
+ProcessWait(PIDOrName [, Timeout]) => Integer
 
 /**
  * Wait for the matching process to close.
  */
-ProcessWaitClose(PIDOrName [, Timeout]) => Number
+ProcessWaitClose(PIDOrName [, Timeout]) => Integer
 
 /**
  * Generate a pseudo-random number.
@@ -1844,7 +1844,7 @@ ProcessWaitClose(PIDOrName [, Timeout]) => Number
  * 
  * For floating point numbers, the maximum value is usually not included.
  */
-Random([A, B]) => Number
+Random([A, B]) => Float | Integer
 
 /**
  * Creates a registry key without writing a value.
@@ -1864,7 +1864,7 @@ RegDeleteKey([KeyName]) => void
 /**
  * Determine whether the string contains a certain matching pattern (regular expression).
  */
-RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Number
+RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Integer
 
 /**
  * Replace the place where the matching pattern (regular expression) appears in the string.
@@ -1889,7 +1889,7 @@ Reload() => void
 /**
  * Return the number, rounded to N digits after the decimal point
  */
-Round(Number, N := 0) => Number | String
+Round(Number, N := 0) => Integer | String
 
 /**
  * Trim characters from the end of the string.
@@ -1916,7 +1916,7 @@ RunAs([User, Password, Domain]) => void
 /**
  * Run the external program and wait for the end of the program to continue execution.
  */
-RunWait(Target [, WorkingDir, Options, &OutputVarPID]) => Number
+RunWait(Target [, WorkingDir, Options, &OutputVarPID]) => Integer
 
 /**
  * Send simulated keystrokes and mouse clicks to the active window. By default, Send is equivalent to SendInput.
@@ -1941,7 +1941,7 @@ SendLevel(Level) => Integer
 /**
  * Send the message to the window or control, and then wait for confirmation.
  */
-SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout]) => Number
+SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout]) => Integer
 
 /**
  * Make Send equal to SendEvent or SendPlay, instead of the default (SendInput). Also make Click and MouseMove/Click/Drag use specified methods.
@@ -2040,7 +2040,7 @@ Shutdown(Code) => void
 /*
  * Returns the sine of Number.
  */
-Sin(Number) => Number
+Sin(Number) => Float
 
 /**
  * Wait the specified amount of time before continuing.
@@ -2101,7 +2101,7 @@ SoundGetInterface(IID [, Component, Device]) => Comobject
 /**
  * Retrieve the mute setting from the sound device.
  */
-SoundGetMute([Component, Device]) => Number
+SoundGetMute([Component, Device]) => Integer
 
 /**
  * Retrieve the name of the sound device or component.
@@ -2111,7 +2111,7 @@ SoundGetName([Component, Device]) => String
 /**
  * Retrieve the volume setting from the sound device.
  */
-SoundGetVolume([Component, Device]) => Number
+SoundGetVolume([Component, Device]) => Integer
 
 /**
  * Play audio, video or other supported file types.
@@ -2150,7 +2150,7 @@ SplitPath(Path [, &OutFileName, &OutDir, &OutExtension, &OutNameNoExt, &OutDrive
 /**
  * Returns the square root of Number.
  */
-Sqrt(Number) => Number
+Sqrt(Number) => Float
 
 /**
  * Get the text of the standard status bar control.
@@ -2160,7 +2160,7 @@ StatusBarGetText(Part := 1 [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => 
 /**
  * Wait until the status bar of the window contains the specified string.
  */
-StatusBarWait([BarText, Timeout, Part, WinTitle, WinText, Interval, ExcludeTitle, ExcludeText]) => Number
+StatusBarWait([BarText, Timeout, Part, WinTitle, WinText, Interval, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Compare two strings in alphabetical order.
@@ -2174,7 +2174,7 @@ StatusBarWait([BarText, Timeout, Part, WinTitle, WinText, Interval, ExcludeTitle
  * 
  * "Logical": Similar to Locale, but the numbers in the string are treated as digital content, not text. For example, "A2" is considered smaller than "A10". However, if the two numbers differ only by the presence of leading zeros , Then a string with leading zeros may be considered smaller than another string. The exact behavior may vary in different operating system versions.
  */
-StrCompare(String1, String2, CaseSense := false) => Number
+StrCompare(String1, String2, CaseSense := false) => Integer
 
 /**
  * Copy a string from a memory address or buffer, optionally convert it from a given code page.
@@ -2190,7 +2190,7 @@ StrGet(Source [, Length, Encoding]) => String
 /**
  * Retrieve the number of characters in a string.
  */
-StrLen(String) => Number
+StrLen(String) => Integer
 
 /**
  * Convert the string to lowercase.
@@ -2200,12 +2200,12 @@ StrLower(String) => String
 /**
  * Returns the current memory address of the string.
  */
-StrPtr(Value) => Number
+StrPtr(Value) => Integer
 
 /**
  * Copy the string to the memory address, you can choose to convert it to the given code page.
  * If Target, Length, and Encoding are omitted, this function returns the required buffer size in bytes, including space for the null-terminator.
- * @overload StrPut(String, Encoding := 'UTF-16') => Number
+ * @overload StrPut(String, Encoding := 'UTF-16') => Integer
  * @param Target class buffer object or memory address, the string will be written into it.
  * @param Length The maximum number of characters to be written, including the null terminator when necessary.
  * 
@@ -2215,7 +2215,7 @@ StrPtr(Value) => Number
  * @param Encoding "UTF-8", "UTF-16" or "CP936". For numeric identifiers, the prefix "CP" can be omitted only when Length is specified. Specify an empty string or "CP0" to use the system The default ANSI code.
  * @returns returns the number of bytes written. If Target is not specified, it returns the necessary buffer size in bytes. If Length is exactly equal to the length of the source string, then the string does not contain the null terminator; otherwise it returns The size includes the null terminator.
  */
-StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Number
+StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Integer
 
 /**
  * Replace the specified substring with a new string.
@@ -2267,7 +2267,7 @@ StrTitle(String) => String
 /**
  * Get the size and other system properties of the system object.
  */
-SysGet(Property) => Number
+SysGet(Property) => Integer
 
 /**
  * Return the system's IPv4 address array.
@@ -2277,7 +2277,7 @@ SysGetIPAddresses() => Array
 /*
  * Returns the tangent of Number.
  */
-Tan(Number) => Number
+Tan(Number) => Float
 
 /**
  * Set the thread priority or whether it can be interrupted. It can also temporarily disable all timers.
@@ -2341,12 +2341,12 @@ Type(Value) => String
 /**
  * Increase the capacity of the variable or release its memory. Generally not needed, but it can be used with DllCall or SendMessage, or to optimize repeated connections.
  */
-VarSetStrCapacity(&TargetVar [, RequestedCapacity]) => Number
+VarSetStrCapacity(&TargetVar [, RequestedCapacity]) => Integer
 
 /**
  * Compare two version strings.
  */
-VerCompare(VersionA, VersionB) => Number
+VerCompare(VersionA, VersionB) => Integer
 
 /**
  * Activate the specified window.
@@ -2361,7 +2361,7 @@ WinActivateBottom([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * Check if the specified window exists and is currently active (at the forefront).
  */
-WinActive([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinActive([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Close the specified window.
@@ -2371,13 +2371,13 @@ WinClose([WinTitle, WinText, SecondsToWait, ExcludeTitle, ExcludeText]) => void
 /**
  * Check if the specified window exists.
  */
-WinExist([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinExist([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns true if the specified window is always-on-top, otherwise false.
  * @since v2.1-alpha.1
  */
-WinGetAlwaysOnTop([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetAlwaysOnTop([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Get the class name of the specified window.
@@ -2402,28 +2402,28 @@ WinGetControlsHwnd([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
 /**
  * Returns the number of existing windows that meet the specified conditions.
  */
-WinGetCount([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetCount([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns true if the specified window is enabled, otherwise false.
  * @since v2.1-alpha.1
  */
-WinGetEnabled([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetEnabled([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Return the style or extended style of the specified window respectively.
  */
-WinGetExStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetExStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Return the unique ID number of the specified window.
  */
-WinGetID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * If multiple matching windows are found, the unique ID number of the last/bottom window will be returned.
  */
-WinGetIDLast([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetIDLast([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Return the unique ID numbers of all existing windows that match the specified conditions.
@@ -2433,12 +2433,12 @@ WinGetList([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
 /**
  * Returns whether the specified window is maximized or minimized.
  */
-WinGetMinMax([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetMinMax([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns the process ID of the specified window.
  */
-WinGetPID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetPID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Get the position and size of the specified window.
@@ -2458,7 +2458,7 @@ WinGetProcessPath([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 /**
  * Return the style or extended style of the specified window respectively.
  */
-WinGetStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Retrieve text from the specified window.
@@ -2478,7 +2478,7 @@ WinGetTransColor([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 /**
  * Returns the transparency level of the specified window.
  */
-WinGetTransparent([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetTransparent([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Hide the specified window.
@@ -2583,22 +2583,22 @@ WinShow([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * Wait until the specified window exists.
  */
-WinWait([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Number
+WinWait([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Wait until the specified window is active.
  */
-WinWaitActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
+WinWaitActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Wait until no matching window is found.
  */
-WinWaitClose([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Number
+WinWaitClose([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Wait until the specified window is inactive.
  */
-WinWaitNotActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
+WinWaitNotActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Integer
 ;#endregion
 
 ;#region class
@@ -2612,17 +2612,17 @@ class Any {
 	/**
 	 * If BaseObj is in Value's base object chain, it returns true, otherwise it returns false.
 	 */
-	HasBase(BaseObj) => Number
+	HasBase(BaseObj) => Integer
 
 	/**
 	 * If the value has a method using this name, it returns true, otherwise it returns false.
 	 */
-	HasMethod(Name) => Number
+	HasMethod(Name) => Integer
 
 	/**
 	 * If the value has an attribute with this name, it returns true, otherwise it returns false.
 	 */
-	HasProp(Name) => Number
+	HasProp(Name) => Integer
 
 	__Init() => void
 
@@ -2671,7 +2671,7 @@ class Array extends Object {
 	/**
 	 * If Index is valid and there is a value at that position, it returns true, otherwise it returns false.
 	 */
-	Has(Index) => Number
+	Has(Index) => Integer
 
 	/**
 	 * Insert one or more values to the given position.
@@ -2696,12 +2696,12 @@ class Array extends Object {
 	/**
 	 * Retrieve or set the length of the array.
 	 */
-	Length => Number
+	Length => Integer
 
 	/**
 	 * Retrieve or set the current capacity of the array.
 	 */
-	Capacity => Number
+	Capacity => Integer
 }
 
 class BoundFunc extends Func {
@@ -2720,12 +2720,12 @@ class Buffer extends Object {
 	/**
 	 * Retrieve the current memory address of the buffer.
 	 */
-	Ptr => Number
+	Ptr => Integer
 
 	/**
 	 * Retrieve or set the size of the buffer, in bytes.
 	 */
-	Size => Number
+	Size => Integer
 }
 
 class Class extends Object {
@@ -2767,9 +2767,9 @@ class ComObjArray extends ComValue {
 	 */
 	__Enum(NumberOfVars?) => Enumerator
 
-	MaxIndex(n) => Number
+	MaxIndex(n) => Integer
 
-	MinIndex(n) => Number
+	MinIndex(n) => Integer
 
 	Clone() => ComObjArray
 }
@@ -2827,7 +2827,7 @@ class Error extends Object {
 	/**
 	 * The line number at which the error occurred, or at which the Error object was constructed.
 	 */
-	Line => Number
+	Line => Integer
 
 	/**
 	 * A string representing the call stack at the time the Error object was constructed.
@@ -2844,17 +2844,17 @@ class File extends Object {
 	/**
 	 * Retrieve or set the position of the file pointer.
 	 */
-	Pos => Number
+	Pos => Integer
 
 	/**
 	 * Retrieve or set the size of the file.
 	 */
-	Length => Number
+	Length => Integer
 
 	/**
 	 * Retrieve a non-zero value if the file pointer has reached the end of the file.
 	 */
-	AtEOF => Number
+	AtEOF => Integer
 
 	/**
 	 * Retrieve or set the text encoding used by this file object.
@@ -2864,7 +2864,7 @@ class File extends Object {
 	/**
 	 * Retrieve system file handles intended for use with DllCall.
 	 */
-	Handle => Number
+	Handle => Integer
 
 	/**
 	 * Read the string from the file and move the file pointer forward.
@@ -2874,17 +2874,17 @@ class File extends Object {
 	/**
 	 * Write a string to the file and move the file pointer forward.
 	 */
-	Write(String) => Number
+	Write(String) => Integer
 
 	/**
 	 * Read the original binary data from the file to the memory and move the file pointer forward.
 	 */
-	RawRead(Buffer [, Bytes]) => Number
+	RawRead(Buffer [, Bytes]) => Integer
 
 	/**
 	 * Write the original binary data to the file and move the file pointer forward.
 	 */
-	RawWrite(Data [, Bytes]) => Number
+	RawWrite(Data [, Bytes]) => Integer
 
 	/**
 	 * Read a line of text from the file and move the file pointer forward.
@@ -2894,102 +2894,102 @@ class File extends Object {
 	/**
 	 * According to the flag used when opening the file, write the string followed by `n or `r`n. Move the file pointer forward.
 	 */
-	WriteLine([String]) => Number
+	WriteLine([String]) => Integer
 
 	/**
 	 * Read the specified type of data from the file and move the file pointer forward.
 	 */
-	ReadChar() => Number
+	ReadChar() => Integer
 
 	/**
 	 * Read Double type data from the file and move the file pointer forward.
 	 */
-	ReadDouble() => Number
+	ReadDouble() => Float
 
 	/**
 	 * Read Float type data from the file and move the file pointer forward.
 	 */
-	ReadFloat() => Number
+	ReadFloat() => Float
 
 	/**
 	 * Read Int type data from the file and move the file pointer forward.
 	 */
-	ReadInt() => Number
+	ReadInt() => Integer
 
 	/**
 	 * Read Int64 type data from the file and move the file pointer forward.
 	 */
-	ReadInt64() => Number
+	ReadInt64() => Integer
 
 	/**
 	 * Read Short type data from the file and move the file pointer forward.
 	 */
-	ReadShort() => Number
+	ReadShort() => Integer
 
 	/**
 	 * Read UChar type data from the file and move the file pointer forward.
 	 */
-	ReadUChar() => Number
+	ReadUChar() => Integer
 
 	/**
 	 * Read UInt type data from the file and move the file pointer forward.
 	 */
-	ReadUInt() => Number
+	ReadUInt() => Integer
 
 	/**
 	 * Read UShort type data from the file and move the file pointer forward.
 	 */
-	ReadUShort() => Number
+	ReadUShort() => Integer
 
 	/**
 	 * Write Char type data to the file and move the file pointer forward.
 	 */
-	WriteChar(Num) => Number
+	WriteChar(Num) => Integer
 
 	/**
 	 * Write Double type data to the file and move the file pointer forward.
 	 */
-	WriteDouble(Num) => Number
+	WriteDouble(Num) => Integer
 
 	/**
 	 * Write Float type data to the file and move the file pointer forward.
 	 */
-	WriteFloat(Num) => Number
+	WriteFloat(Num) => Integer
 
 	/**
 	 * Write Int type data to the file and move the file pointer forward.
 	 */
-	WriteInt(Num) => Number
+	WriteInt(Num) => Integer
 
 	/**
 	 * Write Int64 type data to the file and move the file pointer forward.
 	 */
-	WriteInt64(Num) => Number
+	WriteInt64(Num) => Integer
 
 	/**
 	 * Write Short type data to the file and move the file pointer forward.
 	 */
-	WriteShort(Num) => Number
+	WriteShort(Num) => Integer
 
 	/**
 	 * Write UChar type data to the file and move the file pointer forward.
 	 */
-	WriteUChar(Num) => Number
+	WriteUChar(Num) => Integer
 
 	/**
 	 * Write UInt type data to the file and move the file pointer forward.
 	 */
-	WriteUInt(Num) => Number
+	WriteUInt(Num) => Integer
 
 	/**
 	 * Write UShort type data to the file and move the file pointer forward.
 	 */
-	WriteUShort(Num) => Number
+	WriteUShort(Num) => Integer
 
 	/**
 	 * Move the file pointer. If Origin is omitted, when the Distance is negative, Origin defaults to SEEK_END, and otherwise it is SEEK_SET..
 	 */
-	Seek(Distance [, Origin]) => Number
+	Seek(Distance [, Origin]) => Integer
 
 	/**
 	 * Close the file, write all the data in the cache to disk and release the shared lock.
@@ -3013,22 +3013,22 @@ class Func extends Object {
 	/**
 	 * The built-in function returns true, otherwise it returns false.
 	 */
-	IsBuiltIn => Number
+	IsBuiltIn => Integer
 
 	/**
 	 * When the function is a variable parameter, it returns true, otherwise it returns false.
 	 */
-	IsVariadic => Number
+	IsVariadic => Integer
 
 	/**
 	 * Return the number of required parameters.
 	 */
-	MinParams => Number
+	MinParams => Integer
 
 	/**
 	 * For user-defined functions, return the number of officially declared parameters, for built-in functions, return the maximum number of parameters.
 	 */
-	MaxParams => Number
+	MaxParams => Integer
 
 	/**
 	 * call function.
@@ -3043,12 +3043,12 @@ class Func extends Object {
 	/**
 	 * Determine whether the parameter is of the ByRef type (if the parameter is omitted, it means whether the function contains a ByRef parameter).
 	 */
-	IsByRef(ParameterVar) => Number
+	IsByRef(ParameterVar) => Integer
 
 	/**
 	 * Determine whether the parameter is optional (if the parameter is omitted, it means whether the function contains optional parameters).
 	 */
-	IsOptional([ParamIndex]) => Number
+	IsOptional([ParamIndex]) => Integer
 }
 
 class Gui extends Object {
@@ -3070,17 +3070,17 @@ class Gui extends Object {
 	/**
 	 * Retrieve the window handle (HWND) of the GUI window.
 	 */
-	Hwnd => Number
+	Hwnd => Integer
 
 	/**
 	 * Retrieve or set the size of the horizontal margin between the two sides and the subsequently created control.
 	 */
-	MarginX => Number
+	MarginX => Integer
 
 	/**
 	 * Retrieve or set the size of the vertical margin between the two sides and the subsequently created control.
 	 */
-	MarginY => Number
+	MarginY => Integer
 
 	/**
 	 * Retrieve or set the menu bar of the window.
@@ -3417,12 +3417,12 @@ class Gui extends Object {
 		/**
 		 * Retrieve the current interactive state of the control, or enable or disable (gray) the control.
 		 */
-		Enabled => Number
+		Enabled => Integer
 
 		/**
 		 * Retrieve the current focus state of the control.
 		 */
-		Focused => Number
+		Focused => Integer
 
 		/**
 		 * Retrieve the Gui parent control of the control.
@@ -3432,7 +3432,7 @@ class Gui extends Object {
 		/**
 		 * Retrieve the HWND of the control.
 		 */
-		Hwnd => Number
+		Hwnd => Integer
 
 		/**
 		 * Retrieve or set the explicit name of the control.
@@ -3452,12 +3452,12 @@ class Gui extends Object {
 		/**
 		 * Retrieve new content or set it as a valuable control.
 		 */
-		Value => Number | String
+		Value => Float | Integer | String
 
 		/**
 		 * Retrieve the current visible state of the control, or show or hide it.
 		 */
-		Visible => Number
+		Visible => Integer
 
 		/**
 		 * Set the keyboard focus to the control.
@@ -3598,22 +3598,22 @@ class Gui extends Object {
 		/**
 		 * Delete the specified row, return 1 on success, and return 0 on failure.
 		 */
-		Delete([RowNumber]) => Number
+		Delete([RowNumber]) => Integer
 
 		/**
 		 * Delete the specified column and all the content under it, and return 1 on success and 0 on failure.
 		 */
-		DeleteCol(ColumnNumber) => Number
+		DeleteCol(ColumnNumber) => Integer
 
 		/**
 		 * Returns the number of rows or columns in the control.
 		 */
-		GetCount([Mode]) => Number
+		GetCount([Mode]) => Integer
 
 		/**
 		 * Return the line number of the next selected, selected or focused line, otherwise it returns zero.
 		 */
-		GetNext([StartingRowNumber, RowType]) => Number
+		GetNext([StartingRowNumber, RowType]) => Integer
 
 		/**
 		 * Retrieve the text of the specified row number and column number.
@@ -3623,27 +3623,27 @@ class Gui extends Object {
 		/**
 		 * Insert a new line at the specified line number, and return the new line number.
 		 */
-		Insert(RowNumber [, Options, Cols*]) => Number
+		Insert(RowNumber [, Options, Cols*]) => Integer
 
 		/**
 		 * Insert a new column at the specified column number, and return the position number of the new column.
 		 */
-		InsertCol(ColumnNumber [, Options, ColumnTitle]) => Number
+		InsertCol(ColumnNumber [, Options, ColumnTitle]) => Integer
 
 		/**
 		 * Modify the attributes/text of the row and return 1 on success and 0 on failure.
 		 */
-		Modify(RowNumber [, Options, NewCols*]) => Number
+		Modify(RowNumber [, Options, NewCols*]) => Integer
 
 		/**
 		 * Modify the attribute/text of the specified column and its title, and return 1 on success and 0 on failure.
 		 */
-		ModifyCol([ColumnNumber, Options, ColumnTitle]) => Number
+		ModifyCol([ColumnNumber, Options, ColumnTitle]) => Integer
 
 		/**
 		 * Set or replace ImageList, and return the ImageListID previously associated with this control (if not, return 0).
 		 */
-		SetImageList(ImageListID [, IconType]) => Number
+		SetImageList(ImageListID [, IconType]) => Integer
 	}
 
 	class MonthCal extends Gui.Control {
@@ -3665,17 +3665,17 @@ class Gui extends Object {
 		/**
 		 * Display a small icon on the left side of the text in the specified part, and return the handle of the icon.
 		 */
-		SetIcon(Filename, IconNumber := 1, PartNumber := 1) => Number
+		SetIcon(Filename, IconNumber := 1, PartNumber := 1) => Integer
 
 		/**
 		 * Divide the bar into multiple parts according to the specified width (in pixels), and return a non-zero value (HWND of the status bar).
 		 */
-		SetParts(Widths*) => Number
+		SetParts(Widths*) => Integer
 
 		/**
 		 * Display NewText in the specified part of the status bar, return 1 if successful, and return 0 if failed.
 		 */
-		SetText(NewText, PartNumber := 1, Style := 0) => Number
+		SetText(NewText, PartNumber := 1, Style := 0) => Integer
 	}
 
 	class Tab extends Gui.List {
@@ -3694,49 +3694,49 @@ class Gui extends Object {
 		/**
 		 * Add a new item to the TreeView, and return its unique item ID number.
 		 */
-		Add(Name [, ParentItemID, Options]) => Number
+		Add(Name [, ParentItemID, Options]) => Integer
 
 		/**
 		 * Delete the specified item, return 1 if successful, and return 0 if failed.
 		 */
-		Delete([ItemID]) => Number
+		Delete([ItemID]) => Integer
 
 		/**
 		 * If the specified item has the specified attribute, a non-zero value (item ID) is returned.
 		 * @param ItemID selected item.
 		 * @param Attribute specify "E", "Expand" or "Expanded" to determine whether this item is currently expanded (that is, its sub-items are displayed); specify "C", "Check" or "Checked" to determine Whether this item contains a check mark; or specify "B" or "Bold" to determine whether this item is currently bold.
 		 */
-		Get(ItemID, Attribute) => Number
+		Get(ItemID, Attribute) => Integer
 
 		/**
 		 * Return the ID number of the first/top child item of the specified item (if there is none, return 0).
 		 */
-		GetChild(ParentItemID) => Number
+		GetChild(ParentItemID) => Integer
 
 		/**
 		 * Returns the total number of items in the control.
 		 */
-		GetCount() => Number
+		GetCount() => Integer
 
 		/**
 		 * Return the ID number of the next item below the specified item (if there is none, return 0).
 		 */
-		GetNext([ItemID, ItemType]) => Number
+		GetNext([ItemID, ItemType]) => Integer
 
 		/**
 		 * Return the parent item of the specified item as the item ID.
 		 */
-		GetParent(ItemID) => Number
+		GetParent(ItemID) => Integer
 
 		/**
 		 * Return the ID number of the previous item above the specified item (if there is none, return 0).
 		 */
-		GetPrev(ItemID) => Number
+		GetPrev(ItemID) => Integer
 
 		/**
 		 * Return the ID number of the selected item.
 		 */
-		GetSelection() => Number
+		GetSelection() => Integer
 
 		/**
 		 * Retrieve the text/name of the specified item.
@@ -3746,12 +3746,12 @@ class Gui extends Object {
 		/**
 		 * Modify the project's attributes/name, and return the project's own ID.
 		 */
-		Modify(ItemID [, Options, NewName]) => Number
+		Modify(ItemID [, Options, NewName]) => Integer
 
 		/**
 		 * Set or replace ImageList, and return the ImageListID previously associated with this control (if not, return 0).
 		 */
-		SetImageList(ImageListID [, IconType]) => Number
+		SetImageList(ImageListID [, IconType]) => Integer
 	}
 
 	class UpDown extends Gui.Control {
@@ -3780,7 +3780,7 @@ class InputHook extends Object {
 	/**
 	 * If the input is in progress, it returns true, otherwise it returns false.
 	 */
-	InProgress => Number
+	InProgress => Integer
 
 	/**
 	 * Returns any text collected since the last time Input was started.
@@ -3815,42 +3815,42 @@ class InputHook extends Object {
 	/**
 	 * Control whether Backspace deletes the most recently pressed character from the end of the input buffer.
 	 */
-	BackspaceIsUndo => Number
+	BackspaceIsUndo => Integer
 
 	/**
 	 * Control whether MatchList is case sensitive.
 	 */
-	CaseSensitive => Number
+	CaseSensitive => Integer
 
 	/**
 	 * Control whether each match can be a substring of the input text.
 	 */
-	FindAnywhere => Number
+	FindAnywhere => Integer
 
 	/**
 	 * Retrieve or set the minimum sending level of the input to be collected.
 	 */
-	MinSendLevel => Number
+	MinSendLevel => Integer
 
 	/**
 	 * Control whether the OnKeyDown and OnKeyUp callbacks are called when a non-text key is pressed.
 	 */
-	NotifyNonText => Number
+	NotifyNonText => Integer
 
 	/**
 	 * Retrieve or set the timeout value (in seconds).
 	 */
-	Timeout => Number
+	Timeout => Integer
 
 	/**
 	 * Control whether keys or key combinations that do not produce text are visible (not blocked).
 	 */
-	VisibleNonText => Number
+	VisibleNonText => Integer
 
 	/**
 	 * Control whether the key or key combination that generates the text is visible (not blocked).
 	 */
-	VisibleText => Number
+	VisibleText => Integer
 
 	/**
 	 * Create an object that can be used to collect or intercept keyboard input.
@@ -3928,7 +3928,7 @@ class InputHook extends Object {
 	/**
 	 * Wait until Input terminates (InProgress is false).
 	 */
-	Wait([MaxTime]) => Number
+	Wait([MaxTime]) => Integer
 }
 
 class Integer extends Number {
@@ -3977,7 +3977,7 @@ class Map extends Object {
 	/**
 	 * If Key has an associated value in the map, it returns true, otherwise it returns false.
 	 */
-	Has(Key) => Number
+	Has(Key) => Integer
 
 	/**
 	 * Set zero or more items.
@@ -3987,12 +3987,12 @@ class Map extends Object {
 	/**
 	 * Retrieve the number of key-value pairs present in the map.
 	 */
-	Count => Number
+	Count => Integer
 
 	/**
 	 * Retrieve or set the current capacity of the mapping.
 	 */
-	Capacity => Number
+	Capacity => Integer
 
 	/**
 	 * Retrieve or set the case sensitivity setting of the mapping.
@@ -4015,7 +4015,7 @@ class Menu extends Object {
 	/**
 	 * Retrieve or set the number of clicks required to activate the default item of the tray menu.
 	 */
-	ClickCount => Number
+	ClickCount => Integer
 
 	/**
 	 * Retrieve or set the default menu item.
@@ -4025,7 +4025,7 @@ class Menu extends Object {
 	/**
 	 * Retrieve the Win32 handle of the menu.
 	 */
-	Handle => Number
+	Handle => Integer
 
 	/**
 	 * Create a new Menu or MenuBar object.
@@ -4148,7 +4148,7 @@ class Object extends Any {
 	/**
 	 * If the object has the attribute of the name, it returns true, otherwise it returns false.
 	 */
-	HasOwnProp(Name) => Number
+	HasOwnProp(Name) => Integer
 
 	/**
 	 * Enumerate the properties of the object.
@@ -4176,22 +4176,22 @@ class RegExMatchInfo extends Object {
 	/**
 	 * Returns the position of the overall matched or captured sub-pattern.
 	 */
-	Pos[N?] => Number
+	Pos[N?] => Integer
 
 	/**
 	 * Returns the position of the overall matched or captured sub-pattern.
 	 */
-	Pos(N?) => Number
+	Pos(N?) => Integer
 
 	/**
 	 * Returns the length of the overall matched or captured sub-pattern.
 	 */
-	Len[N?] => Number
+	Len[N?] => Integer
 
 	/**
 	 * Returns the length of the overall matched or captured sub-pattern.
 	 */
-	Len(N?) => Number
+	Len(N?) => Integer
 
 	/**
 	 * Return the name of the given submode (if any).
@@ -4206,7 +4206,7 @@ class RegExMatchInfo extends Object {
 	/**
 	 * Returns the total number of sub-patterns.
 	 */
-	Count => Number
+	Count => Integer
 
 	/**
 	 * If applicable, return the last name encountered (*MARK: NAME).

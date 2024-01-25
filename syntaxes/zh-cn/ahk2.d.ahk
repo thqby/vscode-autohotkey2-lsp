@@ -2,28 +2,28 @@
 /**
  * 返回 Number 的绝对值.
  */
-Abs(Number) => Number
+Abs(Number) => Float | Integer
 
 /**
  * 返回以弧度表示的反余弦值(其余弦值为 Number).
  */
-ACos(Number) => Number
+ACos(Number) => Float
 
 /**
  * 返回以弧度表示的反正弦值(其正弦值为 Number).
  */
-ASin(Number) => Number
+ASin(Number) => Float
 
 /**
  * 返回以弧度表示的反正切值(其正切值为 Number).
  */
-ATan(Number) => Number
+ATan(Number) => Float
 
 /**
  * 返回以弧度表示的y/x的反正切值.
  * @since v2.1-alpha.1
  */
-ATan2(Y, X) => Number
+ATan2(Y, X) => Float
 
 /**
  * 禁用或启用用户通过键盘和鼠标与计算机交互的能力.
@@ -43,7 +43,7 @@ BlockInput(Option) => void
  * &: 将参数列表的地址(单个整数) 传递给 Function, 而不是传递给各个参数. 可以使用 NumGet 检索参数值. 当使用标准的 32 位调用约定时, ParamCount 必须以 DWORDs 指定参数列表的大小(字节数除以 4).
  * @param ParamCount Address 的调用者会传递给它的参数数目. 如果省略, 则它默认为 Function.MinParams, 这通常是 Function 定义中强制参数的数目. 在这两种情况中, 必须确保调用者准确传递此数目的参数.
  */
-CallbackCreate(Function [, Options, ParamCount]) => Number
+CallbackCreate(Function [, Options, ParamCount]) => Integer
 
 /**
  * 释放回调对脚本函数对象的引用.
@@ -53,12 +53,12 @@ CallbackFree(Address) => void
 /**
  * 检索插入符号的当前位置(文本插入点).
  */
-CaretGetPos([&OutputVarX, &OutputVarY]) => Number
+CaretGetPos([&OutputVarX, &OutputVarY]) => Integer
 
 /**
  * 返回 Number 向上取整后的整数(不含任何 .00 后缀).
  */
-Ceil(Number) => Number
+Ceil(Number) => Integer
 
 /**
  * 返回与指定数字所表示的编码相对应的字符串(通常是单个字符).
@@ -82,7 +82,7 @@ Click(Options*) => void
  * @param WaitForAnyData 如果此参数省略或为 0(false), 此命令会更有选择性, 明确地等待剪贴板中出现文本或文件("文本" 包含任何当您粘贴到记事本时会产生文本的内容).
  * 如果此参数为 1(true), 该函数等待任何类型的数据出现在剪贴板上.
  */
-ClipWait([Timeout, WaitForAnyData]) => Number
+ClipWait([Timeout, WaitForAnyData]) => Integer
 
 /**
  * 通过索引调用原生 COM 接口方法.
@@ -94,7 +94,7 @@ ClipWait([Timeout, WaitForAnyData]) => Number
  * @param ComObject 目标 COM 对象; 也就是说, 一个 COM 接口指针.
  * 指针值可以直接传递, 也可以封装在带有 Ptr 属性的对象中, 如带有 VT_UNKNOWN 变量类型的 ComObj.
  */
-ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Number | String
+ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Float | Integer | String
 
 /**
  * 检索已使用 OLE(对象连接与嵌入) 注册的运行中的对象.
@@ -120,7 +120,7 @@ ComObjFromPtr(DispPtr) => ComObject
  * @param Mask 更改 flags 的位掩码.
  * @returns 此函数返回指定 COM 对象的当前标志(如果指定, 在应用 NewFlags 之后).
  */
-ComObjFlags(ComObject [, NewFlags, Mask]) => Number
+ComObjFlags(ComObject [, NewFlags, Mask]) => Integer
 
 /**
  * 返回对 COM 组件提供的对象的引用.
@@ -143,19 +143,19 @@ ComObjQuery(ComObject [, SID], IID) => Comobject
  * @param Type 第二个参数是指示返回的类型信息的字符串.
  * Name, IID, Class, CLSID
  */
-ComObjType(ComObject [, Type]) => Number | String
+ComObjType(ComObject [, Type]) => Integer | String
 
 /**
  * 检索存储在 COM 包装器对象中的值或指针.
  * @param ComObject 包含 COM 对象或类型化值的包装器对象.
  * @returns 返回 64 位有符号整数.
  */
-ComObjValue(ComObject) => Number
+ComObjValue(ComObject) => Integer
 
 /**
  * 添加指定的字符串作为 ListBox(列表框) 或 ComboBox(组合框) 底部的新条目.
  */
-ControlAddItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlAddItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 设置列表框, 组合框或标签页控件中的选择为指定的条目或选项卡编号.
@@ -168,7 +168,7 @@ ControlChooseIndex(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) 
  * 将 ListBox 或 ComboBox 中的选择设置为其前导部分与指定字符串匹配的第一个条目.
  * @param String 要选择的字符串. 搜索不区分大小写. 例如, 如果一个 ListBox/ComboBox 包含项目 "UNIX Text", 指定单词 "unix"(小写) 足以选中它.
  */
-ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => number
+ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 发送鼠标按钮或鼠标滚轮事件到控件.
@@ -207,7 +207,7 @@ ControlDeleteItem(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) =
  * 返回与指定字符串完全匹配的 ListBox 或 ComboBox 的条目编号.
  * @param String 要查找的字符串. 搜索不区分大小写. 与 ControlChooseString 不同, 条目的整个文本必须匹配, 而不仅仅是开头部分.
  */
-ControlFindItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlFindItem(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 设置输入焦点到窗口的指定控件上.
@@ -217,7 +217,7 @@ ControlFocus(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * 如果选中复选框或单选按钮, 则返回非零值.
  */
-ControlGetChecked(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetChecked(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回 ListBox 或 ComboBox 中当前选择的条目的名称.
@@ -232,27 +232,27 @@ ControlGetClassNN(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => S
 /**
  * 如果指定的控件是启用的, 则返回非零值.
  */
-ControlGetEnabled(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetEnabled(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回表示指定控件样式或扩展样式的整数.
  */
-ControlGetExStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetExStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 如果有, 则获取目标窗口中具有输入焦点的控件.
  */
-ControlGetFocus([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetFocus([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回指定控件的唯一 ID.
  */
-ControlGetHwnd(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetHwnd(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回 ListBox, ComboBox 或 Tab 控件中当前选中的条目或标签的索引.
  */
-ControlGetIndex(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetIndex(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 从列表框、组合框或下拉列表中返回项目/行的数组.
@@ -267,7 +267,7 @@ ControlGetPos([&X, &Y, &Width, &Height, Control, WinTitle, WinText, ExcludeTitle
 /**
  * 返回表示指定控件样式或扩展样式的整数.
  */
-ControlGetStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetStyle(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 检索控件的文本.
@@ -277,7 +277,7 @@ ControlGetText(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Stri
 /**
  * 如果指定的控件可见, 则返回非零值.
  */
-ControlGetVisible(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+ControlGetVisible(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 隐藏指定控件.
@@ -371,7 +371,7 @@ CoordMode(TargetType, RelativeTo := 'Screen') => String
 /**
  * 返回 Number 的余弦值.
  */
-Cos(Number) => Number
+Cos(Number) => Float
 
 /**
  * 防止当前线程被其他线程中断, 或使其能够被中断.
@@ -391,7 +391,7 @@ DateAdd(DateTime, Time, TimeUnits) => String
  * 比较两个日期-时间并返回它们的差异值.
  * @param TimeUnits Time 参数的单位. TimeUnits 可以是下列字符串之一(也可以是其第一个字母): Seconds(秒), Minutes(分), Hours(小时) 或 Days(天).
  */
-DateDiff(DateTime1, DateTime2, TimeUnits) => Number
+DateDiff(DateTime1, DateTime2, TimeUnits) => Integer
 
 /**
  * 设置在查找窗口时是否 '看见' 隐藏的文本. 这将影响 WinExist 和 WinActivate 等内置函数.
@@ -491,7 +491,7 @@ DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
 /**
  * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Number | String
+DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Float | Integer | String
 
 /**
  * 从互联网下载文件.
@@ -507,7 +507,7 @@ DriveEject(Drive := '') => void
 /**
  * 返回包含指定路径的驱动器的总容量, 单位为 mb(兆字节).
  */
-DriveGetCapacity(Path) => Number
+DriveGetCapacity(Path) => Integer
 
 /**
  * 返回指定驱动器的文件系统的类型.
@@ -529,12 +529,12 @@ DriveGetList(Type := '') => String
 /**
  * 返回指定驱动器的卷序列号.
  */
-DriveGetSerial(Drive) => Number
+DriveGetSerial(Drive) => Integer
 
 /**
  * 包含指定路径的驱动器的空闲磁盘空间, 单位为 mb(兆字节).
  */
-DriveGetSpaceFree(Path) => Number
+DriveGetSpaceFree(Path) => Integer
 
 /**
  * 返回包含指定路径的驱动器的状态.
@@ -593,12 +593,12 @@ Edit(Filename?) => void
 /**
  * 返回插入符号(文本插入点) 在的 Edit 控件中的列号.
  */
-EditGetCurrentCol(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetCurrentCol(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回插入符号(插入点) 在的 Edit 控件中的行号.
  */
-EditGetCurrentLine(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetCurrentLine(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回 Edit 控件中指定行的文本.
@@ -608,7 +608,7 @@ EditGetLine(N, Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Stri
 /**
  * 返回 Edit 控件的行数.
  */
-EditGetLineCount(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+EditGetLineCount(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回 Edit 控件中选定的文本.
@@ -643,7 +643,7 @@ ExitApp(ExitCode := 0) => void
 /**
  * 返回 e(近似值为 2.71828182845905) 的 N 次幂.
  */
-Exp(N) => Number
+Exp(N) => Float
 
 /**
  * 在文件末尾处追加(写入) 文本或二进制数据(如果有必要, 首先创建文件).
@@ -769,7 +769,7 @@ FileGetShortcut(LinkFile [, &OutTarget, &OutDir, &OutArgs, &OutDescription, &Out
 /**
  * 获取文件的大小.
  */
-FileGetSize([Filename, Units]) => Number
+FileGetSize([Filename, Units]) => Integer
 
 /**
  * 获取文件或文件夹的时间戳.
@@ -931,7 +931,7 @@ FileSetTime(YYYYMMDDHH24MISS := '', FilePattern := '', WhichTime := 'M', Mode :=
 /**
  * 返回 Number 向下取整后的整数(不含任何 .00 后缀).
  */
-Floor(Number) => Number
+Floor(Number) => Integer
 
 /**
  * 根据格式字符串格式化一个可变数量的输入值.
@@ -997,7 +997,7 @@ Floor(Number) => Number
  * 
  * c 字符编码 按照编码顺序输出一个单字符, 类似于 Chr(n). 如果输入值不在预期范围内将被回转. 例如, Format("{:c}", 116) 返回 t.
  */
-Format(FormatStr, Values*) => Number | String
+Format(FormatStr, Values*) => String
 
 /**
  * 将YYYYMMDDHH24MISS时间戳转换为指定的日期/时间格式.
@@ -1012,7 +1012,7 @@ GetKeyName(KeyName) => String
 /**
  * 检索按键的扫描码.
  */
-GetKeySC(KeyName) => Number
+GetKeySC(KeyName) => Integer
 
 /**
  * 检查键盘按键或鼠标/操纵杆按键是否按下或放开. 也可以获取操纵杆的状态.
@@ -1045,7 +1045,7 @@ GetKeyState(KeyName, Mode := '') => String
 /**
  * 检索按键的虚拟键码.
  */
-GetKeyVK(KeyName) => Number
+GetKeyVK(KeyName) => Integer
 
 /**
  * 检索方法的实现函数.
@@ -1058,7 +1058,7 @@ GetMethod(Value [, Name, ParamCount]) => Func
  * 
  * R: 最新的窗口(最近激活的窗口) 被激活, 但仅当函数运行时组中没有活动的成员时才会激活. "R" 在临时切换到处理不相关任务的情况下非常有用. 当您使用 GroupActivate, GroupDeactivate 或 GroupClose 返回到目标组时, 会激活您最近工作的窗口而不是最早的窗口.
  */
-GroupActivate(GroupName, Mode := '') => Number
+GroupActivate(GroupName, Mode := '') => Integer
 
 /**
  * 将窗口规范添加到窗口组,如有必要,创建该组.
@@ -1097,17 +1097,17 @@ GuiFromHwnd(Hwnd, RecurseParent := false) => Gui
 /**
  * 如果指定的值派生自指定的基对象, 则返回非零数字.
  */
-HasBase(Value, BaseObj) => Number
+HasBase(Value, BaseObj) => Integer
 
 /**
  * 如果指定的值具有指定名称的方法, 则返回非零数字.
  */
-HasMethod(Value [, Name, ParamCount]) => Number
+HasMethod(Value [, Name, ParamCount]) => Integer
 
 /**
  * 如果指定值具有指定名称的属性, 则返回非零数字.
  */
-HasProp(Value, Name) => Number
+HasProp(Value, Name) => Integer
 
 /**
  * 指定后续创建或修改热键变体的条件.
@@ -1175,7 +1175,7 @@ Hotstring(StringorOptions [, Replacement, OnOffToggle]) => String
  * 
  * 支持的图片类型包括 ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF 和 WMF.
  */
-IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Number
+IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Integer
 
 /**
  * 创建一个新的ImageList,最初为空,并返回ImageList的唯一ID（失败时返回0）.
@@ -1183,12 +1183,12 @@ IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Number
  * @param GrowCount 列表的图标数量, 每次超过当前列表的容量时, 列表的图标数量将增长(如果省略, 默认为 5).
  * @param LargeIcons 如果这个参数为 1(true), 则图像列表将包含大图标. 如果为 0(false), 则它包含小图标(这是省略时的默认情况). 会按比例对添加到列表中的图标自动进行缩放以符合系统中大图标和小图标的尺寸.
  */
-IL_Create(InitialCount := 2, GrowCount := 5, LargeIcons := false) => Number
+IL_Create(InitialCount := 2, GrowCount := 5, LargeIcons := false) => Integer
 
 /**
  * 删除指定的ImageList,如果成功则返回1,失败则返回0.
  */
-IL_Destroy(ImageListID) => Number
+IL_Destroy(ImageListID) => Integer
 
 /**
  * 在屏幕区域中搜索图像.
@@ -1208,7 +1208,7 @@ IL_Destroy(ImageListID) => Number
  * 
  * 位图或图标句柄可用于替代文件名. 例如, "HBITMAP:*" handle.
  */
-ImageSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ImageFile) => Number
+ImageSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ImageFile) => Integer
 
 /**
  * 删除标准格式的 .ini 文件中的值.
@@ -1263,97 +1263,97 @@ InstallKeybdHook(Install := true, Force := false) => void
  * 不管 StartingPos 的值是多少, 返回值总是相对于 Haystack 中的第一个字符. 例如, "abc" 在 "123abc789" 中的位置始终是 4.
  * @param Occurrence 如果省略了 Occurrence, 它默认为 1, 函数返回 Needle 在 Haystack 中的首次匹配位置. 指定 Occurrence 为 2, 返回第二次匹配的位置, 3 返回第三次匹配位置, 依此类推.
  */
-InStr(Haystack, Needle, CaseSense := false, StartingPos := 1, Occurrence := 1) => Number
+InStr(Haystack, Needle, CaseSense := false, StartingPos := 1, Occurrence := 1) => Integer
 
 /**
  * 除了还允许 0 到 9 的数字外, 其他与 IsAlpha 相同.
  */
-IsAlnum(Value, Mode?) => Number
+IsAlnum(Value, Mode?) => Integer
 
 /**
  * 如果 Value 是字符串, 可以为空字符串或仅包含字母字符. 如果字符串任意位置有任何 digit, 空格, 制表符, 标点或其他非字母的字符时, 则为 False. 例如, 如果 Value 包含一个空格后跟字母, 则 不被 视为 alpha.
  * 默认情况下, 只考虑ASCII字母. 如果要根据当前用户的区域规则来执行检查, 请使用 IsAlpha(Value, 'Locale').
  */
-IsAlpha(Value, Mode?) => Number
+IsAlpha(Value, Mode?) => Integer
 
 /**
  * 如果 Value 是有效的日期时间戳, 可以是 YYYYMMDDHH24MISS 格式的全部或开始部分, 则为 True. 例如, 类似 2004 这样的 4 位字符串被视为有效的. 使用 StrLen 确定是否存在其他时间分量.
  * 小于 1601 的年份会被视为无效的, 因为操作系统通常不支持它们. 被视为有效的最大年份为 9999.
  */
-IsDate(Value) => Number
+IsDate(Value) => Integer
 
 /**
  * 如果 Value 是一个正整数, 一个空字符串, 或仅包含字符 0 到 9 的字符串, 则为 True. 不允许使用其他字符, 例如以下字符: 空格, 制表符, 正号, 负号, 小数点, 十六进制数字, 以及 0x 前缀.
  */
-IsDigit(Value) => Number
+IsDigit(Value) => Integer
 
 /**
  * 如果 Value 是浮点数或包含小数点的纯数字字符串, 则为 True. 允许前导和尾随空格和制表符. 该字符串可以以加号, 减号或小数点开头, 并且不能为空.
  */
-IsFloat(Value) => Number
+IsFloat(Value) => Integer
 
 /**
  * 如果 Value 是整数或不带小数点的纯数字字符串(十进制或十六进制), 则为 True. 允许前导和尾随空格和制表符. 该字符串可以以加号或减号开头, 并且不能为空.
  */
-IsInteger(Value) => Number
+IsInteger(Value) => Integer
 
 /**
  * 如果 Value 是当前作用域中定义的标签的名称, 则 IsLabel 为 True.
  */
-IsLabel(Value) => Number
+IsLabel(Value) => Integer
 
 /**
  * 如果 Value 是字符串, 可以为空字符串或仅包含小写字母字符, 则为 True. 如果字符串任意位置有任何 digit, 空格, 制表符, 标点或其他非小写字母的字符时, 则为 False.
  * 默认情况下, 只考虑ASCII字母. 如果要根据当前用户的区域规则来执行检查, 请使用 IsLower(Value, 'Locale').
  */
-IsLower(Value, Mode?) => Number
+IsLower(Value, Mode?) => Integer
 
 /**
  * 如果 IsInteger(Value) or IsFloat(Value) 为 true, 则为 True.
  */
-IsNumber(Value) => Number
+IsNumber(Value) => Integer
 
 /**
  * 如果 Value 是一个对象. 这包括从 Object 派生的对象, 原型对象(如 0.base) 和 COM 对象, 但不包括数字或字符串.
  */
-IsObject(Value) => Number
+IsObject(Value) => Integer
 
 /**
  * 如果变量 Value 已经被赋值, 则 IsSet 为 True.
  * 
  * @param Var 一个变量. 例如: `IsSet(MyVar)`.
  */
-IsSet(Var) => Number
+IsSet(Var) => Integer
 
 /**
  * 如果变量 Value 已经被赋值, 则 IsSet 为 True.
  * 
  * @param Ref 对变量的间接引用. 通常不会像在 `IsSetRef(&MyVar)` 中那样直接传递, 而是间接传递, 比如在解引用一个 包含 VarRef 的参数之前检查它.
  */
-IsSetRef(Ref) => Number
+IsSetRef(Ref) => Integer
 
 /**
  * 如果 Value 是字符串, 可以为空字符串或仅包含下列空白字符: 空格(A_Space 或 `s), 制表符(A_Tab 或 `t), 换行符(`n), 回车符(`r), 垂直制表符(`v) 和 进纸符(`f), 则为 True.
  */
-IsSpace(Value) => Number
+IsSpace(Value) => Integer
 
 /**
  * 如果 Value 是有效的日期时间戳, 可以是 YYYYMMDDHH24MISS 格式的全部或开始部分, 则为 True. 例如, 类似 2004 这样的 4 位字符串被视为有效的. 使用 StrLen 确定是否存在其他时间分量.
  * 小于 1601 的年份会被视为无效的, 因为操作系统通常不支持它们. 被视为有效的最大年份为 9999.
  * 可以使用单词 DATE 代替 TIME, 效果相同.
  */
-IsTime(Value) => Number
+IsTime(Value) => Integer
 
 /**
  * 如果 Value 是字符串, 可以为空字符串或仅包含大写字母字符, 则为 True. 如果字符串任意位置有任何 digit, 空格, 制表符, 标点或其他非大写字母的字符时, 则为 False.
  * 默认情况下, 只考虑ASCII字母. 如果要根据当前用户的区域规则来执行检查, 请使用 IsUpper(Value, 'Locale').
  */
-IsUpper(Value, Mode?) => Number
+IsUpper(Value, Mode?) => Integer
 
 /**
  * 十六进制数字: 与 digit 相同, 但也允许使用字符 A 到 F(大写或小写). 如果存在前缀 0x, 则可以接受.
  */
-IsXDigit(Value) => Number
+IsXDigit(Value) => Integer
 
 /**
  * 显示脚本信息以及最近的击键和鼠标单击的历史记录.
@@ -1375,7 +1375,7 @@ KeyHistory([MaxEvents]) => void
  * 
  * 此超时时间值可以为浮点数(例如 2.5), 但不能为十六进制值(例如 0x03).
  */
-KeyWait(KeyName, Options := '') => Number
+KeyWait(KeyName, Options := '') => Integer
 
 /**
  * 显示当前脚本使用的热键, 不论它们的子程序当前是否运行, 也不论它们是否使用键盘或鼠标钩子.
@@ -1415,7 +1415,7 @@ ListViewGetContent([Options, Control, WinTitle, WinText, ExcludeTitle, ExcludeTe
 /**
  * 返回Number的自然对数（以e为底）.
  */
-Ln(Number) => Number
+Ln(Number) => Float
 
 /**
  * 载入图像文件并返回位图或图标句柄.
@@ -1431,12 +1431,12 @@ Ln(Number) => Number
  * 如果忽略该参数, 则返回值始终是位图句柄(图标/光标类型会按需转换). 这是因为可靠地使用或删除位图/图标/光标句柄需要知道它是哪种类型.
  * @returns 函数根据指定的图片或图标返回位图或图标句柄.
  */
-LoadPicture(Filename [, Options, &ImageType]) => Number
+LoadPicture(Filename [, Options, &ImageType]) => Integer
 
 /**
  * 返回Number的对数（以10为底）.
  */
-Log(Number) => Number
+Log(Number) => Float
 
 /**
  * 从字符串的开头修剪字符.
@@ -1446,7 +1446,7 @@ LTrim(String, OmitChars := ' `t') => String
 /**
  * 返回一个或多个数字的最大值.
  */
-Max(Numbers*) => Number
+Max(Numbers*) => Float | Integer
 
 /**
  * 检索对应于 Win32 菜单句柄的菜单或菜单栏对象.
@@ -1468,22 +1468,22 @@ MenuSelect(WinTitle, WinText?, Menu [, SubMenu1, SubMenu2, SubMenu3, SubMenu4, S
 /**
  * 返回一个或多个数字的最小值.
  */
-Min(Numbers*) => Number
+Min(Numbers*) => Float | Integer
 
 /**
  * 返回 Dividend 除以 Divisor 的余数.
  */
-Mod(Dividend, Divisor) => Number
+Mod(Dividend, Divisor) => Float | Integer
 
 /**
  * 检查指定的监视器是否存在, 并可选地检索其边界坐标.
  */
-MonitorGet([N, &Left, &Top, &Right, &Bottom]) => Number
+MonitorGet([N, &Left, &Top, &Right, &Bottom]) => Integer
 
 /**
  * 返回监视器的数量.
  */
-MonitorGetCount() => Number
+MonitorGetCount() => Integer
 
 /**
  * 返回指定监视器的操作系统名称.
@@ -1493,12 +1493,12 @@ MonitorGetName([N]) => String
 /**
  * 返回主监视器的编号.
  */
-MonitorGetPrimary() => Number
+MonitorGetPrimary() => Integer
 
 /**
  * 检查指定的监视器是否存在, 并可选地检索其工作区域的边界坐标.
  */
-MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Number
+MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Integer
 
 /**
  * 单击或按住鼠标按钮,或转动鼠标滚轮.注意：单击功能通常更灵活且更易于使用.
@@ -1605,17 +1605,17 @@ MsgBox([Text, Title, Options]) => String
 /**
  * 返回存储在指定地址+偏移量处的二进制数.
  */
-NumGet(Source [, Offset], Type) => Number
+NumGet(Source [, Offset], Type) => Float | Integer
 
 /**
  * 将一个或多个数字以二进制格式存储到指定地址+偏移的位置.
  */
-NumPut(Type1, Number1, *, Target [, Offset]) => Number
+NumPut(Type1, Number1, *, Target [, Offset]) => Integer
 
 /**
  * 增加对象的引用计数.
  */
-ObjAddRef(Ptr) => Number
+ObjAddRef(Ptr) => Integer
 
 /**
  * 创建一个绑定函数对象, 它能调用指定对象的方法.
@@ -1640,29 +1640,29 @@ ObjGetBase(Value) => Object
 /**
  * 对象内部属性数组的当前容量.
  */
-ObjGetCapacity(Obj) => Number
+ObjGetCapacity(Obj) => Integer
 
 /**
  * 获取对象的结构化数据(类型化属性)的地址.
  * @since v2.1-alpha.3
  */
-ObjGetDataPtr(Obj) => Number
+ObjGetDataPtr(Obj) => Integer
 
 /**
  * 获取对象结构(类型化属性)的大小, 以字节为单位.
  * @since v2.1-alpha.3
  */
-ObjGetDataSize(Obj) => Number
+ObjGetDataSize(Obj) => Integer
 
 /**
  * 如果对象拥有此名称的属性,则返回true,否则返回false.
  */
-ObjHasOwnProp(Obj, Name) => Number
+ObjHasOwnProp(Obj, Name) => Integer
 
 /**
  * 返回对象拥有的属性数.
  */
-ObjOwnPropCount(Obj) => Number
+ObjOwnPropCount(Obj) => Integer
 
 /**
  * 返回对象拥有的属性.
@@ -1672,17 +1672,17 @@ ObjOwnProps(Obj) => Enumerator
 /**
  * 检索对象的地址.
  */
-ObjPtr(Obj) => Number
+ObjPtr(Obj) => Integer
 
 /**
  * 检索对象的地址并增加引用计数.
  */
-ObjPtrAddRef(Obj) => Number
+ObjPtrAddRef(Obj) => Integer
 
 /**
  * 减少对象的引用计数.
  */
-ObjRelease(Ptr) => Number
+ObjRelease(Ptr) => Integer
 
 /**
  * 设置对象的Base对象.
@@ -1693,7 +1693,7 @@ ObjSetBase(Obj, BaseObj) => void
  * 设置对象自身属性内部数组的当前容量.
  * @param MaxProps 新的容量. 如果小于自有属性的当前数量, 则使用该数量, 并释放所有未使用的空间.
  */
-ObjSetCapacity(Obj, MaxProps) => void
+ObjSetCapacity(Obj, MaxProps) => Integer
 
 /**
  * 设置对象的结构化数据(类型化属性)的地址.
@@ -1742,7 +1742,7 @@ OnMessage(MsgNumber, Function, MaxThreads := 1) => void
 /**
  * 返回指定字符串中首个字符的序号值(数字字符编码).
  */
-Ord(String) => Number
+Ord(String) => Integer
 
 /**
  * 发送字符串到调试器(如果有) 显示出来.
@@ -1778,7 +1778,7 @@ PixelGetColor(X, Y, Mode := '') => String
  * @param ColorID 要搜索的颜色 ID. 通常用红绿蓝(RGB) 格式的十六进制数表示. 例如: 0x9d6346. 颜色 ID 可以通过 Window Spy(可从托盘菜单访问) 或 PixelGetColor 来确定.
  * @param Variation 介于 0 和 255(包含) 之间的数字, 用于表示每个像素颜色红/绿/蓝通道强度在任一方向上允许的渐变值. 如果所查找的颜色并不总是完全相同的色度, 这个参数很有用. 如果指定 255 为渐变值, 则匹配所有颜色. 默认渐变值为 0.
  */
-PixelSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ColorID, Variation := 0) => Number
+PixelSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ColorID, Variation := 0) => Integer
 
 /**
  * 将消息放置在窗口或控件的消息队列中.
@@ -1793,7 +1793,7 @@ PostMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, Exclude
  * 
  * Name: 进程的名称, 通常和它的可执行文件名相同(不带路径), 例如 notepad.exe 或 winword.exe. 由于一个名称可能与多个正在运行的进程匹配, 因此将仅对第一个进程进行操作. 名称不区分大小写.
  */
-ProcessClose(PIDOrName) => Number
+ProcessClose(PIDOrName) => Integer
 
 /**
  * 检查指定的进程是否存在.
@@ -1803,7 +1803,7 @@ ProcessClose(PIDOrName) => Number
  * 
  * Name: 进程的名称通常与其可执行文件相同(没有路径), 例如 notepad.exe 或 winword.exe. 由于名称可能匹配多个正在运行的进程, 因此只对第一个匹配的进程进行操作. 该名称不区分大小写.
  */
-ProcessExist(PIDOrName?) => Number
+ProcessExist(PIDOrName?) => Integer
 
 /**
  * 返回指定进程的名称.
@@ -1823,17 +1823,17 @@ ProcessGetPath(PIDOrName?) => String
 /**
  * 更改第一个匹配进程的优先级.
  */
-ProcessSetPriority(Level, PIDOrName?) => Number
+ProcessSetPriority(Level, PIDOrName?) => Integer
 
 /**
  * 等待指定的进程存在.
  */
-ProcessWait(PIDOrName [, Timeout]) => Number
+ProcessWait(PIDOrName [, Timeout]) => Integer
 
 /**
  * 等待匹配进程关闭.
  */
-ProcessWaitClose(PIDOrName [, Timeout]) => Number
+ProcessWaitClose(PIDOrName [, Timeout]) => Integer
 
 /**
  * 生成一个伪随机数字.
@@ -1844,7 +1844,7 @@ ProcessWaitClose(PIDOrName [, Timeout]) => Number
  * 
  * 对于浮点数, 通常不包括最大值.
  */
-Random([A, B]) => Number
+Random([A, B]) => Float | Integer
 
 /**
  * 创建注册表项而不写入值.
@@ -1864,7 +1864,7 @@ RegDeleteKey([KeyName]) => void
 /**
  * 确定字符串是否包含某个匹配模式（正则表达式）.
  */
-RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Number
+RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Integer
 
 /**
  * 替换字符串中匹配模式(正则表达式) 出现的地方.
@@ -1889,7 +1889,7 @@ Reload() => void
 /**
  * 返回数字,四舍五入到小数点后N位
  */
-Round(Number, N := 0) => Number | String
+Round(Number, N := 0) => Integer | String
 
 /**
  * 从字符串的结尾修剪字符.
@@ -1916,7 +1916,7 @@ RunAs([User, Password, Domain]) => void
 /**
  * 运行外部程序并等待程序结束才继续往后执行.
  */
-RunWait(Target [, WorkingDir, Options, &OutputVarPID]) => Number
+RunWait(Target [, WorkingDir, Options, &OutputVarPID]) => Integer
 
 /**
  * 将模拟的击键和鼠标单击发送到活动窗口.默认情况下, Send 等同于 SendInput.
@@ -1941,7 +1941,7 @@ SendLevel(Level) => Integer
 /**
  * 将消息发送到窗口或控件,然后等待确认.
  */
-SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout]) => Number
+SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout]) => Integer
 
 /**
  * 使 Send 等同于 SendEvent 或 SendPlay, 而不是默认的(SendInput). 也使 Click 和 MouseMove/Click/Drag 使用指定的方法.
@@ -2040,7 +2040,7 @@ Shutdown(Code) => void
 /*
  * 返回 Number 的正弦.
  */
-Sin(Number) => Number
+Sin(Number) => Float
 
 /**
  * 在继续前等待指定的时间量.
@@ -2101,7 +2101,7 @@ SoundGetInterface(IID [, Component, Device]) => Comobject
 /**
  * 从声音设备检索静音设置.
  */
-SoundGetMute([Component, Device]) => Number
+SoundGetMute([Component, Device]) => Integer
 
 /**
  * 检索声音设备或组件的名称.
@@ -2111,7 +2111,7 @@ SoundGetName([Component, Device]) => String
 /**
  * 从声音设备检索音量设置.
  */
-SoundGetVolume([Component, Device]) => Number
+SoundGetVolume([Component, Device]) => Integer
 
 /**
  * 播放音频, 视频或其他支持的文件类型.
@@ -2150,7 +2150,7 @@ SplitPath(Path [, &OutFileName, &OutDir, &OutExtension, &OutNameNoExt, &OutDrive
 /**
  * 返回Number的平方根.
  */
-Sqrt(Number) => Number
+Sqrt(Number) => Float
 
 /**
  * 获取标准状态栏控件的文本.
@@ -2160,7 +2160,7 @@ StatusBarGetText(Part := 1 [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => 
 /**
  * 等待, 直到窗口的状态栏包含指定的字符串.
  */
-StatusBarWait([BarText, Timeout, Part, WinTitle, WinText, Interval, ExcludeTitle, ExcludeText]) => Number
+StatusBarWait([BarText, Timeout, Part, WinTitle, WinText, Interval, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 按字母顺序比较两个字符串.
@@ -2174,7 +2174,7 @@ StatusBarWait([BarText, Timeout, Part, WinTitle, WinText, Interval, ExcludeTitle
  * 
  * "Logical": 类似 Locale, 但字符串中的数字被视为数字内容, 而不是文本. 例如, "A2" 被认为小于 "A10". 然而, 如果两个数字仅因前导零的存在而不同, 则前导零的字符串可能被视为 小于 另一个字符串. 确切的行为可能会在不同的操作系统版本中有所不同.
  */
-StrCompare(String1, String2, CaseSense := false) => Number
+StrCompare(String1, String2, CaseSense := false) => Integer
 
 /**
  * 从内存地址或缓冲中复制字符串, 可选地从给定的代码页进行转换.
@@ -2190,7 +2190,7 @@ StrGet(Source [, Length, Encoding]) => String
 /**
  * 检索字符串中的字符数.
  */
-StrLen(String) => Number
+StrLen(String) => Integer
 
 /**
  * 将字符串转换为小写.
@@ -2200,12 +2200,12 @@ StrLower(String) => String
 /**
  * 返回字符串的当前内存地址.
  */
-StrPtr(Value) => Number
+StrPtr(Value) => Integer
 
 /**
  * 将字符串复制到内存地址,可以选择将其转换为给定的代码页.
  * 如果省略了Target、Length和Encoding, 此函数将返回所需的缓冲区大小(以字节为单位)，包括空结束符的空间.
- * @overload StrPut(String, Encoding := 'UTF-16') => Number
+ * @overload StrPut(String, Encoding := 'UTF-16') => Integer
  * @param Target 类缓冲对象或内存地址, 字符串将写入其中.
  * @param Length 要写入的最大字符数, 需要时包含空终止符.
  * 
@@ -2215,7 +2215,7 @@ StrPtr(Value) => Number
  * @param Encoding "UTF-8", "UTF-16" 或 "CP936". 对于数字标识符, 只有在指定 Length 时, 才可以省略前缀 "CP". 指定空字符串或 "CP0" 则使用系统默认 ANSI 代码.
  * @returns 返回写入的字节数. 如果没有指定 Target, 则返回以字节数表示的必须的缓冲大小. 如果 Length 准确等于源字符串的长度, 那么字符串不包含空终止符; 否则返回的大小包含空终止符.
  */
-StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Number
+StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Integer
 
 /**
  * 用新字符串替换指定的子字符串.
@@ -2267,7 +2267,7 @@ StrTitle(String) => String
 /**
  * 获取系统对象的尺寸和其他系统属性.
  */
-SysGet(Property) => Number
+SysGet(Property) => Integer
 
 /**
  * 返回系统的 IPv4 地址数组.
@@ -2277,7 +2277,7 @@ SysGetIPAddresses() => Array
 /*
  * 返回 Number 的正切值.
  */
-Tan(Number) => Number
+Tan(Number) => Float
 
 /**
  * 设置线程的优先级或是否可以被中断. 它也可以临时禁用所有的计时器.
@@ -2341,12 +2341,12 @@ Type(Value) => String
 /**
  * 增加变量的容量或释放其内存. 一般情况下不需要, 但可以与 DllCall 或 SendMessage 一起使用, 或者优化重复连接.
  */
-VarSetStrCapacity(&TargetVar [, RequestedCapacity]) => Number
+VarSetStrCapacity(&TargetVar [, RequestedCapacity]) => Integer
 
 /**
  * 比较两个版本字符串.
  */
-VerCompare(VersionA, VersionB) => Number
+VerCompare(VersionA, VersionB) => Integer
 
 /**
  * 激活指定的窗口.
@@ -2361,7 +2361,7 @@ WinActivateBottom([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * 检查指定的窗口是否存在且当前是否活动(在最前面).
  */
-WinActive([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinActive([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 关闭指定的窗口.
@@ -2371,13 +2371,13 @@ WinClose([WinTitle, WinText, SecondsToWait, ExcludeTitle, ExcludeText]) => void
 /**
  * 检查指定的窗口是否存在.
  */
-WinExist([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinExist([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 如果指定的窗口始终位于顶部, 则返回true, 否则返回false.
  * @since v2.1-alpha.1
  */
-WinGetAlwaysOnTop([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetAlwaysOnTop([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 获取指定窗口的类名.
@@ -2402,28 +2402,28 @@ WinGetControlsHwnd([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
 /**
  * 返回符合指定条件的现有窗口的数目.
  */
-WinGetCount([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetCount([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 如果指定的窗口已启用, 则返回true, 否则返回false.
  * @since v2.1-alpha.1
  */
-WinGetEnabled([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetEnabled([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 分别返回指定窗口的样式或扩展样式.
  */
-WinGetExStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetExStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回指定窗口的唯一 ID 号.
  */
-WinGetID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 如果找到多个匹配窗口, 则返回最后的/最底部的窗口的唯一 ID 号.
  */
-WinGetIDLast([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetIDLast([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回与指定条件匹配的所有现有窗口的唯一 ID 号.
@@ -2433,12 +2433,12 @@ WinGetList([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Array
 /**
  * 返回指定窗口是最大化还是最小化的状态.
  */
-WinGetMinMax([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetMinMax([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 返回指定窗口的进程 ID.
  */
-WinGetPID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetPID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 获取指定窗口的位置和大小.
@@ -2458,7 +2458,7 @@ WinGetProcessPath([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 /**
  * 分别返回指定窗口的样式或扩展样式.
  */
-WinGetStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetStyle([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 从指定窗口检索文本.
@@ -2478,7 +2478,7 @@ WinGetTransColor([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 /**
  * 返回指定窗口的透明度的等级.
  */
-WinGetTransparent([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Number
+WinGetTransparent([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 隐藏指定的窗口.
@@ -2583,22 +2583,22 @@ WinShow([WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 /**
  * 等待直到指定的窗口存在.
  */
-WinWait([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Number
+WinWait([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 等待直到指定的窗口处于活动状态.
  */
-WinWaitActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
+WinWaitActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 等待直到找不到匹配的窗口.
  */
-WinWaitClose([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Number
+WinWaitClose([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 等待直到指定的窗口不活动.
  */
-WinWaitNotActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Number
+WinWaitNotActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Integer
 ;#endregion
 
 ;#region class
@@ -2612,17 +2612,17 @@ class Any {
 	/**
 	 * 如果 BaseObj 在 Value 的基对象链中, 则返回 true, 否则返回 false.
 	 */
-	HasBase(BaseObj) => Number
+	HasBase(BaseObj) => Integer
 
 	/**
 	 * 如果该值具有使用此名称的方法, 则返回 true, 否则返回 false.
 	 */
-	HasMethod(Name) => Number
+	HasMethod(Name) => Integer
 
 	/**
 	 * 如果值具有使用此名称的属性, 则返回 true, 否则返回 false.
 	 */
-	HasProp(Name) => Number
+	HasProp(Name) => Integer
 
 	__Init() => void
 
@@ -2671,7 +2671,7 @@ class Array extends Object {
 	/**
 	 * 如果 Index 有效且在该位置有一个值, 则返回 true, 否则返回 false.
 	 */
-	Has(Index) => Number
+	Has(Index) => Integer
 
 	/**
 	 * 插入一个或多个值到给定位置.
@@ -2696,12 +2696,12 @@ class Array extends Object {
 	/**
 	 * 检索或设置数组的长度.
 	 */
-	Length => Number
+	Length => Integer
 
 	/**
 	 * 检索或设置数组的当前容量.
 	 */
-	Capacity => Number
+	Capacity => Integer
 }
 
 class BoundFunc extends Func {
@@ -2720,12 +2720,12 @@ class Buffer extends Object {
 	/**
 	 * 检索缓冲区的当前内存地址.
 	 */
-	Ptr => Number
+	Ptr => Integer
 
 	/**
 	 * 检索或设置缓冲区的大小, 以字节为单位.
 	 */
-	Size => Number
+	Size => Integer
 }
 
 class Class extends Object {
@@ -2767,9 +2767,9 @@ class ComObjArray extends ComValue {
 	 */
 	__Enum(NumberOfVars?) => Enumerator
 
-	MaxIndex(n) => Number
+	MaxIndex(n) => Integer
 
-	MinIndex(n) => Number
+	MinIndex(n) => Integer
 
 	Clone() => ComObjArray
 }
@@ -2878,7 +2878,7 @@ class Error extends Object {
 	/**
 	 * 发生错误的行号, 或构造Error对象的行号.
 	 */
-	Line => Number
+	Line => Integer
 
 	/**
 	 * 表示构造Error对象时的调用堆栈的字符串.
@@ -2895,17 +2895,17 @@ class File extends Object {
 	/**
 	 * 检索或设置文件指针的位置.
 	 */
-	Pos => Number
+	Pos => Integer
 
 	/**
 	 * 检索或设置文件的大小.
 	 */
-	Length => Number
+	Length => Integer
 
 	/**
 	 * 检索一个非零值, 如果文件指针已到达文件末尾.
 	 */
-	AtEOF => Number
+	AtEOF => Integer
 
 	/**
 	 * 检索或设置此文件对象使用的文本编码.
@@ -2915,7 +2915,7 @@ class File extends Object {
 	/**
 	 * 检索旨在与 DllCall 一起使用的系统文件句柄.
 	 */
-	Handle => Number
+	Handle => Integer
 
 	/**
 	 * 从文件读取字符串并向前移动文件指针.
@@ -2925,17 +2925,17 @@ class File extends Object {
 	/**
 	 * 写入字符串到文件并向前移动文件指针.
 	 */
-	Write(String) => Number
+	Write(String) => Integer
 
 	/**
 	 * 从文件读取原始的二进制数据到内存并向前移动文件指针.
 	 */
-	RawRead(Buffer [, Bytes]) => Number
+	RawRead(Buffer [, Bytes]) => Integer
 
 	/**
 	 * 写入原始的二进制数据到文件并向前移动文件指针.
 	 */
-	RawWrite(Data [, Bytes]) => Number
+	RawWrite(Data [, Bytes]) => Integer
 
 	/**
 	 * 从文件中读取一行文本并使文件指针向前移动.
@@ -2945,102 +2945,102 @@ class File extends Object {
 	/**
 	 * 根据打开文件时使用的标志, 写入后面跟着 `n 或 `r`n 的字符串. 向前移动文件指针.
 	 */
-	WriteLine([String]) => Number
+	WriteLine([String]) => Integer
 
 	/**
 	 * 从文件中读取指定类型的数据并向前移动文件指针.
 	 */
-	ReadChar() => Number
+	ReadChar() => Integer
 
 	/**
 	 * 从文件中读取Double类型的数据并向前移动文件指针.
 	 */
-	ReadDouble() => Number
+	ReadDouble() => Float
 
 	/**
 	 * 从文件中读取Float类型的数据并向前移动文件指针.
 	 */
-	ReadFloat() => Number
+	ReadFloat() => Float
 
 	/**
 	 * 从文件中读取Int类型的数据并向前移动文件指针.
 	 */
-	ReadInt() => Number
+	ReadInt() => Integer
 
 	/**
 	 * 从文件中读取Int64类型的数据并向前移动文件指针.
 	 */
-	ReadInt64() => Number
+	ReadInt64() => Integer
 
 	/**
 	 * 从文件中读取Short类型的数据并向前移动文件指针.
 	 */
-	ReadShort() => Number
+	ReadShort() => Integer
 
 	/**
 	 * 从文件中读取UChar类型的数据并向前移动文件指针.
 	 */
-	ReadUChar() => Number
+	ReadUChar() => Integer
 
 	/**
 	 * 从文件中读取UInt类型的数据并向前移动文件指针.
 	 */
-	ReadUInt() => Number
+	ReadUInt() => Integer
 
 	/**
 	 * 从文件中读取UShort类型的数据并向前移动文件指针.
 	 */
-	ReadUShort() => Number
+	ReadUShort() => Integer
 
 	/**
 	 * 写入Char类型的数据到文件并向前移动文件指针.
 	 */
-	WriteChar(Num) => Number
+	WriteChar(Num) => Integer
 
 	/**
 	 * 写入Double类型的数据到文件并向前移动文件指针.
 	 */
-	WriteDouble(Num) => Number
+	WriteDouble(Num) => Integer
 
 	/**
 	 * 写入Float类型的数据到文件并向前移动文件指针.
 	 */
-	WriteFloat(Num) => Number
+	WriteFloat(Num) => Integer
 
 	/**
 	 * 写入Int类型的数据到文件并向前移动文件指针.
 	 */
-	WriteInt(Num) => Number
+	WriteInt(Num) => Integer
 
 	/**
 	 * 写入Int64类型的数据到文件并向前移动文件指针.
 	 */
-	WriteInt64(Num) => Number
+	WriteInt64(Num) => Integer
 
 	/**
 	 * 写入Short类型的数据到文件并向前移动文件指针.
 	 */
-	WriteShort(Num) => Number
+	WriteShort(Num) => Integer
 
 	/**
 	 * 写入UChar类型的数据到文件并向前移动文件指针.
 	 */
-	WriteUChar(Num) => Number
+	WriteUChar(Num) => Integer
 
 	/**
 	 * 写入UInt类型的数据到文件并向前移动文件指针.
 	 */
-	WriteUInt(Num) => Number
+	WriteUInt(Num) => Integer
 
 	/**
 	 * 写入UShort类型的数据到文件并向前移动文件指针.
 	 */
-	WriteUShort(Num) => Number
+	WriteUShort(Num) => Integer
 
 	/**
 	 * 移动文件指针. 如果省略 Origin, 当 Distance 为负数时, Origin 默认为 SEEK_END, 而其他情况时为 SEEK_SET.
 	 */
-	Seek(Distance [, Origin]) => Number
+	Seek(Distance [, Origin]) => Integer
 
 	/**
 	 * 关闭文件, 将缓存中的所有数据写入磁盘并释放共享锁定.
@@ -3064,22 +3064,22 @@ class Func extends Object {
 	/**
 	 * 内置函数返回 true, 否则返回 false.
 	 */
-	IsBuiltIn => Number
+	IsBuiltIn => Integer
 
 	/**
 	 * 当函数为可变参数时返回 true, 否则返回 false.
 	 */
-	IsVariadic => Number
+	IsVariadic => Integer
 
 	/**
 	 * 返回所需参数的数量.
 	 */
-	MinParams => Number
+	MinParams => Integer
 
 	/**
 	 * 对于用户定义函数返回正式声明的参数数目, 对于内置函数返回最大的参数数目.
 	 */
-	MaxParams => Number
+	MaxParams => Integer
 
 	/**
 	 * 调用函数.
@@ -3094,12 +3094,12 @@ class Func extends Object {
 	/**
 	 * 确定参数是否为 ByRef 类型(如果省略参数, 表示此函数是否含有 ByRef 参数).
 	 */
-	IsByRef(ParameterVar) => Number
+	IsByRef(ParameterVar) => Integer
 
 	/**
 	 * 确定参数是否是可选的(如果省略参数, 表示此函数是否含有可选参数).
 	 */
-	IsOptional([ParamIndex]) => Number
+	IsOptional([ParamIndex]) => Integer
 }
 
 class Gui extends Object {
@@ -3121,17 +3121,17 @@ class Gui extends Object {
 	/**
 	 * 检索 GUI 窗口的窗口句柄(HWND).
 	 */
-	Hwnd => Number
+	Hwnd => Integer
 
 	/**
 	 * 检索或设置两侧与随后创建控件之间的水平边距的大小.
 	 */
-	MarginX => Number
+	MarginX => Integer
 
 	/**
 	 * 检索或设置两侧与随后创建控件之间的垂直边距的大小.
 	 */
-	MarginY => Number
+	MarginY => Integer
 
 	/**
 	 * 检索或设置窗口的菜单栏.
@@ -3402,12 +3402,12 @@ class Gui extends Object {
 		/**
 		 * 检索控件当前交互状态, 或启用或禁用(灰色)控件.
 		 */
-		Enabled => Number
+		Enabled => Integer
 
 		/**
 		 * 检索控件当前焦点状态.
 		 */
-		Focused => Number
+		Focused => Integer
 
 		/**
 		 * 检索控件的 Gui 父控件.
@@ -3417,7 +3417,7 @@ class Gui extends Object {
 		/**
 		 * 检索控件的 HWND.
 		 */
-		Hwnd => Number
+		Hwnd => Integer
 
 		/**
 		 * 检索或设置控件的显式名称.
@@ -3437,12 +3437,12 @@ class Gui extends Object {
 		/**
 		 * 检索新内容或将其设置为具有价值的控件.
 		 */
-		Value => Number | String
+		Value => Float | Integer | String
 
 		/**
 		 * 检索控件的当前可见状态, 或显示或隐藏它.
 		 */
-		Visible => Number
+		Visible => Integer
 
 		/**
 		 * 将键盘焦点设置为控件.
@@ -3583,22 +3583,22 @@ class Gui extends Object {
 		/**
 		 * 删除指定的行, 成功则返回1, 失败则返回0.
 		 */
-		Delete([RowNumber]) => Number
+		Delete([RowNumber]) => Integer
 
 		/**
 		 * 删除指定的列及其下的所有内容, 并在成功时返回1, 在失败时返回0.
 		 */
-		DeleteCol(ColumnNumber) => Number
+		DeleteCol(ColumnNumber) => Integer
 
 		/**
 		 * 返回控件中的行数或列数.
 		 */
-		GetCount([Mode]) => Number
+		GetCount([Mode]) => Integer
 
 		/**
 		 * 返回下一个选定, 选中或关注的行的行号, 否则返回零.
 		 */
-		GetNext([StartingRowNumber, RowType]) => Number
+		GetNext([StartingRowNumber, RowType]) => Integer
 
 		/**
 		 * 检索指定行号和列号的文本.
@@ -3608,27 +3608,27 @@ class Gui extends Object {
 		/**
 		 * 在指定的行号处插入新行, 并返回新的行号.
 		 */
-		Insert(RowNumber [, Options, Cols*]) => Number
+		Insert(RowNumber [, Options, Cols*]) => Integer
 
 		/**
 		 * 在指定的列号处插入新列, 并返回新列的位置号.
 		 */
-		InsertCol(ColumnNumber [, Options, ColumnTitle]) => Number
+		InsertCol(ColumnNumber [, Options, ColumnTitle]) => Integer
 
 		/**
 		 * 修改行的属性/文本, 并在成功时返回1, 在失败时返回0.
 		 */
-		Modify(RowNumber [, Options, NewCols*]) => Number
+		Modify(RowNumber [, Options, NewCols*]) => Integer
 
 		/**
 		 * 修改指定列及其标题的属性/文本, 并在成功时返回1, 在失败时返回0.
 		 */
-		ModifyCol([ColumnNumber, Options, ColumnTitle]) => Number
+		ModifyCol([ColumnNumber, Options, ColumnTitle]) => Integer
 
 		/**
 		 * 设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).
 		 */
-		SetImageList(ImageListID [, IconType]) => Number
+		SetImageList(ImageListID [, IconType]) => Integer
 	}
 
 	class MonthCal extends Gui.Control {
@@ -3650,17 +3650,17 @@ class Gui extends Object {
 		/**
 		 * 在指定部分的文本左侧显示一个小图标, 并返回图标的句柄.
 		 */
-		SetIcon(Filename, IconNumber := 1, PartNumber := 1) => Number
+		SetIcon(Filename, IconNumber := 1, PartNumber := 1) => Integer
 
 		/**
 		 * 根据指定的宽度(以像素为单位)将条形划分为多个部分, 并返回非零值(状态条的HWND).
 		 */
-		SetParts(Widths*) => Number
+		SetParts(Widths*) => Integer
 
 		/**
 		 * 在状态栏的指定部分显示NewText, 成功则返回1, 失败则返回0.
 		 */
-		SetText(NewText, PartNumber := 1, Style := 0) => Number
+		SetText(NewText, PartNumber := 1, Style := 0) => Integer
 	}
 
 	class Tab extends Gui.List {
@@ -3679,49 +3679,49 @@ class Gui extends Object {
 		/**
 		 * 将新项目添加到TreeView, 并返回其唯一的项目ID号.
 		 */
-		Add(Name [, ParentItemID, Options]) => Number
+		Add(Name [, ParentItemID, Options]) => Integer
 
 		/**
 		 * 删除指定的项目, 成功则返回1, 失败则返回0.
 		 */
-		Delete([ItemID]) => Number
+		Delete([ItemID]) => Integer
 
 		/**
 		 * 如果指定的项目具有指定的属性, 则返回非零值(项目ID).
 		 * @param ItemID 选中项目.
 		 * @param Attribute 指定 "E", "Expand" 或 "Expanded" 来判断此项当前是否是展开的(即它的子项目是显示的); 指定 "C", "Check" 或 "Checked" 来判断此项是否含有复选标记; 或指定 "B" 或 "Bold" 来判断此项当前是否为粗体.
 		 */
-		Get(ItemID, Attribute) => Number
+		Get(ItemID, Attribute) => Integer
 
 		/**
 		 * 返回指定项目的第一个/顶部子项的ID号(如果没有, 则返回0).
 		 */
-		GetChild(ParentItemID) => Number
+		GetChild(ParentItemID) => Integer
 
 		/**
 		 * 返回控件中的项目总数.
 		 */
-		GetCount() => Number
+		GetCount() => Integer
 
 		/**
 		 * 返回指定项目下方的下一个项目的ID号(如果没有, 则返回0).
 		 */
-		GetNext([ItemID, ItemType]) => Number
+		GetNext([ItemID, ItemType]) => Integer
 
 		/**
 		 * 返回指定项目的父项作为项目ID.
 		 */
-		GetParent(ItemID) => Number
+		GetParent(ItemID) => Integer
 
 		/**
 		 * 返回指定项目上方的前一个项目的ID号(如果没有, 则返回0).
 		 */
-		GetPrev(ItemID) => Number
+		GetPrev(ItemID) => Integer
 
 		/**
 		 * 返回所选项目的ID号.
 		 */
-		GetSelection() => Number
+		GetSelection() => Integer
 
 		/**
 		 * 检索指定项目的文本/名称.
@@ -3731,12 +3731,12 @@ class Gui extends Object {
 		/**
 		 * 修改项目的属性/名称, 并返回项目自己的ID.
 		 */
-		Modify(ItemID [, Options, NewName]) => Number
+		Modify(ItemID [, Options, NewName]) => Integer
 
 		/**
 		 * 设置或替换ImageList, 并返回以前与此控件关联的ImageListID(如果没有, 则返回0).
 		 */
-		SetImageList(ImageListID [, IconType]) => Number
+		SetImageList(ImageListID [, IconType]) => Integer
 	}
 
 	class UpDown extends Gui.Control {
@@ -3765,7 +3765,7 @@ class InputHook extends Object {
 	/**
 	 * 如果输入正在进行, 则返回 true, 否则返回 false.
 	 */
-	InProgress => Number
+	InProgress => Integer
 
 	/**
 	 * 返回自上次 Input 启动以来收集的任何文本.
@@ -3800,42 +3800,42 @@ class InputHook extends Object {
 	/**
 	 * 控制 Backspace 是否从输入缓冲的末尾删除最近按下的字符.
 	 */
-	BackspaceIsUndo => Number
+	BackspaceIsUndo => Integer
 
 	/**
 	 * 控制 MatchList 是否区分大小写.
 	 */
-	CaseSensitive => Number
+	CaseSensitive => Integer
 
 	/**
 	 * 控制每个匹配项是否可以是输入文本的子字符串.
 	 */
-	FindAnywhere => Number
+	FindAnywhere => Integer
 
 	/**
 	 * 检索或设置要收集的输入的最小发送级别.
 	 */
-	MinSendLevel => Number
+	MinSendLevel => Integer
 
 	/**
 	 * 控制当按下非文本键时是否调用 OnKeyDown 和 OnKeyUp 回调.
 	 */
-	NotifyNonText => Number
+	NotifyNonText => Integer
 
 	/**
 	 * 检索或设置超时值(以秒为单位).
 	 */
-	Timeout => Number
+	Timeout => Integer
 
 	/**
 	 * 控制不产生文本的键或键组合是否可见(不阻止).
 	 */
-	VisibleNonText => Number
+	VisibleNonText => Integer
 
 	/**
 	 * 控制产生文本的键或键组合是否可见(不阻止).
 	 */
-	VisibleText => Number
+	VisibleText => Integer
 
 	/**
 	 * 创建一个对象, 该对象可用于收集或拦截键盘输入.
@@ -3913,7 +3913,7 @@ class InputHook extends Object {
 	/**
 	 * 等待, 直到 Input 终止(InProgress 为 false).
 	 */
-	Wait([MaxTime]) => Number
+	Wait([MaxTime]) => Integer
 }
 
 class Integer extends Number {
@@ -3962,7 +3962,7 @@ class Map extends Object {
 	/**
 	 * 如果 Key 在映射中有关联的值, 则返回 true, 否则返回 false.
 	 */
-	Has(Key) => Number
+	Has(Key) => Integer
 
 	/**
 	 * 设置零个或多个项目.
@@ -3972,12 +3972,12 @@ class Map extends Object {
 	/**
 	 * 检索映射中存在的键值对的数量.
 	 */
-	Count => Number
+	Count => Integer
 
 	/**
 	 * 检索或设置映射的当前容量.
 	 */
-	Capacity => Number
+	Capacity => Integer
 
 	/**
 	 * 检索或设置映射的大小写敏感性设置.
@@ -4000,7 +4000,7 @@ class Menu extends Object {
 	/**
 	 * 检索或设置激活托盘菜单的默认项所需的单击次数.
 	 */
-	ClickCount => Number
+	ClickCount => Integer
 
 	/**
 	 * 检索或设置默认菜单项.
@@ -4010,7 +4010,7 @@ class Menu extends Object {
 	/**
 	 * 检索菜单的 Win32 句柄.
 	 */
-	Handle => Number
+	Handle => Integer
 
 	/**
 	 * 创建一个新的Menu或MenuBar对象.
@@ -4133,7 +4133,7 @@ class Object extends Any {
 	/**
 	 * 如果对象拥有该名称的属性, 则返回 true, 否则返回 false.
 	 */
-	HasOwnProp(Name) => Number
+	HasOwnProp(Name) => Integer
 
 	/**
 	 * 枚举对象自有的属性.
@@ -4161,22 +4161,22 @@ class RegExMatchInfo extends Object {
 	/**
 	 * 返回整体匹配或捕获的子模式的位置.
 	 */
-	Pos[N?] => Number
+	Pos[N?] => Integer
 
 	/**
 	 * 返回整体匹配或捕获的子模式的位置.
 	 */
-	Pos(N?) => Number
+	Pos(N?) => Integer
 
 	/**
 	 * 返回整体匹配或捕获的子模式的长度.
 	 */
-	Len[N?] => Number
+	Len[N?] => Integer
 
 	/**
 	 * 返回整体匹配或捕获的子模式的长度.
 	 */
-	Len(N?) => Number
+	Len(N?) => Integer
 
 	/**
 	 * 返回给定子模式的名称(如果有的话).
@@ -4191,7 +4191,7 @@ class RegExMatchInfo extends Object {
 	/**
 	 * 返回子模式的总数.
 	 */
-	Count => Number
+	Count => Integer
 
 	/**
 	 * 如果适用, 返回最后遇到的名称(*MARK：NAME).
