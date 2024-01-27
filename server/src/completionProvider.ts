@@ -524,7 +524,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								items.push(...completionItemCache.key);
 								return items;
 							default:
-								if ((ahkvars[res.name.toUpperCase()] as FuncNode)?.params[res.index]?.name === 'WinTitle')
+								if ((ahkvars[res.name.toUpperCase()] as FuncNode)?.params?.[res.index]?.name === 'WinTitle')
 									return completionItemCache.option.ahk_criteria;
 						}
 					}
