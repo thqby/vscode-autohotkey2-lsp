@@ -2449,8 +2449,10 @@ export class Lexer {
 							if (!predot) {
 								let vr: Variable | undefined;
 								if (input.charAt(lk.offset - 1) !== '%' && (vr = addvariable(lk))) {
-									if (byref !== undefined)
-										vr.def = true, byref ? (vr.ref = vr.assigned = true) : (vr.returntypes = { '#number': 0 });
+									if (byref)
+										vr.def = vr.ref = vr.assigned = true;
+									else if (byref === false && tk.type as string !== 'TK_DOT')
+										vr.def = true, vr.returntypes = { '#number': 0 };
 									if (tk.type as string === 'TK_EQUALS') {
 										if (_cm = comments[vr.selectionRange.start.line])
 											vr.detail = trim_comment(_cm.content);
@@ -3176,7 +3178,12 @@ export class Lexer {
 											else tpexp += tp, vr.def = true;
 										} else if (byref)
 											tpexp = tpexp.slice(0, -1) + '#varref';
-										else tpexp += check_concat(lk) + lk.content, !tk.topofline && ['++', '--'].includes(tk.content) && (byref = false);
+										else {
+											tpexp += check_concat(lk) + lk.content;
+											if (tk.type as string === 'TK_DOT')
+												byref ||= undefined;
+											else !tk.topofline && ['++', '--'].includes(tk.content) && (byref = false);
+										}
 										if (byref !== undefined)
 											vr.def = true, byref ? (vr.ref = vr.assigned = true) : (vr.returntypes = { '#number': 0 });
 										else if (tk.content === '??' || tk.ignore && tk.content === '?')
