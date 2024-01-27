@@ -56,7 +56,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 				} else if (fn.full)
 					hover.push({ kind: 'ahk2', value: fn.full });
 
-				if (node.detail || node.kind === SymbolKind.Variable) {
+				if (node.detail || node.kind === SymbolKind.Variable || node.kind === SymbolKind.TypeParameter) {
 					let md = formatMarkdowndetail(node, lexers[uri]);
 					if (node.kind === SymbolKind.Variable) {
 						let re = /^/;
@@ -68,6 +68,9 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 						else
 							md = `\`${node.name}\`\n___\n${md}`;
 						md = md.replace(re, !scope ? '*@global* ' : (node as Variable).static ? '*@static* ' : '*@local* ');
+					} else if (node.kind === SymbolKind.TypeParameter) {
+						if (!md.startsWith('*@param* '))
+							md = `*@param* \`${node.name}\`\n___\n${md}`;
 					}
 					hover.push({ kind: 'markdown', value: (hover.length ? '___\n' : '') + md });
 				}

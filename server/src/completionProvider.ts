@@ -342,7 +342,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						}
 					}
 					if (!ismethod && is_builtin_symbol(res.name, res.pos)) {
-						switch (res.name.toLowerCase()) {
+						switch (l = res.name.toLowerCase()) {
 							case 'dynacall':
 								if (res.index !== 0)
 									break;
@@ -418,6 +418,34 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 									return items;
 								}
 								break;
+							case 'hasmethod':
+							case 'hasprop':
+								if (res.index === 1) {
+									let exp = ci.paraminfo?.data?.[0], unknown = true;
+									if (!exp) break;
+									let ts: any = {};
+									let filter = l.endsWith('method') ? (kind: SymbolKind) => kind !== SymbolKind.Method : undefined;
+									reset_detect_cache(), detectExpType(doc, exp, position, ts);
+									if (ts['#any'] !== undefined) break;
+									for (const tp in ts) {
+										let ns;
+										if (ts[tp] === false) {
+											ns = searchNode(doc, tp, position, SymbolKind.Class);
+										} else if (ts[tp]?.node)
+											ns = [ts[tp]];
+										ns?.forEach((it: any) => {
+											if (it.node.kind !== SymbolKind.Class)
+												return;
+											unknown = false;
+											Object.values(getClassMembers(doc, it.node, !/[@#][^.]+$/.test(tp))).forEach(it => {
+												if (expg.test(it.name) && !filter?.(it.kind))
+													additem(it.name, it.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Property);
+											});
+										});
+									}
+									return items;
+								}
+								break;
 							case 'numget':
 								if (res.index === 2 || res.index === 1) {
 									for (const name of dllcalltpe.filter(v => !/str$/i.test(v)))
@@ -436,25 +464,23 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								if (res.index === 1) {
 									let exp = ci.paraminfo?.data?.[0], unknown = true;
 									['NEW', 'DELETE', 'GET', 'SET', 'CALL'].forEach(it => { vars['__' + it] = true; });
-									if (exp) {
-										let ts: any = {};
-										reset_detect_cache(), detectExpType(doc, exp, position, ts);
-										if (ts['#any'] === undefined) {
-											for (const tp in ts) {
-												let ns: any;
-												if (ts[tp] === false) {
-													ns = searchNode(doc, tp, position, SymbolKind.Class);
-												} else if (ts[tp]?.node)
-													ns = [ts[tp]];
-												ns?.forEach((it: any) => {
-													unknown = false;
-													Object.values(getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/))).forEach(it => {
-														if (it.kind === SymbolKind.Method && expg.test(temp))
-															additem(it.name, CompletionItemKind.Method);
-													});
-												});
-											}
-										}
+									if (!exp) break;
+									let ts: any = {};
+									reset_detect_cache(), detectExpType(doc, exp, position, ts);
+									if (ts['#any'] !== undefined) break;
+									for (const tp in ts) {
+										let ns: any;
+										if (ts[tp] === false) {
+											ns = searchNode(doc, tp, position, SymbolKind.Class);
+										} else if (ts[tp]?.node)
+											ns = [ts[tp]];
+										ns?.forEach((it: any) => {
+											unknown = false;
+											Object.values(getClassMembers(doc, it.node, !tp.match(/[@#][^.]+$/))).forEach(it => {
+												if (it.kind === SymbolKind.Method && expg.test(temp))
+													additem(it.name, CompletionItemKind.Method);
+											});
+										});
 									}
 									if (unknown) {
 										let meds = [doc.object.method];

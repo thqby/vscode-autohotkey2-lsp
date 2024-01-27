@@ -2725,8 +2725,8 @@ export class Lexer {
 			}
 
 			function parse_params(types: any = {}, must = false, endc = ')') {
-				let paramsdef = true, beg = parser_pos - 1, cache: Variable[] = [], rg, la = [',', endc === ')' ? '(' : '['];
-				let byref = false, tpexp = '', bb = parser_pos, bak = tk, hasexpr = false;
+				let paramsdef = true, beg = parser_pos - 1, cache: Variable[] = [], la = [',', endc === ')' ? '(' : '['];
+				let byref = false, tpexp = '', bb = parser_pos, bak = tk, hasexpr = false, lineno: number | undefined;
 				let info: ParamInfo = { offset: beg, count: 0, comma: [], miss: [], unknown: false };
 				block_mode = false, bak.paraminfo = info;
 				if (lk.type === 'TK_WORD' && bak.prefix_is_whitespace === undefined)
@@ -2758,9 +2758,9 @@ export class Lexer {
 							if (tk.content === ',' || tk.content === endc) {
 								if (lk.content.match(/^\d/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
-								let tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length));
-								if (_cm = comments[tn.selectionRange.start.line])
-									tn.detail = trim_comment(_cm?.content);
+								let tn = Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length));
+								if ((_cm = comments[tn.selectionRange.start.line]) && tn.selectionRange.start.line > (lineno ??= _this.document.positionAt(beg).line))
+									tn.detail = trim_comment(_cm.content);
 								if (byref)
 									byref = false, tn.ref = tn.def = tn.assigned = true, tpexp = '#varref';
 								else tpexp = ' ' + tn.name;
@@ -2776,7 +2776,7 @@ export class Lexer {
 								let ek = tk, o: any;
 								if (lk.content.match(/^\d/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
-								let tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length));
+								let tn = Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length));
 								if (_cm = comments[tn.selectionRange.start.line])
 									tn.detail = trim_comment(_cm.content);
 								tn.def = true, tn.defaultVal = null, cache.push(tn);
@@ -2815,13 +2815,13 @@ export class Lexer {
 									let t = lk;
 									nexttoken();
 									if (tk.content === endc) {
-										tn = Variable.create(t.content, SymbolKind.Variable, rg = make_range(t.offset, t.length));
+										tn = Variable.create(t.content, SymbolKind.Variable, make_range(t.offset, t.length));
 										cache.push(tn), (<any>tn).arr = true, info.unknown = true, bb = parser_pos, bak = tk;
 										break;
 									} else { paramsdef = false, info.count--; break; }
 								} else if (tk.content === '?' && tk.ignore) {
 									let t = lk;
-									let tn = Variable.create(lk.content, SymbolKind.Variable, rg = make_range(lk.offset, lk.length));
+									let tn = Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length));
 									tn.def = true, tn.defaultVal = null, cache.push(tn);
 									if (byref)
 										byref = false, tn.ref = tn.assigned = true, tpexp = '#varref';
@@ -2853,7 +2853,7 @@ export class Lexer {
 							let t = tk, tn: Variable;
 							nexttoken();
 							if (tk.content === endc) {
-								cache.push(tn = Variable.create('', SymbolKind.Variable, rg = make_range(t.offset, 0)));
+								cache.push(tn = Variable.create('', SymbolKind.Variable, make_range(t.offset, 0)));
 								tn.arr = true;
 								break;
 							} else _this.addDiagnostic(diagnostic.unexpected('*'), t.offset, 1);
@@ -2874,7 +2874,7 @@ export class Lexer {
 				if (paramsdef) {
 					if (hasexpr)
 						Object.defineProperty(cache, 'format', { value: format_params_default_val.bind(undefined, _this.tokens), configurable: true });
-					types[tpexp] = 0, tk.previous_pair_pos = beg;
+					types[tpexp] = 0, tk.previous_pair_pos = beg, _this.tokens[beg].next_pair_pos = tk.offset;
 					_this.addFoldingRange(beg, parser_pos, 'block');
 					return cache;
 				} else {
@@ -4544,7 +4544,7 @@ export class Lexer {
 									ignore = true;
 								}
 							}
-							continue;
+							if (!ignore) continue;
 						}
 						parser_pos = next_LF;
 					}
@@ -4567,7 +4567,7 @@ export class Lexer {
 						add_comment_foldingrange();
 					if (last_comment_fr)
 						last_comment_fr.endLine = l;
-					else last_comment_fr = FoldingRange.create(_this.document.positionAt(offset).line, l, undefined, undefined, 'commnet');
+					else last_comment_fr = FoldingRange.create(_this.document.positionAt(offset).line, l, undefined, undefined, 'comment');
 				}
 				return cmm;
 			}
@@ -6660,6 +6660,10 @@ export function formatMarkdowndetail(node: AHKSymbol, lex?: Lexer, name?: string
 							details.push(`\n*@${s}* ${t}\0${m[4]}`);
 						}
 						break;
+					case 'type':
+						if (m = m[2].match(/^\s*({(.*?)}(?=\s|$))?(\s*[-—])?(.*)/))
+							details.push(`\n*@${s}* ${(m[2] ??= 'any') && `*\`${m[2]}\`*`}\0${m[4]}`);
+						break;
 					default:
 						switch (s) {
 							case 'ignore': node.ignore = true; break;
@@ -6688,13 +6692,16 @@ export function formatMarkdowndetail(node: AHKSymbol, lex?: Lexer, name?: string
 				it.returntypes = o, types.forEach(t => o[t] = true);
 		}
 	});
-	let replacer = (s: string, m1: string) => m1 && (/  \n|\n\n/.test(s) ? `\n\n${m1}` : ` — ${m1}`);
-	detail = details.join('\n').replace(/\0\s*(\S?)/g, replacer);
+	detail = remove_nul(details.join('\n'));
 	if (name !== undefined)
-		s = params[name.toUpperCase()]?.join('\n').replace(/\0\s*(\S?)/g, replacer) ?? '', detail = `${s}\n\n${detail}`;
+		s = remove_nul(params[name.toUpperCase()]?.join('\n') ?? ''), detail = `${s}\n\n${detail}`;
 	else if (!overloads && ols.length)
 		detail = '*@overload*\n```ahk2\n' + ols.map(it => it.replace(/^_[^\W]*/, node.name)).join('\n') + '\n```\n' + (detail && `___\n${detail}`);
 	return detail;
+	function remove_nul(str: string) {
+		return str.replace(/\0\s*((([-+*]|#+|\d+\.)[ \t]|[>|]|```\w*\n)|\S?)/g,
+			(s, m1, m2) => m1 && (m2 || /  \n|\n\n/.test(s) ? `\n\n${m1}` : ` — ${m1}`));
+	}
 }
 
 export function samenameerr(a: DocumentSymbol, b: DocumentSymbol): string {
