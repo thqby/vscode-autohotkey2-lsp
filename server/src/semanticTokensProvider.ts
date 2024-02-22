@@ -1,10 +1,11 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, FuncNode, getClassMembers, get_class_member, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token } from './Lexer';
-import { diagnostic, extsettings, lexers, Variable } from './common';
-import { checkParams, globalsymbolcache, symbolProvider } from './symbolProvider';
+import {
+	AhkSymbol, ClassNode, FuncNode, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
+	checkParams, diagnostic, extsettings, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
+} from './common';
 
 let curclass: ClassNode | undefined;
-let memscache = new Map<ClassNode, { [name: string]: DocumentSymbol }>();
+let memscache = new Map<ClassNode, { [name: string]: AhkSymbol }>();
 
 function resolve_sem(tk: Token, doc: Lexer) {
 	let l: string, sem: SemanticToken | undefined;
@@ -25,8 +26,8 @@ function resolve_sem(tk: Token, doc: Lexer) {
 	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 		curclass = undefined;
 	else if (tk.type === 'TK_WORD' && ['THIS', 'SUPER'].includes(l = tk.content.toUpperCase()) && tk.previous_token?.type !== 'TK_DOT') {
-		let r = doc.searchNode(l, doc.document.positionAt(tk.offset), SymbolKind.Variable);
-		if (r && r.ref === false)
+		let r = doc.findSymbol(l, SymbolKind.Variable, doc.document.positionAt(tk.offset));
+		if (r?.is_this !== undefined)
 			curclass = r.node as ClassNode;
 	}
 }
@@ -69,9 +70,9 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 		case SemanticTokenTypes.method:
 		case SemanticTokenTypes.property:
 			if (curclass) {
-				let n = curclass.staticdeclaration[name], kind = n?.kind, temp: { [name: string]: DocumentSymbol };
+				let n = curclass.property[name], kind = n?.kind, temp: { [name: string]: AhkSymbol };
 				if (!n || (n as any).def === false) {
-					let t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = getClassMembers(doc, curclass, true)), temp))[name];
+					let t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = get_class_members(doc, curclass)), temp))[name];
 					if (t)
 						n = t, kind = t.kind;
 					else if (sem.type === SemanticTokenTypes.method) {
@@ -83,10 +84,10 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 				switch (kind) {
 					case SymbolKind.Method:
 						sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | SemanticTokenModifiers.static;
-						if (tk.callinfo) {
+						if (tk.callsite) {
 							if (curclass) {
 								if (n.full?.startsWith('(Object) static Call('))
-									n = get_class_member(doc, curclass, '__new', false, true) ?? n;
+									n = get_class_member(doc, curclass.prototype!, '__new', true) ?? n;
 								else if (n.full?.startsWith('(Object) DefineProp(')) {
 									let tt = doc.tokens[tk.next_token_offset];
 									if (tt?.content === '(')
@@ -98,14 +99,14 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 									}
 								}
 							}
-							checkParams(doc, n as FuncNode, tk.callinfo);
+							checkParams(doc, n as FuncNode, tk.callsite);
 						}
 						curclass = undefined;
 						return sem.type = SemanticTokenTypes.method;
 					case SymbolKind.Class:
 						sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;
-						curclass = curclass.staticdeclaration[name] as ClassNode;
-						if (tk.callinfo) checkParams(doc, curclass as unknown as FuncNode, tk.callinfo);
+						curclass = curclass.property[name] as ClassNode;
+						if (tk.callsite) checkParams(doc, curclass as unknown as FuncNode, tk.callsite);
 						return sem.type = SemanticTokenTypes.class;
 					case SymbolKind.Property:
 						let t = n.children;
@@ -114,7 +115,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						curclass = undefined;
 						return sem.type = SemanticTokenTypes.property;
 					case undefined:
-						if (((<any>curclass).checkmember ?? (<any>doc).checkmember) !== false && extsettings.Diagnostics.ClassStaticMemberCheck) {
+						if ((curclass.checkmember ?? doc.checkmember) !== false && extsettings.Diagnostics.ClassStaticMemberCheck) {
 							let tt = doc.tokens[tk.next_token_offset];
 							if (tt?.content === ':=') {
 								cls_add_prop(curclass, tk.content, tk.offset);
@@ -130,13 +131,13 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 	}
 
 	function cls_add_prop(cls: ClassNode, name: string, offset?: number) {
-		let d = lexers[(<any>cls).uri];
+		let d = lexers[cls.uri!];
 		if (d && offset) {
 			let rg = Range.create(d.document.positionAt(offset), d.document.positionAt(offset + name.length));
 			let p = DocumentSymbol.create(name, undefined, SymbolKind.Property, rg, rg) as Variable;
 			p.static = p.def = true, name = name.toUpperCase();
 			if (d === doc && d.d < 2)
-				cls.children?.push(p), cls.staticdeclaration[name] ??= p;
+				cls.children?.push(p), cls.property[name] ??= p;
 			else {
 				let t = memscache.get(cls);
 				if (t)
@@ -147,7 +148,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 		} else {
 			delete cls.undefined;
 			if (d && d.d < 2)
-				(<any>cls).checkmember = false;
+				cls.checkmember = false;
 			else {
 				let t = memscache.get(cls) as any;
 				if (t)

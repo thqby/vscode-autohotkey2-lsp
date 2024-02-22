@@ -1,91 +1,60 @@
-import { CancellationToken, DocumentSymbol, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
-import { reset_detect_cache, detectExpType, formatMarkdowndetail, FuncNode, searchNode, Variable } from './Lexer';
-import { lexers, hoverCache, Maybe, SemanticTokenTypes } from './common';
+import { CancellationToken, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
+import {
+	AhkSymbol, FuncNode, Maybe, SemanticTokenTypes,
+	format_markdown_detail, hoverCache, join_types, lexers, find_symbols
+} from './common';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return;
-	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
-	let context = doc?.buildContext(params.position), t: any, hover: any[] = [];
-	if (context) {
-		let word = context.text.toLowerCase(), kind: SymbolKind = SymbolKind.Variable;
-		let nodes: [{ node: DocumentSymbol, uri: string, scope?: DocumentSymbol }] | undefined | null;
-		if (!word || context.kind === SymbolKind.Null) {
-			if (context.token && context.token.semantic?.type !== SemanticTokenTypes.variable) {
-				t = context.token;
-				if (t = hoverCache[(t.hover_word || t.content).toLowerCase()])
-					return t[1];
-			}
-			return undefined;
-		}
-		if (undefined === (nodes = searchNode(doc, word, context.range.end, kind = context.kind)) && word.includes('.') && (kind == SymbolKind.Property || kind === SymbolKind.Method)) {
-			let ts: any = {};
-			nodes = <any>[], reset_detect_cache(), detectExpType(doc, word.replace(/\.[^.]+$/, m => {
-				word = m.match(/^\.[^.]+$/) ? m : '';
-				return '';
-			}), context.range.end, ts);
-			if (word && ts['#any'] === undefined)
-				for (const tp in ts)
-					searchNode(doc, tp + word, context.range.end, kind)?.forEach(it => {
-						if (!nodes?.map(i => i.node).includes(it.node))
-							nodes?.push(it);
-					});
-			if (!nodes?.length)
-				nodes = undefined;
-		} else if (nodes === null)
-			return undefined;
-		if (!nodes) {
-			if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
-			} else if (kind !== SymbolKind.Function && (t = hoverCache[word]))
+	let uri = params.textDocument.uri.toLowerCase(), lex = lexers[uri];
+	let context = lex?.getContext(params.position), hover: { kind?: 'ahk2', value: string }[] = [], t;
+	if (!context)
+		return;
+	if (context.kind === SymbolKind.Null) {
+		if (context.token.semantic?.type !== SemanticTokenTypes.variable) {
+			t = context.token;
+			if (t = hoverCache[(t.hover_word || t.content).toLowerCase()])
 				return t[1];
 		}
-		if (nodes) {
-			if (nodes.length > 1) {
-				nodes.forEach(it => {
-					if ((<any>(it.node)).full)
-						hover.push({ kind: 'ahk2', value: (<any>(it.node)).full })
-				});
-			} else {
-				let { node, scope, uri } = nodes[0], fn = node as FuncNode;
-				if (node.kind === SymbolKind.Class && !fn.full?.startsWith('('))
-					hover.push({ kind: 'ahk2', value: 'class ' + (fn.full || node.name) });
-				else if (scope && node.kind === SymbolKind.TypeParameter) {
-					let p = (scope as any).parent;
-					if (p?.kind === SymbolKind.Property && p.parent?.kind === SymbolKind.Class)
-						scope = p as DocumentSymbol;
-					formatMarkdowndetail(scope, lexers[uri]);
-				} else if (fn.full)
-					hover.push({ kind: 'ahk2', value: fn.full });
-
-				if (node.detail || node.kind === SymbolKind.Variable || node.kind === SymbolKind.TypeParameter) {
-					let md = formatMarkdowndetail(node, lexers[uri]);
-					if (node.kind === SymbolKind.Variable) {
-						let re = /^/;
-						if (md.startsWith('\n*@var* ')) {
-							md = md.replace(' — ', '\n___\n');
-							re = /^\n\*@var\*\s/;
-						} else if (md.startsWith('\n*@type* '))
-							md = md.replace(' — ', '\n___\n').replace(/^\n\*@type\*[ \t]*/, `\`${node.name}\`: `);
-						else
-							md = `\`${node.name}\`\n___\n${md}`;
-						md = md.replace(re, !scope ? '*@global* ' : (node as Variable).static ? '*@static* ' : '*@local* ');
-					} else if (node.kind === SymbolKind.TypeParameter) {
-						if (!md.startsWith('*@param* '))
-							md = `*@param* \`${node.name}\`\n___\n${md}`;
-					}
-					hover.push({ kind: 'markdown', value: (hover.length ? '___\n' : '') + md });
-				}
-			}
-			if (hover.length)
-				return {
-					contents: {
-						kind: 'markdown', value: hover.map(it => {
-							if (it.kind === 'ahk2') {
-								return '```ahk2\n' + it.value + '\n```';
-							} else
-								return it.value;
-						}).join('\n\n')
-					}
-				};
-		}
+		return;
 	}
+	let nodes = find_symbols(lex, context);
+	if (!nodes?.length)
+		return;
+	let set = [] as AhkSymbol[];
+	nodes = nodes.filter(it => !set.includes(it.node) && set.push(it.node));
+	if (nodes.length > 1) {
+		for (t of nodes)
+			(t = (t.node as FuncNode).full) && hover.push({ kind: 'ahk2', value: t });
+	} else {
+		let { node, is_global, uri } = nodes[0], fn = node as FuncNode;
+		if (node.kind === SymbolKind.Class && !fn.full?.startsWith('('))
+			hover.push({ kind: 'ahk2', value: 'class ' + (fn.full || node.name) });
+		else if (fn.full)
+			hover.push({ kind: 'ahk2', value: fn.full });
+
+		let md = format_markdown_detail(node, lexers[uri]), re = /^/, ___re = / — |  \n|\n\n/, t;
+		if (node.kind === SymbolKind.Variable) {
+			if (md.startsWith('*@var* ')) {
+				md = md.replace(___re, '\n___\n');
+				re = /^\*@var\*\s/;
+			} else if (md.startsWith('*@type* '))
+				md = md.replace(___re, '\n___\n').replace(/^\*@type\*[ \t]*/, `\`${node.name}\`: `);
+			else
+				md = `\`${node.name}\`${(t = join_types(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
+			md = md.replace(re, is_global === true ? '*@global* ' : node.static ? '*@static* ' : '*@local* ');
+		} else if (node.kind === SymbolKind.TypeParameter) {
+			if (!md.startsWith('*@param* '))
+				md = `*@param* \`${node.name}\`\n___\n${md}`;
+			else md = md.replace(___re, '\n___\n');
+		}
+		md && hover.push({ value: (hover.length ? '___\n' : '') + md });
+	}
+	return {
+		contents: {
+			kind: 'markdown',
+			value: hover.map(it => it.kind === 'ahk2' ?
+				'```ahk2\n' + it.value + '\n```' : it.value).join('\n\n')
+		}
+	};
 }

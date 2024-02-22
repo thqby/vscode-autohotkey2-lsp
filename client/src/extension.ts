@@ -240,8 +240,10 @@ function runScript(textEditor: TextEditor, selection = false) {
 	outputchannel.show(true);
 	if (!ahkprocesses.size)
 		outputchannel.clear();
-	if (selection || textEditor.document.isUntitled)
+	if (selection)
 		selecttext = textEditor.document.getText(textEditor.selection);
+	else if (textEditor.document.isUntitled || !textEditor.document.uri.toString().startsWith('file:///'))
+		selecttext = textEditor.document.getText();
 	executePath.replace(/^(.+[\\/])AutoHotkeyUX\.exe$/i, (...m) => {
 		let lc = m[1] + 'launcher.ahk';
 		if (existsSync(lc))
@@ -262,6 +264,8 @@ function runScript(textEditor: TextEditor, selection = false) {
 			process.stdin?.write(selecttext), process.stdin?.end();
 		}
 	} else {
+		if (textEditor.document.isUntitled)
+			return;
 		commands.executeCommand('workbench.action.files.save');
 		path = textEditor.document.fileName, command += `"${path}"`, startTime = new Date();
 		process = spawn(command, { cwd: resolve(path, '..'), shell: true });

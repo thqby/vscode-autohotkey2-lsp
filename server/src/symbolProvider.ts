@@ -1,11 +1,18 @@
-import { URI } from 'vscode-uri';
+import {
+	CancellationToken, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams,
+	Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams
+} from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { CancellationToken, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams } from 'vscode-languageserver';
-import { checksamenameerr, ClassNode, CallInfo, FuncNode, FuncScope, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable, samenameerr, get_class_call } from './Lexer';
-import { ahkuris, ahkvars, connection, detectExpType, enum_ahkfiles, extsettings, isBrowser, is_line_continue, lexers, openFile, reset_detect_cache, warn, workspaceFolders } from './common';
-import { diagnostic } from './localize';
+import { URI } from 'vscode-uri';
+import {
+	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SemanticToken,
+	SemanticTokenModifiers, SemanticTokenTypes, Token, VARREF, Variable,
+	ahkuris, ahkvars, check_same_name_error, connection, decltype_expr,
+	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor, isBrowser,
+	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
+} from './common';
 
-export let globalsymbolcache: { [name: string]: DocumentSymbol } = {};
+export let globalsymbolcache: { [name: string]: AhkSymbol } = {};
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
@@ -31,16 +38,15 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		return doc.symbolInformation;
 	if (ahkuris.winapi && !list.includes(ahkuris.winapi))
 		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
-	let rawuri = doc.document.uri;
 	const warnLocalSameAsGlobal = extsettings.Warn?.LocalSameAsGlobal;
-	const result: DocumentSymbol[] = [], unset_vars = new Map<Variable, Variable>();
+	const result: AhkSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class, SymbolKind.TypeParameter];
 	for (let [k, v] of Object.entries(doc.declaration)) {
 		let t = gvar[k];
 		if (t.kind === SymbolKind.Variable && !t.assigned)
 			if (winapis[k])
 				t = gvar[k] = winapis[k];
-			else if (v.returntypes === undefined)
+			else if (v.returns === undefined)
 				unset_vars.set(t, v);
 		if (t === v || v.kind !== SymbolKind.Variable)
 			result.push(v), converttype(v, false, v.kind);
@@ -54,15 +60,16 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		doc.sendDiagnostics(false, true);
 	}
 	doc.diags = doc.diagnostics.length;
-	return doc.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.children ? info.range : info.selectionRange, rawuri));
+	uri = doc.document.uri;
+	return doc.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
 	function maybe_unset(k: Variable, v: Variable) {
-		if (!(k.assigned ||= v.assigned) && v.returntypes === undefined)
+		if (!(k.assigned ||= v.assigned) && v.returns === undefined)
 			unset_vars.has(k) || unset_vars.set(k, v);
 	}
-	function flatTree(node: { children?: DocumentSymbol[], funccall?: CallInfo[] }, vars: { [key: string]: Variable } = {}, outer_is_global = false) {
-		const t: DocumentSymbol[] = [];
-		let tk: Token, iscls = (node as DocumentSymbol).kind === SymbolKind.Class;
+	function flatTree(node: { children?: AhkSymbol[] }, vars: { [key: string]: Variable } = {}, outer_is_global = false) {
+		const t: AhkSymbol[] = [];
+		let tk: Token, iscls = (node as AhkSymbol).kind === SymbolKind.Class;
 		node.children?.forEach((info: Variable) => {
 			if (info.children)
 				t.push(info);
@@ -80,17 +87,13 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					result.push(info);
 				else if (sym.kind === SymbolKind.Variable)
 					maybe_unset(sym, info);
+				else if (tk.callsite)
+					checkParams(doc, sym as FuncNode, tk.callsite);
 			} else if (!filter_types.includes(kind))
 				result.push(info);
 		});
-		node.funccall?.forEach(info => {
-			if (info.kind !== SymbolKind.Function)
-				return;
-			let name = info.name.toUpperCase();
-			checkParams(doc, (vars[name] ?? gvar[name]) as FuncNode, info);
-		});
 		t.forEach(info => {
-			let inherit: { [key: string]: DocumentSymbol } = {}, fn = info as FuncNode, s: Variable;
+			let inherit: { [key: string]: AhkSymbol } = {}, fn = info as FuncNode, s: Variable;
 			let oig = outer_is_global;
 			switch (info.kind) {
 				case SymbolKind.Class:
@@ -99,7 +102,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						THIS: DocumentSymbol.create('this', undefined, SymbolKind.TypeParameter, rg, rg),
 						SUPER: DocumentSymbol.create('super', undefined, SymbolKind.TypeParameter, rg, rg)
 					}, outer_is_global = false;
-					for (let dec of [cls.staticdeclaration, cls.declaration])
+					for (let dec of [cls.property, cls.prototype?.property ?? {}])
 						Object.values(dec).forEach(it => it.selectionRange.end.character && result.push(it));
 					break;
 				case SymbolKind.Method:
@@ -129,7 +132,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						if (v.kind !== SymbolKind.TypeParameter) {
 							result.push(v);
 							if (v.kind === SymbolKind.Variable) {
-								if (!v.assigned && v.returntypes === undefined)
+								if (!v.assigned && v.returns === undefined)
 									unset_vars.set(v, v);
 								else if (warnLocalSameAsGlobal && !v.decl && gvar[k])
 									doc.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
@@ -141,7 +144,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							s !== v && (converttype(v, s === ahkvars[k], s.kind).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable));
 						else if (outer_is_global)
-							s = gvar[k] ??= (result.push(v), (v as any).infunc = true, doc.declaration[k] = v),
+							s = gvar[k] ??= (result.push(v), (v as Variable).isglobal = true, doc.declaration[k] = v),
 								converttype(v, !!ahkvars[k], s.kind).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
 						else if (!(v as Variable).def && (s = gvar[k]))
@@ -152,7 +155,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							if (warnLocalSameAsGlobal && v.kind === SymbolKind.Variable && gvar[k])
 								doc.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
-					for (let [k, v] of Object.entries(fn.unresolved_vars ??= {}))
+					for (let [k, v] of Object.entries(fn.unresolved_vars ?? {}))
 						if (s = inherit[k] ?? gvar[k] ?? winapis[k])
 							converttype(v, s === ahkvars[k], s.kind).definition = s;
 						else {
@@ -160,16 +163,16 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							result.push(inherit[k] = v);
 							if (fn.assume === FuncScope.STATIC)
 								v.static = true;
-							if (v.returntypes === undefined)
+							if (v.returns === undefined)
 								unset_vars.set(v, v);
 						}
 					break;
 				case SymbolKind.Property:
 					if ((info as FuncNode).parent?.kind === SymbolKind.Class) {
 						inherit = { THIS: vars.THIS, SUPER: vars.SUPER };
-						let t = info as any;
-						for (let s of ['get', 'set', 'call'])
-							(t[s] as DocumentSymbol)?.selectionRange.end.character && result.push(t[s]),
+						let t = info as Property;
+						for (let s of ['get', 'set', 'call'] as (keyof Property)[])
+							(t[s])?.selectionRange.end.character && result.push(t[s]),
 								inherit[s.toUpperCase()] = false as any;
 						break;
 					}
@@ -187,19 +190,19 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		for (const uri in doc.relevance) {
 			if (dd = lexers[uri]) {
 				dd.diagnostics.splice(dd.diags);
-				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
+				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
 				for (const lb in dd.labels)
-					if ((<any>dd.labels[lb][0]).def)
+					if ((dd.labels[lb][0]).def)
 						if (lbs[lb])
 							dd.diagnostics.push({ message: diagnostic.duplabel(), range: dd.labels[lb][0].selectionRange, severity: DiagnosticSeverity.Error });
 						else lbs[lb] = true;
 			}
 		}
 		let t = Object.values(doc.declaration);
-		checksamenameerr(dec, t, doc.diagnostics);
+		check_same_name_error(dec, t, doc.diagnostics);
 		for (const uri in doc.relevance) {
 			if (dd = lexers[uri])
-				checksamenameerr(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
+				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
 		}
 		let cls: ClassNode;
 		t.forEach(it => {
@@ -207,7 +210,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				let l = cls.extends?.toUpperCase();
 				if (l === it.name.toUpperCase())
 					err_extends(doc, cls, false);
-				else if (l && !checkextendsclassexist(l))
+				else if (l && !find_class(doc, l)?.prototype)
 					err_extends(doc, cls);
 			}
 		});
@@ -218,18 +221,9 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						let l = cls.extends?.toUpperCase();
 						if (l === it.name.toUpperCase())
 							err_extends(dd, cls, false);
-						else if (l && !checkextendsclassexist(l))
+						else if (l && !find_class(dd, l)?.prototype)
 							err_extends(dd, cls);
 					}
-		}
-		function checkextendsclassexist(name: string) {
-			let n = name.split('.'), c: ClassNode | undefined;
-			for (let t of n) {
-				c = c?.staticdeclaration[t] ?? dec[t];
-				if (c?.kind !== SymbolKind.Class || (<any>c).def === false)
-					return false;
-			}
-			return true;
 		}
 		function err_extends(doc: Lexer, it: ClassNode, not_exist = true) {
 			let o = doc.document.offsetAt(it.selectionRange.start), tks = doc.tokens, tk: Token;
@@ -240,11 +234,11 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Warning });
 		}
 	}
-	function converttype(it: DocumentSymbol, islib: boolean = false, kind?: number): Token {
+	function converttype(it: AhkSymbol, islib = false, kind?: number): Token {
 		let tk: Token, stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined, offset: number;
 		switch (kind ?? it.kind) {
 			case SymbolKind.TypeParameter:
-				if (it.range.start.line === 0 && it.range.start.character === 0)
+				if (!it.selectionRange.end.character)
 					return {} as Token;
 				st = SemanticTokenTypes.parameter; break;
 			case SymbolKind.Variable:
@@ -257,9 +251,9 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		if ((tk = doc.tokens[offset = doc.document.offsetAt(it.selectionRange.start)]) && st !== undefined && !tk.ignore) {
 			if ((stk = tk.semantic) === undefined) {
 				tk.semantic = stk = { type: st };
-				if (it.kind === SymbolKind.Variable && (<Variable>it).def && (kind === SymbolKind.Class || kind === SymbolKind.Function))
-					doc.addDiagnostic(samenameerr(it, { kind } as DocumentSymbol), offset, it.name.length), delete (<Variable>it).def;
-				if (!tk.callinfo && st === SemanticTokenTypes.function) {
+				if (it.kind === SymbolKind.Variable && it.def && (kind === SymbolKind.Class || kind === SymbolKind.Function))
+					doc.addDiagnostic(make_same_name_error(it, { kind } as AhkSymbol), offset, it.name.length), delete it.def;
+				if (!tk.callsite && st === SemanticTokenTypes.function) {
 					let nk = doc.tokens[tk.next_token_offset];
 					if (nk && nk.topofline < 1 && !(nk.op_type! >= 0 || ':?.+-*/=%<>,)]}'.includes(nk.content.charAt(0)) || !nk.data && nk.content === '{'))
 						doc.addDiagnostic(diagnostic.funccallerr2(), tk.offset, tk.length, 2);
@@ -273,11 +267,11 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	}
 }
 
-export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
+export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 	let paraminfo = info.paraminfo!, is_cls: boolean;
 	if (!paraminfo || !extsettings.Diagnostics.ParamsCheck) return;
 	if (is_cls = node?.kind === SymbolKind.Class)
-		node = get_class_call(node as any) as any;
+		node = get_class_constructor(node as any) as any;
 	if (!node) return;
 	if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) {
 		let paramcount = node.params.length, pc = paraminfo.count, miss: { [index: number]: boolean } = {};
@@ -316,21 +310,23 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallInfo) {
 				if (index < pc && param.ref && !miss[index]) {
 					let o: number, t: Token;
 					if (index === 0)
-						o = info.offset as number + info.name.length + 1;
+						o = info.offset! + info.name.length + 1;
 					else o = paraminfo.comma[index - 1] + 1;
 					if ((t = doc.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && doc.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
-						let exp = paraminfo.data?.[index], tps: any = {};
-						exp && (reset_detect_cache(), detectExpType(doc, exp, doc.document.positionAt(o), tps));
-						if ((tps['@varref'] ?? tps['#varref']) !== undefined)
+						let end = 0, ts = decltype_expr(doc, t, paraminfo.comma[index] ??
+							(end = doc.document.offsetAt(info.range.end) - (doc.tokens[info.offset! + info.name.length] ? 1 : 0)));
+						if (ts.includes(VARREF) || ts.includes(ANY))
 							return;
 						let lk = doc.tokens[paraminfo.comma[index]]?.previous_token;
+						if (lk)
+							end = lk.offset + lk.length;
 						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
-							Math.max(0, (lk ? lk.offset + lk.length : doc.document.offsetAt(info.range.end)) - t.offset), 2);
+							Math.max(0, end - t.offset), 2);
 					}
 				}
 			});
 		}
-		if (!node.returntypes && !(is_cls && node.name.toLowerCase() === '__new')) {
+		if ((!node.returns && !node.type_annotations?.length) && !(is_cls && node.name.toLowerCase() === '__new')) {
 			let tk = doc.tokens[info.offset as number];
 			if (tk?.previous_token?.type === 'TK_EQUALS') {
 				let nt = doc.get_token(doc.document.offsetAt(info.range.end), true);

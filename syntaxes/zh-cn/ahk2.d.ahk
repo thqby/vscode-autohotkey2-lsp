@@ -1,4 +1,439 @@
-;#region functions
+;@region vars
+; 对于未编译脚本: 实际运行当前脚本的 EXE 文件的完整路径和名称.
+; 对于已编译脚本: 除了通过注册表条目 HKLM\SOFTWARE\AutoHotkey\InstallDir 获取 AutoHotkey 目录.
+A_AhkPath: String
+
+; 包含了运行当前脚本的 AutoHotkey 主程序的版本号, 例如 `1.0.22`.
+; 在已编译脚本中, 它包含了原来编译时使用的主程序的版本号.
+A_AhkVersion: String
+
+; 可以用来获取或设置是否允许通过托盘图标打开脚本的主窗口.
+; 对于已编译脚本, 此变量默认为 0, 但可以通过给该变量赋值来覆盖它. 将其设置为 1 会激活主窗口 View 菜单下的项目(如 'Lines most recently executed'), 它允许查看脚本的源代码和其他信息.
+; 如果脚本没有被编译, 那么这个变量的值始终是 1, 任何对它进行更改的尝试都会被忽略.
+A_AllowMainWindow: Integer
+
+; 当前用户的应用程序数据文件夹的完整路径和名称.例如: `C:\Users\<UserName>\AppData\Roaming`
+A_AppData: String
+
+; 所有用户的应用程序数据文件夹的完整路径和名称. 例如: `C:\ProgramData`
+A_AppDataCommon: String
+
+; 包含一个命令行参数数组.
+A_Args: Array
+
+; 可用于获取或设置系统剪贴板的内容.
+A_Clipboard: String
+
+; 包含与环境的 ComSpec 变量相同的字符串.例如: `C:\Windows\system32\cmd.exe`
+A_ComSpec: String
+
+; 在网络上看到的计算机名称.
+A_ComputerName: String
+
+; 可用于获取或设置控件修改函数的延迟, 单位为毫秒.
+A_ControlDelay: Integer
+
+; 可以用来获取或设置相对坐标的区域.
+A_CoordModeCaret: 'Window' | 'Client' | 'Screen'
+
+; 可以用来获取或设置相对坐标的区域.
+A_CoordModeMenu: 'Window' | 'Client' | 'Screen'
+
+; 可以用来获取或设置相对坐标的区域.
+A_CoordModeMouse:  'Window' | 'Client' | 'Screen'
+
+; 可以用来获取或设置相对坐标的区域.
+A_CoordModePixel:  'Window' | 'Client' | 'Screen'
+
+; 可以用来获取或设置相对坐标的区域.
+A_CoordModeToolTip:  'Window' | 'Client' | 'Screen'
+
+; 当前显示的鼠标光标类型. 其值为下列单词的其中一个:
+; - AppStarting(程序启动, 后台运行--箭头+等待)
+; - Arrow(箭头, 正常选择--标准光标)
+; - Cross(十字, 精确选择)
+; - Help(帮助, 帮助选择--箭头+问号)
+; - IBeam(工字光标, 文本选择--输入)
+; - Icon
+; - No(No, 不可用--圆圈加反斜杠)
+; - Size, SizeAll(所有尺寸,移动--四向箭头)
+; - SizeNESW(东南和西北尺寸, 沿对角线调整 2--双箭头指向东南和西北)
+; - SizeNS(南北尺寸, 垂直调整--双箭头指向南北)
+; - SizeNWSE(西北和东南尺寸, 沿对角线调整 1--双箭头指向西北和东南)
+; - SizeWE(东西尺寸, 水平调整--双箭头指向东西)
+; - UpArrow(向上箭头, 候选--指向上的箭头)
+; - Wait(等待, 忙--沙漏或圆圈)
+; - Unknown(未知).手型指针(点击和抓取) 属于 Unknown 类别.
+A_Cursor: String
+
+; 2 位数表示的当前月份的日期(01-31). 与 A_MDay 含义相同.
+A_DD: String
+
+; 使用当前用户语言表示的当前星期几的简称, 例如 Sun
+A_DDD: String
+
+; 使用当前用户语言表示的当前星期几的全称, 例如, Sunday
+A_DDDD: String
+
+; 可以用来获取或设置默认的鼠标速度, 从 0(最快) 到 100(最慢) 的整数.
+A_DefaultMouseSpeed: Integer
+
+; 当前用户的桌面文件夹的完整路径和名称. 例如: `C:\Users\<UserName>\Desktop`
+A_Desktop: String
+
+; 所有用户的桌面文件夹的完整路径和名称. 例如: `C:\Users\Public\Desktop`
+A_DesktopCommon: String
+
+; 可以用来获取或设置是否检测窗口中的隐藏文本.
+A_DetectHiddenText: Integer
+
+; 可用于获取或设置是否检测隐藏窗口.
+A_DetectHiddenWindows: Integer
+
+; 用户最近按下的触发了非自动替换热字串的终止字符.
+A_EndChar: String
+
+; 每个线程保留自身的 A_EventInfo 值.包含下列事件的额外信息:
+; - 鼠标滚轮热键(WheelDown/Up/Left/Right)
+; - OnMessage
+; - Regular Expression Callouts
+A_EventInfo: Integer
+
+; 可以用来获取或设置各种内置函数的默认编码.
+A_FileEncoding: String
+
+; 定义在按下热键后多长时间假定(Alt/Ctrl/Win/Shift)仍处于按下状态.
+A_HotkeyModifierTimeout: Integer
+
+; A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框.
+A_HotkeyInterval: Integer
+
+; 在 24 小时制(例如, 17 表示 5pm) 中 2 位数表示的当前小时数(00-23). 要获取带 AM/PM 提示的 12 小时制的时间, 请参照此例: FormatTime(, 'h:mm:ss tt')
+A_Hour: String
+
+; 如果通过 TraySetIcon 指定自定义的托盘图标时, 变量的值为图标文件的完整路径和名称, 否则为空.
+A_IconFile: String
+
+; 可以用来获取或设置是否隐藏托盘图标.
+A_IconHidden: Integer
+
+; 如果 A_IconFile 为空时, 值为空. 否则, 它的值为 A_IconFile 中的图标的编号(通常为 1).
+A_IconNumber: Integer | ""
+
+; 可用于获取或设置托盘图标的工具提示文字, 当鼠标悬停在其上时显示该文本. 如果为空, 则使用脚本的名称.
+; 要创建多行工具提示, 请在每行之间使用换行符(`n), 例如 'Line1`nLine2'. 只显示前 127 个字符, 并且文本在第一个制表符(如果存在) 处被截断.
+A_IconTip: String
+
+; 包含当前循环迭代的次数,可以由脚本赋值为任何整数值.
+A_Index: Integer
+
+; 脚本的初始工作目录, 由它的启动方式决定.
+A_InitialWorkingDir: String
+
+; 当操作系统为 64 位则值为 1(true), 为 32 位则为 0(false).
+A_Is64bitOS: Integer
+
+; 如果当前用户有管理员权限, 则此变量的值为 1. 否则为 0.
+A_IsAdmin: Integer
+
+; 如果当前运行的脚本为已编译 EXE 时, 此变量值为 1, 否则为空字符串(这会被视为 false).
+A_IsCompiled: Integer
+
+; 如果当前线程的 Critical 是关闭时值为 0. 否则值为大于零的整数, 即为 Critical 使用的消息检查频率.
+A_IsCritical: Integer
+
+; 如果在当前线程之后的线程是暂停时值为 1, 否则为 0.
+A_IsPaused: Integer
+
+; 如果脚本挂起时值为 1, 否则为 0.
+A_IsSuspended: Integer
+
+; 可以用来获取或设置按键的延迟时间, 单位为毫秒.
+A_KeyDelay: Integer
+
+; 可以用来获取或设置通过 SendPlay 模式发送的按键的延迟时间, 单位为毫秒.
+A_KeyDelayPlay: Integer
+
+; 可以用来获取或设置按键的持续时间, 单位为毫秒.
+A_KeyDuration: Integer
+
+; 可以用来获取或设置通过 SendPlay 模式发送的按键的持续时间, 单位为毫秒.
+A_KeyDurationPlay: Integer
+
+; 当前系统的默认语言, 值为这些 4 位数字编码的其中一个.例如, 如果 A_Language 的值为 0436, 则系统的默认语言为 Afrikaans.
+A_Language: String
+
+; 这通常是脚本调用某些函数(如 DllCall 或 Run/RunWait), 或上一次 COM 对象调用的 HRESULT 之后, 系统的 GetLastError() 函数的结果.
+A_LastError: Integer
+
+; A_LineNumber 所属文件的完整路径和名称, 除非当前行属于未编译脚本的某个 #Include 文件, 否则它将和 A_ScriptFullPath 相同.
+A_LineFile: String
+
+; 脚本(或其 #Include 文件) 中正在执行的行的行号. 这个行号与 ListLines 显示的一致; 它对于错误报告非常有用, 比如这个例子: MsgBox 'Could not write to log file (line number ' A_LineNumber ')'.
+; 由于已编译脚本已经把它所有的 #Include 文件合并成一个大脚本, 所以它的行号可能与它在未编译模式运行时不一样.
+A_LineNumber: Integer
+
+; 可用于获取或设置是否记录行.
+A_ListLines: Integer
+
+; 存在于任何解析循环中,它包含当前子字符串(字段)的内容.
+A_LoopField: String
+
+; 当前检索文件的属性.
+A_LoopFileAttrib: String
+
+; A_LoopFileName 所在目录的路径. 如果 FilePattern 包含相对路径而不是绝对路径, 那么这里的路径也将是相对路径. 根目录不会包含反斜杠. 例如: C:
+A_LoopFileDir: String
+
+; 文件的扩展名(例如 TXT, DOC 或 EXE). 不包括点号(.).
+A_LoopFileExt: String
+
+; 这与 A_LoopFilePath 有以下不同: 1) 它总是包含文件的绝对/完整路径, 即使 FilePattern 包含相对路径; 2) FilePattern 本身的任何短(8.3) 文件夹名都会被转换为长文件名; 3) FilePattern 中的字符会被转换为大写或小写以匹配文件系统中存储的大小写. 这对于将文件名 -- 例如作为命令行参数传入脚本的文件名 -- 转换为资源管理器显示的准确路径名很有用.
+A_LoopFileFullPath: String
+
+; 当前检索的文件或文件夹的名称(不包括路径).
+A_LoopFileName: String
+
+; 当前检索的文件/文件夹的路径和名称. 如果 FilePattern 包含相对路径而不是绝对路径, 这里的路径也将是相对路径.
+A_LoopFilePath: String
+
+; 文件的 8.3 短名称, 或备用名称. 如果文件没有短文件名(由于长文件比 8.3 短, 或者可能因为 NTFS 文件系统禁用了短文件名的生成), 将检索 A_LoopFileName.
+A_LoopFileShortName: String
+
+; 当前检索文件/文件夹的 8.3 短路径和名称. 例如: C:\MYDOCU~1\ADDRES~1.txt. 如果 FilePattern 包含相对路径而不是绝对路径, 这里的路径也将是相对路径.
+A_LoopFileShortPath: String
+
+; 当前检索文件的大小, 以 KB 为单位, 向下取整到最近的整数.
+A_LoopFileSize: Integer
+
+; 当前检索文件的大小, 以 KB 为单位, 向下取整到最近的整数.
+A_LoopFileSizeKB: Integer
+
+; 当前检索文件的大小, 以 Mb 为单位, 向下取整到最近的整数.
+A_LoopFileSizeMB: Integer
+
+; 文件最后访问的时间. 格式为 YYYYMMDDHH24MISS.
+A_LoopFileTimeAccessed: String
+
+; 文件创建的时间. 格式为 YYYYMMDDHH24MISS.
+A_LoopFileTimeCreated: String
+
+; 文件最后修改的时间. 格式为 YYYYMMDDHH24MISS.
+A_LoopFileTimeModified: String
+
+; 存在于任何文件读取循环中,它包含当前行的内容,不包括回车符和标记行尾的换行符(`r`n).
+A_LoopReadLine: String
+
+; 包含当前循环项的键的全名.对于远程注册表访问,该值将不包括计算机名.
+A_LoopRegKey: String
+
+; 当前检索到的项的名称,可以是值名或子项的名称.
+A_LoopRegName: String
+
+; 上次修改当前子项或其任何值的时间.格式为YYYYMMDDHH24MISS.
+A_LoopRegTimeModified: String
+
+; 当前检索到的项目的类型.
+A_LoopRegType: String
+
+; A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框.
+A_MaxHotkeysPerInterval: Integer
+
+; 2 位数表示的当前月份的日期(01-31).
+A_MDay: String
+
+; 控制使用哪个键来掩盖Win或Alt键事件.
+A_MenuMaskKey: String
+
+; 2 位数表示的当前月份(01-12). 与 A_Mon 含义相同.
+A_MM: String
+
+; 使用当前用户语言表示的当前月份的简称, 例如 Jul
+A_MMM: String
+
+; 使用当前用户语言表示的当前月份的全称, 例如 July
+A_MMMM: String
+
+; 3 位数表示的当前毫秒数(000-999).
+A_MSec: String
+
+; 2 位数表示的当前分钟数(00-59).
+A_Min: String
+
+; 2 位数表示的当前月份(01-12).
+A_Mon: String
+
+; 可以用来获取或设置鼠标延迟, 单位为毫秒.
+A_MouseDelay: Integer
+
+; 可以用来获取或设置SendPlay的鼠标延迟, 单位为毫秒.
+A_MouseDelayPlay: Integer
+
+; 当前用户 '我的文档' 文件夹的完整路径和名称.
+A_MyDocuments: String
+
+; 以 YYYYMMDDHH24MISS 格式表示的当前本地时间.
+A_Now: String
+
+; 以 YYYYMMDDHH24MISS 格式表示的当前的协调世界时(UTC). UTC 本质上和格林威治标准时间(GMT) 一致.
+A_NowUTC: String
+
+; 操作系统的版本号, 格式为 'major.minor.build'. 例如, Windows 7 SP1 为 6.1.7601.
+; 在 AutoHotkey 可执行文件或已编译脚本的属性中应用兼容性设置会导致系统报告不同的版本号, 这将体现在 A_OSVersion 中.
+A_OSVersion: String
+
+; 除了保存前一次热键的名称外, 其他的与上面相同. 如果没有它会为空.
+A_PriorHotkey: String
+
+; 在最近一次键-按下或键-释放之前按下的最后一个键的名称, 如果在按键历史中找不到合适的键-按下则为空. 不包括由 AutoHotkey 脚本生成的所有输入.要使用此变量, 首先必须安装键盘或鼠标钩子并且启用了key history(按键历史).
+A_PriorKey: String
+
+; Program Files 目录(例如 `C:\Program Files` 或 `C:\Program Files (x86)`). 这通常与 ProgramFiles 环境变量相同.
+A_ProgramFiles: String
+
+; 当前用户的开始菜单中程序文件夹的完整路径和名称. 例如: `C:\Users\<UserName>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs`
+A_Programs: String
+
+; 所有用户的开始菜单中程序文件夹的完整路径和名称. 例如: `C:\ProgramData\Microsoft\Windows\Start Menu\Programs`
+A_ProgramsCommon: String
+
+; 包含指针的大小值, 单位为字节. 值为 4(32 位) 或 8(64 位), 取决于运行当前脚本的执行程序的类型.
+A_PtrSize: 4 | 8
+
+; 可用于获取或设置注册表视图.
+A_RegView: '32' | '64' | 'Default'
+
+; 屏幕宽度每逻辑英寸的像素数. 在具有多个显示监视器的系统中, 此值对于所有监视器都是相同的.
+A_ScreenDPI: Integer
+
+; 主监视器的高度,单位为像素
+A_ScreenHeight: Integer
+
+; 主监视器的宽度,单位为像素
+A_ScreenWidth: Integer
+
+; 当前脚本所在目录的完整路径. 不包含最后的反斜杠(根目录同样如此).
+; 如果脚本文字是从标准输入中读取的而不是从文件中读取的, 变量值为初始工作目录.
+A_ScriptDir: String
+
+; 当前脚本的完整路径, 例如 `C:\My Documents\My Script.ahk`
+; 如果脚本文字是从标准输入中读取的而不是从文件中读取的, 值为 '*'.
+A_ScriptFullPath: String
+
+; 脚本的主窗口(隐藏的) 的唯一 ID(HWND/句柄).
+A_ScriptHwnd: Integer
+
+; 可以用来获取或设置 MsgBox, InputBox, FileSelect, DirSelect 和 Gui 的默认标题. 如果脚本没有设置, 它默认为当前脚本的文件名, 不包括路径, 例如 MyScript.ahk.
+A_ScriptName: String
+
+; 2 位数表示的当前秒数(00-59).
+A_Sec: String
+
+; 可用于获取或设置发送级别, 为 0 至 100 之间的整数, 包括 0 和 100.
+A_SendLevel: Integer
+
+; 可用于获取或设置发送模式.
+A_SendMode: 'Event' | 'Input' | 'Play' | 'InputThenPlay'
+
+; 包含单个空格字符.
+A_Space: ' '
+
+; 当前用户的开始菜单文件夹的完整路径和名称. 例如: `C:\Users\<UserName>\AppData\Roaming\Microsoft\Windows\Start Menu`
+A_StartMenu: String
+
+; 所有用户的开始菜单文件夹的完整路径和名称. 例如: `C:\ProgramData\Microsoft\Windows\Start Menu`
+A_StartMenuCommon: String
+
+; 当前用户的开始菜单中启动文件夹的完整路径和名称. 例如: `C:\Users\<UserName>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`
+A_Startup: String
+
+; 所有用户的开始菜单中启动文件夹的完整路径和名称. 例如: `C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup`
+A_StartupCommon: String
+
+; 可以用来获取或设置是否在 Send 后恢复 CapsLock 的状态.
+A_StoreCapsLockMode: Integer
+
+; 包含单个 tab(制表符) 字符.
+A_Tab: '`t'
+
+; 存放临时文件的文件夹的完整路径和名称. 它的值从下列的其中一个位置检索(按顺序): 1) 环境变量 TMP, TEMP 或 USERPROFILE; 2) Windows 目录. 例如: `C:\Users\<UserName>\AppData\Local\Temp`
+A_Temp: String
+
+; 当前正在执行的自定义函数的名称(没有则为空); 例如: MyFunction.
+A_ThisFunc: String
+
+; 最近执行的热键或非自动替换热字串(如果没有则为空), 例如 #z. 如果当前线程被其他热键或热字串中断, 那么此变量的值会变化, 所以一般情况下, 最好使用 ThisHotkey 参数.
+A_ThisHotkey: String
+
+; 计算机自启动以来经过的毫秒数, 最多为 49.7 天.通过把 A_TickCount 保存到变量中, 经过一段时间后从最近的 A_TickCount 值中减去那个变量, 可以计算出所经过的时间.
+A_TickCount: Integer
+
+; 从系统最后一次接收到键盘, 鼠标或其他输入后所经过的毫秒数. 这可以用来判断用户是否离开. 用户的物理输入和由 任何 程序或脚本生成的模拟输入(例如 Send 或 MouseMove 函数) 会让此变量重置为零.
+A_TimeIdle: Integer
+
+; 如果安装了键盘钩子, 这是自系统上次接收物理键盘输入以来所经过的毫秒数. 否则, 这个变量就等于 A_TimeIdle.
+A_TimeIdleKeyboard: Integer
+
+; 如果安装了鼠标钩子, 这是自系统上次收到物理鼠标输入以来所经过的毫秒数. 否则, 这个变量就等于 A_TimeIdle.
+A_TimeIdleMouse: Integer
+
+; 与上面类似, 但在安装了相应的钩子(键盘或鼠标) 后会忽略模拟的键击和/或鼠标点击; 即此变量仅对物理事件做出响应. (这样避免了由于模拟键击和鼠标点击而误以为用户存在.) 如果两种钩子都没有安装, 则此变量等同于 A_TimeIdle.如果仅安装了一种钩子, 那么仅此类型的物理输入才会对 A_TimeIdlePhysical 起作用(另一种/未安装钩子的输入, 包括物理的和模拟的, 都会被忽略).
+A_TimeIdlePhysical: Integer
+
+; 从 A_PriorHotkey 按下后到现在经过的毫秒数. 如果 A_PriorHotkey 为空, 则此变量的值为 -1.
+A_TimeSincePriorHotkey: Integer
+
+; 从 A_ThisHotkey 按下后到现在经过的毫秒数. 如果 A_ThisHotkey 为空, 则此变量的值为 -1.
+A_TimeSinceThisHotkey: Integer
+
+; 可用于获取或设置标题匹配模式.
+A_TitleMatchMode: 1 | 2 | 3 | 'RegEx'
+
+; 可用于获取或设置标题匹配速度.
+A_TitleMatchModeSpeed: 'Fast' | 'Slow'
+
+; 返回可用于修改或显示托盘菜单的菜单对象.
+A_TrayMenu: String
+
+; 运行当前脚本的用户的登录名.
+A_UserName: String
+
+; 1 位数表示的当前星期经过的天数(1-7). 在所有区域设置中 1 都表示星期天.
+A_WDay: String
+
+; 可用于获取或设置窗口函数的延迟, 单位为毫秒.
+A_WinDelay: Integer
+
+; Windows 目录. 例如: `C:\Windows`
+A_WinDir: String
+
+; 可以用来获取或设置脚本当前工作目录, 这是访问文件的默认路径. 除非是根目录, 否则路径末尾不包含反斜杠. 两个示例: C:\ and C:\My Documents.使用 SetWorkingDir 或赋值路径到 A_WorkingDir 可以改变当前工作目录.
+; 无论脚本是如何启动的, 脚本的工作目录默认为 A_ScriptDir.
+A_WorkingDir: String
+
+; 当前年份中经过的天数(1-366). 不会使用零对变量的值进行填充, 例如检索到 9, 而不是 009.
+A_YDay: String
+
+; 符合 ISO 8601 标准的当前的年份和周数(例如 200453).
+A_YWeek: String
+
+; 4 位数表示的当前年份(例如 2004). 与 A_Year 含义相同.
+A_YYYY: String
+
+; 4 位数表示的当前年份(例如 2004).
+A_Year: String
+
+; 布尔值'真', 同数值1.
+true: 1
+
+; 布尔值'假', 同数值0.
+false: 0
+
+; 在函数调用、数组字面值或对象字面值中, 关键字unset可用于显式省略形参或值.
+unset: unset
+;@endregion
+
+;@region functions
 /**
  * 返回 Number 的绝对值.
  */
@@ -27,6 +462,7 @@ ATan2(Y, X) => Float
 
 /**
  * 禁用或启用用户通过键盘和鼠标与计算机交互的能力.
+ * @param {'On'|'Off'|'Send'|'Mouse'|'SendAndMouse'|'Default'|'MouseMove'|'MouseMoveOff'} Option
  */
 BlockInput(Option) => void
 
@@ -365,8 +801,10 @@ ControlShowDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) =>
 
 /**
  * 为多个内置函数设置坐标模式, 相对于活动窗口还是屏幕.
+ * @param {'ToolTip'|'Pixel'|'Mouse'|'Caret'|'Menu'} TargetType
+ * @param {'Screen'|'Window'|'Client'} RelativeTo
  */
-CoordMode(TargetType, RelativeTo := 'Screen') => String
+CoordMode(TargetType, RelativeTo) => String
 
 /**
  * 返回 Number 的余弦值.
@@ -486,7 +924,7 @@ DirMove(Source, Dest, Flag := 0) => void
  * 如果用户在编辑区域中输入了无效的文件夹名称, 则 SelectedFolder 会被设置为在导航树中选择的文件夹而不是用户输入的内容.
  * @param Prompt 显示在窗口中用来提示用户操作的文本. 如果省略或为空, 则它默认为 "Select Folder - " A_ScriptName(即当前脚本的名称).
  */
-DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
+DirSelect(StartingFolder?, Options := 1, Prompt?) => String
 
 /**
  * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
@@ -502,7 +940,7 @@ Download(URL, Filename) => void
  * 弹出指定 CD/DVD 驱动器或可移动驱动器.
  * @param Drive 驱动器字母后面跟着冒号和可选的反斜杠(也可以用于 UNC 路径和映射驱动器). 如果省略, 将使用默认的 CD/DVD 驱动器. 如果未找到驱动器, 则会引发异常.
  */
-DriveEject(Drive := '') => void
+DriveEject(Drive?) => void
 
 /**
  * 返回包含指定路径的驱动器的总容量, 单位为 mb(兆字节).
@@ -524,7 +962,7 @@ DriveGetLabel(Drive) => String
  * 返回一串字母, 系统中的每个驱动器字母对应一个字符.
  * @param Type 如果省略, 则检索所有类型的驱动器. 否则, 指定为下列单词的其中一个来获取该特定类型的驱动器: CDROM, REMOVABLE, FIXED, NETWORK, RAMDISK, UNKNOWN.
  */
-DriveGetList(Type := '') => String
+DriveGetList(Type?) => String
 
 /**
  * 返回指定驱动器的卷序列号.
@@ -556,7 +994,7 @@ DriveGetStatus(Path) => String
  * 
  * stopped 驱动器里有 CD 但当前没有进行访问.
  */
-DriveGetStatusCD(Drive := '') => String
+DriveGetStatusCD(Drive?) => String
 
 /**
  * 返回包含指定路径的驱动器类型.
@@ -577,7 +1015,7 @@ DriveRetract([Drive]) => void
 /**
  * 更改指定驱动器的卷标签.
  */
-DriveSetLabel(Drive, NewLabel := '') => void
+DriveSetLabel(Drive, NewLabel?) => void
 
 /**
  * 恢复指定驱动器的弹出功能.
@@ -850,7 +1288,7 @@ FileRecycle(FilePattern) => void
  * 清空回收站.
  * @param DriveLetter 如果省略, 则清空所有驱动器的回收站. 否则, 请指定驱动器字母, 例如 C:\
  */
-FileRecycleEmpty(DriveLetter := '') => void
+FileRecycleEmpty(DriveLetter?) => void
 
 /**
  * 显示可以让用户打开或保存文件的标准对话框.
@@ -876,7 +1314,7 @@ FileRecycleEmpty(DriveLetter := '') => void
  * 
  * 由于 "提示覆盖" 选项只有保存对话框支持, 因此在没有 "提示创建" 选项的情况下指定该选项也会使 "S" 选项生效. 同样, 当 "S" 选项存在时, "提示创建" 选项也没有效果. 指定数字 24 可以启用对话框支持的任何一种提示类型.
  */
-FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Files (*.*)') => String | Array
+FileSelect(Options := 0, RootDir_Filename?, Title?, Filter?) => String | Array
 
 /**
  * 改变一个或多个文件或文件夹的属性. 支持通配符.
@@ -905,7 +1343,7 @@ FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Fil
  * 
  * R = 子文件夹被递归到其中, 这样包含在其中的文件和文件夹如果匹配 FilePattern, 则对它们进行操作. 所有子文件夹都将被递归到其中, 而不仅仅是那些名称匹配 FilePattern 的子文件夹. 如果省略 R, 则不包含子目录中的文件和目录.
  */
-FileSetAttrib(Attributes, FilePattern := '', Mode := '') => void
+FileSetAttrib(Attributes, FilePattern?, Mode?) => void
 
 /**
  * 改变一个或多个文件或文件夹的时间戳. 支持通配符.
@@ -926,7 +1364,7 @@ FileSetAttrib(Attributes, FilePattern := '', Mode := '') => void
  * 
  * R = 子文件夹被递归到其中, 这样包含在其中的文件和文件夹如果匹配 FilePattern, 则对它们进行操作. 所有子文件夹都将被递归到其中, 而不仅仅是那些名称匹配 FilePattern 的子文件夹. 如果省略 R, 则不包含子目录中的文件和目录.
  */
-FileSetTime(YYYYMMDDHH24MISS := '', FilePattern := '', WhichTime := 'M', Mode := '') => void
+FileSetTime(YYYYMMDDHH24MISS?, FilePattern?, WhichTime := 'M', Mode?) => void
 
 /**
  * 返回 Number 向下取整后的整数(不含任何 .00 后缀).
@@ -1040,7 +1478,7 @@ GetKeySC(KeyName) => Integer
  * 
  * 18000 (即 180 度): 向后 POV
  */
-GetKeyState(KeyName, Mode := '') => String
+GetKeyState(KeyName, Mode?) => String
 
 /**
  * 检索按键的虚拟键码.
@@ -1058,7 +1496,7 @@ GetMethod(Value [, Name, ParamCount]) => Func
  * 
  * R: 最新的窗口(最近激活的窗口) 被激活, 但仅当函数运行时组中没有活动的成员时才会激活. "R" 在临时切换到处理不相关任务的情况下非常有用. 当您使用 GroupActivate, GroupDeactivate 或 GroupClose 返回到目标组时, 会激活您最近工作的窗口而不是最早的窗口.
  */
-GroupActivate(GroupName, Mode := '') => Integer
+GroupActivate(GroupName, Mode?) => Integer
 
 /**
  * 将窗口规范添加到窗口组,如有必要,创建该组.
@@ -1073,7 +1511,7 @@ GroupAdd(GroupName [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
  * 
  * A: 关闭组的所有成员. 这等同于 WinClose "ahk_group GroupName".
  */
-GroupClose(GroupName, Mode := '') => void
+GroupClose(GroupName, Mode?) => void
 
 /**
  * 与GroupActivate相似,除了激活不在组中的下一个窗口.
@@ -1081,7 +1519,7 @@ GroupClose(GroupName, Mode := '') => void
  * 
  * R: 最新的非成员窗口(最近激活的窗口) 被激活, 但仅当函数运行时该组的成员处于活动状态时才会激活. "R" 在临时切换到处理不相关任务的情况下非常有用. 当您使用 GroupActivate, GroupDeactivate 或 GroupClose 返回组时, 会激活您最近工作的窗口而不是最老的窗口.
  */
-GroupDeactivate(GroupName, Mode := '') => void
+GroupDeactivate(GroupName, Mode?) => void
 
 /**
  * 检索与指定的 HWND 关联的 GUI 控件的 GuiControl 对象.
@@ -1375,7 +1813,7 @@ KeyHistory([MaxEvents]) => void
  * 
  * 此超时时间值可以为浮点数(例如 2.5), 但不能为十六进制值(例如 0x03).
  */
-KeyWait(KeyName, Options := '') => Integer
+KeyWait(KeyName, Options?) => Integer
 
 /**
  * 显示当前脚本使用的热键, 不论它们的子程序当前是否运行, 也不论它们是否使用键盘或鼠标钩子.
@@ -1502,7 +1940,7 @@ MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Integer
 
 /**
  * 单击或按住鼠标按钮,或转动鼠标滚轮.注意：单击功能通常更灵活且更易于使用.
- * @param WhichButton 要点击的按钮: Left(默认), Right, Middle(或仅使用这些名称的首字母); 或鼠标的第四或第五个按钮(X1 或 X2). 例如: MouseClick "X1". 此参数可以省略, 此时它默认为 Left.
+ * @param {'Left'|'Right'|'Middle'|'X1'|'X2'|'WheelUp'|'WheelDown'|'WheelLeft'|'WheelRight'} WhichButton 要点击的按钮: Left(默认), Right, Middle(或仅使用这些名称的首字母); 或鼠标的第四或第五个按钮(X1 或 X2). 例如: MouseClick "X1". 此参数可以省略, 此时它默认为 Left.
  * 
  * Left 和 Right 对应于主按钮和次按钮. 如果用户通过系统设置调换了按钮, 按钮的物理位置被调换, 但效果不变.
  * 
@@ -1769,7 +2207,7 @@ Persistent(Persist := true) => Integer
  * 
  * Slow: 使用一种更精细复杂的方法获取颜色, 在某些全屏应用程序中其他方法失败时, 此方法可能有效. 此方法比正常方法大约慢三倍. 注: Slow 方法优先于 Alt, 所以此时不需要指定 Alt.
  */
-PixelGetColor(X, Y, Mode := '') => String
+PixelGetColor(X, Y, Mode?: 'Alt'|'Slow'|'Alt Slow') => String
 
 /**
  * 在屏幕区域中搜索指定颜色的像素.
@@ -1822,6 +2260,7 @@ ProcessGetPath(PIDOrName?) => String
 
 /**
  * 更改第一个匹配进程的优先级.
+ * @param {'Low'|'BelowNormal'|'Normal'|'AboveNormal'|'High'|'Realtime'} Level
  */
 ProcessSetPriority(Level, PIDOrName?) => Integer
 
@@ -1869,7 +2308,7 @@ RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Integer
 /**
  * 替换字符串中匹配模式(正则表达式) 出现的地方.
  */
-RegExReplace(Haystack, NeedleRegEx, Replacement := '', &OutputVarCount?, Limit := -1, StartingPosition := 1) => String
+RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?, Limit := -1, StartingPosition := 1) => String
 
 /**
  * 从注册表读取值.
@@ -1945,6 +2384,7 @@ SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, Exclude
 
 /**
  * 使 Send 等同于 SendEvent 或 SendPlay, 而不是默认的(SendInput). 也使 Click 和 MouseMove/Click/Drag 使用指定的方法.
+ * @param {'Event'|'Input'|'InputThenPlay'|'Play'} Mode
  */
 SendMode(Mode) => String
 
@@ -1960,6 +2400,7 @@ SendText(Keys) => void
 
 /**
  * 设置Caps Lock键的状态.还可以强制按键保持打开或关闭状态.
+ * @param {'On'|'Off'|'AlwaysOn'|'AlwaysOff'} State
  */
 SetCapsLockState([State]) => void
 
@@ -1985,6 +2426,7 @@ SetMouseDelay(Delay [, 'Play']) => Integer
 
 /**
  * 设置NumLock键的状态. 也可以强制按键保持打开或关闭状态.
+ * @param {'On'|'Off'|'AlwaysOn'|'AlwaysOff'} State
  */
 SetNumLockState([State]) => void
 
@@ -1995,6 +2437,7 @@ SetRegView(RegView) => Integer
 
 /**
  * 设置滚动锁定键的状态. 也可以强制按键保持打开或关闭状态.
+ * @param {'On'|'Off'|'AlwaysOn'|'AlwaysOff'} State
  */
 SetScrollLockState([State]) => void
 
@@ -2019,8 +2462,9 @@ SetTimer([Callback, Period := 250, Priority := 0]) => void
 
 /**
  * 在诸如WinWait之类的命令中设置WinTitle参数的匹配行为.
+ * @param {'Fast'|'Slow'|'RegEx'|1|2|3} MatchMode
  */
-SetTitleMatchMode(MatchModeOrSpeed) => Integer | String
+SetTitleMatchMode(MatchMode) => Integer | String
 
 /**
  * 设置在每次执行窗口函数(例如 WinActivate) 后的延时.
@@ -2081,7 +2525,7 @@ Sleep(Delay) => void
  * 
  * `注意:` 当存在 Callback(回调) 时, 除了 D, Z 和 U 之外的所有选项都会被忽略(尽管 N, C 和 CL 仍然会影响重复项的检测).
  */
-Sort(String, Options := '' [, Callback]) => String
+Sort(String, Options? [, Callback]) => String
 
 /**
  * 从 PC 扬声器发出声音.
@@ -2178,8 +2622,7 @@ StrCompare(String1, String2, CaseSense := false) => Integer
 
 /**
  * 从内存地址或缓冲中复制字符串, 可选地从给定的代码页进行转换.
- * 
- * `StrGet(Source, Encoding := '')`或省略Length
+ * @overload StrGet(Source, Encoding?) => String
  * @param Source 包含字符串的类缓冲对象, 或字符串的内存地址. 如果提供了类缓冲对象, 或者指定了 Length 参数, 则字符串不需要以空终止符结尾.
  * @param Length 需读取的最大字符数. 如果字符串以空终止符结尾, 则可以省略.
  * 默认情况下, 只复制到第一个二进制零. 如果 Length 为负数, 则它的绝对值指示要转换的确切字符数, 包括字符串可能包含的任何二进制零 - 换句话说, 结果始终是具有该长度的字符串.
@@ -2227,7 +2670,7 @@ StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Integer
  * 
  * "Locale": 根据当前用户的区域设置规则, 搜索是不区分大小写的. 例如, 在大多数英语及西欧地区, 不仅将 A-Z 视为等同于它们的小写形式, 同时也将非-ASCII 字母(如 Ä 和 Ü) 视为等同的. 根据被比较字符串的性质, Locale 比 Off 慢 1 到 8 倍.
  */
-StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputVarCount?, Limit := -1) => String
+StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCount?, Limit := -1) => String
 
 /**
  * 使用指定的分隔符将字符串分成子字符串数组.
@@ -2237,7 +2680,7 @@ StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputV
  * 使用 `[A_Tab, A_Space]` 作为分隔符将在输入字符串中每次遇到空格或制表符时创建一个新的数组元素.
  * @param OmitChars 可选的字符列表(区分大小写), 用来从每个数组元素的开始和结尾部分移除这些字符.
  */
-StrSplit(String, Delimiters := '', OmitChars := '', MaxParts := -1) => Array
+StrSplit(String, Delimiters?, OmitChars?, MaxParts := -1) => Array
 
 /**
  * 将字符串转换为大写.
@@ -2281,12 +2724,10 @@ Tan(Number) => Float
 
 /**
  * 设置线程的优先级或是否可以被中断. 它也可以临时禁用所有的计时器.
- * 
- * Thread 'NoTimers' , TrueOrFalse
- * 
- * Thread 'Priority', Level
- * 
- * Thread 'Interrupt' [, Duration, LineCount]
+ * @overload Thread('NoTimers', TrueOrFalse)
+ * @overload Thread('Priority', Level)
+ * @overload Thread('Interrupt' [, Duration, LineCount])
+ * @param {'NoTimers'|'Priority'|'Interrupt'} SubFunction
  */
 Thread(SubFunction [, Value1, Value2]) => void
 
@@ -2326,7 +2767,7 @@ TraySetIcon(FileName, IconNumber := 1, Freeze := false) => void
  * 
  * 使用大图标. 0x20
  */
-TrayTip(Text := '', Title := '', Options := 0) => void
+TrayTip(Text?, Title?, Options := 0) => void
 
 /**
  * 从字符串的开头和结尾修剪字符.
@@ -2599,10 +3040,9 @@ WinWaitClose([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Integer
  * 等待直到指定的窗口不活动.
  */
 WinWaitNotActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Integer
-;#endregion
+;@endregion
 
-;#region class
-
+;@region classes
 class Any {
 	/**
 	 * 检索方法的实现函数.
@@ -2624,19 +3064,24 @@ class Any {
 	 */
 	HasProp(Name) => Integer
 
+	__Class: String
+
 	__Init() => void
 
 	/**
 	 * 检索值的基对象.
 	 */
-	Base => Object
+	Base {
+		get => Object | void
+		set => void
+	}
 }
 
 class Array extends Object {
 	/**
 	 * 数组对象包含值的列表或序列.
 	 */
-	__New(Values*)
+	__New(Values*) => void
 
 	/**
 	 * 枚举数组元素.
@@ -2646,17 +3091,20 @@ class Array extends Object {
 	/**
 	 * 检索或设置数组元素的值.
 	 */
-	__Item[Index] => Any
+	__Item[Index] {
+		get => Any
+		set => void
+	}
 
 	/**
 	 * 返回对象的一个浅拷贝.
 	 */
-	Clone() => Array
+	Clone() => this
 
 	/**
 	 * 定义请求没有值的元素时返回的默认值.
 	 */
-	Default => Any
+	Default: Any
 
 	/**
 	 * 删除数组元素的值, 使索引不包含值.
@@ -2696,12 +3144,18 @@ class Array extends Object {
 	/**
 	 * 检索或设置数组的长度.
 	 */
-	Length => Integer
+	Length {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 检索或设置数组的当前容量.
 	 */
-	Capacity => Integer
+	Capacity {
+		get => Integer
+		set => void
+	}
 }
 
 class BoundFunc extends Func {
@@ -2715,7 +3169,7 @@ class Buffer extends Object {
 	 * 在不需要先读取缓冲而直接写入的情况下, 通常应将其省略, 因为它的时间开销与字节数成正比.
 	 * 如果省略, 则不初始化缓冲的内存; 每个字节的值是任意的.
 	 */
-	__New([ByteCount, FillByte])
+	__New([ByteCount, FillByte]) => void
 
 	/**
 	 * 检索缓冲区的当前内存地址.
@@ -2725,7 +3179,10 @@ class Buffer extends Object {
 	/**
 	 * 检索或设置缓冲区的大小, 以字节为单位.
 	 */
-	Size => Integer
+	Size {
+		get => Integer
+		set => void
+	}
 }
 
 class Class extends Object {
@@ -2740,14 +3197,14 @@ class Class extends Object {
 	/**
 	 * 检索或设置类的所有实例所基于的对象.
 	 */
-	Prototype => Prototype
+	Prototype: Prototype
 }
 
 class ClipboardAll extends Buffer {
 	/**
 	 * 创建一个包含剪贴板上的所有内容的对象(如图片和格式).
 	 */
-	__New([Data, Size])
+	__New([Data, Size]) => void
 }
 
 class Closure extends Func {
@@ -2841,6 +3298,8 @@ class ComValue extends Any {
 	 * @param Flags 影响包装器对象行为的标志; 有关详情, 请参阅 ComObjFlags.
 	 */
 	static Call(VarType, Value [, Flags]) => ComValue | ComObject | ComObjArray
+
+	Ptr?: Integer
 }
 
 class ComValueRef extends ComValue {
@@ -2857,50 +3316,58 @@ class Error extends Object {
 	/**
 	 * 错误消息.
 	 */
-	Message => String
+	Message: String
 
 	/**
 	 * 
 	 * 引起异常的原因. 这通常是一个函数的名称, 但对于因表达式错误而引发的异常(例如对非数字值使用数学运算符), 则为空.
 	 */
-	What => String
+	What: String
 
 	/**
 	 * 如果找到, 错误的额外信息.
 	 */
-	Extra => String
+	Extra: String
 
 	/**
 	 * 脚本文件的完整路径, 其中包含发生错误的行或构造Error对象的行.
 	 */
-	File => String
+	File: String
 
 	/**
 	 * 发生错误的行号, 或构造Error对象的行号.
 	 */
-	Line => Integer
+	Line: Integer
 
 	/**
 	 * 表示构造Error对象时的调用堆栈的字符串.
 	 */
-	Stack => String
+	Stack: String
 
 	/**
 	 * 构造 Error 对象.
 	 */
-	__New([Message, What, Extra])
+	__New([Message, What, Extra]) => void
 }
 
 class File extends Object {
+	static Call() => throw
+
 	/**
 	 * 检索或设置文件指针的位置.
 	 */
-	Pos => Integer
+	Pos {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 检索或设置文件的大小.
 	 */
-	Length => Integer
+	Length {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 检索一个非零值, 如果文件指针已到达文件末尾.
@@ -2910,7 +3377,10 @@ class File extends Object {
 	/**
 	 * 检索或设置此文件对象使用的文本编码.
 	 */
-	Encoding => String
+	Encoding {
+		get => String
+		set => void
+	}
 
 	/**
 	 * 检索旨在与 DllCall 一起使用的系统文件句柄.
@@ -3056,6 +3526,8 @@ class Float extends Number {
 }
 
 class Func extends Object {
+	static Call() => throw
+
 	/**
 	 * 返回函数的名称.
 	 */
@@ -3111,12 +3583,15 @@ class Gui extends Object {
 	/**
 	 * 检索或设置窗口的背景色.
 	 */
-	BackColor => String
+	BackColor {
+		get => String
+		set => void
+	}
 
 	/**
 	 * 检索 GUI 的焦点控件的 GuiControl 对象.
 	 */
-	FocusedCtrl => String
+	FocusedCtrl => Gui.Control
 
 	/**
 	 * 检索 GUI 窗口的窗口句柄(HWND).
@@ -3126,37 +3601,53 @@ class Gui extends Object {
 	/**
 	 * 检索或设置两侧与随后创建控件之间的水平边距的大小.
 	 */
-	MarginX => Integer
+	MarginX {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 检索或设置两侧与随后创建控件之间的垂直边距的大小.
 	 */
-	MarginY => Integer
+	MarginY {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 检索或设置窗口的菜单栏.
 	 */
-	MenuBar => Menubar
+	MenuBar {
+		get => MenuBar
+		set => void
+	}
 
 	/**
 	 * 检索或设置 GUI 窗口的自定义名称.
 	 */
-	Name => String
+	Name {
+		get => String
+		set => void
+	}
 
 	/**
 	 * 检索或设置 GUI 的标题.
 	 */
-	Title => String
+	Title {
+		get => String
+		set => void
+	}
 
 	/**
 	 * 创建一个新的Gui对象.
 	 */
-	__New([Options, Title := A_ScriptName, EventObj])
+	__New([Options, Title := A_ScriptName, EventObj]) => void
 
 	/**
 	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
+	 * @param {'ActiveX'|'Button'|'Checkbox'|'ComboBox'|'Custom'|'DateTime'|'DropDownList'|'Edit'|'GroupBox'|'Hotkey'|'Link'|'ListBox'|'ListView'|'MonthCal'|'Picture'|'Progress'|'Radio'|'Slider'|'StatusBar'|'Tab'|'Tab2'|'Tab3'|'Text'|'TreeView'|'UpDown'} ControlType
 	 */
-	Add(ControlType [, Options, Text]) => Gui.Control
+	Add(ControlType [, Options, Text]) => Gui.ActiveX | Gui.Button | Gui.CheckBox | Gui.ComboBox | Gui.Custom | Gui.DateTime | Gui.DDL | Gui.Edit | Gui.GroupBox | Gui.Hotkey | Gui.Link | Gui.List | Gui.ListBox | Gui.ListView | Gui.MonthCal | Gui.Pic | Gui.Progress | Gui.Radio | Gui.Slider | Gui.StatusBar | Gui.Tab | Gui.Text | Gui.TreeView | Gui.UpDown
 
 	/**
 	 * 创建文本控件, 返回一个GuiControl对象.
@@ -3330,6 +3821,7 @@ class Gui extends Object {
 
 	/**
 	 * 注册一个函数或方法, 当 GUI 窗口发生给定事件时, 该函数或方法将被调用.
+	 * @param {'Close'|'ContextMenu'|'DropFiles'|'Escape'|'Size'} EventName
 	 * @param Callback 事件发生时要调用的函数, 方法或对象.
 	 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
 	 * 否则, 这个参数必须是一个函数对象.
@@ -3394,6 +3886,8 @@ class Gui extends Object {
 	}
 
 	class Control extends Object {
+		static Call() => throw
+	
 		/**
 		 * 检索控件的 ClassNN.
 		 */
@@ -3402,7 +3896,10 @@ class Gui extends Object {
 		/**
 		 * 检索控件当前交互状态, 或启用或禁用(灰色)控件.
 		 */
-		Enabled => Integer
+		Enabled {
+			get => Integer
+			set => void
+		}
 
 		/**
 		 * 检索控件当前焦点状态.
@@ -3422,12 +3919,18 @@ class Gui extends Object {
 		/**
 		 * 检索或设置控件的显式名称.
 		 */
-		Name => String
+		Name {
+			get => String
+			set => void
+		}
 
 		/**
 		 * 检索或设置控件的文本/标题.
 		 */
-		Text => String
+		Text {
+			get => String
+			set => void
+		}
 
 		/**
 		 * 检索控件的类型.
@@ -3437,12 +3940,18 @@ class Gui extends Object {
 		/**
 		 * 检索新内容或将其设置为具有价值的控件.
 		 */
-		Value => Float | Integer | String
+		Value {
+			get => Float | Integer | String
+			set => void
+		}
 
 		/**
 		 * 检索控件的当前可见状态, 或显示或隐藏它.
 		 */
-		Visible => Integer
+		Visible {
+			get => Integer
+			set => void
+		}
 
 		/**
 		 * 将键盘焦点设置为控件.
@@ -3470,6 +3979,7 @@ class Gui extends Object {
 
 		/**
 		 * 注册一个函数或方法, 当控件发生给定事件时, 该函数或方法将被调用.
+		 * @param {'Change'|'Click'|'DoubleClick'|'ColClick'|'ContextMenu'|'Focus'|'LoseFocus'|'ItemCheck'|'ItemEdit'|'ItemExpand'|'ItemFocus'|'ItemSelect'} EventName
 		 * @param Callback 事件发生时要调用的函数, 方法或对象.
 		 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
 		 * 否则, 这个参数必须是一个函数对象.
@@ -3780,62 +4290,98 @@ class InputHook extends Object {
 	/**
 	 * 检索或设置在 Input 终止时调用的函数对象.
 	 */
-	OnEnd => Func
+	OnEnd {
+		get => Func | void
+		set => void
+	}
 
 	/**
 	 * 检索或设置函数对象, 该函数对象将在字符添加到输入缓冲后调用.
 	 */
-	OnChar => Func
+	OnChar {
+		get => Func | void
+		set => void
+	}
 
 	/**
 	 * 检索或设置函数对象, 该函数对象将在按下启用通知的按键时调用.
 	 */
-	OnKeyDown => Func
+	OnKeyDown {
+		get => Func | void
+		set => void
+	}
 
 	/**
 	 * 检索或设置函数对象, 该函数对象将在释放启用通知按键时被调用.
 	 */
-	OnKeyUp => Func
+	OnKeyUp {
+		get => Func | void
+		set => void
+	}
 
 	/**
 	 * 控制 Backspace 是否从输入缓冲的末尾删除最近按下的字符.
 	 */
-	BackspaceIsUndo => Integer
+	BackspaceIsUndo {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 控制 MatchList 是否区分大小写.
 	 */
-	CaseSensitive => Integer
+	CaseSensitive {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 控制每个匹配项是否可以是输入文本的子字符串.
 	 */
-	FindAnywhere => Integer
+	FindAnywhere {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 检索或设置要收集的输入的最小发送级别.
 	 */
-	MinSendLevel => Integer
+	MinSendLevel {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 控制当按下非文本键时是否调用 OnKeyDown 和 OnKeyUp 回调.
 	 */
-	NotifyNonText => Integer
+	NotifyNonText {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 检索或设置超时值(以秒为单位).
 	 */
-	Timeout => Integer
+	Timeout {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 控制不产生文本的键或键组合是否可见(不阻止).
 	 */
-	VisibleNonText => Integer
+	VisibleNonText {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 控制产生文本的键或键组合是否可见(不阻止).
 	 */
-	VisibleText => Integer
+	VisibleText {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 创建一个对象, 该对象可用于收集或拦截键盘输入.
@@ -3875,7 +4421,7 @@ class InputHook extends Object {
 	 * 
 	 * 因为 MatchList 中的项目不被视为单独的参数, 所以列表可以完全包含在一个变量中. 事实上, 如果此列表的长度超过 16383, 那么列表的全部或部分必须包含在变量中, 因为这个长度是任何脚本行的最大长度. 例如, MatchList 可能由 List1 "," List2 "," List3 组成 -- 其中每个变量都包含匹配词组的子列表.
 	 */
-	__New(Options := '', EndKeys := '', MatchList := '')
+	__New(Options?, EndKeys?, MatchList?) => void
 
 	/**
 	 * 设置按键或按键列表的选项.
@@ -3927,7 +4473,7 @@ class Map extends Object {
 	/**
 	 * Map对象将一组称为键的值关联或映射到另一组值.
 	 */
-	__New([Key1, Value1, *])
+	__New([Key1, Value1, *]) => void
 
 	/**
 	 * 枚举键值对.
@@ -3937,7 +4483,10 @@ class Map extends Object {
 	/**
 	 * 检索或设置键值对的值.
 	 */
-	__Item[Index] => Any
+	__Item[Index] {
+		get => Any
+		set => void
+	}
 
 	/**
 	 * 从映射中删除所有键值对.
@@ -3947,7 +4496,7 @@ class Map extends Object {
 	/**
 	 * 返回对象的一个浅拷贝.
 	 */
-	Clone() => Map
+	Clone() => this
 
 	/**
 	 * 从映射中删除键值对.
@@ -3977,17 +4526,23 @@ class Map extends Object {
 	/**
 	 * 检索或设置映射的当前容量.
 	 */
-	Capacity => Integer
+	Capacity {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * 检索或设置映射的大小写敏感性设置.
 	 */
-	CaseSense => String
+	CaseSense {
+		get => String
+		set => void
+	}
 
 	/**
 	 * 定义找不到键时返回的默认值.
 	 */
-	Default => Any
+	Default: Any
 }
 
 class MemberError extends UnsetError {
@@ -4005,7 +4560,10 @@ class Menu extends Object {
 	/**
 	 * 检索或设置默认菜单项.
 	 */
-	Default => String
+	Default {
+		get => String
+		set => void
+	}
 
 	/**
 	 * 检索菜单的 Win32 句柄.
@@ -4015,7 +4573,7 @@ class Menu extends Object {
 	/**
 	 * 创建一个新的Menu或MenuBar对象.
 	 */
-	__New()
+	__New() => void
 
 	/**
 	 * 添加或修改菜单项.
@@ -4113,12 +4671,12 @@ class Object extends Any {
 	/**
 	 * 返回对象的一个浅拷贝.
 	 */
-	Clone() => Object
+	Clone() => this
 
 	/**
 	 * 定义一个新的自有属性.
 	 */
-	DefineProp(Name, Desc) => void
+	DefineProp(Name, Desc) => this
 
 	/**
 	 * 删除对象拥有的属性.
@@ -4142,7 +4700,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	__New(ErrorCode := A_LastError, What?, Extra?)
+	__New(ErrorCode := A_LastError, What?, Extra?) => void
 }
 
 class Primitive extends Any {
@@ -4229,19 +4787,18 @@ class VarRef extends Any {
 
 class ZeroDivisionError extends Error {
 }
-;#endregion
+;@endregion
 
-;#region typedef
-
+;@region typedef
 class $InputBoxResult {
 	/**
 	 * 用户输入的文本.
 	 */
-	Value => String
+	Value: String
 
 	/**
 	 * 以下单词之一表示输入框是如何关闭的: OK, Cancel 或 Timeout.
 	 */
-	Result => String
+	Result: String
 }
-;#endregion
+;@endregion

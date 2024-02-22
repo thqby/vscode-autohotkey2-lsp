@@ -46,43 +46,5 @@
 			"body": "macro",
 			"description": "A function definition can be prefixed with 'macro ' to create a macro function. All undeclared variables within a macro function except parameters and local variables come from the scope of the caller."
 		}
-	],
-	"variables": [
-		{
-			"body": "A_AhkDir",
-			"description": "The dir of current exe."
-		},
-		{
-			"body": "A_DllDir",
-			"description": "the dir of current module (dll or exe)"
-		},
-		{
-			"body": "A_DllPath",
-			"description": "The path of current module (dll or exe)."
-		},
-		{
-			"body": "A_GlobalStruct"
-		},
-		{
-			"body": "A_IsDll"
-		},
-		{
-			"body": "A_MainThreadID"
-		},
-		{
-			"body": "A_MemoryModule"
-		},
-		{
-			"body": "A_ModuleHandle"
-		},
-		{
-			"body": "A_ScriptStruct"
-		},
-		{
-			"body": "A_ThreadID"
-		},
-		{
-			"body": "A_ZipCompressionLevel"
-		}
 	]
 }

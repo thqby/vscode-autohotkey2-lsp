@@ -1,6 +1,9 @@
-import { DocumentSymbol, Position, Range, SymbolKind } from 'vscode-languageserver';
-import { ClassNode, reset_detect_cache, detectExp, FuncNode, Token, Variable, find_class, Lexer } from './Lexer';
-import { connection, extsettings, lexers, restorePath, semanticTokensOnFull, update_includecache } from './common';
+import { Position, Range, SymbolKind } from 'vscode-languageserver';
+import {
+	AhkSymbol, ClassNode, FuncNode, Lexer, Property, Variable, Token,
+	connection, extsettings, find_class, lexers, restorePath,
+	semanticTokensOnFull, update_include_cache, generate_type_annotation
+} from './common';
 
 function checkCommand(cmd: string) {
 	if (extsettings.commands?.includes(cmd))
@@ -26,7 +29,7 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode) {
 	let returns: string[] = [], details: string[] = [], result = ['/**'];
 	let lastarr: string[] | undefined, m: RegExpMatchArray | null;
 	let params: { [name: string]: string[] } = {}, i = 0, z = true;
-	let p: Position, pp = Object.assign({}, fn.range.end);
+	let pp = Object.assign({}, fn.range.end);
 	pp.character--;
 	comments?.forEach(line => {
 		if (m = line.match(/^@(param|arg)\s+(({[^}]*}\s)?\s*(\[.*?\]|\S+).*)$/i))
@@ -46,34 +49,25 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode) {
 		if (lastarr = params[it.name.toUpperCase()]) {
 			lastarr.forEach(s => result.push(' * ' + s));
 		} else if (it.name) {
-			let rets: string[] = [], o: any = {};
-			for (const ret in it.returntypes)
-				reset_detect_cache(), detectExp(doc, ret, Position.is(p = it.returntypes[ret]) ? p : pp).forEach(tp => o[trim(tp)] = true);
-			rets = o['#any'] ? [] : Object.keys(o);
-			if (rets.length)
-				result.push(` * @param $\{${++i}:{${rets.join('|')}\\}} ${it.name} $${++i}`);
+			let rets = generate_type_annotation(it, doc);
+			if (rets)
+				result.push(` * @param $\{${++i}:{${rets}\\}} ${it.name} $${++i}`);
 			else result.push(` * @param ${it.name} $${++i}`);
 		}
 	});
 	if (returns.length) {
 		returns.forEach(s => result.push(' * ' + s));
 	} else {
-		let rets: string[] = [], o: any = {};
-		for (const ret in fn.returntypes)
-			reset_detect_cache(), detectExp(doc, ret, Position.is(p = fn.returntypes[ret]) ? p : pp).forEach(tp => o[trim(tp)] = true);
-		rets = o['#any'] ? ['any'] : Object.keys(o);
-		if (rets.length)
-			result.push(` * @returns $\{${++i}:{${rets.join('|')}\\}} $${++i}`);
+		let rets = generate_type_annotation(fn, doc);
+		if (rets)
+			result.push(` * @returns $\{${++i}:{${rets}\\}} $${++i}`);
 	}
 	result.push(' */');
 	let text = result.join('\n');
 	if (z)
 		text = text.replace(new RegExp(`\\$${i}\\b`), '$0');
 	return text;
-	function trim(tp: string) {
-		tp = tp.trim().replace(/([^.]+)$/, '\\$$$1').replace(/\\\$[@#]/, '');
-		return tp;
-	}
+	
 }
 
 export async function generateComment() {
@@ -116,7 +110,7 @@ export function exportSymbols(uri: string) {
 	let doc = lexers[uri.toLowerCase()], cache: any = {}, result: any = {};
 	if (!doc)
 		return;
-	update_includecache();
+	update_include_cache();
 	for (let uri of [doc.uri, ...Object.keys(doc.relevance)]) {
 		if (!(doc = lexers[uri]))
 			continue;
@@ -126,7 +120,7 @@ export function exportSymbols(uri: string) {
 		dump(Object.values(doc.declaration), result[doc.fsPath || doc.document.uri] = { includes });
 	}
 	return result;
-	function dump(nodes: DocumentSymbol[], result: any) {
+	function dump(nodes: AhkSymbol[], result: any) {
 		let kind: SymbolKind, fn: FuncNode, cl: ClassNode, t: any;
 		for (let it of nodes) {
 			if (!it.selectionRange.end.character)
@@ -139,8 +133,8 @@ export function exportSymbols(uri: string) {
 						extends: _extends(cl),
 						comment: it.detail
 					});
-					dump(Object.values(cl.staticdeclaration ?? {}), t);
-					dump(Object.values(cl.declaration ?? {}), t);
+					dump(Object.values(cl.property ?? {}), t);
+					dump(Object.values(cl.$property ?? {}), t);
 					break;
 				case SymbolKind.Property:
 					fn = it as FuncNode;
@@ -152,10 +146,10 @@ export function exportSymbols(uri: string) {
 							name: p.name, byref: p.ref || undefined,
 							defval: _def(p)
 						})),
-						readonly: fn.params && !(it as any).set || undefined,
+						readonly: fn.params && !(it as Property).set || undefined,
 						comment: it.detail
 					});
-					if (!(it = (it as any).call))
+					if (!(it = (it as Property).call!))
 						break;
 				case SymbolKind.Function:
 				case SymbolKind.Method:
@@ -195,7 +189,7 @@ export async function diagnosticFull() {
 	let { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
 	const doc = lexers[uri.toLowerCase()];
 	if (!doc) return;
-	update_includecache();
+	update_include_cache();
 	for (let u in doc.relevance)
 		(u = lexers[u]?.document.uri) && semanticTokensOnFull({ textDocument: { uri: u } });
 	semanticTokensOnFull({ textDocument: { uri } });

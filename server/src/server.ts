@@ -1,23 +1,23 @@
-import { URI } from 'vscode-uri';
 import { resolve } from 'path';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	CancellationToken, createConnection, DidChangeConfigurationNotification, ExecuteCommandParams,
 	InitializeResult, ProposedFeatures, SymbolKind, TextDocuments, TextDocumentSyncKind
 } from 'vscode-languageserver/node';
+import { URI } from 'vscode-uri';
+import { get_ahkProvider } from './ahkProvider';
 import {
 	a_vars, AHKLSSettings, ahkpath_cur, chinese_punctuations, clearLibfuns, codeActionProvider,
 	colorPresentation, colorProvider, completionProvider, defintionProvider, diagnosticFull,
 	documentFormatting, enum_ahkfiles, exportSymbols, extsettings, generateComment, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile,
-	parseinclude, prepareRename, rangeFormatting, referenceProvider, renameProvider, SemanticTokenModifiers,
+	parse_include, prepareRename, rangeFormatting, referenceProvider, renameProvider, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
 	set_dirname, set_locale, set_version, set_WorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
 	traverse_include, typeFormatting, update_settings, utils, winapis, workspaceSymbolProvider
 } from './common';
-import { get_ahkProvider } from './ahkProvider';
-import { resolvePath, runscript } from './scriptrunner';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
+import { resolvePath, runscript } from './scriptrunner';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -306,7 +306,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	for (const uri in lexers) {
 		let doc = lexers[uri];
 		if (!doc.d) {
-			doc.initlibdirs();
+			doc.initLibDirs();
 			if (Object.keys(doc.include).length || doc.diagnostics.length)
 				doc.update();
 		}
@@ -325,6 +325,13 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	}
 }
 
+function get_lib_symbols(lex: Lexer) {
+	return Object.assign(
+		Object.values(lex.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function),
+		{ fsPath: lex.fsPath, islib: inlibdirs(lex.fsPath) }
+	);
+}
+
 async function parseuserlibs() {
 	let dir: string, path: string, uri: string, d: Lexer, t: TextDocument | undefined;
 	for (dir of libdirs)
@@ -333,12 +340,7 @@ async function parseuserlibs() {
 				if (!(d = lexers[uri]))
 					if (!(t = openFile(path)) || (d = new Lexer(t)).d || (d.parseScript(), d.maybev1))
 						continue;
-				if (d.d) continue;
-				libfuncs[uri] = Object.values(d.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
-				Object.defineProperties(libfuncs[uri], {
-					islib: { value: inlibdirs(path), enumerable: false },
-					fsPath: { value: path, enumerable: false }
-				});
+				libfuncs[uri] = get_lib_symbols(d);
 				await sleep(50);
 			}
 		}
@@ -362,7 +364,7 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 	documents.all().forEach(td => {
 		let doc = lexers[td.uri.toLowerCase()];
 		if (!doc) return;
-		doc.initlibdirs(doc.scriptdir);
+		doc.initLibDirs(doc.scriptdir);
 		if (extsettings.AutoLibInclude & 1)
 			parseproject(doc.uri);
 	});
@@ -383,13 +385,7 @@ async function parseproject(uri: string) {
 	let lex = lexers[uri];
 	if (!lex || !uri.startsWith('file:'))
 		return;
-	if (!lex.d && !libfuncs[uri]) {
-		Object.defineProperties(libfuncs[uri] = Object.values(lex.declaration)
-			.filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function), {
-			islib: { value: inlibdirs(lex.fsPath), enumerable: false },
-			fsPath: { value: lex.fsPath, enumerable: false }
-		});
-	}
+	!lex.d && (libfuncs[uri] ??= get_lib_symbols(lex));
 	let searchdir = '', workspace = false, path: string, t: TextDocument | undefined;
 	if (searchdir = lex.workspaceFolder)
 		searchdir = URI.parse(searchdir).fsPath, workspace = true;
@@ -401,16 +397,11 @@ async function parseproject(uri: string) {
 				if (!(t = openFile(path)) || (lex = new Lexer(t)).d || (lex.parseScript(), lex.maybev1))
 					continue;
 				if (workspace) {
-					parseinclude(lexers[uri] = lex, lex.scriptdir);
+					parse_include(lexers[uri] = lex, lex.scriptdir);
 					traverse_include(lex);
 				}
 			}
-			if (lex.d) continue;
-			libfuncs[uri] = Object.values(lex.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function);
-			Object.defineProperties(libfuncs[uri], {
-				islib: { value: inlibdirs(path), enumerable: false },
-				fsPath: { value: path, enumerable: false }
-			});
+			libfuncs[uri] = get_lib_symbols(lex);
 			await sleep(50);
 		}
 	}

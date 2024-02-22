@@ -46,43 +46,5 @@
 			"body": "macro",
 			"description": "函数定义可以以'macro '作为前缀来创建宏函数. 宏函数内除参数和局部变量外的所有未声明变量来自调用者的作用域."
 		}
-	],
-	"variables": [
-		{
-			"body": "A_AhkDir",
-			"description": "当前exe文件的目录."
-		},
-		{
-			"body": "A_DllDir",
-			"description": "当前模块(dll或exe)的目录."
-		},
-		{
-			"body": "A_DllPath",
-			"description": "当前模块(dll或exe)的路径."
-		},
-		{
-			"body": "A_GlobalStruct"
-		},
-		{
-			"body": "A_IsDll"
-		},
-		{
-			"body": "A_MainThreadID"
-		},
-		{
-			"body": "A_MemoryModule"
-		},
-		{
-			"body": "A_ModuleHandle"
-		},
-		{
-			"body": "A_ScriptStruct"
-		},
-		{
-			"body": "A_ThreadID"
-		},
-		{
-			"body": "A_ZipCompressionLevel"
-		}
 	]
 }

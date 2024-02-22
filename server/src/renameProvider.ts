@@ -1,14 +1,13 @@
 import { CancellationToken, PrepareRenameParams, Range, RenameParams, WorkspaceEdit } from 'vscode-languageserver';
 import { ResponseError } from 'vscode-jsonrpc';
-import { getAllReferences } from './referencesProvider';
-import { Maybe, lexers, response } from './common';
+import { Maybe, lexers, getAllReferences, response } from './common';
 
 let renameranges: { [uri: string]: Range[] } | null | undefined;
 
 export async function prepareRename(params: PrepareRenameParams, token: CancellationToken): Promise<Maybe<{ range: Range, placeholder: string } | ResponseError>> {
 	let doc = lexers[params.textDocument.uri.toLowerCase()];
 	if (!doc || token.isCancellationRequested) return;
-	let context = doc.buildContext(params.position);
+	let context = doc.getContext(params.position);
 	if (renameranges = getAllReferences(doc, context, false))
 		return { range: context.range, placeholder: context.text.split('.').pop() || '' };
 	return new ResponseError(0, renameranges === null ? response.cannotrenamestdlib() : response.cannotrename());

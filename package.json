@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.3.2",
+	"version": "2.3.3",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -330,7 +330,7 @@
 		},
 		"commands": [
 			{
-				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk2.debug",
 				"title": "%ahk2.debug%",
 				"icon": "$(debug)",
@@ -343,7 +343,7 @@
 				"category": "ahk2"
 			},
 			{
-				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk2.debug.params",
 				"title": "%ahk2.debug.params%",
 				"category": "ahk2"
@@ -361,7 +361,7 @@
 				"category": "ahk2"
 			},
 			{
-				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk2.run",
 				"title": "%ahk2.run%",
 				"icon": "$(play)",
@@ -381,7 +381,7 @@
 				"category": "ahk2"
 			},
 			{
-				"enablement": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk2.compile",
 				"title": "%ahk2.compile%",
 				"category": "ahk2"

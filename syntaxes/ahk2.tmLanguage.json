@@ -771,8 +771,13 @@
           }
         },
         {
-          "match": "(?<=^\\s*);\\s*@(?i:[\\w\\-]+)\\b",
-          "name": "keyword.control.directive.ahk2"
+          "match": "(?<=^\\s*);\\s*@(?:[\\w\\-]+)\\b(\\s+(.*))?",
+          "name": "keyword.control.directive.ahk2",
+          "captures": {
+            "2": {
+              "name": "comment.line.ahk2"
+            }
+          }
         }
       ]
     },

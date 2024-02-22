@@ -3,8 +3,8 @@ import { URI } from 'vscode-uri';
 import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 'fs';
 import { Connection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { CompletionItem, CompletionItemKind, DocumentSymbol, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { ActionType, FormatOptions, Lexer, update_commentTags } from './Lexer';
+import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
+import { AhkSymbol, ActionType, FormatOptions, Lexer, update_comment_tags, ClassNode } from './Lexer';
 import { diagnostic } from './localize';
 import { isBrowser, jsDocTagNames } from './constants';
 export * from './codeActionProvider';
@@ -33,9 +33,10 @@ enum LibIncludeType {
 export interface AHKLSSettings {
 	locale?: string
 	commands?: string[]
+	extensionUri?: string
 	ActionWhenV1IsDetected: ActionType
 	AutoLibInclude: LibIncludeType
-	CommentTags: string
+	CommentTags?: string
 	CompleteFunctionParens: boolean
 	CompletionCommitCharacters?: {
 		Class: string
@@ -103,8 +104,8 @@ export let connection: Connection;
 export let ahkpath_cur = '', locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahk_version = encode_version('3.0.0.0');
 export let ahkuris: { [name: string]: string } = {};
-export let ahkvars: { [key: string]: DocumentSymbol } = {};
-export let libfuncs: { [uri: string]: DocumentSymbol[] } = {};
+export let ahkvars: { [key: string]: AhkSymbol } = {};
+export let libfuncs: { [uri: string]: LibSymbol } = {};
 export let hoverCache: { [key: string]: [string, Hover | undefined] } = {};
 export let libdirs: string[] = [], workspaceFolders: string[] = [];
 export let completionItemCache: {
@@ -116,6 +117,11 @@ export let completionItemCache: {
 	text: CompletionItem[];
 	option: { [k: string]: CompletionItem[] };
 };
+
+interface LibSymbol extends Array<AhkSymbol> {
+	fsPath: string
+	islib: boolean
+}
 
 export function openFile(path: string, showError = true): TextDocument | undefined {
 	if (isBrowser) {
@@ -370,7 +376,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						completionItemCache.text.push({ label: snip.body, kind });
 					break;
 				case 'options':
-					kind = CompletionItemKind.Value;
+					kind = CompletionItemKind.Text;
 					for (let k in arr) {
 						let t = completionItemCache.option[k] ??= [];
 						for (snip of arr[k])
@@ -432,10 +438,10 @@ export function update_settings(configs: AHKLSSettings) {
 			default: delete configs.FormatOptions.brace_style; break;
 		}
 	try {
-		update_commentTags(configs.CommentTags);
+		update_comment_tags(configs.CommentTags!);
 	} catch (e: any) {
 		delete e.stack;
-		delete (configs as any).CommentTags;
+		delete configs.CommentTags;
 		console.log(e);
 	}
 	if (configs.WorkingDirs instanceof Array)
@@ -482,7 +488,7 @@ export function make_search_re(search: string, re = '') {
 	let t = undefined;
 	search = search.replace(/([*.?+^$|\\/\[\](){}])|([^\x00-\x7f])|(.)/g,
 		(_, m1, m2, m3) => `${m3 || (t ??= m2) || `\\${m1}`}.*`);
-	return new RegExp(t ? re + search : `${re}([^\x00-\x7f]|${search})`, 'i');
+	return new RegExp(t ? re + search : `${re}([^\\x00-\\x7f]|${search})`, 'i');
 }
 
 export function enumNames(enumType: object): string[] {

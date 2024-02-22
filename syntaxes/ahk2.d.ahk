@@ -1,4 +1,446 @@
-;#region functions
+;@region vars
+; For uncompiled scripts: the full path and name of the EXE file that actually runs the current script.
+; For compiled scripts: except for obtaining the AutoHotkey directory through the registry entry HKLM\SOFTWARE\AutoHotkey\InstallDir.
+A_AhkPath: String
+
+; Contains the version number of the AutoHotkey main program running the current script, for example `1.0.22`.
+; In the compiled script, it contains the version number of the main program used in the original compilation.
+A_AhkVersion: String
+
+; It can be used to get or set whether to allow the main window of the script to be opened through the tray icon.
+; For compiled scripts, this variable defaults to 0, but it can be overridden by assigning a value to this variable. Set it to 1 will activate the items under the View menu of the main window (such as'Lines most recently executed'), which allows you to view the source code and other information of the script.
+; If the script is not compiled, then the value of this variable is always 1. Its attempts to make changes will be ignored.
+A_AllowMainWindow: Integer
+
+; The full path and name of the current user's application data folder. For example: `C:\Users\<UserName>\AppData\Roaming`
+A_AppData: String
+
+; The full path and name of the application data folder for all users. For example: `C:\ProgramData`
+A_AppDataCommon: String
+
+; Contains an array of command line parameters.
+A_Args: Array
+
+; Can be used to get or set the contents of the system clipboard.
+A_Clipboard: String
+
+; Contains the same string as the ComSpec variable of the environment. For example: `C:\Windows\system32\cmd.exe`
+A_ComSpec: String
+
+; The computer name seen on the network.
+A_ComputerName: String
+
+; It can be used to get or set the delay of the control modification function, in milliseconds.
+A_ControlDelay: Integer
+
+; The area that can be used to get or set relative coordinates.
+A_CoordModeCaret: 'Window' | 'Client' | 'Screen'
+
+; The area that can be used to get or set relative coordinates.
+A_CoordModeMenu: 'Window' | 'Client' | 'Screen'
+
+; The area that can be used to get or set relative coordinates.
+A_CoordModeMouse:  'Window' | 'Client' | 'Screen'
+
+; The area that can be used to get or set relative coordinates.
+A_CoordModePixel:  'Window' | 'Client' | 'Screen'
+
+; The area that can be used to get or set relative coordinates.
+A_CoordModeToolTip:  'Window' | 'Client' | 'Screen'
+
+; The currently displayed mouse cursor type. Its value is one of the following words:
+; - AppStarting (program start, background running--arrow+wait)
+; - Arrow(arrow, normal selection--standard cursor)
+; - Cross( Cross, precise selection)
+; - Help(Help, help selection--arrow+question mark)
+; - IBeam(I-cursor, text selection--input)
+; - Icon
+; - No(No, not available--circle plus backslash)
+; - Size , SizeAll (all sizes, move-four-way arrow)
+; - SizeNESW (southeast and northwest size, diagonal adjustment 2-double arrows point to southeast and northwest)
+; - SizeNS (north-south size, vertical adjustment-double arrows point to north and south )
+; - SizeNWSE (the size of northwest and southeast, adjust 1 along the diagonal-double arrows point to northwest and southeast)
+; - SizeWE (size of east and west, adjust horizontally-double arrows point to east)
+; - UpArrow (up arrow, candidates-point up Arrow)
+; - Wait(Waiting, busy--hourglass or circle)
+; - Unknown. The hand pointer (click and grab) belongs to the Unknown category.
+A_Cursor: String
+
+; The day of the current month represented by 2 digits (01-31). It has the same meaning as A_MDay.
+A_DD: String
+
+; The abbreviation of the current day of the week in the language of the current user, such as Sun
+A_DDD: String
+
+; Use the full name of the current day of the week in the current user's language, for example, Sunday
+A_DDDD: String
+
+; Can be used to get or set the default mouse speed, an integer from 0 (fastest) to 100 (slowest).
+A_DefaultMouseSpeed: Integer
+
+; The full path and name of the desktop folder of the current user. For example: `C:\Users\<UserName>\Desktop`
+A_Desktop: String
+
+; The full path and name of the desktop folder of all users. For example: `C:\Users\Public\Desktop`
+A_DesktopCommon: String
+
+; Can be used to get or set whether to detect hidden text in the window.
+A_DetectHiddenText: Integer
+
+; Can be used to get or set whether to detect hidden windows.
+A_DetectHiddenWindows: Integer
+
+; The user recently pressed the termination character that triggered the non-auto-replacement hotstring.
+A_EndChar: String
+
+; Each thread retains its own A_EventInfo value. It contains additional information about the following events:
+; Mouse wheel hotkey (WheelDown/Up/Left/Right)
+; OnMessage
+; Regular Expression Callouts
+A_EventInfo: Integer
+
+; Can be used to get or set the default encoding of various built-in functions.
+A_FileEncoding: String
+
+; Defines how long after pressing the hotkey it is assumed that (Alt/Ctrl/Win/Shift) is still pressed.
+A_HotkeyModifierTimeout: Integer
+
+; The A_MaxHotkeysPerInterval and A_HotkeyInterval variables control the rate of hotkey activation, beyond which a warning dialog will be displayed.
+A_HotkeyInterval: Integer
+
+; The current hour (00-23) represented by 2 digits in the 24-hour clock (for example, 17 for 5pm).
+; To get the time in the 12-hour clock with AM/PM prompts, please refer to this example: FormatTime(,'h:mm:ss tt')
+A_Hour: String
+
+; If a custom tray icon is specified by TraySetIcon, the value of the variable is the full path and name of the icon file, otherwise it is empty.
+A_IconFile: String
+
+; Can be used to get or set whether to hide the tray icon.
+A_IconHidden: Integer
+
+; If A_IconFile is empty, the value is empty. Otherwise, its value is the number of the icon in A_IconFile (usually 1).
+A_IconNumber: Integer | ""
+
+; It can be used to get or set the tooltip text of the tray icon, which will be displayed when the mouse hovers over it.
+; If it is empty, the name of the script is used.
+; To create a multi-line tooltip, please click Use a newline character (`n) between each line, such as'Line1`nLine2'.
+; Only the first 127 characters are displayed, and the text is truncated at the first tab (if it exists).
+A_IconTip: String
+
+; Contains the number of current loop iterations, which can be assigned to any integer value by the script.
+A_Index: Integer
+
+; The initial working directory of the script, determined by how it was started.
+A_InitialWorkingDir: String
+
+; The value is 1 (true) when the operating system is 64-bit, and 0 (false) when it is 32-bit.
+A_Is64bitOS: Integer
+
+; If the current user has administrator rights, the value of this variable is 1. Otherwise, it is 0.
+A_IsAdmin: Integer
+
+; If the currently running script is a compiled EXE, the value of this variable is 1,
+; otherwise it is an empty string (this will be regarded as false).
+A_IsCompiled: Integer
+
+; If the Critical of the current thread is closed, the value is 0. Otherwise,
+; the value is an integer greater than zero, which is the message check frequency used by Critical.
+A_IsCritical: Integer
+
+; If the thread after the current thread is suspended, the value is 1, otherwise it is 0.
+A_IsPaused: Integer
+
+; If the script is suspended, the value is 1, otherwise it is 0.
+A_IsSuspended: Integer
+
+; It can be used to get or set the delay time of the button, in milliseconds.
+A_KeyDelay: Integer
+
+; It can be used to get or set the delay time of keys sent through SendPlay mode, in milliseconds.
+A_KeyDelayPlay: Integer
+
+; It can be used to get or set the duration of the button, in milliseconds.
+A_KeyDuration: Integer
+
+; It can be used to get or set the duration of the button sent through SendPlay mode, in milliseconds.
+A_KeyDurationPlay: Integer
+
+; The default language of the current system, the value is one of these 4-digit codes.
+; For example, if the value of A_Language is 0436, the default language of the system is Afrikaans.
+A_Language: String
+
+; This is usually the result of the system's GetLastError() function after the script calls certain functions (such as DllCall or Run/RunWait), or the HRESULT of the last COM object call.
+A_LastError: Integer
+
+; The full path and name of the file that A_LineNumber belongs to. Unless the current line belongs to a #Include file of an uncompiled script, it will be the same as A_ScriptFullPath.
+A_LineFile: String
+
+; The line number of the line being executed in the script (or its #Include file). This line number is consistent with that displayed by ListLines; it is very useful for error reporting, such as this example: MsgBox'Could not write to log file (line number 'A_LineNumber')'.
+; Because the compiled script has merged all its #Include files into one large script, its line number may be different from when it is run in uncompiled mode.
+A_LineNumber: Integer
+
+; Can be used to get or set whether to record a row.
+A_ListLines: Integer
+
+; Exists in any parsing loop, it contains the contents of the current substring (field).
+A_LoopField: String
+
+; The attributes of the currently retrieved file.
+A_LoopFileAttrib: String
+
+; The path of the directory where A_LoopFileName is located. If FilePattern contains a relative path instead of an absolute path, then the path here will also be a relative path. The root directory will not contain a backslash. For example: C:
+A_LoopFileDir: String
+
+; The extension of the file (such as TXT, DOC or EXE). Do not include the period (.).
+A_LoopFileExt: String
+
+; This is different from A_LoopFilePath as follows: 1) It always contains the absolute/full path of the file, even if the FilePattern contains a relative path; 2) Any short (8.3) folder name in the FilePattern itself will be converted to a long file Name; 3) The characters in the FilePattern will be converted to uppercase or lowercase to match the case stored in the file system. This is for the file name - for example, the file name passed into the script as a command line parameter - is converted to the resource manager The exact path name displayed is useful.
+A_LoopFileFullPath: String
+
+; The name of the file or folder currently retrieved (not including the path).
+A_LoopFileName: String
+
+; The path and name of the file/folder currently retrieved. If FilePattern contains a relative path instead of an absolute path, the path here will also be a relative path.
+A_LoopFilePath: String
+
+; The 8.3 short name of the file, or alternative name. If the file does not have a short file name (because the long file is shorter than 8.3, or perhaps because the NTFS file system disables the generation of short file names), A_LoopFileName will be retrieved.
+A_LoopFileShortName: String
+
+; The 8.3 short path and name of the currently retrieved file/folder. For example: C:\MYDOCU~1\ADDRES~1.txt. If FilePattern contains a relative path instead of an absolute path, the path here will also be Is a relative path.
+A_LoopFileShortPath: String
+
+; The size of the currently retrieved file, in KB, rounded down to the nearest integer.
+A_LoopFileSize: Integer
+
+; The size of the currently retrieved file, in KB, rounded down to the nearest integer.
+A_LoopFileSizeKB: Integer
+
+; The size of the currently retrieved file, in Mb, rounded down to the nearest integer.
+A_LoopFileSizeMB: Integer
+
+; The last time the file was accessed. The format is YYYYMMDDHH24MISS.
+A_LoopFileTimeAccessed: String
+
+; The time when the file was created. The format is YYYYMMDDHH24MISS.
+A_LoopFileTimeCreated: String
+
+; The time when the file was last modified. The format is YYYYMMDDHH24MISS.
+A_LoopFileTimeModified: String
+
+; Exists in any file reading loop, it contains the content of the current line, excluding the carriage return and the newline (`r`n) marking the end of the line.
+A_LoopReadLine: String
+
+; Contains the full name of the key of the current loop item. For remote registry access, this value will not include the computer name.
+A_LoopRegKey: String
+
+; The name of the item currently retrieved. It can be a value name or the name of a sub-item.
+A_LoopRegName: String
+
+; The time when the current item or any value was last modified. The format is YYYYMMDDHH24MISS.
+A_LoopRegTimeModified: String
+
+; The type of item currently retrieved.
+A_LoopRegType: String
+
+; The A_MaxHotkeysPerInterval and A_HotkeyInterval variables control the rate of hotkey activation, beyond which a warning dialog will be displayed.
+A_MaxHotkeysPerInterval: Integer
+
+; The day of the current month represented by 2 digits (01-31).
+A_MDay: String
+
+; Control which key is used to mask Win or Alt key events.
+A_MenuMaskKey: String
+
+; The current month represented by 2 digits (01-12). It has the same meaning as A_Mon.
+A_MM: String
+
+; The abbreviation of the current month in the language of the current user, such as Jul
+A_MMM: String
+
+; The full name of the current month in the language of the current user, for example July
+A_MMMM: String
+
+; The current three-digit number of milliseconds (000-999).
+A_MSec: String
+
+; The current minute in 2 digits (00-59).
+A_Min: String
+
+; The current month represented by 2 digits (01-12).
+A_Mon: String
+
+; Can be used to get or set the mouse delay, in milliseconds.
+A_MouseDelay: Integer
+
+; It can be used to get or set the mouse delay of SendPlay, in milliseconds.
+A_MouseDelayPlay: Integer
+
+; The full path and name of the current user's'My Documents' folder.
+A_MyDocuments: String
+
+; The current local time in YYYYMMDDHH24MISS format.
+A_Now: String
+
+; The current Coordinated Universal Time (UTC) in YYYYMMDDHH24MISS format. UTC is essentially the same as Greenwich Mean Time (GMT).
+A_NowUTC: String
+
+; The version number of the operating system, in the format of'major.minor.build'. For example, Windows 7 SP1 is `6.1.7601`.
+; Applying compatibility settings in the properties of the AutoHotkey executable file or compiled script will Cause the system to report a different version number, which will be reflected in A_OSVersion.
+A_OSVersion: String
+
+; Except for saving the name of the previous hotkey, everything else is the same as above. It will be empty if there is no one.
+A_PriorHotkey: String
+
+; The name of the last key pressed before the most recent key-press or key-release. If no suitable key is found in the key history-it will be empty. Does not include generated by AutoHotkey script To use this variable, you must first install a keyboard or mouse hook and enable key history.
+A_PriorKey: String
+
+; Program Files directory (e.g. `C:\Program Files` or `C:\Program Files (x86)`). This is usually the same as the ProgramFiles environment variable.
+A_ProgramFiles: String
+
+; The full path and name of the program folder in the start menu of the current user. For example: `C:\Users\<UserName>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs`
+A_Programs: String
+
+; The full path and name of the program folder in the start menu of all users. For example: `C:\ProgramData\Microsoft\Windows\Start Menu\Programs`
+A_ProgramsCommon: String
+
+; Contains the size value of the pointer, in bytes. The value is 4 (32-bit) or 8 (64-bit), depending on the type of executor running the current script.
+A_PtrSize: 4 | 8
+
+; Can be used to get or set the registry view.
+A_RegView: '32' | '64' | 'Default'
+
+; The number of pixels per logical inch of screen width. In a system with multiple display monitors, this value is the same for all monitors.
+A_ScreenDPI: Integer
+
+; The height of the main monitor, in pixels
+A_ScreenHeight: Integer
+
+; The width of the main monitor, in pixels
+A_ScreenWidth: Integer
+
+; The full path of the directory where the current script is located. Does not include the final backslash (the same is true for the root directory).
+; If the script text is read from standard input instead of from a file, variable The value is the initial working directory.
+A_ScriptDir: String
+
+; The full path of the current script, for example C:\My Documents\My Script.ahk
+; If the script text is read from standard input instead of from the file, the value is'* '.
+A_ScriptFullPath: String
+
+; The unique ID (HWND/handle) of the script's main window (hidden).
+A_ScriptHwnd: Integer
+
+; It can be used to get or set the default title of MsgBox, InputBox, FileSelect, DirSelect and Gui.New. If the script is not set, it defaults to the file name of the current script, excluding the path, such as MyScript.ahk.
+A_ScriptName: String
+
+; The current second in 2 digits (00-59).
+A_Sec: String
+
+; Can be used to get or set the sending level, an integer between 0 and 100, including 0 and 100.
+A_SendLevel: Integer
+
+; Can be used to get or set the sending mode.
+A_SendMode: 'Event' | 'Input' | 'Play' | 'InputThenPlay'
+
+; Contains a single space character.
+A_Space: ' '
+
+; The full path and name of the start menu folder of the current user. For example: `C:\Users\<UserName>\AppData\Roaming\Microsoft\Windows\Start Menu`
+A_StartMenu: String
+
+; The full path and name of the start menu folder for all users. For example: `C:\ProgramData\Microsoft\Windows\Start Menu`
+A_StartMenuCommon: String
+
+; The full path and name of the startup folder in the start menu of the current user. For example: `C:\Users\<UserName>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`
+A_Startup: String
+
+; The full path and name of the startup folder in the start menu of all users. For example: `C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup`
+A_StartupCommon: String
+
+; Can be used to get or set whether to restore the state of CapsLock after Send.
+A_StoreCapsLockMode: Integer
+
+; Contains a single tab character.
+A_Tab: '`t'
+
+; The full path and name of the folder where temporary files are stored. Its value is retrieved from one of the following locations (in order): 1) Environment variable TMP, TEMP or USERPROFILE; 2) Windows directory. For example: 
+; C:\Users\<UserName>\AppData\Local\Temp
+A_Temp: String
+
+; The name of the custom function currently being executed (empty if none); For example: MyFunction.
+A_ThisFunc: String
+
+; The most recently executed hotkey or non-auto-replacement hotstring (empty if there is none), such as #z. If the current thread is interrupted by other hotkeys or hotstrings, then the value of this variable will change, So in general, it is best to use the ThisHotkey parameter.
+A_ThisHotkey: String
+
+; The number of milliseconds that have elapsed since the computer was started, up to 49.7 days. By saving A_TickCount to a variable, and after a period of time, subtracting that variable from the latest A_TickCount value, the elapsed time can be calculated.
+A_TickCount: Integer
+
+; The number of milliseconds since the last time the system received keyboard, mouse or other input. This can be used to determine whether the user has left. The user's physical input and analog input generated by any program or script (such as Send Or MouseMove function) will reset this variable to zero.
+A_TimeIdle: Integer
+
+; If the keyboard hook is installed, this is the number of milliseconds that have passed since the system last received physical keyboard input. Otherwise, this variable is equal to A_TimeIdle.
+A_TimeIdleKeyboard: Integer
+
+; If the mouse hook is installed, this is the number of milliseconds that have passed since the system last received physical mouse input. Otherwise, this variable is equal to A_TimeIdle.
+A_TimeIdleMouse: Integer
+
+; Similar to the above, but after installing the corresponding hook (keyboard or mouse), the simulated keystrokes and/or mouse clicks will be ignored; that is, this variable only responds to physical events. (This avoids Simulate keystrokes and mouse clicks and mistakenly believe that the user exists.) If both hooks are not installed, this variable is equivalent to A_TimeIdle. If only one hook is installed, then only this type of physical input will work on A_TimeIdlePhysical ( Another input/no hook installed, both physical and simulated, will be ignored).
+A_TimeIdlePhysical: Integer
+
+; The number of milliseconds that have elapsed since A_PriorHotkey was pressed. If A_PriorHotkey is empty, the value of this variable is -1.
+A_TimeSincePriorHotkey: Integer
+
+; The number of milliseconds that have elapsed since A_ThisHotkey was pressed. If A_ThisHotkey is empty, the value of this variable is -1.
+A_TimeSinceThisHotkey: Integer
+
+; Can be used to get or set the title matching mode.
+A_TitleMatchMode: 1 | 2 | 3 | 'RegEx'
+
+; Can be used to get or set the title matching speed.
+A_TitleMatchModeSpeed: 'Fast' | 'Slow'
+
+; Returns the menu object that can be used to modify or display the tray menu.
+A_TrayMenu: String
+
+; The login name of the user running the current script.
+A_UserName: String
+
+; One digit represents the elapsed days of the current week (1-7). In all locales, 1 means Sunday.
+A_WDay: String
+
+; Can be used to get or set the delay of the window function, in milliseconds.
+A_WinDelay: Integer
+
+; Windows directory. For example: C:\Windows
+A_WinDir: String
+
+; Can be used to get or set the current working directory of the script, which is the default path for accessing files. Unless it is the root directory, the path does not contain a backslash at the end. Two examples: C:\ and C:\My Documents. Use SetWorkingDir or assign a path to A_WorkingDir to change the current working directory.
+; No matter how the script is started, the script's working directory defaults to A_ScriptDir.
+A_WorkingDir: String
+
+; The number of days elapsed in the current year (1-366). The value of the variable will not be filled with zeros, for example, 9, instead of 009.
+A_YDay: String
+
+; The current year and week according to the ISO 8601 standard (e.g. 200453).
+A_YWeek: String
+
+; The current year represented by 4 digits (for example, 2004). It has the same meaning as A_Year.
+A_YYYY: String
+
+; The current year represented by 4 digits (e.g. 2004).
+A_Year: String
+
+; Boolean value'true', same as value 1.
+true: 1
+
+; Boolean value'false', same as value 0.
+false: 0
+
+; Within a function call, array literal or object literal, the keyword unset can be used to explicitly omit the parameter or value.
+unset: unset
+;@endregion
+
+;@region functions
 /**
  * Returns the absolute value of Number.
  */
@@ -27,6 +469,7 @@ ATan2(Y, X) => Float
 
 /**
  * Disable or enable the user's ability to interact with the computer through the keyboard and mouse.
+ * @param {'On'|'Off'|'Send'|'Mouse'|'SendAndMouse'|'Default'|'MouseMove'|'MouseMoveOff'} Option
  */
 BlockInput(Option) => void
 
@@ -365,6 +808,8 @@ ControlShowDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) =>
 
 /**
  * Set the coordinate mode for multiple built-in functions, relative to the active window or the screen.
+ * @param {'ToolTip'|'Pixel'|'Mouse'|'Caret'|'Menu'} TargetType
+ * @param {'Screen'|'Window'|'Client'} RelativeTo
  */
 CoordMode(TargetType, RelativeTo := 'Screen') => String
 
@@ -486,7 +931,7 @@ DirMove(Source, Dest, Flag := 0) => void
  * If the user enters an invalid folder name in the editing area, SelectedFolder will be set to the folder selected in the navigation tree instead of the content entered by the user.
  * @param Prompt The text displayed in the window to prompt the user to operate. If omitted or empty, it defaults to "Select Folder-"A_ScriptName (namely the name of the current script).
  */
-DirSelect(StartingFolder := '', Options := 1, Prompt := '') => String
+DirSelect(StartingFolder?, Options := 1, Prompt?) => String
 
 /**
  * Call functions in DLL files, such as standard Windows API functions.
@@ -502,7 +947,7 @@ Download(URL, Filename) => void
  * Eject the designated CD/DVD drive or removable drive.
  * @param Drive The drive letter is followed by a colon and optional backslash (can also be used for UNC paths and mapped drives). If omitted, the default CD/DVD drive will be used. If the drive is not found, an exception will be raised.
  */
-DriveEject(Drive := '') => void
+DriveEject(Drive?) => void
 
 /**
  * Returns the total capacity of the drive containing the specified path, in mb (megabytes).
@@ -524,7 +969,7 @@ DriveGetLabel(Drive) => String
  * Return a string of letters, each drive letter in the system corresponds to a character.
  * @param Type If omitted, all types of drives are retrieved. Otherwise, specify one of the following words to obtain the specific type of drive: CDROM, REMOVABLE, FIXED, NETWORK, RAMDISK, UNKNOWN.
  */
-DriveGetList(Type := '') => String
+DriveGetList(Type?) => String
 
 /**
  * Returns the volume serial number of the specified drive.
@@ -556,7 +1001,7 @@ DriveGetStatus(Path) => String
  * 
  * There is a CD in the stopped drive but it is not currently being accessed.
  */
-DriveGetStatusCD(Drive := '') => String
+DriveGetStatusCD(Drive?) => String
 
 /**
  * Returns the drive type containing the specified path.
@@ -577,7 +1022,7 @@ DriveRetract([Drive]) => void
 /**
  * Change the volume label of the specified drive.
  */
-DriveSetLabel(Drive, NewLabel := '') => void
+DriveSetLabel(Drive, NewLabel?) => void
 
 /**
  * Restore the eject function of the specified drive.
@@ -850,7 +1295,7 @@ FileRecycle(FilePattern) => void
  * Empty the recycle bin.
  * @param DriveLetter If omitted, the recycle bin of all drives will be cleared. Otherwise, please specify the drive letter, such as C:\
  */
-FileRecycleEmpty(DriveLetter := '') => void
+FileRecycleEmpty(DriveLetter?) => void
 
 /**
  * Display a standard dialog box that allows users to open or save files.
@@ -876,7 +1321,7 @@ FileRecycleEmpty(DriveLetter := '') => void
  * 
  * Because the "Prompt Overwrite" option is only supported by the save dialog, specifying this option without the "Prompt to Create" option will also make the "S" option effective. Similarly, when the "S" option exists, "Prompt to create" The option has no effect. Specify the number 24 to enable any prompt type supported by the dialog box.
  */
-FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Files (*.*)') => String | Array
+FileSelect(Options := 0, RootDir_Filename?, Title?, Filter?) => String | Array
 
 /**
  * Change the attributes of one or more files or folders. Wildcards are supported.
@@ -905,7 +1350,7 @@ FileSelect(Options := 0, RootDir_Filename := '', Title := '', Filter := 'All Fil
  * 
  * R = Subfolders are recursively into it, so if the files and folders contained in it match FilePattern, they will be operated on. All subfolders will be recursively into it, not just those whose names match FilePattern Subfolders. If R is omitted, files and directories in subdirectories are not included.
  */
-FileSetAttrib(Attributes, FilePattern := '', Mode := '') => void
+FileSetAttrib(Attributes, FilePattern?, Mode?) => void
 
 /**
  * Change the timestamp of one or more files or folders. Wildcards are supported.
@@ -926,7 +1371,7 @@ FileSetAttrib(Attributes, FilePattern := '', Mode := '') => void
  * 
  * R = Subfolders are recursively into it, so if the files and folders contained in it match FilePattern, they will be operated on. All subfolders will be recursively into it, not just those whose names match FilePattern Subfolders. If R is omitted, files and directories in subdirectories are not included.
  */
-FileSetTime(YYYYMMDDHH24MISS := '', FilePattern := '', WhichTime := 'M', Mode := '') => void
+FileSetTime(YYYYMMDDHH24MISS?, FilePattern?, WhichTime := 'M', Mode?) => void
 
 /**
  * Return Number rounded down to integer (without any .00 suffix).
@@ -1040,7 +1485,7 @@ GetKeySC(KeyName) => Integer
  * 
  * 18000 (i.e. 180 degrees): backward POV
  */
-GetKeyState(KeyName, Mode := '') => String
+GetKeyState(KeyName, Mode?) => String
 
 /**
  * Retrieve the virtual key code of the button.
@@ -1058,7 +1503,7 @@ GetMethod(Value [, Name, ParamCount]) => Func
  * 
  * R: The most recent window (the most recently activated window) is activated, but only when there are no active members in the group when the function is running. "R" is very useful when temporarily switching to handling irrelevant tasks. When When you use GroupActivate, GroupDeactivate or GroupClose to return to the target group, the most recently worked window will be activated instead of the oldest window.
  */
-GroupActivate(GroupName, Mode := '') => Integer
+GroupActivate(GroupName, Mode?) => Integer
 
 /**
  * Add the window specification to the window group, if necessary, create the group.
@@ -1073,7 +1518,7 @@ GroupAdd(GroupName [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
  * 
  * A: Close all members of the group. This is equivalent to WinClose "ahk_group GroupName".
  */
-GroupClose(GroupName, Mode := '') => void
+GroupClose(GroupName, Mode?) => void
 
 /**
  * Similar to GroupActivate, except that the next window that is not in the group is activated.
@@ -1081,7 +1526,7 @@ GroupClose(GroupName, Mode := '') => void
  * 
  * R: The latest non-member window (the most recently activated window) is activated, but only when the members of the group are active when the function is running. "R" is very useful when temporarily switching to handling irrelevant tasks Useful. When you use GroupActivate, GroupDeactivate or GroupClose to return to the group, the most recently worked window will be activated instead of the oldest window.
  */
-GroupDeactivate(GroupName, Mode := '') => void
+GroupDeactivate(GroupName, Mode?) => void
 
 /**
  * Retrieve the GuiControl object of the GUI control associated with the specified HWND.
@@ -1375,7 +1820,7 @@ KeyHistory([MaxEvents]) => void
  * 
  * This timeout value can be a floating point number (e.g. 2.5), but cannot be a hexadecimal value (e.g. 0x03).
  */
-KeyWait(KeyName, Options := '') => Integer
+KeyWait(KeyName, Options?) => Integer
 
 /**
  * Displays the hotkeys in use by the current script, whether their subroutines are currently running, and whether or not they use the keyboard or mouse hook.
@@ -1502,7 +1947,7 @@ MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Integer
 
 /**
  * Click or hold the mouse button, or turn the mouse wheel. Note: The click function is usually more flexible and easier to use.
- * @param WhichButton The button to click: Left (default), Right, Middle (or just the first letter of these names); or the fourth or fifth button of the mouse (X1 or X2). For example: MouseClick "X1" . This parameter can be omitted, at this time it defaults to Left.
+ * @param {'Left'|'Right'|'Middle'|'X1'|'X2'|'WheelUp'|'WheelDown'|'WheelLeft'|'WheelRight'} WhichButton The button to click: Left (default), Right, Middle (or just the first letter of these names); or the fourth or fifth button of the mouse (X1 or X2). For example: MouseClick "X1" . This parameter can be omitted, at this time it defaults to Left.
  * 
  * Left and Right correspond to the main button and the secondary button. If the user changes the button through the system settings, the physical position of the button is changed, but the effect remains unchanged.
  * 
@@ -1769,7 +2214,7 @@ Persistent(Persist := true) => Integer
  * 
  * Slow: Use a more sophisticated method to get the color. This method may be effective when other methods fail in some full-screen applications. This method is about three times slower than the normal method. Note: The Slow method takes precedence over Alt, so There is no need to specify Alt at this time.
  */
-PixelGetColor(X, Y, Mode := '') => String
+PixelGetColor(X, Y, Mode?: 'Alt'|'Slow'|'Alt Slow') => String
 
 /**
  * Search for pixels of the specified color in the screen area.
@@ -1822,6 +2267,7 @@ ProcessGetPath(PIDOrName?) => String
 
 /**
  * Change the priority of the first matching process.
+ * @param {'Low'|'BelowNormal'|'Normal'|'AboveNormal'|'High'|'Realtime'} Level
  */
 ProcessSetPriority(Level, PIDOrName?) => Integer
 
@@ -1869,7 +2315,7 @@ RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Integer
 /**
  * Replace the place where the matching pattern (regular expression) appears in the string.
  */
-RegExReplace(Haystack, NeedleRegEx, Replacement := '', &OutputVarCount?, Limit := -1, StartingPosition := 1) => String
+RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?, Limit := -1, StartingPosition := 1) => String
 
 /**
  * Read the value from the registry.
@@ -1945,6 +2391,7 @@ SendMessage(Msg, wParam := 0, lParam := 0 [, Control, WinTitle, WinText, Exclude
 
 /**
  * Make Send equal to SendEvent or SendPlay, instead of the default (SendInput). Also make Click and MouseMove/Click/Drag use specified methods.
+ * @param {'Event'|'Input'|'InputThenPlay'|'Play'} Mode
  */
 SendMode(Mode) => String
 
@@ -1960,6 +2407,7 @@ SendText(Keys) => void
 
 /**
  * Set the state of the caps Lock key. You can also force the key to stay on or off.
+ * @param {'On'|'Off'|'AlwaysOn'|'AlwaysOff'} State
  */
 SetCapsLockState([State]) => void
 
@@ -1976,15 +2424,16 @@ SetDefaultMouseSpeed(Speed) => Integer
 /**
  * Set the delay that will occur after each keystroke sent by send and controlsend.
  */
-SetKeyDelay([Delay, PressDuration, 'Play']) => void
+SetKeyDelay([Delay, PressDuration, Play: 'Play']) => void
 
 /**
  * Set the delay that occurs after each mouse move or click.
  */
-SetMouseDelay(Delay [, 'Play']) => Integer
+SetMouseDelay(Delay [, Play: 'Play']) => Integer
 
 /**
  * Set the state of the NumLock key. You can also force the key to remain open or closed.
+ * @param {'On'|'Off'|'AlwaysOn'|'AlwaysOff'} State
  */
 SetNumLockState([State]) => void
 
@@ -1995,6 +2444,7 @@ SetRegView(RegView) => Integer
 
 /**
  * Set the state of the scroll lock key. You can also force the key to stay on or off.
+ * @param {'On'|'Off'|'AlwaysOn'|'AlwaysOff'} State
  */
 SetScrollLockState([State]) => void
 
@@ -2019,8 +2469,9 @@ SetTimer([Callback, Period := 250, Priority := 0]) => void
 
 /**
  * Set the matching behavior of WinTitle parameters in commands such as WinWait.
+ * @param {'Fast'|'Slow'|'RegEx'|1|2|3} MatchMode
  */
-SetTitleMatchMode(MatchModeOrspeed) => Integer | String
+SetTitleMatchMode(MatchMode) => Integer | String
 
 /**
  * Set the delay after each execution of a window function (such as Winactivate).
@@ -2081,7 +2532,7 @@ Sleep(Delay) => void
  * 
  * `Note:` When there is a Callback, all options except D, Z and U will be ignored (although N, C and CL will still affect the detection of duplicates).
  */
-Sort(String, Options := '' [, Callback]) => String
+Sort(String, Options? [, Callback]) => String
 
 /**
  * Sound is emitted from the PC speaker.
@@ -2178,8 +2629,7 @@ StrCompare(String1, String2, CaseSense := false) => Integer
 
 /**
  * Copy a string from a memory address or buffer, optionally convert it from a given code page.
- * 
- * `StrGet(Source, Encoding :='')` or omit Length
+ * @overload StrGet(Source, Encoding?) => String
  * @param Source contains the buffer-like object of the string, or the memory address of the string. If the buffer-like object is provided, or the Length parameter is specified, the string does not need to end with a null terminator.
  * @param Length The maximum number of characters to be read. If the string ends with a null terminator, it can be omitted.
  * By default, only the first binary zero is copied. If Length is negative, its absolute value indicates the exact number of characters to be converted, including any binary zeros that the string may contain-in other words, the result is always with String of that length.
@@ -2227,7 +2677,7 @@ StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Integer
  * 
  * "Locale": According to the current user's locale rules, the search is not case sensitive. For example, in most English and Western European regions, not only treats AZ as equivalent to their lowercase form, but also treats non-ASCII letters ( Such as Ä and Ü) are considered equivalent. Depending on the nature of the string being compared, Locale is 1 to 8 times slower than Off.
  */
-StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputVarCount?, Limit := -1) => String
+StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCount?, Limit := -1) => String
 
 /**
  * Use the specified delimiter to divide the string into an array of substrings.
@@ -2237,7 +2687,7 @@ StrReplace(Haystack, SearchText, ReplaceText := '', CaseSense := false, &OutputV
  * Using `[A_Tab, A_Space]` as a separator will create a new array element every time a space or tab is encountered in the input string.
  * @param OmitChars Optional list of characters (case sensitive), used to remove these characters from the beginning and end of each array element.
  */
-StrSplit(String, Delimiters := '', OmitChars := '', MaxParts := -1) => Array
+StrSplit(String, Delimiters?, OmitChars?, MaxParts := -1) => Array
 
 /**
  * Convert the string to uppercase.
@@ -2281,12 +2731,10 @@ Tan(Number) => Float
 
 /**
  * Set the thread priority or whether it can be interrupted. It can also temporarily disable all timers.
- * 
- * Thread 'NoTimers' , TrueOrFalse
- * 
- * Thread 'Priority', Level
- * 
- * Thread 'Interrupt' [, Duration, LineCount]
+ * @overload Thread('NoTimers', TrueOrFalse)
+ * @overload Thread('Priority', Level)
+ * @overload Thread('Interrupt' [, Duration, LineCount])
+ * @param {'NoTimers'|'Priority'|'Interrupt'} SubFunction
  */
 Thread(SubFunction [, Value1, Value2]) => void
 
@@ -2326,7 +2774,7 @@ TraySetIcon(FileName, IconNumber := 1, Freeze := false) => void
  * 
  * Use large icons. 0x20
  */
-TrayTip(Text := '', Title := '', Options := 0) => void
+TrayTip(Text?, Title?, Options := 0) => void
 
 /**
  * Trim characters from the beginning and end of the string.
@@ -2599,15 +3047,14 @@ WinWaitClose([WinTitle, WinText, Timeout, ExcludeTitle, ExcludeText]) => Integer
  * Wait until the specified window is inactive.
  */
 WinWaitNotActive([WinTitle, WinText, Seconds, ExcludeTitle, ExcludeText]) => Integer
-;#endregion
+;@endregion
 
-;#region class
-
+;@region class
 class Any {
 	/**
 	 * The implementation function of the retrieval method.
 	 */
-	GetMethod(Name) => Object
+	GetMethod(Name) => Func
 
 	/**
 	 * If BaseObj is in Value's base object chain, it returns true, otherwise it returns false.
@@ -2624,19 +3071,24 @@ class Any {
 	 */
 	HasProp(Name) => Integer
 
+	__Class: String
+
 	__Init() => void
 
 	/**
 	 * The base object to retrieve the value.
 	 */
-	Base => Object
+	Base {
+		get => Object | void
+		set => void
+	}
 }
 
 class Array extends Object {
 	/**
 	 * An array object contains a list or sequence of values.
 	 */
-	__New(Values*)
+	__New(Values*) => void
 
 	/**
 	 * Enumerates array elements.
@@ -2646,17 +3098,20 @@ class Array extends Object {
 	/**
 	 * Retrieves or sets the value of an array element.
 	 */
-	__Item[Index] => Any
+	__Item[Index] {
+		get => Any
+		set => void
+	}
 
 	/**
 	 * Return a shallow copy of the object.
 	 */
-	Clone() => Array
+	Clone() => this
 
 	/**
 	 * Defines the default value returned when an element with no value is requested.
 	 */
-	Default => Any
+	Default: Any
 
 	/**
 	 * Delete the value of the array element so that the index does not contain a value.
@@ -2696,12 +3151,18 @@ class Array extends Object {
 	/**
 	 * Retrieve or set the length of the array.
 	 */
-	Length => Integer
+	Length {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the current capacity of the array.
 	 */
-	Capacity => Integer
+	Capacity {
+		get => Integer
+		set => void
+	}
 }
 
 class BoundFunc extends Func {
@@ -2715,7 +3176,7 @@ class Buffer extends Object {
 	 * In the case of direct writing without first reading the buffer, it should usually be omitted, because its time overhead is proportional to the number of bytes.
 	 * If omitted, the buffered memory is not initialized; the value of each byte is arbitrary.
 	 */
-	__New([ByteCount, FillByte])
+	__New([ByteCount, FillByte]) => void
 
 	/**
 	 * Retrieve the current memory address of the buffer.
@@ -2725,7 +3186,10 @@ class Buffer extends Object {
 	/**
 	 * Retrieve or set the size of the buffer, in bytes.
 	 */
-	Size => Integer
+	Size {
+		get => Integer
+		set => void
+	}
 }
 
 class Class extends Object {
@@ -2740,14 +3204,14 @@ class Class extends Object {
 	/**
 	 * Retrieve or set the object on which all instances of the class are based.
 	 */
-	Prototype => Prototype
+	Prototype: Prototype
 }
 
 class ClipboardAll extends Buffer {
 	/**
 	 * Create an object (such as pictures and formats) that contains all the content on the clipboard.
 	 */
-	__New([Data, Size])
+	__New([Data, Size]) => void
 }
 
 class Closure extends Func {
@@ -2791,6 +3255,8 @@ class ComValue extends Any {
 	 * @param Flags Flags that affect the behavior of the wrapper object; for details, see ComObjFlags.
 	 */
 	static Call(VarType, Value [, Flags]) => ComValue | ComObject | ComObjArray
+
+	Ptr?: Integer
 }
 
 class ComValueRef extends ComValue {
@@ -2807,49 +3273,57 @@ class Error extends Object {
 	/**
 	 * An error message.
 	 */
-	Message => String
+	Message: String
 
 	/**
 	 * What threw the exception. This is usually the name of a function, but is blank for exceptions thrown due to an error in an expression (such as using a math operator on a non-numeric value).
 	 */
-	What => String
+	What: String
 
 	/**
 	 * A string value relating to the error, if available. If this value can be converted to a non-empty string, the standard error dialog displays a line with "Specifically:" followed by this string.
 	 */
-	Extra => String
+	Extra: String
 
 	/**
 	 * The full path of the script file which contains the line at which the error occurred, or at which the Error object was constructed.
 	 */
-	File => String
+	File: String
 
 	/**
 	 * The line number at which the error occurred, or at which the Error object was constructed.
 	 */
-	Line => Integer
+	Line: Integer
 
 	/**
 	 * A string representing the call stack at the time the Error object was constructed.
 	 */
-	Stack => String
+	Stack: String
 
 	/**
 	 * Create an Error object.
 	 */
-	__New([Message, What, Extra])
+	__New([Message, What, Extra]) => void
 }
 
 class File extends Object {
+	static Call() => throw
+
 	/**
 	 * Retrieve or set the position of the file pointer.
 	 */
-	Pos => Integer
+	Pos {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the size of the file.
 	 */
-	Length => Integer
+	Length {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Retrieve a non-zero value if the file pointer has reached the end of the file.
@@ -2859,7 +3333,10 @@ class File extends Object {
 	/**
 	 * Retrieve or set the text encoding used by this file object.
 	 */
-	Encoding => String
+	Encoding {
+		get => String
+		set => void
+	}
 
 	/**
 	 * Retrieve system file handles intended for use with DllCall.
@@ -3005,6 +3482,8 @@ class Float extends Number {
 }
 
 class Func extends Object {
+	static Call() => throw
+
 	/**
 	 * Returns the name of the function.
 	 */
@@ -3060,12 +3539,15 @@ class Gui extends Object {
 	/**
 	 * Retrieve or set the background color of the window.
 	 */
-	BackColor => String
+	BackColor {
+		get => String
+		set => void
+	}
 
 	/**
 	 * Retrieve the GuiControl object of the focus control of the GUI.
 	 */
-	FocusedCtrl => String
+	FocusedCtrl => Gui.Control
 
 	/**
 	 * Retrieve the window handle (HWND) of the GUI window.
@@ -3075,27 +3557,42 @@ class Gui extends Object {
 	/**
 	 * Retrieve or set the size of the horizontal margin between the two sides and the subsequently created control.
 	 */
-	MarginX => Integer
+	MarginX {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the size of the vertical margin between the two sides and the subsequently created control.
 	 */
-	MarginY => Integer
+	MarginY {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the menu bar of the window.
 	 */
-	MenuBar => Menubar
+	MenuBar {
+		get => MenuBar
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the custom name of the GUI window.
 	 */
-	Name => String
+	Name {
+		get => String
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the title of the GUI.
 	 */
-	Title => String
+	Title {
+		get => String
+		set => void
+	}
 
 	/**
 	 * Create a new Gui object.
@@ -3106,16 +3603,17 @@ class Gui extends Object {
 	 * @param Title The window title. If omitted, it defaults to the current value of A_ScriptName.
 	 * @param EventObj OnEvent, OnNotify and OnCommand can be used to register methods of EventObj to be called when an event is raised
 	 */
-	__New([Options, Title := A_ScriptName, EventObj])
+	__New([Options, Title := A_ScriptName, EventObj]) => void
 
 	/**
 	 * Create controls such as text, buttons or checkboxes, and return a GuiControl object.
+	 * @param {'ActiveX'|'Button'|'Checkbox'|'ComboBox'|'Custom'|'DateTime'|'DropDownList'|'Edit'|'GroupBox'|'Hotkey'|'Link'|'ListBox'|'ListView'|'MonthCal'|'Picture'|'Progress'|'Radio'|'Slider'|'StatusBar'|'Tab'|'Tab2'|'Tab3'|'Text'|'TreeView'|'UpDown'} ControlType
 	 * @param Options V:    Sets the control's Name.
 	 *   Pos:  xn yn wn hn rn Right Left Center Section
 	 *         VScroll HScroll -Tabstop -Wrap
 	 *         BackgroundColor Border Theme Disabled Hidden
 	 */
-	Add(ControlType [, Options, Text]) => Gui.Control
+	Add(ControlType [, Options, Text]) => Gui.ActiveX | Gui.Button | Gui.CheckBox | Gui.ComboBox | Gui.Custom | Gui.DateTime | Gui.DDL | Gui.Edit | Gui.GroupBox | Gui.Hotkey | Gui.Link | Gui.List | Gui.ListBox | Gui.ListView | Gui.MonthCal | Gui.Pic | Gui.Progress | Gui.Radio | Gui.Slider | Gui.StatusBar | Gui.Tab | Gui.Text | Gui.TreeView | Gui.UpDown
 
 	/**
 	 * Create a text control that the user cannot edit. Often used to label other controls.
@@ -3329,6 +3827,7 @@ class Gui extends Object {
 
 	/**
 	 * Registers a function or method to be called when the given event is raised by a GUI window.
+	 * @param {'Close'|'ContextMenu'|'DropFiles'|'Escape'|'Size'} EventName
 	 * @param Callback The function, method or object to call when the event is raised.
 	 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
 	 * Otherwise, this parameter must be a function object.
@@ -3409,6 +3908,8 @@ class Gui extends Object {
 	}
 
 	class Control extends Object {
+		static Call() => throw
+
 		/**
 		 * Retrieve the ClassNN of the control.
 		 */
@@ -3417,7 +3918,10 @@ class Gui extends Object {
 		/**
 		 * Retrieve the current interactive state of the control, or enable or disable (gray) the control.
 		 */
-		Enabled => Integer
+		Enabled {
+			get => Integer
+			set => void
+		}
 
 		/**
 		 * Retrieve the current focus state of the control.
@@ -3437,12 +3941,18 @@ class Gui extends Object {
 		/**
 		 * Retrieve or set the explicit name of the control.
 		 */
-		Name => String
+		Name {
+			get => String
+			set => void
+		}
 
 		/**
 		 * Retrieve or set the text/title of the control.
 		 */
-		Text => String
+		Text {
+			get => String
+			set => void
+		}
 
 		/**
 		 * Retrieve the type of control.
@@ -3452,12 +3962,18 @@ class Gui extends Object {
 		/**
 		 * Retrieve new content or set it as a valuable control.
 		 */
-		Value => Float | Integer | String
+		Value {
+			get => Float | Integer | String
+			set => void
+		}
 
 		/**
 		 * Retrieve the current visible state of the control, or show or hide it.
 		 */
-		Visible => Integer
+		Visible {
+			get => Integer
+			set => void
+		}
 
 		/**
 		 * Set the keyboard focus to the control.
@@ -3485,6 +4001,7 @@ class Gui extends Object {
 
 		/**
 		 * Registers a function or method to be called when the given event is raised.
+		 * @param {'Change'|'Click'|'DoubleClick'|'ColClick'|'ContextMenu'|'Focus'|'LoseFocus'|'ItemCheck'|'ItemEdit'|'ItemExpand'|'ItemFocus'|'ItemSelect'} EventName
 		 * @param Callback The function, method or object to call when the event is raised.
 		 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
 		 * Otherwise, this parameter must be a function object.
@@ -3795,62 +4312,98 @@ class InputHook extends Object {
 	/**
 	 * Retrieve or set the function object called when Input is terminated.
 	 */
-	OnEnd => Func
+	OnEnd {
+		get => Func | void
+		set => void
+	}
 
 	/**
 	 * Retrieve or set a function object, which will be called after characters are added to the input buffer.
 	 */
-	OnChar => Func
+	OnChar {
+		get => Func | void
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the function object, which will be called when the button that enables notification is pressed.
 	 */
-	OnKeyDown => Func
+	OnKeyDown {
+		get => Func | void
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the function object, which will be called when the enable notification button is released.
 	 */
-	OnKeyUp => Func
+	OnKeyUp {
+		get => Func | void
+		set => void
+	}
 
 	/**
 	 * Control whether Backspace deletes the most recently pressed character from the end of the input buffer.
 	 */
-	BackspaceIsUndo => Integer
+	BackspaceIsUndo {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Control whether MatchList is case sensitive.
 	 */
-	CaseSensitive => Integer
+	CaseSensitive {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Control whether each match can be a substring of the input text.
 	 */
-	FindAnywhere => Integer
+	FindAnywhere {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the minimum sending level of the input to be collected.
 	 */
-	MinSendLevel => Integer
+	MinSendLevel {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Control whether the OnKeyDown and OnKeyUp callbacks are called when a non-text key is pressed.
 	 */
-	NotifyNonText => Integer
+	NotifyNonText {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the timeout value (in seconds).
 	 */
-	Timeout => Integer
+	Timeout {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Control whether keys or key combinations that do not produce text are visible (not blocked).
 	 */
-	VisibleNonText => Integer
+	VisibleNonText {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Control whether the key or key combination that generates the text is visible (not blocked).
 	 */
-	VisibleText => Integer
+	VisibleText {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Create an object that can be used to collect or intercept keyboard input.
@@ -3890,7 +4443,7 @@ class InputHook extends Object {
 	 * 
 	 * Because the items in MatchList are not treated as separate parameters, the list can be completely contained in a variable. In fact, if the length of this list exceeds 16383, then all or part of the list must be contained in the variable because of this length Is the maximum length of any script line. For example, MatchList may consist of List1 "," List2 "," List3 - each of these variables contains a sublist of matching phrases.
 	 */
-	__New(Options := '', EndKeys := '', MatchList := '')
+	__New(Options?, EndKeys?, MatchList?) => void
 
 	/**
 	 * Set the options of the key or key list.
@@ -3942,7 +4495,7 @@ class Map extends Object {
 	/**
 	 * The Map object associates or maps a set of values called keys to another set of values.
 	 */
-	__New([Key1, Value1, *])
+	__New([Key1, Value1, *]) => void
 
 	/**
 	 * Enumerates key-value pairs.
@@ -3952,7 +4505,10 @@ class Map extends Object {
 	/**
 	 * Retrieves or sets the value of a key-value pair.
 	 */
-	__Item[Index] => Any
+	__Item[Index] {
+		get => Any
+		set => void
+	}
 
 	/**
 	 * Remove all key-value pairs from the map.
@@ -3962,7 +4518,7 @@ class Map extends Object {
 	/**
 	 * Return a shallow copy of the object.
 	 */
-	Clone() => Map
+	Clone() => this
 
 	/**
 	 * Remove key-value pairs from the map.
@@ -3992,17 +4548,23 @@ class Map extends Object {
 	/**
 	 * Retrieve or set the current capacity of the mapping.
 	 */
-	Capacity => Integer
+	Capacity {
+		get => Integer
+		set => void
+	}
 
 	/**
 	 * Retrieve or set the case sensitivity setting of the mapping.
 	 */
-	CaseSense => String
+	CaseSense {
+		get => String
+		set => void
+	}
 
 	/**
 	 * Define the default value returned when the key is not found.
 	 */
-	Default => Any
+	Default: Any
 }
 
 class MemberError extends UnsetError {
@@ -4020,7 +4582,10 @@ class Menu extends Object {
 	/**
 	 * Retrieve or set the default menu item.
 	 */
-	Default => String
+	Default {
+		get => String
+		set => void
+	}
 
 	/**
 	 * Retrieve the Win32 handle of the menu.
@@ -4030,7 +4595,7 @@ class Menu extends Object {
 	/**
 	 * Create a new Menu or MenuBar object.
 	 */
-	__New()
+	__New() => void
 
 	/**
 	 * Add or modify menu items.
@@ -4128,12 +4693,12 @@ class Object extends Any {
 	/**
 	 * Return a shallow copy of the object.
 	 */
-	Clone() => Object
+	Clone() => this
 
 	/**
 	 * Define a new own attribute.
 	 */
-	DefineProp(Name, Desc) => void
+	DefineProp(Name, Desc) => this
 
 	/**
 	 * Delete the attributes owned by the object.
@@ -4157,7 +4722,7 @@ class Object extends Any {
 }
 
 class OSError extends Error {
-	__New(ErrorCode := A_LastError, What?, Extra?)
+	__New(ErrorCode := A_LastError, What?, Extra?) => void
 }
 
 class Primitive extends Any {
@@ -4167,6 +4732,8 @@ class PropertyError extends MemberError {
 }
 
 class RegExMatchInfo extends Object {
+	static Call() => throw
+
 	/**
 	 * Returns the overall match or a captured subpattern.
 	 * @param {Integer|String} N
@@ -4244,19 +4811,18 @@ class VarRef extends Any {
 
 class ZeroDivisionError extends Error {
 }
-;#endregion
+;@endregion
 
-;#region typedef
-
+;@region typedef
 class $InputBoxResult {
 	/**
 	 * The text entered by the user.
 	 */
-	Value => String
+	Value: String
 
 	/**
 	 * One of the following words indicating how the input box was closed: "OK", "Cancel", "Timeout".
 	 */
-	Result => String
+	Result: String
 }
-;#endregion
+;@endregion

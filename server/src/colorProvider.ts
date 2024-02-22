@@ -16,5 +16,5 @@ export async function colorPresentation(params: ColorPresentationParams, token: 
 
 export async function colorProvider(params: DocumentColorParams, token: CancellationToken): Promise<Maybe<ColorInformation[]>> {
 	if (!token.isCancellationRequested)
-		return lexers[params.textDocument.uri.toLowerCase()]?.colors();
+		return lexers[params.textDocument.uri.toLowerCase()]?.getColors();
 }

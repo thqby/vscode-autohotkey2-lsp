@@ -1,14 +1,5 @@
 {
-	"snippet": [
-		{
-			"body": ";#region",
-			"prefix": "region begin"
-		},
-		{
-			"body": ";#endregion",
-			"prefix": "region end"
-		}
-	],
+	"snippet": [],
 	"directives": [
 		{
 			"body": ";@Debug-Breakpoint${1:(CONDITION)[HITCONDITION] => MESSAGE}",
@@ -21,6 +12,14 @@
 		{
 			"body": ";@Debug-Output${1::GROUPING(CONDITION)[HITCONDITION] => MESSAGE}",
 			"prefix": "@Debug-Output"
+		},
+		{
+			"body": ";@region",
+			"prefix": "@region"
+		},
+		{
+			"body": ";@endregion",
+			"prefix": "@endregion"
 		}
 	],
 	"texts": [

@@ -1,46 +1,46 @@
-import { CancellationToken, DocumentSymbol, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
-import { Lexer, FuncScope, FuncNode, searchNode, Variable, ClassNode } from './Lexer';
-import { lexers, ahkvars, ahkuris, Context } from './common';
+import { CancellationToken, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
+import {
+	AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, Variable,
+	ahkuris, ahkvars, find_symbol, find_symbols, lexers
+} from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
 	let result: any = [], doc = lexers[params.textDocument.uri.toLowerCase()];
 	if (!doc || token.isCancellationRequested) return;
-	let refs = getAllReferences(doc, doc.buildContext(params.position));
+	let refs = getAllReferences(doc, doc.getContext(params.position));
 	for (const uri in refs)
 		result.push(...refs[uri].map(range => ({ uri, range })));
 	return result;
 }
 
 export function getAllReferences(doc: Lexer, context: Context, allow_builtin = true): { [uri: string]: Range[] } | null | undefined {
-	if (!context.text) return undefined;
-	let name = context.text.toUpperCase(), references: { [uri: string]: Range[] } = {};
-	let nodes = searchNode(doc, name, context.range.end, context.kind);
-	if (!nodes || nodes.length > 1)
-		return undefined;
-	let { node, uri, scope, ref } = nodes[0];
-	if (!uri || !node.selectionRange.end.character)
-		return undefined;
+	if (context.kind === SymbolKind.Null) return;
+	let nodes = find_symbols(doc, context);
+	if (nodes?.length !== 1)
+		return;
+	let name = context.text.toUpperCase();
+	let references: { [uri: string]: Range[] } = {};
+	let { node, uri, scope, is_this, is_global } = nodes[0];
+	if (!uri || !node.selectionRange.end.character || is_this === false)
+		return;
 
-	if (ref !== undefined) {	// this or super
-		let cls = scope as ClassNode, range: Range[] = [];
-		let decl = ref ? cls.declaration : cls.staticdeclaration;
+	if (!allow_builtin && (node === ahkvars[name] || uri === ahkuris.winapi))
+		return null;
+
+	if (is_this) {	// this
+		let cls = node as ClassNode, range: Range[] = [];
+		let decl = cls.property;
 		for (let it of Object.values(decl ?? {}))
 			it.children?.length && findAllVar(it as FuncNode, name, range, false, false);
 		if (range.length)
 			return { [lexers[uri].document.uri]: range };
-		return undefined;
+		return;
 	}
 
-	if (node === lexers[uri].declaration[name])
-		scope = undefined;
-	else if (!scope)
-		scope = doc.searchScopedNode(node.selectionRange.start);
-	if (!allow_builtin && (node === ahkvars[name] || uri === ahkuris.winapi))
-		return null;
 	switch (node.kind) {
 		case SymbolKind.Field:
 			if (scope) {
-				let lbs = (<FuncNode>scope).labels;
+				let lbs = (scope as FuncNode).labels;
 				if (lbs && lbs[name])
 					references[lexers[uri].document.uri] = lbs[name].map(it => it.selectionRange);
 			} else {
@@ -58,13 +58,10 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 		case SymbolKind.Variable:
 		case SymbolKind.TypeParameter:
 		case SymbolKind.Class:
-			if (node.kind !== SymbolKind.Class || !(<any>node).full.includes('.')) {
-				if (scope) {
-					if (scope.kind === SymbolKind.Function || scope.kind === SymbolKind.Method || scope.kind === SymbolKind.Event) {
-						if ((<FuncNode>scope).global?.[name])
-							scope = undefined;
-					}
-				}
+			if (node.kind !== SymbolKind.Class || !(node as FuncNode).full.includes('.')) {
+				if (is_global === true)
+					scope = undefined;
+				else scope = nodes[0].parent;
 				let all_uris: any = { [doc.uri]: scope };
 				if (uri !== doc.uri)
 					all_uris[uri] = undefined;
@@ -79,7 +76,7 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 				break;
 			}
 		default:
-			if (node.kind === SymbolKind.Class || (<FuncNode>node).static) {
+			if (node.kind === SymbolKind.Class || node.static) {
 				if (node.kind === SymbolKind.Class)
 					name = (node as ClassNode).full.toUpperCase();
 				else {
@@ -96,10 +93,10 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 					refs[lexers[uri].document.uri] = findAllFromDoc(lexers[uri], c[0], SymbolKind.Variable);
 				while (i < l) {
 					let name = c.slice(0, ++i).join('.');
-					let nodes = searchNode(doc, name, undefined, SymbolKind.Variable);
-					if (nodes?.[0].node.kind === SymbolKind.Class) {
-						for (let it of Object.values((nodes[0].node as ClassNode).staticdeclaration ?? {}))
-							it.children?.length && findAllVar(it as FuncNode, 'THIS', refs[lexers[nodes[0].uri].document.uri] ??= [], false, false);
+					let r = find_symbol(doc, name);
+					if (r?.node.kind === SymbolKind.Class) {
+						for (let it of Object.values((r.node as ClassNode).property ?? {}))
+							it.children?.length && findAllVar(it as FuncNode, 'THIS', refs[lexers[r.uri].document.uri] ??= [], false, false);
 					}
 					// TODO: search subclass's `super`
 					for (const uri in refs) {
@@ -109,7 +106,7 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 						for (let rg of rgs) {
 							let tk = tokens[document.offsetAt(rg.start)];
 							if (!tk) continue;
-							for (let j = i; j < l; j++){
+							for (let j = i; j < l; j++) {
 								if ((tk = tokens[tk.next_token_offset])?.type !== 'TK_DOT')
 									continue next_rg;
 								if ((tk = tokens[tk.next_token_offset])?.type !== 'TK_WORD' || tk.content.toUpperCase() !== c[j])
@@ -136,45 +133,38 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 					arr.unshift(node.selectionRange);
 				break;
 			}
-			return undefined;
+			return;
 	}
 	if (Object.keys(references).length)
 		return references;
-	return undefined
+	return;
 }
 
-function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: DocumentSymbol) {
+function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: AhkSymbol) {
 	let ranges: Range[] = [];
 	if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
 
 	} else {
 		let node = (scope ?? doc) as FuncNode, gg = !scope, assume: boolean | undefined = gg;
-		let not_static = !((<any>node)?.local?.[name]?.static);
+		let not_static = !(node?.local?.[name]?.static);
 		// symbolProvider({ textDocument: { uri: doc.uri } });
 		if (not_static && scope && node.declaration?.[name]?.static === null)
 			not_static = false;
-		if (node.kind === SymbolKind.Property && node.parent?.kind === SymbolKind.Class) {
-			node.children?.forEach(it => {
-				if (it.kind === SymbolKind.Function)
-					it.children?.forEach(it => {
-						if (it.name.toUpperCase() === name)
-							ranges.push(it.selectionRange);
-						if (it.children)
-							findAllVar(it as FuncNode, name, ranges, gg, gg, not_static);
-					});
-			});
-		} else {
-			if (!assume) {
-				let local = (<FuncNode>node).local, dec = (<FuncNode>node).declaration;
-				if (!(local?.[name] || dec?.[name]))
-					assume = undefined;
-			} else assume = false;
-			node.children?.forEach(it => {
-				if (it.name.toUpperCase() === name)
-					ranges.push(it.selectionRange);
-				if (it.children?.length)
-					findAllVar(it as FuncNode, name, ranges, gg, gg || it.kind === SymbolKind.Function ? assume : undefined, not_static);
-			});
+		if (!assume) {
+			let local = node.local, dec = node.declaration;
+			if (!(local?.[name] || dec?.[name]))
+				assume = undefined;
+		} else assume = false;
+		node.children?.forEach(it => {
+			if (it.name.toUpperCase() === name)
+				ranges.push(it.selectionRange);
+			if (it.children?.length)
+				findAllVar(it as FuncNode, name, ranges, gg, gg || it.kind === SymbolKind.Function ? assume : undefined, not_static);
+		});
+		if (node.kind === SymbolKind.Property) {
+			let prop = node as Property;
+			for (let it of [prop.get, prop.set, prop.call])
+				it?.children && ranges.push(...findAllFromDoc(doc, name, kind, it));
 		}
 	}
 	return ranges;
@@ -202,7 +192,7 @@ function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boole
 			assume = true;
 
 	if (not_static)
-		not_static = !((<any>node)?.local?.[name]?.static);
+		not_static = !(node?.local?.[name]?.static);
 	if (assume === global) {
 		node.children?.forEach(it => {
 			if (it.name.toUpperCase() === name && (it.kind !== SymbolKind.Property && it.kind !== SymbolKind.Method && it.kind !== SymbolKind.Class))

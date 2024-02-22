@@ -1,5 +1,34 @@
 ; AutoHotkey_H https://github.com/thqby/AutoHotkey_H
 
+;@region vars
+; The dir of current exe.
+A_AhkDir: String
+
+; the dir of current module (dll or exe)
+A_DllDir: String
+
+; The path of current module (dll or exe).
+A_DllPath: String
+
+A_GlobalStruct: Integer
+
+A_IsDll: Integer
+
+A_MainThreadID: Integer
+
+A_MemoryModule: Integer
+
+A_ModuleHandle: Integer
+
+A_ScriptStruct: Integer
+
+A_ThreadID: Integer
+
+/** @deprecated {@since v2.1-alpha.3} */
+A_ZipCompressionLevel: Integer
+;@endregion
+
+;@region functions
 /**
  * Convert a local variable to an alias to represent another variable, such as in another thread.
  */
@@ -178,8 +207,9 @@ ZipOptions(ZipHandle, Options) => void
  * @param CompressionLevel [@since v2.1-alpha.7]
  */
 ZipRawMemory(AddOrBuf [, Size], Password?, CompressionLevel := 5) => Buffer
+;@endregion
 
-; dll/exe export functions
+;@region dll/exe export functions
 ; https://hotkeyit.github.io/v2/docs/commands/NewThread.htm
 NewThread(Script, CmdLine := '', Title := 'AutoHotkey') => Integer
 addScript(Script, WaitToExecute := 0, ThreadID := 0) => Integer
@@ -196,7 +226,9 @@ ahkPostFunction(FuncName, Param1?, Param2?, Param3?, Param4?, Param5?, Param6?, 
 ahkReady(ThreadID := 0) => Integer
 MinHookDisable(pHook) => Integer
 MinHookEnable(Target, Detour, &Original?) => Integer
+;@endregion
 
+;@region classes
 /** @extends {ahk2/Array} */
 class Array {
 	/**
@@ -242,7 +274,7 @@ class Array {
 	 * It is expected to return a negative value if the first argument is less than the second argument,
 	 * zero if they're equal, and a positive value otherwise. If omitted, the elements are sorted in random order.
 	 */
-	Sort(CompareFn?) => $this
+	Sort(CompareFn?) => this
 }
 
 class Decimal extends Number {
@@ -264,6 +296,7 @@ class Decimal extends Number {
 	; Number(decimal_obj) => Integer | Float
 }
 
+/** @extends {Object.Prototype} */
 class JSON {
 	static null => ComValue
 	static true => ComValue
@@ -274,13 +307,15 @@ class JSON {
 	 * @param KeepType If true, convert true/false/null to JSON.true/JSON.false/JSON.null, otherwise 1/0/''
 	 * @param AsMap If true, convert `{}` to Map, otherwise Object
 	 */
-	static parse(Text, KeepType := true, AsMap := true) => Map | Array
+	static parse(Text, KeepType := true, AsMap := true) => Array | Map | Object
 
 	/**
-	 * Objects include maps, arrays, objects and Com objects.
-	 * @param Space The number of spaces or string used for indentation.
+	 * the object include map,array,object and custom objects with `__enum` meta function
+	 * @param {Integer|String|Object} Options The number of Spaces or string used for indentation
+	 * @param Options.Indent The number of spaces or string used for indentation
+	 * @param Options.Depth Expands the specified number of levels
 	 */
-	static stringify(Obj, Space := 0) => String
+	static stringify(Obj, Options := 0) => String
 }
 
 /**
@@ -341,9 +376,9 @@ class Struct {
 class Worker {
 	/**
 	 * Enumerates ahk threads.
-	 * @return {([&threadid,]&workerobj)=>void} An enumerator which will return items contained threadid and workerobj.
+	 * @return An enumerator which will return items contained threadid and workerobj.
 	 */
-	static __Enum(NumberOfVars?) => Enumerator
+	static __Enum(NumberOfVars?) => ([&threadid,] &workerobj) => void
 
 	/**
 	 * Creates a real AutoHotkey thread or associates an existing AutoHotkey thread in the current process and returns an object that communicates with it.
@@ -351,7 +386,7 @@ class Worker {
 	 * When ScriptOrThreadID is a threadid of created thread, it is associated with it;
 	 * When ScriptOrThreadID = 0, associate the main thread.
 	 */
-	__New(ScriptOrThreadID, Cmd := '', Title := 'AutoHotkey') => Worker
+	__New(ScriptOrThreadID, Cmd := '', Title := 'AutoHotkey') => void
 
 	/**
 	 * Gets/sets the thread global variable. Objects of other threads will be converted to thread-safe Com object access and will not be accessible after the thread exits.
@@ -403,14 +438,15 @@ class Worker {
 	class Promise {
 		/**
 		 * Execute the callback after the asynchronous call completes.
-		 * @param {(result)=>void} Callback
+		 * @param {(result) => void} Callback
 		 */
 		Then(Callback) => Worker.Promise
 
 		/**
 		 * An asynchronous call throws an exception and executes the callback.
-		 * @param {(exception)=>void} Callback
+		 * @param {(exception) => void} Callback
 		 */
 		Catch(Callback) => Worker.Promise
 	}
 }
+;@endregion

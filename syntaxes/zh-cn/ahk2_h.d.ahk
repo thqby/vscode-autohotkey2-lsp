@@ -1,5 +1,34 @@
 ; AutoHotkey_H https://github.com/thqby/AutoHotkey_H
 
+;@region vars
+; 当前exe文件的目录.
+A_AhkDir: String
+
+; 当前模块(dll或exe)的目录.
+A_DllDir: String
+
+; 当前模块(dll或exe)的路径.
+A_DllPath: String
+
+A_GlobalStruct: Integer
+
+A_IsDll: Integer
+
+A_MainThreadID: Integer
+
+A_MemoryModule: Integer
+
+A_ModuleHandle: Integer
+
+A_ScriptStruct: Integer
+
+A_ThreadID: Integer
+
+/** @deprecated {@since v2.1-alpha.3} */
+A_ZipCompressionLevel: Integer
+;@endregion
+
+;@region functions
 /**
  * 将局部变量转换为别名以表示另一个变量, 例如在另一个线程中.
  */
@@ -178,8 +207,9 @@ ZipOptions(ZipHandle, Options) => void
  * @param CompressionLevel [@since v2.1-alpha.7]
  */
 ZipRawMemory(AddOrBuf [, Size], Password?, CompressionLevel := 5) => Buffer
+;@endregion
 
-; dll/exe export functions
+;@region dll/exe export functions
 ; https://hotkeyit.github.io/v2/docs/commands/NewThread.htm
 NewThread(Script, CmdLine := '', Title := 'AutoHotkey') => Integer
 addScript(Script, WaitToExecute := 0, ThreadID := 0) => Integer
@@ -196,7 +226,9 @@ ahkPostFunction(FuncName, Param1?, Param2?, Param3?, Param4?, Param5?, Param6?, 
 ahkReady(ThreadID := 0) => Integer
 MinHookDisable(pHook) => Integer
 MinHookEnable(Target, Detour, &Original?) => Integer
+;@endregion
 
+;@region classes
 /** @extends {ahk2/Array} */
 class Array {
 	/**
@@ -237,7 +269,7 @@ class Array {
 	 * @param {(a, b) => Number} CompareFn 用于确定元素顺序的函数. 如果第一个参数小于第二个参数, 则返回负值;
 	 * 如果相等则返回零, 否则返回正值. 如果省略, 则元素按随机顺序排序.
 	 */
-	Sort(CompareFn?) => $this
+	Sort(CompareFn?) => this
 }
 
 class Decimal extends Number {
@@ -259,6 +291,7 @@ class Decimal extends Number {
 	; Number(decimal_obj) => Integer | Float
 }
 
+/** @extends {Object.Prototype} */
 class JSON {
 	static null => ComValue
 	static true => ComValue
@@ -269,13 +302,15 @@ class JSON {
 	 * @param KeepType 如果为true, 则将true/false/null转换为JSON.true/JSON.false/JSON.null，否则为1/0/''
 	 * @param AsMap 如果为true, 转换`{}`为Map, 否则为Object
 	 */
-	static parse(Text, KeepType := true, AsMap := true) => Map | Array
+	static parse(Text, KeepType := true, AsMap := true) => Array | Map | Object
 
 	/**
-	 * 对象包括映射、数组、对象和Com对象.
-	 * @param Space 用于缩进的空格的数量或字符串.
+	 * 对象包括map,array,object和带有' __enum '元函数的自定义对象
+	 * @param {Integer|String|Object} Options 用于缩进的空格的数量或字符串.
+	 * @param Options.Indent 用于缩进的空格的数量或字符串.
+	 * @param Options.Depth 展开指定深度
 	 */
-	static stringify(Obj, Space := 0) => String
+	static stringify(Obj, Options := 0) => String
 }
 
 /**
@@ -336,9 +371,9 @@ class Struct {
 class Worker {
 	/**
 	 * 枚举 ahk 线程.
-	 * @return {([&threadid,] &workerobj)=>void} 一个将返回threadid和workerobj的枚举器.
+	 * @return 一个将返回threadid和workerobj的枚举器.
 	 */
-	static __Enum(NumberOfVars?) => Enumerator
+	static __Enum(NumberOfVars?) => ([&threadid,] &workerobj) => void
 
 	/**
 	 * 在当前进程中创建一个真AutoHotkey线程或关联一个已有AutoHotkey线程, 并返回一个与之交流的对象.
@@ -346,7 +381,7 @@ class Worker {
 	 * 当ScriptOrThreadID为已创建的线程ID时, 则与之关联;
 	 * 当ScriptOrThreadID = 0时, 关联主线程.
 	 */
-	__New(ScriptOrThreadID, Cmd := '', Title := 'AutoHotkey') => Worker
+	__New(ScriptOrThreadID, Cmd := '', Title := 'AutoHotkey') => void
 
 	/**
 	 * 获取/设置线程全局变量. 其他线程的对象将转换为线程Com对象安全访问, 线程退出后将无法访问.
@@ -398,14 +433,15 @@ class Worker {
 	class Promise {
 		/**
 		 * 异步调用完成后执行.
-		 * @param {(result)=>void} Callback
+		 * @param {(result) => void} Callback
 		 */
 		Then(Callback) => Worker.Promise
 
 		/**
 		 * 异步调用抛出异常后执行.
-		 * @param {(exception)=>void} Callback
+		 * @param {(exception) => void} Callback
 		 */
 		Catch(Callback) => Worker.Promise
 	}
 }
+;@endregion
