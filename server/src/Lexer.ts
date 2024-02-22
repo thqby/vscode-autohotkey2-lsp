@@ -4757,7 +4757,7 @@ export class Lexer {
 
 			output_space_before_token = Boolean(opt.space_in_paren && !(last_type === 'TK_START_EXPR' && !opt.space_in_empty_paren));
 			restore_mode();
-			if (just_added_newline()) {
+			if (just_added_newline() && output_lines.length > 1) {
 				if (previous_flags.indentation_level === flags.indentation_level)
 					trim_newlines();
 			}
@@ -5204,7 +5204,7 @@ export class Lexer {
 		function handle_inline_comment() {
 			if (opt.ignore_comment)
 				return token_text = '';
-			if (just_added_newline())
+			if (just_added_newline() && output_lines.length > 1)
 				output_lines.pop();
 			let t;
 			output_lines[output_lines.length - 1].text.push(
