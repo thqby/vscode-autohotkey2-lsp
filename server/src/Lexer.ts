@@ -18,7 +18,7 @@ import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
-	a_vars, ahk_version, ahkprototypes, ahkuris, ahkvars, alpha_3, connection, extsettings,
+	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings,
 	hoverCache, isBrowser, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
@@ -260,7 +260,7 @@ const whitespace = " \t\r\n", punct = '+ - * / % & ++ -- ** // = += -= *= /= //=
 const line_starters = 'try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
 const reserved_words = line_starters.concat(['class', 'in', 'is', 'isset', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not', 'as', 'super']);
 const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', Conditional: 'Conditional', Expression: 'Expression' };
-const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[12])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x3A\x3C-\x7E])$/i;
+const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[12])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
 const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 export const ANY = create_prototype('Any');
@@ -1462,16 +1462,14 @@ export class Lexer {
 								next = false;
 								break;
 							}
-							if (tk.content.match(/\s::$/) ||
-								(m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === ''))
+							if (!is_valid_hotkey(tk.content))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
 							break;
 						}
 						case 'TK_HOT': {
 							if (mode !== 0)
 								_this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
-							else if (!tk.ignore && (tk.content.match(/\s::$/) ||
-								(m = tk.content.match(/\S(\s*)&(\s*)\S+::/)) && (m[1] === '' || m[2] === '')))
+							else if (!tk.ignore && !is_valid_hotkey(tk.content))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
 							let tn = SymbolNode.create(tk.content, SymbolKind.Event,
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2)) as FuncNode;
@@ -2518,7 +2516,7 @@ export class Lexer {
 											vr.def = vr.assigned = true;
 											if (byref)
 												vr.ref = true;
-											else vr.cached_types = ['Number'];
+											else vr.cached_types = [NUMBER];
 										}
 									} else lk.ignore = true;
 								} else if (input.charAt(lk.offset - 1) !== '%') {
@@ -2534,7 +2532,7 @@ export class Lexer {
 									if (byref)
 										vr.def = vr.ref = vr.assigned = true;
 									else if (byref === false && tk.type as string !== 'TK_DOT')
-										vr.def = vr.assigned = true, vr.cached_types = ['Number'];
+										vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
 									if (tk.type as string === 'TK_EQUALS') {
 										if (_cm = comments[vr.selectionRange.start.line])
 											vr.detail = trim_comment(_cm.content);
@@ -2544,7 +2542,7 @@ export class Lexer {
 										vr.range.end = document.positionAt(lk.offset + lk.length);
 										if (equ === ':=' || equ === '??=' && (vr.assigned ??= 1))
 											vr.returns = [b, lk.offset + lk.length];
-										else vr.cached_types = [equ === '.=' ? 'String' : 'Number'];
+										else vr.cached_types = [equ === '.=' ? STRING : NUMBER];
 										vr.assigned ??= true, vr.def = true;
 									} else {
 										next = false;
@@ -5783,6 +5781,15 @@ function create_prototype(name: string, kind = 0, extends_ = '') {
 	return { name, full: name, kind, extends: extends_, range: ZERO_RANGE, selectionRange: ZERO_RANGE } as AhkSymbol;
 }
 
+function is_valid_hotkey(s: string) {
+	let m = s.match(/^((([<>$~*!+#^]*?)(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))|~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f])\s+&\s+~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))(\s+up)?::$/i);
+	if (!m)
+		return false;
+	for (let i = 4; i < 7; i++)
+		if ((m[i] ?? '').length > 1 && !KEYS_RE.test(m[i]))
+			return false;
+	return true;
+}
 
 export function find_include_path(path: string, libdirs: string[], workdir: string = '', check_exists = false) {
 	let m: RegExpMatchArray | null, uri = '', raw = path;

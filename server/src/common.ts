@@ -113,9 +113,10 @@ export let completionItemCache: {
 	directive: { [c: string]: CompletionItem[] };
 	key: CompletionItem[];
 	keyword: CompletionItem[];
-	snippet: CompletionItem[];
-	text: CompletionItem[];
 	option: { [k: string]: CompletionItem[] };
+	snippet: CompletionItem[];
+	static: CompletionItem
+	text: CompletionItem[];
 };
 
 interface LibSymbol extends Array<AhkSymbol> {
@@ -245,7 +246,8 @@ export function initahk2cache() {
 		keyword: [],
 		snippet: [],
 		text: [],
-		option: {}
+		option: {},
+		static: { label: 'static', insertText: 'static', kind: CompletionItemKind.Keyword }
 	};
 }
 
@@ -275,6 +277,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		if (path = getfilepath('.json'))
 			build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
 		if (filename === 'ahk2') {
+			completionItemCache.static = completionItemCache.keyword.find(it => it.label === 'static') ?? completionItemCache.static;
 			build_item_cache(JSON.parse(readFileSync(`${rootdir}/syntaxes/ahk2_common.json`, { encoding: 'utf8' })));
 			if (syntaxes)
 				for (let file of readdirSync(syntaxes)) {

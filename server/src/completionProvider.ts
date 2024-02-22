@@ -480,8 +480,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			let metafns = ['__Init()', '__Call(${1:Name}, ${2:Params})', '__Delete()',
 				'__Enum(${1:NumberOfVars})', '__Get(${1:Key}, ${2:Params})',
 				'__Item[$1]', '__New($1)', '__Set(${1:Key}, ${2:Params}, ${3:Value})'];
+			items.push(...completionItemCache.snippet);
 			if (token.topofline === 1)
-				items.push({ label: 'static', insertText: 'static', kind: CompletionItemKind.Keyword }, {
+				items.push(completionItemCache.static, {
 					label: 'class', insertText: ['class $1', '{\n\t$0\n}'].join(join_c),
 					kind: CompletionItemKind.Snippet, insertTextFormat: InsertTextFormat.Snippet
 				});
