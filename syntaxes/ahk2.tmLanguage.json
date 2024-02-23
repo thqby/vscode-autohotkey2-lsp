@@ -771,7 +771,7 @@
           }
         },
         {
-          "match": "(?<=^\\s*);\\s*@(?:[\\w\\-]+)\\b(\\s+(.*))?",
+          "match": "(?<=^|\\s);\\s*@(?:[\\w\\-]+)\\b(\\s+(.*))?",
           "name": "keyword.control.directive.ahk2",
           "captures": {
             "2": {

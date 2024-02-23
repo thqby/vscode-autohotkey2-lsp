@@ -440,6 +440,9 @@ export function update_settings(configs: AHKLSSettings) {
 			case 'One True Brace Variant': configs.FormatOptions.brace_style = -1; break;
 			default: delete configs.FormatOptions.brace_style; break;
 		}
+	for (let k of ['array_style', 'object_style'] as Array<keyof FormatOptions>)
+		if (typeof configs.FormatOptions?.[k] === 'string')
+			configs.FormatOptions[k] = { collapse: 2, expand: 1, none: 0 }[configs.FormatOptions[k] as string] as any;
 	try {
 		update_comment_tags(configs.CommentTags!);
 	} catch (e: any) {

@@ -204,6 +204,15 @@
 					"scope": "window",
 					"type": "object",
 					"properties": {
+						"array_style": {
+							"type": "string",
+							"enum": [
+								"collapse",
+								"expand",
+								"none"
+							],
+							"default": "none"
+						},
 						"brace_style": {
 							"type": "string",
 							"enum": [
@@ -233,16 +242,22 @@
 							"type": "boolean",
 							"default": false
 						},
-						"keep_array_indentation": {
-							"type": "boolean",
-							"default": true
-						},
 						"keyword_start_with_uppercase": {
-							"type": "boolean"
+							"type": "boolean",
+							"default": false
 						},
 						"max_preserve_newlines": {
 							"type": "number",
 							"default": 2
+						},
+						"object_style": {
+							"type": "string",
+							"enum": [
+								"collapse",
+								"expand",
+								"none"
+							],
+							"default": "none"
 						},
 						"preserve_newlines": {
 							"type": "boolean",

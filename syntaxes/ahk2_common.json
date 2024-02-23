@@ -20,6 +20,16 @@
 		{
 			"body": ";@endregion",
 			"prefix": "@endregion"
+		},
+		{
+			"body": ";@include-winapi",
+			"prefix": "@include-winapi",
+			"description": "In ahk_h, enable winapi function completion"
+		},
+		{
+			"body": ";@lint-${1|disable,enable|} ${2|class-static-member-check|}",
+			"prefix": "@lint",
+			"description": "Enables or disables class static member checking for the current file/class"
 		}
 	],
 	"texts": [
