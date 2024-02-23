@@ -377,17 +377,13 @@ export class Lexer {
 			this.initLibDirs(scriptdir);
 		}
 
-		this.get_token = function (offset?: number, ignorecomment = false): Token {
-			let p = parser_pos, t: Token, b: Token;
-			if (offset !== undefined) {
-				parser_pos = offset, b = lst;
-				do {
-					t = get_next_token();
-				} while (ignorecomment && t.type.endsWith('COMMENT'));
-				parser_pos = p, lst = b;
-			} else do {
-				t = get_next_token();
-			} while (ignorecomment && t.type.endsWith('COMMENT'));
+		this.get_token = function (offset?: number, ignore = false): Token {
+			let p: number, t: Token, b: Token;
+			if (offset !== undefined)
+				p = parser_pos, b = lst, parser_pos = offset;
+			for (; (t = get_next_token()).type.endsWith('COMMENT') && ignore;);
+			if (offset !== undefined)
+				parser_pos = p!, lst = b!;
 			return t;
 		}
 
@@ -4741,7 +4737,7 @@ export class Lexer {
 
 			if (token_text === ']' && flags.mode === MODE.ArrayLiteral) {
 				let style = flags.array_style ?? opt.array_style;
-				if (style === STYLE.collapse)
+				if (style === STYLE.collapse || last_text === '[')
 					trim_newlines();
 				else if (style || input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
@@ -4807,10 +4803,11 @@ export class Lexer {
 			let is_obj = flags.mode === MODE.ObjectLiteral, is_exp = is_obj || (ck.in_expr !== undefined);
 			if (is_obj) {
 				let style = flags.object_style ?? opt.object_style;
-				if (input_wanted_newline && !style || style === STYLE.expand)
+				if (style === STYLE.collapse || last_text === '{')
+					trim_newlines();
+				else if (style || input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
-				else trim_newlines();
-				output_space_before_token = space_in_other;
+				output_space_before_token = space_in_other && last_text !== '{';
 			} else if (opt.brace_style !== undefined || input_wanted_newline)
 				print_newline(true);
 
@@ -5156,14 +5153,6 @@ export class Lexer {
 		}
 
 		function handle_block_comment() {
-			if (opt.ignore_comment)
-				return;
-			let lines = token_text.split('\n');
-			let javadoc = lines[0].match(/^\/\*(@ahk2exe-keep|[^*]|$)/i) ? false : true;
-			let remove: RegExp | string = '', t: RegExpMatchArray | null, j: number;
-			if (!javadoc && (t = lines[lines.length - 1].match(/^(\s)\1*/)) && t[0] !== ' ')
-				remove = new RegExp(`^${t[1]}{1,${t[0].length}}`);
-
 			// block comment starts with a new line
 			print_newline(true);
 			if (flags.mode === MODE.Statement) {
@@ -5173,6 +5162,14 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
+
+			if (opt.ignore_comment)
+				return;
+			let lines = token_text.split('\n');
+			let javadoc = lines[0].match(/^\/\*(@ahk2exe-keep|[^*]|$)/i) ? false : true;
+			let remove: RegExp | string = '', t: RegExpMatchArray | null, j: number;
+			if (!javadoc && (t = lines[lines.length - 1].match(/^(\s)\1*/)) && t[0] !== ' ')
+				remove = new RegExp(`^${t[1]}{1,${t[0].length}}`);
 
 			// first line always indented
 			print_token(lines[0].trimRight());
@@ -5223,9 +5220,6 @@ export class Lexer {
 		}
 
 		function handle_comment() {
-			format_directives(token_text);
-			if (opt.ignore_comment)
-				return;
 			print_newline(true);
 			if (flags.mode === MODE.Statement) {
 				let nk = _this.tokens[ck.previous_token?.next_token_offset!];
@@ -5234,6 +5228,9 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
+			format_directives(token_text);
+			if (opt.ignore_comment)
+				return;
 			token_text.split('\n').forEach(s => {
 				print_newline(true);
 				print_token(s.trim());
@@ -5787,7 +5784,7 @@ export class Lexer {
 }
 
 function create_prototype(name: string, kind = 0, extends_ = '') {
-	return { name, full: name, kind, extends: extends_, range: ZERO_RANGE, selectionRange: ZERO_RANGE } as AhkSymbol;
+	return { name, full: name, kind, extends: extends_, range: ZERO_RANGE, selectionRange: ZERO_RANGE, uri: '' } as AhkSymbol;
 }
 
 function is_valid_hotkey(s: string) {
@@ -6417,12 +6414,21 @@ function decltype_var(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbo
 	return ts;
 }
 
-let comobj_template = { kind: SymbolKind.Interface, range: ZERO_RANGE, selectionRange: ZERO_RANGE };
+const comobj_template = { kind: SymbolKind.Interface, range: ZERO_RANGE, selectionRange: ZERO_RANGE, uri: '' };
+const S2O: { [n: string]: AhkSymbol } = {
+	array: ARRAY,
+	float: FLOAT,
+	integer: INTEGER,
+	number: NUMBER,
+	object: OBJECT,
+	string: STRING,
+	unset: undefined as any,
+};
 export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode): AhkSymbol[] {
 	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined;
 	switch (!sym.cached_types) {
 		case true:
-			let annotations = get_type_annotations(sym, lex), s: string, is_typeof;
+			let annotations = get_type_annotations(sym, lex), s: string, is_typeof, t;
 			if (!annotations) break;
 			types = new Set;
 			for (let tp of annotations) {
@@ -6435,19 +6441,12 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 				else if (/^[-+]?\d+[.eE]/.test(tp))
 					types.add(FLOAT);
 				else if (tp.startsWith('('))
-					types.add(generate_anonymous_fn(tp)!);
+					(t = generate_anonymous_fn(tp)) && types.add(t);
 				else if (tp.endsWith('>')) {
 					/^comobject</i.test(tp) && types.add({ ...comobj_template, name: tp.slice(11, -1) });
-				} else switch (s = `${is_typeof ? 'typeof ' : ''}${tp.toLowerCase()}`) {
-					case 'string': types.add(STRING); break;
-					case 'float': types.add(FLOAT); break;
-					case 'integer': types.add(INTEGER); break;
-					case 'number': types.add(NUMBER); break;
-					case 'object': types.add(OBJECT); break;
-					case 'unset': break;
-					case 'this': case 'typeof this':
-						if (tp !== 'this') s = `${s.slice(0, -4)}This`;
-					default: types.add(s as any); break;
+				} else {
+					s = (s = tp.toLowerCase()) === 'this' && s !== tp ? 'This' : s;
+					types.add(S2O[s = `${is_typeof ? 'typeof ' : ''}${s}`] ?? s);
 				}
 			}
 			if (types.has(ANY))
@@ -6455,7 +6454,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 			sym.cached_types = [...types];
 
 		default:
-			let i = -1, t, is_this;
+			let i = -1, is_this;
 			types = new Set;
 			for (let tp of ct = sym.cached_types!) {
 				if (i++, typeof tp === 'string') {
@@ -6468,15 +6467,19 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 				return [...types];
 	}
 
+	let tps: AhkSymbol[];
 	if (sym.returns) {
-		sym.cached_types = [ANY], types ??= new Set;
+		sym.cached_types = [ANY], tps = [];
 		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
-			for (let n of decltype_expr(lex, lex.find_token(r[i], true), r[i + 1], _this))
-				types.add(n);
-	}
-	if (!types) return [];
-	let tps = [...types];
-	return sym.cached_types = ct ?? tps, tps;
+			tps.push(...decltype_expr(lex, lex.find_token(r[i], true), r[i + 1], _this));
+		if (types) {
+			for (let n of new Set(tps as ClassNode[]))
+				if (n.property && !n.name && !types.has(n))
+					types.add(n), ct!.push(n);
+			tps = [...types], sym.cached_types = ct;
+		} else types = new Set(tps), sym.cached_types = tps = [...types];
+	} else tps = types ? [...types] : [];
+	return tps;
 }
 
 function type_naming(sym: AhkSymbol) {
@@ -6508,7 +6511,7 @@ function type_naming(sym: AhkSymbol) {
 		case SymbolKind.String:
 		case SymbolKind.Number:
 			return (sym.data as string | number ?? sym.name).toString();
-		default: return '';
+		default: return 'Any';
 	}
 }
 

@@ -30,6 +30,11 @@
 			"body": ";@lint-${1|disable,enable|} ${2|class-static-member-check|}",
 			"prefix": "@lint",
 			"description": "Enables or disables class static member checking for the current file/class"
+		},
+		{
+			"body": ";@format ${1|array_style,object_style|}: ${2|collapse,expand,none|}",
+			"prefix": "@format",
+			"description": "Sets the object or array style of the current block for formatting"
 		}
 	],
 	"texts": [

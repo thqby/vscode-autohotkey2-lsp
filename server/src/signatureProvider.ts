@@ -59,15 +59,13 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		}
 		function add_cls() {
 			let n: AhkSymbol | undefined, cls = it as ClassNode;
-			let d = lexers[uri];
-			if (d.d) d = doc;
-			if (!(n = get_class_member(d, cls, prop, iscall)))
+			if (!(n = get_class_member(doc, cls, prop, iscall)))
 				return;
 			if (iscall) {
 				if (n.kind === SymbolKind.Class)
 					n = get_class_constructor(n as ClassNode);
 				else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
-					n = get_class_member(d, cls.prototype!, '__new', true) ?? n;
+					n = get_class_member(doc, cls.prototype!, '__new', true) ?? n;
 				else if (n.kind === SymbolKind.Property || (n as FuncNode).alias)
 					return decltype_returns(n, lexers[n.uri!], cls).forEach(it => add(it, 'call', -1));
 				else if (fn && prop === 'bind') {
@@ -81,12 +79,12 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 					n = fn;
 				}
 			} else if (n.kind === SymbolKind.Class)
-				n = get_class_member(d, n as any, '__item', false);
+				n = get_class_member(doc, n as any, '__item', false);
 			else if (n.kind !== SymbolKind.Property)
 				return;
 			else if (!(n as FuncNode).params) {
-				for (let t of decltype_returns(n, d, cls))
-					(t = get_class_member(d, t as any, '__item', false)!) &&
+				for (let t of decltype_returns(n, lexers[n.uri!], cls))
+					(t = get_class_member(doc, t as any, '__item', false)!) &&
 						nodes.push({ node: t, needthis, uri: t.uri! });
 				return;
 			} 

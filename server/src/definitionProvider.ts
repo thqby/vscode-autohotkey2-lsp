@@ -1,8 +1,8 @@
-import { DefinitionParams, Definition, LocationLink, SymbolKind, Range, CancellationToken } from 'vscode-languageserver';
-import { lexers, restorePath, find_symbols } from './common';
+import { DefinitionParams, LocationLink, SymbolKind, Range, CancellationToken } from 'vscode-languageserver';
+import { AhkSymbol, lexers, restorePath, find_symbols } from './common';
 import { URI } from 'vscode-uri';
 
-export async function defintionProvider(params: DefinitionParams, token: CancellationToken): Promise<Definition | LocationLink[] | undefined> {
+export async function defintionProvider(params: DefinitionParams, token: CancellationToken): Promise<LocationLink[] | undefined> {
 	if (token.isCancellationRequested) return;
 	let uri = params.textDocument.uri.toLowerCase(), locas: LocationLink[] = [];
 	let lex = lexers[uri], context = lex?.getContext(params.position);
@@ -25,8 +25,9 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 	}
 	if (context.kind === SymbolKind.Null)
 		return;
+	let set: AhkSymbol[] = [];
 	find_symbols(lex, context)?.forEach(it => {
-		if (it.node.selectionRange.end.character && (uri = it.node.uri || it.uri))
+		if (!set.includes(it.node) && set.push(it.node) && it.node.selectionRange.end.character && (uri = it.node.uri ?? it.uri))
 			locas.push(LocationLink.create(lexers[uri].document.uri, it.node.range, it.node.selectionRange));
 	});
 	return locas;
