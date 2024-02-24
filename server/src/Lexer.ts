@@ -3549,9 +3549,9 @@ export class Lexer {
 					if (!has_this_param || fn.kind === SymbolKind.Method)
 						fn.children.unshift(...fn.params ?? []);
 					for (let it of fn.params ?? []) {
+						it.def = it.assigned = true, it.kind = SymbolKind.TypeParameter;
 						if (!it.name)
 							continue;
-						it.def = it.assigned = true, it.kind = SymbolKind.TypeParameter;
 						if (it.defaultVal !== undefined || it.arr)
 							lpv = true;
 						else if (lpv)
