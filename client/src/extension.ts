@@ -331,7 +331,7 @@ async function compileScript(textEditor: TextEditor) {
 		window.showErrorMessage(zhcn ? `"${s}"未找到!` : `"${s}" was not found!`);
 		return;
 	}
-	if (textEditor.document.isUntitled) {
+	if (textEditor.document.isUntitled || !textEditor.document.uri.toString().startsWith('file:///')) {
 		window.showErrorMessage(zhcn ? '编译前请先保存脚本' : 'Please save the script before compiling');
 		return;
 	}

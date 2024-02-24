@@ -141,13 +141,14 @@ usage:
 
 - Right-click the popup menu and click "Format document".
 - Press `Shift+Alt+F`.
-- Supports formatting code blocks when typing'}', formatting lines and indenting lines when typing'\ n'. (`editor.formatOnType` needs to be enabled)
+- Supports formatting code blocks when typing '}', formatting lines and indenting lines when typing '\n'. (`editor.formatOnType` needs to be enabled)
+- Supports the use of formatting instructions `;@format array_style: collapse, object_style: expand` to change the object style of different blocks
 
 ![codeFormat](./pic/codeFormat.gif)
 
 ### Custom folding
 
-Fold the part between `;#region tag` and `;#endregion`, `;{` and `;}`
+Fold the part between `;@region tag` and `;@endregion`, `;{` and `;}`
 
 ```ini
 ;#region tag
@@ -223,12 +224,13 @@ node install.js
         },
         "ActionWhenV1IsDetected": "Continue",
         "FormatOptions": {
+          "array_style": "none",           // or "collapse" or "expand"
           "break_chained_methods": false,
           "ignore_comment": false,
           "indent_string": "\t",
-          "keep_array_indentation": true,
           "max_preserve_newlines": 2,
           "brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
+          "object_style": "none",          // or "collapse" or "expand"
           "preserve_newlines": true,
           "space_after_double_colon": true,
           "space_before_conditional": true,

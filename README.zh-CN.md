@@ -139,17 +139,18 @@ class abc {
 - 右键弹出菜单然后点击 格式化文档。
 - 或按 `Shift+Alt+F`。
 - 支持在键入`}`时格式化代码块，在代码行结束处键入`\n`时格式化行并缩进。支持在代码区(非注释、字符串)输入中文标点时替换为英文标点。 (需要开启`editor.format OnType`)
+- 支持使用格式化指令`;@format array_style: collapse, object_style: expand`改变不同块的对象样式
 
 ![codeFormat](./pic/codeFormat.gif)
 
 ### 自定义折叠
 
-折叠`;#region tag`和`;#endregion`之间部分, `;{`和`;}`之间部分
+折叠`;@region tag`和`;@endregion`之间部分, `;{`和`;}`之间部分
 
 ```ini
-;#region tag
+;@region tag
 code
-;#endregion
+;@endregion
 ```
 
 ## 上下文菜单
@@ -220,12 +221,13 @@ node install.js
         },
         "ActionWhenV1IsDetected": "Continue",
         "FormatOptions": {
+          "array_style": "none",           // or "collapse" or "expand"
           "break_chained_methods": false,
           "ignore_comment": false,
           "indent_string": "\t",
-          "keep_array_indentation": true,
           "max_preserve_newlines": 2,
           "brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
+          "object_style": "none",          // or "collapse" or "expand"
           "preserve_newlines": true,
           "space_after_double_colon": true,
           "space_before_conditional": true,

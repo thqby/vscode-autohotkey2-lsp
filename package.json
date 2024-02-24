@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.3.3",
+	"version": "2.3.4",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -441,7 +441,7 @@
 		"menus": {
 			"editor/context": [
 				{
-					"when": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
+					"when": "editorLangId == ahk2 && !isWeb",
 					"command": "ahk2.debug",
 					"group": "navigation@1"
 				},
@@ -451,7 +451,7 @@
 					"group": "navigation@2"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
+					"when": "editorLangId == ahk2 && !isWeb",
 					"command": "ahk2.debug.params",
 					"group": "navigation@2"
 				},
@@ -461,12 +461,12 @@
 					"group": "navigation@0"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection && resourceScheme == file",
+					"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection",
 					"command": "ahk2.run",
 					"group": "navigation@0"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb && resourceScheme == file",
+					"when": "editorLangId == ahk2 && !isWeb",
 					"command": "ahk2.compile",
 					"group": "navigation@2"
 				},

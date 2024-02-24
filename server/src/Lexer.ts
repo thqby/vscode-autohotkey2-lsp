@@ -511,7 +511,7 @@ export class Lexer {
 						for (let i = 1; i < n_newlines; i++)
 							output_lines.push(create_output_line());
 					} else if (!is_conditional && !flags.in_expression) {
-						if ((ck.type.endsWith('COMMENT') || !is_line_continue(flags.mode === MODE.Statement && ck.previous_token || EMPTY_TOKEN, ck)) &&
+						if ((ck.type.endsWith('COMMENT') || !is_line_continue(flags.mode === MODE.Statement ? ck.previous_token ?? EMPTY_TOKEN : {} as Token, ck)) &&
 							!(last_type === 'TK_RESERVED' && ['catch', 'else', 'finally', 'until'].includes(last_text))) {
 							if (opt.max_preserve_newlines && n_newlines > opt.max_preserve_newlines)
 								n_newlines = opt.max_preserve_newlines;
@@ -738,7 +738,7 @@ export class Lexer {
 										this.children.push(Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length)));
 									while ((++j) < l && (lk = tokens[j]).content !== '{')
 										extends_ += lk.content;
-									cl.extends = extends_.toLowerCase();
+									cl.extends = extends_;
 								}
 								if (_cm = comments[cl.selectionRange.start.line])
 									cl.detail = trim_comment(_cm.content), _cm.symbol = cl;
@@ -1599,10 +1599,10 @@ export class Lexer {
 							let tn = DocumentSymbol.create(cl.content, undefined, SymbolKind.Class,
 								ZERO_RANGE, make_range(cl.offset, cl.length)) as ClassNode;
 							cl.symbol = cl.definition = tn, tn.full = classfullname + cl.content;
+							tn.extends = ex, tn.uri = _this.uri;
 							if (_cm = comments[tn.selectionRange.start.line])
 								if (m = (tn.detail = trim_comment(_cm.content)).match(/^\s*@extends\s+(.+)/m))
 									set_extends(tn, m[1]);
-							tn.extends = ex.toLowerCase(), tn.uri = _this.uri;
 							tn.prototype = { ...tn, detail: undefined, property: tn.$property = {} };
 							tn.children = [], tn.cache = [], tn.property = {};
 							tn.type_annotations = [tn.full];
@@ -2948,7 +2948,7 @@ export class Lexer {
 					lk = l, tk = b, result.splice(rl);
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
 					if (must) {
-						parse_errobj(), tk.previous_pair_pos = b.offset, b.next_pair_pos = tk.offset;
+						parse_errobj(), tk.previous_pair_pos = b.offset, b.next_pair_pos = tk.offset, tk.data = b.data;
 						_this.addDiagnostic(diagnostic.objectliteralerr(), e.offset, parser_pos - e.offset);
 						return true;
 					}
@@ -2958,10 +2958,11 @@ export class Lexer {
 				if (tk.type === 'TK_END_BLOCK') {
 					_this.addFoldingRange(tk.previous_pair_pos = b.offset, tk.offset);
 					b.next_pair_pos = tk.offset;
-					if (!b.data || Object.keys(props).length) {
+					if (Object.keys(props).length) {
 						let cls = DocumentSymbol.create('', undefined, SymbolKind.Class, ZERO_RANGE, ZERO_RANGE) as ClassNode;
 						b.data = cls, cls.property = props, cls.name = cls.full = cls.extends = '';
 					}
+					tk.data = b.data;
 				} else
 					_this.addDiagnostic(diagnostic.missing('}'), b.offset, 1);
 				return true;
@@ -3717,7 +3718,7 @@ export class Lexer {
 					tn.extendsuri = u.toString().toLowerCase();
 				}
 				return '';
-			}).toLowerCase();
+			});
 		}
 
 		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
@@ -6115,9 +6116,14 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 		calculate(tk);
 	let result = new Set<AhkSymbol>, syms: Set<AhkSymbol> | AhkSymbol[] = [];
 	for (tk of stack) {
-		if (tk.symbol)
-			syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
-		else switch (tk.type) {
+		if (tk.symbol) {
+			if (tk.symbol.kind === SymbolKind.Property) {
+				let prop = tk.symbol, cls = prop.parent as ClassNode;
+				if (prop = cls?.property?.[prop.name.toUpperCase()])
+					syms = decltype_returns(prop, lexers[cls.uri!], cls);
+				else syms = [];
+			} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
+		} else switch (tk.type) {
 			case 'TK_FUNC':
 				let call = !!tk.data, name = tk.content.toLowerCase() || (call ? 'call' : '__item');
 				syms = decltype_invoke(lex, syms, name, call, tk.paraminfo);
@@ -6427,7 +6433,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined;
 	switch (!sym.cached_types) {
 		case true:
-			let annotations = get_type_annotations(sym, lex), s: string, is_typeof, t;
+			let annotations = get_type_annotations(sym, lex), s: string, is_typeof, has_obj, t;
 			if (!annotations) break;
 			types = new Set;
 			for (let tp of annotations) {
@@ -6450,7 +6456,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 			}
 			if (types.has(ANY))
 				return sym.cached_types = [ANY];
-			sym.cached_types = [...types];
+			sym.cached_types = [...types], has_obj = types.has(OBJECT);
 
 		default:
 			let i = -1, is_this;
@@ -6462,7 +6468,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 						types.add(t = !is_typeof && t.prototype || t), !is_this && (ct[i] = t);
 				} else types.add(tp);
 			}
-			if (!types.has(OBJECT))
+			if (!has_obj)
 				return [...types];
 	}
 
