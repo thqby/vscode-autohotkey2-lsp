@@ -2140,7 +2140,7 @@ export class Lexer {
 			}
 
 			function parse_line(end?: string, act?: string, min = 0, max = 1, pi?: ParamInfo): AhkSymbol[] {
-				let b: number, res: AhkSymbol[] = [], hascomma = 0, t = 0, nk: Token | undefined;
+				let b: number, res: AhkSymbol[] = [], hascomma = 0, t = 0, nk: Token | undefined, e: number;
 				let info = pi ?? { offset: 0, count: 0, comma: [], miss: [], unknown: false };
 				if (block_mode = false, next) {
 					let t = _this.get_token(parser_pos, true);
@@ -2156,10 +2156,9 @@ export class Lexer {
 					else if (!tk.topofline || is_line_continue(lk, tk))
 						++info.count, nk = tk;
 				}
-				let e;
 				while (true) {
 					res.push(...parse_expression(undefined, 0, end));
-					e ??= parser_pos;
+					e ??= tk.offset;
 					if (tk.type === 'TK_COMMA') {
 						next = true, ++hascomma, ++info.count;
 						if (lk.type === 'TK_COMMA' || lk.type === 'TK_START_EXPR')
@@ -2187,12 +2186,11 @@ export class Lexer {
 								break;
 							}
 							if (tk.symbol)
-								tk = _this.find_token(_this.document.offsetAt(tk.symbol.range.end) + 1, true);
-							else
-								tk = tk.next_pair_pos ? tokens[tk.next_pair_pos] : tokens[tk.next_token_offset];
+								tk = _this.find_token(_this.document.offsetAt(tk.symbol.range.end), true);
+							else tk = tokens[tk.next_pair_pos ?? tk.next_token_offset];
 						}
 						if (diag) {
-							act === '=' && stop_parse(_this.tokens[(nk as Token).next_token_offset]);
+							act === '=' && stop_parse(tokens[nk!.next_token_offset]);
 							_this.addDiagnostic(`${diagnostic.unexpected(act)}, ${diagnostic.didyoumean(':=').toLowerCase()}`, min, act.length);
 						}
 					}
@@ -2434,7 +2432,8 @@ export class Lexer {
 			}
 
 			function parse_expression(inpair?: string, mustexp = 1, end?: string): AhkSymbol[] {
-				let pres = result.length, byref = undefined, bg = tk.offset, ternarys: number[] = [];
+				let pres = result.length, byref = undefined, ternarys: number[] = [];
+				let bg = (next && (nexttoken(), next = false), tk.offset);
 				block_mode = false;
 				while (nexttoken()) {
 					if (tk.topofline === 1)
