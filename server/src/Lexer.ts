@@ -6430,10 +6430,10 @@ const S2O: { [n: string]: AhkSymbol } = {
 	unset: undefined as any,
 };
 export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode): AhkSymbol[] {
-	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined;
+	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined, is_typeof, has_obj, t;
 	switch (!sym.cached_types) {
 		case true:
-			let annotations = get_type_annotations(sym, lex), s: string, is_typeof, has_obj, t;
+			let annotations = get_type_annotations(sym, lex), s: string;
 			if (!annotations) break;
 			types = new Set;
 			for (let tp of annotations) {
