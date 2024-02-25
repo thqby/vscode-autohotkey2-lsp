@@ -224,16 +224,14 @@ export namespace FuncNode {
 		params.format?.(params);
 		for (let param of params) {
 			param_offsets.push(full.length);
-			full += ', ' + (param.ref ? (hasref = true, '&') : '') + param.name + (
-				param.defaultVal ? ' := ' + param.defaultVal :
-					param.defaultVal === null ? '?' :
-						param.arr ? (variadic = true, '*') : '');
+			full += `, ${param.ref ? (hasref = true, '&') : ''}${param.name}${param.defaultVal ?
+				` := ${param.defaultVal}` : param.defaultVal === null ? '?' : param.arr ? (variadic = true, '*') : ''}`;
 		}
 		return {
 			assume: FuncScope.DEFAULT, static: isstatic, variadic, children,
 			hasref, name, kind, range, selectionRange, params, param_offsets,
 			param_def_len: full.length || 2,
-			full: (isstatic ? 'static ' : '') + name + '(' + full.substring(2) + ')',
+			full: `${isstatic ? 'static ' : ''}${name}(${full.substring(2)})`,
 			declaration: {}, global: {}, local: {}, labels: {}
 		};
 	}
@@ -582,7 +580,6 @@ export class Lexer {
 				if (!param.range_offset)
 					continue;
 				let [start, end] = param.range_offset;
-				delete param.range_offset;
 				last_type = last_text = '', output_lines = [create_output_line()];
 				output_space_before_token = false, flag_store = [], flags = null, set_mode(MODE.Expression);
 				for (ck = tokens[tokens[start].next_token_offset]; ck && ck.offset < end; ck = tokens[ck.next_token_offset]) {
@@ -823,7 +820,7 @@ export class Lexer {
 						loop:
 						while (lk = tokens[++j]) {
 							if (lk.content === '(') {
-								if (',:?&*)['.includes((t = tokens[j + 2])?.content ?? '\0') || t?.content === '=>') {
+								if (',:=?&*)['.includes((t = tokens[j + 2])?.content ?? '\0') || t?.content === '=>') {
 									r = '(';
 									while ((lk = tokens[++j]) && lk.content !== ')') {
 										if (lk.type === 'TK_WORD') {
@@ -832,6 +829,13 @@ export class Lexer {
 												lk = tokens[++j];
 											if (lk?.content === ':')
 												j++, r += (tp = join_types(parse())) && `: ${tp}`, lk = tokens[++j];
+											if (lk?.content === ':=') {
+												let s = '';
+												if ('-+'.includes((lk = tokens[++j])?.content))
+													s = lk.content, lk = tokens[++j];
+												if (['TK_WORD', 'TK_STRING', 'TK_NUMBER'].includes(lk?.type))
+													r += ` := ${s}${lk.content}`, lk = tokens[++j];
+											}
 											if ('[]'.includes(lk?.content || '\0'))
 												r += lk.content === '[' ? ' [' : ']', lk = tokens[++j];
 											if (lk?.content === ',')
@@ -1632,7 +1636,7 @@ export class Lexer {
 						if (tk.topofline) {
 							if (mode === 2)
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
-							else if (_low === 'local' || _parent.children?.length)
+							else if (_low === 'local' || result.some(it => it.kind === SymbolKind.Variable))
 								_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
 							else
 								(_parent as FuncNode).assume = _low === 'static' ? FuncScope.STATIC : FuncScope.GLOBAL;
@@ -3649,6 +3653,8 @@ export class Lexer {
 						} else if (it.kind === SymbolKind.Variable)
 							((vr = it as Variable).def ? vars : unresolved_vars)[_low] ??= (vr.assigned ||= Boolean(vr.returns), it);
 					});
+					if ((fn.parent as FuncNode)?.assume === FuncScope.GLOBAL)
+						fn.assume ??= FuncScope.GLOBAL;
 					if (fn.assume === FuncScope.GLOBAL) {
 						Object.entries(vars = { ...unresolved_vars, ...vars }).forEach(([k, v]) => {
 							if (!(t = dec[k]))
@@ -5365,7 +5371,7 @@ export class Lexer {
 		let fn = scope;
 		while (fn?.local) {
 			if ((t = fn.local[name])) {
-				node = t, parent = fn;
+				node = t, parent = fn, is_global = false;
 				if (node.kind === SymbolKind.TypeParameter) {
 					if (fn.parent?.kind === SymbolKind.Property)
 						parent = fn.parent;
@@ -5387,10 +5393,11 @@ export class Lexer {
 					return { node, uri, scope, is_this: false };
 				return null;
 			}
-			if ((t = fn.global?.[name]) && (node = t) || fn.assume === FuncScope.GLOBAL)
+			if (((t = fn.global?.[name]) && (node = t) ||
+				fn.assume === FuncScope.GLOBAL) && (is_global = true))
 				break;
 			if (t = fn.declaration?.[name])
-				node = t, parent = fn;
+				node = t, parent = fn, is_global = false;
 			else node ??= (parent = fn, fn.unresolved_vars?.[name]);
 			if (fn.static && fn.kind === SymbolKind.Function) {
 				if ((t = (fn.parent as FuncNode)?.local[name])?.static)
@@ -6446,7 +6453,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 				else if (/^[-+]?\d+[.eE]/.test(tp))
 					types.add(FLOAT);
 				else if (tp.startsWith('('))
-					(t = generate_anonymous_fn(tp)) && types.add(t);
+					(t = generate_anonymous_fn(tp, lex.uri)) && types.add(t);
 				else if (tp.endsWith('>')) {
 					/^comobject</i.test(tp) && types.add({ ...comobj_template, name: tp.slice(11, -1) });
 				} else {
@@ -6510,8 +6517,15 @@ function type_naming(sym: AhkSymbol) {
 					return names.reverse().join('~');
 				}
 			}
-			if ((s = (sym as FuncNode).full.replace(/^[^()]+/, '')).length === (sym as FuncNode).param_def_len)
+			let fn = sym as FuncNode;
+			s = fn.full.replace(/^[^()]+/, '');
+			if (s.length === fn.param_def_len) {
+				if (fn.params.some(param => param.range_offset))
+					s = `(${fn.params.map(param =>
+						`${param.ref ? '&' : ''}${param.name}${param.defaultVal === null || param.range_offset ?
+						'?' : param.defaultVal ? ` := ${param.defaultVal}` : param.arr ? '*' : ''}`).join(', ')})`;
 				s += ` => ${generate_type_annotation(sym) || 'void'}`;
+			}
 			return s;
 		case SymbolKind.String:
 		case SymbolKind.Number:
@@ -6556,9 +6570,10 @@ export function get_type_annotations(sym: AhkSymbol, lex?: Lexer) {
 			tag = 'prop(erty)?';
 		case SymbolKind.Variable:
 			tag ??= '(var)';
-			annotation = (detail.match(new RegExp(`^\\s*@${tag}\\s+{(.*?)}\\s+${sym.name}\\s`, 'mi')) ??
+			annotation = (detail.match(new RegExp(`^\\s*@${tag}\\s+{(.*?)}\\s+${sym.name}(\\s|$)`, 'mi')) ??
 				detail.match(/^\s*@(type)\s+{(.*?)}(?=\s|$)/mi))?.[2];
-			break;
+			if (annotation !== undefined || sym.kind === SymbolKind.Variable)
+				break;
 		case SymbolKind.Function:
 		case SymbolKind.Method:
 			annotation = detail.match(/^\s*@(returns?)\s+{(.*?)}(?=\s|$)/mi)?.[2];
@@ -6567,13 +6582,13 @@ export function get_type_annotations(sym: AhkSymbol, lex?: Lexer) {
 	return sym.type_annotations = resolve_type_annotations(annotation);
 }
 
-function generate_anonymous_fn(def: string) {
+function generate_anonymous_fn(def: string, uri: string) {
 	let lex = new Lexer(TextDocument.create('', 'ahk2', 0, `$${def}`), undefined, -1);
 	lex.parseScript();
 	let node = lex.declaration.$ as FuncNode;
 	if (node?.kind === SymbolKind.Function) {
 		node.name = '', node.full = node.full.substring(1);
-		node.selectionRange.end.character = 0;
+		node.range = node.selectionRange = ZERO_RANGE, node.uri = uri;
 		return node;
 	}
 }

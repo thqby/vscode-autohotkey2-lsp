@@ -6,7 +6,7 @@ import {
 } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 import {
-	ANY, AhkSymbol, ClassNode, Context, FuncNode, Maybe, Token, Variable,
+	ANY, AhkSymbol, ClassNode, Context, FuncNode, Maybe, SemanticTokenTypes, Token, Variable,
 	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache,
 	completionitem, decltype_expr, dllcalltpe, extsettings, find_class, find_symbols, format_markdown_detail,
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
@@ -513,6 +513,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 
 	// obj.xxx|
 	if (kind === SymbolKind.Property || kind === SymbolKind.Method) {
+		if (!token.symbol && token.semantic?.type === SemanticTokenTypes.property)
+			return;
 		let props: { [k: string]: CompletionItem } = {};
 		let tps = decltype_expr(doc, token, range.end);
 		let is_any = tps.includes(ANY), bases: ClassNode[] = [];
