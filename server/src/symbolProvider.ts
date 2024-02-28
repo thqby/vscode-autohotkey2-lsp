@@ -30,7 +30,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		for (let k in dec) {
 			if (!(t = gvar[k]) || d || dec[k].kind !== SymbolKind.Variable && (t.kind === SymbolKind.Variable || t.def === false))
 				gvar[k] = dec[k];
-			else if (t.kind === SymbolKind.Variable && (t.assigned ||= (dec[k] as Variable).assigned, (dec[k] as Variable).def))
+			else if (t.kind === SymbolKind.Variable && (t.assigned ||= (dec[k] as Variable).assigned, dec[k].def))
 				t.def ??= false;
 		}
 	}
@@ -119,7 +119,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 								outer_is_global = false;
 							if (fn.static) {
 								for (let [k, v] of Object.entries(vars))
-									if ((v as Variable).static || v === gvar[k])
+									if (v.static || v === gvar[k])
 										inherit[k] = v;
 							} else inherit = { ...vars };
 						} else outer_is_global = true;
@@ -147,7 +147,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							s = gvar[k] ??= (result.push(v), (v as Variable).isglobal = true, doc.declaration[k] = v),
 								converttype(v, !!ahkvars[k], s.kind).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
-						else if (!(v as Variable).def && (s = gvar[k]))
+						else if (!v.def && (s = gvar[k]))
 							converttype(v, !!ahkvars[k], s.kind).definition = s;
 						else {
 							converttype(inherit[k] = fn.local[k] = v).definition = v, result.push(v);
@@ -168,12 +168,14 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						}
 					break;
 				case SymbolKind.Property:
-					if ((info as FuncNode).parent?.kind === SymbolKind.Class) {
+					if (info.parent?.kind === SymbolKind.Class) {
 						inherit = { THIS: vars.THIS, SUPER: vars.SUPER };
 						let t = info as Property;
-						for (let s of ['get', 'set', 'call'] as (keyof Property)[])
-							(t[s])?.selectionRange.end.character && result.push(t[s]),
-								inherit[s.toUpperCase()] = false as any;
+						for (let s of [t.get, t.set, t.call]) {
+							if (!s) continue;
+							s.selectionRange.end.character && result.push(s);
+							flatTree(s, inherit, false);
+						}
 						break;
 					}
 				default: inherit = { ...vars }; break;
@@ -327,10 +329,10 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 			});
 		}
 		if ((!node.returns && !node.type_annotations?.length) && !(is_cls && node.name.toLowerCase() === '__new')) {
-			let tk = doc.tokens[info.offset as number];
+			let tk = doc.tokens[info.offset!];
 			if (tk?.previous_token?.type === 'TK_EQUALS') {
 				let nt = doc.get_token(doc.document.offsetAt(info.range.end), true);
-				if (!nt || !is_line_continue(nt.previous_token as Token, nt) || nt.content !== '??')
+				if (!nt || !is_line_continue(nt.previous_token!, nt) || nt.content !== '??')
 					doc.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, 2);
 			}
 		}
