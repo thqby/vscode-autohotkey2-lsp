@@ -37,7 +37,7 @@ Alias(VariableOrName [, VariableOrPointer]) => void
 /**
  * Convert a value from one data type to another data type.
  */
-Cast(DataType, Value, NewDataType) => Number
+Cast(DataType, Value, NewDataType) => Float | Integer
 
 /**
  * Create a COM object from the dll.
@@ -52,19 +52,19 @@ CryptAES(AddOrBuf [, Size], password [, EncryptOrDecrypt := true, Algorithm := 2
 /**
  * Built-in functions, similar to DllCall, but can be used in the DllCall structure and use Object syntax. It is usually faster than DllCall, easier to use, and saves a lot of typing and code.
  */
-DynaCall(DllFunc, ParameterDefinition, Params*) => Number | String
+DynaCall(DllFunc, ParameterDefinition, Params*) => $DynaToken
 
 /**
  * Retrieve low-level pointers to variables.
  */
-GetVar(VarName, ResolveAlias := true) => Number
+GetVar(VarName, ResolveAlias := true) => Integer
 
-MemoryCallEntryPoint(hModule [, cmdLine]) => Number
+MemoryCallEntryPoint(hModule [, cmdLine]) => Integer
 
 /**
  * Find the resource in the specified dll loaded MemoryLoadLibrary. Similar to FindResource and FindResourceEx.
  */
-MemoryFindResource(hModule, Name, Type [, Language]) => Number
+MemoryFindResource(hModule, Name, Type [, Language]) => Integer
 
 /**
  * Release the previously loaded MemoryLoadLibrary of the specified dll. Similar to FreeLibrary.
@@ -74,27 +74,27 @@ MemoryFreeLibrary(hModule) => void
 /**
  * Find the function pointer in the specified dll that previously loaded MemoryLoadLibrary. Similar to GetProcAddress.
  */
-MemoryGetProcAddress(hModule, FuncName) => Number
+MemoryGetProcAddress(hModule, FuncName) => Integer
 
 /**
  * Load the specified dll into the process. Similar to LoadLibrary, but load the module from the memory instead of the disk, and allow multiple loading of the module.
  */
-MemoryLoadLibrary(PathOrData, Size := 0 [, DefaultLoadLibrary, DefaultGetProcAddress, DefaultFreeLibrary]) => Number
+MemoryLoadLibrary(PathOrData, Size := 0 [, DefaultLoadLibrary, DefaultGetProcAddress, DefaultFreeLibrary]) => Integer
 
 /**
  * Load resources into the specified dll previously loaded through MemoryLoadLibrary. Similar to LoadResource.
  */
-MemoryLoadResource(hModule, hResource) => Number
+MemoryLoadResource(hModule, hResource) => Integer
 
 /**
  * Load string resources in the specified dll previously loaded with MemoryLoadLibrary. Similar to LoadString.
  */
 MemoryLoadString(hModule, Id [, Language]) => String
 
-/*
+/**
  * Find out the resource size in the specified dll loaded with MemoryLoadLibrary. Similar to SizeOfResource.
  */
-MemorySizeOfResource(hModule, hReslnfo) => Number
+MemorySizeOfResource(hModule, hReslnfo) => Integer
 
 /**
  * Dump objects to memory or save to file for later use.
@@ -111,7 +111,7 @@ ObjLoad(AddOrPath [, password]) => Array | Map | Object
 /**
  * Load the specified dll from the resource into the process. Similar to MemoryLoadLibrary.
  */
-ResourceLoadLibrary(ResName) => Number
+ResourceLoadLibrary(ResName) => Integer
 
 /**
  * Exchange two variables.
@@ -122,19 +122,19 @@ Swap(Var1, Var2) => void
  * Built-in functions can calculate the size of structures or types, such as TCHAR or PTR or VOID..., for usage and examples, see also Struct.
  * @deprecated Removed from v2.1
  */
-sizeof(Definition [, offset]) => Number
+sizeof(Definition [, offset]) => Integer
 
-/*
+/**
  * Create an unsorted Array (for attributes).
  */
 UArray(Values*) => Array
 
-/*
+/**
  * Create an unsorted Map (for items/attributes).
  */
 UMap([Key1, Value1, ...]) => Map
 
-/*
+/**
  * Create an unsorted Object (applicable to attributes).
  */
 UObject([Key1, Value1, ...]) => Object
@@ -183,13 +183,13 @@ ZipCloseFile(ZipHandle) => void
  * This function is used to create a new empty zip file in memory, use ZipAddBuffer or ZipAddFile to add the file to the zip archive
  * @param CompressionLevel [@since v2.1-alpha.7]
  */
-ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Number
+ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Integer
 
 /**
  * This function is used to create a new empty zip file, use ZipAddFile or ZipAddBuffer to add the file to the zip archive.
  * @param CompressionLevel [@since v2.1-alpha.7]
  */
-ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Number
+ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Integer
 
 /**
  * Returns an object containing information about all items in the zip archive file.
@@ -270,7 +270,7 @@ class Array {
 
 	/**
 	 * Sorts an array in place. This method mutates the array and returns a reference to the same array.
-	 * @param {(a, b) => Number} CompareFn Function used to determine the order of the elements.
+	 * @param {(a, b) => Integer} CompareFn Function used to determine the order of the elements.
 	 * It is expected to return a negative value if the first argument is less than the second argument,
 	 * zero if they're equal, and a positive value otherwise. If omitted, the elements are sorted in random order.
 	 */
@@ -312,8 +312,8 @@ class JSON {
 	/**
 	 * the object include map,array,object and custom objects with `__enum` meta function
 	 * @param {Integer|String|Object} Options The number of Spaces or string used for indentation
-	 * @param Options.Indent The number of spaces or string used for indentation
-	 * @param Options.Depth Expands the specified number of levels
+	 * @param {Integer|String} Options.Indent The number of spaces or string used for indentation
+	 * @param {Integer} Options.Depth Expands the specified number of levels
 	 */
 	static stringify(Obj, Options := 0) => String
 }
@@ -330,47 +330,47 @@ class Struct {
 	/**
 	 * Returns the size defined by the array; if the structure or field is not an array, it returns 0.
 	 */
-	CountOf([field]) => Number
+	CountOf([field]) => Integer
 
 	/**
 	 * Return the code of the field.
 	 */
-	Encoding([field]) => Number
+	Encoding([field]) => Integer
 
 	/**
 	 * Return the address of the field or structure.
 	 */
-	GetAddress([field]) => Number
+	GetAddress([field]) => Integer
 
-	/*
+	/**
 	 * Returns the previously allocated capacity using .SetCapacity() or allocation string.
 	 */
-	GetCapacity([field]) => Number
+	GetCapacity([field]) => Integer
 
 	/**
 	 * Returns a pointer to the allocated memory stored in a structure or field.
 	 */
-	GetPointer([field]) => Number
+	GetPointer([field]) => Integer
 
 	/**
 	 * If the field or structure is a pointer, return true.
 	 */
-	IsPointer([field]) => Number
+	IsPointer([field]) => Integer
 
 	/**
 	 * Returns the offset of the field.
 	 */
-	Offset(field) => Number
+	Offset(field) => Integer
 
 	/**
 	 * Allocate memory for a field, if new memory is allocated, return the allocated size.
 	 */
-	SetCapacity([field, ] newsize) => Number
+	SetCapacity([field, ] newsize) => Integer
 
 	/**
 	 * Returns the size of the structure or field (in bytes).
 	 */
-	Size([field]) => Number
+	Size([field]) => Integer
 }
 
 class Worker {

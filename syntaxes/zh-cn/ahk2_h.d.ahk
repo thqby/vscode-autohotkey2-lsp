@@ -37,7 +37,7 @@ Alias(VariableOrName [, VariableOrPointer]) => void
 /**
  * 将值从一种数据类型转换为另一种数据类型.
  */
-Cast(DataType, Value, NewDataType) => Number
+Cast(DataType, Value, NewDataType) => Float | Integer
 
 /**
  * 从dll创建一个COM对象.
@@ -52,19 +52,19 @@ CryptAES(AddOrBuf [, Size], password [, EncryptOrDecrypt := true, Algorithm := 2
 /**
  * 内置函数, 类似于DllCall, 但可用于DllCall结构并使用Object语法.它通常比DllCall更快, 更易于使用, 并且节省了大量的键入和代码.
  */
-DynaCall(DllFunc, ParameterDefinition, Params*) => Number | String
+DynaCall(DllFunc, ParameterDefinition, Params*) => $DynaToken
 
 /**
  * 检索指向变量的低级指针.
  */
-GetVar(VarName, ResolveAlias := true) => Number
+GetVar(VarName, ResolveAlias := true) => Integer
 
-MemoryCallEntryPoint(hModule [, cmdLine]) => Number
+MemoryCallEntryPoint(hModule [, cmdLine]) => Integer
 
 /**
  * 在先前加载了MemoryLoadLibrary的指定dll中找到资源.类似于FindResource和FindResourceEx.
  */
-MemoryFindResource(hModule, Name, Type [, Language]) => Number
+MemoryFindResource(hModule, Name, Type [, Language]) => Integer
 
 /**
  * 释放指定的 dll 先前加载的 MemoryLoadLibrary.类似于 FreeLibrary.
@@ -74,27 +74,27 @@ MemoryFreeLibrary(hModule) => void
 /**
  * 在先前加载了MemoryLoadLibrary的指定dll中找到函数指针.类似于GetProcAddress.
  */
-MemoryGetProcAddress(hModule, FuncName) => Number
+MemoryGetProcAddress(hModule, FuncName) => Integer
 
 /**
  * 将指定的dll加载到进程中.与LoadLibrary类似, 但是从内存而不是从磁盘加载模块, 并允许多次加载模块.
  */
-MemoryLoadLibrary(PathOrData, Size := 0 [, DefaultLoadLibrary, DefaultGetProcAddress, DefaultFreeLibrary]) => Number
+MemoryLoadLibrary(PathOrData, Size := 0 [, DefaultLoadLibrary, DefaultGetProcAddress, DefaultFreeLibrary]) => Integer
 
 /**
  * 将资源加载到以前通过MemoryLoadLibrary加载的指定dll中.类似于LoadResource.
  */
-MemoryLoadResource(hModule, hResource) => Number
+MemoryLoadResource(hModule, hResource) => Integer
 
 /**
  * 在之前使用 MemoryLoadLibrary 加载的指定 dll 中加载字符串资源.类似于 LoadString.
  */
 MemoryLoadString(hModule, Id [, Language]) => String
 
-/*
+/**
  * 找出之前使用 MemoryLoadLibrary 加载的指定 dll 中的资源大小.类似于 SizeOfResource.
  */
-MemorySizeOfResource(hModule, hReslnfo) => Number
+MemorySizeOfResource(hModule, hReslnfo) => Integer
 
 /**
  * 将对象转储到内存或保存到文件以供以后使用.
@@ -111,7 +111,7 @@ ObjLoad(AddOrPath [, password]) => Array | Map | Object
 /**
  * 从资源中将指定的dll加载到进程中.类似于MemoryLoadLibrary.
  */
-ResourceLoadLibrary(ResName) => Number
+ResourceLoadLibrary(ResName) => Integer
 
 /**
  * 交换两个变量.
@@ -122,19 +122,19 @@ Swap(Var1, Var2) => void
  * 内置函数可以计算结构或类型的大小, 例如TCHAR或PTR或VOID ..., 有关用法和示例, 另请参见Struct.
  * @deprecated Removed from v2.1
  */
-sizeof(Definition [, offset]) => Number
+sizeof(Definition [, offset]) => Integer
 
-/*
+/**
  * 创建未排序的 Array(适用于属性).
  */
 UArray(Values*) => Array
 
-/*
+/**
  * 创建未排序的 Map(适用于项目/属性).
  */
 UMap([Key1, Value1, ...]) => Map
 
-/*
+/**
  * 创建未排序的 Object(适用于属性).
  */
 UObject([Key1, Value1, ...]) => Object
@@ -183,13 +183,13 @@ ZipCloseFile(ZipHandle) => void
  * 此函数用于在内存中创建一个新的空zip文件, 使用ZipAddBuffer或ZipAddFile将文件添加到zip存档中
  * @param CompressionLevel [@since v2.1-alpha.7]
  */
-ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Number
+ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Integer
 
 /**
  * 此函数用于创建一个新的空zip文件, 使用ZipAddFile或ZipAddBuffer将文件添加到zip存档中.
  * @param CompressionLevel [@since v2.1-alpha.7]
  */
-ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Number
+ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Integer
 
 /**
  * 返回一个对象, 其中包含有关zip归档文件中所有项目的信息.
@@ -266,7 +266,7 @@ class Array {
 
 	/**
 	 * 对数组进行排序. 此方法会使数组发生变化, 并返回对同一数组的引用.
-	 * @param {(a, b) => Number} CompareFn 用于确定元素顺序的函数. 如果第一个参数小于第二个参数, 则返回负值;
+	 * @param {(a, b) => Integer} CompareFn 用于确定元素顺序的函数. 如果第一个参数小于第二个参数, 则返回负值;
 	 * 如果相等则返回零, 否则返回正值. 如果省略, 则元素按随机顺序排序.
 	 */
 	Sort(CompareFn?) => this
@@ -307,8 +307,8 @@ class JSON {
 	/**
 	 * 对象包括map,array,object和带有' __enum '元函数的自定义对象
 	 * @param {Integer|String|Object} Options 用于缩进的空格的数量或字符串.
-	 * @param Options.Indent 用于缩进的空格的数量或字符串.
-	 * @param Options.Depth 展开指定深度
+	 * @param {Integer|String} Options.Indent 用于缩进的空格的数量或字符串.
+	 * @param {Integer} Options.Depth 展开指定深度
 	 */
 	static stringify(Obj, Options := 0) => String
 }
@@ -325,47 +325,47 @@ class Struct {
 	/**
 	 * 返回数组定义的大小; 如果结构或字段不是数组, 则返回0.
 	 */
-	CountOf([field]) => Number
+	CountOf([field]) => Integer
 
 	/**
 	 * 返回字段的编码.
 	 */
-	Encoding([field]) => Number
+	Encoding([field]) => Integer
 
 	/**
 	 * 返回字段或结构的地址.
 	 */
-	GetAddress([field]) => Number
+	GetAddress([field]) => Integer
 
-	/*
+	/**
 	 * 返回先前使用. SetCapacity()或分配字符串分配的容量.
 	 */
-	GetCapacity([field]) => Number
+	GetCapacity([field]) => Integer
 
 	/**
 	 * 返回保存在结构或字段中的已分配内存的指针.
 	 */
-	GetPointer([field]) => Number
+	GetPointer([field]) => Integer
 
 	/**
 	 * 如果字段或结构是指针, 则返回true.
 	 */
-	IsPointer([field]) => Number
+	IsPointer([field]) => Integer
 
 	/**
 	 * 返回字段的偏移量.
 	 */
-	Offset(field) => Number
+	Offset(field) => Integer
 
 	/**
 	 * 为一个字段分配内存, 如果分配了新的内存, 则返回分配的大小.
 	 */
-	SetCapacity([field,] newsize) => Number
+	SetCapacity([field,] newsize) => Integer
 
 	/**
 	 * 返回结构或字段的大小(以字节为单位).
 	 */
-	Size([field]) => Number
+	Size([field]) => Integer
 }
 
 class Worker {

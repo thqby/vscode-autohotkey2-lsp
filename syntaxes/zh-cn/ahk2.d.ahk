@@ -40,13 +40,13 @@ A_CoordModeCaret: 'Window' | 'Client' | 'Screen'
 A_CoordModeMenu: 'Window' | 'Client' | 'Screen'
 
 ; 可以用来获取或设置相对坐标的区域.
-A_CoordModeMouse:  'Window' | 'Client' | 'Screen'
+A_CoordModeMouse: 'Window' | 'Client' | 'Screen'
 
 ; 可以用来获取或设置相对坐标的区域.
-A_CoordModePixel:  'Window' | 'Client' | 'Screen'
+A_CoordModePixel: 'Window' | 'Client' | 'Screen'
 
 ; 可以用来获取或设置相对坐标的区域.
-A_CoordModeToolTip:  'Window' | 'Client' | 'Screen'
+A_CoordModeToolTip: 'Window' | 'Client' | 'Screen'
 
 ; 当前显示的鼠标光标类型. 其值为下列单词的其中一个:
 ; - AppStarting(程序启动, 后台运行--箭头+等待)
@@ -536,14 +536,14 @@ ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Float | Integer | St
  * 检索已使用 OLE(对象连接与嵌入) 注册的运行中的对象.
  * @param CLSID 要检索的 COM 对象的 CLSID 或可读的 Prog ID.
  */
-ComObjActive(CLSID) => Comobjct
+ComObjActive(CLSID) => ComObject
 
 /**
  * 将对象的事件源连接到具有给定前缀的函数.
  */
 ComObjConnect(ComObject [, Prefix]) => void
 
-/*
+/**
  * 包装原始IDispatch指针.
  * IDispatch或派生接口的非空接口指针.
  */
@@ -562,7 +562,7 @@ ComObjFlags(ComObject [, NewFlags, Mask]) => Integer
  * 返回对 COM 组件提供的对象的引用.
  * @param Name 要检索的对象的显示名称. 有关详情, 请参阅 MkParseDisplayName (MSDN)
  */
-ComObjGet(Name) => Comobject
+ComObjGet(Name) => ComObject
 
 /**
  * 查询 COM 对象的接口或服务.
@@ -571,7 +571,7 @@ ComObjGet(Name) => Comobject
  * @param IID 与 IID 格式相同的服务标识符. 省略此参数时, 还要省略逗号.
  * @returns 返回一个类型为 VT_UNKNOWN(13) 的 COM 封装对象.
  */
-ComObjQuery(ComObject [, SID], IID) => Comobject
+ComObjQuery(ComObject [, SID], IID) => ComObject
 
 /**
  * 从 COM 对象检索类型信息.
@@ -1602,7 +1602,7 @@ Hotkey(KeyName [, Callback, Options]) => void
 /**
  * 在脚本运行时创建, 修改, 启用或禁用热字串.
  */
-Hotstring(StringorOptions [, Replacement, OnOffToggle]) => String
+Hotstring(StringOrOptions [, Replacement, OnOffToggle]) => String
 
 /**
  * 将图标或图片添加到指定的ImageListID并返回新图标的索引（1是第一个图标,2是第二个图标,依此类推）.
@@ -2481,7 +2481,7 @@ SetWorkingDir(DirName) => void
  */
 Shutdown(Code) => void
 
-/*
+/**
  * 返回 Number 的正弦.
  */
 Sin(Number) => Float
@@ -2540,7 +2540,7 @@ SoundBeep(Frequency := 523, Duration := 150) => void
  * @param Device 设备的显示名称和/或索引. 例如, 1, "Speakers", "Speakers:2" 或 "Speakers (Example HD Audio)".
  * 如果省略该参数, 则它默认为系统的默认回放设备(不一定是设备 1).
  */
-SoundGetInterface(IID [, Component, Device]) => Comobject
+SoundGetInterface(IID [, Component, Device]) => ComObject
 
 /**
  * 从声音设备检索静音设置.
@@ -2717,7 +2717,7 @@ SysGet(Property) => Integer
  */
 SysGetIPAddresses() => Array
 
-/*
+/**
  * 返回 Number 的正切值.
  */
 Tan(Number) => Float

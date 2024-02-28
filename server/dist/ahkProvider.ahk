@@ -112,7 +112,7 @@ class JSON2 {
 		D := [C := (A := InStr(text := LTrim(text, " `t`r`n"), "[") = 1) ? [] : maptype()], text := LTrim(SubStr(text, 2), " `t`r`n"), L := 1, N := 0, V := K := "", J := C, !(Q := InStr(text, '"') != 1) ? text := LTrim(text, '"') : ""
 		Loop Parse text, '"' {
 			Q := NQ ? 1 : !Q
-			NQ := Q && (SubStr(A_LoopField, -3) = "\\\" || (SubStr(A_LoopField, -1) = "\" && SubStr(A_LoopField, -2) != "\\"))
+			NQ := Q && RegExMatch(A_LoopField, '(^|[^\\])(\\\\)*\\$')
 			if !Q {
 				if (t := Trim(A_LoopField, " `t`r`n")) = "," || (t = ":" && V := 1)
 					continue

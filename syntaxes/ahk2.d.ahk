@@ -40,13 +40,13 @@ A_CoordModeCaret: 'Window' | 'Client' | 'Screen'
 A_CoordModeMenu: 'Window' | 'Client' | 'Screen'
 
 ; The area that can be used to get or set relative coordinates.
-A_CoordModeMouse:  'Window' | 'Client' | 'Screen'
+A_CoordModeMouse: 'Window' | 'Client' | 'Screen'
 
 ; The area that can be used to get or set relative coordinates.
-A_CoordModePixel:  'Window' | 'Client' | 'Screen'
+A_CoordModePixel: 'Window' | 'Client' | 'Screen'
 
 ; The area that can be used to get or set relative coordinates.
-A_CoordModeToolTip:  'Window' | 'Client' | 'Screen'
+A_CoordModeToolTip: 'Window' | 'Client' | 'Screen'
 
 ; The currently displayed mouse cursor type. Its value is one of the following words:
 ; - AppStarting (program start, background running--arrow+wait)
@@ -522,10 +522,10 @@ Click(Options*) => void
 /**
  * Wait until the clipboard contains data.
  * @param Timeout If omitted, this command will wait indefinitely. Otherwise, it will wait no more than this number of seconds (can include a decimal point).
- * @param WaitForanyData If this parameter is omitted or 0 (false), this command will be more selective, explicitly waiting for the text or file to appear in the clipboard ("text" includes anything that will produce text when you paste it into Notepad content).
+ * @param WaitForAnyData If this parameter is omitted or 0 (false), this command will be more selective, explicitly waiting for the text or file to appear in the clipboard ("text" includes anything that will produce text when you paste it into Notepad content).
  * If this parameter is 1 (true), the function waits for any type of data to appear on the clipboard.
  */
-ClipWait([Timeout, WaitForanyData]) => Integer
+ClipWait([Timeout, WaitForAnyData]) => Integer
 
 /**
  * Call native COM interface methods by index.
@@ -550,7 +550,7 @@ ComObjActive(CLSID) => ComObjct
  */
 ComObjConnect(ComObject [, Prefix]) => void
 
-/*
+/**
  * Wrap the original IDispatch pointer.
  * IDispatch or non-null interface pointer of derived interface.
  */
@@ -1562,7 +1562,7 @@ HotIf([FuncOrExpr]) => void
 /**
  * Specify the conditions for the hotkey variants to be subsequently created or modified.
  */
-HotIfWinactive([WinTitle, WinText]) => void
+HotIfWinActive([WinTitle, WinText]) => void
 
 /**
  * Specify the conditions for the hotkey variants to be subsequently created or modified.
@@ -1572,7 +1572,7 @@ HotIfWinExist([WinTitle, WinText]) => void
 /**
  * Specify the conditions for the hotkey variants to be subsequently created or modified.
  */
-HotIfWinNotactive([WinTitle, WinText]) => void
+HotIfWinNotActive([WinTitle, WinText]) => void
 
 /**
  * Specify the conditions for the hotkey variants to be subsequently created or modified.
@@ -1609,7 +1609,7 @@ Hotkey(KeyName [, Callback, Options]) => void
 /**
  * Create, modify, enable or disable hot strings while the script is running.
  */
-Hotstring(StringorOptions [, Replacement, OnOffToggle]) => String
+Hotstring(StringOrOptions [, Replacement, OnOffToggle]) => String
 
 /**
  * Add the icon or picture to the specified ImageListID and return the index of the new icon (1 is the first icon, 2 is the second icon, and so on).
@@ -2488,7 +2488,7 @@ SetWorkingDir(DirName) => void
  */
 Shutdown(Code) => void
 
-/*
+/**
  * Returns the sine of Number.
  */
 Sin(Number) => Float
@@ -2547,7 +2547,7 @@ SoundBeep(Frequency := 523, Duration := 150) => void
  * @param Device The display name and/or index of the device. For example, 1, "Speakers", "Speakers:2" or "Speakers (Example HD Audio)".
  * If this parameter is omitted, it will default to the system's default playback device (not necessarily device 1).
  */
-SoundGetInterface(IID [, Component, Device]) => Comobject
+SoundGetInterface(IID [, Component, Device]) => ComObject
 
 /**
  * Retrieve the mute setting from the sound device.
@@ -2724,7 +2724,7 @@ SysGet(Property) => Integer
  */
 SysGetIPAddresses() => Array
 
-/*
+/**
  * Returns the tangent of Number.
  */
 Tan(Number) => Float
