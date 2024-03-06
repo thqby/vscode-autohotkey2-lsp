@@ -6160,8 +6160,11 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 				if (tt = !t.extends && t.property?.BASE) {
 					let tp = tt.cached_types ?? (decltype_returns(tt, lex, _this), tt.cached_types ??= []);
 					syms.pop();
-					for (let s of tp)
+					for (let s of tp) {
+						if (typeof s === 'object')
+							s = s.name;
 						s && syms.push({ ...t, extends: s } as ClassNode);
+					}
 					!syms.length && (t.extends = 'Object', syms.push(t));
 				}
 				break;
