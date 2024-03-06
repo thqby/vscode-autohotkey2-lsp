@@ -3397,7 +3397,7 @@ export class Lexer {
 					let pi = tk.callsite?.paraminfo;
 					if (pi && tk.content.toLowerCase() === 'defineprop' && pi.count > 1 && pi.miss[0] !== 0) {
 						get_class();
-						if (p && p.kind === SymbolKind.Class) {
+						if (p?.cache) {
 							let end = pi.comma[0], nk = tokens[tk.next_token_offset];
 							if (input.charAt(tk.offset + tk.length) === '(')
 								nk = tokens[nk.next_token_offset];
@@ -3411,25 +3411,25 @@ export class Lexer {
 									pp.GET || pp.VALUE || pp.SET) {
 									t = Variable.create(prop, SymbolKind.Property, rg);
 									t.full = `(${classfullname.slice(0, -1)}) ${(t.static = s) ? 'static ' : ''}${prop}`;
-									t.returns = pp?.VALUE?.returns, p.cache!.push(t), t.parent = s ? p : p.prototype;
+									t.returns = pp?.VALUE?.returns, p.cache.push(t), t.parent = s ? p : p.prototype;
 								}
 								if (pp = pp?.CALL) {
 									t = Variable.create('', SymbolKind.Variable, make_range(0, 0)), t.arr = true;
 									t = FuncNode.create(prop, SymbolKind.Method, rg, rg, [t], undefined, s);
 									t.full = `(${classfullname.slice(0, -1)}) ` + t.full;
 									t.returns = pp.returns, (t as FuncNode).alias = true;
-									p.cache!.push(t), t.parent = s ? p : p.prototype;
+									p.cache.push(t), t.parent = s ? p : p.prototype;
 								}
 							}
 						}
 					}
 				} else {
 					get_class();
-					if (p && p.kind === SymbolKind.Class) {
+					if (p?.cache) {
 						if (flag === null)
 							return p.checkmember = false, undefined;
 						let t = Variable.create(tk.content, SymbolKind.Property, rg = make_range(tk.offset, tk.length));
-						t.static = s, p.cache!.push(t), t.def = false, t.parent = s ? p : p.prototype;
+						t.static = s, p.cache.push(t), t.def = false, t.parent = s ? p : p.prototype;
 					}
 				}
 				return;
@@ -3538,8 +3538,8 @@ export class Lexer {
 						if (it.def !== false)
 							_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange, severity });
 					});
-					children.push(...__init, ...cls.cache!);
-					cls.cache!.forEach(it => (it.static ? sdec : dec)[_low = it.name.toUpperCase()] ??= it);
+					children.push(...__init, ...cls.cache ?? []);
+					cls.cache?.forEach(it => (it.static ? sdec : dec)[_low = it.name.toUpperCase()] ??= it);
 					delete cls.cache;
 				} else {
 					let fn = node as FuncNode, dec = fn.declaration;
