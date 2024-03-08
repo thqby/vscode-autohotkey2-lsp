@@ -1399,7 +1399,7 @@ export class Lexer {
 										blocks = 0, blockpos.length = 0;
 								else {
 									if (blockpos.length && tk.previous_pair_pos === undefined)
-										tokens[tk.previous_pair_pos = blockpos[blockpos.length - 1]].next_pair_pos = tk.offset;
+										tokens[tk.previous_pair_pos = blockpos.at(-1)!].next_pair_pos = tk.offset;
 									return;
 								}
 							}
@@ -1426,7 +1426,7 @@ export class Lexer {
 							}
 							tk.symbol = tn = SymbolNode.create(tk.content, SymbolKind.Field,
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1));
-							tn.data = blockpos[blockpos.length - 1];
+							tn.data = blockpos.at(-1);
 							result.push(tn);
 							let labels = (_parent as FuncNode).labels;
 							if (labels) {
@@ -1911,7 +1911,7 @@ export class Lexer {
 						labels[_low = tk.content.toUpperCase()] ??= [];
 						let rg = make_range(tk.offset, tk.length);
 						labels[_low].push(tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field, rg, rg));
-						tn.data = blockpos[blockpos.length - 1];
+						tn.data = blockpos.at(-1);
 					}
 				}
 			}
@@ -2702,7 +2702,7 @@ export class Lexer {
 								}
 								prec === '.' ? (maybeclassprop(tk, null), parse_prop()) : parse_pair('%', '%');
 							} else if (tk.content === '=>' && lk.type === 'TK_WORD') {
-								if (result.length && result[result.length - 1].name === lk.content)
+								if (result.length && result.at(-1)!.name === lk.content)
 									result.pop();
 								let tn = FuncNode.create('', SymbolKind.Function, make_range(lk.offset, lk.length),
 									make_range(lk.offset, 0), [Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length))]);
@@ -3374,7 +3374,7 @@ export class Lexer {
 					if (pc !== 1)
 						extsettings.Diagnostics.ParamsCheck && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
 					else if (result.length > l && lk.type === 'TK_WORD') {
-						let vr = result[result.length - 1] as Variable;
+						let vr = result.at(-1) as Variable;
 						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
 							vr.assigned ??= 1, vr.returns ??= null;
 					}
@@ -3785,7 +3785,7 @@ export class Lexer {
 			let c = comment.split(/\r?\n/), jsdoc = comment.startsWith('/**');
 			if (!(c[0] = c[0].replace(/^\/\*+\s*/, '')))
 				c.splice(0, 1);
-			if (!(c[c.length - 1] = c[c.length - 1].replace(/\s*\*+\/\s*$/, '')))
+			if (!(c[c.length - 1] = c.at(-1)!.replace(/\s*\*+\/\s*$/, '')))
 				c.pop();
 			if (!jsdoc)
 				return c.join('\n');
@@ -3861,13 +3861,13 @@ export class Lexer {
 		}
 
 		function just_added_newline(): boolean {
-			let line = output_lines[output_lines.length - 1];
+			let line = output_lines.at(-1)!;
 			return line.text.length === 0;
 		}
 
 		function allow_wrap_or_preserved_newline(force_linewrap = false): void {
 			if (opt.wrap_line_length && !force_linewrap) {
-				let line = output_lines[output_lines.length - 1];
+				let line = output_lines.at(-1)!;
 				let proposed_line_length = 0;
 				// never wrap the first token of a line.
 				if (line.text.length > 0) {
@@ -3899,7 +3899,7 @@ export class Lexer {
 		}
 
 		function print_token(printable_token?: string): void {
-			let line = output_lines[output_lines.length - 1];
+			let line = output_lines.at(-1)!;
 			if (!line.text.length) {
 				if (preindent_string)
 					line.text.push(preindent_string);
@@ -5174,7 +5174,7 @@ export class Lexer {
 			let lines = token_text.split('\n');
 			let javadoc = lines[0].match(/^\/\*(@ahk2exe-keep|[^*]|$)/i) ? false : true;
 			let remove: RegExp | string = '', t: RegExpMatchArray | null, j: number;
-			if (!javadoc && (t = lines[lines.length - 1].match(/^(\s)\1*/)) && t[0] !== ' ')
+			if (!javadoc && (t = lines.at(-1)!.match(/^(\s)\1*/)) && t[0] !== ' ')
 				remove = new RegExp(`^${t[1]}{1,${t[0].length}}`);
 
 			// first line always indented
@@ -5189,7 +5189,7 @@ export class Lexer {
 			}
 			if (lines.length > 1) {
 				print_newline(true);
-				print_token((javadoc ? ' ' : '') + lines[lines.length - 1].trim());
+				print_token((javadoc ? ' ' : '') + lines.at(-1)!.trim());
 			}
 			print_newline(true);
 			flags.had_comment = 3;
@@ -5298,7 +5298,7 @@ export class Lexer {
 				return;
 			}
 			print_token();
-			let t = output_lines[output_lines.length - 1].text;
+			let t = output_lines.at(-1)!.text;
 			if (t[0].trim() === '')
 				output_lines[output_lines.length - 1].text = t.slice(1);
 			else
@@ -6169,7 +6169,7 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 				}
 				break;
 			case 'TK_START_EXPR':
-				let b = (t = tk.paraminfo?.comma)?.length ? t[t.length - 1] : tk.next_token_offset;
+				let b = (t = tk.paraminfo?.comma)?.length ? t.at(-1)! : tk.next_token_offset;
 				syms = decltype_expr(lex, tokens[b], tk.next_pair_pos! - 1, _this);
 				break;
 			default:
