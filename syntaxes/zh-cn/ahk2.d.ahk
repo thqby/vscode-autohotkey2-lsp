@@ -393,7 +393,7 @@ A_TitleMatchMode: 1 | 2 | 3 | 'RegEx'
 A_TitleMatchModeSpeed: 'Fast' | 'Slow'
 
 ; 返回可用于修改或显示托盘菜单的菜单对象.
-A_TrayMenu: String
+A_TrayMenu: Menu
 
 ; 运行当前脚本的用户的登录名.
 A_UserName: String
@@ -804,7 +804,7 @@ ControlShowDropDown(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) =>
  * @param {'ToolTip'|'Pixel'|'Mouse'|'Caret'|'Menu'} TargetType
  * @param {'Screen'|'Window'|'Client'} RelativeTo
  */
-CoordMode(TargetType, RelativeTo) => String
+CoordMode(TargetType, RelativeTo := 'Screen') => String
 
 /**
  * 返回 Number 的余弦值.
@@ -929,7 +929,7 @@ DirSelect(StartingFolder?, Options := 1, Prompt?) => String
 /**
  * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Float | Integer | String
+DllCall(DllFile_Function [, Type1, Arg1, *, Cdecl_ReturnType]) => Float | Integer | String
 
 /**
  * 从互联网下载文件.
@@ -2207,7 +2207,7 @@ Persistent(Persist := true) => Integer
  * 
  * Slow: 使用一种更精细复杂的方法获取颜色, 在某些全屏应用程序中其他方法失败时, 此方法可能有效. 此方法比正常方法大约慢三倍. 注: Slow 方法优先于 Alt, 所以此时不需要指定 Alt.
  */
-PixelGetColor(X, Y, Mode?: 'Alt'|'Slow'|'Alt Slow') => String
+PixelGetColor(X, Y, Mode?: 'Alt' | 'Slow' | 'Alt Slow') => String
 
 /**
  * 在屏幕区域中搜索指定颜色的像素.
@@ -2417,12 +2417,12 @@ SetDefaultMouseSpeed(Speed) => Integer
 /**
  * 设置由Send和ControlSend发送的每次击键之后将发生的延迟.
  */
-SetKeyDelay([Delay, PressDuration, 'Play']) => void
+SetKeyDelay([Delay, PressDuration, Play: 'Play']) => void
 
 /**
  * 设置每次鼠标移动或单击后发生的延迟.
  */
-SetMouseDelay(Delay [, 'Play']) => Integer
+SetMouseDelay(Delay [, Play: 'Play']) => Integer
 
 /**
  * 设置NumLock键的状态. 也可以强制按键保持打开或关闭状态.
@@ -3887,7 +3887,7 @@ class Gui extends Object {
 
 	class Control extends Object {
 		static Call() => throw
-	
+
 		/**
 		 * 检索控件的 ClassNN.
 		 */
@@ -4516,7 +4516,7 @@ class Map extends Object {
 	/**
 	 * 设置零个或多个项目.
 	 */
-	Set(Key1, Value1, * ) => void
+	Set(Key1, Value1, *) => void
 
 	/**
 	 * 检索映射中存在的键值对的数量.

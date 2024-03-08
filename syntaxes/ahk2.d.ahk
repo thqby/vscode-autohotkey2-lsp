@@ -362,8 +362,7 @@ A_StoreCapsLockMode: Integer
 ; Contains a single tab character.
 A_Tab: '`t'
 
-; The full path and name of the folder where temporary files are stored. Its value is retrieved from one of the following locations (in order): 1) Environment variable TMP, TEMP or USERPROFILE; 2) Windows directory. For example: 
-; C:\Users\<UserName>\AppData\Local\Temp
+; The full path and name of the folder where temporary files are stored. Its value is retrieved from one of the following locations (in order): 1) Environment variable TMP, TEMP or USERPROFILE; 2) Windows directory. For example: `C:\Users\<UserName>\AppData\Local\Temp`
 A_Temp: String
 
 ; The name of the custom function currently being executed (empty if none); For example: MyFunction.
@@ -400,7 +399,7 @@ A_TitleMatchMode: 1 | 2 | 3 | 'RegEx'
 A_TitleMatchModeSpeed: 'Fast' | 'Slow'
 
 ; Returns the menu object that can be used to modify or display the tray menu.
-A_TrayMenu: String
+A_TrayMenu: Menu
 
 ; The login name of the user running the current script.
 A_UserName: String
@@ -936,7 +935,7 @@ DirSelect(StartingFolder?, Options := 1, Prompt?) => String
 /**
  * Call functions in DLL files, such as standard Windows API functions.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, 'Cdecl ReturnType']) => Float | Integer | String
+DllCall(DllFile_Function [, Type1, Arg1, *, Cdecl_ReturnType]) => Float | Integer | String
 
 /**
  * Download files from the Internet.
@@ -2214,7 +2213,7 @@ Persistent(Persist := true) => Integer
  * 
  * Slow: Use a more sophisticated method to get the color. This method may be effective when other methods fail in some full-screen applications. This method is about three times slower than the normal method. Note: The Slow method takes precedence over Alt, so There is no need to specify Alt at this time.
  */
-PixelGetColor(X, Y, Mode?: 'Alt'|'Slow'|'Alt Slow') => String
+PixelGetColor(X, Y, Mode?: 'Alt' | 'Slow' | 'Alt Slow') => String
 
 /**
  * Search for pixels of the specified color in the screen area.
@@ -4538,7 +4537,7 @@ class Map extends Object {
 	/**
 	 * Set zero or more items.
 	 */
-	Set(Key1, Value1, * ) => void
+	Set(Key1, Value1, *) => void
 
 	/**
 	 * Retrieve the number of key-value pairs present in the map.

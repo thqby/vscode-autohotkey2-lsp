@@ -132,12 +132,12 @@ UArray(Values*) => Array
 /**
  * Create an unsorted Map (for items/attributes).
  */
-UMap([Key1, Value1, ...]) => Map
+UMap([Key1, Value1, *]) => Map
 
 /**
  * Create an unsorted Object (applicable to attributes).
  */
-UObject([Key1, Value1, ...]) => Object
+UObject([Key1, Value1, *]) => Object
 
 /**
  * Extract one or all items from the zip file to the hard drive.
@@ -233,13 +233,13 @@ MinHookEnable(Target, Detour, &Original?) => Integer
 class Array {
 	/**
 	 * Returns the elements of an array that meet the condition specified in a callback function.
-	 * @param {(Value [, Index]) => Boolean} Predicate The filter method calls the predicate function one time for each element in the array.
+	 * @param {(Value [, Index]) => Integer} Predicate The filter method calls the predicate function one time for each element in the array.
 	 */
 	Filter(Predicate) => Array
 
 	/**
 	 * Returns the index of the first element in the array where predicate is true, and 0 otherwise.
-	 * @param {(Value [, Index]) => Boolean} Predicate FindIndex calls predicate once for each element of the array,
+	 * @param {(Value [, Index]) => Integer} Predicate FindIndex calls predicate once for each element of the array,
 	 * until it finds one where Predicate returns true. If such an element is found,
 	 * FindIndex immediately returns that element index. Otherwise, FindIndex returns 0.
 	 * @param {Integer} StartingPosition The array index at which to begin the search. Specify 1 to start at the first element,
@@ -365,7 +365,7 @@ class Struct {
 	/**
 	 * Allocate memory for a field, if new memory is allocated, return the allocated size.
 	 */
-	SetCapacity([field, ] newsize) => Integer
+	SetCapacity([field,] newsize) => Integer
 
 	/**
 	 * Returns the size of the structure or field (in bytes).
@@ -378,7 +378,7 @@ class Worker {
 	 * Enumerates ahk threads.
 	 * @return An enumerator which will return items contained threadid and workerobj.
 	 */
-	static __Enum(NumberOfVars?) => ([&threadid,] &workerobj) => void
+	static __Enum(NumberOfVars?) => ([&threadid,] &workerobj) => Integer
 
 	/**
 	 * Creates a real AutoHotkey thread or associates an existing AutoHotkey thread in the current process and returns an object that communicates with it.
@@ -410,8 +410,8 @@ class Worker {
 	ExitApp() => void
 
 	/**
-     * Pauses/Unpauses the script's current thread.
-     */
+	 * Pauses/Unpauses the script's current thread.
+	 */
 	Pause(NewState) => Integer
 
 	/**

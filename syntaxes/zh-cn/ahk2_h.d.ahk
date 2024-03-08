@@ -132,12 +132,12 @@ UArray(Values*) => Array
 /**
  * 创建未排序的 Map(适用于项目/属性).
  */
-UMap([Key1, Value1, ...]) => Map
+UMap([Key1, Value1, *]) => Map
 
 /**
  * 创建未排序的 Object(适用于属性).
  */
-UObject([Key1, Value1, ...]) => Object
+UObject([Key1, Value1, *]) => Object
 
 /**
  * 从zip文件中提取一项或所有项到硬盘.
@@ -233,13 +233,13 @@ MinHookEnable(Target, Detour, &Original?) => Integer
 class Array {
 	/**
 	 * 返回满足回调函数中指定条件的数组元素.
-	 * @param {(Value [, Index]) => Boolean} Predicate Filter方法为数组中的每个元素调用一次Predicate函数.
+	 * @param {(Value [, Index]) => Integer} Predicate Filter方法为数组中的每个元素调用一次Predicate函数.
 	 */
 	Filter(Predicate) => Array
 
 	/**
 	 * 返回数组中Predicate为true的第一个元素的索引, 否则为0.
-	 * @param {(Value [, Index]) => Boolean} Predicate FindIndex为数组的每个元素调用Predicate一次, 
+	 * @param {(Value [, Index]) => Integer} Predicate FindIndex为数组的每个元素调用Predicate一次, 
 	 * 直到它找到一个Predicate返回true的值. 如果找到这样的元素, FindIndex立即返回该元素索引. 否则, FindIndex返回0.
 	 * @param {Integer} StartingPosition 开始搜索的数组索引. 指定1从第一个元素开始升序搜索; 指定-1从最后一个元素开始降序搜索.
 	 */
@@ -318,8 +318,8 @@ class JSON {
  */
 class Struct {
 	/**
-	* Struct是一个内置函数, 用于创建并返回结构对象. 该对象可用于使用对象语法访问定义的结构. SetCapacity方法可用于将内存分配给结构和指针.
-	*/
+	 * Struct是一个内置函数, 用于创建并返回结构对象. 该对象可用于使用对象语法访问定义的结构. SetCapacity方法可用于将内存分配给结构和指针.
+	 */
 	static Call(Definition [, StructMemory, InitObject]) => Struct
 
 	/**
@@ -373,7 +373,7 @@ class Worker {
 	 * 枚举 ahk 线程.
 	 * @return 一个将返回threadid和workerobj的枚举器.
 	 */
-	static __Enum(NumberOfVars?) => ([&threadid,] &workerobj) => void
+	static __Enum(NumberOfVars?) => ([&ThreadId,] &WorkerObj) => Integer
 
 	/**
 	 * 在当前进程中创建一个真AutoHotkey线程或关联一个已有AutoHotkey线程, 并返回一个与之交流的对象.
@@ -405,8 +405,8 @@ class Worker {
 	ExitApp() => void
 
 	/**
-     * 暂停/取消暂停脚本的当前线程.
-     */
+	 * 暂停/取消暂停脚本的当前线程.
+	 */
 	Pause(NewState) => Integer
 
 	/**
