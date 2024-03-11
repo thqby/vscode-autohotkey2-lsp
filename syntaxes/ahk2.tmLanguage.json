@@ -263,6 +263,42 @@
               "include": "#comments"
             },
             {
+              "begin": "\\G\\s*(<)",
+              "beginCaptures": {
+                "1": {
+                  "name": "punctuation.definition.typeparameters.begin.ahk2"
+                }
+              },
+              "end": ">",
+              "endCaptures": {
+                "0": {
+                  "name": "punctuation.definition.typeparameters.end.ahk2"
+                }
+              },
+              "patterns": [
+                {
+                  "match": "\\w+",
+                  "name": "entity.name.type.parameter"
+                },
+                {
+                  "match": ",",
+                  "name": "punctuation.separator.comma.ahk2"
+                },
+                {
+                  "match": "=",
+                  "name": "keyword.operator.assignment.ahk2"
+                },
+                {
+                  "match": "\\.",
+                  "name": "punctuation.accessor.ahk2"
+                },
+                {
+                  "match": "\\|",
+                  "name": "keyword.operator.ahk2"
+                }
+              ]
+            },
+            {
               "match": "\\b((?i:extends))(\\s+([\\w.]+))?",
               "captures": {
                 "1": {

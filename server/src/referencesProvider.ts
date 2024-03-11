@@ -56,7 +56,6 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 			break;
 		case SymbolKind.Function:
 		case SymbolKind.Variable:
-		case SymbolKind.TypeParameter:
 		case SymbolKind.Class:
 			if (node.kind !== SymbolKind.Class || !(node as FuncNode).full.includes('.')) {
 				if (is_global === true)

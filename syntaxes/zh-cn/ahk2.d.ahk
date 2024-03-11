@@ -608,7 +608,7 @@ ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeT
 
 /**
  * 发送鼠标按钮或鼠标滚轮事件到控件.
- * @param Control_or_Pos 如果省略此参数, 则目标窗口本身将被点击. 否则, 将使用以下两种模式之一.
+ * @param ControlOrPos 如果省略此参数, 则目标窗口本身将被点击. 否则, 将使用以下两种模式之一.
  * 模式 1(位置): 指定相对于目标窗口客户端区域左上角的 X 和 Y 坐标. X 坐标必须在 Y 坐标之前, 并且它们之间必须至少有一个空格或制表符. 例如: X55 Y33. 如果在指定的坐标上有一个控件, 它将在这些确切的坐标上发送点击事件. 如果没有控件, 目标窗口本身将被发送事件(根据窗口的性质, 可能没有效果).
  * 
  * 模式 2(控件): 指定控件的 ClassNN, 文本或 HWND, 或一个具有 Hwnd 属性的对象. 有关详情, 请参阅控件的参数.
@@ -632,7 +632,7 @@ ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeT
  * 
  * X 和 Y 选项中使用十进制(不是十六进制数) 数字.
  */
-ControlClick([Control_or_Pos, WinTitle, WinText, WhichButton, ClickCount, Options, ExcludeTitle, ExcludeText]) => void
+ControlClick([ControlOrPos, WinTitle, WinText, WhichButton, ClickCount, Options, ExcludeTitle, ExcludeText]) => void
 
 /**
  * 从 ListBox 或 ComboBox 中删除指定的条目.
@@ -2105,7 +2105,7 @@ ObjOwnPropCount(Obj) => Integer
 /**
  * 返回对象拥有的属性.
  */
-ObjOwnProps(Obj) => Enumerator
+ObjOwnProps(Obj) => Enumerator<String, Any>
 
 /**
  * 检索对象的地址.
@@ -3077,7 +3077,7 @@ class Any {
 	}
 }
 
-class Array extends Object {
+class Array<T> extends Object {
 	/**
 	 * 数组对象包含值的列表或序列.
 	 */
@@ -3086,13 +3086,13 @@ class Array extends Object {
 	/**
 	 * 枚举数组元素.
 	 */
-	__Enum(NumberOfVars?) => Enumerator
+	__Enum(NumberOfVars?) => Enumerator<T, void> | Enumerator<Integer, T>
 
 	/**
 	 * 检索或设置数组元素的值.
 	 */
 	__Item[Index] {
-		get => Any
+		get => T
 		set => void
 	}
 
@@ -3104,17 +3104,17 @@ class Array extends Object {
 	/**
 	 * 定义请求没有值的元素时返回的默认值.
 	 */
-	Default: Any
+	Default: T
 
 	/**
 	 * 删除数组元素的值, 使索引不包含值.
 	 */
-	Delete(Index) => Any
+	Delete(Index) => T
 
 	/**
 	 * 返回给定索引处的值, 或默认值.
 	 */
-	Get(Index [, Default]) => Any
+	Get(Index [, Default]) => T
 
 	/**
 	 * 如果 Index 有效且在该位置有一个值, 则返回 true, 否则返回 false.
@@ -3129,7 +3129,7 @@ class Array extends Object {
 	/**
 	 * 删除并返回最后的数组元素.
 	 */
-	Pop() => Any
+	Pop() => T
 
 	/**
 	 * 追加值到数组的末尾.
@@ -3139,7 +3139,7 @@ class Array extends Object {
 	/**
 	 * 从数组中移除项目.
 	 */
-	RemoveAt(Index, Length := 1) => Any
+	RemoveAt(Index, Length := 1) => T
 
 	/**
 	 * 检索或设置数组的长度.
@@ -3305,11 +3305,11 @@ class ComValue extends Any {
 class ComValueRef extends ComValue {
 }
 
-class Enumerator extends Func {
+class Enumerator<T1, T2> extends Func {
 	/**
 	 * 检索枚举中的下一个或多个项目.
 	 */
-	Call(&OutputVar1?, &OutputVar2?, *) => Integer
+	Call(&OutputVar1?: VarRef<T1>, &OutputVar2?: VarRef<T2>, *) => Integer
 }
 
 class Error extends Object {
@@ -3574,12 +3574,7 @@ class Func extends Object {
 	IsOptional([ParamIndex]) => Integer
 }
 
-class Gui extends Object {
-	/**
-	 * 枚举 GUI 的控件.
-	 */
-	__Enum(NumberOfVars?) => Enumerator
-
+class Gui<ControlType = Gui.Control | Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView> extends Object {
 	/**
 	 * 检索或设置窗口的背景色.
 	 */
@@ -3591,7 +3586,7 @@ class Gui extends Object {
 	/**
 	 * 检索 GUI 的焦点控件的 GuiControl 对象.
 	 */
-	FocusedCtrl => Gui.Control
+	FocusedCtrl => ControlType
 
 	/**
 	 * 检索 GUI 窗口的窗口句柄(HWND).
@@ -3644,10 +3639,15 @@ class Gui extends Object {
 	__New([Options, Title := A_ScriptName, EventObj]) => void
 
 	/**
+	 * 枚举 GUI 的控件.
+	 */
+	__Enum(NumberOfVars?) => Enumerator<ControlType> | Enumerator<Integer, ControlType>
+
+	/**
 	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
 	 * @param {'ActiveX'|'Button'|'Checkbox'|'ComboBox'|'Custom'|'DateTime'|'DropDownList'|'Edit'|'GroupBox'|'Hotkey'|'Link'|'ListBox'|'ListView'|'MonthCal'|'Picture'|'Progress'|'Radio'|'Slider'|'StatusBar'|'Tab'|'Tab2'|'Tab3'|'Text'|'TreeView'|'UpDown'} ControlType
 	 */
-	Add(ControlType [, Options, Text]) => Gui.ActiveX | Gui.Button | Gui.CheckBox | Gui.ComboBox | Gui.Custom | Gui.DateTime | Gui.DDL | Gui.Edit | Gui.GroupBox | Gui.Hotkey | Gui.Link | Gui.List | Gui.ListBox | Gui.ListView | Gui.MonthCal | Gui.Pic | Gui.Progress | Gui.Radio | Gui.Slider | Gui.StatusBar | Gui.Tab | Gui.Text | Gui.TreeView | Gui.UpDown
+	Add(ControlType [, Options, Text]) => ControlType
 
 	/**
 	 * 创建文本控件, 返回一个GuiControl对象.
@@ -4469,7 +4469,7 @@ class Integer extends Number {
 	static Call(Value) => Integer
 }
 
-class Map extends Object {
+class Map<K, V> extends Object {
 	/**
 	 * Map对象将一组称为键的值关联或映射到另一组值.
 	 */
@@ -4478,13 +4478,13 @@ class Map extends Object {
 	/**
 	 * 枚举键值对.
 	 */
-	__Enum(NumberOfVars?) => Enumerator
+	__Enum(NumberOfVars?) => Enumerator<K, V>
 
 	/**
 	 * 检索或设置键值对的值.
 	 */
 	__Item[Index] {
-		get => Any
+		get => V
 		set => void
 	}
 
@@ -4501,12 +4501,12 @@ class Map extends Object {
 	/**
 	 * 从映射中删除键值对.
 	 */
-	Delete(Key) => Any
+	Delete(Key) => V
 
 	/**
 	 * 返回与键关联的值或默认值.
 	 */
-	Get(Key [, Default]) => Any
+	Get(Key [, Default]) => V
 
 	/**
 	 * 如果 Key 在映射中有关联的值, 则返回 true, 否则返回 false.
@@ -4542,7 +4542,7 @@ class Map extends Object {
 	/**
 	 * 定义找不到键时返回的默认值.
 	 */
-	Default: Any
+	Default: V
 }
 
 class MemberError extends UnsetError {
@@ -4578,7 +4578,7 @@ class Menu extends Object {
 	/**
 	 * 添加或修改菜单项.
 	 */
-	Add([MenuItemName, Callback_or_Submenu, Options]) => void
+	Add([MenuItemName, CallbackOrSubmenu, Options]) => void
 
 	/**
 	 * 在菜单项旁边添加一个可见的选中标记.
@@ -4603,7 +4603,7 @@ class Menu extends Object {
 	/**
 	 * 在指定的项之前插入一个新项.
 	 */
-	Insert([ItemToInsertBefore, NewItemName, Callback_or_Submenu, Options]) => void
+	Insert([ItemToInsertBefore, NewItemName, CallbackOrSubmenu, Options]) => void
 
 	/**
 	 * 重命名菜单项(如果NewName为空或省略, 则MenuItemName将转换为分隔线).
@@ -4681,7 +4681,7 @@ class Object extends Any {
 	/**
 	 * 删除对象拥有的属性.
 	 */
-	DeleteProp(Name) => Object
+	DeleteProp(Name) => Any
 
 	/**
 	 * 返回给定自有属性的描述符, 兼容于 DefineProp.
@@ -4696,7 +4696,7 @@ class Object extends Any {
 	/**
 	 * 枚举对象自有的属性.
 	 */
-	OwnProps() => Enumerator
+	OwnProps() => Enumerator<String, Any>
 }
 
 class OSError extends Error {
@@ -4782,7 +4782,7 @@ class UnsetItemError extends UnsetError {
 class ValueError extends Error {
 }
 
-class VarRef extends Any {
+class VarRef<O, I> extends Any {
 }
 
 class ZeroDivisionError extends Error {

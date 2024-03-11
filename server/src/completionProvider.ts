@@ -6,7 +6,7 @@ import {
 } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 import {
-	ANY, AhkSymbol, ClassNode, Context, FuncNode, Maybe, SemanticTokenTypes, Token, Variable,
+	ANY, AhkSymbol, ClassNode, Context, FuncNode, Maybe, STRING, SemanticTokenTypes, Token, Variable,
 	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache,
 	completionitem, decltype_expr, dllcalltpe, extsettings, find_class, find_symbols, format_markdown_detail,
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
@@ -80,7 +80,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 	let { text, word, token, range, linetext, kind, symbol } = doc.getContext(position, true);
 	let list = doc.relevance, { line, character } = position;
-	let isexpr = false, expg = make_search_re(word, doc.d ? '' : '^(?!\\$).*');
+	let isexpr = false, expg = make_search_re(word);
 
 	switch (token.type) {
 		case 'TK_UNKNOWN':
@@ -458,10 +458,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							}
 						}
 						let annotations = param.type_annotations ?? [];
-						if (annotations.some(s => s.toLowerCase() === 'string'))
+						if (annotations.includes(STRING))
 							kind = CompletionItemKind.Text, command = undefined;
 						for (let s of annotations)
-							if (/['"]/.test(s[0]) && s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)))
+							if (typeof s === 'string' && /['"]/.test(s[0]) && s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)))
 								items.push(text2item(s));
 					}
 				}
@@ -521,7 +521,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (is_any) tps = [];
 		for (const node of tps) {
 			if (node.kind === SymbolKind.Interface) {
-				let params = node.name.split(',').map(s => /['"]/.test(s) ? s.slice(1, -1) : s);
+				let params = ((node as ClassNode).generic_types?.[0] as string[])?.map(s => `'"`.includes(s[0]) ? s.slice(1, -1) : s);
+				if (!params?.length) continue;
 				let result = (await sendAhkRequest('GetDispMember', params) ?? {}) as { [func: string]: number };
 				Object.entries(result).forEach(it => expg.test(it[0]) &&
 					add_item(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
@@ -769,7 +770,6 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				ci.detail = info.full, ci.documentation = { kind: 'markdown', value: format_markdown_detail(info) };
 				break;
 			case SymbolKind.Variable:
-			case SymbolKind.TypeParameter:
 				ci.kind = CompletionItemKind.Variable;
 				if (info.range.end.character)
 					ci.documentation = { kind: 'markdown', value: format_markdown_detail(info) };

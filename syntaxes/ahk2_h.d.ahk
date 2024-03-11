@@ -230,12 +230,12 @@ MinHookEnable(Target, Detour, &Original?) => Integer
 
 ;@region classes
 /** @extends {ahk2/Array} */
-class Array {
+class Array<T> {
 	/**
 	 * Returns the elements of an array that meet the condition specified in a callback function.
 	 * @param {(Value [, Index]) => Integer} Predicate The filter method calls the predicate function one time for each element in the array.
 	 */
-	Filter(Predicate) => Array
+	Filter(Predicate) => Array<T>
 
 	/**
 	 * Returns the index of the first element in the array where predicate is true, and 0 otherwise.
@@ -266,7 +266,7 @@ class Array {
 	 * Calls a defined callback function on each element of an array, and returns an array that contains the results.
 	 * @param {(Value [, Index]) => Any} CallbackFn The map method calls the CallbackFn function one time for each element in the array.
 	 */
-	Map(CallbackFn) => Array
+	Map(CallbackFn) => Array<T>
 
 	/**
 	 * Sorts an array in place. This method mutates the array and returns a reference to the same array.
@@ -378,7 +378,7 @@ class Worker {
 	 * Enumerates ahk threads.
 	 * @return An enumerator which will return items contained threadid and workerobj.
 	 */
-	static __Enum(NumberOfVars?) => ([&threadid,] &workerobj) => Integer
+	static __Enum(NumberOfVars?) => Enumerator<Worker> | Enumerator<Integer, Worker>
 
 	/**
 	 * Creates a real AutoHotkey thread or associates an existing AutoHotkey thread in the current process and returns an object that communicates with it.

@@ -143,7 +143,7 @@ export function exportSymbols(uri: string) {
 						static: fn.static || undefined,
 						variadic: fn.variadic || undefined,
 						params: fn.params?.map(p => ({
-							name: p.name, byref: p.ref || undefined,
+							name: p.name, byref: p.pass_by_ref || undefined,
 							defval: _def(p)
 						})),
 						readonly: fn.params && !(it as Property).set || undefined,
@@ -159,7 +159,7 @@ export function exportSymbols(uri: string) {
 						static: fn.static || undefined,
 						variadic: fn.variadic || undefined,
 						params: fn.params.map(p => ({
-							name: p.name, byref: p.ref || undefined,
+							name: p.name, byref: p.pass_by_ref || undefined,
 							defval: _def(p)
 						})),
 						comment: it.detail

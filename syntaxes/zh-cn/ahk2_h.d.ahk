@@ -230,12 +230,12 @@ MinHookEnable(Target, Detour, &Original?) => Integer
 
 ;@region classes
 /** @extends {ahk2/Array} */
-class Array {
+class Array<T> {
 	/**
 	 * 返回满足回调函数中指定条件的数组元素.
 	 * @param {(Value [, Index]) => Integer} Predicate Filter方法为数组中的每个元素调用一次Predicate函数.
 	 */
-	Filter(Predicate) => Array
+	Filter(Predicate) => Array<T>
 
 	/**
 	 * 返回数组中Predicate为true的第一个元素的索引, 否则为0.
@@ -262,7 +262,7 @@ class Array {
 	 * 对数组的每个元素调用定义的回调函数, 并返回包含结果的数组.
 	 * @param {(Value [, Index]) => Any} CallbackFn Map方法为数组中的每个元素调用一次CallbackFn函数.
 	 */
-	Map(CallbackFn) => Array
+	Map(CallbackFn) => Array<T>
 
 	/**
 	 * 对数组进行排序. 此方法会使数组发生变化, 并返回对同一数组的引用.
@@ -373,7 +373,7 @@ class Worker {
 	 * 枚举 ahk 线程.
 	 * @return 一个将返回threadid和workerobj的枚举器.
 	 */
-	static __Enum(NumberOfVars?) => ([&ThreadId,] &WorkerObj) => Integer
+	static __Enum(NumberOfVars?) => Enumerator<Worker> | Enumerator<Integer, Worker>
 
 	/**
 	 * 在当前进程中创建一个真AutoHotkey线程或关联一个已有AutoHotkey线程, 并返回一个与之交流的对象.

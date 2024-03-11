@@ -15,12 +15,8 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		return undefined;
 	let { name, pos, index, kind } = res;
 	let context = doc.getContext(pos), iscall = true;
-	let prop = context.text ? '' : context.word.toLowerCase();
 	if (context.kind === SymbolKind.Null || context.token.symbol)
 		return;
-	if (kind === SymbolKind.Property)
-		prop ||= '__item', iscall = false;
-	else prop ||= 'call';
 	let tps = decltype_expr(doc, context.token, context.range.end);
 	let set = new Set<AhkSymbol>(), nodes: { node: AhkSymbol, uri: string, needthis?: number }[] = [];
 	if (tps.includes(ANY)) {
@@ -29,8 +25,14 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		for (const u of new Set([ahkuris.ahk2, ahkuris.ahk2_h, doc.uri, ...Object.keys(doc.relevance)]))
 			for (const node of lexers[u]?.object.method[name] ?? [])
 				nodes.push({ node, uri: u });
-	} else for (let it of tps)
-		add(it, prop);
+	} else {
+		let prop = context.text ? '' : context.word.toLowerCase();
+		if (kind === SymbolKind.Property)
+			prop ||= '__item', iscall = false;
+		else prop ||= 'call';
+		for (let it of tps)
+			add(it, prop);
+	}
 	function add(it: AhkSymbol, prop: string, needthis = 0) {
 		let fn: FuncNode | undefined, uri = it.uri!;
 		switch (it.kind) {
@@ -87,7 +89,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 					(t = get_class_member(doc, t as any, '__item', false)!) &&
 						nodes.push({ node: t, needthis, uri: t.uri! });
 				return;
-			} 
+			}
 			n && nodes.push({ node: n, needthis, uri: n.uri! });
 		}
 	}

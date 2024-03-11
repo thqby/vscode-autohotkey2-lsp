@@ -1,6 +1,6 @@
 import { CancellationToken, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
 import {
-	AhkSymbol, FuncNode, Maybe, SemanticTokenTypes,
+	AhkSymbol, FuncNode, Maybe, SemanticTokenTypes, Variable,
 	format_markdown_detail, hoverCache, join_types, lexers, find_symbols
 } from './common';
 
@@ -34,7 +34,11 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			hover.push({ kind: 'ahk2', value: fn.full });
 
 		let md = format_markdown_detail(node, lexers[uri]), re = /^/, ___re = / — |  \n|\n\n/, t;
-		if (node.kind === SymbolKind.Variable) {
+		if ((node as Variable).is_param) {
+			if (!md.startsWith('*@param* '))
+				md = `*@param* \`${node.name}\`${(t = join_types(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
+			else md = md.replace(___re, '\n___\n');
+		} else if (node.kind === SymbolKind.Variable) {
 			if (md.startsWith('*@var* ')) {
 				md = md.replace(___re, '\n___\n');
 				re = /^\*@var\*\s/;
@@ -43,10 +47,6 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			else
 				md = `\`${node.name}\`${(t = join_types(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
 			md = md.replace(re, is_global === true ? '*@global* ' : node.static ? '*@static* ' : '*@local* ');
-		} else if (node.kind === SymbolKind.TypeParameter) {
-			if (!md.startsWith('*@param* '))
-				md = `*@param* \`${node.name}\`\n___\n${md}`;
-			else md = md.replace(___re, '\n___\n');
 		}
 		md && hover.push({ value: (hover.length ? '___\n' : '') + md });
 	}

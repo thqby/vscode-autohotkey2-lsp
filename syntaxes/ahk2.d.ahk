@@ -614,7 +614,7 @@ ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeT
 
 /**
  * Send mouse button or mouse wheel events to the control.
- * @param Control_or_Pos If this parameter is omitted, the target window itself will be clicked. Otherwise, one of the following two modes will be used.
+ * @param ControlOrPos If this parameter is omitted, the target window itself will be clicked. Otherwise, one of the following two modes will be used.
  * Mode 1 (Position): Specify the X and Y coordinates relative to the upper left corner of the client area of the target window. The X coordinate must be before the Y coordinate, and there must be at least one space or tab between them. For example: X55 Y33. If there is a control at the specified coordinates, it will send a click event at these exact coordinates. If there is no control, the target window itself will be sent an event (depending on the nature of the window, it may have no effect).
  * 
  * Mode 2 (Control): Specify the ClassNN, text or HWND of the control, or an object with Hwnd property. For details, please refer to the parameters of the control.
@@ -638,7 +638,7 @@ ControlChooseString(String, Control [, WinTitle, WinText, ExcludeTitle, ExcludeT
  * 
  * Decimal (not hexadecimal) numbers are used in the X and Y options.
  */
-ControlClick([Control_or_Pos, WinTitle, WinText, WhichButton, ClickCount, Options, ExcludeTitle, ExcludeText]) => void
+ControlClick([ControlOrPos, WinTitle, WinText, WhichButton, ClickCount, Options, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Delete the specified item from ListBox or ComboBox.
@@ -2111,7 +2111,7 @@ ObjOwnPropCount(Obj) => Integer
 /**
  * Return the attributes owned by the object.
  */
-ObjOwnProps(Obj) => Enumerator
+ObjOwnProps(Obj) => Enumerator<String, Any>
 
 /**
  * Retrieve the address of the object.
@@ -3083,7 +3083,7 @@ class Any {
 	}
 }
 
-class Array extends Object {
+class Array<T> extends Object {
 	/**
 	 * An array object contains a list or sequence of values.
 	 */
@@ -3092,13 +3092,13 @@ class Array extends Object {
 	/**
 	 * Enumerates array elements.
 	 */
-	__Enum(NumberOfVars?) => Enumerator
+	__Enum(NumberOfVars?) => Enumerator<T, void> | Enumerator<Integer, T>
 
 	/**
 	 * Retrieves or sets the value of an array element.
 	 */
 	__Item[Index] {
-		get => Any
+		get => T
 		set => void
 	}
 
@@ -3110,17 +3110,17 @@ class Array extends Object {
 	/**
 	 * Defines the default value returned when an element with no value is requested.
 	 */
-	Default: Any
+	Default: T
 
 	/**
 	 * Delete the value of the array element so that the index does not contain a value.
 	 */
-	Delete(Index) => Any
+	Delete(Index) => T
 
 	/**
 	 * Returns the value at a given index, or a default value.
 	 */
-	Get(Index [, Default]) => Any
+	Get(Index [, Default]) => T
 
 	/**
 	 * If Index is valid and there is a value at that position, it returns true, otherwise it returns false.
@@ -3135,7 +3135,7 @@ class Array extends Object {
 	/**
 	 * Delete and return the last array element.
 	 */
-	Pop() => Any
+	Pop() => T
 
 	/**
 	 * Append the value to the end of the array.
@@ -3145,7 +3145,7 @@ class Array extends Object {
 	/**
 	 * Removes items from the array.
 	 */
-	RemoveAt(Index, Length := 1) => Any
+	RemoveAt(Index, Length := 1) => T
 
 	/**
 	 * Retrieve or set the length of the array.
@@ -3261,11 +3261,11 @@ class ComValue extends Any {
 class ComValueRef extends ComValue {
 }
 
-class Enumerator extends Func {
+class Enumerator<T1, T2> extends Func {
 	/**
 	 * Retrieves the next item or items in an enumeration.
 	 */
-	Call(&OutputVar1?, &OutputVar2?, *) => Integer
+	Call(&OutputVar1?: VarRef<T1>, &OutputVar2?: VarRef<T2>, *) => Integer
 }
 
 class Error extends Object {
@@ -3529,12 +3529,7 @@ class Func extends Object {
 	IsOptional([ParamIndex]) => Integer
 }
 
-class Gui extends Object {
-	/**
-	 * Enumerates the GUI's controls.
-	 */
-	__Enum(NumberOfVars?) => Enumerator
-
+class Gui<ControlType = Gui.Control | Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView> extends Object {
 	/**
 	 * Retrieve or set the background color of the window.
 	 */
@@ -3546,7 +3541,7 @@ class Gui extends Object {
 	/**
 	 * Retrieve the GuiControl object of the focus control of the GUI.
 	 */
-	FocusedCtrl => Gui.Control
+	FocusedCtrl => ControlType
 
 	/**
 	 * Retrieve the window handle (HWND) of the GUI window.
@@ -3605,6 +3600,11 @@ class Gui extends Object {
 	__New([Options, Title := A_ScriptName, EventObj]) => void
 
 	/**
+	 * Enumerates the GUI's controls.
+	 */
+	__Enum(NumberOfVars?) => Enumerator<ControlType> | Enumerator<Integer, ControlType>
+
+	/**
 	 * Create controls such as text, buttons or checkboxes, and return a GuiControl object.
 	 * @param {'ActiveX'|'Button'|'Checkbox'|'ComboBox'|'Custom'|'DateTime'|'DropDownList'|'Edit'|'GroupBox'|'Hotkey'|'Link'|'ListBox'|'ListView'|'MonthCal'|'Picture'|'Progress'|'Radio'|'Slider'|'StatusBar'|'Tab'|'Tab2'|'Tab3'|'Text'|'TreeView'|'UpDown'} ControlType
 	 * @param Options V:    Sets the control's Name.
@@ -3612,7 +3612,7 @@ class Gui extends Object {
 	 *         VScroll HScroll -Tabstop -Wrap
 	 *         BackgroundColor Border Theme Disabled Hidden
 	 */
-	Add(ControlType [, Options, Text]) => Gui.ActiveX | Gui.Button | Gui.CheckBox | Gui.ComboBox | Gui.Custom | Gui.DateTime | Gui.DDL | Gui.Edit | Gui.GroupBox | Gui.Hotkey | Gui.Link | Gui.List | Gui.ListBox | Gui.ListView | Gui.MonthCal | Gui.Pic | Gui.Progress | Gui.Radio | Gui.Slider | Gui.StatusBar | Gui.Tab | Gui.Text | Gui.TreeView | Gui.UpDown
+	Add(ControlType [, Options, Text]) => ControlType
 
 	/**
 	 * Create a text control that the user cannot edit. Often used to label other controls.
@@ -4490,7 +4490,7 @@ class Integer extends Number {
 	static Call(Value) => Integer
 }
 
-class Map extends Object {
+class Map<K, V> extends Object {
 	/**
 	 * The Map object associates or maps a set of values called keys to another set of values.
 	 */
@@ -4499,13 +4499,13 @@ class Map extends Object {
 	/**
 	 * Enumerates key-value pairs.
 	 */
-	__Enum(NumberOfVars?) => Enumerator
+	__Enum(NumberOfVars?) => Enumerator<K, V>
 
 	/**
 	 * Retrieves or sets the value of a key-value pair.
 	 */
 	__Item[Index] {
-		get => Any
+		get => V
 		set => void
 	}
 
@@ -4522,12 +4522,12 @@ class Map extends Object {
 	/**
 	 * Remove key-value pairs from the map.
 	 */
-	Delete(Key) => Any
+	Delete(Key) => V
 
 	/**
 	 * Returns the value or default value associated with the key.
 	 */
-	Get(Key [, Default]) => Any
+	Get(Key [, Default]) => V
 
 	/**
 	 * If Key has an associated value in the map, it returns true, otherwise it returns false.
@@ -4563,7 +4563,7 @@ class Map extends Object {
 	/**
 	 * Define the default value returned when the key is not found.
 	 */
-	Default: Any
+	Default: V
 }
 
 class MemberError extends UnsetError {
@@ -4599,7 +4599,7 @@ class Menu extends Object {
 	/**
 	 * Add or modify menu items.
 	 */
-	Add([MenuItemName, Callback_or_Submenu, Options]) => void
+	Add([MenuItemName, CallbackOrSubmenu, Options]) => void
 
 	/**
 	 * Add a visible check mark next to the menu item.
@@ -4624,7 +4624,7 @@ class Menu extends Object {
 	/**
 	 * Insert a new item before the specified item.
 	 */
-	Insert([ItemToInsertBefore, NewItemName, Callback_or_Submenu, Options]) => void
+	Insert([ItemToInsertBefore, NewItemName, CallbackOrSubmenu, Options]) => void
 
 	/**
 	 * Rename the menu item (if NewName is empty or omitted, the MenuItemName will be converted to a divider).
@@ -4702,7 +4702,7 @@ class Object extends Any {
 	/**
 	 * Delete the attributes owned by the object.
 	 */
-	DeleteProp(Name) => Object
+	DeleteProp(Name) => Any
 
 	/**
 	 * Returns the descriptor of a given own property, compatible with DefineProp.
@@ -4717,7 +4717,7 @@ class Object extends Any {
 	/**
 	 * Enumerate the properties of the object.
 	 */
-	OwnProps() => Enumerator
+	OwnProps() => Enumerator<String, Any>
 }
 
 class OSError extends Error {
@@ -4805,7 +4805,7 @@ class UnsetItemError extends UnsetError {
 class ValueError extends Error {
 }
 
-class VarRef extends Any {
+class VarRef<O, I> extends Any {
 }
 
 class ZeroDivisionError extends Error {

@@ -246,7 +246,7 @@ export function initahk2cache() {
 		keyword: [],
 		snippet: [],
 		text: [],
-		option: {},
+		option: { ahk_criteria: [], hotstring: [] },
 		static: { label: 'static', insertText: 'static', kind: CompletionItemKind.Keyword }
 	};
 }
@@ -490,11 +490,11 @@ export async function sendAhkRequest(method: string, params: any[]) {
 	return utils.get_ahkProvider().then((server: any) => server?.sendRequest(method, ...params));
 }
 
-export function make_search_re(search: string, re = '') {
+export function make_search_re(search: string) {
 	let t = undefined;
 	search = search.replace(/([*.?+^$|\\/\[\](){}])|([^\x00-\x7f])|(.)/g,
 		(_, m1, m2, m3) => `${m3 || (t ??= m2) || `\\${m1}`}.*`);
-	return new RegExp(t ? re + search : `${re}([^\\x00-\\x7f]|${search})`, 'i');
+	return new RegExp(t ? search : `([^\\x00-\\x7f]|${search})`, 'i');
 }
 
 export function enumNames(enumType: object): string[] {
