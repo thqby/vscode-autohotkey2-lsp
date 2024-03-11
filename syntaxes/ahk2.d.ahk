@@ -495,7 +495,7 @@ CallbackFree(Address) => void
 /**
  * Retrieve the current position of the caret (text insertion point).
  */
-CaretGetPos([&OutputVarX, &OutputVarY]) => Integer
+CaretGetPos([&OutputVarX: VarRef<Integer>, &OutputVarY: VarRef<Integer>]) => Integer
 
 /**
  * Return Number rounded up to integer (without any .00 suffix).
@@ -704,7 +704,7 @@ ControlGetItems(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Arr
 /**
  * Get the position and size of the control.
  */
-ControlGetPos([&X, &Y, &Width, &Height, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlGetPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Returns an integer representing the specified control style or extended style.
@@ -1208,7 +1208,7 @@ FileGetAttrib([Filename]) => String
 /**
  * Get the information of the shortcut (.lnk) file, such as its target file.
  */
-FileGetShortcut(LinkFile [, &OutTarget, &OutDir, &OutArgs, &OutDescription, &OutIcon, &OutIconNum, &OutRunState]) => String
+FileGetShortcut(LinkFile [, &OutTarget: VarRef<String>, &OutDir: VarRef<String>, &OutArgs: VarRef<String>, &OutDescription: VarRef<String>, &OutIcon: VarRef<String>, &OutIconNum: VarRef<Integer>, &OutRunState: VarRef<Integer>]) => String
 
 /**
  * Get the size of the file.
@@ -1652,7 +1652,7 @@ IL_Destroy(ImageListID) => Integer
  * 
  * Bitmap or icon handles can be used to replace file names. For example, "HBITMAP:*" handle.
  */
-ImageSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ImageFile) => Integer
+ImageSearch(&OutputVarX?: VarRef<Integer>, &OutputVarY?: VarRef<Integer>, X1, Y1, X2, Y2, ImageFile) => Integer
 
 /**
  * Delete the value in the standard format .ini file.
@@ -1681,7 +1681,12 @@ IniWrite(Value, Filename, Section [, Key]) => void
  * 
  * Password: shield the user's input. To specify which character to use, as shown in this example: Password
  */
-InputBox([Prompt, Title, Options, Default]) => $InputBoxResult
+InputBox([Prompt, Title, Options, Default]) => {
+	; One of the following words indicating how the input box was closed: "OK", "Cancel", "Timeout".
+	Result: String,
+	; The text entered by the user.
+	Value: String
+}
 
 /**
  * Install mouse hook
@@ -1875,7 +1880,7 @@ Ln(Number) => Float
  * If this parameter is omitted, the return value is always a bitmap handle (icon/cursor type will be converted as needed). This is because reliable use or deletion of bitmap/icon/cursor handle requires knowing which type it is.
  * The @returns function returns the bitmap or icon handle according to the specified image or icon.
  */
-LoadPicture(Filename [, Options, &ImageType]) => Integer
+LoadPicture(Filename [, Options, &ImageType: VarRef<Integer>]) => Integer
 
 /**
  * Returns the logarithm of Number (base 10).
@@ -1922,7 +1927,7 @@ Mod(Dividend, Divisor) => Float | Integer
 /**
  * Check whether the specified monitor exists, and optionally retrieve its boundary coordinates.
  */
-MonitorGet([N, &Left, &Top, &Right, &Bottom]) => Integer
+MonitorGet([N, &Left: VarRef<Integer>, &Top: VarRef<Integer>, &Right: VarRef<Integer>, &Bottom: VarRef<Integer>]) => Integer
 
 /**
  * Returns the number of monitors.
@@ -1942,7 +1947,7 @@ MonitorGetPrimary() => Integer
 /**
  * Check whether the specified monitor exists, and optionally retrieve the boundary coordinates of its working area.
  */
-MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Integer
+MonitorGetWorkArea([N, &Left: VarRef<Integer>, &Top: VarRef<Integer>, &Right: VarRef<Integer>, &Bottom: VarRef<Integer>]) => Integer
 
 /**
  * Click or hold the mouse button, or turn the mouse wheel. Note: The click function is usually more flexible and easier to use.
@@ -1987,7 +1992,7 @@ MouseClickDrag(WhichButton, X1?, Y1?, X2, Y2 [, Speed, Relative]) => void
  * 
  * For example, to make the above two options effective, the Flag parameter must be set to 3 (1+2).
  */
-MouseGetPos([&OutputVarX, &OutputVarY, &OutputVarWin, &OutputVarControl, Flag]) => void
+MouseGetPos([&OutputVarX: VarRef<Integer>, &OutputVarY: VarRef<Integer>, &OutputVarWin: VarRef<Integer>, &OutputVarControl: VarRef<String>, Flag]) => void
 
 /**
  * Move the mouse cursor.
@@ -2222,7 +2227,7 @@ PixelGetColor(X, Y, Mode?: 'Alt' | 'Slow' | 'Alt Slow') => String
  * @param ColorID The color ID to be searched. It is usually represented by a hexadecimal number in red, green and blue (RGB) format. For example: 0x9d6346. The color ID can be determined by Window Spy (accessible from the tray menu) or PixelGetColor.
  * @param Variation is a number between 0 and 255 (inclusive), used to indicate the permissible gradient value of the red/green/blue channel intensity of each pixel color in any direction. If the color you are looking for is not always exactly the same This parameter is very useful. If you specify 255 as the gradient value, all colors will be matched. The default gradient value is 0.
  */
-PixelSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ColorID, Variation := 0) => Integer
+PixelSearch(&OutputVarX?: VarRef<Integer>, &OutputVarY?: VarRef<Integer>, X1, Y1, X2, Y2, ColorID, Variation := 0) => Integer
 
 /**
  * Place the message in the message queue of the window or control.
@@ -2309,12 +2314,12 @@ RegDeleteKey([KeyName]) => void
 /**
  * Determine whether the string contains a certain matching pattern (regular expression).
  */
-RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Integer
+RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingPosition := 1) => Integer
 
 /**
  * Replace the place where the matching pattern (regular expression) appears in the string.
  */
-RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?, Limit := -1, StartingPosition := 1) => String
+RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?: VarRef<Integer>, Limit := -1, StartingPosition := 1) => String
 
 /**
  * Read the value from the registry.
@@ -2351,7 +2356,7 @@ RTrim(String, OmitChars := ' `t') => String
  * 
  * Hide: hide operation (cannot be used in combination with any of the above options)
  */
-Run(Target [, WorkingDir, Options, &OutputVarPID]) => void
+Run(Target [, WorkingDir, Options, &OutputVarPID: VarRef<Integer>]) => void
 
 /**
  * Specify a set of user credentials to be used in all subsequent Runs and RunWait.
@@ -2361,7 +2366,7 @@ RunAs([User, Password, Domain]) => void
 /**
  * Run the external program and wait for the end of the program to continue execution.
  */
-RunWait(Target [, WorkingDir, Options, &OutputVarPID]) => Integer
+RunWait(Target [, WorkingDir, Options, &OutputVarPID: VarRef<Integer>]) => Integer
 
 /**
  * Send simulated keystrokes and mouse clicks to the active window. By default, Send is equivalent to SendInput.
@@ -2595,7 +2600,7 @@ SoundSetVolume(NewSetting [, Component, Device]) => void
 /**
  * Break the file name (path) or URL into its name, directory, extension and drive.
  */
-SplitPath(Path [, &OutFileName, &OutDir, &OutExtension, &OutNameNoExt, &OutDrive]) => void
+SplitPath(Path [, &OutFileName: VarRef<String>, &OutDir: VarRef<String>, &OutExtension: VarRef<String>, &OutNameNoExt: VarRef<String>, &OutDrive: VarRef<String>]) => void
 
 /**
  * Returns the square root of Number.
@@ -2676,7 +2681,7 @@ StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Integer
  * 
  * "Locale": According to the current user's locale rules, the search is not case sensitive. For example, in most English and Western European regions, not only treats AZ as equivalent to their lowercase form, but also treats non-ASCII letters ( Such as Ä and Ü) are considered equivalent. Depending on the nature of the string being compared, Locale is 1 to 8 times slower than Off.
  */
-StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCount?, Limit := -1) => String
+StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCount?: VarRef<Integer>, Limit := -1) => String
 
 /**
  * Use the specified delimiter to divide the string into an array of substrings.
@@ -2834,7 +2839,7 @@ WinGetClass([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 /**
  * Retrieve the location and size of the workspace of the specified window.
  */
-WinGetClientPos([&X, &Y, &Width, &Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinGetClientPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Return the names of all controls in the specified window.
@@ -2890,7 +2895,7 @@ WinGetPID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 /**
  * Get the position and size of the specified window.
  */
-WinGetPos([&X, &Y, &Width, &Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinGetPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * Returns the name of the process of the specified window.
@@ -3083,7 +3088,7 @@ class Any {
 	}
 }
 
-class Array<T> extends Object {
+class Array<T = Any> extends Object {
 	/**
 	 * An array object contains a list or sequence of values.
 	 */
@@ -3110,7 +3115,7 @@ class Array<T> extends Object {
 	/**
 	 * Defines the default value returned when an element with no value is requested.
 	 */
-	Default: T
+	Default?: T
 
 	/**
 	 * Delete the value of the array element so that the index does not contain a value.
@@ -3792,12 +3797,12 @@ class Gui<ControlType = Gui.Control | Gui.List | Gui.ListView | Gui.StatusBar | 
 	/**
 	 * Retrieve the position and size of the working area of the window.
 	 */
-	GetClientPos([&X, &Y, &Width, &Height]) => void
+	GetClientPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>]) => void
 
 	/**
 	 * Retrieve the position and size of the window.
 	 */
-	GetPos([&X, &Y, &Width, &Height]) => void
+	GetPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>]) => void
 
 	/**
 	 * Hide window.
@@ -3982,7 +3987,7 @@ class Gui<ControlType = Gui.Control | Gui.List | Gui.ListView | Gui.StatusBar | 
 		/**
 		 * Retrieve the position and size of the control.
 		 */
-		GetPos([&X, &Y, &Width, &Height]) => void
+		GetPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>]) => void
 
 		/**
 		 * Move/resize controls.
@@ -4490,7 +4495,7 @@ class Integer extends Number {
 	static Call(Value) => Integer
 }
 
-class Map<K, V> extends Object {
+class Map<K = Any, V = Any> extends Object {
 	/**
 	 * The Map object associates or maps a set of values called keys to another set of values.
 	 */
@@ -4563,7 +4568,7 @@ class Map<K, V> extends Object {
 	/**
 	 * Define the default value returned when the key is not found.
 	 */
-	Default: V
+	Default?: V
 }
 
 class MemberError extends UnsetError {
@@ -4707,7 +4712,7 @@ class Object extends Any {
 	/**
 	 * Returns the descriptor of a given own property, compatible with DefineProp.
 	 */
-	GetOwnPropDesc(Name) => Object
+	GetOwnPropDesc(Name) => { Get?: Func, Set?: Func, Call?: Func, Value?: Any }
 
 	/**
 	 * If the object has the attribute of the name, it returns true, otherwise it returns false.
@@ -4805,23 +4810,9 @@ class UnsetItemError extends UnsetError {
 class ValueError extends Error {
 }
 
-class VarRef<O, I> extends Any {
+class VarRef<O = Any, I = Any> extends Any {
 }
 
 class ZeroDivisionError extends Error {
-}
-;@endregion
-
-;@region typedef
-class $InputBoxResult {
-	/**
-	 * The text entered by the user.
-	 */
-	Value: String
-
-	/**
-	 * One of the following words indicating how the input box was closed: "OK", "Cancel", "Timeout".
-	 */
-	Result: String
 }
 ;@endregion

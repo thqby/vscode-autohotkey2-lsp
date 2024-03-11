@@ -489,7 +489,7 @@ CallbackFree(Address) => void
 /**
  * 检索插入符号的当前位置(文本插入点).
  */
-CaretGetPos([&OutputVarX, &OutputVarY]) => Integer
+CaretGetPos([&OutputVarX: VarRef<Integer>, &OutputVarY: VarRef<Integer>]) => Integer
 
 /**
  * 返回 Number 向上取整后的整数(不含任何 .00 后缀).
@@ -698,7 +698,7 @@ ControlGetItems(Control [, WinTitle, WinText, ExcludeTitle, ExcludeText]) => Arr
 /**
  * 获取控件的位置和大小.
  */
-ControlGetPos([&X, &Y, &Width, &Height, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+ControlGetPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>, Control, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * 返回表示指定控件样式或扩展样式的整数.
@@ -1202,7 +1202,7 @@ FileGetAttrib([Filename]) => String
 /**
  * 获取快捷方式(.lnk) 文件的信息, 例如其目标文件.
  */
-FileGetShortcut(LinkFile [, &OutTarget, &OutDir, &OutArgs, &OutDescription, &OutIcon, &OutIconNum, &OutRunState]) => String
+FileGetShortcut(LinkFile [, &OutTarget: VarRef<String>, &OutDir: VarRef<String>, &OutArgs: VarRef<String>, &OutDescription: VarRef<String>, &OutIcon: VarRef<String>, &OutIconNum: VarRef<Integer>, &OutRunState: VarRef<Integer>]) => String
 
 /**
  * 获取文件的大小.
@@ -1646,7 +1646,7 @@ IL_Destroy(ImageListID) => Integer
  * 
  * 位图或图标句柄可用于替代文件名. 例如, "HBITMAP:*" handle.
  */
-ImageSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ImageFile) => Integer
+ImageSearch(&OutputVarX?: VarRef<Integer>, &OutputVarY?: VarRef<Integer>, X1, Y1, X2, Y2, ImageFile) => Integer
 
 /**
  * 删除标准格式的 .ini 文件中的值.
@@ -1675,7 +1675,12 @@ IniWrite(Value, Filename, Section [, Key]) => void
  * 
  * Password: 屏蔽用户的输入. 要指定使用哪个字符, 如此例所示: Password
  */
-InputBox([Prompt, Title, Options, Default]) => $InputBoxResult
+InputBox([Prompt, Title, Options, Default]) => {
+	; 以下单词之一表示输入框是如何关闭的: OK, Cancel 或 Timeout.
+	Result: String,
+	; 用户输入的文本.
+	Value: String
+}
 
 /**
  * 安装鼠标钩子
@@ -1869,7 +1874,7 @@ Ln(Number) => Float
  * 如果忽略该参数, 则返回值始终是位图句柄(图标/光标类型会按需转换). 这是因为可靠地使用或删除位图/图标/光标句柄需要知道它是哪种类型.
  * @returns 函数根据指定的图片或图标返回位图或图标句柄.
  */
-LoadPicture(Filename [, Options, &ImageType]) => Integer
+LoadPicture(Filename [, Options, &ImageType: VarRef<Integer>]) => Integer
 
 /**
  * 返回Number的对数（以10为底）.
@@ -1916,7 +1921,7 @@ Mod(Dividend, Divisor) => Float | Integer
 /**
  * 检查指定的监视器是否存在, 并可选地检索其边界坐标.
  */
-MonitorGet([N, &Left, &Top, &Right, &Bottom]) => Integer
+MonitorGet([N, &Left: VarRef<Integer>, &Top: VarRef<Integer>, &Right: VarRef<Integer>, &Bottom: VarRef<Integer>]) => Integer
 
 /**
  * 返回监视器的数量.
@@ -1936,7 +1941,7 @@ MonitorGetPrimary() => Integer
 /**
  * 检查指定的监视器是否存在, 并可选地检索其工作区域的边界坐标.
  */
-MonitorGetWorkArea([N, &Left, &Top, &Right, &Bottom]) => Integer
+MonitorGetWorkArea([N, &Left: VarRef<Integer>, &Top: VarRef<Integer>, &Right: VarRef<Integer>, &Bottom: VarRef<Integer>]) => Integer
 
 /**
  * 单击或按住鼠标按钮,或转动鼠标滚轮.注意：单击功能通常更灵活且更易于使用.
@@ -1981,7 +1986,7 @@ MouseClickDrag(WhichButton, X1?, Y1?, X2, Y2 [, Speed, Relative]) => void
  * 
  * 例如, 要使上面两个选项都生效, Flag 参数必须设置为 3(1+2).
  */
-MouseGetPos([&OutputVarX, &OutputVarY, &OutputVarWin, &OutputVarControl, Flag]) => void
+MouseGetPos([&OutputVarX: VarRef<Integer>, &OutputVarY: VarRef<Integer>, &OutputVarWin: VarRef<Integer>, &OutputVarControl: VarRef<String>, Flag]) => void
 
 /**
  * 移动鼠标光标.
@@ -2216,7 +2221,7 @@ PixelGetColor(X, Y, Mode?: 'Alt' | 'Slow' | 'Alt Slow') => String
  * @param ColorID 要搜索的颜色 ID. 通常用红绿蓝(RGB) 格式的十六进制数表示. 例如: 0x9d6346. 颜色 ID 可以通过 Window Spy(可从托盘菜单访问) 或 PixelGetColor 来确定.
  * @param Variation 介于 0 和 255(包含) 之间的数字, 用于表示每个像素颜色红/绿/蓝通道强度在任一方向上允许的渐变值. 如果所查找的颜色并不总是完全相同的色度, 这个参数很有用. 如果指定 255 为渐变值, 则匹配所有颜色. 默认渐变值为 0.
  */
-PixelSearch(&OutputVarX?, &OutputVarY?, X1, Y1, X2, Y2, ColorID, Variation := 0) => Integer
+PixelSearch(&OutputVarX?: VarRef<Integer>, &OutputVarY?: VarRef<Integer>, X1, Y1, X2, Y2, ColorID, Variation := 0) => Integer
 
 /**
  * 将消息放置在窗口或控件的消息队列中.
@@ -2303,12 +2308,12 @@ RegDeleteKey([KeyName]) => void
 /**
  * 确定字符串是否包含某个匹配模式（正则表达式）.
  */
-RegExMatch(Haystack, NeedleRegEx, &OutputVar?, StartingPosition := 1) => Integer
+RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingPosition := 1) => Integer
 
 /**
  * 替换字符串中匹配模式(正则表达式) 出现的地方.
  */
-RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?, Limit := -1, StartingPosition := 1) => String
+RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?: VarRef<Integer>, Limit := -1, StartingPosition := 1) => String
 
 /**
  * 从注册表读取值.
@@ -2345,7 +2350,7 @@ RTrim(String, OmitChars := ' `t') => String
  * 
  * Hide: 隐藏运行(不能和上面任意一个选项组合使用)
  */
-Run(Target [, WorkingDir, Options, &OutputVarPID]) => void
+Run(Target [, WorkingDir, Options, &OutputVarPID: VarRef<Integer>]) => void
 
 /**
  * 指定在后续所有的 Run 和 RunWait 中使用的一组用户凭据.
@@ -2355,7 +2360,7 @@ RunAs([User, Password, Domain]) => void
 /**
  * 运行外部程序并等待程序结束才继续往后执行.
  */
-RunWait(Target [, WorkingDir, Options, &OutputVarPID]) => Integer
+RunWait(Target [, WorkingDir, Options, &OutputVarPID: VarRef<Integer>]) => Integer
 
 /**
  * 将模拟的击键和鼠标单击发送到活动窗口.默认情况下, Send 等同于 SendInput.
@@ -2589,7 +2594,7 @@ SoundSetVolume(NewSetting [, Component, Device]) => void
 /**
  * 将文件名(路径) 或 URL 分解成它的名称, 目录, 扩展名和驱动器.
  */
-SplitPath(Path [, &OutFileName, &OutDir, &OutExtension, &OutNameNoExt, &OutDrive]) => void
+SplitPath(Path [, &OutFileName: VarRef<String>, &OutDir: VarRef<String>, &OutExtension: VarRef<String>, &OutNameNoExt: VarRef<String>, &OutDrive: VarRef<String>]) => void
 
 /**
  * 返回Number的平方根.
@@ -2670,7 +2675,7 @@ StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Integer
  * 
  * "Locale": 根据当前用户的区域设置规则, 搜索是不区分大小写的. 例如, 在大多数英语及西欧地区, 不仅将 A-Z 视为等同于它们的小写形式, 同时也将非-ASCII 字母(如 Ä 和 Ü) 视为等同的. 根据被比较字符串的性质, Locale 比 Off 慢 1 到 8 倍.
  */
-StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCount?, Limit := -1) => String
+StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCount?: VarRef<Integer>, Limit := -1) => String
 
 /**
  * 使用指定的分隔符将字符串分成子字符串数组.
@@ -2828,7 +2833,7 @@ WinGetClass([WinTitle, WinText, ExcludeTitle, ExcludeText]) => String
 /**
  * 检索指定窗口的工作区的位置和大小.
  */
-WinGetClientPos([&X, &Y, &Width, &Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinGetClientPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * 返回指定窗口中所有控件的名称.
@@ -2884,7 +2889,7 @@ WinGetPID([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 /**
  * 获取指定窗口的位置和大小.
  */
-WinGetPos([&X, &Y, &Width, &Height, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
+WinGetPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>, WinTitle, WinText, ExcludeTitle, ExcludeText]) => void
 
 /**
  * 返回指定窗口的进程的名称.
@@ -3077,7 +3082,7 @@ class Any {
 	}
 }
 
-class Array<T> extends Object {
+class Array<T = Any> extends Object {
 	/**
 	 * 数组对象包含值的列表或序列.
 	 */
@@ -3104,7 +3109,7 @@ class Array<T> extends Object {
 	/**
 	 * 定义请求没有值的元素时返回的默认值.
 	 */
-	Default: T
+	Default?: T
 
 	/**
 	 * 删除数组元素的值, 使索引不包含值.
@@ -3787,12 +3792,12 @@ class Gui<ControlType = Gui.Control | Gui.List | Gui.ListView | Gui.StatusBar | 
 	/**
 	 * 检索窗口工作区的位置和大小.
 	 */
-	GetClientPos([&X, &Y, &Width, &Height]) => void
+	GetClientPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>]) => void
 
 	/**
 	 * 检索窗口的位置和大小.
 	 */
-	GetPos([&X, &Y, &Width, &Height]) => void
+	GetPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>]) => void
 
 	/**
 	 * 隐藏窗口.
@@ -3961,7 +3966,7 @@ class Gui<ControlType = Gui.Control | Gui.List | Gui.ListView | Gui.StatusBar | 
 		/**
 		 * 检索控件的位置和大小.
 		 */
-		GetPos([&X, &Y, &Width, &Height]) => void
+		GetPos([&X: VarRef<Integer>, &Y: VarRef<Integer>, &Width: VarRef<Integer>, &Height: VarRef<Integer>]) => void
 
 		/**
 		 * 移动/调整控件大小.
@@ -4469,7 +4474,7 @@ class Integer extends Number {
 	static Call(Value) => Integer
 }
 
-class Map<K, V> extends Object {
+class Map<K = Any, V = Any> extends Object {
 	/**
 	 * Map对象将一组称为键的值关联或映射到另一组值.
 	 */
@@ -4542,7 +4547,7 @@ class Map<K, V> extends Object {
 	/**
 	 * 定义找不到键时返回的默认值.
 	 */
-	Default: V
+	Default?: V
 }
 
 class MemberError extends UnsetError {
@@ -4686,7 +4691,7 @@ class Object extends Any {
 	/**
 	 * 返回给定自有属性的描述符, 兼容于 DefineProp.
 	 */
-	GetOwnPropDesc(Name) => Object
+	GetOwnPropDesc(Name) => { Get?: Func, Set?: Func, Call?: Func, Value?: Any }
 
 	/**
 	 * 如果对象拥有该名称的属性, 则返回 true, 否则返回 false.
@@ -4782,23 +4787,9 @@ class UnsetItemError extends UnsetError {
 class ValueError extends Error {
 }
 
-class VarRef<O, I> extends Any {
+class VarRef<O = Any, I = Any> extends Any {
 }
 
 class ZeroDivisionError extends Error {
-}
-;@endregion
-
-;@region typedef
-class $InputBoxResult {
-	/**
-	 * 用户输入的文本.
-	 */
-	Value: String
-
-	/**
-	 * 以下单词之一表示输入框是如何关闭的: OK, Cancel 或 Timeout.
-	 */
-	Result: String
 }
 ;@endregion
