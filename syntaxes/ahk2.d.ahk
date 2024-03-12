@@ -1530,7 +1530,7 @@ GroupDeactivate(GroupName, Mode?) => void
 /**
  * Retrieve the GuiControl object of the GUI control associated with the specified HWND.
  */
-GuiCtrlFromHwnd(Hwnd) => Gui.Control
+GuiCtrlFromHwnd(Hwnd) => Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView
 
 /**
  * Retrieve the Gui object of the Gui window associated with the specified HWND.
@@ -3534,7 +3534,7 @@ class Func extends Object {
 	IsOptional([ParamIndex]) => Integer
 }
 
-class Gui<ControlType = Gui.Control | Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView> extends Object {
+class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView> extends Object {
 	/**
 	 * Retrieve or set the background color of the window.
 	 */

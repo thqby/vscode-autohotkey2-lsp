@@ -1027,7 +1027,7 @@
           },
           "patterns": [
             {
-              "match": "^\\s*\\*\\s",
+              "match": "^\\s*\\*\\s+",
               "name": "comment.block.ahk2"
             },
             {
@@ -1635,6 +1635,10 @@
     },
     "brackets": {
       "patterns": [
+        {
+          "match": "^\\s*\\*\\s+",
+          "name": "comment.block.ahk2"
+        },
         {
           "begin": "{",
           "end": "}|(?=\\*/)",

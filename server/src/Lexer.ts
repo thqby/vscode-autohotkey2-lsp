@@ -3698,18 +3698,18 @@ export class Lexer {
 				} else {
 					let fn = node as FuncNode, dec = fn.declaration;
 					let vars: { [k: string]: Variable } = {}, unresolved_vars: { [k: string]: Variable } = {}, vr: Variable;
-					let has_this_param = fn.has_this_param;
+					let has_this_param = fn.has_this_param, named_params: Variable[] | undefined = [];
 					if (has_this_param) {
 						pars.THIS = dec.THIS = THIS;
 						pars.SUPER = dec.SUPER = SUPER;
+						if (fn.kind !== SymbolKind.Method)
+							named_params = undefined;
 					}
-					fn.children ??= [];
-					if (!has_this_param || fn.kind === SymbolKind.Method)
-						fn.children.unshift(...fn.params ?? []);
 					for (let it of fn.params ?? []) {
 						it.def = it.assigned = it.is_param = true;
 						if (!it.name)
 							continue;
+						named_params?.push(it);
 						if (it.defaultVal !== undefined || it.arr)
 							lpv = true;
 						else if (lpv)
@@ -3732,46 +3732,48 @@ export class Lexer {
 							});
 						else dec[k] = v, v.assigned ||= Boolean(v.returns);
 					}
-					Object.entries(fn.global ?? {}).forEach(([k, v]) => {
+					for (let [k, v] of Object.entries(fn.global ?? {})) {
 						if (t = dec[k]) {
-							if (pars[k])
-								return _diags.push({
+							if (pars[k]) {
+								_diags.push({
 									message: diagnostic.conflictserr('global', 'parameter', t.name),
 									range: v.selectionRange, severity
 								});
-							else {
-								let varsp = v.static ? 'static' : 'local';
-								_diags.push({
-									message: diagnostic.conflictserr(...(
-										t.selectionRange.start.line < v.selectionRange.start.line ?
-											(t = v, ['global', varsp]) : [varsp, 'global']
-									), t.name),
-									range: t.selectionRange, severity
-								});
-								if (v !== t) return;
-								delete fn.local[k];
+								continue;
 							}
+							let varsp = v.static ? 'static' : 'local';
+							_diags.push({
+								message: diagnostic.conflictserr(...(
+									t.selectionRange.start.line < v.selectionRange.start.line ?
+										(t = v, ['global', varsp]) : [varsp, 'global']
+								), t.name),
+								range: t.selectionRange, severity
+							});
+							if (v !== t) continue;
+							delete fn.local[k];
 						}
 						dec[k] ??= v;
 						_this.declaration[k] ??= v;
 						v.assigned ||= Boolean(v.returns);
 						v.is_global = true;
-					});
-					fn.children.forEach(it => {
+					}
+					(fn.children ??= []).unshift(...named_params ?? []);
+					for (let it of fn.children) {
 						_low = it.name.toUpperCase();
 						if (it.kind === SymbolKind.Function) {
 							let _f = it as FuncNode;
 							if (!_f.static)
 								_f.closure = true;
 							if (!_low)
-								return;
+								continue;
 							if (dec[_low]) {
-								if (t = pars[_low])
-									return _diags.push({
+								if (t = pars[_low]) {
+									_diags.push({
 										message: diagnostic.conflictserr('function', 'parameter', t.name),
 										range: it.selectionRange, severity
 									});
-								if (t = fn.global[_low]) {
+									continue;
+								} else if (t = fn.global[_low]) {
 									_diags.push({
 										message: diagnostic.conflictserr(...(
 											t.selectionRange.start.line < it.selectionRange.start.line ||
@@ -3781,47 +3783,49 @@ export class Lexer {
 										), t.name),
 										range: t.selectionRange, severity
 									});
-									if (it === t) return;
+									if (it === t) continue;
 									delete fn.global[_low];
 									delete t.is_global;
 									if (_this.declaration[_low] === t)
 										delete _this.declaration[_low];
-								} else if (t = fn.local[_low])
+								} else if (t = fn.local[_low]) {
 									if (t.selectionRange.start.line < it.selectionRange.start.line ||
 										t.selectionRange.start.line === it.selectionRange.start.line &&
-										t.selectionRange.start.character < it.selectionRange.start.character)
-										return _diags.push({
+										t.selectionRange.start.character < it.selectionRange.start.character) {
+										_diags.push({
 											message: diagnostic.conflictserr('function',
 												t.kind === SymbolKind.Function ? 'Func' : t.static ? 'static' : 'local', it.name),
 											range: it.selectionRange, severity
 										});
-									else if (t.static)
+										continue;
+									} else if (t.static)
 										_diags.push({
 											message: diagnostic.conflictserr(t.kind === SymbolKind.Function ? 'function' : 'static',
 												it.kind === SymbolKind.Function ? 'Func' : 'static', t.name),
 											range: t.selectionRange, severity
 										});
+								}
 							}
 							dec[_low] = fn.local[_low] = it;
 						} else if (it.kind === SymbolKind.Variable)
 							((vr = it as Variable).def ? vars : unresolved_vars)[_low] ??= (vr.assigned ||= Boolean(vr.returns), it);
-					});
+					}
 					if ((fn.parent as FuncNode)?.assume === FuncScope.GLOBAL)
 						fn.assume ??= FuncScope.GLOBAL;
 					if (fn.assume === FuncScope.GLOBAL) {
-						Object.entries(vars = { ...unresolved_vars, ...vars }).forEach(([k, v]) => {
+						for (let [k, v] of Object.entries(vars = { ...unresolved_vars, ...vars })) {
 							if (!(t = dec[k]))
 								_this.declaration[k] ??= fn.global[k] = v, v.is_global = true;
 							else if (t.kind === SymbolKind.Function && v.def)
 								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
 								t.def = true, t.assigned ||= Boolean(v.returns);
-						});
+						}
 						unresolved_vars = {};
 					} else {
 						let assme_static = fn.assume === FuncScope.STATIC;
 						let is_outer = fn.kind === SymbolKind.Method || !fn.parent;
-						Object.entries(vars).forEach(([k, v]) => {
+						for (let [k, v] of Object.entries(vars)) {
 							delete unresolved_vars[k];
 							if (!(t = dec[k])) {
 								if (dec[k] = v, is_outer)
@@ -3832,7 +3836,7 @@ export class Lexer {
 								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
 								t.def = true, t.assigned ||= Boolean(v.returns);
-						});
+						}
 					}
 					vars = unresolved_vars, unresolved_vars = {};
 					for (let k in vars)
@@ -6833,16 +6837,13 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 function type_naming(sym: AhkSymbol) {
 	let s;
 	switch (sym.kind) {
-		case SymbolKind.Interface: return (sym as ClassNode).full;
+		case SymbolKind.Interface:
+			return (sym as ClassNode).full;
 		case SymbolKind.Class:
 			s = sym as ClassNode;
 			if (s.prototype)
 				return `typeof ${s.full}`;
 			return s.full || 'Object';
-		case SymbolKind.Method:
-		case SymbolKind.Property:
-			s = (sym as FuncNode).full?.match(/^\((.+?)\)/)?.[1] ?? '';
-			return `${s}${sym.static ? '.' : '#'}${sym.name}`;
 		case SymbolKind.Function:
 			if (sym.name) {
 				let s = sym, ps = [sym], names = [sym.name];
@@ -6867,7 +6868,11 @@ function type_naming(sym: AhkSymbol) {
 		case SymbolKind.String:
 		case SymbolKind.Number:
 			return (sym.data as string | number ?? sym.name).toString();
-		default: return 'Any';
+		case SymbolKind.Method:
+		case SymbolKind.Property:
+			if (s = (sym as FuncNode).full?.match(/^\((.+?)\)/)?.[1])
+				return `${s}${sym.static ? '.' : '#'}${sym.name}`;
+		default: return 'unknown';
 	}
 }
 
@@ -6876,11 +6881,10 @@ export function generate_type_annotation(sym: AhkSymbol, lex?: Lexer) {
 }
 
 export function join_types(tps?: Array<string | AhkSymbol> | null) {
-	let ts = tps?.map(s => typeof s === 'string' ? s : type_naming(s));
-	let t = ts?.pop();
+	let ts = [...new Set(tps?.map(s => typeof s === 'string' ? s : type_naming(s)) ?? [])];
+	let t = ts.pop();
 	if (!t) return '';
-	ts = ts!.map(s => s.includes('=>') && !'"\''.includes(s[0]) ? `(${s})` : s);
-	ts.push(t);
+	(ts = ts.map(s => s.includes('=>') && !'"\''.includes(s[0]) ? `(${s})` : s)).push(t);
 	return ts.join(' | ');
 }
 

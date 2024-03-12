@@ -1524,7 +1524,7 @@ GroupDeactivate(GroupName, Mode?) => void
 /**
  * 检索与指定的 HWND 关联的 GUI 控件的 GuiControl 对象.
  */
-GuiCtrlFromHwnd(Hwnd) => Gui.Control
+GuiCtrlFromHwnd(Hwnd) => Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView
 
 /**
  * 检索与指定的 HWND 关联的 Gui 窗口的 Gui 对象.
@@ -3052,7 +3052,7 @@ class Any {
 	/**
 	 * 检索方法的实现函数.
 	 */
-	GetMethod(Name) => Object
+	GetMethod(Name) => Func
 
 	/**
 	 * 如果 BaseObj 在 Value 的基对象链中, 则返回 true, 否则返回 false.
@@ -3579,7 +3579,7 @@ class Func extends Object {
 	IsOptional([ParamIndex]) => Integer
 }
 
-class Gui<ControlType = Gui.Control | Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView> extends Object {
+class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView> extends Object {
 	/**
 	 * 检索或设置窗口的背景色.
 	 */
