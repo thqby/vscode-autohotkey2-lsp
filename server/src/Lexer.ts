@@ -6908,7 +6908,7 @@ export function get_type_annotations(sym: AhkSymbol, lex?: Lexer) {
 			tag = 'prop(erty)?';
 		case SymbolKind.Variable:
 			tag ??= '(var)';
-			annotation = (detail.match(new RegExp(`^\\s*@${tag}\\s+{(.*[^\\])?}\\s+${sym.name}(\\s|$)`, 'mi')) ??
+			annotation = (detail.match(new RegExp(`^\\s*@${tag}\\s+{(.*[^\\\\])?}\\s+${sym.name}(\\s|$)`, 'mi')) ??
 				detail.match(/^\s*@(type)\s+{(.*[^\\])?}(?=\s|$)/mi))?.[2];
 			if (annotation !== undefined || sym.kind === SymbolKind.Variable)
 				break;
