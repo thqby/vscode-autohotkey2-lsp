@@ -1,9 +1,9 @@
-import { CancellationToken, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, ParameterInformation, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, Variable,
-	ahkuris, format_markdown_detail, get_callinfo, get_class_constructor,
-	get_class_member, lexers, decltype_expr, decltype_returns
+	ahkuris, decltype_expr, decltype_invoke, decltype_returns, get_detail,
+	get_callinfo, get_class_constructor, get_class_member, lexers
 } from './common';
 
 export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
@@ -68,15 +68,18 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 					n = get_class_constructor(n as ClassNode);
 				else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
 					n = get_class_member(doc, cls.prototype!, '__new', true) ?? n;
-				else if (n.kind === SymbolKind.Property || (n as FuncNode).alias)
-					return decltype_returns(n, lexers[n.uri!], cls).forEach(it => add(it, 'call', -1));
-				else if (fn && prop === 'bind') {
+				else if (n.kind === SymbolKind.Property || (n as FuncNode).alias) {
+					let tps: AhkSymbol[] | Set<AhkSymbol> = decltype_returns(n, lexers[n.uri!] ?? doc, cls);
+					if (n.kind === SymbolKind.Property && (n as FuncNode).alias)
+						tps = decltype_invoke(doc, tps, 'call', true);
+					return tps.forEach(it => add(it, 'call', -1));
+				} else if (fn && prop === 'bind') {
 					if (set.has(fn)) return; else set.add(fn);
 					let b = fn.full.indexOf('(', fn.name ? 1 : 0);
 					fn = {
-						...fn, name: n.name, detail: undefined,
+						...fn, name: n.name, detail: n.markdown_detail === undefined ? n.detail : undefined,
 						full: `(Func) Bind${fn.full.slice(b, b + fn.param_def_len)} => BoundFunc`,
-						formated_detail: (format_markdown_detail(n, null), n.formated_detail)
+						markdown_detail: n.markdown_detail
 					};
 					n = fn;
 				}
@@ -85,7 +88,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			else if (n.kind !== SymbolKind.Property)
 				return;
 			else if (!(n as FuncNode).params) {
-				for (let t of decltype_returns(n, lexers[n.uri!], cls))
+				for (let t of decltype_returns(n, lexers[n.uri!] ?? doc, cls))
 					(t = get_class_member(doc, t as any, '__item', false)!) &&
 						nodes.push({ node: t, needthis, uri: t.uri! });
 				return;
@@ -98,14 +101,11 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		if (!fn.params || set.has(fn))
 			continue;
 		let fns = [fn], q = fn.name && fn.full.match(/^(\(.+?\))?[^([]+/)?.[0].length || 0, pi = index - needthis;
-		let parameters: { label: string | [number, number], documentation?: any }[] = [];
+		let parameters: ParameterInformation[] = [];
 		let params: Variable[] | undefined, param: Variable | undefined;
 		let activeParameter: number, pc: number, label: string, name: string;
-		let documentation: any = (fn.detail || fn.formated_detail) && {
-			kind: 'markdown',
-			value: format_markdown_detail(fn, lex,
-				/(^|\n)\*@param\*(.|\n|\r)*?(?=\n\*@|$)|^\*@overload\*\n```(.|\n)*?\n```/g)
-		};
+		let documentation = get_detail(fn, lex,
+			/(^|\n)\*@param\*(.|\n|\r)*?(?=\n\*@|$)/g);
 		if (fn.overloads) {
 			if (typeof fn.overloads === 'string') {
 				let lex = new Lexer(TextDocument.create('', 'ahk2', -10,
@@ -134,11 +134,9 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				parameters.unshift({ label: 'this' }), activeParameter++;
 				label = label.replace(/(?<=.)\(/, '(this' + (params.length ? ', ' : ''));
 			}
-			if (param?.formated_detail)
-				parameters[activeParameter].documentation = {
-					kind: 'markdown',
-					value: format_markdown_detail(param, lex)
-				};
+			let detail = param && get_detail(param, lex);
+			if (detail)
+				parameters[activeParameter].documentation = detail;
 			signinfo.signatures.push({ label, parameters, documentation, activeParameter });
 		}
 	}

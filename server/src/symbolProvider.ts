@@ -92,7 +92,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			} else if (!filter_types.includes(kind))
 				result.push(info);
 		});
-		t.forEach(info => {
+		for (let info of t) {
 			let inherit: { [key: string]: AhkSymbol } = {}, fn = info as FuncNode, s: Variable;
 			let oig = outer_is_global;
 			switch (info.kind) {
@@ -103,9 +103,11 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						Object.values(dec).forEach(it => it.selectionRange.end.character && result.push(it));
 					break;
 				case SymbolKind.Method:
-					inherit = { THIS, SUPER }, outer_is_global ||= fn.assume === FuncScope.GLOBAL;
-				case SymbolKind.Event:
+					outer_is_global ||= fn.assume === FuncScope.GLOBAL;
 				case SymbolKind.Function:
+					if (fn.has_this_param)
+						inherit = { THIS, SUPER };
+				case SymbolKind.Event:
 					if (!fn.parent)
 						outer_is_global ||= fn.assume === FuncScope.GLOBAL;
 					else if (fn.kind !== SymbolKind.Method) {
@@ -165,20 +167,18 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					break;
 				case SymbolKind.Property:
 					if (info.parent?.kind === SymbolKind.Class) {
-						inherit = { THIS, SUPER };
-						let t = info as Property;
-						for (let s of [t.get, t.set, t.call]) {
+						let prop = info as Property;
+						for (let s of [prop.get, prop.set, prop.call]) {
 							if (!s) continue;
-							s.selectionRange.end.character && result.push(s);
-							flatTree(s, inherit, false);
+							t.push(s), s.selectionRange.end.character && result.push(s);
 						}
-						break;
 					}
+					break;
 				default: inherit = { ...vars }; break;
 			}
 			flatTree(info, inherit, outer_is_global);
 			outer_is_global = oig;
-		});
+		}
 	}
 	function checksamename(doc: Lexer) {
 		if (doc.d)
@@ -267,72 +267,74 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	}
 }
 
+function get_func_param_count(fn: FuncNode) {
+	let params = fn.params, min = params.length, max = min;
+	if (fn.variadic) {
+		max = Infinity;
+		if (min > 0 && params[min - 1].arr)
+			min--;
+	}
+	while (min > 0 && params[min - 1].defaultVal !== undefined)
+		--min;
+	for (let i = 0; i < min; ++i)
+		if (params[i].defaultVal === false)
+			--min;
+	return { min, max, has_this_param: fn.has_this_param };
+}
+
 export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
-	let paraminfo = info.paraminfo!, is_cls: boolean;
+	let paraminfo = info.paraminfo!, is_cls: boolean, params;
 	if (!paraminfo || !extsettings.Diagnostics.ParamsCheck) return;
 	if (is_cls = node?.kind === SymbolKind.Class)
 		node = get_class_constructor(node as any) as any;
-	if (!node) return;
-	if (node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) {
-		let paramcount = node.params.length, pc = paraminfo.count, miss: { [index: number]: boolean } = {};
-		if (node.variadic) {
-			if (paramcount > 0 && node.params[paramcount - 1].arr)
-				paramcount--;
-			while (paramcount > 0 && node.params[paramcount - 1].defaultVal !== undefined) --paramcount;
-			for (let i = 0; i < paramcount; ++i)
-				if (node.params[i].defaultVal === false)
-					--paramcount;
-			if (pc < paramcount && !paraminfo.unknown)
-				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount + '+', pc), range: info.range, severity: DiagnosticSeverity.Error });
-			paraminfo.miss.forEach(index => {
-				miss[index] = true;
-				if (index < paramcount && param_is_miss(node.params, index))
-					doc.addDiagnostic(diagnostic.missingparam(), paraminfo.comma[index] ?? doc.document.offsetAt(info.range.end), 1);
-			});
-		} else {
-			let maxcount = paramcount, l = paraminfo.miss.length, t = 0;
-			while (paramcount > 0 && node.params[paramcount - 1].defaultVal !== undefined) --paramcount;
-			for (let i = 0; i < paramcount; ++i)
-				if (node.params[i].defaultVal === false)
-					--paramcount;
-			while (l > 0) {
-				if ((t = paraminfo.miss[l - 1]) >= maxcount) {
-					if (t + 1 === pc) --pc;
-				} else if (param_is_miss(node.params, t))
-					doc.addDiagnostic(diagnostic.missingparam(), paraminfo.comma[t] ?? doc.document.offsetAt(info.range.end), 1);
-				miss[t] = true, --l;
-			}
-			if ((pc < paramcount && !paraminfo.unknown) || pc > maxcount)
-				doc.diagnostics.push({ message: diagnostic.paramcounterr(paramcount === maxcount ? maxcount : paramcount + '-' + maxcount, pc), range: info.range, severity: DiagnosticSeverity.Error });
+	if (!(params = node?.params)) return;
+	let { max, min } = get_func_param_count(node), l = params.length;
+	let { count, miss } = paraminfo, _miss: { [index: number]: boolean } = {}, index;
+	while ((index = miss.pop()) !== undefined) {
+		if (index !== --count) {
+			count++, miss.push(index);
+			break;
 		}
-		if (node.hasref) {
-			node.params.forEach((param, index) => {
-				if (index < pc && param.pass_by_ref && !miss[index]) {
-					let o: number, t: Token;
-					if (index === 0)
-						o = info.offset! + info.name.length + 1;
-					else o = paraminfo.comma[index - 1] + 1;
-					if ((t = doc.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && doc.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
-						let end = 0, ts = decltype_expr(doc, t, paraminfo.comma[index] ??
-							(end = doc.document.offsetAt(info.range.end) - (doc.tokens[info.offset! + info.name.length] ? 1 : 0)));
-						if (ts.some(it => it === VARREF || it === ANY || it.data === VARREF))
-							return;
-						let lk = doc.tokens[paraminfo.comma[index]]?.previous_token;
-						if (lk)
-							end = lk.offset + lk.length;
-						doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
-							Math.max(0, end - t.offset), 2);
-					}
+	}
+	if ((count < min && !paraminfo.unknown) || count > max)
+		doc.diagnostics.push({
+			message: diagnostic.paramcounterr(min === max ? min : max === Infinity ? `${min}+` : `${min}-${max}`, count),
+			range: info.range, severity: DiagnosticSeverity.Error
+		});
+	for (index of miss) {
+		if (index >= l)
+			break;
+		if (_miss[index] = true, param_is_miss(params, index))
+			doc.addDiagnostic(diagnostic.missingparam(),
+				paraminfo.comma[index] ?? doc.document.offsetAt(info.range.end), 1);
+	}
+	if (node.hasref) {
+		params.forEach((param, index) => {
+			if (index < count && param.pass_by_ref && !miss[index]) {
+				let o: number, t: Token;
+				if (index === 0)
+					o = info.offset! + info.name.length + 1;
+				else o = paraminfo.comma[index - 1] + 1;
+				if ((t = doc.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && doc.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
+					let end = 0, ts = decltype_expr(doc, t, paraminfo.comma[index] ??
+						(end = doc.document.offsetAt(info.range.end) - (doc.tokens[info.offset! + info.name.length] ? 1 : 0)));
+					if (ts.some(it => it === VARREF || it === ANY || it.data === VARREF))
+						return;
+					let lk = doc.tokens[paraminfo.comma[index]]?.previous_token;
+					if (lk)
+						end = lk.offset + lk.length;
+					doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
+						Math.max(0, end - t.offset), 2);
 				}
-			});
-		}
-		if ((!node.returns && !node.type_annotations?.length) && !(is_cls && node.name.toLowerCase() === '__new')) {
-			let tk = doc.tokens[info.offset!];
-			if (tk?.previous_token?.type === 'TK_EQUALS') {
-				let nt = doc.get_token(doc.document.offsetAt(info.range.end), true);
-				if (!nt || !is_line_continue(nt.previous_token!, nt) || nt.content !== '??')
-					doc.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, 2);
 			}
+		});
+	}
+	if ((!node.returns?.length && !(node.type_annotations || null)?.length) && !(is_cls && node.name.toLowerCase() === '__new')) {
+		let tk = doc.tokens[info.offset!];
+		if (tk?.previous_token?.type === 'TK_EQUALS') {
+			let nt = doc.get_token(doc.document.offsetAt(info.range.end), true);
+			if (!nt || !is_line_continue(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
+				doc.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, 2);
 		}
 	}
 	function param_is_miss(params: Variable[], i: number) {

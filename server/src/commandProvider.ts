@@ -1,8 +1,8 @@
 import { Position, Range, SymbolKind } from 'vscode-languageserver';
 import {
-	AhkSymbol, ClassNode, FuncNode, Lexer, Property, Variable, Token,
-	connection, extsettings, find_class, lexers, restorePath,
-	semanticTokensOnFull, update_include_cache, generate_type_annotation
+	AhkSymbol, ClassNode, FuncNode, Lexer, Property, Token, Variable,
+	connection, extsettings, find_class, generate_type_annotation,
+	join_types, lexers, restorePath, semanticTokensOnFull, update_include_cache
 } from './common';
 
 function checkCommand(cmd: string) {
@@ -10,6 +10,11 @@ function checkCommand(cmd: string) {
 		return true;
 	connection.console.warn(`Command '${cmd}' is not implemented!`);
 	return false;
+}
+
+function trim_jsdoc(detail?: string) {
+	return detail?.replace(/^[ \t]*(\*?[ \t]*(?=@)|\* ?)/gm, '')
+		.replace(/^\/\*+\s*|\s*\**\/$/g, '') ?? '';
 }
 
 export function insertSnippet(value: string, range?: Range) {
@@ -24,13 +29,11 @@ export function setTextDocumentLanguage(uri: string, lang?: string) {
 	return connection.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
 }
 
-export function generate_fn_comment(doc: Lexer, fn: FuncNode) {
-	let comments = fn.detail?.replace(/\$/g, '\\$').split('\n');
+export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
+	let comments = detail?.replace(/\$/g, '\\$').split('\n');
 	let returns: string[] = [], details: string[] = [], result = ['/**'];
 	let lastarr: string[] | undefined, m: RegExpMatchArray | null;
 	let params: { [name: string]: string[] } = {}, i = 0, z = true;
-	let pp = Object.assign({}, fn.range.end);
-	pp.character--;
 	comments?.forEach(line => {
 		if (m = line.match(/^@(param|arg)\s+(({[^}]*}\s)?\s*(\[.*?\]|\S+).*)$/i))
 			(lastarr = params[m[4].replace(/^\[?((\w|[^\x00-\x7f])+).*$/, '$1').toUpperCase()] ??= []).push('@param ' + m[2].trim());
@@ -67,7 +70,6 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode) {
 	if (z)
 		text = text.replace(new RegExp(`\\$${i}\\b`), '$0');
 	return text;
-	
 }
 
 export async function generateComment() {
@@ -84,26 +86,28 @@ export async function generateComment() {
 			break;
 		}
 	}
-	if (scope && (scope as FuncNode).params) {
-		let text = generate_fn_comment(doc, scope as FuncNode), pos = scope.selectionRange.start;
-		let tk: Token, range: Range;
-		if (scope.detail === undefined) {
-			text += '\n', tk = doc.tokens[doc.document.offsetAt(pos)];
-			if (tk.topofline === 2)
-				tk = tk.previous_token!;
-			pos = doc.document.positionAt(tk.offset);
-			range = { start: pos, end: pos };
-		} else {
-			tk = doc.find_token(doc.document.offsetAt({ line: pos.line - 1, character: 0 }));
-			if (!tk.type.endsWith('COMMENT'))
-				return;
-			range = {
-				start: doc.document.positionAt(tk.offset),
-				end: doc.document.positionAt(tk.offset + tk.length)
-			};
-		}
-		insertSnippet(text, range);
+	if (!scope || !(scope as FuncNode).params)
+		return;
+	let text: string, pos = scope.selectionRange.start;
+	let tk: Token, range: Range;
+	if (scope.markdown_detail === undefined) {
+		text = `${generate_fn_comment(doc, scope as FuncNode)}\n`;
+		tk = doc.tokens[doc.document.offsetAt(pos)];
+		if (tk.topofline === 2)
+			tk = tk.previous_token!;
+		pos = doc.document.positionAt(tk.offset);
+		range = { start: pos, end: pos };
+	} else {
+		tk = doc.find_token(doc.document.offsetAt({ line: pos.line - 1, character: 0 }));
+		if (tk.type !== 'TK_BLOCK_COMMENT')
+			return;
+		text = generate_fn_comment(doc, scope as FuncNode, trim_jsdoc(scope.detail));
+		range = {
+			start: doc.document.positionAt(tk.offset),
+			end: doc.document.positionAt(tk.offset + tk.length)
+		};
 	}
+	insertSnippet(text, range);
 }
 
 export function exportSymbols(uri: string) {
@@ -131,7 +135,7 @@ export function exportSymbols(uri: string) {
 					(result.classes ??= []).push(t = {
 						name: it.name, label: cl.full,
 						extends: _extends(cl),
-						comment: it.detail
+						detail: get_detail(it)
 					});
 					dump(Object.values(cl.property ?? {}), t);
 					dump(Object.values(cl.$property ?? {}), t);
@@ -140,14 +144,11 @@ export function exportSymbols(uri: string) {
 					fn = it as FuncNode;
 					(result.properties ??= []).push({
 						name: it.name, label: fn.full,
-						static: fn.static || undefined,
-						variadic: fn.variadic || undefined,
-						params: fn.params?.map(p => ({
-							name: p.name, byref: p.pass_by_ref || undefined,
-							defval: _def(p)
-						})),
-						readonly: fn.params && !(it as Property).set || undefined,
-						comment: it.detail
+						static: fn.static ?? false,
+						variadic: fn.variadic ?? false,
+						params: dump_params(fn.params),
+						readonly: fn.params && !(it as Property).set || false,
+						detail: get_detail(it)
 					});
 					if (!(it = (it as Property).call!))
 						break;
@@ -156,18 +157,15 @@ export function exportSymbols(uri: string) {
 					fn = it as FuncNode;
 					(result[kind === SymbolKind.Function ? 'functions' : 'methods'] ??= []).push({
 						name: it.name, label: fn.full,
-						static: fn.static || undefined,
-						variadic: fn.variadic || undefined,
-						params: fn.params.map(p => ({
-							name: p.name, byref: p.pass_by_ref || undefined,
-							defval: _def(p)
-						})),
-						comment: it.detail
+						static: fn.static ?? false,
+						variadic: fn.variadic ?? false,
+						params: dump_params(fn.params),
+						detail: get_detail(it)
 					});
 					break;
 			}
 		}
-		function _def(v: Variable) {
+		function get_defval(v: Variable) {
 			switch (v.defaultVal) {
 				case false: return null;
 				case null: return 'unset';
@@ -179,6 +177,20 @@ export function exportSymbols(uri: string) {
 			if (!(s = cl.extends))
 				return;
 			return cache[`${cl.extendsuri},${s}`] ??= find_class(doc, s, cl.extendsuri)?.full || s;
+		}
+		function get_detail(sym: AhkSymbol) {
+			if (sym.markdown_detail)
+				return trim_jsdoc(sym.detail);
+			return sym.detail ?? '';
+		}
+		function dump_params(params?: Variable[]) {
+			return params?.map(param => ({
+				name: param.name,
+				defval: get_defval(param),
+				byref: param.pass_by_ref ?? false,
+				variadic: param.arr ?? false,
+				type: join_types(param.type_annotations)
+			}));
 		}
 	}
 }

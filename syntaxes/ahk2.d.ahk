@@ -2469,7 +2469,7 @@ SetStoreCapsLockMode(State) => Integer
  * If Period is 0, the timer is marked as deleted. If the thread started by this timer is still running, then after the thread ends, the timer will be deleted (unless it is re-enabled); otherwise, it will be Delete immediately. In any case, the Period and Priority before the timer will not be retained.
  * @param Priority This optional parameter is an integer (or an expression) between -2147483648 and 2147483647 to indicate the priority of the timer.
  */
-SetTimer([Callback, Period := 250, Priority := 0]) => void
+SetTimer(Callback?, Period := 250, Priority := 0) => void
 
 /**
  * Set the matching behavior of WinTitle parameters in commands such as WinWait.
@@ -3602,7 +3602,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * @param Title The window title. If omitted, it defaults to the current value of A_ScriptName.
 	 * @param EventObj OnEvent, OnNotify and OnCommand can be used to register methods of EventObj to be called when an event is raised
 	 */
-	__New([Options, Title := A_ScriptName, EventObj]) => void
+	__New(Options := '', Title := A_ScriptName, EventObj?) => void
 
 	/**
 	 * Enumerates the GUI's controls.
@@ -4639,7 +4639,7 @@ class Menu extends Object {
 	/**
 	 * Change the background color of the menu.
 	 */
-	SetColor([ColorValue, Submenus := true]) => void
+	SetColor(ColorValue := 'Default', Submenus := true) => void
 
 	/**
 	 * Set the icon to be displayed next to the menu item.

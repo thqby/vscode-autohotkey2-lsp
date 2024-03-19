@@ -1,7 +1,7 @@
 import { CancellationToken, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
 import {
 	AhkSymbol, FuncNode, Maybe, SemanticTokenTypes, Variable,
-	format_markdown_detail, hoverCache, join_types, lexers, find_symbols
+	get_detail, hoverCache, join_types, lexers, find_symbols
 } from './common';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
@@ -30,23 +30,29 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		let { node, is_global, uri } = nodes[0], fn = node as FuncNode;
 		if (node.kind === SymbolKind.Class && !fn.full?.startsWith('('))
 			hover.push({ kind: 'ahk2', value: 'class ' + (fn.full || node.name) });
-		else if (fn.full)
+		else if (fn.full) {
 			hover.push({ kind: 'ahk2', value: fn.full });
+			let overloads = fn.overloads;
+			switch (typeof overloads) {
+				case 'object':
+					overloads = overloads.map(it => it.full).join('\n');
+				case 'string':
+					hover.at(-1)!.value += `\n${overloads}`;
+					break;
+			}
+		}
 
-		let md = format_markdown_detail(node, lexers[uri]), re = /^/, ___re = / — |  \n|\n\n/, t;
+		let md = get_detail(node, lexers[uri]);
+		if (typeof md === 'string')
+			md = md && ('```plaintext\n' + md + '\n```');
+		else md = md.value;
 		if ((node as Variable).is_param) {
 			if (!md.startsWith('*@param* '))
 				md = `*@param* \`${node.name}\`${(t = join_types(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
-			else md = md.replace(___re, '\n___\n');
+			else md = md.replace(/\n|(?<=`\*?) — /, '\n___\n');
 		} else if (node.kind === SymbolKind.Variable) {
-			if (md.startsWith('*@var* ')) {
-				md = md.replace(___re, '\n___\n');
-				re = /^\*@var\*\s/;
-			} else if (md.startsWith('*@type* '))
-				md = md.replace(___re, '\n___\n').replace(/^\*@type\*[ \t]*/, `\`${node.name}\`: `);
-			else
-				md = `\`${node.name}\`${(t = join_types(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
-			md = md.replace(re, is_global === true ? '*@global* ' : node.static ? '*@static* ' : '*@local* ');
+			let kind = is_global === true ? '*@global*' : node.static ? '*@static*' : '*@local*';
+			md = `${kind} \`${node.name}\`${(t = join_types(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
 		}
 		md && hover.push({ value: (hover.length ? '___\n' : '') + md });
 	}

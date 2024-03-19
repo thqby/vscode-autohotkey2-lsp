@@ -6,9 +6,9 @@ import {
 } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 import {
-	ANY, AhkSymbol, ClassNode, Context, FuncNode, Maybe, STRING, SemanticTokenTypes, Token, Variable,
+	ANY, AhkSymbol, ClassNode, Context, FuncNode, Maybe, Property, STRING, SemanticTokenTypes, Token, Variable,
 	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache,
-	completionitem, decltype_expr, dllcalltpe, extsettings, find_class, find_symbols, format_markdown_detail,
+	completionitem, decltype_expr, dllcalltpe, extsettings, find_class, find_symbols, get_detail,
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
 	isBrowser, lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
@@ -457,7 +457,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								continue;
 							}
 						}
-						let annotations = param.type_annotations ?? [];
+						let annotations = param.type_annotations || [];
 						if (annotations.includes(STRING))
 							kind = CompletionItemKind.Text, command = undefined;
 						for (let s of annotations)
@@ -470,7 +470,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			}
 	}
 
-	let right_is_paren = '(['.includes(linetext.charAt(range.end.character) || '\0');
+	let right_is_paren = '(['.includes(linetext[range.end.character] || '\0');
 	let join_c = extsettings.FormatOptions.brace_style === 0 ? '\n' : ' ';
 
 	// fn|()=>...
@@ -518,6 +518,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		let props: { [k: string]: CompletionItem } = {};
 		let tps = decltype_expr(doc, token, range.end);
 		let is_any = tps.includes(ANY), bases: ClassNode[] = [];
+		if (linetext[range.end.character] === '.')
+			right_is_paren = '(['.includes(linetext.charAt(range.end.character + word.length + 1) || '\0');
 		if (is_any) tps = [];
 		for (const node of tps) {
 			if (node.kind === SymbolKind.Interface) {
@@ -725,7 +727,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (tk.symbol)
 			return tk.symbol;
 		let nk = doc.tokens[tk.next_token_offset], t;
-		if (nk && ((t = nk.symbol)?.detail !== undefined || (t = doc.tokens[nk.next_token_offset]?.symbol)?.detail !== undefined))
+		if (nk && (((t = nk.symbol)?.detail ?? (t = doc.tokens[nk.next_token_offset]?.symbol)?.detail) !== undefined))
 			return t;
 	}
 	function add_texts() {
@@ -748,7 +750,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	function at_edit_pos(it: AhkSymbol) {
 		return it.selectionRange.end.line === line && character === it.selectionRange.end.character;
 	}
-	function convertNodeCompletion(info: any): CompletionItem {
+	function convertNodeCompletion(info: AhkSymbol): CompletionItem {
 		let ci = CompletionItem.create(info.name);
 		switch (info.kind) {
 			case SymbolKind.Function:
@@ -767,33 +769,39 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					} else ci.insertText = ci.label + '()';
 				} else
 					ci.commitCharacters = commitCharacters.Function;
-				ci.detail = info.full, ci.documentation = { kind: 'markdown', value: format_markdown_detail(info) };
+				ci.detail = info.full;
 				break;
 			case SymbolKind.Variable:
 				ci.kind = CompletionItemKind.Variable;
-				if (info.range.end.character)
-					ci.documentation = { kind: 'markdown', value: format_markdown_detail(info) };
-				else ci.detail = info.detail;
+				if (!info.range.end.character) {
+					ci.detail = info.detail;
+					return ci;
+				}
 				break;
 			case SymbolKind.Class:
 				ci.kind = CompletionItemKind.Class, ci.commitCharacters = commitCharacters.Class;
-				ci.detail = 'class ' + (info.full || ci.label), ci.documentation = { kind: 'markdown', value: format_markdown_detail(info) }; break;
+				ci.detail = 'class ' + (info.full || ci.label); break;
 			case SymbolKind.Event:
-				ci.kind = CompletionItemKind.Event; break;
+				ci.kind = CompletionItemKind.Event;
+				return ci;
 			case SymbolKind.Field:
-				ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.slice(0, -1); break;
+				ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.slice(0, -1);
+				return ci;
 			case SymbolKind.Property:
-				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label, ci.documentation = { kind: 'markdown', value: format_markdown_detail(info) };
-				if (!info.call && info.get?.params.length)
+				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label;
+				let prop = info as Property;
+				if (!prop.call && prop.get?.params.length)
 					ci.insertTextFormat = InsertTextFormat.Snippet, ci.insertText = ci.label + '[$0]';
 				break;
-			case SymbolKind.Interface:
-				ci.kind = CompletionItemKind.Interface; break;
 			default:
-				ci.kind = CompletionItemKind.Text; break;
+				ci.kind = CompletionItemKind.Text;
+				return ci;
 		}
 		if (info.tags)
 			ci.tags = info.tags;
+		let value = get_detail(info, doc);
+		if (value)
+			ci.documentation = value;
 		return ci;
 	}
 	//#endregion

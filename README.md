@@ -94,7 +94,7 @@ fn(a*) {
   return a[1] + a[2]
 }
 class abc {
-  /** @prop {Map} p */
+  /** @type {Map} */
   p := dosomethingandreturnmap()
 }
 ```

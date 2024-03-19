@@ -47,7 +47,7 @@ ComObjDll(hModule, CLSID [, IID]) => ComObject
 /**
  * 加密和解密数据.
  */
-CryptAES(AddOrBuf [, Size], password [, EncryptOrDecrypt := true, Algorithm := 256]) => Buffer
+CryptAES(AddOrBuf [, Size], Password, EncryptOrDecrypt := true, Algorithm := 256) => Buffer
 
 /**
  * 内置函数, 类似于DllCall, 但可用于DllCall结构并使用Object语法.它通常比DllCall更快, 更易于使用, 并且节省了大量的键入和代码.
@@ -59,7 +59,7 @@ DynaCall(DllFunc, ParameterDefinition, Params*) => $DynaToken
  */
 GetVar(VarName, ResolveAlias := true) => Integer
 
-MemoryCallEntryPoint(hModule [, cmdLine]) => Integer
+MemoryCallEntryPoint(hModule [, CmdLine]) => Integer
 
 /**
  * 在先前加载了MemoryLoadLibrary的指定dll中找到资源.类似于FindResource和FindResourceEx.
@@ -100,13 +100,13 @@ MemorySizeOfResource(hModule, hReslnfo) => Integer
  * 将对象转储到内存或保存到文件以供以后使用.
  * @deprecated Removed from v2.1
  */
-ObjDump(obj [, compress, password]) => Buffer
+ObjDump(Obj [, Compress, Password]) => Buffer
 
 /**
  * 从内存或文件加载转储的对象.
  * @deprecated Removed from v2.1
  */
-ObjLoad(AddOrPath [, password]) => Array | Map | Object
+ObjLoad(AddOrPath [, Password]) => Array | Map | Object
 
 /**
  * 从资源中将指定的dll加载到进程中.类似于MemoryLoadLibrary.
@@ -122,7 +122,7 @@ Swap(Var1, Var2) => void
  * 内置函数可以计算结构或类型的大小, 例如TCHAR或PTR或VOID ..., 有关用法和示例, 另请参见Struct.
  * @deprecated Removed from v2.1
  */
-sizeof(Definition [, offset]) => Integer
+Sizeof(Definition [, Offset]) => Integer
 
 /**
  * 创建未排序的 Array(适用于属性).
@@ -275,15 +275,15 @@ class Array<T> {
 class Decimal extends Number {
 	/**
 	 * 设置计算精度和tostring()精度
-	 * @param prec 有效数字位数, 大于零只影响除法
-	 * @param outputprec tostring() 如果大于0, 则保留到小数点后n位. 如果小于0, 则保留n位有效数字
+	 * @param Prec 有效数字位数, 大于零只影响除法
+	 * @param OutputPrec tostring() 如果大于0, 则保留到小数点后n位. 如果小于0, 则保留n位有效数字
 	 * @return 返回旧的prec值
 	 */
-	static SetPrecision(prec := 20, outputprec := 0) => Integer
+	static SetPrecision(Prec := 20, OutputPrec := 0) => Integer
 
 	; 将整数、浮点数和数字字符串转换为Decimal对象
 	; 像数字一样加、减、乘、除
-	static Call(val?) => Decimal
+	static Call(Val?) => Decimal
 
 	ToString() => String
 
@@ -325,32 +325,32 @@ class Struct {
 	/**
 	 * 返回数组定义的大小; 如果结构或字段不是数组, 则返回0.
 	 */
-	CountOf([field]) => Integer
+	CountOf([Field]) => Integer
 
 	/**
 	 * 返回字段的编码.
 	 */
-	Encoding([field]) => Integer
+	Encoding([Field]) => Integer
 
 	/**
 	 * 返回字段或结构的地址.
 	 */
-	GetAddress([field]) => Integer
+	GetAddress([Field]) => Integer
 
 	/**
 	 * 返回先前使用. SetCapacity()或分配字符串分配的容量.
 	 */
-	GetCapacity([field]) => Integer
+	GetCapacity([Field]) => Integer
 
 	/**
 	 * 返回保存在结构或字段中的已分配内存的指针.
 	 */
-	GetPointer([field]) => Integer
+	GetPointer([Field]) => Integer
 
 	/**
 	 * 如果字段或结构是指针, 则返回true.
 	 */
-	IsPointer([field]) => Integer
+	IsPointer([Field]) => Integer
 
 	/**
 	 * 返回字段的偏移量.
@@ -360,12 +360,12 @@ class Struct {
 	/**
 	 * 为一个字段分配内存, 如果分配了新的内存, 则返回分配的大小.
 	 */
-	SetCapacity([field,] newsize) => Integer
+	SetCapacity([Field,] newsize) => Integer
 
 	/**
 	 * 返回结构或字段的大小(以字节为单位).
 	 */
-	Size([field]) => Integer
+	Size([Field]) => Integer
 }
 
 class Worker {
@@ -433,15 +433,28 @@ class Worker {
 	class Promise {
 		/**
 		 * 异步调用完成后执行.
-		 * @param {(result) => void} Callback
+		 * @param {(Result) => void} Callback
 		 */
 		Then(Callback) => Worker.Promise
 
 		/**
 		 * 异步调用抛出异常后执行.
-		 * @param {(exception) => void} Callback
+		 * @param {(Exception) => void} Callback
 		 */
 		Catch(Callback) => Worker.Promise
 	}
 }
 ;@endregion
+
+class $DynaToken {
+	MinParams => Integer
+
+	MaxParams => Integer
+
+	Param[Index] {
+		get => Float | Integer | String
+		set => void
+	}
+
+	Call(Params*) => Buffer | Float | Integer | String
+}

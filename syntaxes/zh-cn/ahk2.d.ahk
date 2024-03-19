@@ -2463,7 +2463,7 @@ SetStoreCapsLockMode(State) => Integer
  * 如果 Period 为 0, 定时器被标记为删除. 如果由这个定时器启动的线程还在运行, 那么在线程结束后, 定时器就会被删除(除非它被重新启用); 否则, 它会被立即删除. 在任何情况下, 定时器之前的 Period 和 Priority 都不会被保留.
  * @param Priority 这个可选参数是一个介于 -2147483648 和 2147483647 之间的整数(或为表达式) 来表示计时器的优先级.
  */
-SetTimer([Callback, Period := 250, Priority := 0]) => void
+SetTimer(Callback?, Period := 250, Priority := 0) => void
 
 /**
  * 在诸如WinWait之类的命令中设置WinTitle参数的匹配行为.
@@ -3641,7 +3641,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	/**
 	 * 创建一个新的Gui对象.
 	 */
-	__New([Options, Title := A_ScriptName, EventObj]) => void
+	__New(Options := '', Title := A_ScriptName, EventObj?) => void
 
 	/**
 	 * 枚举 GUI 的控件.
@@ -4618,7 +4618,7 @@ class Menu extends Object {
 	/**
 	 * 更改菜单的背景色.
 	 */
-	SetColor([ColorValue, Submenus := true]) => void
+	SetColor(ColorValue := 'Default', Submenus := true) => void
 
 	/**
 	 * 设置要在菜单项旁边显示的图标.

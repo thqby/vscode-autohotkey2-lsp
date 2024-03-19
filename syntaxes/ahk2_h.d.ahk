@@ -47,7 +47,7 @@ ComObjDll(hModule, CLSID [, IID]) => ComObject
 /**
  * Encrypt and decrypt data.
  */
-CryptAES(AddOrBuf [, Size], password [, EncryptOrDecrypt := true, Algorithm := 256]) => Buffer
+CryptAES(AddOrBuf [, Size], Password, EncryptOrDecrypt := true, Algorithm := 256) => Buffer
 
 /**
  * Built-in functions, similar to DllCall, but can be used in the DllCall structure and use Object syntax. It is usually faster than DllCall, easier to use, and saves a lot of typing and code.
@@ -59,7 +59,7 @@ DynaCall(DllFunc, ParameterDefinition, Params*) => $DynaToken
  */
 GetVar(VarName, ResolveAlias := true) => Integer
 
-MemoryCallEntryPoint(hModule [, cmdLine]) => Integer
+MemoryCallEntryPoint(hModule [, CmdLine]) => Integer
 
 /**
  * Find the resource in the specified dll loaded MemoryLoadLibrary. Similar to FindResource and FindResourceEx.
@@ -100,13 +100,13 @@ MemorySizeOfResource(hModule, hReslnfo) => Integer
  * Dump objects to memory or save to file for later use.
  * @deprecated Removed from v2.1
  */
-ObjDump(obj [, compress, password]) => Buffer
+ObjDump(Obj [, Compress, Password]) => Buffer
 
 /**
  * Load dumped objects from memory or files.
  * @deprecated Removed from v2.1
  */
-ObjLoad(AddOrPath [, password]) => Array | Map | Object
+ObjLoad(AddOrPath [, Password]) => Array | Map | Object
 
 /**
  * Load the specified dll from the resource into the process. Similar to MemoryLoadLibrary.
@@ -122,7 +122,7 @@ Swap(Var1, Var2) => void
  * Built-in functions can calculate the size of structures or types, such as TCHAR or PTR or VOID..., for usage and examples, see also Struct.
  * @deprecated Removed from v2.1
  */
-sizeof(Definition [, offset]) => Integer
+Sizeof(Definition [, Offset]) => Integer
 
 /**
  * Create an unsorted Array (for attributes).
@@ -280,15 +280,15 @@ class Array<T> {
 class Decimal extends Number {
 	/**
 	 * Sets the computation precision and tostring() precision
-	 * @param prec Significant digits, greater than zero only affects division
-	 * @param outputprec tostring() If it is greater than 0, it is reserved to n decimal places. If less than 0, retain n significant digits
+	 * @param Prec Significant digits, greater than zero only affects division
+	 * @param OutputPrec tostring() If it is greater than 0, it is reserved to n decimal places. If less than 0, retain n significant digits
 	 * @return Returns the old prec value
 	 */
-	static SetPrecision(prec := 20, outputprec := 0) => Integer
+	static SetPrecision(Prec := 20, OutputPrec := 0) => Integer
 
 	; Converts integer, float, and numeric strings to Decimal object
 	; Add, subtract, multiply and divide as with numbers
-	static Call(val?) => Decimal
+	static Call(Val?) => Decimal
 
 	ToString() => String
 
@@ -330,32 +330,32 @@ class Struct {
 	/**
 	 * Returns the size defined by the array; if the structure or field is not an array, it returns 0.
 	 */
-	CountOf([field]) => Integer
+	CountOf([Field]) => Integer
 
 	/**
 	 * Return the code of the field.
 	 */
-	Encoding([field]) => Integer
+	Encoding([Field]) => Integer
 
 	/**
 	 * Return the address of the field or structure.
 	 */
-	GetAddress([field]) => Integer
+	GetAddress([Field]) => Integer
 
 	/**
 	 * Returns the previously allocated capacity using .SetCapacity() or allocation string.
 	 */
-	GetCapacity([field]) => Integer
+	GetCapacity([Field]) => Integer
 
 	/**
 	 * Returns a pointer to the allocated memory stored in a structure or field.
 	 */
-	GetPointer([field]) => Integer
+	GetPointer([Field]) => Integer
 
 	/**
 	 * If the field or structure is a pointer, return true.
 	 */
-	IsPointer([field]) => Integer
+	IsPointer([Field]) => Integer
 
 	/**
 	 * Returns the offset of the field.
@@ -365,12 +365,12 @@ class Struct {
 	/**
 	 * Allocate memory for a field, if new memory is allocated, return the allocated size.
 	 */
-	SetCapacity([field,] newsize) => Integer
+	SetCapacity([Field,] newsize) => Integer
 
 	/**
 	 * Returns the size of the structure or field (in bytes).
 	 */
-	Size([field]) => Integer
+	Size([Field]) => Integer
 }
 
 class Worker {
@@ -438,15 +438,28 @@ class Worker {
 	class Promise {
 		/**
 		 * Execute the callback after the asynchronous call completes.
-		 * @param {(result) => void} Callback
+		 * @param {(Result) => void} Callback
 		 */
 		Then(Callback) => Worker.Promise
 
 		/**
 		 * An asynchronous call throws an exception and executes the callback.
-		 * @param {(exception) => void} Callback
+		 * @param {(Exception) => void} Callback
 		 */
 		Catch(Callback) => Worker.Promise
 	}
 }
 ;@endregion
+
+class $DynaToken {
+	MinParams => Integer
+
+	MaxParams => Integer
+
+	Param[Index] {
+		get => Float | Integer | String
+		set => void
+	}
+
+	Call(Params*) => Buffer | Float | Integer | String
+}

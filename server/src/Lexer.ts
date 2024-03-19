@@ -6,6 +6,7 @@ import {
 	DiagnosticSeverity,
 	DocumentSymbol,
 	FoldingRange,
+	MarkupContent,
 	Position,
 	Range,
 	SemanticTokensBuilder,
@@ -74,13 +75,14 @@ export interface AhkSymbol extends DocumentSymbol {
 	children?: AhkSymbol[]
 	data?: any
 	def?: boolean
-	formated_detail?: string
+	full?: string
+	markdown_detail?: string
 	ignore?: boolean
 	overwrite?: number
 	parent?: AhkSymbol
 	returns?: number[] | null
 	static?: boolean | null
-	type_annotations?: Array<string | AhkSymbol> | null
+	type_annotations?: Array<string | AhkSymbol> | false
 	uri?: string
 }
 
@@ -261,6 +263,18 @@ export function isIdentifierChar(code: number) {
 	return code > 127;
 }
 
+String.prototype.trim = function () {
+	return this.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, '');
+};
+
+String.prototype.trimLeft = function () {
+	return this.replace(/^[ \t\r\n]+/, '');
+};
+
+String.prototype.trimRight = function () {
+	return this.replace(/[ \t\r\n]+$/, '');
+};
+
 const colorregexp = new RegExp(/['"\s](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
 const whitespace = " \t\r\n", punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , ?? ??= : ? ^ ^= |= =>'.split(' ');
@@ -305,7 +319,8 @@ const S2O: { [n: string]: AhkSymbol } = {
 	NUMBER,
 	OBJECT,
 	STRING,
-	VARREF
+	VARREF,
+	UNSET: create_prototype('unset', SymbolKind.Null)
 };
 
 class ParseStopError {
@@ -360,7 +375,7 @@ export class Lexer {
 	private hotstringExecuteAction = false;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let begin_line: boolean, callWithoutParentheses: boolean | 1, comments: { [line: number]: Token };
-		let continuation_sections_mode: boolean, currsymbol: AhkSymbol | undefined;
+		let continuation_sections_mode: boolean | null, currsymbol: AhkSymbol | undefined;
 		let customblocks: { region: number[], bracket: number[] };
 		let dlldir: string, includedir: string, includetable: { [uri: string]: string };
 		let input: string, input_length: number, input_wanted_newline: boolean;
@@ -534,7 +549,7 @@ export class Lexer {
 					flags.last_text = ')';
 					input_wanted_newline = n_newlines > 0;
 				} else if (input_wanted_newline = n_newlines > 0) {
-					if (continuation_sections_mode) {
+					if (continuation_sections_mode !== false) {
 						print_newline();
 						for (let i = 1; i < n_newlines; i++)
 							output_lines.push(create_output_line());
@@ -660,7 +675,7 @@ export class Lexer {
 									_parent.children?.push(tn), tn.static = isstatic, tn.full = `(${cls.join('.')}) ${isstatic ? 'static ' : ''}` + tn.name;
 									(isstatic ? _parent.property : _parent.$property!)[_low] ??= tn;
 									if (_cm = comments[tn.selectionRange.start.line])
-										tn.detail = trim_comment(_cm.content), _cm.symbol = tn;
+										set_detail(_cm.symbol = tn, _cm);
 									(this.object.property[_low] ??= []).push(tn);
 									if (lk.content === '[') {
 										params = parse_params(']');
@@ -722,7 +737,7 @@ export class Lexer {
 										(this.object.method[_low] ??= []).push(fn);
 									}
 									if (_cm = comments[fn.selectionRange.start.line])
-										fn.detail = trim_comment(_cm.content), _cm.symbol = fn;
+										set_detail(_cm.symbol = fn, _cm);
 									_parent.children?.push(fn);
 									let decl = isstatic ? _parent.property : _parent.$property!;
 									if (decl[_low])
@@ -736,7 +751,7 @@ export class Lexer {
 											(lk.content === '=>' ? SemanticTokenModifiers.readonly : 0)
 									}, tn.assigned = tn.def = true;
 									if (_cm = comments[tn.selectionRange.start.line])
-										tn.detail = trim_comment(_cm.content), _cm.symbol = tn;
+										set_detail(_cm.symbol = tn, _cm);
 									if (['=>', ':'].includes(lk.content))
 										parse_types(tn);
 									else if (lk.content !== ',')
@@ -789,9 +804,7 @@ export class Lexer {
 									cl.extends = extends_;
 								}
 								if (_cm = comments[cl.selectionRange.start.line])
-									cl.detail = trim_comment(_cm.content), _cm.symbol = cl;
-								if (m = cl.detail?.match(/^\s*@extends\s+(.+)/m))
-									set_extends(cl, m[1]);
+									set_detail(_cm.symbol = cl, _cm);
 								cl.full = cls.join('.'), cl.property = {}, cl.prototype =
 									{ ...cl, detail: undefined, property: cl.$property = {} };
 								(!blocks && cl.name.startsWith('$') ? _this.typedef : _parent.property)[cl.name.toUpperCase()] ??= cl;
@@ -852,6 +865,7 @@ export class Lexer {
 					for (let k in ahkprotos)
 						ahkprotos[k as keyof typeof ahkprotos] = (ahkvars[k] as ClassNode)?.prototype!;
 				}
+				parse_unresolved_typedef();
 				check_same_name_error({}, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length, this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
@@ -916,7 +930,7 @@ export class Lexer {
 										props[lk.content.toUpperCase()] ??= p, lk.semantic = { type: SemanticTokenTypes.property };
 										full += ', ' + lk.content;
 										if (_cm && _cm === comments[p.selectionRange.start.line])
-											p.detail = trim_comment(_cm.content);
+											set_detail(p, _cm);
 										if ((lk = tokens[++j])?.content === '?')
 											lk.ignore = true, lk = tokens[++j], p.defaultVal = null, full += '?';
 										if (lk?.content === ':')
@@ -950,7 +964,7 @@ export class Lexer {
 											fn.full += ` => ${join_types(fn.type_annotations) || 'void'}`;
 											tps.push(fn), fn.uri = _this.uri;
 											if (_cm && _cm === comments[fn.selectionRange.start.line])
-												fn.detail = trim_comment(_cm.content), _cm.symbol = fn;
+												set_detail(_cm.symbol = fn, _cm);
 										} else {
 											tps.push(...parse());
 											if (lk?.content as string === ')')
@@ -1112,11 +1126,20 @@ export class Lexer {
 					} else
 						console.error(e);
 				}
+				parse_unresolved_typedef();
 				check_same_name_error(this.declaration, this.children, this.diagnostics);
 				this.diags = this.diagnostics.length, this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 				if (this.actived)
 					this.actionwhenv1 ??= 'Continue';
+			}
+		}
+
+		function parse_unresolved_typedef() {
+			for (let m of Object.values(comments)) {
+				if (m.data !== null || !/^[ \t]*\*?[ \t]*@typedef\s/m.test(m.content))
+					continue;
+				parse_jsdoc_detail(_this, m.content, {} as AhkSymbol);
 			}
 		}
 
@@ -1351,7 +1374,7 @@ export class Lexer {
 									se.modifier = SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly |
 										(isstatic as any);
 									if (_cm = comments[tn.selectionRange.start.line])
-										tn.detail = trim_comment(_cm.content), _cm.symbol = tn;
+										set_detail(_cm.symbol = tn, _cm);
 									if (mode === 2) {
 										tn.has_this_param = true;
 										tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
@@ -1381,7 +1404,7 @@ export class Lexer {
 										let prop = fc.symbol = DocumentSymbol.create(fc.content, undefined, SymbolKind.Property,
 											rg = make_range(fc.offset, fc.length), { ...rg }) as Property;
 										if (_cm = comments[prop.selectionRange.start.line])
-											prop.detail = trim_comment(_cm.content), _cm.symbol = prop;
+											set_detail(_cm.symbol = prop, _cm);
 										prop.parent = _parent, prop.has_this_param = true;
 										prop.static = isstatic, prop.children = result.splice(rl);
 										let pd = '';
@@ -1400,7 +1423,7 @@ export class Lexer {
 										result.push(prop), addprop(fc, prop);
 										fc.semantic = { type: SemanticTokenTypes.property, modifier: SemanticTokenModifiers.definition | (isstatic as any) };
 										if (tk.content === '{') {
-											let nk: Token, sk: Token, tn: FuncNode | undefined, mmm = mode, brace = tk.offset;
+											let nk: Token, sk: Token, tn: FuncNode | undefined, _low: string, mmm = mode, brace = tk.offset;
 											tk.previous_pair_pos = oo;
 											nexttoken(), next = false, mode = 1;
 											if (tk.type as string === 'TK_END_BLOCK' && !lk.topofline && !tk.topofline)
@@ -1421,7 +1444,7 @@ export class Lexer {
 															_this.addDiagnostic(diagnostic.invaliddefinition('function'), nk.offset, nk.length);
 														if (_low === 'set')
 															tn.params.unshift(v = Variable.create('Value', SymbolKind.Variable,
-																Range.create(0, 0, 0, 0))), v.detail = completionitem.value();
+																Range.create(0, 0, 0, 0))), v.is_param = v.assigned = v.def = true, v.detail = completionitem.value();
 														else prop.returns = tn.returns;
 														tn.has_this_param = true, adddeclaration(tn);
 														_this.linepos[tn.range.end.line] = nk.offset;
@@ -1432,7 +1455,7 @@ export class Lexer {
 														tn.range.end = document.positionAt(parser_pos);
 														if (_low === 'set')
 															tn.params.unshift(v = Variable.create('Value', SymbolKind.Variable,
-																Range.create(0, 0, 0, 0))), v.detail = completionitem.value();
+																Range.create(0, 0, 0, 0))), v.is_param = v.assigned = v.def = true, v.detail = completionitem.value();
 														else prop.returns = tn.returns;
 														tn.has_this_param = true, adddeclaration(tn);
 														_this.addSymbolFolding(tn, sk.offset);
@@ -1585,7 +1608,7 @@ export class Lexer {
 									labels[_low].unshift(tn);
 							}
 							if (_cm = comments[tn.selectionRange.start.line])
-								tn.detail = trim_comment(_cm.content);
+								set_detail(tn, _cm);
 							if (!(_nk = _this.get_token(parser_pos, true)).topofline)
 								_this.addDiagnostic(diagnostic.unexpected(_nk.content), _nk.offset, _nk.length);
 							break;
@@ -1595,7 +1618,7 @@ export class Lexer {
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2));
 							tn.range.end = document.positionAt(parser_pos - 1), result.push(tn);
 							if (_cm = comments[tn.selectionRange.start.line])
-								tn.detail = trim_comment(_cm.content);
+								set_detail(tn, _cm);
 							if (mode !== 0)
 								_this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
 							if (tk.ignore) {
@@ -1619,7 +1642,7 @@ export class Lexer {
 							let tn = SymbolNode.create(tk.content, SymbolKind.Event,
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2)) as FuncNode;
 							if (_cm = comments[tn.selectionRange.start.line])
-								tn.detail = trim_comment(_cm.content);
+								set_detail(tn, _cm);
 							tk.symbol = tn, nexttoken();
 							let ht = lk, v: Variable;
 							tn.declaration = {}, result.push(tn);
@@ -1750,8 +1773,7 @@ export class Lexer {
 							cl.symbol = cl.definition = tn, tn.full = classfullname + cl.content;
 							tn.extends = ex, tn.uri = _this.uri;
 							if (_cm = comments[tn.selectionRange.start.line])
-								if (m = (tn.detail = trim_comment(_cm.content)).match(/^\s*@extends\s+(.+)/m))
-									set_extends(tn, m[1]);
+								set_detail(tn, _cm);
 							tn.prototype = { ...tn, detail: undefined, property: tn.$property = {} };
 							tn.children = [], tn.cache = [], tn.property = {};
 							tn.type_annotations = [tn.full];
@@ -2436,7 +2458,7 @@ export class Lexer {
 									addprop(lk);
 								} else if (vr = addvariable(lk, mode, sta)) {
 									if (pc = comments[vr.selectionRange.start.line])
-										vr.detail = trim_comment(pc.content);
+										set_detail(vr, pc);
 								} else if (local)
 									_this.addDiagnostic(diagnostic.conflictserr(local, 'built-in variable', lk.content), lk.offset, lk.length);
 								result.push(...parse_expression(undefined));
@@ -2559,7 +2581,7 @@ export class Lexer {
 									let vr = addvariable(lk, mode, sta);
 									if (vr) {
 										if (pc = comments[vr.selectionRange.start.line])
-											vr.detail = trim_comment(pc.content);
+											set_detail(vr, pc);
 									} else if (local)
 										_this.addDiagnostic(diagnostic.conflictserr(local, 'built-in variable', lk.content), lk.offset, lk.length);
 									if (tk.type as string !== 'TK_COMMA')
@@ -2683,7 +2705,7 @@ export class Lexer {
 										vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
 									if (tk.type as string === 'TK_EQUALS') {
 										if (_cm = comments[vr.selectionRange.start.line])
-											vr.detail = trim_comment(_cm.content);
+											set_detail(vr, _cm);
 										let equ = tk.content, b = parser_pos;
 										next = true;
 										result.push(...parse_expression(inpair, mustexp || 1, end ?? (ternarys.length ? ':' : undefined)));
@@ -2939,7 +2961,7 @@ export class Lexer {
 									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
 								let tn = Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length));
 								if ((_cm = comments[tn.selectionRange.start.line]) && tn.selectionRange.start.line > (lineno ??= _this.document.positionAt(beg).line))
-									tn.detail = trim_comment(_cm.content);
+									set_detail(tn, _cm);
 								if (byref)
 									byref = false, tn.pass_by_ref = tn.def = tn.assigned = true;
 								cache.push(tn), bb = parser_pos, bak = tk;
@@ -2956,7 +2978,7 @@ export class Lexer {
 									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
 								let tn = Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length));
 								if ((_cm = comments[tn.selectionRange.start.line]) && !_cm.symbol)
-									tn.detail = trim_comment(_cm.content);
+									set_detail(tn, _cm);
 								tn.def = true, tn.defaultVal = null, cache.push(tn);
 								result.push(...parse_expression(',', 2)), next = true;
 								bb = parser_pos, bak = tk;
@@ -3093,7 +3115,7 @@ export class Lexer {
 						if (must && !isobj) {
 							e = lk, isobj = true;
 							while (!',}'.includes(tk.content))
-								parse_expression('}', 2);
+								parse_expression('}', 2), next = true;
 							next = true;
 							_this.addDiagnostic(diagnostic.objectliteralerr(), e.offset, lk.offset + lk.length - e.offset);
 							if (tk.content === ',')
@@ -3323,7 +3345,7 @@ export class Lexer {
 										nexttoken(), next = false;
 										if (tk.type as string === 'TK_EQUALS') {
 											if (_cm = comments[vr.selectionRange.start.line])
-												vr.detail = trim_comment(_cm.content);
+												set_detail(vr, _cm);
 											let equ = tk.content, bb = parser_pos;
 											next = true;
 											result.push(...parse_expression(e, 2, ternarys.length ? ':' : undefined));
@@ -3564,7 +3586,10 @@ export class Lexer {
 								pp.GET || pp.VALUE || pp.SET) {
 								t = Variable.create(prop, SymbolKind.Property, rg);
 								t.full = `(${classfullname.slice(0, -1)}) ${(t.static = s) ? 'static ' : ''}${prop}`;
-								t.returns = pp?.VALUE?.returns, p.cache.push(t), t.parent = s ? p : p.prototype;
+								p.cache.push(t), t.parent = s ? p : p.prototype;
+								if (t.returns = pp?.GET?.returns)
+									(t as FuncNode).alias = true;
+								else t.returns = pp?.VALUE?.returns;
 							}
 							if (pp = pp?.CALL) {
 								t = Variable.create('', SymbolKind.Variable, make_range(0, 0)), t.arr = true;
@@ -3722,7 +3747,7 @@ export class Lexer {
 								message: diagnostic.conflictserr('parameter', 'parameter', t.name),
 								range: it.selectionRange, severity
 							});
-						else pars[_low] = dec[_low] = it;
+						else pars[_low] = dec[_low] = vars[_low] = it;
 					}
 					for (let [k, v] of Object.entries(fn.local ?? {})) {
 						if (t = pars[k])
@@ -3757,8 +3782,7 @@ export class Lexer {
 						v.assigned ||= Boolean(v.returns);
 						v.is_global = true;
 					}
-					(fn.children ??= []).unshift(...named_params ?? []);
-					for (let it of fn.children) {
+					for (let it of fn.children ??= []) {
 						_low = it.name.toUpperCase();
 						if (it.kind === SymbolKind.Function) {
 							let _f = it as FuncNode;
@@ -3810,6 +3834,7 @@ export class Lexer {
 						} else if (it.kind === SymbolKind.Variable)
 							((vr = it as Variable).def ? vars : unresolved_vars)[_low] ??= (vr.assigned ||= Boolean(vr.returns), it);
 					}
+					fn.children.unshift(...named_params ?? []);
 					if ((fn.parent as FuncNode)?.assume === FuncScope.GLOBAL)
 						fn.assume ??= FuncScope.GLOBAL;
 					if (fn.assume === FuncScope.GLOBAL) {
@@ -3857,7 +3882,7 @@ export class Lexer {
 		}
 
 		function set_extends(tn: ClassNode, str: string) {
-			tn.extendsuri = '', tn.extends = str.replace(/^{(.*)}$/, '$1').trim().replace(/^(.+[\\/])?/, m => {
+			tn.extends = str.trim().replace(/^(.+[\\/])?/, m => {
 				if (m = m.slice(0, -1)) {
 					let u: URI;
 					m = m.replace(/\\/g, '/').toLowerCase();
@@ -3936,17 +3961,314 @@ export class Lexer {
 				_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
 		}
 
-		function trim_comment(comment: string): string {
-			if (comment.startsWith(';'))
-				return comment.replace(/^[ \t]*; ?/gm, '');
-			let c = comment.split(/\r?\n/), jsdoc = comment.startsWith('/**');
-			if (!(c[0] = c[0].replace(/^\/\*+\s*/, '')))
-				c.splice(0, 1);
-			if (!(c[c.length - 1] = c.at(-1)!.replace(/\s*\*+\/\s*$/, '')))
-				c.pop();
-			if (!jsdoc)
-				return c.join('\n');
-			return c.map(l => l.replace(/^\s*\*(\s*(?=@)| ?)/, '')).join('\n');
+		function join_markdown(s1: string, s2: string) {
+			if (s2)
+				return (s1 && (s1 + '\n\n')) + s2;
+			return s1;
+		}
+		function set_detail(sym: AhkSymbol, cm: Token) {
+			let comment = cm.content;
+			if (comment.startsWith(';')) {
+				sym.detail = cm.data ??= comment.replace(/^[ \t]*; ?/gm, '');
+				return;
+			}
+			if (!/^\/\*\*(?!\/)/.test(comment)) {
+				sym.detail = cm.data ??= comment.replace(
+					new RegExp(`^${input.substring(input.lastIndexOf('\n', cm.offset) + 1, cm.offset)}`, 'gm'), '')
+					.replace(/^\/\*\s*\n|\s*\*+\/$/g, '');
+				return;
+			}
+			if (!cm.data)
+				cm.data = parse_jsdoc_detail(_this, comment, sym);
+			else {
+				let { detail, ignore, tags, vars } = cm.data as JsDoc, t;
+				let v = vars && (vars[sym.name.toUpperCase()] ?? vars['']);
+				if (ignore) sym.ignore = ignore;
+				if (tags) sym.tags = tags as any;
+				sym.markdown_detail = join_markdown(v?.detail ?? '', detail);
+				if (v)
+					sym.type_annotations = v.type_annotations ??= resolve_type_annotations(v.type_str);
+			}
+		}
+
+		interface JsDoc {
+			detail: string
+			ignore?: boolean
+			tags?: number[]
+			vars?: {
+				[name: string]: {
+					detail: string,
+					type_annotations?: (string | AhkSymbol)[] | false,
+					type_str?: string
+				}
+			}
+		}
+
+		function parse_jsdoc_detail(lex: Lexer, detail: string, sym: AhkSymbol): JsDoc {
+			sym.detail = detail;
+			detail = detail.replace(/^[ \t]*(\*?[ \t]*(?=@)|\* ?)/gm, '')
+				.replace(/^\/\*+\s*|\s*\**\/$/g, '');
+			if (!detail)
+				return { detail: sym.markdown_detail = sym.detail = '' };
+			let details: string[] = [], ols: string[] = [], vars: {
+				[n: string]: {
+					detail: string,
+					type_annotations?: (string | AhkSymbol)[] | false,
+					type_str?: string
+				}
+			} | undefined, tp = '', t;
+			let objs: { [name: string]: ClassNode } = {}, params: { [name: string]: Variable } = {};
+			let fn = sym as FuncNode, get_param = (name: string) => undefined as Variable | undefined;
+			let m: RegExpMatchArray | null, vr: Variable | undefined, obj: ClassNode | undefined;
+			let kind: string = ({ [SymbolKind.Variable]: 'var', [SymbolKind.Property]: 'prop' } as any)[sym.kind];
+			if (fn.params) {
+				let _params = fn.params;
+				get_param = (name: string) => {
+					if (/^d/.test(name))
+						return;
+					return params[name] ??= _params.find(it => name === it.name.toUpperCase() && !(it.markdown_detail = '')) ??
+						((fn.overload_params ??= {})[name] = { type_annotations: false, markdown_detail: '' } as Variable);
+				};
+			}
+			for (let line of detail.split(/\n(?=@)/)) {
+				if (!(m = line.match(/^@(\w*)/))) {
+					details.push(line);
+					continue;
+				}
+				t = m[1].toLowerCase(), line = line.substring(t.length + 1);
+				obj && !t.startsWith('prop') && (obj = undefined);
+				switch (t) {
+					case 'arg':
+					case 'argument':
+						t = 'param';
+					case 'param':
+					case 'prop':
+					case 'property':
+					case 'var':
+						line = parse_type(line);
+						if (m = line.match(/^\s*(\[(\w|[^\x00-\x7f]|(\[\])?\.)*.*?\]|(\w|[^\x00-\x7f]|(\[\])?\.)*)/)) {
+							let defval = '', name = m[1] ??= '';
+							line = line.substring(m[0].length);
+							if (name.startsWith('['))
+								name.slice(1, -1).replace(/^((\w|[^\x00-\x7f]|(\[\])?\.)*)(.*)$/, (...t) => {
+									if ((name = t[4].trimLeft()).startsWith('='))
+										defval = name.substring(1).trim();
+									return name = t[1];
+								});
+							if (t === 'param') {
+								vr = get_param(name.replace(/(\[\])?\..*$/, '').toUpperCase());
+								if (vr?.name?.length === name.length) {
+									vr.type_annotations ??= resolve_type_annotations(tp);
+								} else if (vr?.name) {
+									let t = name.split('.');
+									add_prop(add_obj_type(vr, t.shift()!), t, tp,
+										`*@param* \`${name}\`${tp && `: *\`${tp}\`*`}${line.trim() && `\n___\n${line}`}`);
+									if (!vr.markdown_detail)
+										vr = undefined;
+								}
+								t = `*@param* \`${name}\`${tp && `: *\`${tp}\`*`}${defval && ` := \`${defval}\``}${join_detail(line)}`;
+								details.push(t), vr && (vr.markdown_detail += `${t}\n\n`);
+								continue;
+							} else if (t.startsWith('prop')) {
+								t = 'property'
+								obj ??= objs[''] ??= create_obj();
+								add_prop(add_obj_type(obj, obj.name), name.split('.'), tp,
+									`*@${t}* \`${name}\`${tp && `: *\`${tp}\`*`}${defval && ` := \`${defval}\``}${line.trim() && `\n___\n${line}`}`);
+							} else if (kind === 'var') {
+								line = line.trimLeft();
+								if (sym.name.toLowerCase() === name.toLowerCase()) {
+									sym.type_annotations ??= resolve_type_annotations(tp);
+									(vars ??= {})[name.toUpperCase()] ??= {
+										detail: line,
+										type_annotations: sym.type_annotations
+									};
+									sym.markdown_detail ??= line;
+								} else (vars ??= {})[name.toUpperCase()] ??= {
+									detail: line, type_str: tp
+								};
+								continue;
+							}
+							line = join_detail(line);
+							details.push(t = `*@${t}* \`${name}\`${tp && `: *\`${tp}\`*`}${defval && ` := \`${defval}\``}${line}`);
+						}
+						continue;
+					case 'return':
+					case 'returns':
+					case 'type':
+						line = parse_type(line);
+						details.push(`*@${t}*${tp && ` *\`${tp}\`*`}${join_detail(line)}`);
+						if (!kind || (sym as Property).get) {
+							if (kind || t !== 'type')
+								sym.type_annotations ??= resolve_type_annotations(tp);
+						} else if (t === 'type') {
+							(vars ??= {})[''] ??= {
+								detail: line,
+								type_annotations: resolve_type_annotations(tp)
+							};
+							details.pop();
+						}
+						continue;
+					case 'enum':
+					case 'throws':
+						line = parse_type(line);
+						details.push(`*@${t}*${tp && ` *\`${tp}\`*`}${join_detail(line)}`);
+						continue;
+					case 'typedef':
+						line = parse_type(line);
+						m = line.match(/^\s*(\$?(\w|[^\x00-\x7f])*)/)!;
+						if (t = m[1])
+							lex.typedef[t.toUpperCase()] ??= obj = {
+								name: t, kind: SymbolKind.TypeParameter,
+								range: ZERO_RANGE, selectionRange: ZERO_RANGE,
+								type_annotations: resolve_type_annotations(tp)
+							} as ClassNode;
+						details.push(`*@typedef* \`${t}\`: *\`${tp || 'Any'}\`*${join_detail(line.substring(m[0].length))}`);
+						continue;
+					case 'overload':
+						if (!(m = line.match(/^\s*(\w|[^\x00-\x7f])*(?=[(\[])/)))
+							break;
+						ols.push(`${sym.name || '_'}${line.substring(m[0].length)}`);
+						continue;
+					case 'example':
+						details.push('*@example*');
+						if (line = line.replace(/^\s*<caption>(.*?)<\/caption>/, (s0, s1) => (details.push(s1), '')).replace(/^[ \t\n]+/, ''))
+							details.push('```ahk2\n' + line + '\n```');
+						continue;
+					case 'extends':
+						t = '*@extends* ';
+						if (m = line.match(/^\s*{([^{}]+)}/)) {
+							if (sym.kind === SymbolKind.Class)
+								set_extends(sym as ClassNode, m[1]);
+							t += `\`${m[1]}\``, line = line.substring(m[0].length);
+						}
+						details.push(`${t}${join_detail(line)}`);
+						continue;
+					case 'ignore': sym.ignore = true; break;
+					case 'deprecated': sym.tags ??= [1]; break;
+				}
+				details.push(`*@${t}*${join_detail(line)}`);
+			}
+			if (kind) {
+				let tt = vars?.['']?.type_annotations;
+				if (!tt && (t = objs['']))
+					((vars ??= {})[''] ??= { detail: '' }).type_annotations = tt = [t];
+				sym.type_annotations ??= tt;
+			} else if (fn.params && (t = ols.join('\n')))
+				(sym as FuncNode).overloads = t;
+			detail = details.join('\n\n');
+			sym.markdown_detail = join_markdown(sym.markdown_detail ?? '', detail);
+			return { detail, ignore: sym.ignore, tags: sym.tags, vars };
+			function join_detail(str: string) {
+				str = str.replace(/^[ \t]*[-—]/, '');
+				let n = 0, ln = 0, i = 0;
+				for (let c of str) {
+					switch (i++, c) {
+						case '\n':
+							if (n > 1 || ++ln === 2)
+								return str;
+						case '\t': n = 0; break;
+						case ' ': n++; break;
+						case '\r': break;
+						default:
+							if (ln) {
+								let newline = false;
+								if (c === '|' || c === '>' ||
+									'-+*'.includes(c) && ' \t'.includes(str[i]) ||
+									str.substring(i - 1, i + 2) === '```')
+									newline = true;
+								else if (c === '#') {
+									for (; str[i] === '#'; i++);
+									newline = ' \t'.includes(str[i]);
+								} else if (c !== '.') {
+									for (; c >= '0' && c <= '9'; c = str[i++]);
+									newline = c === '.' && ' \t'.includes(str[i]);
+								}
+								if (newline)
+									return `\n${str}`;
+							}
+							return ` — ${str}`;
+					}
+				}
+				return '';
+			}
+			function create_obj(name = ''): ClassNode {
+				return {
+					kind: SymbolKind.Class, name, full: '', extends: '', uri: '',
+					property: {}, range: ZERO_RANGE, selectionRange: ZERO_RANGE
+				};
+			}
+			function remove_types(tps: (string | AhkSymbol)[], remove: AhkSymbol[], add?: ClassNode) {
+				for (let i = tps.length - 1; i >= 0; i--)
+					remove.includes(tps[i] as AhkSymbol) && tps.splice(i, 1);
+				add && tps.push(add);
+				return add;
+			}
+			function add_obj_type(sym: AhkSymbol, name: string): ClassNode {
+				let o: ClassNode;
+				let is_arr = name.endsWith(']') && (name = name.slice(0, -2), true);
+				o = objs[name = name.toUpperCase()] ??= remove_types(
+					sym.type_annotations ||= [], [OBJECT], create_obj(sym.name))!;
+				if (is_arr)
+					return objs[`${name}[]`] ??= (o.extends ||= 'Array',
+						remove_types(sym.type_annotations || [], [ARRAY]),
+						remove_types((o.generic_types ??= [])[0] ??= [], [OBJECT], create_obj())!);
+				return o;
+			}
+			function add_prop(obj: ClassNode, props: string[], tp: string, detail: string) {
+				let full = obj.name.toUpperCase(), l = props.length;
+				for (let name of props) {
+					let is_arr = 0, u: string;
+					while (name.endsWith(']'))
+						name = name.slice(0, -2), is_arr++;
+					full += `.${u = name.toUpperCase()}`, l--;
+					obj = objs[full] ??= (obj.property[u] ??= {
+						kind: SymbolKind.Property, name,
+						range: ZERO_RANGE, selectionRange: ZERO_RANGE
+					}) as ClassNode;
+					if (is_arr || l) {
+						do {
+							obj = objs[full + '.'] ??= remove_types(
+								obj.type_annotations ||= [], [OBJECT], create_obj())!;
+							if (is_arr) {
+								obj = objs[full += '[]'] ??= (obj.extends ||= 'Array', remove_types(
+									(obj.generic_types ??= [])[0] ??= [],
+									is_arr > 1 ? [OBJECT, ARRAY] : [OBJECT], create_obj())!);
+								is_arr--;
+							}
+						} while (is_arr);
+					}
+				}
+				if (!obj.property) {
+					obj.markdown_detail ??= detail;
+					obj.type_annotations ??= resolve_type_annotations(tp);
+				}
+			}
+			function parse_type(str: string) {
+				let m = str.match(/^\s*\{/);
+				tp = '';
+				if (!m) return str;
+				let n = 1, i = m[0].length, b = i;
+				while (n) {
+					switch (str[i++]) {
+						case '{': n++; continue;
+						case '}': n--; continue;
+						case undefined: return str;
+						case '"':
+						case "'": {
+							let q = str[i - 1], c: string;
+							while ((c = str[i++]) !== q) {
+								if (c === '`')
+									i++;
+								else if (!c || c === '\n')
+									return str;
+							}
+							break;
+						}
+					}
+				}
+				tp = str.substring(b, i - 1).trim();
+				return str.substring(i);
+			}
 		}
 
 		function make_range(offset: number, length: number): Range {
@@ -4008,7 +4330,7 @@ export class Lexer {
 		}
 
 		function trim_newlines() {
-			if (continuation_sections_mode)
+			if (continuation_sections_mode !== false)
 				return;
 			let line = output_lines.pop();
 			while (line?.text.length === 0)
@@ -4199,7 +4521,7 @@ export class Lexer {
 						continuation_sections_mode = true;
 						next = !format_mode;
 					} else if (_tk.type === 'TK_END_EXPR') {
-						continuation_sections_mode = false;
+						continuation_sections_mode = null;
 						next = !format_mode;
 					} else if (_tk.type.endsWith('COMMENT'))
 						lst = _tk.previous_token ?? EMPTY_TOKEN;
@@ -4360,10 +4682,10 @@ export class Lexer {
 									// )
 									let o = last_LF + 1, next_LF = input.indexOf('\n', i), m: RegExpMatchArray | null = null;
 									let data: number[] = [];
-									while (next_LF > 0 && !(m = input.substring(i, next_LF).match(/^\s*\)/)))
+									while (next_LF > 0 && !(m = input.substring(i, next_LF).match(/^[ \t]*\)/)))
 										data.push(next_LF - i), next_LF = input.indexOf('\n', i = next_LF + 1);
 									if (next_LF < 0)
-										data.push(input_length - i), m = input.substring(i, input_length).match(/^\s*\)/);
+										data.push(input_length - i), m = input.substring(i, input_length).match(/^[ \t]*\)/);
 									parser_pos = m ? i + m[0].length : input_length;
 									data.push(parser_pos - i);
 									resulting_string = input.substring(offset, parser_pos).trimRight();
@@ -4387,7 +4709,7 @@ export class Lexer {
 									lst.data = { content, offset, length: parser_pos - offset };
 									lst.skip_pos = parser_pos;
 									_this.tokenranges.push({ start: offset, end: parser_pos, type: 4, previous: lst.offset });
-									let js = content.match(/(^|\s)join(\S*)/i), ignore_comment = /(^|\s)[Cc]/.test(content), tk: Token;
+									let js = content.match(/(^|[ \t])join([^ \t]*)/i), ignore_comment = /(^|[ \t])[Cc]/.test(content), tk: Token;
 									let _lst = lst, lk = lst, optionend = false, _mode = format_mode, llf = parser_pos, sum = 0;
 									let create_tokens: (n: number, LF: number) => any = (n, pos) => undefined;
 									if (js) {
@@ -4716,29 +5038,23 @@ export class Lexer {
 			}
 
 			if (c === '/' && bg && input.charAt(parser_pos) === '*') {
-				let LF = input.indexOf('\n', --parser_pos), ln = 0, tk: Token;
-				while (!(m = input.substring(parser_pos, LF > 0 ? LF : input_length).match(/(^\s*\*\/)|(\*\/\s*$)/)) && LF > 0)
+				let LF = input.indexOf('\n', --parser_pos), ln = 0, e = '';
+				while (!(m = input.substring(parser_pos, LF > 0 ? LF : input_length).match(/(^[ \t]*\*\/)|\*\/([ \t]*\r?)$/)) && LF > 0)
 					last_LF = LF, LF = input.indexOf('\n', parser_pos = LF + 1), ln++;
-				if (m && m[1])
+				if (m?.[1])
 					parser_pos = input.indexOf('*/', last_LF) + 2, begin_line = true, last_LF = parser_pos - 1;
-				else parser_pos = LF < 0 ? input_length : LF;
+				else parser_pos = (LF < 0 ? input_length : LF) - (m?.[2].length ?? (e = '*/', 0));
 				_this.tokenranges.push({ start: offset, end: parser_pos, type: 1 });
 				let cmm: Token = {
-					type: 'TK_BLOCK_COMMENT', content: input.substring(offset, parser_pos), offset, length: parser_pos - offset,
+					type: 'TK_BLOCK_COMMENT', content: input.substring(offset, parser_pos) + e, offset, length: parser_pos - offset,
 					next_token_offset: -1, previous_token: lst, topofline: bg, skip_pos: parser_pos
 				};
 				if (!string_mode) {
-					if (depth > 5)
-						return cmm;
-					let _lst = lst, _pp = parser_pos;
-					if ((tk = get_next_token(depth + 1)).length) {
-						if (n_newlines < 2) {
-							tk.prefix_is_whitespace ??= ' ';
-							comments[_this.document.positionAt(tk.offset).line] = cmm;
-						}
-						cmm.next_token_offset = tk.offset;
-					}
-					lst = _lst, parser_pos = _pp;
+					let i = parser_pos, n = 0;
+					for (; ' \t\r'.includes(c = input[i] ?? '\0') || c === '\n' && ++n < 2; i++);
+					if (input[offset + 2] === '*' && input[offset + 3] !== '/' && !(cmm.data = null) ||
+						!'\n\0'.includes(c))
+						comments[_this.document.positionAt(i).line] = cmm;
 				}
 				add_comment_foldingrange();
 				_this.tokens[offset] = cmm;
@@ -4926,6 +5242,7 @@ export class Lexer {
 			print_token();
 			if (flags.mode !== MODE.BlockStatement)
 				flags.indentation_level = (flags.parent ?? flags).indentation_level + 1;
+			continuation_sections_mode ??= false;
 		}
 
 		function handle_start_block() {
@@ -5325,7 +5642,6 @@ export class Lexer {
 
 		function handle_block_comment() {
 			// block comment starts with a new line
-			print_newline(true);
 			if (flags.mode === MODE.Statement) {
 				let nk = _this.tokens[ck.previous_token?.next_token_offset!];
 				if (!nk || !flags.in_expression && !is_line_continue(nk.previous_token ?? EMPTY_TOKEN, nk))
@@ -5333,28 +5649,28 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
-
 			if (opt.ignore_comment)
 				return;
-			let lines = token_text.split('\n');
-			let javadoc = lines[0].match(/^\/\*(@ahk2exe-keep|[^*]|$)/i) ? false : true;
-			let remove: RegExp | string = '', t: RegExpMatchArray | null, j: number;
-			if (!javadoc && (t = lines.at(-1)!.match(/^(\s)\1*/)) && t[0] !== ' ')
-				remove = new RegExp(`^${t[1]}{1,${t[0].length}}`);
 
+			let lines = token_text.split('\n');
+			let jsdoc = /^\/\*\*(?!\/)/.test(token_text);
+			let remove: RegExp | string = '', t: RegExpMatchArray | null;
+			if (!jsdoc)
+				remove = new RegExp(`^${input.substring(input.lastIndexOf('\n', ck.offset) + 1, ck.offset)}`);
 			// first line always indented
+			print_newline(true);
 			print_token(lines[0].trimRight());
-			for (j = 1; j < lines.length - 1; j++) {
+			for (let j = 1, l = lines.length - 1; j < l; j++) {
 				print_newline(true);
-				if (javadoc) {
-					print_token(' * ' + lines[j].replace(/^\s*\* ?/g, ''));
+				if (jsdoc) {
+					print_token(lines[j].replace(/^(\s*(\*?\s*(?=@)|\* ?))?/, ' * '));
 				} else {
 					print_token(lines[j].trimRight().replace(remove, ''));
 				}
 			}
 			if (lines.length > 1) {
 				print_newline(true);
-				print_token((javadoc ? ' ' : '') + lines.at(-1)!.trim());
+				print_token((jsdoc ? ' ' : '') + lines.at(-1)!.trim());
 			}
 			print_newline(true);
 			flags.had_comment = 3;
@@ -5391,7 +5707,6 @@ export class Lexer {
 		}
 
 		function handle_comment() {
-			print_newline(true);
 			if (flags.mode === MODE.Statement) {
 				let nk = _this.tokens[ck.previous_token?.next_token_offset!];
 				if (!nk || !flags.in_expression && !is_line_continue(nk.previous_token ?? EMPTY_TOKEN, nk))
@@ -5540,7 +5855,6 @@ export class Lexer {
 				if ((node as Variable).is_param) {
 					if (fn.parent?.kind === SymbolKind.Property)
 						parent = fn.parent;
-					format_markdown_detail(parent, null);
 				}
 				break;
 			}
@@ -5574,7 +5888,8 @@ export class Lexer {
 			fn = fn.parent as FuncNode;
 		}
 		if (is_global)
-			node = from_d(this.d_uri) ?? this.declaration[name] ?? (is_global = 1, node);
+			node = from_d(this.d_uri) ?? this.declaration[name] ??
+				(is_global = 1, node) ?? (is_global = true, this.typedef[name]);
 		return node && { node, uri, scope, is_global, parent };
 		function from_d(d_uri: string) {
 			let lex = lexers[d_uri];
@@ -5608,11 +5923,11 @@ export class Lexer {
 							break;
 						if (tk = lk, !lk.next_pair_pos || lk.topofline > 0)
 							lk = undefined;
-						else if (lk.content === '[' || lk.prefix_is_whitespace === undefined) {
+						else if (lk.prefix_is_whitespace === undefined || lk.content === '[' && !lk.previous_token?.callsite) {
 							if (lk = lk.previous_token) {
 								if (lk.type === 'TK_NUMBER' || lk.type === 'TK_STRING' || lk.content === '%' && (lk = EMPTY_TOKEN))
 									tk = lk, lk = undefined;
-								else if (!(lk.type === 'TK_WORD' || lk.type === 'TK_DOT' || lk.type.endsWith('TK_END_')))
+								else if (!(lk.type === 'TK_WORD' || lk.type === 'TK_DOT' || lk.type.startsWith('TK_END_')))
 									lk = undefined;
 							}
 						} else lk = undefined;
@@ -6292,7 +6607,7 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 			if (tk.symbol.kind === SymbolKind.Property) {
 				let prop = tk.symbol, cls = prop.parent as ClassNode;
 				if (prop = cls?.property?.[prop.name.toUpperCase()])
-					syms = decltype_returns(prop, lexers[cls.uri!], cls);
+					syms = decltype_returns(prop, lexers[cls.uri!] ?? lex, cls);
 				else syms = [];
 			} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
 		} else switch (tk.type) {
@@ -6307,7 +6622,7 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 				syms = new Set;
 				let node = r.node;
 				if (node.kind === SymbolKind.Variable) {
-					for (let n of decltype_var(node, lexers[r.uri], pos, r.scope, _this))
+					for (let n of decltype_var(node, lex, pos, r.scope, _this))
 						syms.add(n);
 				} else syms.add(node);
 				break;
@@ -6480,7 +6795,7 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 	}
 }
 
-function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, call: boolean, paraminfo?: ParamInfo) {
+export function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, call: boolean, paraminfo?: ParamInfo) {
 	let tps = new Set<AhkSymbol>;
 	for (let n of syms) {
 		let _this = n as ClassNode;
@@ -6488,8 +6803,10 @@ function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: s
 			case 0 as SymbolKind: return [ANY];
 			case SymbolKind.Class:
 				if (call && name === 'call') {
-					if (!(n = get_class_member(lex, n as ClassNode, name, call)!))
-						continue;
+					if (!(n = get_class_member(lex, _this, name, call)!))
+						if (invoke_meta_func(_this))
+							break;
+						else continue;
 					let full = (n as Variable).full ?? '';
 					if (full.startsWith('(Object)'))
 						n = _this;
@@ -6518,13 +6835,15 @@ function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: s
 				if (call && name === 'call')
 					break;
 			default:
-				if (!(n = get_class_member(lex, n as ClassNode, name, call)!))
-					continue;
+				if (!(n = get_class_member(lex, _this, name, call)!))
+					if (n = invoke_meta_func(_this)!)
+						break;
+					else continue;
 				if (n.kind !== SymbolKind.Property) {
 					if ((n as FuncNode).alias) {
 						if (paraminfo) continue;
-						let tt = decltype_returns(n, lex, _this);
-						for (let t of call ? tt.flatMap(s => decltype_returns(s, lex, _this)) : tt)
+						let tt = decltype_returns(n, lexers[n.uri!] ?? lex, _this);
+						for (let t of call ? decltype_invoke(lex, tt, 'call', true) : tt)
 							tps.add(t);
 						continue;
 					} else if (call) break;
@@ -6533,21 +6852,35 @@ function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: s
 					else for (let t of decltype_invoke(lex, [n], '__item', false, paraminfo))
 						tps.add(t);
 					continue;
-				} else {
-					let get = (n as Property).get;
-					if (call || paraminfo && (!get || !get.params.length)) {
-						for (let t of decltype_invoke(lex, decltype_returns(n, lexers[n.uri!], _this),
-							call ? 'call' : '__item', call, paraminfo))
-							tps.add(t);
-						continue;
-					}
+				} else if ((n as FuncNode).alias) {
+					let tt = decltype_invoke(lex, decltype_returns(n, lexers[n.uri!] ?? lex, _this), 'call', true);
+					for (let t of call ? decltype_invoke(lex, tt, 'call', true) : tt)
+						tps.add(t);
+					continue;
+				} else if (call || paraminfo && !(n as Property).get?.params.length) {
+					for (let t of decltype_invoke(lex, decltype_returns(n, lexers[n.uri!] ?? lex, _this),
+						call ? 'call' : '__item', call, paraminfo))
+						tps.add(t);
+					continue;
 				}
 				break;
 		}
-		for (let t of decltype_returns(n, lexers[n.uri!], _this))
+		for (let t of decltype_returns(n, lexers[n.uri!] ?? lex, _this))
 			tps.add(t);
 	}
 	return tps;
+	function invoke_meta_func(_this: ClassNode) {
+		let n = get_class_member(lex, _this, call ? '__call' : '__get', call);
+		if (!n) return;
+		if (n.kind === SymbolKind.Method && !(n as FuncNode).alias)
+			return n;
+		let syms = n.kind === SymbolKind.Class ? [n] : !n.children ?
+			decltype_returns(n, lexers[n.uri!] ?? lex, _this) : undefined;
+		if (!syms?.length)
+			return;
+		for (let t of decltype_invoke(lex, syms, 'call', true, paraminfo))
+			tps.add(t);
+	}
 }
 
 function decltype_byref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: ClassNode) {
@@ -6579,8 +6912,7 @@ function decltype_byref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: C
 					break;
 			case SymbolKind.Property:
 				let param = (it as FuncNode).params?.[index + needthis], annotations;
-				if (!param || (param.type_annotations === undefined && format_markdown_detail(it, null),
-					!(annotations = param.type_annotations)))
+				if (!param || !(annotations = param.type_annotations))
 					break;
 				for (let t of annotations) {
 					if (t === VARREF)
@@ -6601,7 +6933,10 @@ function decltype_byref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: C
 					else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
 						n = get_class_member(lex, cls.prototype!, '__new', true) ?? n;
 					else if (n.kind === SymbolKind.Property || (n as FuncNode).alias) {
-						decltype_returns(n, lexers[n.uri!], cls).forEach(it => resolve(it, 'call', types, -1));
+						let tps: AhkSymbol[] | Set<AhkSymbol> = decltype_returns(n, lexers[n.uri!] ?? lex, cls);
+						if (n.kind === SymbolKind.Property && (n as FuncNode).alias)
+							tps = decltype_invoke(lex, tps, 'call', true);
+						tps.forEach(it => resolve(it, 'call', types, -1));
 						return;
 					}
 					if (n?.kind === SymbolKind.Method)
@@ -6612,7 +6947,7 @@ function decltype_byref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: C
 				else if (n.kind !== SymbolKind.Property)
 					return;
 				else if (!(n as FuncNode).params) {
-					for (let t of decltype_returns(n, lexers[n.uri!], cls))
+					for (let t of decltype_returns(n, lexers[n.uri!] ?? lex, cls))
 						(t = get_class_member(lex, t as any, '__item', false)!) &&
 							resolve(t, '', types);
 					return;
@@ -6632,16 +6967,14 @@ function get_declare_class(lex: Lexer, cls?: ClassNode): ClassNode | undefined {
 }
 
 function decltype_var(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol, _this?: ClassNode): AhkSymbol[] {
-	let name = sym.name.toUpperCase(), syms = [sym];
+	let name = sym.name.toUpperCase(), _def = sym, syms = sym.type_annotations ? [sym] : [];
 	if (!scope)
 		for (const uri in lex?.relevance) {
 			let v = lexers[uri]?.declaration?.[name];
-			v && syms.push(v);
+			v?.type_annotations && (syms.includes(v) || syms.push(v));
 		}
 	let ts: AhkSymbol[] | undefined, t;
 	for (let sym of syms) {
-		if (!get_type_annotations(sym))
-			continue;
 		if (t = sym.returns)
 			sym.returns = undefined;
 		ts = decltype_returns(sym, lex, _this);
@@ -6672,7 +7005,7 @@ function decltype_var(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbo
 			} else return [it];
 		}
 	if (sym.for_index !== undefined) {
-		if (sym === syms[0] && !var_in_for_block(sym, t ??= lex.document.offsetAt(pos)))
+		if (sym === _def && !var_in_for_block(sym, t ??= lex.document.offsetAt(pos)))
 			return [];
 		let tps = decltype_returns(sym, lex, _this);
 		for (let it of tps)
@@ -6688,7 +7021,7 @@ function decltype_var(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbo
 					if (invoke_enum && (t = get_class_member(lex, it, '__enum', true, bases))) {
 						if (t.kind !== SymbolKind.Method)
 							break;
-						for (let tp of decltype_returns(t, lex, it as ClassNode))
+						for (let tp of decltype_returns(t, lexers[t.uri!] ?? lex, it as ClassNode))
 							resolve(tp, false);
 						break;
 					} else if ((t = get_class_member(lex, it, 'call', true, bases))?.kind === SymbolKind.Method)
@@ -6699,8 +7032,7 @@ function decltype_var(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbo
 					needthis++;
 				case SymbolKind.Function:
 					let param = (it as FuncNode).params?.[sym.for_index! + needthis], annotations;
-					if (!param || (param.type_annotations === undefined && format_markdown_detail(it, null),
-						!(annotations = param.type_annotations)))
+					if (!param || !(annotations = param.type_annotations))
 						break;
 					for (let t of annotations) {
 						if (t === VARREF)
@@ -6750,19 +7082,25 @@ function decltype_type_annotations(annotations: (string | AhkSymbol)[], lex: Lex
 
 function resolve_cached_types(tps: (string | AhkSymbol)[], resolved_types: Set<AhkSymbol>, lex: Lexer,
 	_this?: ClassNode, type_params?: { [name: string]: AhkSymbol }) {
-	let re: RegExp, i = -1, is_this, is_typeof, t, param;
+	let re: RegExp, i = -1, is_this, is_typeof, t, param, update;
 	for (let tp of tps) {
 		if (i++, typeof tp === 'string') {
 			(is_typeof = tp.startsWith('typeof ')) && (tp = tp.substring(7));
 			if (param = type_params?.[tp.toUpperCase()])
-				resolve_cached_types(_this!.generic_types?.[param.data] ?? param.type_annotations ?? [],
+				resolve_cached_types(_this!.generic_types?.[param.data] ?? (param.type_annotations || []),
 					resolved_types, lex, _this, type_params);
-			else if ((t = (is_this = tp === 'this') && _this || find_symbol(lex, tp)?.node as ClassNode) &&
-				t.kind !== SymbolKind.Variable)
-				resolved_types.add(t = !is_typeof && t.prototype || t), !is_this && (tps[i] = t);
-		} else
+			else if (t = (is_this = tp === 'this') && _this || find_symbol(lex, tp)?.node as ClassNode)
+				if (t.kind === SymbolKind.TypeParameter)
+					update = true, tps[i] = '', tps.push(...decltype_type_annotations(t.type_annotations || [], lex));
+				else if (t.kind !== SymbolKind.Variable)
+					resolved_types.add(t = !is_typeof && t.prototype || t), !is_this && (tps[i] = t);
+		} else if (tp.kind === SymbolKind.TypeParameter)
+			update = true, tps[i] = '', tps.push(...decltype_type_annotations(tp.type_annotations || [], lex));
+		else
 			resolved_types.add(type_params ? resolve_generic_type(tp as ClassNode) : tp);
 	}
+	if (update)
+		tps.push(...new Set(tps.splice(0).filter(Boolean)));
 	function resolve_generic_type(cls: ClassNode): AhkSymbol {
 		let generic_types = cls.generic_types;
 		if (!generic_types)
@@ -6774,7 +7112,7 @@ function resolve_cached_types(tps: (string | AhkSymbol)[], resolved_types: Set<A
 			if (typeof tp === 'object')
 				return [resolve_generic_type(tp as ClassNode)];
 			if (param = type_params![tp.toUpperCase()])
-				return _this!.generic_types?.[param.data] ?? param.type_annotations ?? [];
+				return _this!.generic_types?.[param.data] ?? (param.type_annotations || []);
 			return [tp];
 		}));
 		if (!generic_types.length)
@@ -6791,7 +7129,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined, is_typeof, has_obj, t;
 	switch (!sym.cached_types) {
 		case true:
-			let annotations = get_type_annotations(sym, lex), s: string;
+			let annotations = sym.type_annotations, s: string;
 			if (!annotations) break;
 			types = new Set;
 			for (let tp of annotations) {
@@ -6868,6 +7206,8 @@ function type_naming(sym: AhkSymbol) {
 		case SymbolKind.String:
 		case SymbolKind.Number:
 			return (sym.data as string | number ?? sym.name).toString();
+		case SymbolKind.Null:
+			return 'unset';
 		case SymbolKind.Method:
 		case SymbolKind.Property:
 			if (s = (sym as FuncNode).full?.match(/^\((.+?)\)/)?.[1])
@@ -6877,11 +7217,12 @@ function type_naming(sym: AhkSymbol) {
 }
 
 export function generate_type_annotation(sym: AhkSymbol, lex?: Lexer) {
-	return join_types((get_type_annotations(sym) ?? decltype_returns(sym, lex ?? lexers[sym.uri!])));
+	return join_types((sym.type_annotations || decltype_returns(sym, lexers[sym.uri!] ?? lex)));
 }
 
-export function join_types(tps?: Array<string | AhkSymbol> | null) {
-	let ts = [...new Set(tps?.map(s => typeof s === 'string' ? s : type_naming(s)) ?? [])];
+export function join_types(tps?: Array<string | AhkSymbol> | false) {
+	if (!tps) return '';
+	let ts = [...new Set(tps.map(s => typeof s === 'string' ? s : type_naming(s)))];
 	let t = ts.pop();
 	if (!t) return '';
 	(ts = ts.map(s => s.includes('=>') && !'"\''.includes(s[0]) ? `(${s})` : s)).push(t);
@@ -6889,46 +7230,12 @@ export function join_types(tps?: Array<string | AhkSymbol> | null) {
 }
 
 function resolve_type_annotations(annotation?: string) {
-	if (annotation = annotation?.trim()) {
+	if (annotation) {
 		let lex = new Lexer(TextDocument.create('', 'ahk2', 0, `$:${annotation}`), undefined, -1);
 		lex.parseScript();
-		return lex.declaration.$?.type_annotations ?? null;
+		return lex.declaration.$?.type_annotations ?? false;
 	}
-	return null;
-}
-
-export function get_type_annotations(sym: AhkSymbol, lex?: Lexer) {
-	if (sym.type_annotations !== undefined)
-		return sym.type_annotations;
-	let detail = sym.detail?.trim(), tag, annotation;
-	if (!detail)
-		return sym.type_annotations = null;
-	switch (sym.kind) {
-		case SymbolKind.Property:
-			tag = 'prop(erty)?';
-		case SymbolKind.Variable:
-			tag ??= '(var)';
-			annotation = (detail.match(new RegExp(`^\\s*@${tag}\\s+{(.*[^\\\\])?}\\s+${sym.name}(\\s|$)`, 'mi')) ??
-				detail.match(/^\s*@(type)\s+{(.*[^\\])?}(?=\s|$)/mi))?.[2];
-			if (annotation !== undefined || sym.kind === SymbolKind.Variable)
-				break;
-		case SymbolKind.Function:
-		case SymbolKind.Method:
-			annotation = detail.match(/^\s*@(returns?)\s+{(.*[^\\])?}(?=\s|$)/mi)?.[2];
-			break;
-	}
-	return sym.type_annotations = resolve_type_annotations(annotation);
-}
-
-function generate_anonymous_fn(def: string, uri: string) {
-	let lex = new Lexer(TextDocument.create('', 'ahk2', 0, `$${def}`), undefined, -1);
-	lex.parseScript();
-	let node = lex.declaration.$ as FuncNode;
-	if (node?.kind === SymbolKind.Function) {
-		node.name = '', node.full = node.full.substring(1);
-		node.range = node.selectionRange = ZERO_RANGE, node.uri = uri;
-		return node;
-	}
+	return false;
 }
 
 const MaybeLocalKind = [SymbolKind.Variable, SymbolKind.Function, SymbolKind.Field];
@@ -6939,6 +7246,7 @@ export function find_symbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos
 		!l && MaybeLocalKind.includes(kind as any) ? pos : undefined);
 	if (res === null)
 		return;
+	let scope = res?.scope;
 	if (!res || res.is_global === 1)
 		res = find_include_symbol(lex.relevance, name) ?? res;
 	else if (res.is_global && res.node.kind === SymbolKind.Variable) {
@@ -6950,6 +7258,8 @@ export function find_symbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos
 		return res;
 	if ((!res || res.node.kind === SymbolKind.Variable && ((notdef = !res.node.def) || res.is_global)) && (t = find_builtin_symbol(name)))
 		res = { uri: t.uri!, node: t, is_global: true };
+	else if (scope)
+		scope.uri ??= lex.uri, res!.scope = scope;
 	if (!res)
 		return;
 	let p = name.length, parent: AhkSymbol | undefined, node: typeof parent = res.node;
@@ -6974,7 +7284,6 @@ export function find_symbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos
 			t.uri ??= node.uri, node = t;
 		res = { node, uri: node.uri!, parent };
 	}
-	!(node as Variable).is_param && format_markdown_detail(node, null);
 	return res;
 	function find_builtin_symbol(name: string) {
 		if (t = ahkvars[name])
@@ -7007,12 +7316,12 @@ export function find_symbols(lex: Lexer, context: Context) {
 	let tps = decltype_expr(lex, context.token, range.end);
 	if (!word && tps.length) {
 		for (let node of tps)
-			format_markdown_detail(node, null), syms.push({ node, uri: node.uri! });
+			syms.push({ node, uri: node.uri! });
 		return syms;
 	}
 	for (let tp of tps)
 		if (t = get_class_member(lex, tp, word, ismethod))
-			format_markdown_detail(t, null), syms.push({ node: t, uri: t.uri!, parent: tp });
+			syms.push({ node: t, uri: t.uri!, parent: tp });
 	if (syms.length)
 		return syms;
 }
@@ -7107,14 +7416,13 @@ export function traverse_include(lex: Lexer, included?: any) {
 	return cache;
 }
 
-export function format_markdown_detail(node: AhkSymbol, lex?: Lexer | null, remove_re?: RegExp): string {
-	node.formated_detail ??= format();
-	if (lex === null)
-		return '';
-	let detail = node.formated_detail;
+export function get_detail(sym: AhkSymbol, lex: Lexer, remove_re?: RegExp): string | MarkupContent {
+	let detail = sym.markdown_detail;
+	if (!detail)
+		return sym.detail ?? '';
 	if (remove_re)
 		detail = detail.replace(remove_re, '');
-	return detail.replace(/\{@link(code|plain)?\s+([^{}]*)\}/gm, (...m) => {
+	detail = detail.replace(/\{@link(code|plain)?\b([^{}\n]*)\}/gm, (...m) => {
 		let link: string = m[2]?.trim() ?? '', tag = '', name: string | undefined;
 		const p = link.search(/[|\s]/);
 		if (p !== -1)
@@ -7133,109 +7441,10 @@ export function format_markdown_detail(node: AhkSymbol, lex?: Lexer | null, remo
 			}
 		}
 		return /^[a-z]+:/.test(link) ? `[${m[1] === 'code' ? `\`${tag}\`` : tag}](${link})` : ` ${link} ${tag} `;
-	}).trim().replace(/(^|\n)(@\w*)/g, '$1*$2*');
-	function format() {
-		let details: string[] = [], m: RegExpMatchArray | null, s;
-		let detail = node.detail ?? '', ols: string[] = [], code = 0;
-		let params: { [name: string]: Variable } = {}, vr: Variable | undefined;
-		let fn = node as FuncNode, create_param = (name: string) => undefined as Variable | undefined;
-		if (fn.params) {
-			create_param = (name: string) => {
-				let vr = {} as Variable;
-				(fn.overload_params ??= {})[name] = params[name] = vr;
-				vr.type_annotations = null;
-				vr.formated_detail = '';
-				return vr;
-			};
-			fn.params?.forEach(it => (params[it.name.toUpperCase()] = it).formated_detail = '');
-		}
-		detail.split(/\r?\n/).forEach(line => {
-			if (line.startsWith('@')) {
-				code === 2 && details.push('```'), code = 0, vr = undefined;
-				if (m = line.match(/^@(\w*)(.*)$/)) {
-					switch (s = m[1].toLowerCase()) {
-						case 'param':
-						case 'arg':
-						case 'argument':
-							if (m = m[2].match(/^\s*({(.*[^\\])?}\s+)?(\[.*\]|[^\x00-\x40\x5b-\x5e\x60\x7b-\x7f](\w|(\[\])?\.|[^\x00-\x7f])*)?(\s*[-—])?(.*)$/)) {
-								let defval = '', name = m[3] ??= '';
-								if (name.startsWith('['))
-									m[3] = name.slice(1, -1).replace(/^((\w|(\[\])?\.|[^\x00-\x7f])*)(.*)$/, (...t) => {
-										if ((s = t[4].trimLeft()).startsWith('='))
-											defval = s.substring(1);
-										return name = t[1];
-									});
-								s = name.replace(/(\[\])?\..*$/, '').toUpperCase();
-								vr = params[s] ?? create_param(s);
-								if (vr && s.length === name.length)
-									if (vr.type_annotations === undefined)
-										vr.type_annotations = resolve_type_annotations(m[2]);
-									else m[2] ||= join_types(vr.type_annotations);
-								details.push(s = `\n*@param* \`${m[3]}\`${m[2] ? `: *\`${m[2]}\`*` : ''}${defval && ` := \`${defval}\``}\0${m[7]}`);
-								vr && (vr.formated_detail += s);
-							}
-							break;
-						case 'example':
-							s = m[2].replace(/\s*<caption>(.*?)<\/caption>\s*/, (...m) => { details.push('\n*@example* ' + m[1]); return ''; });
-							if (code = 1, s === m[2]) {
-								s = m[2].replace(/\s*<caption>(.*)/, (...m) => { details.push('\n*@example* ' + m[1]); return ''; });
-								if (s !== m[2])
-									break;
-								details.push('\n*@example*');
-							}
-							details.push('```ahk2' + (s && `\n${s}`)), code = 2;
-							break;
-						case 'var':
-						case 'prop':
-						case 'property':
-							if (m = m[2].match(/^\s*({(.*[^\\])?}\s+)?(\S+)(\s*[-—])?(.*)/))
-								details.push(`\n*@${s}* \`${m[3]}\`${m[2] ? `: *${m[2]}*` : ''}\0${m[5]}`);
-							break;
-						case 'return':
-						case 'returns':
-							if (m = m[2].match(/^\s*({(.*[^\\])?}(?=\s|$))?(\s*[-—])?(.*)/)) {
-								let t = m[2]?.trim() ?? '';
-								if (node.type_annotations === undefined)
-									node.type_annotations = resolve_type_annotations(t);
-								details.push(`\n*@${s}* ${t && `*\`${t}\`*`}\0${m[4]}`);
-							}
-							break;
-						case 'type':
-							if (m = m[2].match(/^\s*({(.*[^\\])?}(?=\s|$))?(\s*[-—])?(.*)/))
-								details.push(`\n*@${s}* ${(m[2] ??= 'Any') && `*\`${m[2]}\`*`}\0${m[4]}`);
-							break;
-						case 'overload':
-							if (s = m[2].trim().replace(/^[^(\[]*/, node.name || '_'))
-								ols.push(s);
-							break;
-						default:
-							switch (s) {
-								case 'ignore': node.ignore = true; break;
-								case 'deprecated': node.tags ??= [1]; break;
-							}
-							details.push(`\n*@${s}*\0${m[2].replace(/^(\s*[-—])?/, '')}`);
-							break;
-					}
-				} else details.push(line);
-			} else {
-				line.startsWith('*@') && (line = ` ${line}`);
-				if (vr)
-					vr.formated_detail += `\n${line}`;
-				else if (code === 1 && (s = line.indexOf('</caption>')) > -1)
-					code = 2, line = line.substring(0, s), '```ahk2' + ((s = line.substring(s + 10).trimLeft()) ? '\n' + s : '');
-				details.push(line);
-			}
-		});
-		code === 2 && details.push('```');
-		if (s = ols.join('\n'))
-			(node as FuncNode).overloads = s, details.unshift('*@overload*\n```ahk2\n' + s + '\n```');
-		Object.values(params).forEach(it => it.formated_detail = remove_nul(it.formated_detail!));
-		return remove_nul(details.join('\n'));
-	}
-	function remove_nul(str: string) {
-		return str.trim().replace(/\0\s*((([-+*]|#+|\d+\.)[ \t]|[>|]|```\w*\n)|\S?)/g,
-			(s, m1, m2) => m1 && (m2 || /  \n|\n\n/.test(s) ? `\n\n${m1}` : ` — ${m1}`));
-	}
+	});
+	if (detail)
+		return { kind: 'markdown', value: detail };
+	return '';
 }
 
 export function make_same_name_error(a: AhkSymbol, b: AhkSymbol): string {
