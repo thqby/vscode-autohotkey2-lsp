@@ -4670,7 +4670,7 @@ export class Lexer {
 			if (c === '(' || c === '[') {
 				if (c === '(') {
 					if (bg && !continuation_sections_mode) {
-						let i = parser_pos, t: string;
+						let i = parser_pos, b = i, t: string;
 						while (i < input_length) {
 							if ((t = input.charAt(i++)) === '\n') {
 								if (string_mode) {
@@ -4774,9 +4774,10 @@ export class Lexer {
 									return lst = (format_mode = _mode) ? _lst : get_next_token();
 								}
 							} else if (t === ')' || t === '(') {
-								if (!input.substring(i - 6, i - 1).match(/[(\s]join\S*$/i))
+								if (i - b < 5 || input.substring(b, b + 4).toLowerCase() !== 'join')
 									break;
-							}
+							} else if (t === ' ' || t === '\t')
+								b = i;
 						}
 					}
 				}
