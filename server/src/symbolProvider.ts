@@ -310,7 +310,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 	}
 	if (node.hasref) {
 		params.forEach((param, index) => {
-			if (index < count && param.pass_by_ref && !miss[index]) {
+			if (index < count && param.pass_by_ref && !_miss[index]) {
 				let o: number, t: Token;
 				if (index === 0)
 					o = info.offset! + info.name.length + 1;
