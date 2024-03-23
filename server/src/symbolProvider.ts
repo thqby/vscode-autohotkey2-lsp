@@ -102,15 +102,19 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					for (let dec of [cls.property, cls.prototype?.property ?? {}])
 						Object.values(dec).forEach(it => it.selectionRange.end.character && result.push(it));
 					break;
+				case SymbolKind.Property:
+					if (fn.has_this_param) {
+						let prop = info as Property;
+						for (let s of [prop.get, prop.set, prop.call]) {
+							if (!s) continue;
+							t.push(s), s.selectionRange.end.character && result.push(s);
+						}
+					} else break;
 				case SymbolKind.Method:
-					outer_is_global ||= fn.assume === FuncScope.GLOBAL;
 				case SymbolKind.Function:
 					if (fn.has_this_param)
 						inherit = { THIS, SUPER };
-				case SymbolKind.Event:
-					if (!fn.parent)
-						outer_is_global ||= fn.assume === FuncScope.GLOBAL;
-					else if (fn.kind !== SymbolKind.Method) {
+					else {
 						if (vars.SUPER?.range.end.character === 0)
 							delete vars.SUPER;
 						if (fn.assume !== FuncScope.GLOBAL) {
@@ -123,6 +127,8 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							} else inherit = { ...vars };
 						} else outer_is_global = true;
 					}
+				case SymbolKind.Event:
+					outer_is_global ||= fn.assume === FuncScope.GLOBAL;
 					for (let [k, v] of Object.entries(fn.global ?? {}))
 						s = inherit[k] = gvar[k] ??= v, converttype(v, s, s === ahkvars[k]).definition = s,
 							s.kind === SymbolKind.Variable && maybe_unset(s, v);
@@ -164,15 +170,6 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							if (v.returns === undefined)
 								unset_vars.set(v, v);
 						}
-					break;
-				case SymbolKind.Property:
-					if (info.parent?.kind === SymbolKind.Class) {
-						let prop = info as Property;
-						for (let s of [prop.get, prop.set, prop.call]) {
-							if (!s) continue;
-							t.push(s), s.selectionRange.end.character && result.push(s);
-						}
-					}
 					break;
 				default: inherit = { ...vars }; break;
 			}
