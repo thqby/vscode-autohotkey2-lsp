@@ -181,22 +181,24 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						for (let path of paths) {
 							if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory())
 								continue;
-							for (let label of readdirSync(path)) {
-								try {
-									if (statSync(path + label).isDirectory()) {
-										if (!ep.test(label))
-											continue;
-										label = label.replace(/(`|(?<= );)/g, '`$1');
-										set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + xg);
-									} else {
-										if (!extreg.test(label) || !ep.test(inlib ? label = label.replace(extreg, '') : label))
-											continue;
-										label = label.replace(/(`|(?<= );)/g, '`$1');
-										set_file_text(cpitem = { label, kind: CompletionItemKind.File }, label + c);
-									}
-									items.push(cpitem);
-								} catch { };
-							}
+							try {
+								for (let label of readdirSync(path)) {
+									try {
+										if (statSync(path + label).isDirectory()) {
+											if (!ep.test(label))
+												continue;
+											label = label.replace(/(`|(?<= );)/g, '`$1');
+											set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + xg);
+										} else {
+											if (!extreg.test(label) || !ep.test(inlib ? label = label.replace(extreg, '') : label))
+												continue;
+											label = label.replace(/(`|(?<= );)/g, '`$1');
+											set_file_text(cpitem = { label, kind: CompletionItemKind.File }, label + c);
+										}
+										items.push(cpitem);
+									} catch { }
+								}
+							} catch { }
 							if (pre.includes(':'))
 								break;
 						}
@@ -722,8 +724,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (!/^\w:[\\/]/.test(path) || /[*?"<>|\t]/.test(path))
 			return;
 		path = path.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
-		if (!existsSync(path) || !statSync(path).isDirectory())
-			return;
+		try {
+			if (!existsSync(path) || !statSync(path).isDirectory())
+				return;
+		} catch { return; };
 
 		let slash = path.endsWith('/') ? '/' : '\\', re = make_search_re(suf);
 		let command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
@@ -736,24 +740,26 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		} : undefined;
 		let set_folder_text = range ? (item: CompletionItem, newText: string) => (item.textEdit = { newText, range }) :
 			(item: CompletionItem, newText: string) => item.insertText = newText;
-		for (let label of readdirSync(path)) {
-			try {
+		try {
+			for (let label of readdirSync(path)) {
 				if (!re.test(label))
 					continue;
-				if (statSync(path + label).isDirectory()) {
-					label = label.replace(/(`|(?<= );)/g, '`$1');
-					set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + slash);
-				} else if (only_folder || ext_re?.test(label))
-					continue;
-				else {
-					label = label.replace(/(`|(?<= );)/g, '`$1');
-					cpitem = { label, kind: CompletionItemKind.File };
-					if (range)
-						cpitem.textEdit = { range, newText: label };
-				}
-				items.push(cpitem);
-			} catch { };
-		}
+				try {
+					if (statSync(path + label).isDirectory()) {
+						label = label.replace(/(`|(?<= );)/g, '`$1');
+						set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + slash);
+					} else if (only_folder || ext_re?.test(label))
+						continue;
+					else {
+						label = label.replace(/(`|(?<= );)/g, '`$1');
+						cpitem = { label, kind: CompletionItemKind.File };
+						if (range)
+							cpitem.textEdit = { range, newText: label };
+					}
+					items.push(cpitem);
+				} catch { }
+			}
+		} catch { }
 	}
 	async function add_dllexports() {
 		if (isBrowser)
@@ -783,9 +789,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			docs.forEach(d => d.dllpaths.forEach(file =>
 				expg.test(file = file.replace(/^.*[\\/]/, '')) &&
 				(ls[file.toUpperCase()] ??= items.push(file2item(file.replace(/\.dll$/i, ''))))));
-			for (let file of readdirSync('C:\\Windows\\System32'))
-				/\.(dll|ocx|cpl)$/i.test(file) && expg.test(file) &&
-					(ls[file.toUpperCase()] ??= items.push(file2item(file.replace(/\.dll$/i, ''))));
+			try {
+				for (let file of readdirSync('C:\\Windows\\System32'))
+					/\.(dll|ocx|cpl)$/i.test(file) && expg.test(file) &&
+						(ls[file.toUpperCase()] ??= items.push(file2item(file.replace(/\.dll$/i, ''))));
+			} catch { }
 			for (let label of winapis)
 				expg.test(label) && items.push({ label, kind });
 		} else {

@@ -1,3 +1,7 @@
+## 2.3.9
+- 修复[#491](https://github.com/thqby/vscode-autohotkey2-lsp/issues/491)
+- 增加路径补全和dll导出函数补全通过标注类型`$DirPath`、`$FilePath<'jpg|png'>`、`$DllFunc`
+
 ## 2.3.8
 - 修复[#488](https://github.com/thqby/vscode-autohotkey2-lsp/issues/488)
 
