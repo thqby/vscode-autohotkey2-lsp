@@ -80,7 +80,7 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 					name = (node as ClassNode).full.toUpperCase();
 				else {
 					let fn = node as FuncNode;
-					let m = fn.full?.match(/^\(([^)]+)\)\sstatic\s([^(]+)($|[(\[])/);
+					let m = fn.full?.match(/^\(([^)]+)\)[ \t]static[ \t]([^(]+)($|[(\[])/);
 					if (m)
 						name = `${m[1]}.${m[2]}`.toUpperCase();
 					else if (fn.parent?.kind === SymbolKind.Class)

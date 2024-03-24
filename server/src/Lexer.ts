@@ -275,7 +275,7 @@ String.prototype.trimRight = function () {
 	return this.replace(/[ \t\r\n]+$/, '');
 };
 
-const colorregexp = new RegExp(/['"\s](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
+const colorregexp = new RegExp(/['" \t](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
 const whitespace = " \t\r\n", punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , ?? ??= : ? ^ ^= |= =>'.split(' ');
 const line_starters = 'try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
@@ -514,7 +514,7 @@ export class Lexer {
 				end_pos = _this.document.offsetAt(range.end);
 				ck = _this.find_token(_this.document.offsetAt(range.start));
 				range.start = _this.document.positionAt(parser_pos = ck.offset);
-				preindent_string = input.substring(input.lastIndexOf('\n', parser_pos) + 1, parser_pos).replace(/\S.*$/, '');
+				preindent_string = input.substring(input.lastIndexOf('\n', parser_pos) + 1, parser_pos).match(/^[ \t]*/)![0];
 			}
 
 			while (true) {
@@ -752,11 +752,12 @@ export class Lexer {
 									else decl[_low] = fn;
 								} else if (!blocks && (['=>', ':', ','].includes(lk.content) || lk.topofline)) {
 									let tn = Variable.create(tk.content, SymbolKind.Variable, rg = make_range(tk.offset, tk.length));
-									tk.symbol = tk.definition = tn, tk.semantic = {
+									tk.symbol = tk.definition = tn, tn.assigned = tn.def = true;
+									tk.semantic = {
 										type: SemanticTokenTypes.variable,
 										modifier: SemanticTokenModifiers.definition |
 											(lk.content === '=>' ? SemanticTokenModifiers.readonly : 0)
-									}, tn.assigned = tn.def = true;
+									};
 									if (_cm = comments[tn.selectionRange.start.line])
 										set_detail(_cm.symbol = tn, _cm);
 									if (['=>', ':'].includes(lk.content))
@@ -1419,15 +1420,10 @@ export class Lexer {
 											let f = FuncNode.create('', SymbolKind.Function, rg, rg, par);
 											pd = `[${f.full.slice(1, -1)}]`;
 											prop.local = f.local, prop.declaration = f.declaration;
-											prop.param_offsets = f.param_offsets, prop.children.unshift(...par);
-											for (let v of prop.params = par)
-												f.local[_low = v.name.toUpperCase()] ??= f.declaration[_low] = v;
-											for (let t of prop.children)
-												if (t.def || t.kind === SymbolKind.Function)
-													f.declaration[t.name.toUpperCase()] ??= t;
+											prop.param_offsets = f.param_offsets, prop.params = par;
 										}
 										prop.full = `(${classfullname.slice(0, -1)}) ${isstatic ? 'static ' : ''}${fc.content}${pd}`;
-										result.push(prop), addprop(fc, prop);
+										result.push(prop), addprop(fc, prop), adddeclaration(prop as FuncNode);
 										fc.semantic = { type: SemanticTokenTypes.property, modifier: SemanticTokenModifiers.definition | (isstatic as any) };
 										if (tk.content === '{') {
 											let nk: Token, sk: Token, tn: FuncNode | undefined, _low: string, mmm = mode, brace = tk.offset;
@@ -1785,9 +1781,11 @@ export class Lexer {
 							tn.children = [], tn.cache = [], tn.property = {};
 							tn.type_annotations = [tn.full];
 							let t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
-							(tn.property.__INIT = t).ranges = [], t.parent = tn, t.full = `(${tn.full}) static __Init()`;
+							(tn.property.__INIT = t).ranges = [], t.parent = tn;
+							t.full = `(${tn.full}) static __Init()`, t.has_this_param = true;
 							t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
-							(tn.$property!.__INIT = t).ranges = [], t.parent = tn.prototype!, t.full = `(${tn.full}) __Init()`;
+							(tn.$property!.__INIT = t).ranges = [], t.parent = tn.prototype!;
+							t.full = `(${tn.full}) __Init()`, t.has_this_param = true;
 							tn.children = parse_block(2, tn as unknown as FuncNode, classfullname + cl.content + '.');
 							tn.range = tn.prototype!.range = make_range(beginpos, parser_pos - beginpos);
 							cl.semantic = {
@@ -2397,8 +2395,8 @@ export class Lexer {
 							let rg = make_range(data.offset, m[0].length), rg2 = Range.create(0, 0, 0, 0);
 							let tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', I: 'int64' };
 							let n = m[0], args: Variable[] = [], arg: Variable | undefined, u = '', i = 0, rt = 'i';
-							h = true, m = data.content.substring(m[0].length).match(/^\s*,[^,]+,([^,]*)/);
-							m = m?.[1].replace(/\s/g, '').toLowerCase().replace(/i6/g, 'I') ?? '';
+							h = true, m = data.content.substring(m[0].length).match(/^[ \t]*,[^,]+,([^,]*)/);
+							m = m?.[1].replace(/[ \t]/g, '').toLowerCase().replace(/i6/g, 'I') ?? '';
 							for (let c of m.replace(/^(\w*)[=@]?=/, (s, m0) => (rt = m0 || rt, ''))) {
 								if (c === 'u')
 									u = 'u';
@@ -2421,7 +2419,7 @@ export class Lexer {
 					case '#requires':
 						l = data.content.toLowerCase();
 						h ||= l.startsWith('autohotkey_h');
-						if (m = l.match(/^\w+\s+v(1|2)/)) {
+						if (m = l.match(/^\w+[ \t]+v(1|2)/)) {
 							if (m[1] === '2')
 								requirev2 = true;
 							else if (_this.maybev1 = 3, !stop_parse(data, true, diagnostic.requirev1()))
@@ -3734,7 +3732,7 @@ export class Lexer {
 					if (has_this_param) {
 						pars.THIS = dec.THIS = THIS;
 						pars.SUPER = dec.SUPER = SUPER;
-						if (fn.kind !== SymbolKind.Method)
+						if (fn.kind === SymbolKind.Function)
 							named_params = undefined;
 					}
 					for (let it of fn.params ?? []) {
@@ -3856,7 +3854,7 @@ export class Lexer {
 						unresolved_vars = {};
 					} else {
 						let assme_static = fn.assume === FuncScope.STATIC;
-						let is_outer = fn.kind === SymbolKind.Method || !fn.parent;
+						let is_outer = fn.kind !== SymbolKind.Function || !fn.parent;
 						for (let [k, v] of Object.entries(vars)) {
 							delete unresolved_vars[k];
 							if (!(t = dec[k])) {
@@ -3920,7 +3918,7 @@ export class Lexer {
 			let m: any, raw: string, ignore = false, q = text[0];
 			if (`'"`.includes(q) && text.endsWith(q))
 				text = text.slice(1, -1);
-			if (m = text.match(/^(\*[iI]\s)?(.*)$/)) {
+			if (m = text.match(/^(\*[iI][ \t])?(.*)$/)) {
 				raw = m[2], ignore = Boolean(m[1]);
 				m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir)
 					.replace(/%a_linefile%/i, _this.fsPath);
@@ -4553,12 +4551,12 @@ export class Lexer {
 				let next_LF = input.indexOf('\n', parser_pos);
 				if (next_LF < 0)
 					next_LF = input_length;
-				let line = input.substring(last_LF + 1, next_LF).trim().replace(/(^|\s+);.*$/, '');
+				let line = input.substring(last_LF + 1, next_LF).trim().replace(/(^|[ \t]+);.*$/, '');
 				if (line.includes('::') && (block_mode || !'"\''.includes(line[0]) ||
 					!['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lst.type))) {
 					if (m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i)) {
 						let execute: boolean;
-						if ((execute = /x(?!0)/i.test(m[2])) || /^\s*\{?$/.test(m[4]) || (execute = _this.hotstringExecuteAction && !/x0/i.test(m[2])))
+						if ((execute = /x(?!0)/i.test(m[2])) || /^[ \t]*\{?$/.test(m[4]) || (execute = _this.hotstringExecuteAction && !/x0/i.test(m[2])))
 							parser_pos += m[1].length - 1, lst = createToken(m[1], 'TK_HOT', offset, m[1].length, 1);
 						else {
 							last_LF = next_LF, parser_pos = offset + m[0].length;
@@ -4570,7 +4568,7 @@ export class Lexer {
 						lst.ignore = true, add_sharp_foldingrange();
 						if (!m[3])
 							_this.addDiagnostic(diagnostic.invalidhotdef(), lst.offset, lst.length);
-						if (lst.type === 'TK_HOTLINE' || (!execute && !/^\s*\{/.test(m[4]))) {
+						if (lst.type === 'TK_HOTLINE' || (!execute && !/^[ \t]*\{/.test(m[4]))) {
 							if (depth > 5) {
 								delete _this.tokens[lst.offset];
 								return lst;
@@ -4597,14 +4595,14 @@ export class Lexer {
 								parser_pos = _lst.skip_pos ?? _lst.offset + _lst.length;
 						}
 						return lst;
-					} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`?;|[\x21-\x3A\x3C-\x7E]|[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+))|~?(`?;|[\x21-\x3A\x3C-\x7E]|[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+)\s*&\s*~?(`?;|[\x21-\x3A\x3C-\x7E]|[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+))(\s+up)?\s*::)(.*)$/i)) {
-						let mm = m[9].match(/^(\s*)(([<>~*!+#^]*?)(`[{;]|[a-z]\w+|[^{]))$/i);
+					} else if (m = line.match(/^(((([<>$~*!+#^]*?)(`?;|[\x21-\x3A\x3C-\x7E]|[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+))|~?(`?;|[\x21-\x3A\x3C-\x7E]|[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+)[ \t]*&[ \t]*~?(`?;|[\x21-\x3A\x3C-\x7E]|[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+))([ \t]+up)?[ \t]*::)(.*)$/i)) {
+						let mm = m[9].match(/^([ \t]*)(([<>~*!+#^]*?)(`[{;]|[a-z]\w+|[^{]))$/i);
 						add_sharp_foldingrange();
 						if (mm) {
 							let t = mm[4].toLowerCase();
 							if (t.length === 1 || !/^joy|^pause$/.test(t) && KEYS_RE.test(t)) {
 								last_LF = next_LF, parser_pos = offset + m[0].length;
-								lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOTLINE', offset, m[1].length, 1);
+								lst = createToken(m[1].replace(/[ \t]+/g, ' '), 'TK_HOTLINE', offset, m[1].length, 1);
 								offset += lst.length + mm[1].length, lst.skip_pos = parser_pos;
 								lst.data = { content: m[9].trim(), offset, length: parser_pos - offset, data: mm[2] };
 								_this.tokenranges.push({ start: offset, end: parser_pos, type: 4, previous: lst.offset });
@@ -4612,7 +4610,7 @@ export class Lexer {
 							}
 						}
 						parser_pos = input.indexOf('::', parser_pos) + 2;
-						return lst = createToken(m[1].replace(/\s+/g, ' '), 'TK_HOT', offset, m[1].length, 1);
+						return lst = createToken(m[1].replace(/[ \t]+/g, ' '), 'TK_HOT', offset, m[1].length, 1);
 					}
 				}
 				if (c !== '#') add_sharp_foldingrange();
@@ -4811,7 +4809,7 @@ export class Lexer {
 			if (c === '"' || c === "'") {
 				let sep = c, o = offset, nosep = false, se = { type: SemanticTokenTypes.string }, _lst: Token | undefined, pt: Token | undefined;
 				resulting_string = '';
-				if (!/^[\s+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1))) {
+				if (!/^[ \t\r\n+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1))) {
 					sep === c && c === '"' && stop_parse(lst);
 					_this.addDiagnostic(diagnostic.missingspace() + ', ' + diagnostic.didyoumean(`\`${c}`), offset, 1);
 				}
@@ -5112,7 +5110,7 @@ export class Lexer {
 					if (c === ' ' || c === '\t') {
 						while (' \t'.includes(input.charAt(offset) || '\0'))
 							offset++;
-						let content = input.substring(offset, parser_pos).trimRight().replace(/(^|\s+);.*$/, '');
+						let content = input.substring(offset, parser_pos).trimRight().replace(/(^|[ \t]+);.*$/, '');
 						lst.data = { content, offset, length: content.length };
 						parser_pos = offset + content.length;
 						if (content) {
@@ -5495,9 +5493,9 @@ export class Lexer {
 				let p: number;
 				print_newline(true);
 				if (opt.ignore_comment && token_text.trimLeft().startsWith('(') && (p = token_text.indexOf('\n')) > 0) {
-					let t = token_text.slice(0, p).trimRight().replace(/\s+;.*$/, '');
-					if (/(^\s*\(|\s)c(om(ments?)?)?/i.test(t))
-						token_text = `${t}\n${token_text.slice(p + 1).replace(/^\s*;.*\r?\n/gm, '').replace(/\s+;.*/gm, '')}`;
+					let t = token_text.slice(0, p).trimRight().replace(/[ \t]+;.*$/, '');
+					if (/(^[ \t]*\(|[ \t])c(om(ments?)?)?/i.test(t))
+						token_text = `${t}\n${token_text.slice(p + 1).replace(/^[ \t]*;.*\r?\n/gm, '').replace(/[ \t]+;.*/gm, '')}`;
 					else token_text = `${t}\n${token_text.slice(p + 1)}`;
 				}
 				print_token();
@@ -5989,7 +5987,7 @@ export class Lexer {
 					if (kind === SymbolKind.Class)
 						text = fc.full;
 					else if (kind === SymbolKind.Property || kind === SymbolKind.Method)
-						text = fc.full.replace(/^\((\S+)\).*$/, (...m) => `${m[1]}${fc.static ? '.' : '#'}${fc.name}`);
+						text = fc.full.replace(/^\(([^ \t]+)\).*$/, (...m) => `${m[1]}${fc.static ? '.' : '#'}${fc.name}`);
 				} else if (sk) {
 					switch (sk.type) {
 						case SemanticTokenTypes.function: kind = SymbolKind.Function; break;
@@ -6008,10 +6006,10 @@ export class Lexer {
 			text = (token = this.find_token(range.start.character === linetext.length ? off - 1 : off)).content;
 			if (token.type.endsWith('COMMENT')) {
 				let s = linetext.substring(0, character), m = s.match(
-					/(@see|\{@link(code|plain)?|@param(\s+\{[^}]*\})?)\s+((\[\s*)?\S+)$/);
+					/(@see|\{@link(code|plain)?|@param(\s+\{[^}]*\})?)\s+((\[[ \t]*)?[^ \t]+)$/);
 				if (m) {
 					if (s = m[4], m[1].startsWith('@param')) {
-						s = s.replace(/^\[\s*/, '');
+						s = s.replace(/^\[[ \t]*/, '');
 						let sym = token.symbol as FuncNode;
 						if (sym?.params)
 							s = `${type_naming(sym)}~${s}`;
@@ -6281,7 +6279,7 @@ function create_prototype(name: string, kind = 0, extends_ = '') {
 }
 
 function is_valid_hotkey(s: string) {
-	let m = s.match(/^((([<>$~*!+#^]*?)(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))|~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f])\s+&\s+~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))(\s+up)?::$/i);
+	let m = s.match(/^((([<>$~*!+#^]*?)(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))|~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f])[ \t]+&[ \t]+~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))([ \t]+up)?::$/i);
 	if (!m)
 		return false;
 	for (let i = 4; i < 7; i++)
