@@ -94,7 +94,7 @@ export const extsettings: AHKLSSettings = {
 	WorkingDirs: []
 };
 export const utils = {
-	get_DllExport: (paths: string[], onlyone: boolean = false) => Promise.resolve([] as string[]),
+	get_DllExport: (paths: string[] | Set<string>, onlyone: boolean = false) => Promise.resolve([] as string[]),
 	get_RCDATA: (path?: string) => (0 ? { uri: '', path: '' } : undefined),
 	get_ahkProvider: async () => null as any
 };

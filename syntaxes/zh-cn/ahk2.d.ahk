@@ -849,12 +849,12 @@ DetectHiddenWindows(Mode) => Integer
  * 
  * 1(true): 覆盖现在的文件. 但是, 不会删除在 Dest 中没有被 Source 目录中文件覆盖的其他子目录或文件.
  */
-DirCopy(Source, Dest, Overwrite := false) => void
+DirCopy(Source: $DirPath, Dest: $DirPath, Overwrite := false) => void
 
 /**
  * 创建目录/文件夹.
  */
-DirCreate(DirName) => void
+DirCreate(DirName: $DirPath) => void
 
 /**
  * 删除文件夹.
@@ -864,7 +864,7 @@ DirCreate(DirName) => void
  * 
  * 1(true): 移除所有文件和子目录(类似于 Windows 命令 "rmdir /S").
  */
-DirDelete(DirName, Recurse := false) => void
+DirDelete(DirName: $DirPath, Recurse := false) => void
 
 /**
  * 检查文件夹是否存在并返回其属性.
@@ -882,7 +882,7 @@ DirDelete(DirName, Recurse := false) => void
  * 
  * C = COMPRESSED(压缩)
  */
-DirExist(FilePattern) => String
+DirExist(FilePattern: $DirPath) => String
 
 /**
  * 移动文件夹, 及其所有子文件夹和文件. 它也可以重命名一个文件夹.
@@ -900,7 +900,7 @@ DirExist(FilePattern) => String
  * R: 重命名目录而不移动它. 尽管普通的重命名和移动具有相同的效果, 但如果您想要 "完全成功或完全失败" 的结果时它就会有用; 即您不希望由于 Source 或其中的某个文件被锁定(在使用中) 而只是部分移动成功.
  * 尽管这种方法不能移动 Source 到另一个卷中, 但它可以移动到同一个卷中的其他任何目录. 如果 Dest 作为文件或目录已经存在, 则操作失败.
  */
-DirMove(Source, Dest, Flag := 0) => void
+DirMove(Source: $DirPath, Dest: $DirPath, Flag := 0) => void
 
 /**
  * 显示可以让用户选择文件夹的标准对话框.
@@ -924,17 +924,17 @@ DirMove(Source, Dest, Flag := 0) => void
  * 如果用户在编辑区域中输入了无效的文件夹名称, 则 SelectedFolder 会被设置为在导航树中选择的文件夹而不是用户输入的内容.
  * @param Prompt 显示在窗口中用来提示用户操作的文本. 如果省略或为空, 则它默认为 "Select Folder - " A_ScriptName(即当前脚本的名称).
  */
-DirSelect(StartingFolder?, Options := 1, Prompt?) => String
+DirSelect(StartingFolder?: $DirPath, Options := 1, Prompt?) => String
 
 /**
  * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, Cdecl_ReturnType]) => Float | Integer | String
+DllCall(DllFile_Function: $DllFunc | $FilePath<'dll|ocx|cpl'> [, Type1, Arg1, *, Cdecl_ReturnType]) => Float | Integer | String
 
 /**
  * 从互联网下载文件.
  */
-Download(URL, Filename) => void
+Download(URL, FileName: $FilePath) => void
 
 /**
  * 弹出指定 CD/DVD 驱动器或可移动驱动器.
@@ -1024,9 +1024,9 @@ DriveUnlock(Drive) => void
 
 /**
  * 在关联编辑器中打开当前脚本进行编辑.
- * @param Filename [@since v2.1-alpha.1] 要打开以进行编辑的文件的路径和名称. 如果省略, 则默认为当前脚本的主文件(A_ScriptFullPath). 相对路径是相对于脚本目录(A_ScriptDir)的.
+ * @param FileName [@since v2.1-alpha.1] 要打开以进行编辑的文件的路径和名称. 如果省略, 则默认为当前脚本的主文件(A_ScriptFullPath). 相对路径是相对于脚本目录(A_ScriptDir)的.
  */
-Edit(Filename?) => void
+Edit(FileName?: $FilePath) => void
 
 /**
  * 返回插入符号(文本插入点) 在的 Edit 控件中的列号.
@@ -1085,9 +1085,9 @@ Exp(N) => Float
 
 /**
  * 在文件末尾处追加(写入) 文本或二进制数据(如果有必要, 首先创建文件).
- * @param Filename 要追加内容的文件名, 如果未指定绝对路径, 则假定在 A_WorkingDir 中. 目标目录必须已经存在.
- * 标准输出(stdout): 在 Filename 指定星号(*) 可以把 Text 发送到标准输出(stdout).
- * 在 Filename 指定两个星号(**) 可以把 Text 发送到标准错误输出(stderr).
+ * @param FileName 要追加内容的文件名, 如果未指定绝对路径, 则假定在 A_WorkingDir 中. 目标目录必须已经存在.
+ * 标准输出(stdout): 在 FileName 指定星号(*) 可以把 Text 发送到标准输出(stdout).
+ * 在 FileName 指定两个星号(**) 可以把 Text 发送到标准错误输出(stderr).
  * @param Options 零个或多个以下字符串. 使用单个空格或制表符将每个选项与下一个选项分开. 例如: "`n UTF-8"
  * 
  * Encoding: 如果文件缺少 UTF-8 或 UTF-16 字节顺序标记, 则指定 FileEncoding 接受的任何编码名称(不包括空字符串) 以使用该编码. 如果省略, 默认为 A_FileEncoding(除非 Text 是对象, 在这种情况下不写入字节顺序标记).
@@ -1096,7 +1096,7 @@ Exp(N) => Float
  * 
  * `n(换行符): 如果回车符不存在, 则在每个换行符(`n) 之前插入回车符(`r). 换句话说, 将转换 `n 为 `r`n. 这种转换通常不会影响性能. 如果不使用此选项, 则不会更改 Text 中的行尾.
  */
-FileAppend(Text, Filename?, Options?) => void
+FileAppend(Text, FileName?: $FilePath, Options?) => void
 
 /**
  * 复制一个或多个文件.
@@ -1105,7 +1105,7 @@ FileAppend(Text, Filename?, Options?) => void
  * 而将最后一个句号 (.) 后的第一个星号替换为源文件的扩展名. 如果有星号, 但省略了扩展名, 则使用源文件的扩展名.
  * @param Overwrite 此参数确定是否覆盖已存在的文件. 如果此参数为 1(true), 则该函数将覆盖现有文件. 如果省略或为 0(false), 则该函数不会覆盖现有文件.
  */
-FileCopy(SourcePattern, DestPattern, Overwrite := false) => void
+FileCopy(SourcePattern: $FilePath, DestPattern: $FilePath, Overwrite := false) => void
 
 /**
  * 创建快捷方式(.lnk) 文件.
@@ -1125,14 +1125,14 @@ FileCopy(SourcePattern, DestPattern, Overwrite := false) => void
  * 
  * 7 = 最小化
  */
-FileCreateShortcut(Target, LinkFile [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]) => void
+FileCreateShortcut(Target: $FilePath, LinkFile: $FilePath<'lnk'> [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]) => void
 
 /**
  * 删除一个或多个文件.
  * @param FilePattern 单个文件的名称, 或通配符模式(如 "C:\Temp\*.tmp"). 如果未指定绝对路径, 则假定 FilePattern 在 A_WorkingDir 中.
  * 要删除整个文件夹及其所有子文件夹和文件, 请使用 DirDelete
  */
-FileDelete(FilePattern) => void
+FileDelete(FilePattern: $FilePath) => void
 
 /**
  * 为 FileRead, Loop Read, FileAppend 和 FileOpen 设置默认编码.
@@ -1173,7 +1173,7 @@ FileEncoding(Encoding := 'CP0') => String
  * 
  * T = TEMPORARY(临时)
  */
-FileExist(FilePattern) => String
+FileExist(FilePattern: $FilePath) => String
 
 /**
  * 报告文件或文件夹是否为只读, 隐藏等.
@@ -1197,37 +1197,37 @@ FileExist(FilePattern) => String
  * 
  * T = TEMPORARY(临时)
  */
-FileGetAttrib([Filename]) => String
+FileGetAttrib(FileName?: $FilePath) => String
 
 /**
  * 获取快捷方式(.lnk) 文件的信息, 例如其目标文件.
  */
-FileGetShortcut(LinkFile [, &OutTarget: VarRef<String>, &OutDir: VarRef<String>, &OutArgs: VarRef<String>, &OutDescription: VarRef<String>, &OutIcon: VarRef<String>, &OutIconNum: VarRef<Integer>, &OutRunState: VarRef<Integer>]) => String
+FileGetShortcut(LinkFile: $FilePath<'lnk'> [, &OutTarget: VarRef<String>, &OutDir: VarRef<String>, &OutArgs: VarRef<String>, &OutDescription: VarRef<String>, &OutIcon: VarRef<String>, &OutIconNum: VarRef<Integer>, &OutRunState: VarRef<Integer>]) => String
 
 /**
  * 获取文件的大小.
  */
-FileGetSize([Filename, Units]) => Integer
+FileGetSize(FileName?: $FilePath, Units?) => Integer
 
 /**
  * 获取文件或文件夹的时间戳.
  */
-FileGetTime([Filename, WhichTime]) => String
+FileGetTime(FileName?: $FilePath, WhichTime: 'M' | 'C' | 'A' := 'M') => String
 
 /**
  * 检索文件的版本.
  */
-FileGetVersion([Filename]) => String
+FileGetVersion(FileName?: $FilePath) => String
 
 /**
  * 在已编译的脚本中包含指定的文件.
  */
-FileInstall(Source, Dest, Overwrite := false) => void
+FileInstall(Source: $FilePath, Dest: $FilePath, Overwrite := false) => void
 
 /**
  * 移动或重命名一个或多个文件.
  */
-FileMove(SourcePattern, DestPattern, Overwrite := false) => void
+FileMove(SourcePattern: $FilePath, DestPattern: $FilePath, Overwrite := false) => void
 /**
  * 打开文件, 从其中读取特定内容和/或将新内容写入其中.
  * @param Flags `访问模式(互斥的)`
@@ -1240,7 +1240,7 @@ FileMove(SourcePattern, DestPattern, Overwrite := false) => void
  * 
  * rw 0x3 读取/写入: 当文件不存在时创建新文件.
  * 
- * h  表示 Filename 是包装在对象中的文件句柄. 忽略共享模式标志, 并且不检查句柄表示的文件或流的字节顺序标记. 当文件对象销毁时, 当文件对象销毁时, 文件句柄 不会 自动关闭并且调用 Close 没有效果. 注意当 Filename 是非搜寻设备(例如管道或通信设备) 的句柄时, 不应该使用 Seek, Pos 和 Length.
+ * h  表示 FileName 是包装在对象中的文件句柄. 忽略共享模式标志, 并且不检查句柄表示的文件或流的字节顺序标记. 当文件对象销毁时, 当文件对象销毁时, 文件句柄 不会 自动关闭并且调用 Close 没有效果. 注意当 FileName 是非搜寻设备(例如管道或通信设备) 的句柄时, 不应该使用 Seek, Pos 和 Length.
  * 
  * `共享模式标志`
  * 
@@ -1261,7 +1261,7 @@ FileMove(SourcePattern, DestPattern, Overwrite := false) => void
  * `r 0x8 读取时把单独的 `r 替换为 `n.
  * @param Encoding 如果文件没有 UTF-8 或 UTF-16 字节顺序标记, 或者使用了 h(handle) 标志, 读写文件时使用的代码页(带字节顺序标记的文件 AutoHotkey 自动识别, 指定的 Encoding 无效). 如果省略本参数, 则使用 A_FileEncoding 的当前值.
  */
-FileOpen(Filename, Flags [, Encoding]) => File
+FileOpen(FileName: $FilePath, Flags [, Encoding]) => File
 
 /**
  * 检索文件的内容.
@@ -1275,14 +1275,14 @@ FileOpen(Filename, Flags [, Encoding]) => File
  * 
  * `n(换行符): 把所有的回车换行符(`r`n) 替换为换行符(`n). 不过, 这种转换会降低性能而且往往不必要. 例如, 包含 `r`n 的文本已经以正确的格式添加到 Gui Edit 控件中. 下面的解析循环将正确工作, 不管每一行的结尾是 `r`n 还是 `n: Loop Parse, MyFileContents, "`n", "`r".
  */
-FileRead(Filename [, Options]) => Buffer | String
+FileRead(FileName: $FilePath [, Options]) => Buffer | String
 
 /**
  * 如果可能, 发送文件或目录到回收站, 或永久删除该文件.
  * @param FilePattern 单个文件的名称或通配符模式(如 C:\Temp\*.tmp). 如果 FilePattern 未指定绝对路径则, 则假定在 A_WorkingDir 中.
  * 要回收整个目录, 请指定不包含末尾反斜杠的目录名.
  */
-FileRecycle(FilePattern) => void
+FileRecycle(FilePattern: $FilePath) => void
 
 /**
  * 清空回收站.
@@ -1314,7 +1314,7 @@ FileRecycleEmpty(DriveLetter?) => void
  * 
  * 由于 "提示覆盖" 选项只有保存对话框支持, 因此在没有 "提示创建" 选项的情况下指定该选项也会使 "S" 选项生效. 同样, 当 "S" 选项存在时, "提示创建" 选项也没有效果. 指定数字 24 可以启用对话框支持的任何一种提示类型.
  */
-FileSelect(Options := 0, RootDir_Filename?, Title?, Filter?) => String | Array
+FileSelect(Options := 0, RootDir_Filename?: $FilePath, Title?, Filter?) => String | Array
 
 /**
  * 改变一个或多个文件或文件夹的属性. 支持通配符.
@@ -1343,7 +1343,7 @@ FileSelect(Options := 0, RootDir_Filename?, Title?, Filter?) => String | Array
  * 
  * R = 子文件夹被递归到其中, 这样包含在其中的文件和文件夹如果匹配 FilePattern, 则对它们进行操作. 所有子文件夹都将被递归到其中, 而不仅仅是那些名称匹配 FilePattern 的子文件夹. 如果省略 R, 则不包含子目录中的文件和目录.
  */
-FileSetAttrib(Attributes, FilePattern?, Mode?) => void
+FileSetAttrib(Attributes, FilePattern?: $FilePath, Mode?) => void
 
 /**
  * 改变一个或多个文件或文件夹的时间戳. 支持通配符.
@@ -1364,7 +1364,7 @@ FileSetAttrib(Attributes, FilePattern?, Mode?) => void
  * 
  * R = 子文件夹被递归到其中, 这样包含在其中的文件和文件夹如果匹配 FilePattern, 则对它们进行操作. 所有子文件夹都将被递归到其中, 而不仅仅是那些名称匹配 FilePattern 的子文件夹. 如果省略 R, 则不包含子目录中的文件和目录.
  */
-FileSetTime(YYYYMMDDHH24MISS?, FilePattern?, WhichTime := 'M', Mode?) => void
+FileSetTime(YYYYMMDDHH24MISS?, FilePattern?: $FilePath, WhichTime: 'M' | 'C' | 'A' := 'M', Mode?) => void
 
 /**
  * 返回 Number 向下取整后的整数(不含任何 .00 后缀).
@@ -1607,13 +1607,13 @@ Hotstring(StringOrOptions [, Replacement, OnOffToggle]) => String
 /**
  * 将图标或图片添加到指定的ImageListID并返回新图标的索引（1是第一个图标,2是第二个图标,依此类推）.
  * @param ImageListID IL_Create 创建的图像列表的 ID.
- * @param Filename 图标(.ICO), 光标(.CUR) 或动画光标(.ANI) 文件的名称(动态光标在 ListView 中显示时实际将不会动), 或位图或图标句柄 , 如 "HBITMAP:" handle. 图标的其他来源包含下列类型的文件: EXE, DLL, CPL, SCR, 以及包含图标资源的其他类型.
+ * @param FileName 图标(.ICO), 光标(.CUR) 或动画光标(.ANI) 文件的名称(动态光标在 ListView 中显示时实际将不会动), 或位图或图标句柄 , 如 "HBITMAP:" handle. 图标的其他来源包含下列类型的文件: EXE, DLL, CPL, SCR, 以及包含图标资源的其他类型.
  * @param IconNumber 要使用文件中第一个以外的图标组, 请在 IconNumber 指定它的编号. 如果 IconNumber 为负数, 则假定其绝对值表示可执行文件中图标的资源 ID. 在下面的例子中, 将使用第二个图标组中的默认图标: IL_Add(ImageListID, "C:\My Application.exe", 2).
  * @param ResizeNonIcon 还可以加载非图标图像, 例如 BMP, GIF 和 JPG. 然而, 此时应该指定最后两个参数以确保正确执行: IconNumber 应该为屏蔽的/透明的颜色编码(对于大多数图片 0xFFFFFF [白色] 可能是最佳的); 而 ResizeNonIcon 应该为非零值来缩放图片为单个图标, 或者为零来把图像分割为多个可以匹配实际宽度的图标.
  * 
  * 支持的图片类型包括 ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF 和 WMF.
  */
-IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Integer
+IL_Add(ImageListID, FileName: $FilePath<'bmp|jpg|png|gif|ico'> [, IconNumber, ResizeNonIcon]) => Integer
 
 /**
  * 创建一个新的ImageList,最初为空,并返回ImageList的唯一ID（失败时返回0）.
@@ -1646,22 +1646,22 @@ IL_Destroy(ImageListID) => Integer
  * 
  * 位图或图标句柄可用于替代文件名. 例如, "HBITMAP:*" handle.
  */
-ImageSearch(&OutputVarX?: VarRef<Integer>, &OutputVarY?: VarRef<Integer>, X1, Y1, X2, Y2, ImageFile) => Integer
+ImageSearch(&OutputVarX?: VarRef<Integer>, &OutputVarY?: VarRef<Integer>, X1, Y1, X2, Y2, ImageFile: $FilePath<'bmp|jpg|png|gif|ico'>) => Integer
 
 /**
  * 删除标准格式的 .ini 文件中的值.
  */
-IniDelete(Filename, Section [, Key]) => void
+IniDelete(FileName: $FilePath, Section [, Key]) => void
 
 /**
  * 从标准格式的.ini文件中读取值,节或节名称列表.
  */
-IniRead(Filename [, Section, Key, Default]) => String
+IniRead(FileName: $FilePath [, Section, Key, Default]) => String
 
 /**
  * 将值或节写入标准格式的.ini文件.
  */
-IniWrite(Value, Filename, Section [, Key]) => void
+IniWrite(Value, FileName: $FilePath, Section [, Key]) => void
 
 /**
  * 显示一个输入框,要求用户输入字符串.
@@ -1862,7 +1862,7 @@ Ln(Number) => Float
 
 /**
  * 载入图像文件并返回位图或图标句柄.
- * @param Filename
+ * @param FileName
  * @param Options 以下选项中的零个或多个字符串, 每个选项之间以空格或制表符分隔::
  * 
  * Wn 和 Hn: 待载入图像的宽度和高度, n 为整数. 如果省略某个尺寸或指定为 -1, 该尺寸将在保持宽高比的情况下根据另一个尺寸进行计算. 如果两个尺寸都被省略, 将使用图像的原始尺寸. 如果任一尺寸被指定为 0, 则该尺寸仍会使用原始尺寸. 例如: "w80 h50", "w48 h-1" 或 "w48"(保持宽高比), "h0 w100"(使用原始高度但覆盖宽度).
@@ -1874,7 +1874,7 @@ Ln(Number) => Float
  * 如果忽略该参数, 则返回值始终是位图句柄(图标/光标类型会按需转换). 这是因为可靠地使用或删除位图/图标/光标句柄需要知道它是哪种类型.
  * @returns 函数根据指定的图片或图标返回位图或图标句柄.
  */
-LoadPicture(Filename [, Options, &ImageType: VarRef<Integer>]) => Integer
+LoadPicture(FileName: $FilePath<'bmp|jpg|png|gif|ico'> [, Options, &ImageType: VarRef<Integer>]) => Integer
 
 /**
  * 返回Number的对数（以10为底）.
@@ -2564,7 +2564,7 @@ SoundGetVolume([Component, Device]) => Integer
 
 /**
  * 播放音频, 视频或其他支持的文件类型.
- * @param Filename 要播放的文件的名称, 如果未指定绝对路径, 则假定在 A_WorkingDir 中.
+ * @param FileName 要播放的文件的名称, 如果未指定绝对路径, 则假定在 A_WorkingDir 中.
  * 要发出标准的系统声音, 请指定星号后跟着数字, 如下所示. 注意: 在此模式中 Wait 参数没有效果.
  * 
  * •*-1 = 简单的哔音. 如果声卡不可用, 则使用扬声器生成这个声音.
@@ -2579,7 +2579,7 @@ SoundGetVolume([Component, Device]) => Integer
  * 
  * `已知限制:` 由于 Windows 系统的限制, 路径超过 127 个字符的 WAV 文件将不会被播放. 要解决这个问题, 可以使用其他文件类型如 MP3(路径长度最多可以有 255 个字符) 或使用 8.3 短路径(如何检索这些路径, 请参阅 A_LoopFileShortPath).
  */
-SoundPlay(Filename, Wait := false) => void
+SoundPlay(FileName: $FilePath, Wait := false) => void
 
 /**
  * 更改声音设备的静音设置.
@@ -2754,7 +2754,7 @@ ToolTip([Text, X, Y, WhichToolTip]) => Integer
  * @param IconNumber 要使用文件中除第一组图标之外的图标组, 请在 IconNumber 指定它的编号(如果省略, 则它默认为 1). 例如, 2 将加载第二组图标中的默认图标. 如果 IconNumber 为负数, 则假定其绝对值表示可执行文件中图标的资源 ID.
  * @param Freeze 指定 1(true) 来冻结图标, 或 0(false) 来解冻它(或留空来保持冻结/解冻状态不变). 当图标已经冻结时, Pause 和 Suspend 不会改变它. 注意: 要冻结或解冻 当前 图标, 请使用 1(true) 或 0(false), 如下例所示: TraySetIcon(,, 1).
  */
-TraySetIcon(FileName, IconNumber := 1, Freeze := false) => void
+TraySetIcon(FileName: $FilePath, IconNumber := 1, Freeze := false) => void
 
 /**
  * 在托盘图标附近创建气球提示窗口. 在 Windows 10 中, 可能会显示 toast 通知来代替.
@@ -3672,7 +3672,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	/**
 	 * 创建图片控件, 返回一个GuiControl对象.
 	 */
-	AddPicture([Options, Filename]) => Gui.Pic
+	AddPicture([Options, FileName: $FilePath<'bmp|jpg|png|gif|ico'>]) => Gui.Pic
 
 	/**
 	 * 创建按钮控件, 返回一个GuiControl对象.
@@ -4165,7 +4165,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 		/**
 		 * 在指定部分的文本左侧显示一个小图标, 并返回图标的句柄.
 		 */
-		SetIcon(Filename, IconNumber := 1, PartNumber := 1) => Integer
+		SetIcon(FileName: $FilePath, IconNumber := 1, PartNumber := 1) => Integer
 
 		/**
 		 * 根据指定的宽度(以像素为单位)将条形划分为多个部分, 并返回非零值(状态条的HWND).
@@ -4623,7 +4623,7 @@ class Menu extends Object {
 	/**
 	 * 设置要在菜单项旁边显示的图标.
 	 */
-	SetIcon(MenuItemName, FileName [, IconNumber, IconWidth]) => void
+	SetIcon(MenuItemName, FileName: $FilePath [, IconNumber, IconWidth]) => void
 
 	/**
 	 * 显示菜单.

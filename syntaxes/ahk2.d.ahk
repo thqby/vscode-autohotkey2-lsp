@@ -855,12 +855,12 @@ DetectHiddenWindows(Mode) => Integer
  * 
  * 1(true): Overwrite the current file. However, other subdirectories or files in Dest that are not overwritten by the files in the Source directory will not be deleted.
  */
-DirCopy(Source, Dest, Overwrite := false) => void
+DirCopy(Source: $DirPath, Dest: $DirPath, Overwrite := false) => void
 
 /**
  * Create directories/folders.
  */
-DirCreate(DirName) => void
+DirCreate(DirName: $DirPath) => void
 
 /**
  * Delete the folder.
@@ -870,7 +870,7 @@ DirCreate(DirName) => void
  * 
  * 1(true): Remove all files and subdirectories (similar to the Windows command "rmdir /S").
  */
-DirDelete(DirName, Recurse := false) => void
+DirDelete(DirName: $DirPath, Recurse := false) => void
 
 /**
  * Check if the folder exists and return its attributes.
@@ -888,7 +888,7 @@ DirDelete(DirName, Recurse := false) => void
  * 
  * C = COMPRESSED (compressed)
  */
-DirExist(FilePattern) => String
+DirExist(FilePattern: $DirPath) => String
 
 /**
  * Move a folder, and all its subfolders and files. It can also rename a folder.
@@ -906,7 +906,7 @@ DirExist(FilePattern) => String
  * R: Rename the directory without moving it. Although ordinary renaming and moving have the same effect, it will be useful if you want the result of "complete success or complete failure"; that is, you don't want it due to Source or One of the files is locked (in use) and only partially moved successfully.
  * Although this method cannot move Source to another volume, it can be moved to any other directory in the same volume. If Dest already exists as a file or directory, the operation fails.
  */
-DirMove(Source, Dest, Flag := 0) => void
+DirMove(Source: $DirPath, Dest: $DirPath, Flag := 0) => void
 
 /**
  * A standard dialog box that allows the user to select a folder is displayed.
@@ -930,17 +930,17 @@ DirMove(Source, Dest, Flag := 0) => void
  * If the user enters an invalid folder name in the editing area, SelectedFolder will be set to the folder selected in the navigation tree instead of the content entered by the user.
  * @param Prompt The text displayed in the window to prompt the user to operate. If omitted or empty, it defaults to "Select Folder-"A_ScriptName (namely the name of the current script).
  */
-DirSelect(StartingFolder?, Options := 1, Prompt?) => String
+DirSelect(StartingFolder?: $DirPath, Options := 1, Prompt?) => String
 
 /**
  * Call functions in DLL files, such as standard Windows API functions.
  */
-DllCall(DllFile_Function [, Type1, Arg1, *, Cdecl_ReturnType]) => Float | Integer | String
+DllCall(DllFile_Function: $DllFunc | $FilePath<'dll|ocx|cpl'> [, Type1, Arg1, *, Cdecl_ReturnType]) => Float | Integer | String
 
 /**
  * Download files from the Internet.
  */
-Download(URL, Filename) => void
+Download(URL, FileName: $FilePath) => void
 
 /**
  * Eject the designated CD/DVD drive or removable drive.
@@ -1030,9 +1030,9 @@ DriveUnlock(Drive) => void
 
 /**
  * Opens the current script for editing in the associated editor.
- * @param Filename [@since v2.1-alpha.1] The path and name of the file to open for editing. If omitted, it defaults to the main file of the current script (A_ScriptFullPath). Relative paths are relative to the script directory (A_ScriptDir).
+ * @param FileName [@since v2.1-alpha.1] The path and name of the file to open for editing. If omitted, it defaults to the main file of the current script (A_ScriptFullPath). Relative paths are relative to the script directory (A_ScriptDir).
  */
-Edit(Filename?) => void
+Edit(FileName?: $FilePath) => void
 
 /**
  * Returns the column number of the caret (text insertion point) in the Edit control.
@@ -1091,9 +1091,9 @@ Exp(N) => Float
 
 /**
  * Append (write) text or binary data at the end of the file (if necessary, create the file first).
- * @param Filename The name of the file to be appended. If the absolute path is not specified, it is assumed to be in A_WorkingDir. The target directory must already exist.
- * Standard output (stdout): Specify an asterisk (*) in Filename to send Text to standard output (stdout).
- * Specify two asterisks (**) in Filename to send Text to standard error output (stderr).
+ * @param FileName The name of the file to be appended. If the absolute path is not specified, it is assumed to be in A_WorkingDir. The target directory must already exist.
+ * Standard output (stdout): Specify an asterisk (*) in FileName to send Text to standard output (stdout).
+ * Specify two asterisks (**) in FileName to send Text to standard error output (stderr).
  * @param Options zero or more of the following strings. Use a single space or tab to separate each option from the next. For example: "`n UTF-8"
  * 
  * Encoding: If the file lacks UTF-8 or UTF-16 byte order mark, specify any encoding name accepted by FileEncoding (excluding the empty string) to use that encoding. If omitted, the default is A_FileEncoding (unless Text is an object, In this case, the byte order mark is not written).
@@ -1102,7 +1102,7 @@ Exp(N) => Float
  * 
  * `n (newline character): If the carriage return character does not exist, insert the carriage return character (`r) before each newline character (`n). In other words, it will convert `n to `r`n. This This conversion usually does not affect performance. If this option is not used, the end of the line in the Text will not be changed.
  */
-FileAppend(Text, Filename?, Options?) => void
+FileAppend(Text, FileName?: $FilePath, Options?) => void
 
 /**
  * Copy one or more files.
@@ -1111,7 +1111,7 @@ FileAppend(Text, Filename?, Options?) => void
  * Replace the first asterisk after the last period (.) with the extension of the source file. If there is an asterisk but the extension is omitted, the extension of the source file is used.
  * @param Overwrite This parameter determines whether to overwrite an existing file. If this parameter is 1 (true), the function will overwrite the existing file. If it is omitted or 0 (false), the function will not overwrite the existing file .
  */
-FileCopy(SourcePattern, DestPattern, Overwrite := false) => void
+FileCopy(SourcePattern: $FilePath, DestPattern: $FilePath, Overwrite := false) => void
 
 /**
  * Create a shortcut (.lnk) file.
@@ -1131,14 +1131,14 @@ FileCopy(SourcePattern, DestPattern, Overwrite := false) => void
  * 
  * 7 = minimize
  */
-FileCreateShortcut(Target, LinkFile [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]) => void
+FileCreateShortcut(Target: $FilePath, LinkFile: $FilePath<'.link'> [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]) => void
 
 /**
  * Delete one or more files.
  * @param FilePattern The name of a single file, or a wildcard pattern (such as "C:\Temp\*.tmp"). If an absolute path is not specified, it is assumed that FilePattern is in A_WorkingDir.
  * To delete the entire folder and all its subfolders and files, use DirDelete
  */
-FileDelete(FilePattern) => void
+FileDelete(FilePattern: $FilePath) => void
 
 /**
  * Set the default encoding for FileRead, Loop Read, FileAppend and FileOpen.
@@ -1179,7 +1179,7 @@ FileEncoding(Encoding := 'CP0') => String
  * 
  * T = TEMPORARY (temporary)
  */
-FileExist(FilePattern) => String
+FileExist(FilePattern: $FilePath) => String
 
 /**
  * Report whether the file or folder is read-only, hidden, etc.
@@ -1203,37 +1203,37 @@ FileExist(FilePattern) => String
  * 
  * T = TEMPORARY (temporary)
  */
-FileGetAttrib([Filename]) => String
+FileGetAttrib(FileName?: $FilePath) => String
 
 /**
  * Get the information of the shortcut (.lnk) file, such as its target file.
  */
-FileGetShortcut(LinkFile [, &OutTarget: VarRef<String>, &OutDir: VarRef<String>, &OutArgs: VarRef<String>, &OutDescription: VarRef<String>, &OutIcon: VarRef<String>, &OutIconNum: VarRef<Integer>, &OutRunState: VarRef<Integer>]) => String
+FileGetShortcut(LinkFile: $FilePath<'lnk'> [, &OutTarget: VarRef<String>, &OutDir: VarRef<String>, &OutArgs: VarRef<String>, &OutDescription: VarRef<String>, &OutIcon: VarRef<String>, &OutIconNum: VarRef<Integer>, &OutRunState: VarRef<Integer>]) => String
 
 /**
  * Get the size of the file.
  */
-FileGetSize([Filename, Units]) => Integer
+FileGetSize(FileName?: $FilePath, Units?) => Integer
 
 /**
  * Get the timestamp of a file or folder.
  */
-FileGetTime([Filename, WhichTime]) => String
+FileGetTime(FileName?: $FilePath, WhichTime: 'M' | 'C' | 'A' := 'M') => String
 
 /**
  * Retrieve the version of the file.
  */
-FileGetVersion([Filename]) => String
+FileGetVersion(FileName?: $FilePath) => String
 
 /**
  * Include the specified file in the compiled script.
  */
-FileInstall(Source, Dest, Overwrite := false) => void
+FileInstall(Source: $FilePath, Dest: $FilePath, Overwrite := false) => void
 
 /**
  * Move or rename one or more files.
  */
-FileMove(SourcePattern, DestPattern, Overwrite := false) => void
+FileMove(SourcePattern: $FilePath, DestPattern: $FilePath, Overwrite := false) => void
 /**
  * Open the file, read specific content from it and/or write new content into it.
  * @param Flags `Access Mode (mutually exclusive)`
@@ -1246,7 +1246,7 @@ FileMove(SourcePattern, DestPattern, Overwrite := false) => void
  * 
  * rw 0x3 Read/write: Create a new file when the file does not exist.
  * 
- * h means Filename is the file handle wrapped in the object. Ignore the sharing mode flag, and do not check the byte order mark of the file or stream represented by the handle. When the file object is destroyed, when the file object is destroyed, the file handle will not be automatically Close and calling Close has no effect. Note that when Filename is a handle to a non-search device (such as a pipe or communication device), Seek, Pos, and Length should not be used.
+ * h means FileName is the file handle wrapped in the object. Ignore the sharing mode flag, and do not check the byte order mark of the file or stream represented by the handle. When the file object is destroyed, when the file object is destroyed, the file handle will not be automatically Close and calling Close has no effect. Note that when FileName is a handle to a non-search device (such as a pipe or communication device), Seek, Pos, and Length should not be used.
  * 
  * `Sharing mode flag`
  * 
@@ -1267,7 +1267,7 @@ FileMove(SourcePattern, DestPattern, Overwrite := false) => void
  * `r 0x8 Replace the single `r with `n when reading.
  * @param Encoding If the file does not have UTF-8 or UTF-16 byte order mark, or the h (handle) flag is used, the code page used when reading and writing the file (AutoHotkey automatically recognizes the file with byte order mark, specified Encoding is invalid). If this parameter is omitted, the current value of A_FileEncoding will be used.
  */
-FileOpen(Filename, Flags [, Encoding]) => File
+FileOpen(FileName: $FilePath, Flags [, Encoding]) => File
 
 /**
  * Retrieve the contents of the file.
@@ -1281,14 +1281,14 @@ FileOpen(Filename, Flags [, Encoding]) => File
  * 
  * `n (newline character): Replace all carriage return and newline characters (`r`n) with newline characters (`n). However, this conversion reduces performance and is often unnecessary. For example, include `r`n The text has been added to the Gui Edit control in the correct format. The following parsing loop will work correctly, regardless of whether the end of each line is `r`n or `n: Loop Parse, MyFileContents, "`n", "`r" .
  */
-FileRead(Filename [, Options]) => Buffer | String
+FileRead(FileName: $FilePath [, Options]) => Buffer | String
 
 /**
  * If possible, send the file or directory to the recycle bin, or delete the file permanently.
  * @param FilePattern The name or wildcard pattern of a single file (such as C:\Temp\*.tmp). If FilePattern does not specify an absolute path, it is assumed to be in A_WorkingDir.
  * To recycle the entire directory, please specify the directory name without the trailing backslash.
  */
-FileRecycle(FilePattern) => void
+FileRecycle(FilePattern: $FilePath) => void
 
 /**
  * Empty the recycle bin.
@@ -1320,7 +1320,7 @@ FileRecycleEmpty(DriveLetter?) => void
  * 
  * Because the "Prompt Overwrite" option is only supported by the save dialog, specifying this option without the "Prompt to Create" option will also make the "S" option effective. Similarly, when the "S" option exists, "Prompt to create" The option has no effect. Specify the number 24 to enable any prompt type supported by the dialog box.
  */
-FileSelect(Options := 0, RootDir_Filename?, Title?, Filter?) => String | Array
+FileSelect(Options := 0, RootDir_FileName?: $FilePath, Title?, Filter?) => String | Array
 
 /**
  * Change the attributes of one or more files or folders. Wildcards are supported.
@@ -1349,7 +1349,7 @@ FileSelect(Options := 0, RootDir_Filename?, Title?, Filter?) => String | Array
  * 
  * R = Subfolders are recursively into it, so if the files and folders contained in it match FilePattern, they will be operated on. All subfolders will be recursively into it, not just those whose names match FilePattern Subfolders. If R is omitted, files and directories in subdirectories are not included.
  */
-FileSetAttrib(Attributes, FilePattern?, Mode?) => void
+FileSetAttrib(Attributes, FilePattern?: $FilePath, Mode?) => void
 
 /**
  * Change the timestamp of one or more files or folders. Wildcards are supported.
@@ -1370,7 +1370,7 @@ FileSetAttrib(Attributes, FilePattern?, Mode?) => void
  * 
  * R = Subfolders are recursively into it, so if the files and folders contained in it match FilePattern, they will be operated on. All subfolders will be recursively into it, not just those whose names match FilePattern Subfolders. If R is omitted, files and directories in subdirectories are not included.
  */
-FileSetTime(YYYYMMDDHH24MISS?, FilePattern?, WhichTime := 'M', Mode?) => void
+FileSetTime(YYYYMMDDHH24MISS?, FilePattern?: $FilePath, WhichTime: 'M' | 'C' | 'A' := 'M', Mode?) => void
 
 /**
  * Return Number rounded down to integer (without any .00 suffix).
@@ -1613,13 +1613,13 @@ Hotstring(StringOrOptions [, Replacement, OnOffToggle]) => String
 /**
  * Add the icon or picture to the specified ImageListID and return the index of the new icon (1 is the first icon, 2 is the second icon, and so on).
  * @param ImageListID IL_Create The ID of the image list created.
- * @param Filename icon (.ICO), cursor (.CUR) or animated cursor (.ANI) file name (dynamic cursor will not actually move when displayed in ListView), or bitmap or icon handle, such as "HBITMAP :" handle. Other sources of icons include the following types of files: EXE, DLL, CPL, SCR, and other types that contain icon resources.
+ * @param FileName icon (.ICO), cursor (.CUR) or animated cursor (.ANI) file name (dynamic cursor will not actually move when displayed in ListView), or bitmap or icon handle, such as "HBITMAP :" handle. Other sources of icons include the following types of files: EXE, DLL, CPL, SCR, and other types that contain icon resources.
  * @param IconNumber To use an icon group other than the first one in the file, please specify its number in IconNumber. If IconNumber is a negative number, it is assumed that its absolute value represents the resource ID of the icon in the executable file. In the following example, The default icon in the second icon group will be used: IL_Add(ImageListID, "C:\My Application.exe", 2).
  * @param ResizeNonIcon can also load non-icon images, such as BMP, GIF and JPG. However, the last two parameters should be specified at this time to ensure correct execution: IconNumber should be a masked/transparent color code (for most images 0xFFFFFF [ White) may be the best); and ResizeNonIcon should be a non-zero value to scale the image into a single icon, or zero to divide the image into multiple icons that can match the actual width.
  * 
  * Supported image types include ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF and WMF.
  */
-IL_Add(ImageListID, Filename [, IconNumber, ResizeNonIcon]) => Integer
+IL_Add(ImageListID, FileName: $FilePath<'bmp|jpg|png|gif|ico'> [, IconNumber, ResizeNonIcon]) => Integer
 
 /**
  * Create a new ImageList, initially empty, and return the unique ID of the ImageList (return 0 on failure).
@@ -1652,22 +1652,22 @@ IL_Destroy(ImageListID) => Integer
  * 
  * Bitmap or icon handles can be used to replace file names. For example, "HBITMAP:*" handle.
  */
-ImageSearch(&OutputVarX?: VarRef<Integer>, &OutputVarY?: VarRef<Integer>, X1, Y1, X2, Y2, ImageFile) => Integer
+ImageSearch(&OutputVarX?: VarRef<Integer>, &OutputVarY?: VarRef<Integer>, X1, Y1, X2, Y2, ImageFile: $FilePath<'bmp|jpg|png|gif|ico'>) => Integer
 
 /**
  * Delete the value in the standard format .ini file.
  */
-IniDelete(Filename, Section [, Key]) => void
+IniDelete(FileName: $FilePath, Section [, Key]) => void
 
 /**
  * Read a list of values, sections or section names from a standard format .ini file.
  */
-IniRead(Filename [, Section, Key, Default]) => String
+IniRead(FileName: $FilePath [, Section, Key, Default]) => String
 
 /**
  * Write values or sections into a standard format .ini file.
  */
-IniWrite(Value, Filename, Section [, Key]) => void
+IniWrite(Value, FileName: $FilePath, Section [, Key]) => void
 
 /**
  * Display an input box, asking the user to enter a string.
@@ -1868,7 +1868,7 @@ Ln(Number) => Float
 
 /**
  * Load the image file and return the bitmap or icon handle.
- * @param Filename
+ * @param FileName
  * @param Options Zero or more strings in the following options, each option is separated by spaces or tabs::
  * 
  * Wn and Hn: the width and height of the image to be loaded, n is an integer. If a certain size is omitted or specified as -1, the size will be calculated based on the other size while maintaining the aspect ratio. If two All sizes are omitted, and the original size of the image will be used. If any size is specified as 0, the original size will still be used for that size. For example: "w80 h50", "w48 h-1" or "w48" (keep the width Height ratio), "h0 w100" (use the original height but cover the width).
@@ -1880,7 +1880,7 @@ Ln(Number) => Float
  * If this parameter is omitted, the return value is always a bitmap handle (icon/cursor type will be converted as needed). This is because reliable use or deletion of bitmap/icon/cursor handle requires knowing which type it is.
  * The @returns function returns the bitmap or icon handle according to the specified image or icon.
  */
-LoadPicture(Filename [, Options, &ImageType: VarRef<Integer>]) => Integer
+LoadPicture(FileName: $FilePath<'bmp|jpg|png|gif|ico'> [, Options, &ImageType: VarRef<Integer>]) => Integer
 
 /**
  * Returns the logarithm of Number (base 10).
@@ -2570,7 +2570,7 @@ SoundGetVolume([Component, Device]) => Integer
 
 /**
  * Play audio, video or other supported file types.
- * @param Filename The name of the file to be played, if the absolute path is not specified, it is assumed to be in A_WorkingDir.
+ * @param FileName The name of the file to be played, if the absolute path is not specified, it is assumed to be in A_WorkingDir.
  * To make a standard system sound, please specify an asterisk followed by a number, as shown below. Note: In this mode, the Wait parameter has no effect.
  * 
  * •*-1 = Simple beep. If the sound card is not available, the speaker will be used to generate this sound.
@@ -2585,7 +2585,7 @@ SoundGetVolume([Component, Device]) => Integer
  * 
  * `Known limitations:` Due to Windows system limitations, WAV files with a path exceeding 127 characters will not be played. To solve this problem, you can use other file types such as MP3 (the path length can be up to 255 characters) or Use 8.3 short paths (see A_LoopFileShortPath for how to retrieve these paths).
  */
-SoundPlay(Filename, Wait := false) => void
+SoundPlay(FileName: $FilePath, Wait := false) => void
 
 /**
  * Change the mute setting of the sound device.
@@ -2760,7 +2760,7 @@ ToolTip([Text, X, Y, WhichToolTip]) => Integer
  * @param IconNumber To use an icon group other than the first group of icons in the file, please specify its number in IconNumber (if omitted, it defaults to 1). For example, 2 will load the default icon in the second group of icons . If IconNumber is negative, it is assumed that its absolute value represents the resource ID of the icon in the executable file.
  * @param Freeze Specify 1 (true) to freeze the icon, or 0 (false) to unfreeze it (or leave it blank to keep the frozen/thawed state unchanged). When the icon is frozen, Pause and Suspend will not change it. Note : To freeze or unfreeze the current icon, please use 1 (true) or 0 (false), as shown in the following example: TraySetIcon(,, 1).
  */
-TraySetIcon(FileName, IconNumber := 1, Freeze := false) => void
+TraySetIcon(FileName: $FilePath, IconNumber := 1, Freeze := false) => void
 
 /**
  * Create a balloon prompt window near the tray icon. In Windows 10, a toast notification may be displayed instead.
@@ -3650,7 +3650,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	/**
 	 * Create Picture control and return a GuiControl object.
 	 */
-	AddPicture([Options, Filename]) => Gui.Pic
+	AddPicture([Options, FileName: $FilePath<'bmp|jpg|png|gif|ico'>]) => Gui.Pic
 
 	/**
 	 * Adds a Button control and returns a GuiControl object.
@@ -4186,7 +4186,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 		/**
 		 * Display a small icon on the left side of the text in the specified part, and return the handle of the icon.
 		 */
-		SetIcon(Filename, IconNumber := 1, PartNumber := 1) => Integer
+		SetIcon(FileName: $FilePath, IconNumber := 1, PartNumber := 1) => Integer
 
 		/**
 		 * Divide the bar into multiple parts according to the specified width (in pixels), and return a non-zero value (HWND of the status bar).
@@ -4644,7 +4644,7 @@ class Menu extends Object {
 	/**
 	 * Set the icon to be displayed next to the menu item.
 	 */
-	SetIcon(MenuItemName, FileName [, IconNumber, IconWidth]) => void
+	SetIcon(MenuItemName, FileName: $FilePath [, IconNumber, IconWidth]) => void
 
 	/**
 	 * Display the menu.

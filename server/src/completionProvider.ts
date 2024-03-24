@@ -6,7 +6,7 @@ import {
 } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 import {
-	ANY, AhkSymbol, ClassNode, Context, FuncNode, Maybe, Property, STRING, SemanticTokenTypes, Token, Variable,
+	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AhkSymbol, ClassNode, Context, FuncNode, Maybe, Property, STRING, SemanticTokenTypes, Token, Variable,
 	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache,
 	completionitem, decltype_expr, dllcalltpe, extsettings, find_class, find_symbols, get_detail,
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
@@ -79,7 +79,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	let commitCharacters = Object.fromEntries(Object.entries(extsettings.CompletionCommitCharacters ?? {})
 		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 	let { text, word, token, range, linetext, kind, symbol } = doc.getContext(position, true);
-	let list = doc.relevance, { line, character } = position;
+	let list = doc.relevance, { line, character } = position, offset;
 	let isexpr = false, expg = make_search_re(word);
 
 	switch (token.type) {
@@ -115,13 +115,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					case '#includeagain': {
 						if (isBrowser)
 							return;
-						let l = doc.document.offsetAt(position) - token!.offset;
+						let l = doc.document.offsetAt(position) - token.offset;
 						let pre = (text = token!.content).slice(0, l);
 						let paths: string[], c = pre[0], inlib = false, suf = '';
 						if ('\'"'.includes(c))
 							pre = pre.slice(1);
 						else c = '';
-						pre = pre.replace(/^\*i\s/i, '');
+						pre = pre.replace(/^\*i[ \t]/i, '');
 						if (pre.startsWith('*')) {
 							expg = make_search_re(pre.slice(1));
 							for (let k in utils.get_RCDATA() ?? {})
@@ -132,7 +132,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							c = '>' + c, pre = pre.slice(1);
 						if (/["<>*?|]/.test(pre) || isdll && c.startsWith('>'))
 							return;
-						pre = pre.replace(/`;/g, ';').replace(/[^\\/]+$/, m => (suf = m, ''));
+						pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 						if (!c.startsWith('>') && text.includes('%')) {
 							if (text.replace(/%[^%]+%/g, m => '\0'.repeat(m.length))[l] === '\0')
 								return Object.values(ahkvars).filter(it =>
@@ -167,29 +167,34 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 
 						let xg = pre.endsWith('/') ? '/' : '\\', ep = make_search_re(suf);
 						let extreg = isdll ? /\.(dll|ocx|cpl)$/i : inlib ? /\.ahk$/i : /\.(ahk2?|ah2)$/i;
-						let textedit: TextEdit | undefined;
-						if (!allIdentifierChar.test(suf))
-							textedit = TextEdit.replace({ start: { line: position.line, character: position.character - suf.length }, end: position }, '');
+						let command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
+						let range = !allIdentifierChar.test(suf) ? {
+							start: {
+								line: position.line,
+								character: position.character - suf.length
+							},
+							end: position
+						} : undefined;
+						let set_folder_text = range ? (item: CompletionItem, newText: string) => (item.textEdit = { newText, range }) :
+							(item: CompletionItem, newText: string) => item.insertText = newText;
+						let set_file_text = range || c ? set_folder_text : (item: CompletionItem, newText: string) => undefined;
 						for (let path of paths) {
 							if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory())
 								continue;
-							for (let it of readdirSync(path)) {
+							for (let label of readdirSync(path)) {
 								try {
-									if (statSync(path + it).isDirectory()) {
-										if (ep.test(it) && add_item(it.replace(/(\s);/g, '$1`;'), CompletionItemKind.Folder)) {
-											cpitem.command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
-											if (textedit)
-												cpitem.textEdit = Object.assign({}, textedit, { newText: cpitem.label + xg });
-											else
-												cpitem.insertText = cpitem.label + xg;
-										}
-									} else if (extreg.test(it) && ep.test(inlib ? it = it.replace(extreg, '') : it) &&
-										add_item(it.replace(/(\s);/g, '$1`;'), CompletionItemKind.File)) {
-										if (textedit)
-											cpitem.textEdit = Object.assign({}, textedit, { newText: cpitem.label + c });
-										else
-											cpitem.insertText = cpitem.label + c;
+									if (statSync(path + label).isDirectory()) {
+										if (!ep.test(label))
+											continue;
+										label = label.replace(/(`|(?<= );)/g, '`$1');
+										set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + xg);
+									} else {
+										if (!extreg.test(label) || !ep.test(inlib ? label = label.replace(extreg, '') : label))
+											continue;
+										label = label.replace(/(`|(?<= );)/g, '`$1');
+										set_file_text(cpitem = { label, kind: CompletionItemKind.File }, label + c);
 									}
+									items.push(cpitem);
 								} catch { };
 							}
 							if (pre.includes(':'))
@@ -306,7 +311,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							for (let it of items)
 								it.insertText = `'${it.insertText}'`;
 				}
-			} else if (!maxn) {
+			} else if (!maxn && !token.ignore) {
 				let ci = (pi && get_callinfo(doc, position, pi))!;
 				if (ci) {
 					let kind: CompletionItemKind, command: { title: string, command: string } | undefined;
@@ -349,53 +354,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 											continue;
 									case 'dllcall':
 										if (index === 0) {
-											if (isBrowser) continue;
-											let tk = tokens[doc.document.offsetAt(ci.pos)], offset = doc.document.offsetAt(position);
-											if (!tk) continue;
-											while ((tk = tokens[tk.next_token_offset]) && tk.content === '(')
-												continue;
-											if (tk && tk.type === 'TK_STRING' && offset > tk.offset && offset <= tk.offset + tk.length) {
-												let pre = tk.content.substring(1, offset - tk.offset);
-												let docs = [doc], files: any = {};
-												for (let u in list) (t = lexers[u]) && docs.push(t);
-												if (!pre.match(/[\\/]/)) {
-													docs.forEach(d => d.dllpaths.forEach(path => {
-														path = path.replace(/^.*[\\/]/, '').replace(/\.dll$/i, '');
-														if (!files[l = path.toLowerCase()])
-															files[l] = true, add_item(path + '\\', CompletionItemKind.File);
-													}));
-													readdirSync('C:\\Windows\\System32').forEach(file => {
-														if (file.toLowerCase().endsWith('.dll') && expg.test(file = file.slice(0, -4)))
-															add_item(file + '\\', CompletionItemKind.File);
-													});
-													winapis.forEach(f => { if (expg.test(f)) add_item(f, CompletionItemKind.Function); });
-												} else {
-													let dlls: { [key: string]: any } = {}, onlyfile = true;
-													l = pre.replace(/[\\/][^\\/]*$/, '').replace(/\\/g, '/').toLowerCase();
-													if (!l.match(/\.\w+$/))
-														l = l + '.dll';
-													if (l.includes(':')) onlyfile = false, dlls[l] = 1;
-													else if (l.includes('/')) {
-														if (l.startsWith('/'))
-															dlls[doc.scriptpath + l] = 1;
-														else dlls[doc.scriptpath + '/' + l] = 1;
-													} else {
-														docs.forEach(d => {
-															d.dllpaths.forEach(path => {
-																if (path.toLowerCase().endsWith(l)) {
-																	dlls[path] = 1;
-																	if (onlyfile && path.includes('/'))
-																		onlyfile = false;
-																}
-															});
-															if (onlyfile)
-																dlls[l] = dlls[d.scriptpath + '/' + l] = 1;
-														});
-													}
-													(await utils.get_DllExport(Object.keys(dlls), true)).forEach(
-														it => expg.test(it) && add_item(it, CompletionItemKind.Function));
-												}
-											}
+											await add_dllexports();
 											continue;
 										}
 										index++;
@@ -457,12 +416,37 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								continue;
 							}
 						}
-						let annotations = param.type_annotations || [];
-						if (annotations.includes(STRING))
-							kind = CompletionItemKind.Text, command = undefined;
-						for (let s of annotations)
-							if (typeof s === 'string' && /['"]/.test(s[0]) && s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)))
-								items.push(text2item(s));
+						await add_annotations(param.type_annotations || []);
+					}
+					async function add_annotations(annotations: (string | AhkSymbol)[]) {
+						for (let s of annotations) {
+							switch (s) {
+								case $DIRPATH:
+									add_paths(true);
+									break;
+								case $DLLFUNC:
+									await add_dllexports();
+									break;
+								case $FILEPATH:
+									add_paths();
+									break;
+								case STRING:
+									kind = CompletionItemKind.Text, command = undefined;
+									break;
+								default:
+									if (typeof s === 'string') {
+										if (/['"]/.test(s[0]) && s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)))
+											items.push(text2item(s));
+										break;
+									}
+									if (s.data === $FILEPATH) {
+										s = (s as ClassNode).generic_types?.[0]?.[0] ?? '';
+										if (typeof s === 'string' && /^(['"])\w+(\|\w+)*\1$/.test(s))
+											add_paths(false, new RegExp(`[^.\\/]+$(?<!\.(${s.slice(1, -1)}))`, 'i'));
+									}
+									break;
+							}
+						}
 					}
 				}
 				!items.length && add_texts();
@@ -729,6 +713,107 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		let nk = doc.tokens[tk.next_token_offset], t;
 		if (nk && (((t = nk.symbol)?.detail ?? (t = doc.tokens[nk.next_token_offset]?.symbol)?.detail) !== undefined))
 			return t;
+	}
+	function add_paths(only_folder = false, ext_re?: RegExp) {
+		if (isBrowser)
+			return;
+		offset ??= doc.document.offsetAt(position);
+		let path = token.content.substring(1, offset - token.offset), suf = '';
+		if (!/^\w:[\\/]/.test(path) || /[*?"<>|\t]/.test(path))
+			return;
+		path = path.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
+		if (!existsSync(path) || !statSync(path).isDirectory())
+			return;
+
+		let slash = path.endsWith('/') ? '/' : '\\', re = make_search_re(suf);
+		let command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
+		let range = !allIdentifierChar.test(suf) ? {
+			start: {
+				line: position.line,
+				character: position.character - suf.length
+			},
+			end: position
+		} : undefined;
+		let set_folder_text = range ? (item: CompletionItem, newText: string) => (item.textEdit = { newText, range }) :
+			(item: CompletionItem, newText: string) => item.insertText = newText;
+		for (let label of readdirSync(path)) {
+			try {
+				if (!re.test(label))
+					continue;
+				if (statSync(path + label).isDirectory()) {
+					label = label.replace(/(`|(?<= );)/g, '`$1');
+					set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + slash);
+				} else if (only_folder || ext_re?.test(label))
+					continue;
+				else {
+					label = label.replace(/(`|(?<= );)/g, '`$1');
+					cpitem = { label, kind: CompletionItemKind.File };
+					if (range)
+						cpitem.textEdit = { range, newText: label };
+				}
+				items.push(cpitem);
+			} catch { };
+		}
+	}
+	async function add_dllexports() {
+		if (isBrowser)
+			return;
+		offset ??= doc.document.offsetAt(position);
+		let pre = token.content.substring(1, offset - token.offset), suf = '';
+		let docs = [doc], ls: any = {}, t;
+		for (let u in list)
+			(t = lexers[u]) && docs.push(t);
+		pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
+		let expg = make_search_re(suf), kind = CompletionItemKind.Function;
+		let range = !allIdentifierChar.test(suf) ? {
+			start: {
+				line: position.line,
+				character: position.character - suf.length
+			},
+			end: position
+		} : undefined;
+		let file2item = (label: string) => {
+			label = label.replace(/(`|(?<= );)/g, '`$1');
+			cpitem = { label, kind: CompletionItemKind.File };
+			if (range) cpitem.textEdit = { range, newText: `${label}\\` };
+			else cpitem.insertText = `${label}\\`;
+			return cpitem;
+		}
+		if (!pre) {
+			docs.forEach(d => d.dllpaths.forEach(file =>
+				expg.test(file = file.replace(/^.*[\\/]/, '')) &&
+				(ls[file.toUpperCase()] ??= items.push(file2item(file.replace(/\.dll$/i, ''))))));
+			for (let file of readdirSync('C:\\Windows\\System32'))
+				/\.(dll|ocx|cpl)$/i.test(file) && expg.test(file) &&
+					(ls[file.toUpperCase()] ??= items.push(file2item(file.replace(/\.dll$/i, ''))));
+			for (let label of winapis)
+				expg.test(label) && items.push({ label, kind });
+		} else {
+			add_paths(false, /[^.\\/]+$(?<!\.(dll|ocx|cpl))/i);
+			if (pre.endsWith('/') || pre.endsWith(':\\'))
+				return;
+			let dlls = new Set<string>, onlyfile = true;
+			let l = pre.slice(0, -1).replace(/\\/g, '/').toLowerCase();
+			if (!/\.\w+$/.test(l))
+				l += '.dll';
+			if (l.includes(':'))
+				dlls.add(l);
+			else if (l.includes('/'))
+				dlls.add(doc.scriptpath + (l.startsWith('/') ? l : `/${l}`));
+			else {
+				l = `/${l}`;
+				docs.forEach(d => d.dllpaths.forEach(path => {
+					if ((path = path.toLowerCase()).endsWith(l))
+						dlls.add(path), onlyfile = false;
+				}));
+				if (onlyfile) {
+					dlls.add(l.substring(1));
+					docs.forEach(d => dlls.add(d.scriptpath + l));
+				}
+			}
+			for (let label of await utils.get_DllExport(dlls, true))
+				expg.test(label) && items.push({ label, kind });
+		}
 	}
 	function add_texts() {
 		for (let it of completionItemCache.text) {

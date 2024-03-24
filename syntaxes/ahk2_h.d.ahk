@@ -52,7 +52,7 @@ CryptAES(AddOrBuf [, Size], Password, EncryptOrDecrypt := true, Algorithm := 256
 /**
  * Built-in functions, similar to DllCall, but can be used in the DllCall structure and use Object syntax. It is usually faster than DllCall, easier to use, and saves a lot of typing and code.
  */
-DynaCall(DllFunc, ParameterDefinition, Params*) => $DynaToken
+DynaCall(DllFunc: $DllFunc | $FilePath<'dll|ocx|cpl'>, ParameterDefinition, Params*) => $DynaToken
 
 /**
  * Retrieve low-level pointers to variables.
@@ -142,12 +142,12 @@ UObject([Key1, Value1, *]) => Object
 /**
  * Extract one or all items from the zip file to the hard drive.
  */
-UnZip(AddOrBufOrFile [, Size], DestinationFolder, FileToExtract?, DestinationFileName?, Password?, CodePage := 0) => void
+UnZip(AddOrBufOrFile: $FilePath | Buffer | Integer [, Size], DestinationFolder, FileToExtract?, DestinationFileName?, Password?, CodePage := 0) => void
 
 /**
  * Extract one item from the zip file.
  */
-UnZipBuffer(AddOrBufOrFile [, Size], FileToExtract, Password?, CodePage := 0) => Buffer
+UnZipBuffer(AddOrBufOrFile: $FilePath | Buffer | Integer [, Size], FileToExtract, Password?, CodePage := 0) => Buffer
 
 /**
  * This function is used to decompress and decrypt raw memory, such as decompressing from resources.
@@ -162,12 +162,12 @@ ZipAddBuffer(ZipHandle, AddOrBuf [, Size], FileName?) => void
 /**
  * Add files to a zip archive created using ZipCreateFile or ZipCreateBuffer.
  */
-ZipAddFile(ZipHandle, FileName [, ZipFileName]) => void
+ZipAddFile(ZipHandle, FileName: $FilePath [, ZipFileName]) => void
 
 /**
  * Add empty folders to the zip archive created with ZipCreateFile or ZipCreateBuffer.
  */
-ZipAddFolder(ZipHandle, ZipFoldName) => void
+ZipAddFolder(ZipHandle, ZipFoldName: $DirPath) => void
 
 /**
  * Close the zip archive created with ZipCreateBuffer and save it in a variable.
@@ -189,12 +189,12 @@ ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Integer
  * This function is used to create a new empty zip file, use ZipAddFile or ZipAddBuffer to add the file to the zip archive.
  * @param CompressionLevel [@since v2.1-alpha.7]
  */
-ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Integer
+ZipCreateFile(FileName: $FilePath, Password?, CompressionLevel := 5) => Integer
 
 /**
  * Returns an object containing information about all items in the zip archive file.
  */
-ZipInfo(AddOrBufOrFile [, Size], CodePage := 0) => Array
+ZipInfo(AddOrBufOrFile: $FilePath | Buffer | Integer [, Size], CodePage := 0) => Array
 
 /**
  * Change the options for zip archives created with ZipCreateFile.

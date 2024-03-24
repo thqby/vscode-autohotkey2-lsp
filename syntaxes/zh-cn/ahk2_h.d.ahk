@@ -52,7 +52,7 @@ CryptAES(AddOrBuf [, Size], Password, EncryptOrDecrypt := true, Algorithm := 256
 /**
  * 内置函数, 类似于DllCall, 但可用于DllCall结构并使用Object语法.它通常比DllCall更快, 更易于使用, 并且节省了大量的键入和代码.
  */
-DynaCall(DllFunc, ParameterDefinition, Params*) => $DynaToken
+DynaCall(DllFunc: $DllFunc | $FilePath<'dll|ocx|cpl'>, ParameterDefinition, Params*) => $DynaToken
 
 /**
  * 检索指向变量的低级指针.
@@ -142,12 +142,12 @@ UObject([Key1, Value1, *]) => Object
 /**
  * 从zip文件中提取一项或所有项到硬盘.
  */
-UnZip(AddOrBufOrFile [, Size], DestinationFolder, FileToExtract?, DestinationFileName?, Password?, CodePage := 0) => void
+UnZip(AddOrBufOrFile: $FilePath | Buffer | Integer [, Size], DestinationFolder, FileToExtract?, DestinationFileName?, Password?, CodePage := 0) => void
 
 /**
  * 从zip文件中提取一项.
  */
-UnZipBuffer(AddOrBufOrFile [, Size], FileToExtract, Password?, CodePage := 0) => Buffer
+UnZipBuffer(AddOrBufOrFile: $FilePath | Buffer | Integer [, Size], FileToExtract, Password?, CodePage := 0) => Buffer
 
 /**
  * 此功能用于解压缩和解密原始内存, 例如从资源中解压缩.
@@ -162,12 +162,12 @@ ZipAddBuffer(ZipHandle, AddOrBuf [, Size], FileName?) => void
 /**
  * 将文件添加到使用ZipCreateFile或ZipCreateBuffer创建的zip存档中.
  */
-ZipAddFile(ZipHandle, FileName [, ZipFileName]) => void
+ZipAddFile(ZipHandle, FileName: $FilePath [, ZipFileName]) => void
 
 /**
  * 将空文件夹添加到使用ZipCreateFile或ZipCreateBuffer创建的zip存档中.
  */
-ZipAddFolder(ZipHandle, ZipFoldName) => void
+ZipAddFolder(ZipHandle, ZipFoldName: $DirPath) => void
 
 /**
  * 关闭使用ZipCreateBuffer创建的zip存档, 将其保存到变量中.
@@ -189,12 +189,12 @@ ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Integer
  * 此函数用于创建一个新的空zip文件, 使用ZipAddFile或ZipAddBuffer将文件添加到zip存档中.
  * @param CompressionLevel [@since v2.1-alpha.7]
  */
-ZipCreateFile(FileName, Password?, CompressionLevel := 5) => Integer
+ZipCreateFile(FileName: $FilePath, Password?, CompressionLevel := 5) => Integer
 
 /**
  * 返回一个对象, 其中包含有关zip归档文件中所有项目的信息.
  */
-ZipInfo(AddOrBufOrFile [, Size], CodePage := 0) => Array
+ZipInfo(AddOrBufOrFile: $FilePath | Buffer | Integer [, Size], CodePage := 0) => Array
 
 /**
  * 更改使用ZipCreateFile创建的zip存档的选项.

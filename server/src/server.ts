@@ -427,7 +427,7 @@ async function getAHKversion(params: string[]) {
 	}));
 }
 
-async function getDllExport(paths: string[], onlyone = false) {
+async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 	let funcs: any = {};
 	for (let path of paths) {
 		let pe = await searchAndOpenPEFile(path, a_vars.is64bit === '1' ? true : a_vars.is64bit === '0' ? false : undefined);

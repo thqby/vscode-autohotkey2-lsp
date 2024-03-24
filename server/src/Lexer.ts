@@ -293,7 +293,11 @@ const NUMBER = create_prototype('Number', SymbolKind.Number);
 export const STRING = create_prototype('String', SymbolKind.String);
 const ARRAY = create_prototype('Array', SymbolKind.Class, 'Array');
 const OBJECT = create_prototype('Object', SymbolKind.Class);
+export const UNSET = create_prototype('unset', SymbolKind.Null);
 export const VARREF = create_prototype('VarRef', SymbolKind.Class, 'Any');
+export const $DLLFUNC = { ...STRING };
+export const $DIRPATH = { ...STRING };
+export const $FILEPATH = { ...STRING };
 export const THIS: Variable = {
 	def: true,
 	detail: completionitem._this(),
@@ -312,6 +316,9 @@ const ahkprotos = {
 	CLASS: ANY, FUNC: ANY, REGEXMATCHINFO: ANY
 };
 const S2O: { [n: string]: AhkSymbol } = {
+	$DIRPATH,
+	$DLLFUNC,
+	$FILEPATH,
 	ANY,
 	ARRAY,
 	FLOAT,
@@ -319,8 +326,8 @@ const S2O: { [n: string]: AhkSymbol } = {
 	NUMBER,
 	OBJECT,
 	STRING,
+	UNSET,
 	VARREF,
-	UNSET: create_prototype('unset', SymbolKind.Null)
 };
 
 class ParseStopError {
