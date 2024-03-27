@@ -2312,6 +2312,8 @@ RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingP
 
 /**
  * 替换字符串中匹配模式(正则表达式) 出现的地方.
+ * @param {String} Replacement
+ * @param {(m: RegExMatchInfo) => String} Replacement [@since v2.1 or ahk_h v2.0]
  */
 RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?: VarRef<Integer>, Limit := -1, StartingPosition := 1) => String
 
@@ -2686,6 +2688,11 @@ StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCou
  * @param OmitChars 可选的字符列表(区分大小写), 用来从每个数组元素的开始和结尾部分移除这些字符.
  */
 StrSplit(String, Delimiters?, OmitChars?, MaxParts := -1) => Array
+
+/**
+ * @since v2.1-alpha.9
+ */
+StructFromPtr(StructClass, Address) => Object
 
 /**
  * 将字符串转换为大写.
@@ -4691,7 +4698,11 @@ class Object extends Any {
 	/**
 	 * 返回给定自有属性的描述符, 兼容于 DefineProp.
 	 */
-	GetOwnPropDesc(Name) => { Get?: Func, Set?: Func, Call?: Func, Value?: Any }
+	GetOwnPropDesc(Name) => {
+		Get?: Func, Set?: Func, Call?: Func, Value?: Any,
+		/** @since v2.1-alpha.3 */
+		Type?: String | Integer | Class
+	}
 
 	/**
 	 * 如果对象拥有该名称的属性, 则返回 true, 否则返回 false.

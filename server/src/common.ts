@@ -65,7 +65,7 @@ export interface AHKLSSettings {
 
 export const winapis: string[] = [];
 export const lexers: { [uri: string]: Lexer } = {};
-export const alpha_3 = encode_version('2.1.0.3');
+export const alpha_3 = encode_version('2.1-alpha.3');
 export const extsettings: AHKLSSettings = {
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
@@ -477,7 +477,8 @@ export function update_settings(configs: AHKLSSettings) {
 }
 
 function encode_version(version: string) {
-	let v = (version.replace(/-\w+/, '.0') + '.0').split('.');
+	const STAGE: { [t: string]: number } = { ALPHA: -3, BETA: -2, RC: -1 };
+	let v = (version.replace(/-\w+/, s => `.${STAGE[s.substring(1).toUpperCase()]}`) + '.0').split('.');
 	let n = 0;
 	for (let i = 0; i < 4; i++)
 		n += parseInt(v[i]) * 2 ** ((3 - i) * 10);

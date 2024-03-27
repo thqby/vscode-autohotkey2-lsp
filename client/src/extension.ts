@@ -241,7 +241,7 @@ function runScript(textEditor: TextEditor, selection = false) {
 	if (!ahkprocesses.size)
 		outputchannel.clear();
 	if (selection)
-		selecttext = textEditor.document.getText(textEditor.selection);
+		selecttext = textEditor.selections.map(textEditor.document.getText).join('\n');
 	else if (textEditor.document.isUntitled || !textEditor.document.uri.toString().startsWith('file:///'))
 		selecttext = textEditor.document.getText();
 	executePath.replace(/^(.+[\\/])AutoHotkeyUX\.exe$/i, (...m) => {

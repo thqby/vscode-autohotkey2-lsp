@@ -226,7 +226,7 @@ function executeCommandProvider(params: ExecuteCommandParams, token?: Cancellati
 			generateComment();
 			break;
 		case 'ahk2.resetinterpreterpath':
-			setInterpreter(args[0]);
+			setInterpreter((args[0] as string).replace(/^[A-Z]:/, m => m.toLowerCase()));
 			break;
 	}
 }

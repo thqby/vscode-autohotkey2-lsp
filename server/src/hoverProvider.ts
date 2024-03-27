@@ -37,6 +37,9 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 				case 'object':
 					overloads = overloads.map(it => it.full).join('\n');
 				case 'string':
+					if (fn.name)
+						overloads = overloads.replace(/^(\w|[^\x00-\x7f])+/gm,
+							fn.full.substring(0, fn.full.search(/(?!^)[([]/)));
 					hover.at(-1)!.value += `\n${overloads}`;
 					break;
 			}

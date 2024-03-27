@@ -2318,6 +2318,8 @@ RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingP
 
 /**
  * Replace the place where the matching pattern (regular expression) appears in the string.
+ * @param {String} Replacement
+ * @param {(m: RegExMatchInfo) => String} Replacement [@since v2.1 or ahk_h v2.0]
  */
 RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?: VarRef<Integer>, Limit := -1, StartingPosition := 1) => String
 
@@ -2692,6 +2694,11 @@ StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCou
  * @param OmitChars Optional list of characters (case sensitive), used to remove these characters from the beginning and end of each array element.
  */
 StrSplit(String, Delimiters?, OmitChars?, MaxParts := -1) => Array
+
+/**
+ * @since v2.1-alpha.9
+ */
+StructFromPtr(StructClass, Address) => Object
 
 /**
  * Convert the string to uppercase.
@@ -4712,7 +4719,11 @@ class Object extends Any {
 	/**
 	 * Returns the descriptor of a given own property, compatible with DefineProp.
 	 */
-	GetOwnPropDesc(Name) => { Get?: Func, Set?: Func, Call?: Func, Value?: Any }
+	GetOwnPropDesc(Name) => {
+		Get?: Func, Set?: Func, Call?: Func, Value?: Any,
+		/** @since v2.1-alpha.3 */
+		Type?: String | Integer | Class
+	}
 
 	/**
 	 * If the object has the attribute of the name, it returns true, otherwise it returns false.
