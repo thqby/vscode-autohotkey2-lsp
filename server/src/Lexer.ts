@@ -1421,9 +1421,10 @@ export class Lexer {
 											pd = `[${f.full.slice(1, -1)}]`;
 											prop.local = f.local, prop.declaration = f.declaration;
 											prop.param_offsets = f.param_offsets, prop.params = par;
+											adddeclaration(prop as FuncNode);
 										}
+										result.push(prop), addprop(fc, prop);
 										prop.full = `(${classfullname.slice(0, -1)}) ${isstatic ? 'static ' : ''}${fc.content}${pd}`;
-										result.push(prop), addprop(fc, prop), adddeclaration(prop as FuncNode);
 										fc.semantic = { type: SemanticTokenTypes.property, modifier: SemanticTokenModifiers.definition | (isstatic as any) };
 										if (tk.content === '{') {
 											let nk: Token, sk: Token, tn: FuncNode | undefined, _low: string, mmm = mode, brace = tk.offset;
