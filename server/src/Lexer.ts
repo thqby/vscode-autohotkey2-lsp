@@ -389,7 +389,7 @@ export class Lexer {
 		let last_comment_fr: FoldingRange | undefined, last_LF: number, lst: Token;
 		let n_newlines: number, parser_pos: number, sharp_offsets: number[];
 		let _this = this, allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
-		let in_loop = false, requirev2 = false, string_mode = false, uri = URI.parse(document.uri);
+		let in_loop = false, maybev1 = 0, requirev2 = false, string_mode = false, uri = URI.parse(document.uri);
 
 		let output_lines: { text: string[], indent: number }[], flags: any, previous_flags: any, flag_store: any[];
 		let opt: FormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
@@ -1119,7 +1119,7 @@ export class Lexer {
 			});
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
-				begin_line = true, requirev2 = false, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
+				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
 				callWithoutParentheses = extsettings.Warn?.CallWithoutParentheses;
@@ -1154,27 +1154,41 @@ export class Lexer {
 		function stop_parse(tk: Token, allow_skip = false, message = diagnostic.maybev1()) {
 			if (requirev2)
 				return false;
-			_this.maybev1 ??= 1;
+			_this.maybev1 ??= maybev1 = 1;
 			switch (_this.actionwhenv1 ??= extsettings.ActionWhenV1IsDetected) {
 				case 'SkipLine':
 					if (!allow_skip)
-						return false;
+						return true;
 					_this.addDiagnostic(diagnostic.skipline(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-					if (tk.type === 'TK_WORD' || tk.content === '=') {
-						let s: string;
+					let s: string, next_LF: number, tp = 'TK_UNKNOWN';
+					if (tk.type === 'TK_WORD' || tk.content === '=' && (tp = 'TK_STRING')) {
 						lst = tk, parser_pos = tk.offset + tk.length;
 						do {
-							let next_LF = input.indexOf('\n', parser_pos);
+							next_LF = input.indexOf('\n', parser_pos);
 							if (next_LF < 0)
 								next_LF = input_length;
 							if (s = input.substring(parser_pos, next_LF).trimLeft()) {
 								let offset = next_LF - s.length;
-								lst = createToken(s = s.trimRight(), 'TK_UNKNOWN', offset, s.length, 0);
+								lst = createToken(s = s.trimRight(), tp, offset, s.length, 0);
 							}
-							parser_pos = next_LF;
-						} while (is_next_char(','));
-						if (input[parser_pos] === '\n')
-							parser_pos--;
+							if ((tk = _this.find_token(parser_pos = next_LF, true)).content === '(') {
+								delete _this.tokens[tk.offset];
+								lst = { ...EMPTY_TOKEN };
+							}
+							string_mode = true;
+							tk = get_token_ignore_comment();
+							while (tk.ignore && tk.type === 'TK_STRING') {
+								next_LF = input.indexOf('\n', parser_pos);
+								if (next_LF < 0)
+									next_LF = input_length;
+								if (s = input.substring(parser_pos, next_LF).trimRight())
+									tk.content += s, tk.length += s.length;
+								parser_pos = next_LF;
+								tk = get_token_ignore_comment();
+							}
+							string_mode = false;
+						} while (is_line_continue({} as Token, tk));
+						parser_pos = tk.offset;
 					}
 					return true;
 				case 'SwitchToV1':
@@ -1672,8 +1686,7 @@ export class Lexer {
 									break;
 								if (tk.type as string !== 'TK_WORD' || !is_func_def()) {
 									stop_parse(ht);
-									if (!_this.maybev1)
-										_this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
+									!maybev1 && _this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
 								}
 								next = false;
 							} else {
@@ -1873,7 +1886,7 @@ export class Lexer {
 						}
 						nexttoken();
 						if (tk.type === 'TK_COMMA')
-							stop_parse(lk), _this.maybev1 && nexttoken();
+							stop_parse(lk), maybev1 && nexttoken();
 						let min = 0, max = 1, act = 'loop', sub;
 						if (tk.type === 'TK_EQUALS') {
 							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
@@ -2245,6 +2258,9 @@ export class Lexer {
 				} else {
 					let act, offset;
 					/^=>?$/.test(tk.content) && (act = tk.content, offset = tk.offset);
+					if (maybev1 && act === '=' && stop_parse(tk, true) &&
+						(next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
+						return;
 					reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN, next = false;
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
 					result.push(...parse_line(undefined, act, offset));
@@ -2254,11 +2270,11 @@ export class Lexer {
 			function parse_funccall(type: SymbolKind, nextc: string) {
 				let tn: CallSite, sub: AhkSymbol[], fc = lk, tp;
 				let pi: ParamInfo = { offset: fc.offset, miss: [], comma: [], count: 0, unknown: false, name: fc.content };
-				if (nextc === ',') {
+				if (nextc === ',' || maybev1) {
 					if (type === SymbolKind.Function && builtin_ahkv1_commands.includes(fc.content.toLowerCase()) &&
-						stop_parse(fc, true) && (next = true))
+						stop_parse(fc, true) && (next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
 						return;
-					_this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
+					nextc === ',' && _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
 				}
 				if ((tp = tk.type) === 'TK_OPERATOR' && !tk.content.match(/^(not|\+\+?|--?|!|~|%|&)$/i))
 					_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
@@ -2378,8 +2394,9 @@ export class Lexer {
 							else tk = tokens[tk.next_pair_pos ?? tk.next_token_offset];
 						}
 						if (diag) {
-							if (act === '=' && stop_parse(tokens[nk!.next_token_offset], true))
-								return res;
+							if (act === '=' && stop_parse(tokens[nk!.next_token_offset], true) &&
+								(next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
+								return [];
 							_this.addDiagnostic(`${diagnostic.unexpected(act)}, ${diagnostic.didyoumean(':=').toLowerCase()}`, min, act.length);
 						}
 					}
@@ -2431,7 +2448,7 @@ export class Lexer {
 						if (m = l.match(/^\w+[ \t]+v(1|2)/)) {
 							if (m[1] === '2')
 								requirev2 = true;
-							else if (_this.maybev1 = 3, !stop_parse(data, true, diagnostic.requirev1()))
+							else if (_this.maybev1 = 3, !stop_parse(data, false, diagnostic.requirev1()))
 								_this.addDiagnostic(diagnostic.unexpected(data.content), data.offset, data.length);
 						}
 						break;
@@ -2452,7 +2469,7 @@ export class Lexer {
 						break;
 					default:
 						if (l.match(/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i) &&
-							!stop_parse(tk, true))
+							!stop_parse(tk))
 							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 						break;
 				}
@@ -4161,7 +4178,7 @@ export class Lexer {
 						continue;
 					case 'example':
 						details.push('*@example*');
-						if (line = line.replace(/^\s*<caption>(.*?)<\/caption>/, (s0, s1) => (details.push(s1), '')).replace(/^[ \t\n]+/, ''))
+						if (line = line.replace(/^\s*<caption>(.*?)<\/caption>/, (s0, s1) => (details.push(s1), '')).replace(/^[ \t\r\n]+/, ''))
 							details.push('```ahk2\n' + line + '\n```');
 						continue;
 					case 'extends':
@@ -4835,8 +4852,13 @@ export class Lexer {
 				let sep = c, o = offset, nosep = false, se = { type: SemanticTokenTypes.string }, _lst: Token | undefined, pt: Token | undefined;
 				resulting_string = '';
 				if (!/^[ \t\r\n+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1))) {
-					sep === c && c === '"' && stop_parse(lst);
-					_this.addDiagnostic(diagnostic.missingspace() + ', ' + diagnostic.didyoumean(`\`${c}`), offset, 1);
+					let msg = diagnostic.missingspace();
+					if (sep === c) {
+						if (c === "'" || !stop_parse(lst))
+							msg += ', ' + diagnostic.didyoumean(`\`${c}`);
+						else msg = '', offset = lst.offset, lst = lst.previous_token!, _this.tokenranges.pop();
+					}
+					msg && _this.addDiagnostic(msg, offset, 1);
 				}
 				while (c = input.charAt(parser_pos++)) {
 					if (c === '`')
