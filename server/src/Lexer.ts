@@ -3009,7 +3009,7 @@ export class Lexer {
 								if (lk.content.match(/^\d/))
 									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
 								let tn = Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length));
-								if ((_cm = comments[tn.selectionRange.start.line]) && !_cm.symbol)
+								if ((_cm = comments[tn.selectionRange.start.line]) && tn.selectionRange.start.line > (lineno ??= _this.document.positionAt(beg).line))
 									set_detail(tn, _cm);
 								tn.def = true, tn.defaultVal = null, cache.push(tn);
 								result.push(...parse_expression(',', 2)), next = true;
