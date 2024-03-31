@@ -221,7 +221,14 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			items.push(...completionItemCache.key), kind = SymbolKind.Event;
 			break;
 		case 'TK_BLOCK_COMMENT':
-			add_classes();
+			if (!/[<{|,][ \t]*$/.test(linetext.substring(0, range.start.character)))
+				return;
+			if (text.includes('.')) {
+				for (let it of Object.values(find_class(doc, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
+					if (it.kind === SymbolKind.Class && expg.test(it.name))
+						items.push(convertNodeCompletion(it));
+				}
+			} else add_classes();
 			return items;
 		case 'TK_COMMENT':
 		case 'TK_INLINE_COMMENT': return;
@@ -266,13 +273,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							for (text = token.content; (tk = tokens[tk.next_token_offset!]) && tk.offset < off; text += tk.content);
 							if (allIdentifierChar.test(text.replace(/\./g, ''))) {
 								for (let it of Object.values(find_class(doc, text)?.property ?? {})) {
-									if (it.kind === SymbolKind.Class && !vars[l = it.name.toUpperCase()] && expg.test(l))
-										items.push(convertNodeCompletion(it)), vars[l] = true;
+									if (it.kind === SymbolKind.Class && expg.test(it.name))
+										items.push(convertNodeCompletion(it));
 								}
 							}
-							return items;
-						}
-						add_classes();
+						} else add_classes();
 						return items;
 					case 'break':
 					case 'continue':

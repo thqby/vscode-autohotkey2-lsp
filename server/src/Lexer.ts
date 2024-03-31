@@ -996,7 +996,7 @@ export class Lexer {
 				}
 				function parse_params(endc = ')') {
 					let params: ParamList = [], vr: Variable, star: Variable | undefined, next_is_param: boolean | 1 = true;
-					let defVal = 0, full = '', offset = params.offset ??= [];
+					let defVal = 0, full = '', offset = params.offset ??= [], star_offset = 0;
 					loop: while ((lk = tokens[++j]) && lk.content !== endc) {
 						switch (lk.type) {
 							case 'TK_WORD':
@@ -1048,10 +1048,10 @@ export class Lexer {
 										skip(endc);
 										break loop;
 									}
-									vr = Variable.create('', SymbolKind.Variable, make_range(lk.offset, 0)), star ??= vr;
+									vr = Variable.create('', SymbolKind.Variable, make_range(lk.offset, 0));
 									params.variadic = vr.arr = vr.assigned = vr.def = vr.is_param = true;
 									defVal && (vr.defaultVal = false), next_is_param = false;
-									offset.push(full.length), full += '*';
+									star ??= (star_offset = full.length, vr), full += '*';
 								} else if (lk.content === '[')
 									defVal++, lk.ignore = true, full += '[';
 								else if (defVal && lk.content === ']')
@@ -1065,7 +1065,7 @@ export class Lexer {
 								break;
 						}
 					}
-					params.full = full, star && params.push(star);
+					params.full = full, star && (params.push(star), offset.push(star_offset));
 					return params;
 				}
 				function create_fn(name: string, params: ParamList, range: Range, isstatic = false) {
@@ -3214,7 +3214,10 @@ export class Lexer {
 								nexttoken();
 								if (tk.content === ':') {
 									k = { ...lk }, k.content = k.content.slice(1, -1), k.offset++, k.length -= 2;
-									!h && _this.addDiagnostic(diagnostic.invalidpropname(), lk.offset, lk.length);
+									if (!h && (!lk.content.startsWith('"') || !stop_parse(lk)))
+										_this.addDiagnostic(
+											[diagnostic.invalidpropname(), diagnostic.didyoumean(k.content)].join(', '),
+											lk.offset, lk.length);
 									return true;
 								}
 								return isobj = false;
@@ -3240,12 +3243,12 @@ export class Lexer {
 				}
 
 				function objval(): boolean {
-					let colon = tk, exp = parse_expression(',');
-					result.push(...exp);
+					let colon = tk.offset;
+					result.push(...parse_expression(','));
 					if (k) {
 						addprop(k);
 						(props[k.content.toUpperCase()] = Variable.create(k.content, SymbolKind.Property, make_range(k.offset, k.length)))
-							.returns = [colon.offset + 1, lk.offset + lk.length];
+							.returns = [colon + 1, lk.offset + lk.length];
 					}
 					if (tk.type === 'TK_COMMA')
 						return !(next = true);
@@ -3255,23 +3258,6 @@ export class Lexer {
 						return true;
 					else
 						return !(isobj = false);
-				}
-			}
-
-			function parse_errobj() {
-				let num = 0;
-				if (!next && tk.type === 'TK_START_BLOCK')
-					next = true;
-				while (nexttoken()) {
-					switch (tk.type) {
-						case 'TK_START_BLOCK':
-							num++;
-							break;
-						case 'TK_END_BLOCK':
-							if ((--num) < 0)
-								return;
-							break;
-					}
 				}
 			}
 
@@ -6048,7 +6034,7 @@ export class Lexer {
 		} else if (pt?.content.startsWith('#'))
 			token = pt, text = pt.content;
 		else {
-			text = (token = this.find_token(range.start.character === linetext.length ? off - 1 : off)).content;
+			token = this.find_token(range.start.character === linetext.length ? off - 1 : off);
 			if (token.type.endsWith('COMMENT')) {
 				let s = linetext.substring(0, character), m = s.match(
 					/(@see|\{@link(code|plain)?|@param(\s+\{[^}]*\})?)\s+((\[[ \t]*)?[^ \t]+)$/);
@@ -6065,7 +6051,8 @@ export class Lexer {
 							m[3] ? SymbolKind.Method : SymbolKind.Property :
 							m[3] ? SymbolKind.Function : SymbolKind.Class;
 					}
-				}
+				} else if (m = s.match(/(([\w.]|[^\x00-\x7f])+)$/))
+					text = m[1] + word;
 			}
 		}
 		kind ??= SymbolKind.Null;
