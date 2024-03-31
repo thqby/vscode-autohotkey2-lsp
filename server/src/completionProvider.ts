@@ -179,21 +179,27 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							(item: CompletionItem, newText: string) => item.insertText = newText;
 						let set_file_text = range || c ? set_folder_text : (item: CompletionItem, newText: string) => undefined;
 						for (let path of paths) {
-							if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory())
+							if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory() || vars[path = path.toUpperCase()])
 								continue;
 							try {
+								vars[path] = 1;
 								for (let label of readdirSync(path)) {
 									try {
 										if (statSync(path + label).isDirectory()) {
 											if (!ep.test(label))
 												continue;
-											label = label.replace(/(`|(?<= );)/g, '`$1');
-											set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + xg);
+											vars[`${label.toUpperCase()}/`] ??= (
+												label = label.replace(/(`|(?<= );)/g, '`$1'),
+												set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + xg),
+												1
+											);
 										} else {
 											if (!extreg.test(label) || !ep.test(inlib ? label = label.replace(extreg, '') : label))
 												continue;
-											label = label.replace(/(`|(?<= );)/g, '`$1');
-											set_file_text(cpitem = { label, kind: CompletionItemKind.File }, label + c);
+											vars[label.toUpperCase()] ??= (label = label.replace(/(`|(?<= );)/g, '`$1'),
+												set_file_text(cpitem = { label, kind: CompletionItemKind.File }, label + c),
+												1
+											);
 										}
 										items.push(cpitem);
 									} catch { }
@@ -214,8 +220,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			// xxx::|
 			items.push(...completionItemCache.key), kind = SymbolKind.Event;
 			break;
-		case 'TK_COMMENT':
 		case 'TK_BLOCK_COMMENT':
+			add_classes();
+			return items;
+		case 'TK_COMMENT':
 		case 'TK_INLINE_COMMENT': return;
 		default:
 			if (token.callsite || token.topofline > 0)
@@ -264,13 +272,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							}
 							return items;
 						}
-						let decls = [ahkvars, doc.declaration];
-						for (const uri in list)
-							(t = lexers[uri]) && decls.push(t.declaration);
-						for (const decl of decls)
-							for (const cl in decl)
-								if ((t = decl[cl]).kind === SymbolKind.Class && !vars[cl] && expg.test(cl))
-									items.push(convertNodeCompletion(t)), vars[cl] = true;
+						add_classes();
 						return items;
 					case 'break':
 					case 'continue':
@@ -715,6 +717,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		let nk = doc.tokens[tk.next_token_offset], t;
 		if (nk && (((t = nk.symbol)?.detail ?? (t = doc.tokens[nk.next_token_offset]?.symbol)?.detail) !== undefined))
 			return t;
+	}
+	function add_classes() {
+		let decls = [ahkvars, doc.declaration], t;
+		for (const uri in list)
+			(t = lexers[uri]) && decls.push(t.declaration);
+		for (const decl of decls)
+			for (const cl in decl)
+				if ((t = decl[cl]).kind === SymbolKind.Class && expg.test(cl))
+					vars[cl] ??= items.push(convertNodeCompletion(t));
 	}
 	function add_paths(only_folder = false, ext_re?: RegExp) {
 		if (isBrowser)
