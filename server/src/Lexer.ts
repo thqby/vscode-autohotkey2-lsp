@@ -6035,7 +6035,9 @@ export class Lexer {
 			token = pt, text = pt.content;
 		else {
 			token = this.find_token(range.start.character === linetext.length ? off - 1 : off);
-			if (token.type.endsWith('COMMENT')) {
+			if (token.type === 'TK_STRING')
+				text = token.content;
+			else if (token.type.endsWith('COMMENT')) {
 				let s = linetext.substring(0, character), m = s.match(
 					/(@see|\{@link(code|plain)?|@param(\s+\{[^}]*\})?)\s+((\[[ \t]*)?[^ \t]+)$/);
 				if (m) {
