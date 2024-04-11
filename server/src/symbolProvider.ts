@@ -285,7 +285,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 	if (is_cls = node?.kind === SymbolKind.Class)
 		node = get_class_constructor(node as any) as any;
 	if (!(params = node?.params)) return;
-	let { max, min } = get_func_param_count(node), l = params.length;
+	let { max, min } = get_func_param_count(node), l = params.length - (node.variadic ? 1 : 0);
 	let { count, miss } = paraminfo, _miss: { [index: number]: boolean } = {}, index;
 	while ((index = miss.pop()) !== undefined) {
 		if (index !== --count) {
