@@ -110,11 +110,18 @@
 					"default": false,
 					"markdownDescription": "%ahk2.completefunctionparens%"
 				},
-				"AutoHotkey2.DefaultDebugger": {
+				"AutoHotkey2.DebugConfiguration": {
 					"scope": "window",
-					"type": "string",
-					"default": "zero-plusplus.vscode-autohotkey-debug",
-					"description": "%ahk2.defaultdebugger%"
+					"type": "object",
+					"default": {
+						"program": "${file}",
+						"port": "9002-9100",
+						"useAnnounce": "detail",
+						"useAutoJumpToError": true,
+						"useDebugDirective": true,
+						"usePerfTips": true
+					},
+					"description": "%ahk2.debugconfiguration%"
 				},
 				"AutoHotkey2.Diagnostics.ClassStaticMemberCheck": {
 					"scope": "window",
