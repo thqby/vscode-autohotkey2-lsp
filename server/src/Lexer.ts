@@ -524,7 +524,8 @@ export class Lexer {
 				if (ck.fat_arrow_end) {
 					while (!flags.in_fat_arrow)
 						restore_mode();
-					deindent();
+					flags.indentation_level = flags.in_fat_arrow - 1;
+					delete flags.in_fat_arrow;
 				}
 
 				if (ck.offset >= end_pos) {
@@ -5594,7 +5595,7 @@ export class Lexer {
 					set_mode(MODE.Statement);
 				else if (is_conditional && flags.parent.mode === MODE.BlockStatement)
 					is_conditional = false;
-				indent(), flags.in_fat_arrow = true;
+				indent(), flags.in_fat_arrow = flags.indentation_level;
 			} else if (token_text_low.match(/^(\+\+|--|%|!|~|not)$/) && need_newline()) {
 				print_newline(), print_token();
 				if (token_text_low === 'not')
