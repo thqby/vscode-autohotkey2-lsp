@@ -360,6 +360,7 @@ export class Lexer {
 	public foldingranges: FoldingRange[] = [];
 	public fsPath = '';
 	public get_token: (offset?: number, ignorecomment?: boolean) => Token;
+	public need_scriptdir = false;
 	public include: { [uri: string]: string } = {};
 	public includedir = new Map<number, string>();
 	public isparsed = false;
@@ -3948,7 +3949,7 @@ export class Lexer {
 				text = text.slice(1, -1);
 			if (m = text.match(/^(\*[iI][ \t])?(.*)$/)) {
 				raw = m[2], ignore = Boolean(m[1]);
-				m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, _this.scriptdir)
+				m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, () => (_this.need_scriptdir = true, _this.scriptdir))
 					.replace(/%a_linefile%/i, _this.fsPath);
 				if (tk)
 					_this[isdll ? 'dlldir' : 'includedir'].set(
@@ -3971,6 +3972,7 @@ export class Lexer {
 							else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/'));
 						}
 					} else {
+						let islib = m.startsWith('<');
 						if (tk) {
 							if (m.startsWith('*')) {
 								let rs = utils.get_RCDATA(tk.content.substring(1));
@@ -3988,6 +3990,7 @@ export class Lexer {
 							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
 						} else if ((m = find_include_path(m.replace(/(\.d)?>$/i, '.d>'), _this.libdirs, _this.scriptpath)) && existsSync(m.path) && !statSync(m.path).isDirectory())
 							includetable[m.uri] = m.path;
+						_this.need_scriptdir ||= islib && (!m || m.path.toLowerCase().startsWith(_this.libdirs[0].toLowerCase()));
 					}
 				}
 			} else if (text && tk)
@@ -5844,7 +5847,7 @@ export class Lexer {
 		this.diagnostics.length = this.foldingranges.length = 0;
 		this.children.length = this.dllpaths.length = this.tokenranges.length = 0;
 		this.includedir.clear(), this.dlldir.clear();
-		this.hotstringExecuteAction = this.isparsed = false;
+		this.need_scriptdir = this.hotstringExecuteAction = this.isparsed = false;
 		delete this.maybev1;
 		delete this.checkmember;
 		delete this.symbolInformation;
@@ -6117,15 +6120,18 @@ export class Lexer {
 		if (isBrowser)
 			return;
 		let workfolder: string;
+		if (!dir) {
 		for (workfolder of extsettings.WorkingDirs)
 			if (this.uri.startsWith(workfolder)) {
-				dir = URI.parse(workfolder).fsPath.replace(/[\\/]$/, '');
+					dir = restorePath(URI.parse(workfolder).fsPath.replace(/[\\/]$/, ''));
 				break;
+				}
 			}
 		if (dir)
-			this.scriptdir = restorePath(dir);
+			this.scriptdir = dir;
 		else if ((workfolder = resolve()).toLowerCase() !== this.scriptpath.toLowerCase()
-			&& workfolder.toLowerCase() !== process.argv0.toLowerCase() && this.scriptpath.toLowerCase().startsWith(workfolder)
+			&& workfolder.toLowerCase() !== process.argv0.toLowerCase()
+			&& this.scriptpath.toLowerCase().startsWith(workfolder.toLowerCase())
 			&& !/\\lib(\\.+)?$/i.test(this.scriptpath)) {
 			if (existsSync(this.scriptpath + '\\Lib') && statSync(this.scriptpath + '\\Lib').isDirectory())
 				this.scriptdir = this.scriptpath;
@@ -6133,7 +6139,8 @@ export class Lexer {
 		} else this.scriptdir = this.scriptpath.replace(/\\Lib(\\.+)?$/i, '');
 		this.libdirs = [dir = this.scriptdir + '\\Lib\\'];
 		dir = dir.toLowerCase();
-		for (const t of libdirs) if (this.libdirs[0] !== t.toLowerCase()) this.libdirs.push(t);
+		for (const t of libdirs)
+			dir !== t.toLowerCase() && this.libdirs.push(t);
 	}
 
 	public getColors() {
@@ -6216,7 +6223,9 @@ export class Lexer {
 			this.initLibDirs(main);
 		for (const u in relevance) {
 			delete initial[u];
-			(lex = lexers[u]).scriptdir.toLowerCase() !== m && lex.initLibDirs(main);
+			if ((lex = lexers[u]).scriptdir.toLowerCase() === m)
+				continue;
+			lex.initLibDirs(main), lex.need_scriptdir && lex.parseScript();
 		}
 		for (const u in initial) {
 			const t = lexers[u];
@@ -6354,18 +6363,18 @@ export function find_include_path(path: string, libdirs: string[], workdir: stri
 	}
 }
 
-export function parse_include(lex: Lexer, dir: string) {
-	let include = lex.include;
+export function parse_include(lex: Lexer, dir: string, _set = new Set()) {
+	let include = lex.include, l = dir.toLowerCase();
+	_set.add(lex);
 	for (const uri in include) {
-		let path = include[uri];
-		if (!lexers[uri] && existsSync(path)) {
-			let t = openFile(restorePath(path));
-			if (!t)
+		let path = include[uri], lex, t;
+		if (!(lex = lexers[uri])) {
+			if (!existsSync(path) || !(t = openFile(restorePath(path))))
 				continue;
-			let doc = new Lexer(t, dir);
-			lexers[uri] = doc, doc.parseScript();
-			parse_include(doc, dir);
-		}
+			(lexers[uri] = lex = new Lexer(t, dir)).parseScript();
+		} else if (lex.scriptdir.toLowerCase() !== l)
+			lex.initLibDirs(dir), lex.need_scriptdir && lex.parseScript();
+		_set.has(lex) || parse_include(lex, dir, _set);
 	}
 }
 

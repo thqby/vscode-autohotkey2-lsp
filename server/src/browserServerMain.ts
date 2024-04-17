@@ -5,11 +5,11 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, BrowserMessageReader, BrowserMessageWriter, DidChangeConfigurationNotification,
-	ExecuteCommandParams, InitializeResult, TextDocuments, TextDocumentSyncKind
+	InitializeResult, TextDocuments, TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import {
-	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, completionProvider,
-	defintionProvider, diagnosticFull, documentFormatting, enumNames, exportSymbols, generateComment,
+	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, commands, completionProvider,
+	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols,
 	hoverProvider, initahk2cache, Lexer, lexers, loadahk2, loadlocalize, prepareRename, rangeFormatting,
 	referenceProvider, renameProvider, SemanticTokenModifiers, semanticTokensOnFull, semanticTokensOnRange,
 	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
@@ -55,12 +55,7 @@ connection.onInitialize(params => {
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
 			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinese_punctuations)] },
-			executeCommandProvider: {
-				commands: [
-					'ahk2.diagnostic.full',
-					'ahk2.generate.comment'
-				]
-			},
+			executeCommandProvider: { commands: Object.keys(commands) },
 			hoverProvider: true,
 			foldingRangeProvider: true,
 			colorProvider: true,
@@ -181,15 +176,3 @@ connection.onNotification('onDidCloseTextDocument',
 	});
 documents.listen(connection);
 connection.listen();
-
-async function executeCommandProvider(params: ExecuteCommandParams) {
-	let args = params.arguments || [];
-	switch (params.command) {
-		case 'ahk2.diagnostic.full':
-			diagnosticFull();
-			break;
-		case 'ahk2.generate.comment':
-			generateComment();
-			break;
-	}
-}

@@ -1,8 +1,9 @@
-import { Position, Range, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, ExecuteCommandParams, Position, Range, SymbolKind } from 'vscode-languageserver';
 import {
 	AhkSymbol, ClassNode, FuncNode, Lexer, Property, Token, Variable,
 	connection, extsettings, find_class, generate_type_annotation,
-	join_types, lexers, restorePath, semanticTokensOnFull, update_include_cache
+	join_types, lexers, parse_include, restorePath, semanticTokensOnFull,
+	traverse_include, update_include_cache
 } from './common';
 
 function checkCommand(cmd: string) {
@@ -17,7 +18,7 @@ function trim_jsdoc(detail?: string) {
 		.replace(/^\/\*+\s*|\s*\**\/$/g, '') ?? '';
 }
 
-export function insertSnippet(value: string, range?: Range) {
+function insertSnippet(value: string, range?: Range) {
 	if (!checkCommand('ahk2.insertSnippet'))
 		return;
 	connection.sendRequest('ahk2.insertSnippet', [value, range]);
@@ -72,7 +73,7 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 	return text;
 }
 
-export async function generateComment() {
+async function generateComment() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
 		return;
 	let { uri, position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
@@ -195,8 +196,8 @@ export function exportSymbols(uri: string) {
 	}
 }
 
-export async function diagnosticFull() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
+async function diagnosticFull() {
+	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
 		return;
 	let { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
 	const doc = lexers[uri.toLowerCase()];
@@ -205,4 +206,28 @@ export async function diagnosticFull() {
 	for (let u in doc.relevance)
 		(u = lexers[u]?.document.uri) && semanticTokensOnFull({ textDocument: { uri: u } });
 	semanticTokensOnFull({ textDocument: { uri } });
+}
+
+async function setscriptdir() {
+	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+		return;
+	let { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const lex = lexers[uri.toLowerCase()];
+	if (!lex) return;
+	if (lex.scriptdir !== lex.scriptpath)
+		lex.initLibDirs(lex.scriptpath), lex.need_scriptdir && lex.parseScript();
+	parse_include(lex, lex.scriptpath);
+	traverse_include(lex);
+	lex.sendDiagnostics(false, true);
+}
+
+export const commands: { [command: string]: (args: any[]) => any } = {
+	'ahk2.diagnostic.full': (args: any[]) => diagnosticFull(),
+	'ahk2.generate.comment': (args: any[]) => generateComment(),
+	'ahk2.setscriptdir': setscriptdir
+};
+
+export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
+	if (!token?.isCancellationRequested)
+		return commands[params.command](params.arguments ?? []);
 }

@@ -443,6 +443,12 @@
 				"command": "ahk2.selectsyntaxes",
 				"title": "Select syntaxes",
 				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && resourceScheme == file",
+				"command": "ahk2.setscriptdir",
+				"title": "%ahk2.setscriptdir%",
+				"category": "ahk2"
 			}
 		],
 		"menus": {

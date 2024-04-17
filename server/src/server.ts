@@ -1,15 +1,15 @@
 import { resolve } from 'path';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	CancellationToken, createConnection, DidChangeConfigurationNotification, ExecuteCommandParams,
-	InitializeResult, ProposedFeatures, SymbolKind, TextDocuments, TextDocumentSyncKind
+	createConnection, DidChangeConfigurationNotification, InitializeResult,
+	ProposedFeatures, SymbolKind, TextDocuments, TextDocumentSyncKind
 } from 'vscode-languageserver/node';
 import { URI } from 'vscode-uri';
 import { get_ahkProvider } from './ahkProvider';
 import {
 	a_vars, AHKLSSettings, ahkpath_cur, chinese_punctuations, clearLibfuns, codeActionProvider,
-	colorPresentation, colorProvider, completionProvider, defintionProvider, diagnosticFull,
-	documentFormatting, enum_ahkfiles, exportSymbols, extsettings, generateComment, hoverProvider,
+	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
+	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, extsettings, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile,
 	parse_include, prepareRename, rangeFormatting, referenceProvider, renameProvider, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
@@ -24,6 +24,9 @@ const documents = new TextDocuments(TextDocument);
 const connection = set_Connection(createConnection(ProposedFeatures.all));
 let hasConfigurationCapability = false, hasWorkspaceFolderCapability = false;
 let uri_switch_to_ahk2 = '', workspaceFolders = new Set<string>();
+
+commands['ahk2.resetinterpreterpath'] = (args: any[]) =>
+	setInterpreter((args[0] as string).replace(/^[A-Z]:/, m => m.toLowerCase()));
 
 connection.onInitialize(async params => {
 	let capabilities = params.capabilities;
@@ -55,13 +58,7 @@ connection.onInitialize(async params => {
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
 			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinese_punctuations)] },
-			executeCommandProvider: {
-				commands: [
-					'ahk2.diagnostic.full',
-					'ahk2.generate.comment',
-					'ahk2.resetinterpreterpath'
-				]
-			},
+			executeCommandProvider: { commands: Object.keys(commands) },
 			hoverProvider: true,
 			foldingRangeProvider: true,
 			colorProvider: true,
@@ -84,9 +81,9 @@ connection.onInitialize(async params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	let configs: AHKLSSettings | undefined;
-	if (process.env.AHK2_LS_CONFIG)
-		try { configs = JSON.parse(process.env.AHK2_LS_CONFIG); } catch { }
+	let configs: AHKLSSettings | undefined, env = process.env;
+	if (env.AHK2_LS_CONFIG)
+		try { configs = JSON.parse(env.AHK2_LS_CONFIG); } catch { }
 	if (params.initializationOptions)
 		configs = Object.assign(configs ?? {}, params.initializationOptions);
 	set_dirname(resolve(__dirname, '../..'));
@@ -214,22 +211,6 @@ connection.onNotification('onDidCloseTextDocument', (params: { uri: string, id: 
 });
 documents.listen(connection);
 connection.listen();
-
-function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
-	if (token?.isCancellationRequested) return;
-	let args = params.arguments || [];
-	switch (params.command) {
-		case 'ahk2.diagnostic.full':
-			diagnosticFull();
-			break;
-		case 'ahk2.generate.comment':
-			generateComment();
-			break;
-		case 'ahk2.resetinterpreterpath':
-			setInterpreter((args[0] as string).replace(/^[A-Z]:/, m => m.toLowerCase()));
-			break;
-	}
-}
 
 async function patherr(msg: string) {
 	if (!extsettings.commands?.includes('ahk2.executeCommand'))

@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 
 import { Connection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { AhkSymbol, ActionType, FormatOptions, Lexer, update_comment_tags, ClassNode } from './Lexer';
+import { AhkSymbol, ActionType, FormatOptions, Lexer, update_comment_tags } from './Lexer';
 import { diagnostic } from './localize';
 import { isBrowser, jsDocTagNames } from './constants';
 export * from './codeActionProvider';
@@ -172,17 +172,17 @@ export function restorePath(path: string): string {
 		return path;
 	if (path.includes('..'))
 		path = resolve(path);
-	let dirs = path.toLowerCase().split(/[/\\]/), i = 1, s = dirs[0];
-	let _dirs = path.split(/[/\\]/);
+	let dirs = path.split(/[/\\]/), s = dirs[0].toLowerCase(), i = 1, l;
 	while (i < dirs.length) {
 		try {
+			l = dirs[i].toLowerCase();
 			for (const d of readdirSync(s + sep)) {
-				if (d.toLowerCase() === dirs[i]) {
+				if (d.toLowerCase() === l) {
 					s += sep + d;
 					break;
 				}
 			}
-		} catch { s += sep + _dirs[i]; }
+		} catch { s += sep + dirs[i]; }
 		i++;
 	}
 	return s;
@@ -511,7 +511,7 @@ export function arrayEqual(a: string[], b: string[]) {
 
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
-export function set_ahkpath(path: string) { ahkpath_cur = path; }
+export function set_ahkpath(path: string) { ahkpath_cur = path.replace(/^.:/, s => s.toLowerCase()); }
 export function set_Connection(conn: Connection) { return connection = conn; }
 export function set_dirname(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }
