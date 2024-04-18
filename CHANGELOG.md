@@ -1,3 +1,9 @@
+## 2.4.2
+- 修复[#499](https://github.com/thqby/vscode-autohotkey2-lsp/issues/499)
+- 修复[#503](https://github.com/thqby/vscode-autohotkey2-lsp/issues/503)
+- 修复[#505](https://github.com/thqby/vscode-autohotkey2-lsp/issues/505)
+- 设置`DefaultDebugger`更改为`DebugConfiguration`, 该设置用于将调试配置追加到当前启动的调试器 [#504](https://github.com/thqby/vscode-autohotkey2-lsp/issues/504)
+
 ## 2.4.1
 - 修复[#496](https://github.com/thqby/vscode-autohotkey2-lsp/issues/496)
 - 修复[#497](https://github.com/thqby/vscode-autohotkey2-lsp/issues/497)

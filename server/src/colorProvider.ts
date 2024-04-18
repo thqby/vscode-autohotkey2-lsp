@@ -1,17 +1,21 @@
-import { CancellationToken, ColorInformation, ColorPresentation, ColorPresentationParams, DocumentColorParams, TextEdit } from 'vscode-languageserver';
+import { CancellationToken, ColorInformation, ColorPresentation, ColorPresentationParams, DocumentColorParams } from 'vscode-languageserver';
 import { Maybe, lexers } from './common';
 
 export async function colorPresentation(params: ColorPresentationParams, token: CancellationToken): Promise<Maybe<ColorPresentation[]>> {
-	let label = 'RGB: ', textEdit: TextEdit = { range: params.range, newText: '' }, color = params.color, m: any;
-	let text = lexers[params.textDocument.uri.toLowerCase()]?.document.getText(params.range), hex = '';
+	let { range, color, textDocument: { uri } } = params, text = lexers[uri.toLowerCase()]?.document.getText(range);
 	if (!text || token.isCancellationRequested) return;
-	for (const i of [color.alpha, color.red, color.green, color.blue])
-		hex += ('00' + Math.round(i * 255).toString(16)).slice(-2);
-	if (m = text.match(/^(0x)?([\da-f]{6}([\da-f]{2})?)/i))
-		textEdit.newText = (m[1] || '') + hex.slice(-m[2].length);
-	else textEdit.newText = hex.substring(2);
-	label += textEdit.newText
-	return [{ label, textEdit }];
+	let pre = /^0x/.test(text) ? '0x' : '', A = text.length - (pre ? 2 : 0) > 6 ? 'A' : '';
+	let colors: number[] | string[] =[color.red, color.green, color.blue];
+	A && colors.unshift(color.alpha);
+	colors = colors.map(v => `0${Math.round(v * 255).toString(16)}`.slice(-2));
+	colors = [colors.join(''), colors.reverse().join('')];
+	return [{
+		label: `${A}RGB: ${colors[0]}`,
+		textEdit: { range, newText: `${pre}${colors[0]}` }
+	}, {
+		label: `BGR${A}: ${colors[1]}`,
+		textEdit: { range, newText: `${pre}${colors[1]}` }
+	}];
 }
 
 export async function colorProvider(params: DocumentColorParams, token: CancellationToken): Promise<Maybe<ColorInformation[]>> {

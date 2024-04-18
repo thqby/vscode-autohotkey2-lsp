@@ -3723,9 +3723,10 @@ export class Lexer {
 							delete (tokens[document.offsetAt(it.selectionRange.start)] ?? {}).semantic;
 						if (it.children) {
 							let tc = it.static || it.kind === SymbolKind.Class ? sdec : (it.parent = prototype, dec);
-							if (!(t = tc[_low]))
+							let t = tc[_low] as Property;
+							if (!t)
 								tc[_low] = it;
-							else if (t.kind === SymbolKind.Property && !t.children?.length) {
+							else if (t.kind === SymbolKind.Property && !(t.get ?? t.set)) {
 								if (it.children.length || it.kind !== SymbolKind.Property)
 									tc[_low] = it;
 							} else {
@@ -4842,13 +4843,13 @@ export class Lexer {
 				let sep = c, o = offset, nosep = false, se = { type: SemanticTokenTypes.string }, _lst: Token | undefined, pt: Token | undefined;
 				resulting_string = '';
 				if (!/^[ \t\r\n+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1))) {
-					let msg = diagnostic.missingspace();
+					let msg = diagnostic.missingspace(), eo = offset;
 					if (sep === c) {
 						if (c === "'" || !stop_parse(lst))
-							msg += ', ' + diagnostic.didyoumean(`\`${c}`);
+							msg = diagnostic.didyoumean(`\`${c}`), eo--;
 						else msg = '', offset = lst.offset, lst = lst.previous_token!, _this.tokenranges.pop();
 					}
-					msg && _this.addDiagnostic(msg, offset, 1);
+					msg && _this.addDiagnostic(msg, eo, 1);
 				}
 				while (c = input.charAt(parser_pos++)) {
 					if (c === '`')
@@ -6122,12 +6123,12 @@ export class Lexer {
 			return;
 		let workfolder: string;
 		if (!dir) {
-		for (workfolder of extsettings.WorkingDirs)
-			if (this.uri.startsWith(workfolder)) {
+			for (workfolder of extsettings.WorkingDirs)
+				if (this.uri.startsWith(workfolder)) {
 					dir = restorePath(URI.parse(workfolder).fsPath.replace(/[\\/]$/, ''));
-				break;
+					break;
 				}
-			}
+		}
 		if (dir)
 			this.scriptdir = dir;
 		else if ((workfolder = resolve()).toLowerCase() !== this.scriptpath.toLowerCase()

@@ -2074,7 +2074,7 @@
     "continuation_string": {
       "patterns": [
         {
-          "begin": "(?<=^[ \t]*)(\\()((((?i:join)[^ \t]*|[^ \t();]+)(?=[ \t]|$)|[ \t]+)*)(?<=([ \t]|^[ \t]*\\()(c(om(ments?)?)?)([ \t].*|$))((?<=[ \t]);.*)?$",
+          "begin": "(?<=^[ \t]*)(\\()((((?i:join)[^ \t]*|[^ \t();]+)(?=[ \t]|$)|[ \t]+)*)(?<=([ \t]|^[ \t]*\\()(?i:c(om(ments?)?)?)([ \t].*|$))((?<=[ \t]);.*)?$",
           "beginCaptures": {
             "1": {
               "name": "punctuation.section.parens.begin.bracket.round.ahk2"

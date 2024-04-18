@@ -823,13 +823,13 @@ Critical(OnOffNumeric := 'On') => Integer
  * @param Time 要添加的时间, 以整数或浮点数表示. 指定一个负数以执行减法.
  * @param TimeUnits Time 参数的单位. TimeUnits 可以是下列字符串之一(也可以是其第一个字母): Seconds(秒), Minutes(分), Hours(小时) 或 Days(天).
  */
-DateAdd(DateTime, Time, TimeUnits) => String
+DateAdd(DateTime, Time, TimeUnits: 'Seconds' | 'Minutes' | 'Hours' | 'Days') => String
 
 /**
  * 比较两个日期-时间并返回它们的差异值.
  * @param TimeUnits Time 参数的单位. TimeUnits 可以是下列字符串之一(也可以是其第一个字母): Seconds(秒), Minutes(分), Hours(小时) 或 Days(天).
  */
-DateDiff(DateTime1, DateTime2, TimeUnits) => Integer
+DateDiff(DateTime1, DateTime2, TimeUnits: 'Seconds' | 'Minutes' | 'Hours' | 'Days') => Integer
 
 /**
  * 设置在查找窗口时是否 '看见' 隐藏的文本. 这将影响 WinExist 和 WinActivate 等内置函数.

@@ -1,34 +1,59 @@
 import { readdirSync } from 'fs';
 import { CancellationToken, CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
 import { codeaction, diagnostic } from './localize';
-import { Maybe, lexers, restorePath } from './common';
+import { Maybe, lexers, restorePath, warn } from './common';
 
 export async function codeActionProvider(params: CodeActionParams, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
-	let uri = params.textDocument.uri, doc = lexers[uri.toLowerCase()];
-	if (!doc || token.isCancellationRequested) return;
-	let rg = new RegExp('^' + diagnostic.filenotexist().replace('{0}', '(.+?)\\*(\\.\\w+)')), t: RegExpExecArray | null, r = '';
-	let matchexpr = new RegExp(`${diagnostic.unexpected('(.+)')}, ${diagnostic.didyoumean(':=').toLowerCase()}`.replace('?', '\\?') + '$|^' + diagnostic.deprecated('([^\'"]+)', '([^\'"]+)'));
-	let acts: CodeAction[] = [], replaces: { [k: string]: TextEdit[] } = {};
-	for (const it of doc.diagnostics) {
-		if (t = matchexpr.exec(it.message)) {
-			(replaces[t[3] ? `${t[3]} ${r = t[2]}` : `${t[1]} ${r = ':='}`] ??= []).push({ range: it.range, newText: r });
-		} else if (t = rg.exec(it.message)) {
-			r = doc.document.getText(it.range);
-			let path = restorePath(t[1]), reg = new RegExp(t[2] + '$', 'i'), includes = [];
+	let uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()];
+	if (!lex || token.isCancellationRequested) return;
+	let acts: CodeAction[] = [], replaces: { [k: string]: TextEdit[] } = {}, parens: TextEdit[] = [];
+	let r: string, t: RegExpExecArray | null, document = lex.document;
+	let cwp = warn.callwithoutparentheses();
+	let include_re = new RegExp('^' + diagnostic.filenotexist('(.+?)\\*\\.(\\w+)'));
+	let repl_re = new RegExp(diagnostic.didyoumean('(.+?)')
+		.replace(/\?$/, '\\?').replace(/^\w/, s => `[${s.toUpperCase() + s.toLowerCase()}]`) +
+		'$|^' + diagnostic.deprecated('.+?', '(.+?)'));
+
+	for (const it of lex.diagnostics) {
+		if (cwp === it.message) {
+			let tk = lex.tokens[document.offsetAt(it.range.start)], cs = tk.callsite!;
+			let end = cs.range.end, start = tk.next_token_offset === -1 ?
+				end = it.range.end : document.positionAt(tk.next_token_offset);
+			if (start.line > end.line || start.line === end.line && start.character > end.character)
+				start = end;
+			parens.push(
+				{ newText: '(', range: { start: it.range.end, end: start } },
+				{ newText: ')', range: { start: end, end } }
+			);
+		} else if (t = repl_re.exec(it.message)) {
+			(replaces[`${document.getText(it.range)} ${r = t[1] || t[2]}`] ??= []).push({ range: it.range, newText: r });
+		} else if (t = include_re.exec(it.message)) {
+			r = document.getText(it.range).replace(/\//g, '\\').replace(/[^\\]+$/, '');
+			let path = restorePath(t[1]), reg = new RegExp(`\\.${t[2]}$`, 'i'), includes = [];
 			let rg = Object.assign({}, it.range);
 			rg.start = Object.assign({}, rg.start), rg.start.character = 0;
 			for (const it of readdirSync(path)) {
 				try {
-					if (reg.test(it)) includes.push(`#Include '${path}${it}'`);
+					if (reg.test(it)) includes.push(`#Include '${r}${it}'`);
 				} catch { };
 			}
 			let textEdit: TextEdit = { range: rg, newText: includes.join('\n') };
-			let act: CodeAction = { title: codeaction.include(path + '*' + t[2]), kind: CodeActionKind.QuickFix };
+			let act: CodeAction = { title: codeaction.include(path + '*.' + t[2]), kind: CodeActionKind.QuickFix };
 			act.edit = { changes: { [uri]: [textEdit] } };
 			acts.push(act);
 		}
 	}
 	for (let [k, v] of Object.entries(replaces))
-		acts.push({ title: k.replace(/(\S+) (\S+)/, "Replace '$1' with '$2'"), edit: { changes: { [uri]: v } }, kind: CodeActionKind.QuickFix });
+		acts.push({
+			kind: CodeActionKind.QuickFix,
+			edit: { changes: { [uri]: v } },
+			title: k.replace(/(\S+) (\S+)/, "Replace '$1' with '$2'")
+		});
+	if (parens.length)
+		acts.push({
+			kind: CodeActionKind.Refactor,
+			edit: { changes: { [uri]: parens } },
+			title: 'Use parenthesized function call styles'
+		});
 	return acts.length ? acts : undefined;
 }

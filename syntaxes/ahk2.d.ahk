@@ -829,13 +829,13 @@ Critical(OnOffNumeric := 'On') => Integer
  * @param Time The time to be added, expressed as an integer or floating point number. Specify a negative number to perform the subtraction.
  * @param TimeUnits The unit of the Time parameter. TimeUnits can be one of the following strings (or the first letter): Seconds, Minutes, Hours or Days.
  */
-DateAdd(DateTime, Time, TimeUnits) => String
+DateAdd(DateTime, Time, TimeUnits: 'Seconds' | 'Minutes' | 'Hours' | 'Days') => String
 
 /**
  * Compare two date-times and return their difference value.
  * @param TimeUnits The unit of the Time parameter. TimeUnits can be one of the following strings (or the first letter): Seconds, Minutes, Hours or Days.
  */
-DateDiff(DateTime1, DateTime2, TimeUnits) => Integer
+DateDiff(DateTime1, DateTime2, TimeUnits: 'Seconds' | 'Minutes' | 'Hours' | 'Days') => Integer
 
 /**
  * Set whether to'see' hidden text when searching for windows. This will affect built-in functions such as WinExist and Winactivate.

@@ -325,10 +325,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				if (ci) {
 					let kind: CompletionItemKind, command: { title: string, command: string } | undefined;
 					let endchar = text.substring(1).endsWith(text[0]) ? '' : text[0];
-					let ct: Context | undefined, fn: FuncNode, l: string, index: number, is_builtin: boolean;
+					let fn: FuncNode, l: string, index: number, is_builtin: boolean;
 					let text2item: (label: string) => CompletionItem = !endchar ? (label) => ({ label, kind, command }) :
 						(label) => ({ label, kind, insertText: `${label}${endchar}` });
-					let syms = find_symbols(doc, ct = doc.getContext(ci.pos)) ?? [], it;
+					let syms = find_symbols(doc, doc.getContext(ci.pos)) ?? [], it;
 					let uris = Object.values(ahkuris);
 					let bases: ClassNode[] = [], set: AhkSymbol[] = [];
 					for (it of syms) {

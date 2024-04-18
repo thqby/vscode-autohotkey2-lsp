@@ -172,18 +172,14 @@ export function restorePath(path: string): string {
 		return path;
 	if (path.includes('..'))
 		path = resolve(path);
-	let dirs = path.split(/[/\\]/), s = dirs[0].toLowerCase(), i = 1, l;
-	while (i < dirs.length) {
-		try {
-			l = dirs[i].toLowerCase();
-			for (const d of readdirSync(s + sep)) {
-				if (d.toLowerCase() === l) {
-					s += sep + d;
-					break;
-				}
-			}
-		} catch { s += sep + dirs[i]; }
-		i++;
+	let dirs = path.split(/[/\\]/), s = dirs.shift()!.toLowerCase(), l;
+	for (let dir of dirs) {
+		if (l = dir.toLowerCase())
+			try {
+				for (const d of readdirSync(s))
+					if (d === l) { dir = d; break; }
+			} catch { }
+		s += sep + dir;
 	}
 	return s;
 }
