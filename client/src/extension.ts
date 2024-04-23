@@ -145,12 +145,19 @@ export async function activate(context: ExtensionContext) {
 						if (!config.__ahk2debug) {
 							let def = { ...ahkconfig.get('DebugConfiguration') as any };
 							delete def.request, delete def.type;
-							append_configs.push(def, configs?.filter(it => {
-								for (let k in it)
-									if (it[k] !== config[k])
-										return false;
-								return true;
-							})?.sort((a, b) => Object.keys(a).length - Object.keys(b).length).pop());
+							append_configs.push(def, configs?.filter(it =>
+								Object.entries(it).every(([k, v]) => equal(v, config[k]))
+							)?.sort((a, b) => Object.keys(a).length - Object.keys(b).length).pop());
+							function equal(a: any, b: any): boolean {
+								if (a === b)
+									return true;
+								if (a.__proto__ !== b.__proto__ || typeof a !== 'object')
+									return false;
+								if (a instanceof Array)
+									return a.every((v, i) => equal(v, b[i]));
+								let kv = Object.entries(a);
+								return kv.length === Object.keys(b).length && kv.every(([k, v]) => equal(v, b[k]));
+							}
 						} else if (configs)
 							append_configs.push(configs.find(it => it.name === config.name) ?? configs[0]);
 						Object.assign(config, ...append_configs);
