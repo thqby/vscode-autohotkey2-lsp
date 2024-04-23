@@ -440,7 +440,7 @@ export class Lexer {
 
 		this.find_token = function (offset: number, ignore = false): Token {
 			let i = offset, c = input.charAt(offset), tks = _this.tokens, tk: Token | undefined;
-			let eof = { ...EMPTY_TOKEN, offset: input_length };
+			let eof = { ...tks[-1], type: '' };
 			if (!c)
 				return eof;
 			if (whitespace.includes(c)) {
@@ -3495,14 +3495,13 @@ export class Lexer {
 							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 							break;
 						case 'TK_COMMA':
-							iscall && (tk.paraminfo = info);
 							if (pairnum === 0 && b !== '%') {
 								++info.count;
 								if (lk.type === 'TK_COMMA' || lk.type === 'TK_START_EXPR')
 									info.miss.push(info.comma.length);
 								else if (!lk.ignore && lk.type === 'TK_OPERATOR' && !lk.content.match(/(--|\+\+|%)/))
 									_this.addDiagnostic(diagnostic.unexpected(','), tk.offset, 1);
-								info.comma.push(tk.offset);
+								info.comma.push(tk.offset), iscall && (tk.paraminfo = info);
 							}
 							break;
 						case 'TK_OPERATOR':
@@ -6534,7 +6533,7 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 					tk = lex.find_token(lex.document.offsetAt(tk.symbol!.range.end), true);
 					continue;
 				} else if (tk.callsite) {
-					if (tk.next_token_offset >= end)
+					if (tk.next_token_offset >= end || tk.next_token_offset === -1)
 						break loop;
 					stack.push(t = {
 						content: '', type: 'TK_FUNC',
@@ -7380,12 +7379,14 @@ export function find_symbols(lex: Lexer, context: Context) {
 }
 
 export function get_callinfo(doc: Lexer, position: Position, pi?: ParamInfo) {
-	let pos: Position, index: number, kind: SymbolKind;
+	let pos: Position, index: number, kind: SymbolKind, pt: Token | undefined;
 	let tokens = doc.tokens, offset = doc.document.offsetAt(position);
 	function get(pi: ParamInfo) {
 		let tk = tokens[pi.offset];
 		pos = doc.document.positionAt(pi.offset);
 		if (tk.type === 'TK_WORD') {
+			if (pt && position.line > doc.document.positionAt(pt.offset + pt.length).line && !is_line_continue(pt, EMPTY_TOKEN))
+				return;
 			index = offset > pi.offset + tk.content.length ? 0 : -1;
 		} else {
 			if (tk.previous_token?.symbol)
@@ -7405,12 +7406,12 @@ export function get_callinfo(doc: Lexer, position: Position, pi?: ParamInfo) {
 	}
 	if (pi)
 		return get(pi);
-	let tk: Token | undefined = doc.find_token(offset), nk = tk.previous_token;
+	let tk: Token | undefined = doc.find_token(offset), nk = pt = tk.previous_token;
 	if (offset <= tk.offset && !(tk = nk))
 		return;
 	if (tk.callsite && offset > tk.offset + tk.length && position.line <= tk.callsite.range.end.line)
 		return get(tk.paraminfo!);
-	if (tk.topofline > 0 || position.line > doc.document.positionAt(tk.offset + tk.length).line && !is_line_continue(tk, EMPTY_TOKEN))
+	if (tk.topofline > 0)
 		return;
 	while (tk.topofline <= 0) {
 		switch (tk.type) {
@@ -7423,10 +7424,8 @@ export function get_callinfo(doc: Lexer, position: Position, pi?: ParamInfo) {
 				break;
 			case 'TK_START_EXPR':
 			case 'TK_COMMA':
-				if (nk = tk, tk.paraminfo) {
+				if (nk = tk, tk.paraminfo)
 					return get(tk.paraminfo);
-				} else if (nk.type === 'TK_COMMA')
-					return;
 				break;
 			case 'TK_OPERATOR':
 				if (tk.content === '%' && !tk.next_pair_pos)

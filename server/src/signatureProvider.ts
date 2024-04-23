@@ -6,94 +6,126 @@ import {
 	get_callinfo, get_class_constructor, get_class_member, lexers
 } from './common';
 
+let cache: {
+	index?: number,
+	loc?: string,
+	nodes?: { node: AhkSymbol, uri: string, needthis?: number }[],
+	signinfo?: SignatureHelp
+} = {};
 export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
-	if (token.isCancellationRequested) return undefined;
-	let uri = params.textDocument.uri.toLowerCase(), doc = lexers[uri];
-	let signinfo: SignatureHelp = { activeSignature: 0, signatures: [], activeParameter: 0 };
-	let res = get_callinfo(doc, params.position);
-	if (!res || res.index < 0)
-		return undefined;
-	let { name, pos, index, kind } = res;
-	let context = doc.getContext(pos), iscall = true;
-	if (context.kind === SymbolKind.Null || context.token.symbol)
-		return;
-	let tps = decltype_expr(doc, context.token, context.range.end);
-	let set = new Set<AhkSymbol>(), nodes: { node: AhkSymbol, uri: string, needthis?: number }[] = [];
-	if (tps.includes(ANY)) {
-		if (kind !== SymbolKind.Method) return;
-		name = name.toUpperCase(), nodes = [];
-		for (const u of new Set([ahkuris.ahk2, ahkuris.ahk2_h, doc.uri, ...Object.keys(doc.relevance)]))
-			for (const node of lexers[u]?.object.method[name] ?? [])
-				nodes.push({ node, uri: u });
-	} else {
-		let prop = context.text ? '' : context.word.toLowerCase();
-		if (kind === SymbolKind.Property)
-			prop ||= '__item', iscall = false;
-		else prop ||= 'call';
-		for (let it of tps)
-			add(it, prop);
+	if (token.isCancellationRequested) return;
+	let { textDocument: { uri }, context, position } = params;
+	let lex = lexers[uri = uri.toLowerCase()], offset, pi;
+	switch (context?.triggerKind) {
+		case 2:	// TriggerCharacter
+			if (!context.isRetrigger) {
+				offset = lex.document.offsetAt(position);
+				if (context.triggerCharacter === ' ') {
+					let tk = lex.find_token(offset);
+					if (tk.offset >= offset && (pi = tk.previous_token?.callsite))
+						pi = pi.range.start.line === position.line && pi.paraminfo;
+				} else pi = lex.tokens[offset - 1]?.paraminfo;
+				if (!pi)
+					return;
+			} else if (context.triggerCharacter === ' ' ||
+				!(pi = lex.tokens[offset = lex.document.offsetAt(position) - 1]?.paraminfo))
+				return cache.signinfo;
+			break;
 	}
-	function add(it: AhkSymbol, prop: string, needthis = 0) {
-		let fn: FuncNode | undefined, uri = it.uri!;
-		switch (it.kind) {
-			case SymbolKind.Method:
-				if (!iscall)
-					break;
-				needthis++;
-				if (prop === 'call') {
-					nodes.push({ node: it, needthis, uri });
-					break;
-				}
-				fn = it as FuncNode;
-				add_cls();
-				break;
-			case SymbolKind.Function:
-				if (!iscall)
-					break;
-				if (prop === 'call') {
-					nodes.push({ node: it, needthis, uri });
-					break;
-				}
-				fn = it as FuncNode;
-			case SymbolKind.Class:
-				add_cls();
-				break;
+	let res = get_callinfo(lex, position, pi);
+	if (!res || res.index < 0)
+		return;
+	let { name, pos, index, kind } = res;
+	let loc = `${uri}?${name},${pos.line},${pos.character}`;
+	if (loc === cache.loc) {
+		if (index === cache.index)
+			return cache.signinfo;
+		cache.index = index;
+	} else cache = { loc, index };
+	let set = new Set<AhkSymbol>(), nodes = cache.nodes!;
+	let signinfo: SignatureHelp = { activeSignature: 0, signatures: [] };
+	if (!nodes) {
+		let context = lex.getContext(pos), iscall = true;
+		cache.nodes = nodes = [];
+		if (context.kind === SymbolKind.Null || context.token.symbol)
+			return;
+		let tps = decltype_expr(lex, context.token, context.range.end);
+		if (tps.includes(ANY)) {
+			if (kind !== SymbolKind.Method) return;
+			name = name.toUpperCase(), nodes = [];
+			for (const u of new Set([ahkuris.ahk2, ahkuris.ahk2_h, lex.uri, ...Object.keys(lex.relevance)]))
+				for (const node of lexers[u]?.object.method[name] ?? [])
+					nodes.push({ node, uri: u });
+		} else {
+			let prop = context.text ? '' : context.word.toLowerCase();
+			if (kind === SymbolKind.Property)
+				prop ||= '__item', iscall = false;
+			else prop ||= 'call';
+			for (let it of tps)
+				add(it, prop);
 		}
-		function add_cls() {
-			let n: AhkSymbol | undefined, cls = it as ClassNode;
-			if (!(n = get_class_member(doc, cls, prop, iscall)))
-				return;
-			if (iscall) {
-				if (n.kind === SymbolKind.Class)
-					n = get_class_constructor(n as ClassNode);
-				else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
-					n = get_class_member(doc, cls.prototype!, '__new', true) ?? n;
-				else if (n.kind === SymbolKind.Property || (n as FuncNode).alias) {
-					let tps: AhkSymbol[] | Set<AhkSymbol> = decltype_returns(n, lexers[n.uri!] ?? doc, cls);
-					if (n.kind === SymbolKind.Property && (n as FuncNode).alias)
-						tps = decltype_invoke(doc, tps, 'call', true);
-					return tps.forEach(it => add(it, 'call', -1));
-				} else if (fn && prop === 'bind') {
-					if (set.has(fn)) return; else set.add(fn);
-					let b = fn.full.indexOf('(', fn.name ? 1 : 0);
-					fn = {
-						...fn, name: n.name, detail: n.markdown_detail === undefined ? n.detail : undefined,
-						full: `(Func) Bind${fn.full.slice(b, b + fn.param_def_len)} => BoundFunc`,
-						markdown_detail: n.markdown_detail
-					};
-					n = fn;
-				}
-			} else if (n.kind === SymbolKind.Class)
-				n = get_class_member(doc, n as any, '__item', false);
-			else if (n.kind !== SymbolKind.Property)
-				return;
-			else if (!(n as FuncNode).params) {
-				for (let t of decltype_returns(n, lexers[n.uri!] ?? doc, cls))
-					(t = get_class_member(doc, t as any, '__item', false)!) &&
-						nodes.push({ node: t, needthis, uri: t.uri! });
-				return;
+		function add(it: AhkSymbol, prop: string, needthis = 0) {
+			let fn: FuncNode | undefined, uri = it.uri!;
+			switch (it.kind) {
+				case SymbolKind.Method:
+					if (!iscall)
+						break;
+					needthis++;
+					if (prop === 'call') {
+						nodes.push({ node: it, needthis, uri });
+						break;
+					}
+					fn = it as FuncNode;
+					add_cls();
+					break;
+				case SymbolKind.Function:
+					if (!iscall)
+						break;
+					if (prop === 'call') {
+						nodes.push({ node: it, needthis, uri });
+						break;
+					}
+					fn = it as FuncNode;
+				case SymbolKind.Class:
+					add_cls();
+					break;
 			}
-			n && nodes.push({ node: n, needthis, uri: n.uri! });
+			function add_cls() {
+				let n: AhkSymbol | undefined, cls = it as ClassNode;
+				if (!(n = get_class_member(lex, cls, prop, iscall)))
+					return;
+				if (iscall) {
+					if (n.kind === SymbolKind.Class)
+						n = get_class_constructor(n as ClassNode);
+					else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
+						n = get_class_member(lex, cls.prototype!, '__new', true) ?? n;
+					else if (n.kind === SymbolKind.Property || (n as FuncNode).alias) {
+						let tps: AhkSymbol[] | Set<AhkSymbol> = decltype_returns(n, lexers[n.uri!] ?? lex, cls);
+						if (n.kind === SymbolKind.Property && (n as FuncNode).alias)
+							tps = decltype_invoke(lex, tps, 'call', true);
+						return tps.forEach(it => add(it, 'call', -1));
+					} else if (fn && prop === 'bind') {
+						if (set.has(fn)) return; else set.add(fn);
+						let b = fn.full.indexOf('(', fn.name ? 1 : 0);
+						fn = {
+							...fn, name: n.name, detail: n.markdown_detail === undefined ? n.detail : undefined,
+							full: `(Func) Bind${fn.full.slice(b, b + fn.param_def_len)} => BoundFunc`,
+							markdown_detail: n.markdown_detail
+						};
+						n = fn;
+					}
+				} else if (n.kind === SymbolKind.Class)
+					n = get_class_member(lex, n as any, '__item', false);
+				else if (n.kind !== SymbolKind.Property)
+					return;
+				else if (!(n as FuncNode).params) {
+					for (let t of decltype_returns(n, lexers[n.uri!] ?? lex, cls))
+						(t = get_class_member(lex, t as any, '__item', false)!) &&
+							nodes.push({ node: t, needthis, uri: t.uri! });
+					return;
+				}
+				n && nodes.push({ node: n, needthis, uri: n.uri! });
+			}
 		}
 	}
 	for (let it of nodes) {
@@ -140,5 +172,5 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			signinfo.signatures.push({ label, parameters, documentation, activeParameter });
 		}
 	}
-	return signinfo;
+	return cache.signinfo = signinfo;
 }

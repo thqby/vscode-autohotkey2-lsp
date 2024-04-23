@@ -51,7 +51,7 @@ connection.onInitialize(async params => {
 				triggerCharacters: ['.', '#', '*', '@']
 			},
 			signatureHelpProvider: {
-				triggerCharacters: ['(', ',']
+				triggerCharacters: ['(', ',', ' ']
 			},
 			documentSymbolProvider: true,
 			definitionProvider: true,
