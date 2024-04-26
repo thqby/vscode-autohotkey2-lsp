@@ -380,11 +380,11 @@ A_TimeIdleMouse: Integer
 ; 与上面类似, 但在安装了相应的钩子(键盘或鼠标) 后会忽略模拟的键击和/或鼠标点击; 即此变量仅对物理事件做出响应. (这样避免了由于模拟键击和鼠标点击而误以为用户存在.) 如果两种钩子都没有安装, 则此变量等同于 A_TimeIdle.如果仅安装了一种钩子, 那么仅此类型的物理输入才会对 A_TimeIdlePhysical 起作用(另一种/未安装钩子的输入, 包括物理的和模拟的, 都会被忽略).
 A_TimeIdlePhysical: Integer
 
-; 从 A_PriorHotkey 按下后到现在经过的毫秒数. 如果 A_PriorHotkey 为空, 则此变量的值为 -1.
-A_TimeSincePriorHotkey: Integer
+; 从 A_PriorHotkey 按下后到现在经过的毫秒数. 如果 A_PriorHotkey 为空, 则此变量的值为空.
+A_TimeSincePriorHotkey: Integer | ''
 
-; 从 A_ThisHotkey 按下后到现在经过的毫秒数. 如果 A_ThisHotkey 为空, 则此变量的值为 -1.
-A_TimeSinceThisHotkey: Integer
+; 从 A_ThisHotkey 按下后到现在经过的毫秒数. 如果 A_ThisHotkey 为空, 则此变量的值为空.
+A_TimeSinceThisHotkey: Integer | ''
 
 ; 可用于获取或设置标题匹配模式.
 A_TitleMatchMode: 1 | 2 | 3 | 'RegEx'

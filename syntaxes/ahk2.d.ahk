@@ -386,11 +386,11 @@ A_TimeIdleMouse: Integer
 ; Similar to the above, but after installing the corresponding hook (keyboard or mouse), the simulated keystrokes and/or mouse clicks will be ignored; that is, this variable only responds to physical events. (This avoids Simulate keystrokes and mouse clicks and mistakenly believe that the user exists.) If both hooks are not installed, this variable is equivalent to A_TimeIdle. If only one hook is installed, then only this type of physical input will work on A_TimeIdlePhysical ( Another input/no hook installed, both physical and simulated, will be ignored).
 A_TimeIdlePhysical: Integer
 
-; The number of milliseconds that have elapsed since A_PriorHotkey was pressed. If A_PriorHotkey is empty, the value of this variable is -1.
-A_TimeSincePriorHotkey: Integer
+; The number of milliseconds that have elapsed since A_PriorHotkey was pressed. It will be blank whenever A_PriorHotkey is blank.
+A_TimeSincePriorHotkey: Integer | ''
 
-; The number of milliseconds that have elapsed since A_ThisHotkey was pressed. If A_ThisHotkey is empty, the value of this variable is -1.
-A_TimeSinceThisHotkey: Integer
+; The number of milliseconds that have elapsed since A_ThisHotkey was pressed. It will be blank whenever A_ThisHotkey is blank.
+A_TimeSinceThisHotkey: Integer | ''
 
 ; Can be used to get or set the title matching mode.
 A_TitleMatchMode: 1 | 2 | 3 | 'RegEx'
