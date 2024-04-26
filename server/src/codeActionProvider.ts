@@ -14,7 +14,7 @@ export async function codeActionProvider(params: CodeActionParams, token: Cancel
 		.replace(/\?$/, '\\?').replace(/^\w/, s => `[${s.toUpperCase() + s.toLowerCase()}]`) +
 		'$|^' + diagnostic.deprecated('.+?', '(.+?)'));
 
-	for (const it of lex.diagnostics) {
+	for (const it of params.context.diagnostics) {
 		if (cwp === it.message) {
 			let tk = lex.tokens[document.offsetAt(it.range.start)], cs = tk.callsite!;
 			let end = cs.range.end, start = tk.next_token_offset === -1 ?

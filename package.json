@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.4.2",
+	"version": "2.4.3",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -114,7 +114,6 @@
 					"scope": "window",
 					"type": "object",
 					"default": {
-						"program": "${file}",
 						"port": "9002-9100",
 						"useAnnounce": "detail",
 						"useAutoJumpToError": true,
