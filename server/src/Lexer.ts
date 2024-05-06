@@ -5241,7 +5241,7 @@ export class Lexer {
 			}
 
 			set_mode(next_mode);
-			flags.indentation_level = previous_flags.indentation_level = real_indentation_level();
+			flags.indentation_level = real_indentation_level();
 			print_token();
 
 			// (options\n...\n)
@@ -5283,8 +5283,6 @@ export class Lexer {
 					trim_newlines();
 			}
 			print_token();
-			if (flags.mode !== MODE.BlockStatement)
-				flags.indentation_level = (flags.parent ?? flags).indentation_level + 1;
 			continuation_sections_mode ??= false;
 		}
 
