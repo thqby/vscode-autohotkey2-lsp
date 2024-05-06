@@ -43,7 +43,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		cache.index = index;
 	} else cache = { loc, index };
 	let set = new Set<AhkSymbol>(), nodes = cache.nodes!;
-	let signinfo: SignatureHelp = { activeSignature: 0, signatures: [] };
+	let signinfo: SignatureHelp = { activeSignature: context?.activeSignatureHelp?.activeSignature ?? 0, signatures: [] };
 	if (!nodes) {
 		let context = lex.getContext(pos), iscall = true;
 		cache.nodes = nodes = [];
