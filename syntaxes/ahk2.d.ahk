@@ -2528,7 +2528,7 @@ Sleep(Delay) => void
  * Z: To understand this option, please consider the variable whose content is RED`nGREEN`nBLUE`n. If the Z option does not exist, the last newline character (`n) will be considered as part of the last item, so the variable There are only three items. But if option Z is specified, the last `n (if it exists) will be considered to separate the last empty item in the list, so there are four items in the variable (the last one is empty).
  * 
  * \: Sort according to the substring after the last backslash in each item. If the item does not contain a backslash, the entire item is used as the sorted substring. This option can be used to sort individual file names (I.e. does not include the path)
- * @param Callback The function must accept two or three parameters: `MyFunction(first, second [, offset])`
+ * @param Callback The function must accept three parameters: `MyFunction(first, second, offset)`
  * 
  * When the function thinks that the first parameter is greater than the second parameter, it should return a positive integer; when the two parameters are judged to be equal, it should return 0, "", or empty; otherwise, it should return a negative integer. If it returns If there is a decimal part in the value, the part is ignored (i.e. 0.8 is equivalent to 0).
  * 

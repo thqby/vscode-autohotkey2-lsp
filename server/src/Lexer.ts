@@ -935,7 +935,8 @@ export class Lexer {
 									break;
 								case 'TK_START_BLOCK': {
 									let props: { [name: string]: AhkSymbol } = {}, b = lk, full = '';
-									while ((lk = skip_comment())?.type === 'TK_WORD') {
+									let prop_types = ['TK_NUMBER', 'TK_RESERVED', 'TK_WORD'];
+									while (prop_types.includes((lk = skip_comment())?.type)) {
 										let p = Variable.create(lk.content, SymbolKind.Property, make_range(lk.offset, lk.length));
 										props[lk.content.toUpperCase()] ??= p, lk.semantic = { type: SemanticTokenTypes.property };
 										full += ', ' + lk.content;
@@ -7496,7 +7497,7 @@ export function get_detail(sym: AhkSymbol, lex: Lexer, remove_re?: RegExp): stri
 				tag ||= link, link = `command:_workbench.open?${encode_params}`;
 			}
 		}
-		return /^[a-z]+:/.test(link) ? `[${m[1] === 'code' ? `\`${tag}\`` : tag}](${link})` : ` ${link} ${tag} `;
+		return /^[a-z]+:/.test(link) && (tag ||= link) ? `[${m[1] === 'code' ? `\`${tag}\`` : tag}](${link})` : ` ${link} ${tag} `;
 	});
 	if (detail)
 		return { kind: 'markdown', value: detail };

@@ -39,6 +39,7 @@ export function semanticTokensOnFull(params: SemanticTokensParams, token?: Cance
 	symbolProvider({ textDocument: params.textDocument }, null);
 	Object.values(doc.tokens).forEach(tk => resolve_sem(tk, doc));
 	resolve_class_undefined_member(doc), memscache.clear();
+	doc.sendDiagnostics();
 	return doc.STB.build();
 }
 
