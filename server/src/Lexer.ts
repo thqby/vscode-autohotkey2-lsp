@@ -5449,6 +5449,7 @@ export class Lexer {
 						print_newline();
 						print_token();
 						flags.last_word = token_text_low;
+						flags.start_line_index = output_lines.length;
 						set_mode(MODE.Statement), is_conditional = true;
 						return;
 					} else if (token_text_low === 'case') {
@@ -5490,6 +5491,7 @@ export class Lexer {
 					}
 				}
 				flags.last_word = token_text_low;
+				flags.start_line_index = output_lines.length;
 			} else {
 				if (input_wanted_newline && flags.mode === MODE.Statement && !flags.is_expression &&
 					!is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))
