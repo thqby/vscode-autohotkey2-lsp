@@ -15,7 +15,7 @@ let cache: {
 export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (token.isCancellationRequested) return;
 	let { textDocument: { uri }, context, position } = params;
-	let lex = lexers[uri = uri.toLowerCase()], offset, pi;
+	let lex = lexers[uri = uri.toLowerCase()], activeSignature = context?.activeSignatureHelp?.activeSignature, offset, pi;
 	switch (context?.triggerKind) {
 		case 2:	// TriggerCharacter
 			if (!context.isRetrigger) {
@@ -29,7 +29,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 					return;
 			} else if (context.triggerCharacter === ' ' ||
 				!(pi = lex.tokens[offset = lex.document.offsetAt(position) - 1]?.paraminfo))
-				return cache.signinfo;
+				return cached_sh();
 			break;
 	}
 	let res = get_callinfo(lex, position, pi);
@@ -39,11 +39,11 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 	let loc = `${uri}?${name},${pos.line},${pos.character}`;
 	if (loc === cache.loc) {
 		if (index === cache.index)
-			return cache.signinfo;
+			return cached_sh();
 		cache.index = index;
 	} else cache = { loc, index };
 	let set = new Set<AhkSymbol>(), nodes = cache.nodes!;
-	let signinfo: SignatureHelp = { activeSignature: context?.activeSignatureHelp?.activeSignature ?? 0, signatures: [] };
+	let signinfo: SignatureHelp = { activeSignature, signatures: [] };
 	if (!nodes) {
 		let context = lex.getContext(pos), iscall = true;
 		cache.nodes = nodes = [];
@@ -173,4 +173,9 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		}
 	}
 	return cache.signinfo = signinfo;
+	function cached_sh() {
+		let sh = cache.signinfo;
+		sh && (sh.activeSignature = activeSignature);
+		return sh;
+	}
 }

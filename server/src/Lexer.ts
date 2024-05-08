@@ -522,10 +522,8 @@ export class Lexer {
 				token_type = (ck = get_next_token()).type;
 				token_text_low = (token_text = ck.content).toLowerCase();
 				if (ck.fat_arrow_end) {
-					while (!flags.in_fat_arrow)
+					while (flags.in_fat_arrow)
 						restore_mode();
-					flags.indentation_level = flags.in_fat_arrow - 1;
-					delete flags.in_fat_arrow;
 				}
 
 				if (ck.offset >= end_pos) {
@@ -5180,8 +5178,8 @@ export class Lexer {
 			}
 		}
 
-		function real_indentation_level() {
-			let line = output_lines[flags.start_line_index - 1];
+		function real_indentation_level(index = flags.start_line_index) {
+			let line = output_lines[index - 1];
 			if (line?.text.length)
 				return line.indent;
 			return flags.indentation_level;
@@ -5210,9 +5208,8 @@ export class Lexer {
 				}
 				if (ck.topofline < 1 && yields_an_operand(ck.previous_token ?? EMPTY_TOKEN)) {
 					set_mode(next_mode);
-					previous_flags.indentation_level = real_indentation_level();
 					print_token();
-					flags.indentation_level = previous_flags.indentation_level + 1;
+					flags.indentation_level = real_indentation_level() + 1;
 					if (opt.space_in_paren) {
 						output_space_before_token = true;
 					}
@@ -5283,10 +5280,11 @@ export class Lexer {
 			output_space_before_token = Boolean(opt.space_in_paren && !(last_type === 'TK_START_EXPR' && !opt.space_in_empty_paren));
 			restore_mode();
 			if (just_added_newline() && output_lines.length > 1) {
-				if (previous_flags.indentation_level === flags.indentation_level)
-					trim_newlines();
-			}
-			print_token();
+				let level = flags.indentation_level;
+				flags.indentation_level = real_indentation_level(previous_flags.start_line_index);
+				print_token();
+				flags.indentation_level = level;
+			} else print_token();
 			continuation_sections_mode ??= false;
 		}
 
@@ -5559,6 +5557,11 @@ export class Lexer {
 		}
 
 		function handle_comma() {
+			if (flags.ternary_depth !== undefined) {
+				for (let i = flags.ternary_indent; i > 0; i--, deindent());
+				flags.ternary_indent = 0;
+				delete flags.ternary_depth;
+			}
 			if (flags.mode === MODE.BlockStatement || flags.declaration_statement)
 				set_mode(MODE.Statement), indent();
 			if (last_type === 'TK_WORD' && whitespace.includes(ck.prefix_is_whitespace || '\0') &&
@@ -5597,11 +5600,11 @@ export class Lexer {
 					return;
 				}
 			} else if (token_text === '=>') {
-				if (flags.mode === MODE.BlockStatement)
-					set_mode(MODE.Statement);
-				// else if (is_conditional && flags.parent.mode === MODE.BlockStatement)
-				// 	is_conditional = false;
-				indent(), flags.in_fat_arrow = flags.indentation_level;
+				// ^fn() => xx
+				if (is_conditional && flags.mode === MODE.Statement && flags.parent.mode === MODE.BlockStatement)
+					is_conditional = false;
+				set_mode(MODE.Statement);
+				indent(), flags.in_fat_arrow = true;
 			} else if (token_text_low.match(/^(\+\+|--|%|!|~|not)$/) && need_newline()) {
 				print_newline(), print_token();
 				if (token_text_low === 'not')
@@ -5658,18 +5661,16 @@ export class Lexer {
 				else if (space_before = false, get_style())
 					trim_newlines();
 			} else if (token_text === '?') {
-				if (!ck.ignore) {
-					if (flags.ternary_depth === undefined)
-						flags.ternary_depth = 1;
-					else {
-						flags.ternary_depth++;
-						indent();
-					}
-					set_mode(MODE.Expression);
-					flags.ternary_depth = flags.parent.ternary_depth;
-				} else {
+				if (ck.ignore) {
 					space_before = false;
 					space_after = _this.tokens[ck.next_token_offset]?.content.startsWith('?') ?? false;
+				} else {
+					if (flags.ternary_depth === undefined)
+						flags.ternary_depth = 1;
+					else flags.ternary_depth++;
+					indent(), flags.ternary_indent = (flags.ternary_indent ?? 0) + 1;
+					set_mode(MODE.Expression);
+					flags.ternary_depth = flags.parent.ternary_depth;
 				}
 			} else if (token_text === '.')
 				space_after = space_before = true;
