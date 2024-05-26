@@ -139,7 +139,11 @@ export async function activate(context: ExtensionContext) {
 				async resolveDebugConfiguration(folder, config, token) {
 					if (config.__ahk2debug || window.activeTextEditor?.document.languageId !== 'ahk') {
 						let append_configs: any[] = [];
-						let configs: DebugConfiguration[] | undefined = workspace.getConfiguration('launch').configurations;
+						let allconfigs = workspace.getConfiguration('launch').inspect<DebugConfiguration[]>('configurations');
+						let configs = allconfigs && [
+							...allconfigs.workspaceFolderValue ?? [],
+							...allconfigs.workspaceValue ?? [],
+							...allconfigs.globalValue ?? []];
 						config.request ||= 'launch';
 						configs = configs?.filter(it => it.request === config.request && it.type === config.type);
 						if (!config.__ahk2debug) {
