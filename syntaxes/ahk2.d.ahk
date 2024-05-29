@@ -3618,7 +3618,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 
 	/**
 	 * Create controls such as text, buttons or checkboxes, and return a GuiControl object.
-	 * @param {'ActiveX'|'Button'|'Checkbox'|'ComboBox'|'Custom'|'DateTime'|'DropDownList'|'Edit'|'GroupBox'|'Hotkey'|'Link'|'ListBox'|'ListView'|'MonthCal'|'Picture'|'Progress'|'Radio'|'Slider'|'StatusBar'|'Tab'|'Tab2'|'Tab3'|'Text'|'TreeView'|'UpDown'} ControlType
+	 * @param {'ActiveX'|'Button'|'Checkbox'|'ComboBox'|'Custom'|'DateTime'|'DDL'|'DropDownList'|'Edit'|'GroupBox'|'Hotkey'|'Link'|'ListBox'|'ListView'|'MonthCal'|'Pic'|'Picture'|'Progress'|'Radio'|'Slider'|'StatusBar'|'Tab'|'Tab2'|'Tab3'|'Text'|'TreeView'|'UpDown'} ControlType
 	 * @param Options V:    Sets the control's Name.
 	 *   Pos:  xn yn wn hn rn Right Left Center Section
 	 *         VScroll HScroll -Tabstop -Wrap
@@ -3658,6 +3658,8 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * Create Picture control and return a GuiControl object.
 	 */
 	AddPicture([Options, FileName: $FilePath<'bmp|jpg|png|gif|ico'>]) => Gui.Pic
+	/** @see {@link Gui#AddPicture} */
+	AddPic([Options, FileName: $FilePath<'bmp|jpg|png|gif|ico'>]) => Gui.Pic
 
 	/**
 	 * Adds a Button control and returns a GuiControl object.
@@ -3705,6 +3707,8 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * Create DropDownList control and return a GuiControl object.
 	 */
 	AddDropDownList([Options, Items]) => Gui.DDL
+	/** @see {@link Gui#AddDropDownList} */
+	AddDDL([Options, Items]) => Gui.DDL
 
 	/**
 	 * Create ComboBox control and return a GuiControl object.

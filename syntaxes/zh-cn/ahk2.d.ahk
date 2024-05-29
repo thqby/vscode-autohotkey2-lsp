@@ -3657,7 +3657,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 
 	/**
 	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
-	 * @param {'ActiveX'|'Button'|'Checkbox'|'ComboBox'|'Custom'|'DateTime'|'DropDownList'|'Edit'|'GroupBox'|'Hotkey'|'Link'|'ListBox'|'ListView'|'MonthCal'|'Picture'|'Progress'|'Radio'|'Slider'|'StatusBar'|'Tab'|'Tab2'|'Tab3'|'Text'|'TreeView'|'UpDown'} ControlType
+	 * @param {'ActiveX'|'Button'|'Checkbox'|'ComboBox'|'Custom'|'DateTime'|'DDL'|'DropDownList'|'Edit'|'GroupBox'|'Hotkey'|'Link'|'ListBox'|'ListView'|'MonthCal'|'Pic'|'Picture'|'Progress'|'Radio'|'Slider'|'StatusBar'|'Tab'|'Tab2'|'Tab3'|'Text'|'TreeView'|'UpDown'} ControlType
 	 */
 	Add(ControlType [, Options, Text]) => ControlType
 
@@ -3680,6 +3680,8 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * 创建图片控件, 返回一个GuiControl对象.
 	 */
 	AddPicture([Options, FileName: $FilePath<'bmp|jpg|png|gif|ico'>]) => Gui.Pic
+	/** @see {@link Gui#AddPicture} */
+	AddPic([Options, FileName: $FilePath<'bmp|jpg|png|gif|ico'>]) => Gui.Pic
 
 	/**
 	 * 创建按钮控件, 返回一个GuiControl对象.
@@ -3700,6 +3702,8 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * 创建下拉列表控件, 返回一个GuiControl对象.
 	 */
 	AddDropDownList([Options, Items]) => Gui.DDL
+	/** @see {@link Gui#AddDropDownList} */
+	AddDDL([Options, Items]) => Gui.DDL
 
 	/**
 	 * 创建复选框控件, 返回一个GuiControl对象.
