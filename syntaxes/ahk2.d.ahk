@@ -3908,7 +3908,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	/**
 	 * Collect values from named controls and combine them into an object, optionally hiding the window.
 	 */
-	Submit(false) => void
+	Submit(Hide := true) => void
 
 	class ActiveX extends Gui.Control {
 	}

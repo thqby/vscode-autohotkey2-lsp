@@ -3887,7 +3887,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	/**
 	 * 从命名控件中收集值并将其组合到一个对象中, 可选择性地隐藏窗口.
 	 */
-	Submit(false) => void
+	Submit(Hide := true) => void
 
 	class ActiveX extends Gui.Control {
 	}
