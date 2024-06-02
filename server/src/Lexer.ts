@@ -2063,8 +2063,7 @@ export class Lexer {
 						break;
 					case 'throw':
 						if (ahk_version >= alpha_3) {
-							tk.semantic = { type: SemanticTokenTypes.keyword };
-							tk.ignore = true, tk.type = 'TK_WORD', next = false;
+							tk.type = 'TK_WORD', next = false;
 							break;
 						}
 					default:
@@ -2889,8 +2888,7 @@ export class Lexer {
 								break;
 							} else if (ahk_version >= alpha_3) {
 								if (tk.content.toLowerCase() === 'throw') {
-									tk.semantic = { type: SemanticTokenTypes.keyword };
-									next = false, tk.type = 'TK_WORD', tk.ignore = true;
+									next = false, tk.type = 'TK_WORD';
 									break;
 								}
 							}
@@ -3492,8 +3490,7 @@ if (lk.content === '%')
 								continue;
 							} else if (ahk_version >= alpha_3) {
 								if (tk.content.toLowerCase() === 'throw') {
-									tk.semantic = { type: SemanticTokenTypes.keyword };
-									next = false, tk.type = 'TK_WORD', tk.ignore = true;
+									next = false, tk.type = 'TK_WORD';
 									continue;
 								}
 							}
@@ -3769,7 +3766,8 @@ if (lk.content === '%')
 						pars.SUPER = dec.SUPER = SUPER;
 						if (fn.kind === SymbolKind.Function)
 							named_params = undefined;
-					}
+					} else if (reserved_words.includes(fn.name.toLowerCase()))
+						_this.diagnostics.push({ message: diagnostic.reservedworderr(fn.name), range: fn.selectionRange, severity });
 					for (let it of fn.params ?? []) {
 						it.def = it.assigned = it.is_param = true;
 						if (!it.name)
