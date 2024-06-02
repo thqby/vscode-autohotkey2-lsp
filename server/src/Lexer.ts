@@ -2240,7 +2240,7 @@ export class Lexer {
 						while (nexttoken()) {
 							if (tk.type as string === 'TK_WORD') {
 								if (input.charAt(parser_pos) === '%') {
-								} else if (addprop(tk), nexttoken(), tk.content === ':=')
+								} else if (addprop(tk), nexttoken(), [':=', '??='].includes(tk.content))
 									maybeclassprop(lk);
 								else if (tk.ignore && tk.content === '?' && (tk = get_next_token()), tk.type === 'TK_DOT')
 									continue;
@@ -2756,7 +2756,7 @@ export class Lexer {
 									next = false, lk.ignore = true;
 							} else {
 								if (next = tk.type as string === 'TK_EQUALS')
-									if (tk.content === ':=')
+									if ([':=', '??='].includes(tk.content))
 										maybeclassprop(lk);
 								addprop(lk);
 							}
