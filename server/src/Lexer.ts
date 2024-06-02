@@ -283,6 +283,7 @@ const reserved_words = line_starters.concat(['class', 'in', 'is', 'isset', 'cont
 const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', Conditional: 'Conditional', Expression: 'Expression' };
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[12])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
 const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
+export const ASSIGN_TYPE = [':=', '??='];
 const STYLE = { collapse: 2, expand: 1, none: 0 };
 const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 const META_FUNCNAME = ['__NEW', '__INIT', '__ITEM', '__ENUM', '__GET', '__CALL', '__SET', '__DELETE'];
@@ -1404,7 +1405,7 @@ export class Lexer {
 									if (_cm = comments[tn.selectionRange.start.line])
 										set_detail(_cm.symbol = tn, _cm);
 									if (mode === 2) {
-										tn.has_this_param = true;
+										tn.has_this_param = true, !tn.static && (tn.parent = (_parent as ClassNode).prototype);
 										tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
 										(_this.object.method[name_l] ??= []).push(tn);
 									}
@@ -1433,8 +1434,9 @@ export class Lexer {
 											rg = make_range(fc.offset, fc.length), { ...rg }) as Property;
 										if (_cm = comments[prop.selectionRange.start.line])
 											set_detail(_cm.symbol = prop, _cm);
-										prop.parent = _parent, prop.has_this_param = true;
-										prop.static = isstatic, prop.children = result.splice(rl);
+										prop.parent = isstatic ? _parent : (_parent as ClassNode).prototype;
+										prop.has_this_param = true, prop.static = isstatic;
+										prop.children = result.splice(rl);
 										let pd = '';
 										if (par.length) {
 											let f = FuncNode.create('', SymbolKind.Function, rg, rg, par);
@@ -1798,7 +1800,7 @@ export class Lexer {
 							tn.extends = ex, tn.uri = _this.uri;
 							if (_cm = comments[tn.selectionRange.start.line])
 								set_detail(tn, _cm);
-							tn.prototype = { ...tn, detail: undefined, property: tn.$property = {} };
+							tn.prototype = { ...tn, cache: [], detail: undefined, property: tn.$property = {} };
 							tn.children = [], tn.cache = [], tn.property = {};
 							tn.type_annotations = [tn.full];
 							let t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
@@ -2239,7 +2241,7 @@ export class Lexer {
 						while (nexttoken()) {
 							if (tk.type as string === 'TK_WORD') {
 								if (input.charAt(parser_pos) === '%') {
-								} else if (addprop(tk), nexttoken(), [':=', '??='].includes(tk.content))
+								} else if (addprop(tk), nexttoken(), ASSIGN_TYPE.includes(tk.content))
 									maybeclassprop(lk);
 								else if (tk.ignore && tk.content === '?' && (tk = get_next_token()), tk.type === 'TK_DOT')
 									continue;
@@ -2493,7 +2495,7 @@ export class Lexer {
 										set_detail(vr, pc);
 								} else if (local)
 									_this.addDiagnostic(diagnostic.conflictserr(local, 'built-in variable', lk.content), lk.offset, lk.length);
-								result.push(...parse_expression(undefined));
+								result.push(...parse_expression());
 								let t: [number, number] = [pp, lk.offset + lk.length];
 								(_parent as FuncNode).ranges?.push(t);
 								if (vr) {
@@ -2506,21 +2508,28 @@ export class Lexer {
 							} else {
 								if (mode === 2) {
 									let llk = lk, ttk = tk, err = diagnostic.propnotinit();
-									let v = addvariable(lk, 2, sta)!;
+									let v = addvariable(lk, 2, sta)!, dots = 0;
 									v.def = false;
 									if (tk.type as string === 'TK_DOT') {
 										while (nexttoken() && tk.type === 'TK_WORD') {
 											if (!nexttoken())
 												break;
 											if (tk.type as string === 'TK_EQUALS') {
-												let pp = parser_pos;
+												let pp = parser_pos, p = lk, assign = ASSIGN_TYPE.includes(tk.content);
 												addprop(lk);
 												result.push(...parse_expression());
-												(_parent as FuncNode).ranges?.push([pp, lk.offset + lk.length]);
+												let t: [number, number] = [pp, lk.offset + lk.length];
+												(_parent as FuncNode).ranges?.push(t);
+												if (!dots && assign && _parent.static && llk.content.toLowerCase() === 'prototype') {
+													let prop = Variable.create(p.content, SymbolKind.Property, make_range(p.offset, p.length));
+													let cls = (_parent.parent as ClassNode).prototype!;
+													prop.parent = cls, prop.returns = t;
+													cls.cache!.push(prop);
+												}
 												continue loop;
 											}
 											if (tk.type as string === 'TK_DOT')
-												addprop(lk);
+												addprop(lk), dots++;
 											else if (tk.topofline && (allIdentifierChar.test(tk.content) || tk.content === '}')) {
 												lk = EMPTY_TOKEN, next = false;
 												break loop;
@@ -2755,7 +2764,7 @@ export class Lexer {
 									next = false, lk.ignore = true;
 							} else {
 								if (next = tk.type as string === 'TK_EQUALS')
-									if ([':=', '??='].includes(tk.content))
+									if (ASSIGN_TYPE.includes(tk.content))
 										maybeclassprop(lk);
 								addprop(lk);
 							}
@@ -3596,24 +3605,25 @@ if (lk.content === '%')
 			function maybeclassprop(tk: Token, flag: boolean | null = false) {
 				if (classfullname === '')
 					return;
-				let rg: Range, ts = tk.previous_token?.previous_token;
-				if (!ts || input.charAt(ts.offset - 1) === '.')
+				let rg: Range, cls: ClassNode | undefined;
+				let proto = false, ts = tk.previous_token?.previous_token;
+				if (!ts) return;
+				if (input.charAt(ts.offset - 1) === '.' &&
+					(ts.content.toLowerCase() !== 'prototype' ||
+						(proto = true, !(ts = ts.previous_token?.previous_token) ||
+							input.charAt(ts.offset - 1) === '.')))
 					return;
-				_low = ts.content.toLowerCase();
-				if (_low !== 'this' && _low !== 'super')
+					_low = ts!.content.toLowerCase();
+				if (_low !== 'this' && _low !== 'super' || !(cls = get_class()) || proto && !(cls = cls.prototype) || !cls.cache)
 					return;
-				let p = _parent as ClassNode, s = false;
 				if (flag) {
 					let pi = tk.callsite?.paraminfo;
 					if (pi && tk.content.toLowerCase() === 'defineprop' && pi.count > 1 && pi.miss[0] !== 0) {
-						get_class();
-						if (!p?.cache)
-							return;
-						let end = pi.comma[0], nk = tokens[tk.next_token_offset];
+						let end = pi.comma[0], nk = tokens[tk.next_token_offset], s = !!cls.prototype;
 						if (input.charAt(tk.offset + tk.length) === '(')
 							nk = tokens[nk.next_token_offset];
 						if (nk.type !== 'TK_STRING' || nk.next_token_offset !== end)
-							p.checkmember = false;
+							cls.checkmember = false;
 						else {
 							let o = tokens[tokens[end].next_token_offset], prop = nk.content.slice(1, -1);
 							let t: Property | FuncNode, pp;
@@ -3622,7 +3632,7 @@ if (lk.content === '%')
 								pp.GET || pp.VALUE || pp.SET) {
 								t = Variable.create(prop, SymbolKind.Property, rg);
 								t.full = `(${classfullname.slice(0, -1)}) ${(t.static = s) ? 'static ' : ''}${prop}`;
-								p.cache.push(t), t.parent = s ? p : p.prototype;
+								cls.cache.push(t), t.parent = cls;
 								if (t.returns = pp?.GET?.returns)
 									(t as FuncNode).alias = true;
 								else t.returns = pp?.VALUE?.returns;
@@ -3632,31 +3642,23 @@ if (lk.content === '%')
 								t = FuncNode.create(prop, SymbolKind.Method, rg, rg, [t], undefined, s);
 								t.full = `(${classfullname.slice(0, -1)}) ` + t.full;
 								t.returns = pp.returns, (t as FuncNode).alias = true;
-								p.cache.push(t), t.parent = s ? p : p.prototype;
+								cls.cache.push(t), t.parent = cls;
 							}
 						}
 					}
 				} else {
-					get_class();
-					if (!p?.cache)
-						return;
 					if (flag === null)
-						return p.checkmember = false, undefined;
+						return cls.checkmember = false, undefined;
 					let t = Variable.create(tk.content, SymbolKind.Property, rg = make_range(tk.offset, tk.length));
-					t.static = s, p.cache.push(t), t.def = false, t.parent = s ? p : p.prototype;
+					t.static = !!cls.prototype, cls.cache.push(t), t.def = false, t.parent = cls;
 				}
 				return;
 
 				function get_class() {
-					if (p.kind === SymbolKind.Method || p.kind === SymbolKind.Function) {
-						while (p && p.kind !== SymbolKind.Class) {
-							if (p.static && p.kind === SymbolKind.Method)
-								s = true;
-							p = p.parent as ClassNode;
-						}
-					}
-					if (p?.kind === SymbolKind.Property)
-						s = !!p.static, p = p.parent as ClassNode;
+					let p = _parent;
+					while (p && p.kind !== SymbolKind.Class)
+						p = p.parent!;
+					return p as ClassNode;
 				}
 			}
 
@@ -3723,7 +3725,7 @@ if (lk.content === '%')
 						if (META_FUNCNAME.includes(_low))
 							delete (tokens[document.offsetAt(it.selectionRange.start)] ?? {}).semantic;
 						if (it.children) {
-							let tc = it.static || it.kind === SymbolKind.Class ? sdec : (it.parent = prototype, dec);
+							let tc = it.static || it.kind === SymbolKind.Class ? sdec : dec;
 							let t = tc[_low] as Property;
 							if (!t)
 								tc[_low] = it;
@@ -3742,7 +3744,7 @@ if (lk.content === '%')
 					});
 					children.forEach((it: Variable) => {
 						if (it.children) return;
-						let tc = it.static ? sdec : (it.parent = prototype, dec);
+						let tc = it.static ? sdec : dec;
 						if (!(t = tc[_low = it.name.toUpperCase()]))
 							return it.def === false || (tc[_low] = it);
 						if (t.typed === true && (it.typed || !it.children && (t.typed = 1)))
@@ -3754,9 +3756,11 @@ if (lk.content === '%')
 						if (it.def !== false)
 							_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange, severity });
 					});
-					children.push(...__init, ...cls.cache ?? []);
-					cls.cache?.forEach(it => (it.static ? sdec : dec)[_low = it.name.toUpperCase()] ??= it);
+					children.push(...__init, ...cls.cache ?? [], ...cls.prototype!.cache ?? []);
+					cls.cache?.forEach(it => sdec[it.name.toUpperCase()] ??= it);
+					cls.prototype!.cache?.forEach(it => dec[it.name.toUpperCase()] ??= it);
 					delete cls.cache;
+					delete cls.prototype!.cache;
 				} else {
 					let fn = node as FuncNode, dec = fn.declaration;
 					let vars: { [k: string]: Variable } = {}, unresolved_vars: { [k: string]: Variable } = {}, vr: Variable;

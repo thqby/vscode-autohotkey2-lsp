@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import {
-	AhkSymbol, ClassNode, FuncNode, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
+	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
 	checkParams, diagnostic, extsettings, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
 } from './common';
 
@@ -113,12 +113,12 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						let t = n.children;
 						if (t?.length === 1 && t[0].name.toLowerCase() === 'get')
 							sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | SemanticTokenModifiers.static;
-						curclass = undefined;
+						curclass = curclass.range === n.range ? curclass.prototype : undefined;
 						return sem.type = SemanticTokenTypes.property;
 					case undefined:
 						if ((curclass.checkmember ?? doc.checkmember) !== false && extsettings.Diagnostics.ClassStaticMemberCheck) {
 							let tt = doc.tokens[tk.next_token_offset];
-							if (tt?.content === ':=') {
+							if (ASSIGN_TYPE.includes(tt?.content)) {
 								cls_add_prop(curclass, tk.content, tk.offset);
 							} else if ((memscache.get(curclass) as any)?.['#checkmember'] !== false)
 								((curclass.undefined ??= {})[tk.content.toUpperCase()] ??= []).push(tk);
@@ -134,6 +134,8 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 	function cls_add_prop(cls: ClassNode, name: string, offset?: number) {
 		let d = lexers[cls.uri!];
 		if (d && offset) {
+			if (cls.property[name.toUpperCase()])
+				return;
 			let rg = Range.create(d.document.positionAt(offset), d.document.positionAt(offset + name.length));
 			let p = DocumentSymbol.create(name, undefined, SymbolKind.Property, rg, rg) as Variable;
 			p.static = p.def = true, name = name.toUpperCase();
