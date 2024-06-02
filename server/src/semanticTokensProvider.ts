@@ -70,7 +70,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 			return SemanticTokenTypes.class;
 		case SemanticTokenTypes.method:
 		case SemanticTokenTypes.property:
-			if (curclass) {
+			if (curclass && !tk.ignore) {
 				let n = curclass.property[name], kind = n?.kind, temp: { [name: string]: AhkSymbol };
 				if (!n || (n as any).def === false) {
 					let t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = get_class_members(doc, curclass)), temp))[name];

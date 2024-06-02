@@ -3132,8 +3132,10 @@ export class Lexer {
 						case 'TK_WORD':
 							tk.type = 'TK_WORD';
 							tk.semantic = { type: SemanticTokenTypes.property };
-							if (input.charAt(parser_pos) === '%')
+							if (input.charAt(parser_pos) === '%' && (tk.ignore = true))
 								break;
+if (lk.content === '%')
+								tk.ignore = true;
 							return;
 						default:
 							return next = false;
