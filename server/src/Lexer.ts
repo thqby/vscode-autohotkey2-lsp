@@ -607,17 +607,19 @@ export class Lexer {
 					case 'TK_BLOCK_COMMENT':
 						return false;
 					case 'TK_OPERATOR':
-						return Boolean(tk.content.match(/^(!|~|not|%|\+\+|--)$/i));
+						return /^(!|~|not|%|\+\+|--)$/i.test(tk.content) &&
+							!is_line_continue(tk.previous_token ?? EMPTY_TOKEN, tk);
 					case 'TK_STRING':
-						return !tk.ignore;
+						return !tk.ignore &&
+							!is_line_continue(tk.previous_token ?? EMPTY_TOKEN, tk);
 					default:
-						let lk = tk.previous_token as Token;
+						let lk = tk.previous_token ?? EMPTY_TOKEN;
 						switch (lk.type) {
 							case 'TK_COMMA':
 							case 'TK_EQUALS':
 								return false;
 							case 'TK_OPERATOR':
-								return Boolean(lk.content.match(/^(\+\+|--|%)$/));
+								return /^(\+\+|--|%)$/.test(lk.content);
 						}
 				}
 				return true;
@@ -3141,7 +3143,7 @@ export class Lexer {
 							tk.semantic = { type: SemanticTokenTypes.property };
 							if (input.charAt(parser_pos) === '%' && (tk.ignore = true))
 								break;
-if (lk.content === '%')
+							if (lk.content === '%')
 								tk.ignore = true;
 							return;
 						default:
@@ -3613,7 +3615,7 @@ if (lk.content === '%')
 						(proto = true, !(ts = ts.previous_token?.previous_token) ||
 							input.charAt(ts.offset - 1) === '.')))
 					return;
-					_low = ts!.content.toLowerCase();
+				_low = ts!.content.toLowerCase();
 				if (_low !== 'this' && _low !== 'super' || !(cls = get_class()) || proto && !(cls = cls.prototype) || !cls.cache)
 					return;
 				if (flag) {
@@ -4483,7 +4485,7 @@ if (lk.content === '%')
 				(last_type === 'TK_WORD' && flags.mode === MODE.BlockStatement && (
 					(!input_wanted_newline && ck.previous_token?.callsite) ||
 					!flags.in_case && !['TK_WORD', 'TK_RESERVED', 'TK_START_EXPR'].includes(token_type) && !['--', '++', '%'].includes(token_text)
-				)) || (flags.declaration_statement) ||
+				)) || (flags.declaration_statement && (!n_newlines || is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))) ||
 				(flags.mode === MODE.ObjectLiteral && flags.last_text === ':' && !flags.ternary_depth)) {
 
 				set_mode(MODE.Statement);
@@ -7482,7 +7484,7 @@ export function traverse_include(lex: Lexer, included?: any) {
 
 export function get_detail(sym: AhkSymbol, lex: Lexer, remove_re?: RegExp): string | MarkupContent {
 	let detail = sym.markdown_detail;
-	if (!detail)
+	if (detail === undefined)
 		return sym.detail ?? '';
 	if (remove_re)
 		detail = detail.replace(remove_re, '');
@@ -7598,7 +7600,7 @@ export function is_line_continue(lk: Token, tk: Token, parent?: AhkSymbol): bool
 		case 'TK_OPERATOR':
 			if (lk.ignore)
 				return false;
-			if (!lk.content.match(/^(%|\+\+|--)$/))
+			if (!/^(%|\+\+|--)$/.test(lk.content))
 				return true;
 		default:
 			switch (tk.type) {
@@ -7607,7 +7609,7 @@ export function is_line_continue(lk: Token, tk: Token, parent?: AhkSymbol): bool
 				case 'TK_EQUALS':
 					return true;
 				case 'TK_OPERATOR':
-					return !tk.content.match(/^(!|~|not|%|\+\+|--)$/i) && (!(parent as FuncNode)?.ranges || !allIdentifierChar.test(tk.content));
+					return !/^(!|~|not|%|\+\+|--)$/i.test(tk.content) && (!(parent as FuncNode)?.ranges || !allIdentifierChar.test(tk.content));
 				// case 'TK_END_BLOCK':
 				// case 'TK_END_EXPR':
 				// 	return false;

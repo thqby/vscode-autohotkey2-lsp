@@ -56,7 +56,8 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		} else if (node.kind === SymbolKind.Variable) {
 			let kind = is_global === true ? '*@global*' : node.static ? '*@static*' : '*@local*';
 			md = `${kind} \`${node.name}\`${(t = join_types(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
-		}
+		} else if (node.kind === SymbolKind.Property && hover.length && (t = join_types(node.type_annotations)))
+			hover[0].value += `: ${t}`;
 		md && hover.push({ value: (hover.length ? '___\n' : '') + md });
 	}
 	return {
