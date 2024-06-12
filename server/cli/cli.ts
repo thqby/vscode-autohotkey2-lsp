@@ -2,9 +2,9 @@ import { openFile } from '../src/common';
 import { Lexer } from '../src/Lexer';
 
 function main() {
-	let options: any = {};
+	const options: { [k: string]: string } = {};
 	process.argv.slice(2).forEach(s => {
-		let arr = s.split('=');
+		const arr = s.split('=');
 		options[arr[0]] = arr[1];
 	});
 	let path: string = options.path ?? '';
@@ -12,10 +12,10 @@ function main() {
 	if (!path)
 		return;
 	try {
-		let td = openFile(path, false);
+		const td = openFile(path, false);
 		if (!td)
 			return;
-		let sc = new Lexer(td).beautify();
+		const sc = new Lexer(td).beautify({});
 		console.log(sc);
 	} catch (e) {
 		console.error(e);

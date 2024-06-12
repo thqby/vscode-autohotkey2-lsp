@@ -20,10 +20,11 @@ const languageServer = 'ahk2-language-server';
 const messageReader = new BrowserMessageReader(self);
 const messageWriter = new BrowserMessageWriter(self);
 const documents = new TextDocuments(TextDocument);
+const workspaceFolders = new Set<string>();
 const connection = set_Connection(createConnection(messageReader, messageWriter));
 
 let hasConfigurationCapability = false, hasWorkspaceFolderCapability = false;
-let uri_switch_to_ahk2 = '', workspaceFolders = new Set<string>();
+let uri_switch_to_ahk2 = '';
 
 connection.onInitialize(params => {
 	const capabilities = params.capabilities;
@@ -119,8 +120,9 @@ connection.onDidChangeConfiguration(async change => {
 });
 
 documents.onDidOpen(e => {
-	let to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
-	let uri = e.document.uri.toLowerCase(), doc = lexers[uri];
+	const to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
+	const uri = e.document.uri.toLowerCase();
+	let doc = lexers[uri];
 	if (doc) doc.document = e.document;
 	else lexers[uri] = doc = new Lexer(e.document);
 	doc.actived = true;
@@ -152,9 +154,9 @@ connection.languages.semanticTokens.onRange(semanticTokensOnRange);
 connection.onRequest('ahk2.exportSymbols', exportSymbols);
 connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
 connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
-	let doc = lexers[uri.toLowerCase()];
+	const doc = lexers[uri.toLowerCase()];
 	if (doc) {
-		let tk = doc.get_token(0);
+		const tk = doc.get_token(0);
 		if ((tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') && tk.content.match(/^\s*[;*]?\s*@(date|version)\b/im)) {
 			return {
 				uri: uri,

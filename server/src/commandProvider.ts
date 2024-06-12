@@ -31,14 +31,15 @@ export function setTextDocumentLanguage(uri: string, lang?: string) {
 }
 
 export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
-	let comments = detail?.replace(/\$/g, '\\$').split('\n');
-	let returns: string[] = [], details: string[] = [], result = ['/**'];
+	const comments = detail?.replace(/\$/g, '\\$').split('\n');
+	const params: { [name: string]: string[] } = {}, returns: string[] = [];
+	const details: string[] = [], result = ['/**'];
 	let lastarr: string[] | undefined, m: RegExpMatchArray | null;
-	let params: { [name: string]: string[] } = {}, i = 0, z = true;
+	let i = 0, z = true;
 	comments?.forEach(line => {
-		if (m = line.match(/^@(param|arg)\s+(({[^}]*}\s)?\s*(\[.*?\]|\S+).*)$/i))
+		if ((m = line.match(/^@(param|arg)\s+(({[^}]*}\s)?\s*(\[.*?\]|\S+).*)$/i)))
 			(lastarr = params[m[4].replace(/^\[?((\w|[^\x00-\x7f])+).*$/, '$1').toUpperCase()] ??= []).push('@param ' + m[2].trim());
-		else if (m = line.match(/^@(returns?)([\s:]\s*(.*))?$/i))
+		else if ((m = line.match(/^@(returns?)([\s:]\s*(.*))?$/i)))
 			lastarr = returns, returns.push(`@${m[1].toLowerCase()} ${m[3]}`);
 		else if (lastarr && !line.startsWith('@'))
 			lastarr.push(line);
@@ -50,10 +51,10 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 	else
 		result.push(' * $0'), z = false;
 	fn.params.forEach(it => {
-		if (lastarr = params[it.name.toUpperCase()]) {
+		if ((lastarr = params[it.name.toUpperCase()])) {
 			lastarr.forEach(s => result.push(' * ' + s));
 		} else if (it.name) {
-			let rets = generate_type_annotation(it, doc);
+			const rets = generate_type_annotation(it, doc);
 			if (rets)
 				result.push(` * @param $\{${++i}:{${rets}\\}} ${it.name} $${++i}`);
 			else result.push(` * @param ${it.name} $${++i}`);
@@ -62,7 +63,7 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 	if (returns.length) {
 		returns.forEach(s => result.push(' * ' + s));
 	} else {
-		let rets = generate_type_annotation(fn, doc);
+		const rets = generate_type_annotation(fn, doc);
 		if (rets)
 			result.push(` * @returns $\{${++i}:{${rets}\\}} $${++i}`);
 	}
@@ -76,8 +77,10 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 async function generateComment() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
 		return;
-	let { uri, position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
-	let doc = lexers[uri = uri.toLowerCase()], scope = doc.searchScopedNode(position), ts = scope?.children || doc.children;
+	const { uri, position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
+	const doc = lexers[uri.toLowerCase()];
+	let scope = doc.searchScopedNode(position);
+	const ts = scope?.children || doc.children;
 	for (const it of ts) {
 		if ((it.kind === SymbolKind.Function || it.kind === SymbolKind.Method) &&
 			it.selectionRange.start.line === position.line &&
@@ -112,11 +115,13 @@ async function generateComment() {
 }
 
 export function exportSymbols(uri: string) {
-	let doc = lexers[uri.toLowerCase()], cache: any = {}, result: any = {};
+	let doc = lexers[uri.toLowerCase()];
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const cache: { [k: string]: string } = {}, result: any = {};
 	if (!doc)
 		return;
 	update_include_cache();
-	for (let uri of [doc.uri, ...Object.keys(doc.relevance)]) {
+	for (const uri of [doc.uri, ...Object.keys(doc.relevance)]) {
 		if (!(doc = lexers[uri]))
 			continue;
 		let includes;
@@ -125,8 +130,9 @@ export function exportSymbols(uri: string) {
 		dump(Object.values(doc.declaration), result[doc.fsPath || doc.document.uri] = { includes });
 	}
 	return result;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	function dump(nodes: AhkSymbol[], result: any) {
-		let kind: SymbolKind, fn: FuncNode, cl: ClassNode, t: any;
+		let kind: SymbolKind, fn: FuncNode, cl: ClassNode, t;
 		for (let it of nodes) {
 			if (!it.selectionRange.end.character)
 				continue;
@@ -153,6 +159,7 @@ export function exportSymbols(uri: string) {
 					});
 					if (!(it = (it as Property).call!))
 						break;
+				// fall through
 				case SymbolKind.Function:
 				case SymbolKind.Method:
 					fn = it as FuncNode;
@@ -199,7 +206,7 @@ export function exportSymbols(uri: string) {
 async function diagnosticFull() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
 		return;
-	let { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
 	const doc = lexers[uri.toLowerCase()];
 	if (!doc) return;
 	update_include_cache();
@@ -211,7 +218,7 @@ async function diagnosticFull() {
 async function setscriptdir() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
 		return;
-	let { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex) return;
 	if (lex.scriptdir !== lex.scriptpath)
@@ -221,9 +228,10 @@ async function setscriptdir() {
 	lex.sendDiagnostics(false, true);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const commands: { [command: string]: (args: any[]) => any } = {
-	'ahk2.diagnostic.full': (args: any[]) => diagnosticFull(),
-	'ahk2.generate.comment': (args: any[]) => generateComment(),
+	'ahk2.diagnostic.full': () => diagnosticFull(),
+	'ahk2.generate.comment': () => generateComment(),
 	'ahk2.setscriptdir': setscriptdir
 };
 

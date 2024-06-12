@@ -2,7 +2,7 @@
  * @license node-stream-zip | (c) 2020 Antelle | https://github.com/antelle/node-stream-zip/blob/master/LICENSE
  * Portions copyright https://github.com/cthackers/adm-zip | https://raw.githubusercontent.com/cthackers/adm-zip/master/LICENSE
  */
-
+/* eslint-disable */
 let fs = require('fs');
 const path = require('path');
 const events = require('events');

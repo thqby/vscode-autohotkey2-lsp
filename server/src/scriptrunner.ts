@@ -4,10 +4,10 @@ import { lstatSync, readlinkSync } from 'fs';
 import { resolve } from 'path';
 
 export function runscript(script: string) {
-	let executePath = resolvePath(ahkpath_cur, true);
+	const executePath = resolvePath(ahkpath_cur, true);
 	if (!executePath)
 		return;
-	const process = spawnSync(`\"${executePath}\" /CP65001 /ErrorStdOut=utf-8 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
+	const process = spawnSync(`"${executePath}" /CP65001 /ErrorStdOut=utf-8 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
 	if (process)
 		return (process.stdout ?? '').toString();
 }
@@ -16,6 +16,7 @@ export function existsSync(path: string): boolean {
 	try {
 		lstatSync(path);
 	} catch (err) {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		if ((err as any)?.code === 'ENOENT')
 			return false;
 	}
@@ -25,7 +26,7 @@ export function existsSync(path: string): boolean {
 export function resolvePath(path: string, resolveSymbolicLink = false): string {
 	if (!path)
 		return '';
-	let paths: string[] = [];
+	const paths: string[] = [];
 	if (!path.includes(':'))
 		paths.push(resolve(path));
 	if (isWindows && !/[\\/]/.test(path))

@@ -5,8 +5,9 @@ import { ahkpath_cur, isWindows, rootdir } from './common';
 let ahk_server: MessageConnection | undefined | null;
 
 async function get_ahkProvider_port(): Promise<number> {
+	// eslint-disable-next-line no-async-promise-executor
 	return new Promise(async resolve => {
-		let executePath = resolvePath(ahkpath_cur);
+		const executePath = resolvePath(ahkpath_cur);
 		if (!executePath)
 			return resolve(0);
 		let server, port = 1200;
@@ -14,23 +15,23 @@ async function get_ahkProvider_port(): Promise<number> {
 			try {
 				server = await createClientSocketTransport(port);
 				break;
-			} catch (e) {
+			} catch (_) {
 				port++;
 			}
 		}
-		let process = spawn(executePath, [`${rootdir}/server/dist/ahkProvider.ahk`, port.toString()]);
+		const process = spawn(executePath, [`${rootdir}/server/dist/ahkProvider.ahk`, port.toString()]);
 		if (!process || !process.pid)
 			return resolve(0);
-		let resolve2: any = (r?: MessageConnection) => {
+		let resolve2: ((_?: MessageConnection) => void) | undefined = (r?: MessageConnection) => {
 			resolve2 = undefined;
 			if (!r) return resolve(0);
 			r.onNotification('initialized', (port) => (r.dispose(), resolve(port)));
 			r.listen();
 		};
-		process.on('close', () => resolve2 && resolve2(null));
+		process.on('close', () => resolve2?.());
 		server.onConnected().then(
-			m => resolve2 && resolve2(createMessageConnection(...m)),
-			_ => resolve2 && resolve2(null)
+			m => resolve2?.(createMessageConnection(...m)),
+			() => resolve2?.()
 		);
 	});
 }

@@ -11,39 +11,40 @@ let client: LanguageClient;
 // this method is called when vs code is activated
 export function activate(context: ExtensionContext) {
 	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
-	const request_handlers: { [cmd: string]: any } = {
-		'ahk2.getActiveTextEditorUriAndPosition': (params: any) => {
+	/* eslint-disable-next-line */
+	const request_handlers: { [cmd: string]: (...params: any[]) => any } = {
+		'ahk2.getActiveTextEditorUriAndPosition': () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			const uri = editor.document.uri.toString(), position = editor.selection.end;
 			return { uri, position };
 		},
 		'ahk2.insertSnippet': async (params: [string, Range?]) => {
-			let editor = window.activeTextEditor;
+			const editor = window.activeTextEditor;
 			if (!editor) return;
 			if (params[1]) {
-				let { start, end } = params[1];
+				const { start, end } = params[1];
 				await editor.insertSnippet(new SnippetString(params[0]), new Range(start.line, start.character, end.line, end.character));
 			} else
 				editor.insertSnippet(new SnippetString(params[0]));
 		},
 		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
-			let lang = params[1] || 'ahk';
+			const lang = params[1] || 'ahk';
 			if (!(await languages.getLanguages()).includes(lang)) {
 				window.showErrorMessage(`Unknown language id: ${lang}`);
 				return;
 			}
-			let uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
+			const uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
 			it && languages.setTextDocumentLanguage(it, lang);
 		},
 		'ahk2.getWorkspaceFiles': async (params: string[]) => {
-			let all = !params.length;
+			const all = !params.length;
 			if (workspace.workspaceFolders) {
 				if (all)
 					return (await workspace.findFiles('**/*.{ahk,ah2,ahk2}')).forEach(it => it.toString());
 				else {
-					let files: string[] = [];
-					for (let folder of workspace.workspaceFolders)
+					const files: string[] = [];
+					for (const folder of workspace.workspaceFolders)
 						if (params.includes(folder.uri.toString().toLowerCase()))
 							files.push(...(await workspace.findFiles(new RelativePattern(folder, '*.{ahk,ah2,ahk2}'))).map(it => it.toString()));
 					return files;
@@ -65,7 +66,7 @@ export function activate(context: ExtensionContext) {
 
 	context.subscriptions.push(
 		commands.registerTextEditorCommand('ahk2.updateversioninfo', async textEditor => {
-			let info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
+			const info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
 			if (!info) {
 				await textEditor.insertSnippet(new SnippetString([
 					"/************************************************************************",
@@ -78,14 +79,14 @@ export function activate(context: ExtensionContext) {
 					"", ""
 				].join('\n')), new Range(0, 0, 0, 0));
 			} else {
-				let d = new Date;
+				const d = new Date;
 				let content = info.content, ver;
 				content = content.replace(/(?<=^\s*[;*]?\s*@date[:\s]\s*)(\d+\/\d+\/\d+)/im, d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2));
 				if (content.match(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im) &&
 					(ver = await window.showInputBox({ prompt: 'Enter version info', value: content.match(/(?<=^[\s*]*@version[:\s]\s*)(\S*)/im)?.[1] })))
 					content = content.replace(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im, ver);
 				if (content !== info.content) {
-					let ed = new WorkspaceEdit();
+					const ed = new WorkspaceEdit();
 					ed.replace(textEditor.document.uri, info.range, content);
 					workspace.applyEdit(ed);
 				}

@@ -1,7 +1,7 @@
 import { resolve, sep } from 'path';
 import { URI } from 'vscode-uri';
 import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 'fs';
-import { Connection } from 'vscode-languageserver';
+import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
 import { AhkSymbol, ActionType, FormatOptions, Lexer, update_comment_tags } from './Lexer';
@@ -94,9 +94,9 @@ export const extsettings: AHKLSSettings = {
 	WorkingDirs: []
 };
 export const utils = {
-	get_DllExport: (paths: string[] | Set<string>, onlyone: boolean = false) => Promise.resolve([] as string[]),
-	get_RCDATA: (path?: string) => (0 ? { uri: '', path: '' } : undefined),
-	get_ahkProvider: async () => null as any
+	get_DllExport: (_paths: string[] | Set<string>, _onlyone = false) => Promise.resolve([] as string[]),
+	get_RCDATA: (_path?: string) => ({ uri: '', path: '' } as { uri: string, path: string, paths?: string[] } | undefined),
+	get_ahkProvider: async () => null as unknown as Promise<MessageConnection | null>
 };
 
 export type Maybe<T> = T | undefined;
@@ -106,8 +106,9 @@ export let ahk_version = encode_version('3.0.0.0');
 export let ahkuris: { [name: string]: string } = {};
 export let ahkvars: { [key: string]: AhkSymbol } = {};
 export let libfuncs: { [uri: string]: LibSymbol } = {};
-export let hoverCache: { [key: string]: [string, Hover | undefined] } = {};
-export let libdirs: string[] = [], workspaceFolders: string[] = [];
+export const hoverCache: { [key: string]: [string, Hover | undefined] } = {};
+export const libdirs: string[] = [];
+export let workspaceFolders: string[] = [];
 export let completionItemCache: {
 	constant: CompletionItem[];
 	directive: { [c: string]: CompletionItem[] };
@@ -126,13 +127,14 @@ interface LibSymbol extends Array<AhkSymbol> {
 
 export function openFile(path: string, showError = true): TextDocument | undefined {
 	if (isBrowser) {
-		let data = getwebfile(path);
+		const data = getwebfile(path);
 		if (data)
 			return TextDocument.create(data.url, 'ahk2', -10, data.text);
 		return undefined;
 	} else {
 		let buf: Buffer | string;
 		try { buf = readFileSync(path); }
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		catch (e: any) {
 			if (showError) {
 				delete e.stack;
@@ -158,9 +160,9 @@ export function openFile(path: string, showError = true): TextDocument | undefin
 }
 
 export function openAndParse(path: string, showError = true, cache = true) {
-	let td = openFile(path, showError);
+	const td = openFile(path, showError);
 	if (td) {
-		let lex = new Lexer(td);
+		const lex = new Lexer(td);
 		lex.parseScript();
 		cache && (lexers[lex.uri] = lex);
 		return lex;
@@ -172,9 +174,10 @@ export function restorePath(path: string): string {
 		return path;
 	if (path.includes('..'))
 		path = resolve(path);
-	let dirs = path.split(/[/\\]/), s = dirs.shift()!.toLowerCase(), l;
+	const dirs = path.split(/[/\\]/);
+	let s = dirs.shift()!.toLowerCase(), l;
 	for (let dir of dirs) {
-		if (l = dir.toLowerCase())
+		if ((l = dir.toLowerCase()))
 			try {
 				for (const d of readdirSync(s))
 					if (d === l) { dir = d; break; }
@@ -185,7 +188,8 @@ export function restorePath(path: string): string {
 }
 
 export function getlocalefilepath(filepath: string): string | undefined {
-	let t = filepath.match(/<>./), s: string;
+	const t = filepath.match(/<>./);
+	let s: string;
 	if (t) {
 		if (existsSync(s = filepath.replace('<>', locale)))
 			return s;
@@ -198,24 +202,24 @@ export function getlocalefilepath(filepath: string): string | undefined {
 	return undefined;
 }
 
-export function getlocalefile(filepath: string, encoding?: string) {
-	let path = getlocalefilepath(filepath);
+export function getlocalefile(filepath: string, encoding?: BufferEncoding) {
+	const path = getlocalefilepath(filepath);
 	if (path)
-		return readFileSync(path, encoding ? { encoding: encoding } : undefined);
+		return readFileSync(path, encoding && { encoding });
 	return undefined;
 }
 
 export function getwebfile(filepath: string) {
-	let t = filepath.match(/<>./), s: string | undefined;
-	let ff: string[] = [];
-	let req = new XMLHttpRequest();
+	let s: string | undefined;
+	const t = filepath.match(/<>./), ff: string[] = [];
+	const req = new XMLHttpRequest();
 	if (t) {
 		ff.push(filepath.replace('<>', locale));
 		if (locale.toLowerCase() === 'zh-tw')
 			ff.unshift(filepath.replace('<>', 'zh-cn'));
 		ff.unshift(filepath.replace(t[0], ''));
 	} else ff.push(filepath);
-	if (s = ff.pop())
+	if ((s = ff.pop()))
 		return get(s);
 
 	function get(url: string): { url: string, text: string } | undefined {
@@ -223,14 +227,14 @@ export function getwebfile(filepath: string) {
 		req.send();
 		if (req.status === 200) {
 			return { url, text: req.responseText };
-		} else if (s = ff.pop())
+		} else if ((s = ff.pop()))
 			return get(s);
 		return undefined;
 	}
 }
 
 export function initahk2cache() {
-	let kind = CompletionItemKind.Keyword, data = '*';
+	const kind = CompletionItemKind.Keyword, data = '*';
 	ahkvars = {}, ahkuris = {};
 	completionItemCache = {
 		constant: [],
@@ -251,26 +255,26 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
 	const file = `${rootdir}/syntaxes/<>/${filename}`;
 	if (isBrowser) {
-		let td = openFile(file + '.d.ahk');
+		const td = openFile(file + '.d.ahk');
 		if (td) {
-			let doc = new Lexer(td, undefined, d);
+			const doc = new Lexer(td, undefined, d);
 			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
 		}
 		let data;
 		if (filename === 'ahk2')
-			if (data = getwebfile(`${rootdir}/syntaxes/ahk2_common.json`))
+			if ((data = getwebfile(`${rootdir}/syntaxes/ahk2_common.json`)))
 				build_item_cache(JSON.parse(data.text));
-		if (data = getwebfile(file + '.json'))
+		if ((data = getwebfile(file + '.json')))
 			build_item_cache(JSON.parse(data.text));
 	} else {
 		const syntaxes = extsettings.Syntaxes && existsSync(extsettings.Syntaxes) ? extsettings.Syntaxes : '';
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
 		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
-			let doc = new Lexer(td, undefined, d);
+			const doc = new Lexer(td, undefined, d);
 			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
 		}
-		if (path = getfilepath('.json'))
+		if ((path = getfilepath('.json')))
 			build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
 		if (filename === 'ahk2') {
 			completionItemCache.static = completionItemCache.keyword.find(it => it.label === 'static') ?? completionItemCache.static;
@@ -285,12 +289,14 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 			return getlocalefilepath(file2 + ext) || (file2 !== file ? getlocalefilepath(file + ext) : undefined);
 		}
 	}
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	function build_item_cache(ahk2: any) {
-		let insertTextFormat: InsertTextFormat, kind: CompletionItemKind;
+		let insertTextFormat: InsertTextFormat, kind: CompletionItemKind, c;
 		let snip: { prefix?: string, body: string, description?: string, syntax?: string };
-		let rg = Range.create(0, 0, 0, 0);
+		const rg = Range.create(0, 0, 0, 0);
 		for (const key in ahk2) {
-			let arr: any[] = ahk2[key];
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const arr: any[] = ahk2[key];
 			switch (key) {
 				case 'constants':
 					kind = CompletionItemKind.Constant;
@@ -304,7 +310,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					}
 					break;
 				case 'directives':
-					let c = '';
+					c = '';
 					kind = CompletionItemKind.Keyword;
 					insertTextFormat = InsertTextFormat.Snippet;
 					for (snip of arr) {
@@ -376,8 +382,8 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					break;
 				case 'options':
 					kind = CompletionItemKind.Text;
-					for (let k in arr) {
-						let t = completionItemCache.option[k] ??= [];
+					for (const k in arr) {
+						const t = completionItemCache.option[k] ??= [];
 						for (snip of arr[k])
 							t.push({
 								label: snip.body, kind,
@@ -398,19 +404,19 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enum_ahkfiles(dirpath: string) {
-	let maxdepth = extsettings.Files.MaxDepth;
-	let { file: file_exclude, folder: folder_exclude } = scanExclude;
+	const maxdepth = extsettings.Files.MaxDepth;
+	const { file: file_exclude, folder: folder_exclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
 		try {
-			let dir = await fs.opendir(dirpath);
-			for await (let t of dir) {
+			const dir = await fs.opendir(dirpath);
+			for await (const t of dir) {
 				if (t.isDirectory() && depth < maxdepth) {
-					let path = resolve(dirpath, t.name);
+					const path = resolve(dirpath, t.name);
 					if (!folder_exclude?.some(re => re.test(path)))
 						yield* enumfile(path, depth + 1);
 				} else if (t.isFile() && /\.(ahk2?|ah2)$/i.test(t.name)) {
-					let path = resolve(dirpath, t.name);
+					const path = resolve(dirpath, t.name);
 					if (!file_exclude?.some(re => re.test(path)))
 						yield path;
 				}
@@ -421,7 +427,7 @@ export function enum_ahkfiles(dirpath: string) {
 
 export function update_settings(configs: AHKLSSettings) {
 	if (typeof configs.AutoLibInclude === 'string')
-		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as any;
+		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 	else if (typeof configs.AutoLibInclude === 'boolean')
 		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
 	if (typeof configs.Warn?.CallWithoutParentheses === 'string')
@@ -436,11 +442,13 @@ export function update_settings(configs: AHKLSSettings) {
 			case 'One True Brace Variant': configs.FormatOptions.brace_style = -1; break;
 			default: delete configs.FormatOptions.brace_style; break;
 		}
-	for (let k of ['array_style', 'object_style'] as Array<keyof FormatOptions>)
+	for (const k of ['array_style', 'object_style'] as Array<keyof FormatOptions>)
 		if (typeof configs.FormatOptions?.[k] === 'string')
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			configs.FormatOptions[k] = { collapse: 2, expand: 1, none: 0 }[configs.FormatOptions[k] as string] as any;
 	try {
 		update_comment_tags(configs.CommentTags!);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} catch (e: any) {
 		delete e.stack;
 		delete configs.CommentTags;
@@ -453,8 +461,8 @@ export function update_settings(configs: AHKLSSettings) {
 	else configs.WorkingDirs = [];
 	scanExclude = {};
 	if (configs.Files) {
-		let file: RegExp[] = [], folder: RegExp[] = [];
-		for (let s of configs.Files.Exclude ?? [])
+		const file: RegExp[] = [], folder: RegExp[] = [];
+		for (const s of configs.Files.Exclude ?? [])
 			try {
 				(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
 			} catch (e) {
@@ -474,22 +482,22 @@ export function update_settings(configs: AHKLSSettings) {
 
 function encode_version(version: string) {
 	const STAGE: { [t: string]: number } = { ALPHA: -3, BETA: -2, RC: -1 };
-	let v = (version.replace(/-\w+/, s => `.${STAGE[s.substring(1).toUpperCase()]}`) + '.0').split('.');
+	const v = (version.replace(/-\w+/, s => `.${STAGE[s.substring(1).toUpperCase()]}`) + '.0').split('.');
 	let n = 0;
 	for (let i = 0; i < 4; i++)
 		n += parseInt(v[i]) * 2 ** ((3 - i) * 10);
 	return n;
 }
 
-export async function sendAhkRequest(method: string, params: any[]) {
+export async function sendAhkRequest(method: string, params: unknown[]) {
 	if (isBrowser)
 		return undefined;
-	return utils.get_ahkProvider().then((server: any) => server?.sendRequest(method, ...params));
+	return utils.get_ahkProvider().then((server) => server?.sendRequest(method, ...params));
 }
 
 export function make_search_re(search: string) {
 	let t = undefined;
-	search = search.replace(/([*.?+^$|\\/\[\](){}])|([^\x00-\x7f])|(.)/g,
+	search = search.replace(/([*.?+^$|\\/[\](){}])|([^\x00-\x7f])|(.)/g,
 		(_, m1, m2, m3) => `${m3 || (t ??= m2) || `\\${m1}`}.*`);
 	return new RegExp(t ? search : `([^\\x00-\\x7f]|${search})`, 'i');
 }
@@ -513,7 +521,7 @@ export function set_dirname(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); 
 export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }
 export function set_version(version: string) { ahk_version = encode_version(version); }
 export function set_WorkspaceFolders(folders: Set<string>) {
-	let old = workspaceFolders;
+	const old = workspaceFolders;
 	workspaceFolders = [...folders];
 	extsettings.WorkingDirs.forEach(it => !folders.has(it) && workspaceFolders.push(it));
 	workspaceFolders.sort().reverse();
@@ -530,9 +538,9 @@ export async function sleep(ms: number) {
 
 function glob2regexp(glob: string) {
 	let reStr = '', inGroup = false, isNot: boolean, c: string;
-	if (isNot = glob.startsWith('!'))
+	if ((isNot = glob.startsWith('!')))
 		glob = glob.slice(1);
-	for (let i = 0, len = glob.length; i < len; i++) {
+	for (let i = 0, j, len = glob.length; i < len; i++) {
 		switch (c = glob[i]) {
 			case '/':
 			case '\\':
@@ -570,7 +578,7 @@ function glob2regexp(glob: string) {
 				reStr += inGroup ? '|' : ',';
 				break;
 			case '*':
-				let j = i;
+				j = i;
 				while (glob[i + 1] === '*')
 					i++;
 				if (i > j && /^[\x5c/]?\*+[\x5c/]?$/.test(glob.substring(j - 1, i + 2))) {

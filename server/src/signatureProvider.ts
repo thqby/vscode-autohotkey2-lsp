@@ -14,14 +14,15 @@ let cache: {
 } = {};
 export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (token.isCancellationRequested) return;
-	let { textDocument: { uri }, context, position } = params;
-	let lex = lexers[uri = uri.toLowerCase()], activeSignature = context?.activeSignatureHelp?.activeSignature, offset, pi;
+	const { textDocument: { uri }, context, position } = params;
+	const lex = lexers[uri.toLowerCase()], activeSignature = context?.activeSignatureHelp?.activeSignature;
+	let offset, pi;
 	switch (context?.triggerKind) {
 		case 2:	// TriggerCharacter
 			if (!context.isRetrigger) {
 				offset = lex.document.offsetAt(position);
 				if (context.triggerCharacter === ' ') {
-					let tk = lex.find_token(offset);
+					const tk = lex.find_token(offset);
 					if (tk.offset >= offset && (pi = tk.previous_token?.callsite))
 						pi = pi.range.start.line === position.line && pi.paraminfo;
 				} else pi = lex.tokens[offset - 1]?.paraminfo;
@@ -32,40 +33,43 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				return cached_sh();
 			break;
 	}
-	let res = get_callinfo(lex, position, pi);
+	const res = get_callinfo(lex, position, pi);
 	if (!res || res.index < 0)
 		return;
-	let { name, pos, index, kind } = res;
-	let loc = `${uri}?${name},${pos.line},${pos.character}`;
+	const { name, pos, index, kind } = res;
+	const loc = `${lex.uri}?${name},${pos.line},${pos.character}`;
 	if (loc === cache.loc) {
 		if (index === cache.index)
 			return cached_sh();
 		cache.index = index;
 	} else cache = { loc, index };
-	let set = new Set<AhkSymbol>(), nodes = cache.nodes!;
-	let signinfo: SignatureHelp = { activeSignature, signatures: [] };
+	let nodes = cache.nodes!;
+	const set = new Set<AhkSymbol>(), signinfo: SignatureHelp = { activeSignature, signatures: [] };
 	if (!nodes) {
-		let context = lex.getContext(pos), iscall = true;
+		const context = lex.getContext(pos);
+		let iscall = true;
 		cache.nodes = nodes = [];
 		if (context.kind === SymbolKind.Null || context.token.symbol)
 			return;
-		let tps = decltype_expr(lex, context.token, context.range.end);
+		const tps = decltype_expr(lex, context.token, context.range.end);
 		if (tps.includes(ANY)) {
 			if (kind !== SymbolKind.Method) return;
-			name = name.toUpperCase(), nodes = [];
+			const uname = name.toUpperCase();
+			nodes = [];
 			for (const u of new Set([ahkuris.ahk2, ahkuris.ahk2_h, lex.uri, ...Object.keys(lex.relevance)]))
-				for (const node of lexers[u]?.object.method[name] ?? [])
+				for (const node of lexers[u]?.object.method[uname] ?? [])
 					nodes.push({ node, uri: u });
 		} else {
 			let prop = context.text ? '' : context.word.toLowerCase();
 			if (kind === SymbolKind.Property)
 				prop ||= '__item', iscall = false;
 			else prop ||= 'call';
-			for (let it of tps)
+			for (const it of tps)
 				add(it, prop);
 		}
 		function add(it: AhkSymbol, prop: string, needthis = 0) {
-			let fn: FuncNode | undefined, uri = it.uri!;
+			let fn: FuncNode | undefined;
+			const uri = it.uri!;
 			switch (it.kind) {
 				case SymbolKind.Method:
 					if (!iscall)
@@ -86,12 +90,14 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 						break;
 					}
 					fn = it as FuncNode;
+				// fall through
 				case SymbolKind.Class:
 					add_cls();
 					break;
 			}
 			function add_cls() {
-				let n: AhkSymbol | undefined, cls = it as ClassNode;
+				let n: AhkSymbol | undefined;
+				const cls = it as ClassNode;
 				if (!(n = get_class_member(lex, cls, prop, iscall)))
 					return;
 				if (iscall) {
@@ -106,7 +112,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 						return tps.forEach(it => add(it, 'call', -1));
 					} else if (fn && prop === 'bind') {
 						if (set.has(fn)) return; else set.add(fn);
-						let b = fn.full.indexOf('(', fn.name ? 1 : 0);
+						const b = fn.full.indexOf('(', fn.name ? 1 : 0);
 						fn = {
 							...fn, name: n.name, detail: n.markdown_detail === undefined ? n.detail : undefined,
 							full: `(Func) Bind${fn.full.slice(b, b + fn.param_def_len)} => BoundFunc`,
@@ -115,12 +121,12 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 						n = fn;
 					}
 				} else if (n.kind === SymbolKind.Class)
-					n = get_class_member(lex, n as any, '__item', false);
+					n = get_class_member(lex, n, '__item', false);
 				else if (n.kind !== SymbolKind.Property)
 					return;
 				else if (!(n as FuncNode).params) {
 					for (let t of decltype_returns(n, lexers[n.uri!] ?? lex, cls))
-						(t = get_class_member(lex, t as any, '__item', false)!) &&
+						(t = get_class_member(lex, t, '__item', false)!) &&
 							nodes.push({ node: t, needthis, uri: t.uri! });
 					return;
 				}
@@ -128,25 +134,25 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			}
 		}
 	}
-	for (let it of nodes) {
-		let fn = it.node as FuncNode, lex = lexers[it.uri], needthis = it.needthis ?? 0;
+	for (const it of nodes) {
+		const fn = it.node as FuncNode, lex = lexers[it.uri], needthis = it.needthis ?? 0;
 		if (!fn.params || set.has(fn))
 			continue;
-		let fns = [fn], q = fn.name && fn.full.match(/^(\(.+?\))?[^([]+/)?.[0].length || 0, pi = index - needthis;
-		let parameters: ParameterInformation[] = [];
+		const fns = [fn], pi = index - needthis;
+		let parameters: ParameterInformation[] = [], q = fn.name && fn.full.match(/^(\(.+?\))?[^([]+/)?.[0].length || 0;
 		let params: Variable[] | undefined, param: Variable | undefined;
 		let activeParameter: number, pc: number, label: string, name: string;
-		let documentation = get_detail(fn, lex,
+		const documentation = get_detail(fn, lex,
 			/(^|\n)\*@param\*(.|\n|\r)*?(?=\n\*@|$)/g);
 		if (fn.overloads) {
 			if (typeof fn.overloads === 'string') {
-				let lex = new Lexer(TextDocument.create('', 'ahk2', -10,
+				const lex = new Lexer(TextDocument.create('', 'ahk2', -10,
 					fn.kind === SymbolKind.Function ? fn.overloads :
 						`class _ {\n${fn.overloads}\n}`), undefined, -1);
 				lex.parseScript(), label = fn.name || '_';
-				let children = (fn.kind === SymbolKind.Function ? lex.children : lex.declaration._?.children ?? []) as FuncNode[];
-				let pre = fn.full.match(/^(\(.+?\))?[^([]+/)?.[0] ?? label;
-				for (let it of children) {
+				const children = (fn.kind === SymbolKind.Function ? lex.children : lex.declaration._?.children ?? []) as FuncNode[];
+				const pre = fn.full.match(/^(\(.+?\))?[^([]+/)?.[0] ?? label;
+				for (const it of children) {
 					if (it.name !== label || !it.params)
 						continue;
 					it.full = pre + it.full.replace(/^(\(.+?\))?[^([]+/, '');
@@ -156,7 +162,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			} else fns.push(...fn.overloads);
 		}
 		q += needthis > 0 ? 7 : 1, set.add(fn);
-		for (let f of fns) {
+		for (const f of fns) {
 			label = f.full, params = f.params;
 			activeParameter = f.variadic && params[(pc = params.length) - 1].arr ? Math.min(pi, pc - 1) : pi;
 			name = params[activeParameter]?.name.toUpperCase() ?? (needthis && activeParameter === -1 ? 'this' : '\0');
@@ -166,7 +172,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				parameters.unshift({ label: 'this' }), activeParameter++;
 				label = label.replace(/(?<=.)\(/, '(this' + (params.length ? ', ' : ''));
 			}
-			let detail = param && get_detail(param, lex);
+			const detail = param && get_detail(param, lex);
 			if (detail)
 				parameters[activeParameter].documentation = detail;
 			signinfo.signatures.push({ label, parameters, documentation, activeParameter });
@@ -174,7 +180,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 	}
 	return cache.signinfo = signinfo;
 	function cached_sh() {
-		let sh = cache.signinfo;
+		const sh = cache.signinfo;
 		sh && (sh.activeSignature = activeSignature);
 		return sh;
 	}

@@ -22,14 +22,15 @@ import { resolvePath, runscript } from './scriptrunner';
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
 const connection = set_Connection(createConnection(ProposedFeatures.all));
+const workspaceFolders = new Set<string>();
 let hasConfigurationCapability = false, hasWorkspaceFolderCapability = false;
-let uri_switch_to_ahk2 = '', workspaceFolders = new Set<string>();
+let uri_switch_to_ahk2 = '';
 
-commands['ahk2.resetinterpreterpath'] = (args: any[]) =>
-	setInterpreter((args[0] as string).replace(/^[A-Z]:/, m => m.toLowerCase()));
+commands['ahk2.resetinterpreterpath'] = (args: string[]) =>
+	setInterpreter((args[0]).replace(/^[A-Z]:/, m => m.toLowerCase()));
 
 connection.onInitialize(async params => {
-	let capabilities = params.capabilities;
+	const capabilities = params.capabilities;
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
 	);
@@ -81,7 +82,8 @@ connection.onInitialize(async params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	let configs: AHKLSSettings | undefined, env = process.env;
+	let configs: AHKLSSettings | undefined;
+	const env = process.env;
 	if (env.AHK2_LS_CONFIG)
 		try { configs = JSON.parse(env.AHK2_LS_CONFIG); } catch { }
 	if (params.initializationOptions)
@@ -126,7 +128,7 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	let { AutoLibInclude, InterpreterPath, Syntaxes } = extsettings;
+	const { AutoLibInclude, InterpreterPath, Syntaxes } = extsettings;
 	update_settings(newset);
 	set_WorkspaceFolders(workspaceFolders);
 	if (InterpreterPath !== extsettings.InterpreterPath) {
@@ -147,8 +149,9 @@ connection.onDidChangeConfiguration(async change => {
 });
 
 documents.onDidOpen(e => {
-	let to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
-	let uri = e.document.uri.toLowerCase(), doc = lexers[uri];
+	const to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
+	const uri = e.document.uri.toLowerCase();
+	let doc = lexers[uri];
 	if (doc) doc.document = e.document;
 	else {
 		lexers[uri] = doc = new Lexer(e.document);
@@ -188,9 +191,9 @@ connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
 connection.onRequest('ahk2.getAHKversion', getAHKversion);
 connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
 connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
-	let doc = lexers[uri.toLowerCase()];
+	const doc = lexers[uri.toLowerCase()];
 	if (doc) {
-		let tk = doc.get_token(0);
+		const tk = doc.get_token(0);
 		if ((tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') && tk.content.match(/^\s*[;*]?\s*@(date|version)\b/im)) {
 			return {
 				uri: uri,
@@ -220,7 +223,7 @@ async function patherr(msg: string) {
 }
 
 async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
-	let script = `
+	const script = `
 	#NoTrayIcon
 	#Warn All, Off
 	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 1) = "1" ? "FileAppend2" : "FileAppend"
@@ -239,13 +242,13 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		return false;
 	}
 	if (!(data = data.trim())) {
-		let path = ahkpath_cur;
+		const path = ahkpath_cur;
 		if ((await getAHKversion([path]))[0].endsWith('[UIAccess]')) {
 			let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
 			fail = 2;
 			if (path !== n && (n = resolvePath(n, true)) && !(await getAHKversion([n]))[0].endsWith('[UIAccess]')) {
 				set_ahkpath(n);
-				if (ret = await initpathenv(samefolder))
+				if ((ret = await initpathenv(samefolder)))
 					fail = 0;
 				set_ahkpath(path);
 			}
@@ -269,9 +272,9 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		libdirs.length = 0;
 		libdirs.push(a_vars.mydocuments + '\\AutoHotkey\\Lib\\',
 			a_vars.ahkpath.replace(/[^\\/]+$/, 'Lib\\'));
-		let lb: any;
+		let lb;
 		for (lb of Object.values(libfuncs))
-			lb.inlib = inlibdirs(lb.fsPath);
+			lb.islib = inlibdirs(lb.fsPath);
 	}
 	a_vars.h = (a_vars.h ?? '0').slice(0, 1);
 	if (a_vars.h === '1') {
@@ -285,7 +288,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	if (samefolder)
 		return true;
 	for (const uri in lexers) {
-		let doc = lexers[uri];
+		const doc = lexers[uri];
 		if (!doc.d) {
 			doc.initLibDirs();
 			if (Object.keys(doc.include).length || doc.diagnostics.length)
@@ -297,9 +300,9 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		parseuserlibs();
 	return true;
 	async function update_rcdata() {
-		let pe = new PEFile(ahkpath_cur);
+		const pe = new PEFile(ahkpath_cur);
 		try {
-			let rc = await pe.getResource(RESOURCE_TYPE.RCDATA);
+			const rc = await pe.getResource(RESOURCE_TYPE.RCDATA);
 			curPERCDATA = rc;
 		} catch (e) { }
 		finally { pe.close(); }
@@ -337,13 +340,13 @@ function inlibdirs(path: string) {
 }
 
 async function changeInterpreter(oldpath: string, newpath: string) {
-	let samefolder = !!oldpath && resolve(oldpath, '..').toLowerCase() === resolve(newpath, '..').toLowerCase();
+	const samefolder = !!oldpath && resolve(oldpath, '..').toLowerCase() === resolve(newpath, '..').toLowerCase();
 	if (!(await initpathenv(samefolder)))
 		return false;
 	if (samefolder)
 		return true;
 	documents.all().forEach(td => {
-		let doc = lexers[td.uri.toLowerCase()];
+		const doc = lexers[td.uri.toLowerCase()];
 		if (!doc) return;
 		doc.initLibDirs(doc.scriptdir);
 		if (extsettings.AutoLibInclude & 1)
@@ -353,7 +356,7 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 }
 
 async function setInterpreter(path: string) {
-	let old = ahkpath_cur;
+	const old = ahkpath_cur;
 	if (!path || path.toLowerCase() === old.toLowerCase())
 		return false;
 	set_ahkpath(path);
@@ -367,8 +370,8 @@ async function parseproject(uri: string) {
 	if (!lex || !uri.startsWith('file:'))
 		return;
 	!lex.d && (libfuncs[uri] ??= get_lib_symbols(lex));
-	let searchdir = '', workspace = false, path: string, t: TextDocument | undefined;
-	if (searchdir = lex.workspaceFolder)
+	let searchdir = lex.workspaceFolder, workspace = false, path: string, t: TextDocument | undefined;
+	if (searchdir)
 		searchdir = URI.parse(searchdir).fsPath, workspace = true;
 	else
 		searchdir = lex.scriptdir + '\\lib';
@@ -393,10 +396,10 @@ async function getAHKversion(params: string[]) {
 		let pe: PEFile | undefined;
 		try {
 			pe = new PEFile(path);
-			let props = (await pe.getResource(RESOURCE_TYPE.VERSION))[0].StringTable[0];
+			const props = (await pe.getResource(RESOURCE_TYPE.VERSION))[0].StringTable[0];
 			if (props.ProductName?.toLowerCase().startsWith('autohotkey')) {
-				let is_bit64 = await pe.is_bit64;
-				let m = (await pe.getResource(RESOURCE_TYPE.MANIFEST))[0]?.replace(/<!--[\s\S]*?-->/g, '') ?? '';
+				const is_bit64 = await pe.is_bit64;
+				const m = (await pe.getResource(RESOURCE_TYPE.MANIFEST))[0]?.replace(/<!--[\s\S]*?-->/g, '') ?? '';
 				let version = `${props.ProductName} ${props.ProductVersion ?? 'unknown version'} ${is_bit64 ? '64' : '32'} bit`;
 				if (m.includes('uiAccess="true"'))
 					version += ' [UIAccess]';
@@ -409,9 +412,9 @@ async function getAHKversion(params: string[]) {
 }
 
 async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
-	let funcs: any = {};
-	for (let path of paths) {
-		let pe = await searchAndOpenPEFile(path, a_vars.is64bit === '1' ? true : a_vars.is64bit === '0' ? false : undefined);
+	const funcs: { [name: string]: true } = {};
+	for (const path of paths) {
+		const pe = await searchAndOpenPEFile(path, a_vars.is64bit === '1' ? true : a_vars.is64bit === '0' ? false : undefined);
 		if (!pe) continue;
 		try {
 			(await pe.getExport())?.Functions.forEach((it) => funcs[it.Name] = true);
@@ -423,20 +426,21 @@ async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 }
 
 let curPERCDATA: { [key: string]: Buffer } | undefined = undefined;
-function getRCDATA(name: string | undefined) {
-	let exe = resolvePath(ahkpath_cur, true), path = `${exe}:${name}`;
+function getRCDATA(name?: string) {
+	const exe = resolvePath(ahkpath_cur, true);
 	if (!exe) return;
-	let uri = URI.from({ scheme: 'ahkres', path }).toString().toLowerCase();
+	if (!name) return { uri: '', path: '', paths: Object.keys(curPERCDATA ?? {}) };
+	const path = `${exe.toLowerCase()}:${name}`;
+	const uri = URI.from({ scheme: 'ahkres', path }).toString().toLowerCase();
 	if (lexers[uri])
 		return { uri, path };
-	exe = exe.toLowerCase();
 	if (!name || !curPERCDATA)
 		return;
-	let data = curPERCDATA[name];
+	const data = curPERCDATA[name];
 	if (!data)
 		return;
 	try {
-		let doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
+		const doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
 		doc.parseScript();
 		return { uri, path };
 	} catch { delete curPERCDATA[name]; }
