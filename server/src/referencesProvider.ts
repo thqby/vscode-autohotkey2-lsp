@@ -135,8 +135,15 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 			}
 			return;
 	}
-	if (Object.keys(references).length)
+	if (Object.keys(references).length) {
+		for (const u in references) {
+			const m: { [k: string]: Range } = {};
+			for (const range of references[u])
+				m[`${range.start.line},${range.start.character}`] ??= range;
+			references[u] = Object.values(m);
+		}
 		return references;
+	}
 	return;
 }
 
