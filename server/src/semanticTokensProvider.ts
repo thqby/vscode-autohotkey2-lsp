@@ -124,7 +124,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						return sem.type = SemanticTokenTypes.property;
 					}
 					case undefined:
-						if ((curclass.checkmember ?? doc.checkmember) !== false && extsettings.Diagnostics.ClassStaticMemberCheck) {
+						if ((curclass.checkmember ?? doc.checkmember) !== false && extsettings.Diagnostics.ClassNonDynamicMemberCheck) {
 							const tt = doc.tokens[tk.next_token_offset];
 							if (ASSIGN_TYPE.includes(tt?.content)) {
 								cls_add_prop(curclass, tk.content, tk.offset);

@@ -5100,7 +5100,7 @@ export class Lexer {
 							} else if ((t = s.match(/^include\s+(.*)/i)))
 								add_include_dllload(t[1].replace(/\s+;.*$/, '').trim());
 							else if ((t = s.match(/^lint-(enable|disable)\b\s*(\S*)/))) {
-								if (t[2] === 'class-static-member-check')
+								if (t[2] === 'class-non-dynamic-member-check')
 									if (t[1] === 'enable')
 										delete (currsymbol as ClassNode ?? _this).checkmember;
 									else (currsymbol as ClassNode ?? _this).checkmember = false;

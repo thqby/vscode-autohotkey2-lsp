@@ -43,7 +43,7 @@ export interface AHKLSSettings {
 		Function: string
 	}
 	Diagnostics: {
-		ClassStaticMemberCheck: boolean
+		ClassNonDynamicMemberCheck: boolean
 		ParamsCheck: boolean
 	}
 	Files: {
@@ -76,7 +76,7 @@ export const extsettings: AHKLSSettings = {
 		Function: '('
 	},
 	Diagnostics: {
-		ClassStaticMemberCheck: true,
+		ClassNonDynamicMemberCheck: true,
 		ParamsCheck: true
 	},
 	Files: {

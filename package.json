@@ -122,11 +122,11 @@
 					},
 					"description": "%ahk2.debugconfiguration%"
 				},
-				"AutoHotkey2.Diagnostics.ClassStaticMemberCheck": {
+				"AutoHotkey2.Diagnostics.ClassNonDynamicMemberCheck": {
 					"scope": "window",
 					"type": "boolean",
 					"default": true,
-					"description": "%ahk2.diagnostics.classstaticmembercheck%"
+					"description": "%ahk2.diagnostics.class-non-dynamic-member-check%"
 				},
 				"AutoHotkey2.Diagnostics.ParamsCheck": {
 					"scope": "window",

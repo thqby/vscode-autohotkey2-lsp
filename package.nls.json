@@ -12,7 +12,7 @@
 	"ahk2.debugconfiguration": "Append debugging configuration to the currently started debugger, same as launch.json configuration",
 	"ahk2.description": "Autohotkey2 Language Support using vscode-lsp",
 	"ahk2.diagnostic.full": "Diagnostic full text",
-	"ahk2.diagnostics.classstaticmembercheck": "Check whether static members of class exist",
+	"ahk2.diagnostics.class-non-dynamic-member-check": "Check whether non-dynamic members of class exist",
 	"ahk2.diagnostics.paramscheck": "Check that the function call has the correct number of arguments",
 	"ahk2.warn.varunset": "Display warnings for each variable that has never been directly assigned or used with the reference operator",
 	"ahk2.warn.localsameasglobal": "Display warnings for each undeclared local variable which has the same name as a global variable",

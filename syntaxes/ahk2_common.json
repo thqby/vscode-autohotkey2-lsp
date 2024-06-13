@@ -27,9 +27,9 @@
 			"description": "In ahk_h, enable winapi function completion"
 		},
 		{
-			"body": ";@lint-${1|disable,enable|} ${2|class-static-member-check|}",
+			"body": ";@lint-${1|disable,enable|} ${2|class-non-dynamic-member-check|}",
 			"prefix": "@lint",
-			"description": "Enables or disables class static member checking for the current file/class"
+			"description": "Enables or disables class non-dynamic member checking for the current file/class"
 		},
 		{
 			"body": ";@format ${1|array_style,object_style|}: ${2|collapse,expand,none|}",
