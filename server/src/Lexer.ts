@@ -553,6 +553,7 @@ export class Lexer {
 				preindent_string = input.substring(input.lastIndexOf('\n', parser_pos) + 1, parser_pos).match(/^[ \t]*/)![0];
 			}
 
+			// eslint-disable-next-line no-constant-condition
 			while (true) {
 				token_type = (ck = get_next_token()).type;
 				token_text_low = (token_text = ck.content).toLowerCase();
@@ -950,6 +951,7 @@ export class Lexer {
 										r += lk.content, tp = lk.type;
 									if (lk?.content === '<' && !lk.topofline) {
 										const generic_types: (string | AhkSymbol)[][] = [];
+										// eslint-disable-next-line no-constant-condition
 										while (true) {
 											generic_types.push(parse());
 											if (!lk || lk.content as string === '>') {
@@ -2203,6 +2205,7 @@ export class Lexer {
 					const tps: string[] = [];
 					next = true;
 					if (tk.content.toLowerCase() !== 'as') {
+						// eslint-disable-next-line no-constant-condition
 						while (true) {
 							let tp = '';
 							if (tk.type !== 'TK_WORD')
@@ -2211,6 +2214,7 @@ export class Lexer {
 							lk = tk, tk = get_token_ignore_comment();
 							if (tk.type === 'TK_DOT') {
 								nexttoken();
+								// eslint-disable-next-line no-constant-condition
 								while (true) {
 									if (tk.type as string === 'TK_WORD') {
 										addprop(tk), tp += '.' + tk.content;
@@ -2430,6 +2434,7 @@ export class Lexer {
 					else if (!tk.topofline || is_line_continue(lk, tk))
 						++info.count, nk = tk;
 				}
+				// eslint-disable-next-line no-constant-condition
 				while (true) {
 					res.push(...parse_expression(undefined, 0, end));
 					e ??= tk.offset;
@@ -2635,6 +2640,7 @@ export class Lexer {
 											_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length), next = false;
 										else err = diagnostic.propdeclaraerr();
 										if (!err) {
+											// eslint-disable-next-line no-constant-condition
 											while (true) {
 												if (tk.content === '.' && tk.type !== 'TK_OPERATOR') {
 													if (tk.type !== 'TK_DOT')
@@ -5088,6 +5094,7 @@ export class Lexer {
 				const comment_type = bg && '\n'.includes(input.charAt(last_LF)) ? 'TK_COMMENT' : (bg = 0, 'TK_INLINE_COMMENT');
 				let comment = '', t, rg: Range, ignore = undefined;
 				let next_LF = offset - 1, line: string, ln = 0, create_fr = true;
+				// eslint-disable-next-line no-constant-condition
 				while (true) {
 					parser_pos = next_LF, next_LF = input.indexOf('\n', parser_pos + 1);
 					line = input.substring(parser_pos + 1, next_LF = next_LF < 0 ? input_length : next_LF).trim();
@@ -6525,6 +6532,7 @@ export function get_class_member(lex: Lexer, node: AhkSymbol, name: string, isme
 	let prop, method, sym, t, i = 0, cls = node as ClassNode;
 	const _bases = bases ??= [];
 	name = name.toUpperCase();
+	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		if (i === _bases.length) {
 			if (_bases.includes(cls))

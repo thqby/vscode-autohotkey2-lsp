@@ -580,7 +580,7 @@
     "vscode:prepublish": "webpack --mode production --devtool hidden-source-map",
     "compile": "webpack",
     "compile-cli": "webpack --config webpack.config.cli.js --mode production --devtool hidden-source-map",
-    "eslint": "eslint --fix",
+    "eslint": "eslint . --fix --report-unused-disable-directives --max-warnings 0",
     "watch": "tsc -b -w",
     "watch-web": "webpack --watch",
     "patch": "npm version patch",

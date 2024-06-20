@@ -244,6 +244,7 @@ export class PEFile {
 			const stringFileInfo = getString(offset);
 			if (stringFileInfo.Key === 'StringFileInfo' && [0, 1].includes(stringFileInfo.Type) && stringFileInfo.ValueLength === 0) {
 				let stringTableOffset = alignDword(2 + nullindex, startOffset);
+				// eslint-disable-next-line no-constant-condition
 				while (true) {
 					const stringTable = getString(stringTableOffset);
 					const entries: any = {};
@@ -289,6 +290,7 @@ export function getFileVersion(path: string) {
 export async function searchAndOpenPEFile(path: string, isBit64?: boolean): Promise<PEFile | undefined> {
 	let pe: PEFile, file = '', dirs: string[] | undefined;
 	const exts: string[] = [''];
+	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		try {
 			if (!existsSync(path))

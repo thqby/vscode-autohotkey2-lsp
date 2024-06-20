@@ -11,6 +11,7 @@ async function get_ahkProvider_port(): Promise<number> {
 		if (!executePath)
 			return resolve(0);
 		let server, port = 1200;
+		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			try {
 				server = await createClientSocketTransport(port);
