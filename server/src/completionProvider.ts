@@ -333,12 +333,12 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				}
 			} else if (!maxn && !token.ignore) {
 				const ci = (pi && get_callinfo(doc, position, pi))!;
+				let kind: CompletionItemKind, command: { title: string, command: string } | undefined;
+				const endchar = text.substring(1).endsWith(text[0]) ? '' : text[0];
+				const text2item: (label: string) => CompletionItem = !endchar ? (label) => ({ label, kind, command }) :
+					(label) => ({ label, kind, insertText: `${label}${endchar}` });
 				if (ci) {
-					let kind: CompletionItemKind, command: { title: string, command: string } | undefined;
-					const endchar = text.substring(1).endsWith(text[0]) ? '' : text[0];
 					let fn: FuncNode, l: string, index: number, is_builtin: boolean, it;
-					const text2item: (label: string) => CompletionItem = !endchar ? (label) => ({ label, kind, command }) :
-						(label) => ({ label, kind, insertText: `${label}${endchar}` });
 					const syms = find_symbols(doc, doc.getContext(ci.pos)) ?? [];
 					const uris = Object.values(ahkuris);
 					const bases: ClassNode[] = [], set: AhkSymbol[] = [];
@@ -443,39 +443,46 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						}
 						await add_annotations(param.type_annotations || []);
 					}
-					async function add_annotations(annotations: (string | AhkSymbol)[]) {
-						for (let s of annotations) {
-							switch (s) {
-								case $DIRPATH:
-									add_paths(true);
-									break;
-								case $DLLFUNC:
-									await add_dllexports();
-									break;
-								case $FILEPATH:
-									add_paths();
-									break;
-								case STRING:
-									kind = CompletionItemKind.Text, command = undefined;
-									break;
-								default:
-									if (typeof s === 'string') {
-										if (/['"]/.test(s[0]) && s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)))
-											items.push(text2item(s));
-										break;
-									}
-									if (s.data === $FILEPATH) {
-										s = (s as ClassNode).generic_types?.[0]?.[0] ?? '';
-										if (typeof s === 'string' && /^(['"])\w+(\|\w+)*\1$/.test(s))
-											add_paths(false, new RegExp(`[^.\\/]+$(?<!\\.(${s.slice(1, -1)}))`, 'i'));
-									}
-									break;
-							}
-						}
-					}
+				}
+				if (!items.length && (pt = token.previous_token)?.content === ':=' &&
+					(pt = pt?.previous_token)?.type === 'TK_WORD') {
+					const syms = find_symbols(doc, doc.getContext(doc.document.positionAt(pt!.offset))) ?? [];
+					kind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
+					for (const sym of syms)
+						await add_annotations(sym.node.type_annotations || []);
 				}
 				!items.length && add_texts();
 				return items;
+				async function add_annotations(annotations: (string | AhkSymbol)[]) {
+					for (let s of annotations) {
+						switch (s) {
+							case $DIRPATH:
+								add_paths(true);
+								break;
+							case $DLLFUNC:
+								await add_dllexports();
+								break;
+							case $FILEPATH:
+								add_paths();
+								break;
+							case STRING:
+								kind = CompletionItemKind.Text, command = undefined;
+								break;
+							default:
+								if (typeof s === 'string') {
+									if (/['"]/.test(s[0]) && s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)))
+										items.push(text2item(s));
+									break;
+								}
+								if (s.data === $FILEPATH) {
+									s = (s as ClassNode).generic_types?.[0]?.[0] ?? '';
+									if (typeof s === 'string' && /^(['"])\w+(\|\w+)*\1$/.test(s))
+										add_paths(false, new RegExp(`[^.\\/]+$(?<!\\.(${s.slice(1, -1)}))`, 'i'));
+								}
+								break;
+						}
+					}
+				}
 			}
 		}
 	}
