@@ -7441,7 +7441,7 @@ function resolve_type_annotations(annotation?: string) {
 
 const MaybeLocalKind: SymbolKind[] = [SymbolKind.Variable, SymbolKind.Function, SymbolKind.Field];
 export function find_symbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?: Position) {
-	const names = fullname.toUpperCase().split(/[.#~]/), l = names.length;
+	const names = fullname.toUpperCase().split(/[.#~]/), l = names.length - 1;
 	let name = names.shift()!, notdef = true, uri, t;
 	let res = lex.findSymbol(name, kind,
 		!l && MaybeLocalKind.includes(kind!) ? pos : undefined);
