@@ -20,6 +20,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	let items: CompletionItem[] = [], cpitem = items.pop()!;
 	let l: string, path: string, pt: Token | undefined, scope: AhkSymbol | undefined, temp;
 	const { triggerKind, triggerCharacter } = params.context ?? {};
+	let cls2index = (name: string) => name;
 
 	//#region /**|
 	if (triggerCharacter === '*') {
@@ -533,11 +534,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (!token.symbol && token.semantic?.type === SemanticTokenTypes.property)
 			return;
 		const props: { [k: string]: CompletionItem } = {};
-		let tps = decltype_expr(doc, token, range.end);
+		let tps = decltype_expr(doc, token, range.end), index = 0;
 		const is_any = tps.includes(ANY), bases: ClassNode[] = [];
+		const clsindex: { [k: string]: string } = {};
 		if (linetext[range.end.character] === '.')
 			right_is_paren = '(['.includes(linetext.charAt(range.end.character + word.length + 1) || '\0');
-		if (is_any) tps = [];
+		if (is_any)
+			tps = [];
+		else
+			cls2index = (name) => clsindex[name] ?? name;
 		for (const node of tps) {
 			if (node.kind === SymbolKind.Interface) {
 				const params = ((node as ClassNode).generic_types?.[0] as string[])?.map(s => `'"`.includes(s[0]) ? s.slice(1, -1) : s);
@@ -548,6 +553,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				continue;
 			}
 			const omems = get_class_members(doc, node, bases);
+			for (const l = bases.length; index < l; index++)
+				clsindex[bases[index].full] = `0000${index}`.slice(-4);
 			for (const [k, it] of Object.entries(omems)) {
 				if (expg.test(k)) {
 					if (!(temp = props[k]))
@@ -555,6 +562,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					else if (!temp.detail?.endsWith((it as Variable).full ?? '')) {
 						temp.detail = '(...) ' + (temp.insertText = it.name);
 						temp.commitCharacters = temp.command = temp.documentation = undefined;
+						temp.sortText = temp.labelDetails = undefined;
 					}
 				}
 			}
@@ -887,11 +895,21 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	function at_edit_pos(it: AhkSymbol) {
 		return it.selectionRange.end.line === line && character === it.selectionRange.end.character;
 	}
+	function set_ci_classinfo(ci: CompletionItem, cls?: AhkSymbol) {
+		const name = cls?.full;
+		if (!name)
+			return;
+		ci.sortText = cls2index(name);
+		ci.labelDetails = { description: name };
+	}
+
 	function convertNodeCompletion(info: AhkSymbol): CompletionItem {
 		const ci = CompletionItem.create(info.name);
 		switch (info.kind) {
-			case SymbolKind.Function:
 			case SymbolKind.Method:
+				set_ci_classinfo(ci, info.parent);
+			// fall through
+			case SymbolKind.Function:
 				ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
 				if (extsettings.CompleteFunctionParens) {
 					const fn = info as FuncNode;
@@ -926,6 +944,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				return ci;
 			case SymbolKind.Property: {
 				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label;
+				set_ci_classinfo(ci, info.parent);
 				const prop = info as Property;
 				if (!prop.call && prop.get?.params.length)
 					ci.insertTextFormat = InsertTextFormat.Snippet, ci.insertText = ci.label + '[$0]';
