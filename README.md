@@ -36,6 +36,7 @@ Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https:
   - [Use in other editors](#use-in-other-editors)
     - [Sublime Text4](#sublime-text4)
     - [Vim and Neovim](#vim-and-neovim)
+    - [Emacs](#Emacs)
   - [Use in Web Browser](#use-in-web-browser)
 
 ## Language Features
@@ -317,6 +318,15 @@ local nvim_lsp = require("lspconfig")
 nvim_lsp.ahk2.setup({})
 ```
 
+### Emacs
+
+#### Eglot
+- Add the following lines to your emacs config file
+
+``` emacs-lisp
+(add-to-list 'eglot-server-programs '(ahk-mode "node" "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js" "--stdio"))
+
+```
 
 ## Use in Web Browser
 

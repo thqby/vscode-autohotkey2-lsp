@@ -36,6 +36,7 @@ AutoHotkey v2 语言支持 for VS Code, 功能实现基于 v2 语法分析。
   - [在其他编辑器中使用](#在其他编辑器中使用)
     - [Sublime Text 4](#sublime-text-4)
     - [Vim 和 Neovim](#vim-和-neovim)
+    - [Emacs](#Emacs)
   - [在 Web 浏览器中使用](#在-web-浏览器中使用)
 
 ## 语言特性
@@ -312,6 +313,16 @@ local configs = require "lspconfig.configs"
 configs["ahk2"] = { default_config = ahk2_configs }
 local nvim_lsp = require("lspconfig")
 nvim_lsp.ahk2.setup({})
+```
+
+### Emacs
+
+#### Eglot
+- 将以下内容添加到您的emacs配置文件中
+
+``` emacs-lisp
+(add-to-list 'eglot-server-programs '(ahk-mode "node" "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js" "--stdio"))
+
 ```
 
 ## 在 Web 浏览器中使用
