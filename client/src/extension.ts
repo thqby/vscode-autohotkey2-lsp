@@ -167,7 +167,7 @@ export async function activate(context: ExtensionContext) {
 						} else if (configs)
 							append_configs.push(configs.find(it => it.name === config.name) ?? configs[0]);
 						Object.assign(config, ...append_configs);
-						if (!config.runtime) {
+						if (!config.runtime && (!config.runtime_v2 || config.type !== 'autohotkey')) {
 							config.runtime = resolvePath(ahkpath_cur, folder?.uri.fsPath);
 							if (ahkStatusBarItem.text.endsWith('[UIAccess]'))
 								config.useUIAVersion = true;
