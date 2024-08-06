@@ -66,7 +66,7 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 					for (const uri in doc.relevance)
 						all_uris[uri] = undefined;
 				for (const uri in all_uris) {
-					const rgs = findAllFromDoc(lexers[uri], name, SymbolKind.Variable, all_uris[uri]);
+					const rgs = findAllFromScope(all_uris[uri] ?? lexers[uri] as unknown as AhkSymbol, name, SymbolKind.Variable);
 					if (rgs.length)
 						references[lexers[uri].document.uri] = rgs;
 				}
@@ -89,7 +89,7 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 				const c = name.split('.'), l = c.length;
 				let i = 0, refs: { [uri: string]: Range[] } = {};
 				for (const uri of new Set([doc.uri, ...Object.keys(doc.relevance)]))
-					refs[lexers[uri].document.uri] = findAllFromDoc(lexers[uri], c[0], SymbolKind.Variable);
+					refs[lexers[uri].document.uri] = findAllFromScope(lexers[uri] as unknown as AhkSymbol, c[0], SymbolKind.Variable);
 				while (i < l) {
 					const name = c.slice(0, ++i).join('.');
 					const r = find_symbol(doc, name);
@@ -147,31 +147,30 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 	return;
 }
 
-function findAllFromDoc(doc: Lexer, name: string, kind: SymbolKind, scope?: AhkSymbol) {
-	const ranges: Range[] = [];
+function findAllFromScope(scope: AhkSymbol, name: string, kind: SymbolKind, ranges: Range[] = []) {
 	if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
 		//
 	} else {
-		const node = (scope ?? doc) as FuncNode, gg = !scope;
+		const node = scope as FuncNode, gg = !scope.kind;
 		let not_static = !(node?.local?.[name]?.static), assume: boolean | undefined = gg;
-		// symbolProvider({ textDocument: { uri: doc.uri } });
-		if (not_static && scope && node.declaration?.[name]?.static === null)
+		if (not_static && !gg && node.declaration?.[name]?.static === null)
 			not_static = false;
 		if (!assume) {
 			const local = node.local, dec = node.declaration;
 			if (!(local?.[name] || dec?.[name]))
 				assume = undefined;
 		} else assume = false;
-		node.children?.forEach(it => {
+		for (const it of node.children ?? []) {
 			if (it.name.toUpperCase() === name)
 				ranges.push(it.selectionRange);
 			if (it.children?.length)
 				findAllVar(it as FuncNode, name, ranges, gg, gg || it.kind === SymbolKind.Function ? assume : undefined, not_static);
-		});
+		}
 		if (node.kind === SymbolKind.Property) {
 			const prop = node as Property;
 			for (const it of [prop.get, prop.set, prop.call])
-				it?.children && ranges.push(...findAllFromDoc(doc, name, kind, it));
+				if (it?.children?.length)
+					findAllFromScope(it, name, kind, ranges);
 		}
 	}
 	return ranges;
@@ -206,11 +205,20 @@ function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boole
 				ranges.push(it.selectionRange);
 			if (it.children?.length)
 				findAllVar(it as FuncNode, name, ranges, global, it.kind === SymbolKind.Function ? assume_glo : global || undefined, not_static);
+			if (it.kind === SymbolKind.Property)
+				find2(it as Property);
 		});
 	} else {
 		node.children?.forEach(it => {
 			if (it.children?.length)
 				findAllVar(it as FuncNode, name, ranges, global, global ? false : undefined, not_static);
+			if (it.kind === SymbolKind.Property)
+				find2(it as Property);
 		});
+	}
+	function find2(prop: Property) {
+		for (const it of [prop.get, prop.set, prop.call])
+			if (it?.children?.length)
+				findAllFromScope(it, name, SymbolKind.Variable, ranges);
 	}
 }
