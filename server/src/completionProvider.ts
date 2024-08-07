@@ -7,8 +7,8 @@ import {
 import { URI } from 'vscode-uri';
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AhkSymbol, ClassNode, FuncNode, Maybe, Property, STRING, SemanticTokenTypes, Token, Variable,
-	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache,
-	completionitem, decltype_expr, dllcalltpe, extsettings, find_class, find_symbols, get_detail,
+	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache, completionitem,
+	decltype_expr, dllcalltpe, extsettings, find_class, find_symbol, find_symbols, get_detail,
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
 	isBrowser, lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
@@ -333,6 +333,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					}
 				}
 			} else if (!maxn && !token.ignore) {
+				const cache = new Set<AhkSymbol | string>;
 				const ci = (pi && get_callinfo(doc, position, pi))!;
 				let kind: CompletionItemKind, command: { title: string, command: string } | undefined;
 				const endchar = text.substring(1).endsWith(text[0]) ? '' : text[0];
@@ -455,7 +456,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				!items.length && add_texts();
 				return items;
 				async function add_annotations(annotations: (string | AhkSymbol)[]) {
+					let t;
 					for (let s of annotations) {
+						if (cache.has(s))
+							continue;
+						cache.add(s);
 						switch (s) {
 							case $DIRPATH:
 								add_paths(true);
@@ -471,8 +476,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								break;
 							default:
 								if (typeof s === 'string') {
-									if (/['"]/.test(s[0]) && s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)))
-										items.push(text2item(s));
+									if (/['"]/.test(s[0]))
+										s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)) && items.push(text2item(s));
+									else if ((t = find_symbol(doc, s)?.node)?.type_annotations && !cache.has(t) && t.kind === SymbolKind.TypeParameter)
+										cache.add(t), await add_annotations(t.type_annotations);
 									break;
 								}
 								if (s.data === $FILEPATH) {
