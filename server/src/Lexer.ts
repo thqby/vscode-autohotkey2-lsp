@@ -368,6 +368,7 @@ export class Lexer {
 	public include: { [uri: string]: string } = {};
 	public includedir = new Map<number, string>();
 	public isparsed = false;
+	public is_virtual = false;		// uris like `vscode-local-history:`
 	public labels: { [name: string]: AhkSymbol[] } = {};
 	public libdirs: string[] = [];
 	public linepos: { [line: number]: number } = {};
@@ -458,6 +459,8 @@ export class Lexer {
 			this.setWorkspaceFolder();
 			this.scriptpath = (this.fsPath = uri.fsPath).replace(/[\\/][^\\/]+$/, '');
 			this.initLibDirs(scriptdir);
+			if (uri.scheme !== 'file' && uri.fsPath.substring(1, 3) === ':\\')
+				this.is_virtual = true;
 		}
 
 		this.get_token = function (offset?: number, ignore = false): Token {
@@ -7611,7 +7614,8 @@ export function traverse_include(lex: Lexer, included?: { [uri: string]: string 
 	let hascache = true;
 	let cache = includecache[uri] ??= (hascache = false, { [uri]: lex.fsPath });
 	included = ((included ??= includedcache[uri])) ? { ...included } : {};
-	included[uri] = lex.fsPath;
+	if (!lex.is_virtual)
+		included[uri] = lex.fsPath;
 	for (const u in include) {
 		Object.assign(includedcache[u] ??= {}, included);
 		if (!(lex = lexers[u]))
