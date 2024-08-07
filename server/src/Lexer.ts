@@ -476,7 +476,7 @@ export class Lexer {
 		this.find_token = function (offset: number, ignore = false): Token {
 			let i = offset, c = input.charAt(offset), tk: Token | undefined;
 			const tks = _this.tokens;
-			const eof = { ...tks[-1], type: '' };
+			const eof = { ...(tks[-1] ?? EMPTY_TOKEN), type: '' };
 			if (!c)
 				return eof;
 			if (whitespace.includes(c)) {
