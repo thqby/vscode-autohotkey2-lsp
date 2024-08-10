@@ -221,11 +221,15 @@ export async function activate(context: ExtensionContext) {
 				].join('\n')), new Range(0, 0, 0, 0));
 			} else {
 				const d = new Date;
-				let content = info.content, ver;
-				content = content.replace(/(?<=^\s*[;*]?\s*@date[:\s]\s*)(\d+\/\d+\/\d+)/im, d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2));
-				if (content.match(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im) &&
-					(ver = await window.showInputBox({ prompt: zhcn ? '输入版本信息' : 'Enter version info', value: content.match(/(?<=^[\s*]*@version[:\s]\s*)(\S*)/im)?.[1] })))
-					content = content.replace(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S*)/im, ver);
+				let content = info.content, value;
+				content = content.replace(/(?<=^\s*[;*]?\s*@date[:\s]\s*)(\S+|(?=[\r\n]))/im,
+					date => [d.getFullYear(), d.getMonth() + 1, d.getDate()].map(
+						n => n.toString().padStart(2, '0')).join(date.includes('.') ? '.' : '/')
+				).replace(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S+|(?=[\r\n]))/im, s => (value = s, '\0'));
+				if (value !== undefined) {
+					value = await window.showInputBox({ value, prompt: zhcn ? '输入版本信息' : 'Enter version info' }) ?? value;
+					content = content.replace('\0', value);
+				}
 				if (content !== info.content) {
 					const ed = new WorkspaceEdit();
 					ed.replace(Uri.parse(info.uri), info.range, content);
