@@ -91,16 +91,18 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	// Options to control the language client
+	const fsw = workspace.createFileSystemWatcher('**/*.{ahk}');
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{ language: 'ahk2' }],
 		markdown: { isTrusted: true, supportHtml: true },
 		outputChannel: outputchannel = window.createOutputChannel('AutoHotkey2', '~ahk2-output'),
 		outputChannelName: 'AutoHotkey2',
+		synchronize: { fileEvents: fsw },
 		initializationOptions: {
 			commands: Object.keys(request_handlers),
 			GlobalStorage: context.globalStorageUri.fsPath,
 			...ahkconfig
-		}
+		},
 	};
 	if (ahkconfig.FormatOptions?.one_true_brace !== undefined)
 		window.showWarningMessage('configuration "AutoHotkey2.FormatOptions.one_true_brace" is deprecated!\nplease use "AutoHotkey2.FormatOptions.brace_style"');
@@ -190,7 +192,7 @@ export async function activate(context: ExtensionContext) {
 	ahkLanguageStatusItem.text = '$(folder)syntaxes';
 	ahkLanguageStatusItem.command = { title: 'Select Syntaxes', command: 'ahk2.selectsyntaxes' };
 	context.subscriptions.push(
-		ahkStatusBarItem, ahkLanguageStatusItem, outputchannel,
+		ahkStatusBarItem, ahkLanguageStatusItem, outputchannel, fsw,
 		extensions.onDidChange(update_extensions_info),
 		commands.registerTextEditorCommand('ahk2.help', quickHelp),
 		commands.registerTextEditorCommand('ahk2.compile', compileScript),

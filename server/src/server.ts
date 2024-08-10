@@ -11,7 +11,7 @@ import {
 	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
 	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, extsettings, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile,
-	parse_include, prepareRename, rangeFormatting, referenceProvider, renameProvider, SemanticTokenModifiers,
+	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
 	set_dirname, set_locale, set_version, set_WorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
 	traverse_include, typeFormatting, update_settings, utils, winapis, workspaceSymbolProvider
@@ -146,6 +146,21 @@ connection.onDidChangeConfiguration(async change => {
 		if (isahk2_h)
 			loadahk2('ahk_h'), loadahk2('winapi', 4);
 	}
+});
+
+connection.onDidChangeWatchedFiles((change) => {
+	let uri, lex;
+	for (const c of change.changes)
+		switch (c.type) {
+			case 2:
+				if ((lex = lexers[c.uri.toLowerCase()])?.actived === false)
+					TextDocument.update(lex.document, [{ text: read_ahk_file(lex.fsPath) ?? '' }], 0), lex.update();
+				break;
+			case 3:
+				if ((lex = lexers[uri = c.uri.toLowerCase()]))
+					lex.close(true), delete lexers[uri];
+				break;
+		}
 });
 
 documents.onDidOpen(e => {

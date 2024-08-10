@@ -125,37 +125,39 @@ interface LibSymbol extends Array<AhkSymbol> {
 	islib: boolean
 }
 
+export function read_ahk_file(path: string, showError = true) {
+	let buf: Buffer;
+	try {
+		buf = readFileSync(path);
+		if (buf[0] === 0xff && buf[1] === 0xfe)
+			return buf.toString('utf16le');
+		if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
+			return buf.toString('utf8').substring(1);
+		try {
+			return new TextDecoder('utf8', { fatal: true }).decode(buf);
+		} catch {
+			showError && connection.window.showErrorMessage(diagnostic.invalidencoding(path));
+		}
+	}
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	catch (e: any) {
+		if (showError) {
+			delete e.stack;
+			e.path = path;
+			console.log(e);
+		}
+	}
+}
+
 export function openFile(path: string, showError = true): TextDocument | undefined {
 	if (isBrowser) {
 		const data = getwebfile(path);
 		if (data)
 			return TextDocument.create(data.url, 'ahk2', -10, data.text);
-		return undefined;
 	} else {
-		let buf: Buffer | string;
-		try { buf = readFileSync(path); }
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		catch (e: any) {
-			if (showError) {
-				delete e.stack;
-				e.path = path;
-				console.log(e);
-			}
-			return undefined;
-		}
-		if (buf[0] === 0xff && buf[1] === 0xfe)
-			buf = buf.toString('utf16le');
-		else if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
-			buf = buf.toString('utf8').substring(1);
-		else {
-			try {
-				buf = new TextDecoder('utf8', { fatal: true }).decode(buf);
-			} catch {
-				showError && connection.window.showErrorMessage(diagnostic.invalidencoding(path));
-				return undefined;
-			}
-		}
-		return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, buf);
+		const text = read_ahk_file(path, showError);
+		if (text !== undefined)
+			return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, text);
 	}
 }
 
