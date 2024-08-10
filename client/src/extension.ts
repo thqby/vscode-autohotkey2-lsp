@@ -42,7 +42,8 @@ const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), n
 const isWindows = process.platform === 'win32';
 
 export async function activate(context: ExtensionContext) {
-	// The server is implemented in node
+	/** Absolute path to `server.js` */
+	// .replace(/^.*[\\/]/, '') is used to get the last part of the path
 	const serverModule = context.asAbsolutePath(`server/${process.env.VSCODE_AHK_SERVER_PATH ?? __dirname.replace(/^.*[\\/]/, '')}/server.js`);
 
 	// If the extension is launched in debug mode then the debug server options are used
@@ -57,9 +58,8 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const request_handlers: { [cmd: string]: any } = {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		'ahk2.executeCommand': (params: any[]) => commands.executeCommand(params.shift(), ...params),
+	const request_handlers: Record<string, any> = {
+		'ahk2.executeCommand': (params: string[]) => commands.executeCommand(params.shift() as string, ...params),
 		'ahk2.getActiveTextEditorUriAndPosition': () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
@@ -102,6 +102,7 @@ export async function activate(context: ExtensionContext) {
 			...ahkconfig
 		}
 	};
+	
 	if (ahkconfig.FormatOptions?.one_true_brace !== undefined)
 		window.showWarningMessage('configuration "AutoHotkey2.FormatOptions.one_true_brace" is deprecated!\nplease use "AutoHotkey2.FormatOptions.brace_style"');
 
