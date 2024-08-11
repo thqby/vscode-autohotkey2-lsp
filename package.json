@@ -596,6 +596,7 @@
 		"@types/vscode": "^1.82.0",
 		"@vscode/test-cli": "^0.0.10",
 		"@vscode/test-electron": "^2.4.1",
+		"@vscode/test-web": "^0.0.56",
 		"@vscode/vsce": "^2.27.0",
 		"eslint": "^9.4.0",
 		"globals": "^15.4.0",
