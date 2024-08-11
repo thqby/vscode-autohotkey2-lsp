@@ -695,7 +695,8 @@ export function resolvePath(path: string, workspace?: string, resolveSymbolicLin
 			if (lstatSync(path).isSymbolicLink() && resolveSymbolicLink)
 				path = resolve(path, '..', readlinkSync(path));
 			return path;
-		} catch {
+		} catch (ex) {
+			console.log("resolvePath threw exception", ex);
 			continue;
 		}
 	}
