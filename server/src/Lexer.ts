@@ -368,6 +368,7 @@ export class Lexer {
 	public include: { [uri: string]: string } = {};
 	public includedir = new Map<number, string>();
 	public isparsed = false;
+	public is_virtual = false;		// uris like `vscode-local-history:`
 	public labels: { [name: string]: AhkSymbol[] } = {};
 	public libdirs: string[] = [];
 	public linepos: { [line: number]: number } = {};
@@ -458,6 +459,8 @@ export class Lexer {
 			this.setWorkspaceFolder();
 			this.scriptpath = (this.fsPath = uri.fsPath).replace(/[\\/][^\\/]+$/, '');
 			this.initLibDirs(scriptdir);
+			if (uri.scheme !== 'file' && uri.fsPath.substring(1, 3) === ':\\')
+				this.is_virtual = true;
 		}
 
 		this.get_token = function (offset?: number, ignore = false): Token {
@@ -473,7 +476,7 @@ export class Lexer {
 		this.find_token = function (offset: number, ignore = false): Token {
 			let i = offset, c = input.charAt(offset), tk: Token | undefined;
 			const tks = _this.tokens;
-			const eof = { ...tks[-1], type: '' };
+			const eof = { ...(tks[-1] ?? EMPTY_TOKEN), type: '' };
 			if (!c)
 				return eof;
 			if (whitespace.includes(c)) {
@@ -4188,33 +4191,35 @@ export class Lexer {
 					case 'var':
 						line = parse_type(line);
 						if ((m = line.match(/^\s*(\[(\w|[^\x00-\x7f]|(\[\])?\.)*.*?\]|(\w|[^\x00-\x7f]|(\[\])?\.)*)/))) {
-							let defval = '', name = m[1] ??= '';
+							let defval = '', name = m[1] ??= '', opt = false;
+							const _name = () => opt ? `<u>\`${name}\`</u>` : `\`${name}\``;
 							line = line.substring(m[0].length);
 							if (name.startsWith('['))
 								name.slice(1, -1).replace(/^((\w|[^\x00-\x7f]|(\[\])?\.)*)(.*)$/, (...t) => {
 									if ((name = t[4].trimStart()).startsWith('='))
 										defval = name.substring(1).trim();
 									return name = t[1];
-								});
+								}), opt = true;
 							if (t === 'param') {
 								vr = get_param(name.replace(/(\[\])?\..*$/, '').toUpperCase());
 								if (vr?.name?.length === name.length) {
+									opt = vr.defaultVal !== undefined;
 									vr.type_annotations ??= resolve_type_annotations(tp);
 								} else if (vr?.name) {
 									const t = name.split('.');
 									add_prop(add_obj_type(vr, t.shift()!), t, tp,
-										`*@param* \`${name}\`${tp && `: *\`${tp}\`*`}${line.trim() && `\n___\n${line}`}`);
+										`*@param* ${_name()}${tp && `: *\`${tp}\`*`}${line.trim() && `\n___\n${line}`}`);
 									if (!vr.markdown_detail)
 										vr = undefined;
 								}
-								t = `*@param* \`${name}\`${tp && `: *\`${tp}\`*`}${defval && ` := \`${defval}\``}${join_detail(line)}`;
+								t = `*@param* ${_name()}${tp && `: *\`${tp}\`*`}${defval && ` := \`${defval}\``}${join_detail(line)}`;
 								details.push(t), vr && (vr.markdown_detail += `${t}\n\n`);
 								continue;
 							} else if (t.startsWith('prop')) {
 								t = 'property'
 								obj ??= objs[''] ??= create_obj();
 								add_prop(add_obj_type(obj, obj.name), name.split('.'), tp,
-									`*@${t}* \`${name}\`${tp && `: *\`${tp}\`*`}${defval && ` := \`${defval}\``}${line.trim() && `\n___\n${line}`}`);
+									`*@${t}* ${_name()}${tp && `: *\`${tp}\`*`}${defval && ` := \`${defval}\``}${line.trim() && `\n___\n${line}`}`);
 							} else if (kind === 'var') {
 								line = line.trimStart();
 								if (sym.name.toLowerCase() === name.toLowerCase()) {
@@ -7609,7 +7614,8 @@ export function traverse_include(lex: Lexer, included?: { [uri: string]: string 
 	let hascache = true;
 	let cache = includecache[uri] ??= (hascache = false, { [uri]: lex.fsPath });
 	included = ((included ??= includedcache[uri])) ? { ...included } : {};
-	included[uri] = lex.fsPath;
+	if (!lex.is_virtual)
+		included[uri] = lex.fsPath;
 	for (const u in include) {
 		Object.assign(includedcache[u] ??= {}, included);
 		if (!(lex = lexers[u]))

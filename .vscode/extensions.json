@@ -1,6 +1,7 @@
 {
 	"recommendations": [
 		"aaron-bond.better-comments",
-		"dbaeumer.vscode-eslint"
+		"dbaeumer.vscode-eslint",
+		"esbenp.prettier-vscode"
 	]
 }

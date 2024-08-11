@@ -183,6 +183,9 @@
         },
         {
           "include": "#variables"
+        },
+        {
+          "include": "#comments"
         }
       ]
     },

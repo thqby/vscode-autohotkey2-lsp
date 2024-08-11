@@ -42,7 +42,8 @@ const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), n
 const isWindows = process.platform === 'win32';
 
 export async function activate(context: ExtensionContext) {
-	// The server is implemented in node
+	/** Absolute path to `server.js` */
+	// .replace(/^.*[\\/]/, '') is used to get the last part of the path
 	const serverModule = context.asAbsolutePath(`server/${process.env.VSCODE_AHK_SERVER_PATH ?? __dirname.replace(/^.*[\\/]/, '')}/server.js`);
 
 	// If the extension is launched in debug mode then the debug server options are used
@@ -57,9 +58,8 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const request_handlers: { [cmd: string]: any } = {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		'ahk2.executeCommand': (params: any[]) => commands.executeCommand(params.shift(), ...params),
+	const request_handlers: Record<string, any> = {
+		'ahk2.executeCommand': (params: string[]) => commands.executeCommand(params.shift() as string, ...params),
 		'ahk2.getActiveTextEditorUriAndPosition': () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
@@ -102,6 +102,7 @@ export async function activate(context: ExtensionContext) {
 			...ahkconfig
 		}
 	};
+
 	if (ahkconfig.FormatOptions?.one_true_brace !== undefined)
 		window.showWarningMessage('configuration "AutoHotkey2.FormatOptions.one_true_brace" is deprecated!\nplease use "AutoHotkey2.FormatOptions.brace_style"');
 
@@ -167,7 +168,7 @@ export async function activate(context: ExtensionContext) {
 						} else if (configs)
 							append_configs.push(configs.find(it => it.name === config.name) ?? configs[0]);
 						Object.assign(config, ...append_configs);
-						if (!config.runtime) {
+						if (!config.runtime && (!config.runtime_v2 || config.type !== 'autohotkey')) {
 							config.runtime = resolvePath(ahkpath_cur, folder?.uri.fsPath);
 							if (ahkStatusBarItem.text.endsWith('[UIAccess]'))
 								config.useUIAVersion = true;
@@ -661,27 +662,30 @@ function findfile(files: string[], workspace: string) {
 }
 
 async function onDidChangegetInterpreter() {
-	let path = ahkpath_cur;
 	const uri = window.activeTextEditor?.document.uri;
 	const ws = uri ? workspace.getWorkspaceFolder(uri)?.uri.fsPath : undefined;
-	path = resolvePath(path, ws, false);
-	if (path.toLowerCase().endsWith('.exe') && existsSync(path)) {
-		if (path !== ahkStatusBarItem.tooltip) {
-			ahkStatusBarItem.tooltip = path;
-			ahkStatusBarItem.text = (await getAHKversion([path]))[0] || (zhcn ? '未知版本' : 'Unknown version');
+	let ahkPath = resolvePath(ahkpath_cur, ws, false);
+	if (ahkPath.toLowerCase().endsWith('.exe') && existsSync(ahkPath)) {
+		// ahkStatusBarItem.tooltip is the current saved interpreter path
+		if (ahkPath !== ahkStatusBarItem.tooltip) {
+			ahkStatusBarItem.tooltip = ahkPath;
+			ahkStatusBarItem.text = (await getAHKversion([ahkPath]))[0] || (zhcn ? '未知版本' : 'Unknown version');
 		}
 	} else {
 		ahkStatusBarItem.text = (zhcn ? '选择AutoHotkey2解释器' : 'Select AutoHotkey2 Interpreter');
-		ahkStatusBarItem.tooltip = undefined, path = '';
+		ahkStatusBarItem.tooltip = undefined, ahkPath = '';
 	}
 }
 
-function resolvePath(path: string, workspace?: string, resolveSymbolicLink = true): string {
+/** Resolves a given path to an absolute path. Returns empty string if resolution fails. */
+export function resolvePath(path: string, workspace?: string, resolveSymbolicLink = true): string {
 	if (!path)
 		return '';
 	const paths: string[] = [];
+	// If the path does not contain a colon, resolve it relative to the workspace
 	if (!path.includes(':'))
 		paths.push(resolve(workspace ?? '', path));
+	// If there are no slashes or backslashes in the path and the platform is Windows
 	if (!/[\\/]/.test(path) && isWindows)
 		paths.push(execSync(`where ${path}`, { encoding: 'utf-8' }).trim());
 	paths.push(path);
@@ -691,24 +695,29 @@ function resolvePath(path: string, workspace?: string, resolveSymbolicLink = tru
 			if (lstatSync(path).isSymbolicLink() && resolveSymbolicLink)
 				path = resolve(path, '..', readlinkSync(path));
 			return path;
-		} catch {
+		} catch (ex) {
+			console.log("resolvePath threw exception", ex);
 			continue;
 		}
 	}
 	return '';
 }
 
+/**
+ * Returns whether the given path exists.
+ * Only returns false if lstatSync give an ENOENT error.
+ */
 function existsSync(path: string): boolean {
 	try {
 		lstatSync(path);
 	} catch (err) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		if ((err as any)?.code === 'ENOENT')
+		if ((err as { code: string})?.code === 'ENOENT')
 			return false;
 	}
 	return true;
 }
 
+/** Returns lstatSync on the file, resolving the symbolic link if it exists. */
 function statSync(path: string) {
 	const st = lstatSync(path);
 	if (st.isSymbolicLink())
