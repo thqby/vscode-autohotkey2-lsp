@@ -102,7 +102,7 @@ export async function activate(context: ExtensionContext) {
 			...ahkconfig
 		}
 	};
-	
+
 	if (ahkconfig.FormatOptions?.one_true_brace !== undefined)
 		window.showWarningMessage('configuration "AutoHotkey2.FormatOptions.one_true_brace" is deprecated!\nplease use "AutoHotkey2.FormatOptions.brace_style"');
 
@@ -662,18 +662,18 @@ function findfile(files: string[], workspace: string) {
 }
 
 async function onDidChangegetInterpreter() {
-	let path = ahkpath_cur;
 	const uri = window.activeTextEditor?.document.uri;
 	const ws = uri ? workspace.getWorkspaceFolder(uri)?.uri.fsPath : undefined;
-	path = resolvePath(path, ws, false);
-	if (path.toLowerCase().endsWith('.exe') && existsSync(path)) {
-		if (path !== ahkStatusBarItem.tooltip) {
-			ahkStatusBarItem.tooltip = path;
-			ahkStatusBarItem.text = (await getAHKversion([path]))[0] || (zhcn ? '未知版本' : 'Unknown version');
+	let ahkPath = resolvePath(ahkpath_cur, ws, false);
+	if (ahkPath.toLowerCase().endsWith('.exe') && existsSync(ahkPath)) {
+		// ahkStatusBarItem.tooltip is the current saved interpreter path
+		if (ahkPath !== ahkStatusBarItem.tooltip) {
+			ahkStatusBarItem.tooltip = ahkPath;
+			ahkStatusBarItem.text = (await getAHKversion([ahkPath]))[0] || (zhcn ? '未知版本' : 'Unknown version');
 		}
 	} else {
 		ahkStatusBarItem.text = (zhcn ? '选择AutoHotkey2解释器' : 'Select AutoHotkey2 Interpreter');
-		ahkStatusBarItem.tooltip = undefined, path = '';
+		ahkStatusBarItem.tooltip = undefined, ahkPath = '';
 	}
 }
 
