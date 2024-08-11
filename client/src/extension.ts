@@ -682,8 +682,10 @@ export function resolvePath(path: string, workspace?: string, resolveSymbolicLin
 	if (!path)
 		return '';
 	const paths: string[] = [];
+	// If the path does not contain a colon, resolve it relative to the workspace
 	if (!path.includes(':'))
 		paths.push(resolve(workspace ?? '', path));
+	// If there are no slashes or backslashes in the path and the platform is Windows
 	if (!/[\\/]/.test(path) && isWindows)
 		paths.push(execSync(`where ${path}`, { encoding: 'utf-8' }).trim());
 	paths.push(path);
