@@ -700,12 +700,15 @@ export function resolvePath(path: string, workspace?: string, resolveSymbolicLin
 	return '';
 }
 
+/**
+ * Returns whether the given path exists.
+ * Only returns false if lstatSync give an ENOENT error.
+ */
 function existsSync(path: string): boolean {
 	try {
 		lstatSync(path);
 	} catch (err) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		if ((err as any)?.code === 'ENOENT')
+		if ((err as { code: string})?.code === 'ENOENT')
 			return false;
 	}
 	return true;
