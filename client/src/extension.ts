@@ -677,7 +677,8 @@ async function onDidChangegetInterpreter() {
 	}
 }
 
-function resolvePath(path: string, workspace?: string, resolveSymbolicLink = true): string {
+/** Resolves a given path to an absolute path. Returns empty string if resolution fails. */
+export function resolvePath(path: string, workspace?: string, resolveSymbolicLink = true): string {
 	if (!path)
 		return '';
 	const paths: string[] = [];
