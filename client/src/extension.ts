@@ -714,6 +714,7 @@ function existsSync(path: string): boolean {
 	return true;
 }
 
+/** Returns lstatSync on the file, resolving the symbolic link if it exists. */
 function statSync(path: string) {
 	const st = lstatSync(path);
 	if (st.isSymbolicLink())
