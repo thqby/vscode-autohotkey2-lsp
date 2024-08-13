@@ -595,8 +595,8 @@
 		"pretest": "npm run compile-test",
 		"test//": "Run tests. Requires the extension to be compiled",
 		"test": "cd client && vscode-test",
-		"test_grammar": "vscode-tmgrammar-snap syntaxes/samples/*.{ahk1,ahk2}",
-		"validate": "npm run clean && npm run vscode:prepublish && npm run test && npm run package"
+		"test-grammar": "vscode-tmgrammar-snap syntaxes/samples/*.{ahk1,ahk2}",
+		"validate": "npm run clean && npm run vscode:prepublish && npm run test-grammar && npm run test && npm run package"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.4.0",
