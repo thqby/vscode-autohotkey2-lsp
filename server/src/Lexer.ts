@@ -2526,7 +2526,7 @@ export class Lexer {
 						if ((m = l.match(/^\w+[ \t]+v(1|2)/))) {
 							if (m[1] === '2')
 								requirev2 = true;
-							else if (_this.maybev1 = 3, !stop_parse(data, false, diagnostic.requirev1()))
+							else if (_this.maybev1 = 3, !stop_parse(data as Token, false, diagnostic.requirev1()))
 								_this.addDiagnostic(diagnostic.unexpected(data.content), data.offset, data.length);
 						}
 						break;
@@ -4048,7 +4048,7 @@ export class Lexer {
 			});
 		}
 
-		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
+		function add_include_dllload(text: string, tk?: Pick<Token, 'offset' | 'pos' | 'length' | 'content' | 'data'>, mode = 0, isdll = false) {
 			let m, raw: string, ignore = false;
 			const q = text[0];
 			if (`'"`.includes(q) && text.endsWith(q))
@@ -6441,8 +6441,8 @@ export class Lexer {
 			else break;
 		}
 		if (l <= r && it)
-			return this.tokens[it.start] ?? ((it = this.tokens[it.previous!])?.data
-				&& { ...it.data as {}, previous_token: it, type: '' });
+			return (this.tokens[it.start] ?? ((it = this.tokens[it.previous!])?.data
+				&& { ...it.data as {}, previous_token: it, type: '' })) as Token;
 	}
 }
 
