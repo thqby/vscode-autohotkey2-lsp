@@ -1,30 +1,32 @@
 {
 	"name": "vscode-autohotkey2-lsp",
 	"displayName": "AutoHotkey v2 Language Support",
-	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
-	"author": "thqby",
-	"publisher": "thqby",
+	"description": "AutoHotkey v2 language support, forked from thqby's extension",
+	"author": "thqby and Mark Wiemer",
+	"publisher": "mark-wiemer",
 	"version": "2.4.9",
 	"license": "LGPLv3.0",
 	"categories": [
-		"Formatters",
-		"Programming Languages",
-		"Snippets"
-	],
+        "Debuggers",
+        "Formatters",
+        "Programming Languages",
+        "Snippets"
+    ],
 	"keywords": [
-		"ahk",
-		"ahk2",
-		"autohotkey",
-		"autohotkey2"
-	],
+        "vscode",
+        "autohotkey",
+        "ahk",
+        "ahk2",
+        "ahk v2"
+    ],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/thqby/vscode-autohotkey2-lsp"
+		"url": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp"
 	},
-	"homepage": "https://github.com/thqby/vscode-autohotkey2-lsp/blob/main/README.md",
+	"homepage": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp/blob/main/README.md",
 	"icon": "icon.png",
 	"bugs": {
-		"url": "https://github.com/thqby/vscode-autohotkey2-lsp/issues"
+		"url": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp/issues"
 	},
 	"engines": {
 		"vscode": "^1.82.0"
@@ -348,7 +350,7 @@
 		},
 		"configurationDefaults": {
 			"[ahk2]": {
-				"editor.defaultFormatter": "thqby.vscode-autohotkey2-lsp",
+				"editor.defaultFormatter": "mark-wiemer.vscode-autohotkey2-lsp",
 				"editor.quickSuggestions": {
 					"other": true,
 					"comments": false,
