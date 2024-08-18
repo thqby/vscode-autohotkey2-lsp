@@ -607,8 +607,7 @@
 			{
 				"files": [
 					"*.yml",
-					"*.yaml",
-					".prettierrc"
+					"*.yaml"
 				],
 				"options": {
 					"tabWidth": 2
