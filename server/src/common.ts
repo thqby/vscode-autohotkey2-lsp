@@ -444,8 +444,9 @@ export function update_settings(configs: AHKLSSettings) {
 		}
 	for (const k of ['array_style', 'object_style'] as Array<keyof FormatOptions>)
 		if (typeof configs.FormatOptions?.[k] === 'string')
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			configs.FormatOptions[k] = { collapse: 2, expand: 1, none: 0 }[configs.FormatOptions[k] as string] as any;
+			// todo fix update_settings
+			// @ts-expect-error undefined not assignable to never
+			configs.FormatOptions[k] = { collapse: 2, expand: 1, none: 0 }[configs.FormatOptions[k] as string];
 	try {
 		update_comment_tags(configs.CommentTags!);
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any

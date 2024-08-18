@@ -1,89 +1,163 @@
 {
 	"name": "vscode-autohotkey2-lsp",
 	"displayName": "AutoHotkey v2 Language Support",
-	"description": "AutoHotkey v2 language support, forked from thqby's extension",
-	"author": "thqby and Mark Wiemer",
-	"publisher": "mark-wiemer",
 	"version": "2.4.9",
-	"license": "LGPLv3.0",
+	"description": "AutoHotkey v2 language support, forked from thqby's extension",
 	"categories": [
-        "Debuggers",
-        "Formatters",
-        "Programming Languages",
-        "Snippets"
-    ],
+		"Debuggers",
+		"Formatters",
+		"Programming Languages",
+		"Snippets"
+	],
 	"keywords": [
-        "vscode",
-        "autohotkey",
-        "ahk",
-        "ahk2",
-        "ahk v2"
-    ],
+		"vscode",
+		"autohotkey",
+		"ahk",
+		"ahk2",
+		"ahk v2"
+	],
+	"homepage": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp/blob/main/README.md",
+	"bugs": {
+		"url": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp/issues"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp"
 	},
-	"homepage": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp/blob/main/README.md",
-	"icon": "icon.png",
-	"bugs": {
-		"url": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp/issues"
-	},
-	"engines": {
-		"vscode": "^1.82.0"
-	},
+	"license": "LGPLv3.0",
+	"author": "thqby and Mark Wiemer",
+	"publisher": "mark-wiemer",
 	"main": "./client/dist/extension",
 	"browser": "./client/dist/browserClientMain",
+	"scripts": {
+		"chrome": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ./test-data",
+		"clean": "del-cli client/dist server/dist/*.js*",
+		"clean//": "Remove both the compiled extension and compiled test files",
+		"compile": "webpack",
+		"compile-cli": "webpack --config webpack.config.cli.js --mode production --devtool hidden-source-map",
+		"compile-test": "cd client && tsc",
+		"compile-test//": "Compile test files",
+		"compile//": "Compile the extension for packaging and publishing",
+		"eslint": "eslint --fix",
+		"package": "vsce package",
+		"patch": "npm version patch",
+		"publish": "vsce publish",
+		"sort-package-json": "sort-package-json --check",
+		"sort-package-json:fix": "sort-package-json",
+		"pretest": "npm run compile-test",
+		"test": "cd client && vscode-test",
+		"test-grammar": "vscode-tmgrammar-snap syntaxes/samples/*.{ahk1,ahk2}",
+		"test//": "Run tests. Requires the extension to be compiled",
+		"validate": "npm run clean && npm run vscode:prepublish && npm run test-grammar && npm run test && npm run package",
+		"vscode:prepublish": "webpack --mode production --devtool hidden-source-map",
+		"watch": "tsc -b -w",
+		"watch-web": "webpack --watch"
+	},
 	"contributes": {
 		"breakpoints": [
 			{
 				"language": "ahk2"
 			}
 		],
-		"languages": [
+		"commands": [
 			{
-				"id": "ahk2",
-				"aliases": [
-					"AutoHotkey2",
-					"autohotkey2",
-					"ahk2"
-				],
-				"extensions": [
-					".ahk",
-					".ah2",
-					".ahk2"
-				],
-				"configuration": "./ahk2.configuration.json",
-				"icon": {
-					"dark": "icon_filetype.png",
-					"light": "icon_filetype.png"
-				}
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.debug",
+				"title": "%ahk2.debug%",
+				"icon": "$(debug)",
+				"category": "ahk2"
 			},
 			{
-				"id": "ahk",
-				"aliases": [
-					"AutoHotkey"
-				]
+				"enablement": "!isWeb",
+				"command": "ahk2.debug.attach",
+				"title": "%ahk2.debug.attach%",
+				"category": "ahk2"
 			},
 			{
-				"id": "~ahk2-output"
-			}
-		],
-		"grammars": [
-			{
-				"language": "ahk2",
-				"scopeName": "source.ahk2",
-				"path": "./syntaxes/ahk2.tmLanguage.json",
-				"embeddedLanguages": {
-					"meta.embedded.ahk2": "ahk2"
-				},
-				"unbalancedBracketScopes": [
-					"keyword.keys.ahk2"
-				]
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.debug.params",
+				"title": "%ahk2.debug.params%",
+				"category": "ahk2"
 			},
 			{
-				"language": "~ahk2-output",
-				"scopeName": "ahk2.output",
-				"path": "./syntaxes/ahk2-output.tmLanguage.json"
+				"enablement": "editorLangId == ahk2",
+				"command": "ahk2.diagnostic.full",
+				"title": "%ahk2.diagnostic.full%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2",
+				"command": "ahk2.export.symbols",
+				"title": "%ahk2.export.symbols%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.run",
+				"title": "%ahk2.run%",
+				"icon": "$(play)",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.selection.run",
+				"title": "%ahk2.selection.run%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.stop",
+				"title": "%ahk2.stop%",
+				"icon": "$(stop)",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.compile",
+				"title": "%ahk2.compile%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.help",
+				"title": "%ahk2.help%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2",
+				"command": "ahk2.generate.comment",
+				"title": "%ahk2.generatecomment%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "!isWeb",
+				"command": "ahk2.setinterpreter",
+				"title": "%ahk2.setinterpreter%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2",
+				"command": "ahk2.updateversioninfo",
+				"title": "%ahk2.updateversioninfo%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 || editorLangId == ahk",
+				"command": "ahk2.switch",
+				"title": "Switch v1/v2",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.selectsyntaxes",
+				"title": "Select syntaxes",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && resourceScheme == file",
+				"command": "ahk2.setscriptdir",
+				"title": "%ahk2.setscriptdir%",
+				"category": "ahk2"
 			}
 		],
 		"configuration": {
@@ -350,7 +424,7 @@
 		},
 		"configurationDefaults": {
 			"[ahk2]": {
-				"editor.defaultFormatter": "mark-wiemer.vscode-autohotkey2-lsp",
+				"editor.defaultFormatter": "mark-wiemer.vscode-autohotkey-plus-plus",
 				"editor.quickSuggestions": {
 					"other": true,
 					"comments": false,
@@ -358,105 +432,88 @@
 				}
 			}
 		},
-		"commands": [
+		"grammars": [
 			{
-				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
-				"command": "ahk2.debug",
-				"title": "%ahk2.debug%",
-				"icon": "$(debug)",
-				"category": "ahk2"
+				"language": "ahk2",
+				"scopeName": "source.ahk2",
+				"path": "./syntaxes/ahk2.tmLanguage.json",
+				"embeddedLanguages": {
+					"meta.embedded.ahk2": "ahk2"
+				},
+				"unbalancedBracketScopes": [
+					"keyword.keys.ahk2"
+				]
 			},
 			{
-				"enablement": "!isWeb",
-				"command": "ahk2.debug.attach",
-				"title": "%ahk2.debug.attach%",
-				"category": "ahk2"
-			},
+				"language": "~ahk2-output",
+				"scopeName": "ahk2.output",
+				"path": "./syntaxes/ahk2-output.tmLanguage.json"
+			}
+		],
+		"keybindings": [
 			{
-				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
-				"command": "ahk2.debug.params",
-				"title": "%ahk2.debug.params%",
-				"category": "ahk2"
-			},
-			{
-				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.diagnostic.full",
-				"title": "%ahk2.diagnostic.full%",
-				"category": "ahk2"
-			},
-			{
-				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.export.symbols",
-				"title": "%ahk2.export.symbols%",
-				"category": "ahk2"
-			},
-			{
-				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk2.run",
-				"title": "%ahk2.run%",
-				"icon": "$(play)",
-				"category": "ahk2"
+				"key": "ctrl+f5",
+				"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection"
 			},
 			{
-				"enablement": "editorLangId == ahk2 && !isWeb",
 				"command": "ahk2.selection.run",
-				"title": "%ahk2.selection.run%",
-				"category": "ahk2"
+				"key": "ctrl+f5",
+				"when": "editorLangId == ahk2 && !isWeb && editorHasSelection"
 			},
 			{
-				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.stop",
-				"title": "%ahk2.stop%",
-				"icon": "$(stop)",
-				"category": "ahk2"
-			},
-			{
-				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk2.compile",
-				"title": "%ahk2.compile%",
-				"category": "ahk2"
+				"key": "ctrl+shift+f5",
+				"when": "editorLangId == ahk2 && !isWeb"
 			},
 			{
-				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.debug",
+				"key": "f5",
+				"when": "editorLangId == ahk2 && !isWeb && !inDebugMode"
+			},
+			{
+				"command": "ahk2.debug.params",
+				"key": "shift+f5",
+				"when": "editorLangId == ahk2 && !isWeb"
+			},
+			{
 				"command": "ahk2.help",
-				"title": "%ahk2.help%",
-				"category": "ahk2"
+				"key": "ctrl+f1",
+				"when": "editorLangId == ahk2 && !isWeb"
 			},
 			{
-				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.generate.comment",
-				"title": "%ahk2.generatecomment%",
-				"category": "ahk2"
+				"command": "ahk2.stop",
+				"key": "ctrl+f6",
+				"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning"
+			}
+		],
+		"languages": [
+			{
+				"id": "ahk2",
+				"aliases": [
+					"AutoHotkey2",
+					"autohotkey2",
+					"ahk2"
+				],
+				"extensions": [
+					".ahk",
+					".ah2",
+					".ahk2"
+				],
+				"configuration": "./ahk2.configuration.json",
+				"icon": {
+					"dark": "icon_filetype.png",
+					"light": "icon_filetype.png"
+				}
 			},
 			{
-				"enablement": "!isWeb",
-				"command": "ahk2.setinterpreter",
-				"title": "%ahk2.setinterpreter%",
-				"category": "ahk2"
+				"id": "ahk",
+				"aliases": [
+					"AutoHotkey"
+				]
 			},
 			{
-				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.updateversioninfo",
-				"title": "%ahk2.updateversioninfo%",
-				"category": "ahk2"
-			},
-			{
-				"enablement": "editorLangId == ahk2 || editorLangId == ahk",
-				"command": "ahk2.switch",
-				"title": "Switch v1/v2",
-				"category": "ahk2"
-			},
-			{
-				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.selectsyntaxes",
-				"title": "Select syntaxes",
-				"category": "ahk2"
-			},
-			{
-				"enablement": "editorLangId == ahk2 && resourceScheme == file",
-				"command": "ahk2.setscriptdir",
-				"title": "%ahk2.setscriptdir%",
-				"category": "ahk2"
+				"id": "~ahk2-output"
 			}
 		],
 		"menus": {
@@ -530,43 +587,6 @@
 				}
 			]
 		},
-		"keybindings": [
-			{
-				"command": "ahk2.run",
-				"key": "ctrl+f5",
-				"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection"
-			},
-			{
-				"command": "ahk2.selection.run",
-				"key": "ctrl+f5",
-				"when": "editorLangId == ahk2 && !isWeb && editorHasSelection"
-			},
-			{
-				"command": "ahk2.compile",
-				"key": "ctrl+shift+f5",
-				"when": "editorLangId == ahk2 && !isWeb"
-			},
-			{
-				"command": "ahk2.debug",
-				"key": "f5",
-				"when": "editorLangId == ahk2 && !isWeb && !inDebugMode"
-			},
-			{
-				"command": "ahk2.debug.params",
-				"key": "shift+f5",
-				"when": "editorLangId == ahk2 && !isWeb"
-			},
-			{
-				"command": "ahk2.help",
-				"key": "ctrl+f1",
-				"when": "editorLangId == ahk2 && !isWeb"
-			},
-			{
-				"command": "ahk2.stop",
-				"key": "ctrl+f6",
-				"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning"
-			}
-		],
 		"semanticTokenScopes": [
 			{
 				"language": "ahk2",
@@ -578,30 +598,32 @@
 			}
 		]
 	},
-	"scripts": {
-		"vscode:prepublish": "webpack --mode production --devtool hidden-source-map",
-		"clean//": "Remove both the compiled extension and compiled test files",
-		"clean": "del-cli client/dist server/dist/*.js*",
-		"compile//": "Compile the extension for packaging and publishing",
-		"compile": "webpack",
-		"compile-cli": "webpack --config webpack.config.cli.js --mode production --devtool hidden-source-map",
-		"eslint": "eslint --fix",
-		"watch": "tsc -b -w",
-		"watch-web": "webpack --watch",
-		"patch": "npm version patch",
-		"publish": "vsce publish",
-		"package": "vsce package",
-		"chrome": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ./test-data",
-		"compile-test//": "Compile test files",
-		"compile-test": "cd client && tsc",
-		"pretest": "npm run compile-test",
-		"test//": "Run tests. Requires the extension to be compiled",
-		"test": "cd client && vscode-test",
-		"test-grammar": "vscode-tmgrammar-snap syntaxes/samples/*.{ahk1,ahk2}",
-		"validate": "npm run clean && npm run vscode:prepublish && npm run test-grammar && npm run test && npm run package"
+	"prettier": {
+		"singleQuote": true,
+		"tabWidth": 4,
+		"trailingComma": "all",
+		"useTabs": true,
+		"overrides": [
+			{
+				"files": [
+					"*.yml",
+					"*.yaml"
+				],
+				"options": {
+					"tabWidth": 2
+				}
+			}
+		]
+	},
+	"dependencies": {
+		"vscode-languageclient": "^9.0.1",
+		"vscode-languageserver": "^9.0.1",
+		"vscode-languageserver-textdocument": "^1.0.11",
+		"vscode-uri": "^3.0.8"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.4.0",
+		"@types/node": "^20.16.0",
 		"@types/sinon": "^17.0.3",
 		"@types/vscode": "^1.82.0",
 		"@vscode/test-cli": "^0.0.10",
@@ -614,6 +636,7 @@
 		"mocha": "^10.7.0",
 		"path-browserify": "^1.0.1",
 		"sinon": "^18.0.0",
+		"sort-package-json": "^2.10.0",
 		"ts-loader": "^9.4.0",
 		"typescript": "^5.3.2",
 		"typescript-eslint": "^7.12.0",
@@ -621,31 +644,11 @@
 		"webpack": "^5.74.0",
 		"webpack-cli": "^4.10.0"
 	},
-	"dependencies": {
-		"vscode-languageclient": "^9.0.1",
-		"vscode-languageserver": "^9.0.1",
-		"vscode-languageserver-textdocument": "^1.0.11",
-		"vscode-uri": "^3.0.8"
+	"engines": {
+		"vscode": "^1.82.0"
 	},
+	"icon": "icon.png",
 	"overrides": {
 		"eslint": "^9.4.0"
-	},
-	"prettier": {
-		"useTabs": true,
-		"singleQuote": true,
-		"tabWidth": 4,
-		"trailingComma": "all",
-		"overrides": [
-			{
-				"files": [
-					"*.yml",
-					"*.yaml",
-					".prettierrc"
-				],
-				"options": {
-					"tabWidth": 2
-				}
-			}
-		]
 	}
 }

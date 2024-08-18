@@ -18,6 +18,7 @@ import {
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
+import { TextDecoder } from 'util';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);

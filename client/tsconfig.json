@@ -7,7 +7,8 @@
 		"sourceMap": true,
 		"strict": true,
 		"outDir": "dist",
-		"rootDirs": ["src", "../server/src"]
+		"rootDirs": ["src", "../server/src"],
+		"composite": true
 	},
 	"include": ["src"],
 	"exclude": ["node_modules", ".vscode-test", ".vscode-test-web"]

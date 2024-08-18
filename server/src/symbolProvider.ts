@@ -267,7 +267,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			if (st < 3)
 				stk.modifier = (stk.modifier ?? 0) | (SemanticTokenModifiers.readonly) | (islib ? SemanticTokenModifiers.defaultLibrary : 0);
 		}
-		return tk ?? {};
+		return tk ?? {} as Token;
 	}
 }
 
