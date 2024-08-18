@@ -894,19 +894,20 @@ export class Lexer {
 				if (this.d & 2) {
 					const overwrite = uri.endsWith('/ahk2_h.d.ahk') ? 1 : 0;
 					let t;
-					for (const [k, it] of Object.entries(this.declaration)) {
+					for (const [k, i] of Object.entries(this.declaration)) {
+						const it = i as AhkSymbol; // ts is being weird
 						switch (it.kind) {
 							case SymbolKind.Function:
-								it.def = false, it.uri = uri;
+								it.def = false; it.uri = uri;
 							// fall through
 							case SymbolKind.Class:
-								it.overwrite ??= overwrite, it.def ??= true;
+								it.overwrite ??= overwrite; it.def ??= true;
 								if (!(t = ahkvars[k]) || overwrite >= (t.overwrite ?? 0))
 									ahkvars[k] = it;
 								break;
 							case SymbolKind.Variable:
 								if (it.def)
-									ahkvars[k] = it, it.uri = uri;
+									ahkvars[k] = it; it.uri = uri;
 								break;
 						}
 					}
