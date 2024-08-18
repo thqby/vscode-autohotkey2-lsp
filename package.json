@@ -350,7 +350,7 @@
 		},
 		"configurationDefaults": {
 			"[ahk2]": {
-				"editor.defaultFormatter": "mark-wiemer.vscode-autohotkey2-lsp",
+				"editor.defaultFormatter": "mark-wiemer.vscode-autohotkey-plus-plus",
 				"editor.quickSuggestions": {
 					"other": true,
 					"comments": false,
