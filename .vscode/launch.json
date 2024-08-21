@@ -11,9 +11,7 @@
 				"--extensionDevelopmentPath=${workspaceFolder}",
 				"--extensionDevelopmentKind=web"
 			],
-			"outFiles": [
-				"${workspaceFolder}/client/dist/**/*.js"
-			],
+			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"],
 			"preLaunchTask": "npm: watch-web"
 		},
 		{
@@ -21,15 +19,10 @@
 			"request": "launch",
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}"
-			],
-			"env": {
-				"VSCODE_AHK_SERVER_PATH": "out"
-			},
-			"outFiles": [
-				"${workspaceRoot}/client/dist/**/*.js"
-			]
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
+			"env": { "VSCODE_AHK_SERVER_PATH": "server/dist/server.js" },
+			"outFiles": ["${workspaceRoot}/client/dist/**/*.js"],
+			"preLaunchTask": "npm: build:dev"
 		},
 		{
 			"type": "node",
@@ -46,10 +39,7 @@
 	"compounds": [
 		{
 			"name": "Client + Server",
-			"configurations": [
-				"Launch Client",
-				"Attach to Server"
-			]
+			"configurations": ["Launch Client", "Attach to Server"]
 		}
 	]
 }

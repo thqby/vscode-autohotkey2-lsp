@@ -30,6 +30,10 @@
 	"main": "./client/dist/extension",
 	"browser": "./client/dist/browserClientMain",
 	"scripts": {
+		"prebuild": "npm run clean",
+		"build": "webpack --mode production --devtool hidden-source-map",
+		"prebuild:dev": "npm run clean",
+		"build:dev": "webpack",
 		"chrome": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ./test-data",
 		"clean": "del-cli client/dist server/dist/*.js*",
 		"clean//": "Remove both the compiled extension and compiled test files",
@@ -47,9 +51,9 @@
 		"pretest": "npm run compile-test",
 		"test": "cd client && vscode-test",
 		"test-grammar": "vscode-tmgrammar-snap syntaxes/samples/*.{ahk1,ahk2}",
-		"test//": "Run tests. Requires the extension to be compiled",
+		"test//": "Run tests",
 		"validate": "npm run clean && npm run vscode:prepublish && npm run test-grammar && npm run test && npm run package",
-		"vscode:prepublish": "webpack --mode production --devtool hidden-source-map",
+		"vscode:prepublish": "npm run build",
 		"watch": "tsc -b -w",
 		"watch-web": "webpack --watch"
 	},

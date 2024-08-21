@@ -4,7 +4,5 @@
 	"typescript.preferences.quoteStyle": "single",
 	"git.ignoreLimitWarning": true,
 	"AutoHotkey2.InterpreterPath": "c:\\Program Files\\AutoHotkey\\v2\\AutoHotkey64.exe",
-	"[ahk2]": {
-		"editor.formatOnSave": false
-	}
+	"editor.formatOnSave": false
 }
