@@ -196,6 +196,7 @@ export async function activate(context: ExtensionContext) {
 	context.subscriptions.push(
 		ahkStatusBarItem, ahkLanguageStatusItem, outputchannel,
 		extensions.onDidChange(update_extensions_info),
+		// todo remove this, AHK++ already has it
 		commands.registerTextEditorCommand('ahk2.help', quickHelp),
 		commands.registerTextEditorCommand('ahk2.compile', compileScript),
 		commands.registerTextEditorCommand('ahk2.run', textEditor => runScript(textEditor)),
