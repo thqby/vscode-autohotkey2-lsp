@@ -141,27 +141,35 @@ class StreamZip extends events.EventEmitter {
 		const ready = false,
 			that = this,
 			entries = config.storeEntries !== false ? {} : null,
-			textDecoder = config.nameEncoding ? new TextDecoder(config.nameEncoding) : null;
+			textDecoder = config.nameEncoding
+				? new TextDecoder(config.nameEncoding)
+				: null;
 
 		fd = config.buffer;
 		fileSize = fd.byteLength;
 		chunkSize = config.chunkSize || Math.round(fileSize / 1000);
 		chunkSize = Math.max(
 			Math.min(chunkSize, Math.min(128 * 1024, fileSize)),
-			Math.min(1024, fileSize)
+			Math.min(1024, fileSize),
 		);
 		setImmediate(readCentralDirectory);
 
 		function readUntilFoundCallback(err, bytesRead) {
 			if (err || !bytesRead) {
-				return that.emit('error', err || new Error('Archive read error'));
+				return that.emit(
+					'error',
+					err || new Error('Archive read error'),
+				);
 			}
 			let pos = op.lastPos;
 			let bufferPosition = pos - op.win.position;
 			const buffer = op.win.buffer;
 			const minPos = op.minPos;
 			while (--pos >= minPos && --bufferPosition >= 0) {
-				if (buffer.length - bufferPosition >= 4 && buffer[bufferPosition] === op.firstByte) {
+				if (
+					buffer.length - bufferPosition >= 4 &&
+					buffer[bufferPosition] === op.firstByte
+				) {
 					// quick check first signature byte
 					if (buffer.readUInt32LE(bufferPosition) === op.sig) {
 						op.lastBufferPosition = bufferPosition;
@@ -184,7 +192,10 @@ class StreamZip extends events.EventEmitter {
 		}
 
 		function readCentralDirectory() {
-			const totalReadLength = Math.min(consts.ENDHDR + consts.MAXFILECOMMENT, fileSize);
+			const totalReadLength = Math.min(
+				consts.ENDHDR + consts.MAXFILECOMMENT,
+				fileSize,
+			);
 			op = {
 				win: new FileWindowBuffer(fd),
 				totalReadLength,
@@ -195,7 +206,11 @@ class StreamZip extends events.EventEmitter {
 				sig: consts.ENDSIG,
 				complete: readCentralDirectoryComplete,
 			};
-			op.win.read(fileSize - op.chunkSize, op.chunkSize, readUntilFoundCallback);
+			op.win.read(
+				fileSize - op.chunkSize,
+				op.chunkSize,
+				readUntilFoundCallback,
+			);
 		}
 
 		function readCentralDirectoryComplete() {
@@ -209,7 +224,9 @@ class StreamZip extends events.EventEmitter {
 					that.comment = buffer
 						.slice(
 							pos + consts.ENDHDR,
-							pos + consts.ENDHDR + centralDirectory.commentLength
+							pos +
+								consts.ENDHDR +
+								centralDirectory.commentLength,
 						)
 						.toString();
 				} else {
@@ -219,7 +236,8 @@ class StreamZip extends events.EventEmitter {
 				that.centralDirectory = centralDirectory;
 				if (
 					(centralDirectory.volumeEntries === consts.EF_ZIP64_OR_16 &&
-						centralDirectory.totalEntries === consts.EF_ZIP64_OR_16) ||
+						centralDirectory.totalEntries ===
+							consts.EF_ZIP64_OR_16) ||
 					centralDirectory.size === consts.EF_ZIP64_OR_32 ||
 					centralDirectory.offset === consts.EF_ZIP64_OR_32
 				) {
@@ -249,7 +267,11 @@ class StreamZip extends events.EventEmitter {
 					sig: consts.ENDL64SIG,
 					complete: readZip64CentralDirectoryLocatorComplete,
 				};
-				op.win.read(op.lastPos - op.chunkSize, op.chunkSize, readUntilFoundCallback);
+				op.win.read(
+					op.lastPos - op.chunkSize,
+					op.chunkSize,
+					readUntilFoundCallback,
+				);
 			}
 		}
 
@@ -257,7 +279,10 @@ class StreamZip extends events.EventEmitter {
 			const buffer = op.win.buffer;
 			const locHeader = new CentralDirectoryLoc64Header();
 			locHeader.read(
-				buffer.slice(op.lastBufferPosition, op.lastBufferPosition + consts.ENDL64HDR)
+				buffer.slice(
+					op.lastBufferPosition,
+					op.lastBufferPosition + consts.ENDL64HDR,
+				),
 			);
 			const readLength = fileSize - locHeader.headerOffset;
 			op = {
@@ -270,13 +295,22 @@ class StreamZip extends events.EventEmitter {
 				sig: consts.END64SIG,
 				complete: readZip64CentralDirectoryComplete,
 			};
-			op.win.read(fileSize - op.chunkSize, op.chunkSize, readUntilFoundCallback);
+			op.win.read(
+				fileSize - op.chunkSize,
+				op.chunkSize,
+				readUntilFoundCallback,
+			);
 		}
 
 		function readZip64CentralDirectoryComplete() {
 			const buffer = op.win.buffer;
 			const zip64cd = new CentralDirectoryZip64Header();
-			zip64cd.read(buffer.slice(op.lastBufferPosition, op.lastBufferPosition + consts.END64HDR));
+			zip64cd.read(
+				buffer.slice(
+					op.lastBufferPosition,
+					op.lastBufferPosition + consts.END64HDR,
+				),
+			);
 			that.centralDirectory.volumeEntries = zip64cd.volumeEntries;
 			that.centralDirectory.totalEntries = zip64cd.totalEntries;
 			that.centralDirectory.size = zip64cd.size;
@@ -293,12 +327,19 @@ class StreamZip extends events.EventEmitter {
 				chunkSize,
 				entriesLeft: centralDirectory.volumeEntries,
 			};
-			op.win.read(op.pos, Math.min(chunkSize, fileSize - op.pos), readEntriesCallback);
+			op.win.read(
+				op.pos,
+				Math.min(chunkSize, fileSize - op.pos),
+				readEntriesCallback,
+			);
 		}
 
 		function readEntriesCallback(err, bytesRead) {
 			if (err || !bytesRead) {
-				return that.emit('error', err || new Error('Entries read error'));
+				return that.emit(
+					'error',
+					err || new Error('Entries read error'),
+				);
 			}
 			let bufferPos = op.pos - op.win.position;
 			let entry = op.entry;
@@ -314,10 +355,17 @@ class StreamZip extends events.EventEmitter {
 						op.pos += consts.CENHDR;
 						bufferPos += consts.CENHDR;
 					}
-					const entryHeaderSize = entry.fnameLen + entry.extraLen + entry.comLen;
-					const advanceBytes = entryHeaderSize + (op.entriesLeft > 1 ? consts.CENHDR : 0);
+					const entryHeaderSize =
+						entry.fnameLen + entry.extraLen + entry.comLen;
+					const advanceBytes =
+						entryHeaderSize +
+						(op.entriesLeft > 1 ? consts.CENHDR : 0);
 					if (bufferLength - bufferPos < advanceBytes) {
-						op.win.moveRight(chunkSize, readEntriesCallback, bufferPos);
+						op.win.moveRight(
+							chunkSize,
+							readEntriesCallback,
+							bufferPos,
+						);
 						op.move = true;
 						return;
 					}
@@ -370,22 +418,34 @@ class StreamZip extends events.EventEmitter {
 						return callback(err);
 					}
 					const offset = dataOffset(entry);
-					let entryStream = new EntryDataReaderStream(fd, offset, entry.compressedSize);
+					let entryStream = new EntryDataReaderStream(
+						fd,
+						offset,
+						entry.compressedSize,
+					);
 					if (entry.method === consts.STORED) {
 						// nothing to do
 					} else if (entry.method === consts.DEFLATED) {
 						entryStream = entryStream.pipe(zlib.createInflateRaw());
 					} else {
-						return callback(new Error('Unknown compression method: ' + entry.method));
+						return callback(
+							new Error(
+								'Unknown compression method: ' + entry.method,
+							),
+						);
 					}
 					if (canVerifyCrc(entry)) {
 						entryStream = entryStream.pipe(
-							new EntryVerifyStream(entryStream, entry.crc, entry.size)
+							new EntryVerifyStream(
+								entryStream,
+								entry.crc,
+								entry.size,
+							),
 						);
 					}
 					callback(null, entryStream);
 				},
-				false
+				false,
 			);
 		};
 
@@ -397,21 +457,31 @@ class StreamZip extends events.EventEmitter {
 					err = e;
 					entry = en;
 				},
-				true
+				true,
 			);
 			if (err) {
 				throw err;
 			}
 			let data = Buffer.alloc(entry.compressedSize);
-			new BufRead(fd, data, 0, entry.compressedSize, dataOffset(entry), (e) => {
-				err = e;
-			}).read(true);
+			new BufRead(
+				fd,
+				data,
+				0,
+				entry.compressedSize,
+				dataOffset(entry),
+				(e) => {
+					err = e;
+				},
+			).read(true);
 			if (err) {
 				throw err;
 			}
 			if (entry.method === consts.STORED) {
 				// nothing to do
-			} else if (entry.method === consts.DEFLATED || entry.method === consts.ENHANCED_DEFLATED) {
+			} else if (
+				entry.method === consts.DEFLATED ||
+				entry.method === consts.ENHANCED_DEFLATED
+			) {
 				data = zlib.inflateRawSync(data);
 			} else {
 				throw new Error('Unknown compression method: ' + entry.method);
@@ -459,7 +529,9 @@ class StreamZip extends events.EventEmitter {
 		};
 
 		function dataOffset(entry) {
-			return entry.offset + consts.LOCHDR + entry.fnameLen + entry.extraLen;
+			return (
+				entry.offset + consts.LOCHDR + entry.fnameLen + entry.extraLen
+			);
 		}
 
 		function canVerifyCrc(entry) {
@@ -519,17 +591,32 @@ class StreamZip extends events.EventEmitter {
 			});
 		}
 
-		function extractFiles(baseDir, baseRelPath, files, callback, extractedCount) {
+		function extractFiles(
+			baseDir,
+			baseRelPath,
+			files,
+			callback,
+			extractedCount,
+		) {
 			if (!files.length) {
 				return callback(null, extractedCount);
 			}
 			const file = files.shift();
-			const targetPath = path.join(baseDir, file.name.replace(baseRelPath, ''));
+			const targetPath = path.join(
+				baseDir,
+				file.name.replace(baseRelPath, ''),
+			);
 			extract(file, targetPath, (err) => {
 				if (err) {
 					return callback(err, extractedCount);
 				}
-				extractFiles(baseDir, baseRelPath, files, callback, extractedCount + 1);
+				extractFiles(
+					baseDir,
+					baseRelPath,
+					files,
+					callback,
+					extractedCount + 1,
+				);
 			});
 		}
 
@@ -540,7 +627,10 @@ class StreamZip extends events.EventEmitter {
 				if (entry) {
 					entryName = entry.name;
 				} else {
-					if (entryName.length && entryName[entryName.length - 1] !== '/') {
+					if (
+						entryName.length &&
+						entryName[entryName.length - 1] !== '/'
+					) {
 						entryName += '/';
 					}
 				}
@@ -556,8 +646,7 @@ class StreamZip extends events.EventEmitter {
 					) {
 						let relPath = e.replace(entryName, '');
 						const childEntry = entries[e];
-						if (filter && !filter(childEntry))
-							continue;
+						if (filter && !filter(childEntry)) continue;
 						if (childEntry.isFile) {
 							files.push(childEntry);
 							relPath = path.dirname(relPath);
@@ -590,7 +679,13 @@ class StreamZip extends events.EventEmitter {
 						if (err) {
 							callback(err);
 						} else {
-							extractFiles(outPath, entryName, files, callback, 0);
+							extractFiles(
+								outPath,
+								entryName,
+								files,
+								callback,
+								0,
+							);
 						}
 					});
 				} else {
@@ -599,7 +694,11 @@ class StreamZip extends events.EventEmitter {
 			} else {
 				fs.stat(outPath, (err, stat) => {
 					if (stat && stat.isDirectory()) {
-						extract(entry, path.join(outPath, path.basename(entry.name)), callback);
+						extract(
+							entry,
+							path.join(outPath, path.basename(entry.name)),
+							callback,
+						);
 					} else {
 						extract(entry, outPath, callback);
 					}
@@ -630,12 +729,15 @@ class StreamZip extends events.EventEmitter {
 				return originalEmit.call(this, ...args);
 			}
 		};
-	};
+	}
 }
 
 class CentralDirectoryHeader {
 	read(data) {
-		if (data.length !== consts.ENDHDR || data.readUInt32LE(0) !== consts.ENDSIG) {
+		if (
+			data.length !== consts.ENDHDR ||
+			data.readUInt32LE(0) !== consts.ENDSIG
+		) {
 			throw new Error('Invalid central directory');
 		}
 		// number of entries on this volume
@@ -653,7 +755,10 @@ class CentralDirectoryHeader {
 
 class CentralDirectoryLoc64Header {
 	read(data) {
-		if (data.length !== consts.ENDL64HDR || data.readUInt32LE(0) !== consts.ENDL64SIG) {
+		if (
+			data.length !== consts.ENDL64HDR ||
+			data.readUInt32LE(0) !== consts.ENDL64SIG
+		) {
 			throw new Error('Invalid zip64 central directory locator');
 		}
 		// ZIP64 EOCD header offset
@@ -663,7 +768,10 @@ class CentralDirectoryLoc64Header {
 
 class CentralDirectoryZip64Header {
 	read(data) {
-		if (data.length !== consts.END64HDR || data.readUInt32LE(0) !== consts.END64SIG) {
+		if (
+			data.length !== consts.END64HDR ||
+			data.readUInt32LE(0) !== consts.END64SIG
+		) {
 			throw new Error('Invalid central directory');
 		}
 		// number of entries on this volume
@@ -680,7 +788,10 @@ class CentralDirectoryZip64Header {
 class ZipEntry {
 	readHeader(data, offset) {
 		// data should be 46 bytes and start with "PK 01 02"
-		if (data.length < offset + consts.CENHDR || data.readUInt32LE(offset) !== consts.CENSIG) {
+		if (
+			data.length < offset + consts.CENHDR ||
+			data.readUInt32LE(offset) !== consts.CENSIG
+		) {
 			throw new Error('Invalid entry header');
 		}
 		// version made by
@@ -764,7 +875,9 @@ class ZipEntry {
 			this.readExtra(data, offset);
 			offset += this.extraLen;
 		}
-		this.comment = this.comLen ? data.slice(offset, offset + this.comLen).toString() : null;
+		this.comment = this.comLen
+			? data.slice(offset, offset + this.comLen).toString()
+			: null;
 	}
 
 	validateName() {
@@ -838,7 +951,7 @@ class BufRead {
 		let bytesRead = this.fd.copy(
 			this.buffer,
 			this.offset + this.bytesRead,
-			this.position + this.bytesRead
+			this.position + this.bytesRead,
 		);
 		this.readCallback(sync, err, !sync || err ? bytesRead : null);
 	}
@@ -876,7 +989,14 @@ class FileWindowBuffer {
 			this.buffer = Buffer.alloc(length);
 		}
 		this.position = pos;
-		this.fsOp = new BufRead(this.fd, this.buffer, 0, length, this.position, callback).read();
+		this.fsOp = new BufRead(
+			this.fd,
+			this.buffer,
+			0,
+			length,
+			this.position,
+			callback,
+		).read();
 	}
 
 	expandLeft(length, callback) {
@@ -886,7 +1006,14 @@ class FileWindowBuffer {
 		if (this.position < 0) {
 			this.position = 0;
 		}
-		this.fsOp = new BufRead(this.fd, this.buffer, 0, length, this.position, callback).read();
+		this.fsOp = new BufRead(
+			this.fd,
+			this.buffer,
+			0,
+			length,
+			this.position,
+			callback,
+		).read();
 	}
 
 	expandRight(length, callback) {
@@ -899,7 +1026,7 @@ class FileWindowBuffer {
 			offset,
 			length,
 			this.position + offset,
-			callback
+			callback,
 		).read();
 	}
 
@@ -917,7 +1044,7 @@ class FileWindowBuffer {
 			this.buffer.length - shift,
 			shift,
 			this.position + this.buffer.length - shift,
-			callback
+			callback,
 		).read();
 	}
 }
@@ -934,7 +1061,11 @@ class EntryDataReaderStream extends stream.Readable {
 	_read(n) {
 		const buffer = Buffer.alloc(Math.min(n, this.length - this.pos));
 		if (buffer.length) {
-			this.readCallback(undefined, this.fd.copy(buffer, 0, this.offset + this.pos), buffer);
+			this.readCallback(
+				undefined,
+				this.fd.copy(buffer, 0, this.offset + this.pos),
+				buffer,
+			);
 		} else {
 			this.push(null);
 		}
@@ -1016,7 +1147,7 @@ class CrcVerify {
 			const b = Buffer.alloc(4);
 			for (let n = 0; n < 256; n++) {
 				let c = n;
-				for (let k = 8; --k >= 0;) {
+				for (let k = 8; --k >= 0; ) {
 					if ((c & 1) !== 0) {
 						c = 0xedb88320 ^ (c >>> 1);
 					} else {
@@ -1046,7 +1177,11 @@ function parseZipTime(timebytes, datebytes) {
 		M: parseInt(datebits.slice(7, 11).join(''), 2),
 		D: parseInt(datebits.slice(11, 16).join(''), 2),
 	};
-	const dt_str = [mt.Y, mt.M, mt.D].join('-') + ' ' + [mt.h, mt.m, mt.s].join(':') + ' GMT+0';
+	const dt_str =
+		[mt.Y, mt.M, mt.D].join('-') +
+		' ' +
+		[mt.h, mt.m, mt.s].join(':') +
+		' GMT+0';
 	return new Date(dt_str).getTime();
 }
 
@@ -1059,25 +1194,33 @@ function toBits(dec, size) {
 }
 
 function readUInt64LE(buffer, offset) {
-	return buffer.readUInt32LE(offset + 4) * 0x0000000100000000 + buffer.readUInt32LE(offset);
+	return (
+		buffer.readUInt32LE(offset + 4) * 0x0000000100000000 +
+		buffer.readUInt32LE(offset)
+	);
 }
-
 
 const https = require('https');
 function https_request(url, data, headers) {
 	return new Promise((resolve, reject) => {
-		let req = https.request(url, { method: data ? 'POST' : 'GET', headers },
+		let req = https.request(
+			url,
+			{ method: data ? 'POST' : 'GET', headers },
 			(msg) => {
 				let body = Buffer.alloc(0);
 				let isgzip = msg.headers['content-encoding'] === 'gzip';
-				msg.on('data', (chunk) => body = Buffer.concat([body, chunk]));
+				msg.on(
+					'data',
+					(chunk) => (body = Buffer.concat([body, chunk])),
+				);
 				msg.on('end', () => {
 					if (isgzip)
-						zlib.gunzip(body, (err, buf) => resolve(err ? body : buf));
-					else
-						resolve(body)
+						zlib.gunzip(body, (err, buf) =>
+							resolve(err ? body : buf),
+						);
+					else resolve(body);
 				});
-			}
+			},
 		);
 		data && req.write(data);
 		req.end();
@@ -1092,61 +1235,91 @@ function get_latest_ahk2lsp() {
 		'{"assetTypes":null,"filters":[{"criteria":[{"filterType":7,"value":"thqby.vscode-autohotkey2-lsp"}],"direction":2,"pageSize":100,"pageNumber":1,"sortBy":0,"sortOrder":0,"pagingToken":null}],"flags":2151}',
 		{
 			'content-type': 'application/json',
-			'accept': 'application/json;api-version=7.1-preview.1;excludeUrls=true',
-		}
-	).catch(err => console.error(err)).then(info => {
-		let ext = JSON.parse(info).results[0].extensions[0].versions[0];
-		let version = ext.version;
-		fs.readFile('./package.json', (err, buf) => {
-			let update = !buf;
-			if (buf) {
-				try {
-					let curver = JSON.parse(buf).version.split('.'), ver = version.split('.');
-					for (let n in curver) {
-						if (parseInt(curver[n]) < parseInt(ver[n])) {
-							update = true;
-							break;
-						}
-					}
-				} catch (e) { update = true; }
-			}
-			if (update)
-				download_ahk2lsp();
-			else
-				console.log(`thqby.vscode-autohotkey2-lsp v${version} is the latest version.`);
-
-			function download_ahk2lsp(url) {
-				https_request(url ?? `https://marketplace.visualstudio.com/_apis/public/gallery/publishers/thqby/vsextensions/vscode-autohotkey2-lsp/${version}/vspackage`)
-					.then(buffer => {
-						if (buffer[0] === 123) {
-							if (!url) {
-								for (let f of ext.files)
-									if (f.assetType.endsWith('.VSIXPackage'))
-										return download_ahk2lsp(f.source);
+			accept: 'application/json;api-version=7.1-preview.1;excludeUrls=true',
+		},
+	)
+		.catch((err) => console.error(err))
+		.then((info) => {
+			let ext = JSON.parse(info).results[0].extensions[0].versions[0];
+			let version = ext.version;
+			fs.readFile('./package.json', (err, buf) => {
+				let update = !buf;
+				if (buf) {
+					try {
+						let curver = JSON.parse(buf).version.split('.'),
+							ver = version.split('.');
+						for (let n in curver) {
+							if (parseInt(curver[n]) < parseInt(ver[n])) {
+								update = true;
+								break;
 							}
-							return console.error(buffer.toString());
 						}
-						let zip = new StreamZip({ buffer });
-						let extract_count = 0, has_extract_count = 0;
-						zip.on('ready', () => zip.extract('extension/', './', err => err && console.error(err), (entry) => {
-							let name = entry.name.toLowerCase();
-							if (name.includes('/client/') || name.includes('/browser'))
-								return false;
-							if (name.endsWith('/ahk2.configuration.json') || name.endsWith('.png') || name.endsWith('.tmlanguage.json'))
-								return false;
-							extract_count++;
-							return true;
-						}));
-						zip.on('error', err => console.error(err));
-						zip.on('extract', (entry, outPath) => {
-							if (++has_extract_count === extract_count)
-								console.log(`thqby.vscode-autohotkey2-lsp v${version} has been installed.`);
-						});
-					})
-					.catch(err => console.error(err));
-			}
+					} catch (e) {
+						update = true;
+					}
+				}
+				if (update) download_ahk2lsp();
+				else
+					console.log(
+						`thqby.vscode-autohotkey2-lsp v${version} is the latest version.`,
+					);
+
+				function download_ahk2lsp(url) {
+					https_request(
+						url ??
+							`https://marketplace.visualstudio.com/_apis/public/gallery/publishers/thqby/vsextensions/vscode-autohotkey2-lsp/${version}/vspackage`,
+					)
+						.then((buffer) => {
+							if (buffer[0] === 123) {
+								if (!url) {
+									for (let f of ext.files)
+										if (
+											f.assetType.endsWith('.VSIXPackage')
+										)
+											return download_ahk2lsp(f.source);
+								}
+								return console.error(buffer.toString());
+							}
+							let zip = new StreamZip({ buffer });
+							let extract_count = 0,
+								has_extract_count = 0;
+							zip.on('ready', () =>
+								zip.extract(
+									'extension/',
+									'./',
+									(err) => err && console.error(err),
+									(entry) => {
+										let name = entry.name.toLowerCase();
+										if (
+											name.includes('/client/') ||
+											name.includes('/browser')
+										)
+											return false;
+										if (
+											name.endsWith(
+												'/ahk2.configuration.json',
+											) ||
+											name.endsWith('.png') ||
+											name.endsWith('.tmlanguage.json')
+										)
+											return false;
+										extract_count++;
+										return true;
+									},
+								),
+							);
+							zip.on('error', (err) => console.error(err));
+							zip.on('extract', (entry, outPath) => {
+								if (++has_extract_count === extract_count)
+									console.log(
+										`thqby.vscode-autohotkey2-lsp v${version} has been installed.`,
+									);
+							});
+						})
+						.catch((err) => console.error(err));
+				}
+			});
 		});
-	});
 }
 
-get_latest_ahk2lsp()
+get_latest_ahk2lsp();

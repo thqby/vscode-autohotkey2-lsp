@@ -26,7 +26,7 @@ const nodeClientConfig = /** @type WebpackConfig */ {
 	resolve: {
 		mainFields: ['module', 'main'],
 		extensions: ['.ts', '.js'], // support ts-files and js-files
-		alias: {}
+		alias: {},
 	},
 	module: {
 		rules: [
@@ -47,6 +47,7 @@ const nodeClientConfig = /** @type WebpackConfig */ {
 	performance: {
 		hints: false,
 	},
+	// todo minify production build
 	devtool: 'source-map',
 };
 
@@ -55,7 +56,7 @@ const nodeServerConfig = /** @type WebpackConfig */ {
 	mode: 'none',
 	target: 'node',
 	entry: {
-		server: './src/server.ts'
+		server: './src/server.ts',
 	},
 	output: {
 		filename: '[name].js',
@@ -65,7 +66,7 @@ const nodeServerConfig = /** @type WebpackConfig */ {
 	resolve: {
 		mainFields: ['module', 'main'],
 		extensions: ['.ts', '.js'], // support ts-files and js-files
-		alias: {}
+		alias: {},
 	},
 	module: {
 		rules: [
@@ -136,7 +137,7 @@ const browserServerConfig = /** @type WebpackConfig */ {
 	mode: 'none',
 	target: 'webworker', // web extensions run in a webworker context
 	entry: {
-		browserServerMain: './src/browserServerMain.ts'
+		browserServerMain: './src/browserServerMain.ts',
 	},
 	output: {
 		filename: '[name].js',
@@ -151,8 +152,8 @@ const browserServerConfig = /** @type WebpackConfig */ {
 		fallback: {
 			fs: false,
 			child_process: false,
-			path: require.resolve("path-browserify"),
-			process: false
+			path: require.resolve('path-browserify'),
+			process: false,
 		},
 	},
 	module: {
@@ -174,7 +175,12 @@ const browserServerConfig = /** @type WebpackConfig */ {
 	performance: {
 		hints: false,
 	},
-	devtool: 'source-map'
+	devtool: 'source-map',
 };
 
-module.exports = [nodeClientConfig, nodeServerConfig, browserClientConfig, browserServerConfig];
+module.exports = [
+	nodeClientConfig,
+	nodeServerConfig,
+	browserClientConfig,
+	browserServerConfig,
+];

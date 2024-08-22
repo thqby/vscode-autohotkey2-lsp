@@ -11,33 +11,33 @@
 AutoHotkey v2 语言支持 for VS Code, 功能实现基于 v2 语法分析。
 支持在`Chrome/Edge`等浏览器中使用 https://vscode.dev 或 https://github.dev/github/dev
 
-- [AutoHotkey v2 语言支持](#autohotkey-v2-语言支持)
-  - [语言特性](#语言特性)
-    - [重命名符号](#重命名符号)
-    - [错误诊断](#错误诊断)
-    - [智能感知](#智能感知)
-    - [智能提示](#智能提示)
-    - [大纲](#大纲)
-    - [语义高亮](#语义高亮)
-    - [代码标记](#代码标记)
-    - [颜色提示](#颜色提示)
-    - [悬停提示](#悬停提示)
-    - [转到定义](#转到定义)
-    - [查找所有引用](#查找所有引用)
-    - [代码格式化](#代码格式化)
-    - [自定义折叠](#自定义折叠)
-  - [上下文菜单](#上下文菜单)
-    - [快速帮助](#快速帮助)
-    - [运行脚本](#运行脚本)
-    - [运行选定的脚本](#运行选定的脚本)
-    - [编译脚本](#编译脚本)
-    - [调试脚本](#调试脚本)
-    - [生成注释](#生成注释)
-  - [在其他编辑器中使用](#在其他编辑器中使用)
-    - [Sublime Text 4](#sublime-text-4)
-    - [Vim 和 Neovim](#vim-和-neovim)
-    - [Emacs](#Emacs)
-  - [在 Web 浏览器中使用](#在-web-浏览器中使用)
+-   [AutoHotkey v2 语言支持](#autohotkey-v2-语言支持)
+    -   [语言特性](#语言特性)
+        -   [重命名符号](#重命名符号)
+        -   [错误诊断](#错误诊断)
+        -   [智能感知](#智能感知)
+        -   [智能提示](#智能提示)
+        -   [大纲](#大纲)
+        -   [语义高亮](#语义高亮)
+        -   [代码标记](#代码标记)
+        -   [颜色提示](#颜色提示)
+        -   [悬停提示](#悬停提示)
+        -   [转到定义](#转到定义)
+        -   [查找所有引用](#查找所有引用)
+        -   [代码格式化](#代码格式化)
+        -   [自定义折叠](#自定义折叠)
+    -   [上下文菜单](#上下文菜单)
+        -   [快速帮助](#快速帮助)
+        -   [运行脚本](#运行脚本)
+        -   [运行选定的脚本](#运行选定的脚本)
+        -   [编译脚本](#编译脚本)
+        -   [调试脚本](#调试脚本)
+        -   [生成注释](#生成注释)
+    -   [在其他编辑器中使用](#在其他编辑器中使用)
+        -   [Sublime Text 4](#sublime-text-4)
+        -   [Vim 和 Neovim](#vim-和-neovim)
+        -   [Emacs](#Emacs)
+    -   [在 Web 浏览器中使用](#在-web-浏览器中使用)
 
 ## 语言特性
 
@@ -137,10 +137,10 @@ class abc {
 
 用法:
 
-- 右键弹出菜单然后点击 格式化文档。
-- 或按 `Shift+Alt+F`。
-- 支持在键入`}`时格式化代码块，在代码行结束处键入`\n`时格式化行并缩进。支持在代码区(非注释、字符串)输入中文标点时替换为英文标点。 (需要开启`editor.format OnType`)
-- 支持使用格式化指令`;@format array_style: collapse, object_style: expand`改变不同块的对象样式
+-   右键弹出菜单然后点击 格式化文档。
+-   或按 `Shift+Alt+F`。
+-   支持在键入`}`时格式化代码块，在代码行结束处键入`\n`时格式化行并缩进。支持在代码区(非注释、字符串)输入中文标点时替换为英文标点。 (需要开启`editor.format OnType`)
+-   支持使用格式化指令`;@format array_style: collapse, object_style: expand`改变不同块的对象样式
 
 ![codeFormat](./pic/codeFormat.gif)
 
@@ -196,87 +196,89 @@ node install.js
 
 ### Sublime Text 4
 
-- `Package Control: Install Package`, 安装[Sublime LSP](https://github.com/sublimelsp/LSP)插件
-- `Preferences: LSP Settings`, 增加 lsp 配置、语言选择器和语法高亮. 这是一个简单的[语法高亮示例](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), 存放在类似路径下 `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
+-   `Package Control: Install Package`, 安装[Sublime LSP](https://github.com/sublimelsp/LSP)插件
+-   `Preferences: LSP Settings`, 增加 lsp 配置、语言选择器和语法高亮. 这是一个简单的[语法高亮示例](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), 存放在类似路径下 `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`
 
 ```json
 {
-  "clients": {
-    "lsp-ahk2": {
-      "enabled": true,
-      "command": [
-        "node",
-        "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-        "--stdio"
-      ], // 更新node.exe的路径(可能已经在环境变量中，所以你不需要设置)和vscode-autohotkey2-lsp的文件夹
-      "selector": "source.ahk2", // 与AutoHotkey2.sublime-syntax中的scope相同
-      "schemes": ["file", "buffer", "res"],
-      "initializationOptions": {
-        "locale": "en-us", // or "zh-cn"
-        "AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
-        "CommentTags": "^;;\\s*(?<tag>.+)",
-        "CompleteFunctionParens": false,
-        "Diagnostics": {
-          "ClassStaticMemberCheck": true,
-          "ParamsCheck": true
-        },
-        "ActionWhenV1IsDetected": "Continue",
-        "FormatOptions": {
-          "array_style": "none",           // or "collapse" or "expand"
-          "break_chained_methods": false,
-          "ignore_comment": false,
-          "indent_string": "\t",
-          "max_preserve_newlines": 2,
-          "brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
-          "object_style": "none",          // or "collapse" or "expand"
-          "preserve_newlines": true,
-          "space_after_double_colon": true,
-          "space_before_conditional": true,
-          "space_in_empty_paren": false,
-          "space_in_other": true,
-          "space_in_paren": false,
-          "wrap_line_length": 0
-        },
-        "InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
-        "WorkingDirs": [],
-        "SymbolFoldingFromOpenBrace": false
-      }
-    }
-  },
-  "semantic_highlighting": true
+	"clients": {
+		"lsp-ahk2": {
+			"enabled": true,
+			"command": [
+				"node",
+				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+				"--stdio"
+			], // 更新node.exe的路径(可能已经在环境变量中，所以你不需要设置)和vscode-autohotkey2-lsp的文件夹
+			"selector": "source.ahk2", // 与AutoHotkey2.sublime-syntax中的scope相同
+			"schemes": ["file", "buffer", "res"],
+			"initializationOptions": {
+				"locale": "en-us", // or "zh-cn"
+				"AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
+				"CommentTags": "^;;\\s*(?<tag>.+)",
+				"CompleteFunctionParens": false,
+				"Diagnostics": {
+					"ClassStaticMemberCheck": true,
+					"ParamsCheck": true
+				},
+				"ActionWhenV1IsDetected": "Continue",
+				"FormatOptions": {
+					"array_style": "none", // or "collapse" or "expand"
+					"break_chained_methods": false,
+					"ignore_comment": false,
+					"indent_string": "\t",
+					"max_preserve_newlines": 2,
+					"brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
+					"object_style": "none", // or "collapse" or "expand"
+					"preserve_newlines": true,
+					"space_after_double_colon": true,
+					"space_before_conditional": true,
+					"space_in_empty_paren": false,
+					"space_in_other": true,
+					"space_in_paren": false,
+					"wrap_line_length": 0
+				},
+				"InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+				"WorkingDirs": [],
+				"SymbolFoldingFromOpenBrace": false
+			}
+		}
+	},
+	"semantic_highlighting": true
 }
 ```
 
 ### Vim 和 Neovim
 
 #### COC
-- 下载[coc.nvim 插件](https://github.com/neoclide/coc.nvim)。
+
+-   下载[coc.nvim 插件](https://github.com/neoclide/coc.nvim)。
 
 ```bat
 cd $VIMRUNTIME\plugin
 git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 ```
 
-- 打开(n)vim, 输入命令 `:CocConfig` 进入`coc.nvim`配置文件增加配置信息。
+-   打开(n)vim, 输入命令 `:CocConfig` 进入`coc.nvim`配置文件增加配置信息。
 
 ```json
 {
-  "languageserver": {
-    "lsp-ahk2": {
-      "module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-      "filetypes": ["autohotkey"],
-      "args": ["--node-ipc"],
-      "initializationOptions": {
-        // Same as initializationOptions for Sublime Text4
-      }
-    }
-  }
+	"languageserver": {
+		"lsp-ahk2": {
+			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+			"filetypes": ["autohotkey"],
+			"args": ["--node-ipc"],
+			"initializationOptions": {
+				// Same as initializationOptions for Sublime Text4
+			}
+		}
+	}
 }
 ```
 
 #### nvim-lspconfig
-- 下载[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)。
-- 将以下内容添加到您的NVIM配置中(init.lua 等). 确定`cmd`指向vscode-autohotkey2-lsp的安装路径，`InterpreterPath`指向AHK exe.
+
+-   下载[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)。
+-   将以下内容添加到您的NVIM配置中(init.lua 等). 确定`cmd`指向vscode-autohotkey2-lsp的安装路径，`InterpreterPath`指向AHK exe.
 
 ```lua
 local function custom_attach(client, bufnr)
@@ -318,9 +320,10 @@ nvim_lsp.ahk2.setup({})
 ### Emacs
 
 #### Eglot
-- 将以下内容添加到您的emacs配置文件中
 
-``` emacs-lisp
+-   将以下内容添加到您的emacs配置文件中
+
+```emacs-lisp
 (add-to-list 'eglot-server-programs '(ahk-mode "node" "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js" "--stdio"))
 
 ```

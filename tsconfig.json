@@ -6,17 +6,9 @@
 		"outDir": "out",
 		"rootDir": "src",
 		"sourceMap": true,
-		"composite": true,
+		"composite": true
 	},
-	"include": [
-		"src"
-	],
-	"exclude": [
-		"node_modules",
-		".vscode-test"
-	],
-	"references": [
-		{ "path": "./client" },
-		{ "path": "./server" }
-	]
+	"include": ["src"],
+	"exclude": ["node_modules", ".vscode-test"],
+	"references": [{ "path": "./client" }, { "path": "./server" }]
 }

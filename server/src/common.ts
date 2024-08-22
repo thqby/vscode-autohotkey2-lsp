@@ -253,6 +253,7 @@ export function initahk2cache() {
 
 export function loadahk2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
+	// todo get this working with AHK++
 	const file = `${rootdir}/syntaxes/<>/${filename}`;
 	if (isBrowser) {
 		const td = openFile(file + '.d.ahk');

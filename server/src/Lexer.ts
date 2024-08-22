@@ -6442,7 +6442,7 @@ export class Lexer {
 		}
 		if (l <= r && it)
 			return (this.tokens[it.start] ?? ((it = this.tokens[it.previous!])?.data
-				&& { ...it.data as {}, previous_token: it, type: '' })) as Token;
+				&& { ...it.data, previous_token: it, type: '' })) as Token;
 	}
 }
 

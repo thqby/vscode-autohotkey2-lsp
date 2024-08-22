@@ -17,7 +17,7 @@ const nodeCLIConfig = /** @type WebpackConfig */ {
 	mode: 'none',
 	target: 'node',
 	entry: {
-		cli: './cli/cli.ts'
+		cli: './cli/cli.ts',
 	},
 	output: {
 		filename: '[name].js',
@@ -27,7 +27,7 @@ const nodeCLIConfig = /** @type WebpackConfig */ {
 	resolve: {
 		mainFields: ['module', 'main'],
 		extensions: ['.ts', '.js'], // support ts-files and js-files
-		alias: {}
+		alias: {},
 	},
 	module: {
 		rules: [
