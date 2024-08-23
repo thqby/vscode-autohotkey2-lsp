@@ -12,7 +12,7 @@
 				"--extensionDevelopmentKind=web"
 			],
 			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"],
-			"preLaunchTask": "npm: watch-web"
+			"preLaunchTask": "npm: build:watch"
 		},
 		{
 			"type": "extensionHost",
@@ -20,7 +20,10 @@
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
-			"env": { "VSCODE_AHK_SERVER_PATH": "server/dist/server.js" },
+			"env": {
+				"VSCODE_AHK_SERVER_PATH": "server/dist/server.js",
+				"SYNTAXES_PATH": "syntaxes"
+			},
 			"outFiles": ["${workspaceRoot}/client/dist/**/*.js"],
 			"preLaunchTask": "npm: build:dev"
 		},

@@ -34,6 +34,7 @@
 		"build": "webpack --mode production --devtool hidden-source-map",
 		"prebuild:dev": "npm run clean",
 		"build:dev": "webpack",
+		"build:watch": "webpack --watch",
 		"chrome": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ./test-data",
 		"clean": "del-cli client/dist server/dist/*.js*",
 		"clean//": "Remove both the compiled extension and compiled test files",
@@ -58,8 +59,7 @@
 		"test//": "Run tests",
 		"validate": "npm run clean && npm run test-grammar && npm run test",
 		"vscode:prepublish": "npm run build",
-		"watch": "tsc -b -w",
-		"watch-web": "webpack --watch"
+		"watch": "tsc -b -w"
 	},
 	"contributes": {
 		"breakpoints": [
