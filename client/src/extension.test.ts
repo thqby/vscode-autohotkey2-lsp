@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import * as fs from 'fs';
-import { resolvePath } from '../extension';
+import { resolvePath } from './extension';
 
 suite('resolvePath', () => {
 	let lstatSyncStub: sinon.SinonStub;

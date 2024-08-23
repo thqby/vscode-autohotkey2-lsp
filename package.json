@@ -56,7 +56,7 @@
 		"test": "cd client && vscode-test",
 		"test-grammar": "vscode-tmgrammar-snap syntaxes/samples/*.{ahk1,ahk2}",
 		"test//": "Run tests",
-		"validate": "npm run clean && npm run vscode:prepublish && npm run test-grammar && npm run test && npm run package",
+		"validate": "npm run clean && npm run test-grammar && npm run test",
 		"vscode:prepublish": "npm run build",
 		"watch": "tsc -b -w",
 		"watch-web": "webpack --watch"
