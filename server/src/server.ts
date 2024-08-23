@@ -177,6 +177,7 @@ connection.onInitialize(async (params) => {
 });
 
 connection.onInitialized(() => {
+	connection.window.showInformationMessage('AutoHotkey2 language server started');
 	if (hasConfigurationCapability) {
 		// Register for all configuration changes.
 		connection.client.register(DidChangeConfigurationNotification.type);
