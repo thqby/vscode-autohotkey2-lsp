@@ -352,13 +352,19 @@
 		"commands": [
 			{
 				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
-				"command": "ahk2.debug",
-				"title": "%ahk2.debug%",
+				"command": "ahk2.debug.file",
+				"title": "%ahk2.debug.file%",
 				"icon": "$(debug)",
 				"category": "ahk2"
 			},
 			{
-				"enablement": "!isWeb",
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.debug.configs",
+				"title": "%ahk2.debug.configs%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "shellExecutionSupported",
 				"command": "ahk2.debug.attach",
 				"title": "%ahk2.debug.attach%",
 				"category": "ahk2"
@@ -453,20 +459,43 @@
 		"menus": {
 			"editor/context": [
 				{
-					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.debug",
-					"group": "navigation@1"
+					"submenu": "ahk2.context",
+					"group": "navigation@0"
+				}
+			],
+			"editor/title/run": [
+				{
+					"command": "ahk2.run",
+					"group": "navigation",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.debug.attach",
-					"group": "navigation@2"
+					"command": "ahk2.stop",
+					"group": "navigation",
+					"when": "resourceLangId == ahk2 && ahk2:isRunning && shellExecutionSupported"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb",
+					"command": "ahk2.debug.file",
+					"group": "navigation",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
+				},
+				{
+					"command": "ahk2.debug.configs",
+					"group": "navigation",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
+				},
+				{
 					"command": "ahk2.debug.params",
-					"group": "navigation@2"
+					"group": "navigation",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				},
+				{
+					"command": "ahk2.debug.attach",
+					"group": "navigation",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
+				}
+			],
+			"ahk2.context": [
 				{
 					"when": "editorLangId == ahk2 && !isWeb && editorHasSelection",
 					"command": "ahk2.selection.run",
@@ -478,14 +507,32 @@
 					"group": "navigation@0"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.compile",
+					"command": "ahk2.debug.file",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported",
+					"group": "navigation@2"
+				},
+				{
+					"command": "ahk2.debug.configs",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported",
+					"group": "navigation@2"
+				},
+				{
+					"command": "ahk2.debug.params",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported",
+					"group": "navigation@2"
+				},
+				{
+					"command": "ahk2.debug.attach",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported",
 					"group": "navigation@2"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.help",
-					"group": "navigation@1"
+					"command": "ahk2.compile"
+				},
+				{
+					"when": "editorLangId == ahk2 && !isWeb",
+					"command": "ahk2.help"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning",
@@ -494,33 +541,20 @@
 				},
 				{
 					"when": "editorLangId == ahk2",
-					"command": "ahk2.generate.comment",
-					"group": "navigation@2"
+					"command": "ahk2.generate.comment"
 				},
 				{
 					"when": "editorLangId == ahk2",
-					"command": "ahk2.updateversioninfo",
-					"group": "navigation@2"
-				}
-			],
-			"editor/title": [
-				{
-					"command": "ahk2.run",
-					"group": "navigation@0",
-					"when": "resourceLangId == ahk2 && shellExecutionSupported"
-				},
-				{
-					"command": "ahk2.stop",
-					"group": "navigation@0",
-					"when": "resourceLangId == ahk2 && ahk2:isRunning && shellExecutionSupported"
-				},
-				{
-					"command": "ahk2.debug",
-					"group": "navigation@1",
-					"when": "resourceLangId == ahk2 && shellExecutionSupported"
+					"command": "ahk2.updateversioninfo"
 				}
 			]
 		},
+		"submenus": [
+			{
+				"id": "ahk2.context",
+				"label": "AutoHotkey v2"
+			}
+		],
 		"keybindings": [
 			{
 				"command": "ahk2.run",
@@ -538,9 +572,9 @@
 				"when": "editorLangId == ahk2 && !isWeb"
 			},
 			{
-				"command": "ahk2.debug",
+				"command": "ahk2.debug.file",
 				"key": "f5",
-				"when": "editorLangId == ahk2 && !isWeb && !inDebugMode"
+				"when": "editorLangId == ahk2 && !isWeb"
 			},
 			{
 				"command": "ahk2.debug.params",

@@ -40,6 +40,7 @@ const ahkconfig = workspace.getConfiguration('AutoHotkey2');
 let ahkpath_cur: string = ahkconfig.InterpreterPath, server_is_ready = false, zhcn = false;
 const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const isWindows = process.platform === 'win32';
+let extlist: string[] = [], debugexts: { [type: string]: string } = {}, langs: string[] = [];
 
 export async function activate(context: ExtensionContext) {
 	// The server is implemented in node
@@ -121,7 +122,6 @@ export async function activate(context: ExtensionContext) {
 		server_is_ready = true;
 	});
 
-	let extlist: string[], debugexts: { [type: string]: string }, langs: string[] = [];
 	const id_has_register: string[] = [];
 	function update_extensions_info() {
 		debugexts = {};
@@ -141,11 +141,7 @@ export async function activate(context: ExtensionContext) {
 				async resolveDebugConfiguration(folder, config) {
 					if (config.__ahk2debug || window.activeTextEditor?.document.languageId !== 'ahk') {
 						const append_configs: (DebugConfiguration | undefined)[] = [];
-						const allconfigs = workspace.getConfiguration('launch').inspect<DebugConfiguration[]>('configurations');
-						let configs = allconfigs && [
-							...allconfigs.workspaceFolderValue ?? [],
-							...allconfigs.workspaceValue ?? [],
-							...allconfigs.globalValue ?? []];
+						let configs = get_debug_configs();
 						config.request ||= 'launch';
 						configs = configs?.filter(it => it.request === config.request && it.type === config.type);
 						if (!config.__ahk2debug) {
@@ -200,9 +196,10 @@ export async function activate(context: ExtensionContext) {
 		commands.registerTextEditorCommand('ahk2.selection.run', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk2.stop', stopRunningScript),
 		commands.registerCommand('ahk2.setinterpreter', setInterpreter),
-		commands.registerCommand('ahk2.debug', () => beginDebug(extlist, debugexts)),
-		commands.registerCommand('ahk2.debug.params', () => beginDebug(extlist, debugexts, true)),
-		commands.registerCommand('ahk2.debug.attach', () => beginDebug(extlist, debugexts, false, true)),
+		commands.registerCommand('ahk2.debug.file', () => beginDebug('f')),
+		commands.registerCommand('ahk2.debug.configs', () => beginDebug('c')),
+		commands.registerCommand('ahk2.debug.params', () => beginDebug('p')),
+		commands.registerCommand('ahk2.debug.attach', () => beginDebug('a')),
 		commands.registerCommand('ahk2.selectsyntaxes', selectSyntaxes),
 		commands.registerTextEditorCommand('ahk2.updateversioninfo', async textEditor => {
 			if (!server_is_ready)
@@ -491,10 +488,18 @@ if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint
 		execSync(`"${executePath}" /ErrorStdOut *`, { input: script });
 }
 
-async function beginDebug(extlist: string[], debugexts: { [type: string]: string }, params = false, attach = false) {
+function get_debug_configs() {
+	const allconfigs = workspace.getConfiguration('launch').inspect<DebugConfiguration[]>('configurations');
+	return allconfigs && [
+		...allconfigs.workspaceFolderValue ?? [],
+		...allconfigs.workspaceValue ?? [],
+		...allconfigs.globalValue ?? []].filter(it => !!debugexts[it.type]);
+}
+
+async function beginDebug(type: string) {
 	let extname: string | undefined;
 	const editor = window.activeTextEditor;
-	const config = { ...ahkconfig.get('DebugConfiguration'), request: 'launch', __ahk2debug: true } as DebugConfiguration;
+	let config = { ...ahkconfig.get('DebugConfiguration'), request: 'launch', __ahk2debug: true } as DebugConfiguration;
 	if (!extlist.length) {
 		window.showErrorMessage(zhcn ? '未找到debug扩展, 请先安装debug扩展!' : 'The debug extension was not found, please install the debug extension first!');
 		extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'mark-wiemer.vscode-autohotkey-plus-plus', 'cweijan.vscode-autohotkey-plus']);
@@ -502,13 +507,13 @@ async function beginDebug(extlist: string[], debugexts: { [type: string]: string
 			commands.executeCommand('workbench.extensions.installExtension', extname);
 		return;
 	}
-	if (params || attach) {
+	if ('ap'.includes(type)) {
 		if (!extlist.includes(extname = 'zero-plusplus.vscode-autohotkey-debug')) {
 			window.showErrorMessage('zero-plusplus.vscode-autohotkey-debug was not found!');
 			return;
 		}
 		config.type = Object.entries(debugexts).find(([, v]) => v === extname)![0];
-		if (params) {
+		if (type === 'p') {
 			let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
 			if ((input = input?.trim())) {
 				const args: string[] = [];
@@ -519,7 +524,24 @@ async function beginDebug(extlist: string[], debugexts: { [type: string]: string
 				config.args = args;
 			}
 		} else config.request = 'attach';
-	} else config.type ||= Object.keys(debugexts).sort().pop()!;
+	} else if (type === 'c') {
+		const configs = get_debug_configs();
+		if (configs?.length) {
+			const pick = window.createQuickPick();
+			pick.items = configs.map(it => ({ label: it.name, data: it }));
+			pick.show();
+			const it = await new Promise(resolve => {
+				pick.onDidAccept(() => resolve(
+					(pick.selectedItems[0] as unknown as { data: DebugConfiguration })?.data));
+				pick.onDidHide(() => resolve(undefined));
+			});
+			pick.dispose();
+			if (!it)
+				return;
+			config = it as DebugConfiguration;
+		}
+	} else config.program = '${file}';
+	config.type ||= Object.keys(debugexts).sort().pop()!;
 	config.name ||= `AutoHotkey ${config.request === 'attach' ? 'Attach' : 'Debug'}`;
 	debug.startDebugging(editor && workspace.getWorkspaceFolder(editor.document.uri), config);
 }
