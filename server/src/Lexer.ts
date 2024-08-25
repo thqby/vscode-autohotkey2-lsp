@@ -2313,7 +2313,7 @@ export class Lexer {
 								if (input.charAt(parser_pos) === '%') {
 									//
 								} else if (addprop(tk), nexttoken(), ASSIGN_TYPE.includes(tk.content))
-									maybeclassprop(lk);
+									maybeclassprop(lk, undefined, result);
 								else if (tk.ignore && tk.content === '?' && (tk = get_next_token()), tk.type === 'TK_DOT')
 									continue;
 								next = false;
@@ -2845,7 +2845,7 @@ export class Lexer {
 							} else {
 								if ((next = tk.type as string === 'TK_EQUALS'))
 									if (ASSIGN_TYPE.includes(tk.content))
-										maybeclassprop(lk);
+										maybeclassprop(lk, undefined, result);
 								addprop(lk);
 							}
 							break;
@@ -3548,7 +3548,8 @@ export class Lexer {
 							} else {
 								addprop(tk), nexttoken(), next = false;
 								if (tk.type as string === 'TK_EQUALS')
-									maybeclassprop(lk);
+									if (ASSIGN_TYPE.includes(tk.content))
+										maybeclassprop(lk, undefined, result);
 							}
 							break;
 						case 'TK_START_BLOCK':
@@ -3696,7 +3697,7 @@ export class Lexer {
 				}
 			}
 
-			function maybeclassprop(tk: Token, flag: boolean | null = false) {
+			function maybeclassprop(tk: Token, flag: boolean | null = false, result?: AhkSymbol[]) {
 				if (classfullname === '')
 					return;
 				let rg: Range, cls: ClassNode | undefined;
@@ -3746,14 +3747,25 @@ export class Lexer {
 						return cls.checkmember = false, undefined;
 					const t = Variable.create(tk.content, SymbolKind.Property, rg = make_range(tk.offset, tk.length));
 					t.static = !!cls.prototype, cls.cache.push(t), t.def = false, t.parent = cls;
+					if (result) {
+						const beg = parser_pos;
+						result.push(...parse_expression());
+						t.returns = [beg, lk.offset + lk.length];
+					}
 				}
 				return;
 
 				function get_class() {
-					let p = _parent;
-					while (p && p.kind !== SymbolKind.Class)
+					const kinds: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property];
+					let p = _parent, s = true;
+					while (p && p.kind !== SymbolKind.Class) {
+						if (kinds.includes(p.kind))
+							s = !!p.static;
 						p = p.parent!;
-					return p as ClassNode;
+					}
+					if (s)
+						return p as ClassNode;
+					return (p as ClassNode)?.prototype;
 				}
 			}
 
@@ -3804,6 +3816,7 @@ export class Lexer {
 				if (node.kind === SymbolKind.Class) {
 					const cls = node as ClassNode, dec = cls.$property!, sdec = cls.property ??= {}, children = cls.children ??= [];
 					const __init = [sdec.__INIT], prototype = cls.prototype!;
+					prototype.checkmember ??= cls.checkmember;
 					adddeclaration(sdec.__INIT as FuncNode);
 					if ((dec.__INIT as FuncNode)?.ranges?.length)
 						adddeclaration(dec.__INIT as FuncNode), __init.push(dec.__INIT);
