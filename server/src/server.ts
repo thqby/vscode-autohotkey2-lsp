@@ -9,7 +9,7 @@ import { get_ahkProvider } from './ahkProvider';
 import {
 	a_vars, AHKLSSettings, ahkpath_cur, chinese_punctuations, clearLibfuns, codeActionProvider,
 	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
-	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, extsettings, hoverProvider,
+	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, extsettings, getVersionInfo, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile,
 	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
@@ -205,23 +205,7 @@ connection.languages.semanticTokens.onRange(semanticTokensOnRange);
 connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
 connection.onRequest('ahk2.getAHKversion', getAHKversion);
 connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
-connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
-	const doc = lexers[uri.toLowerCase()];
-	if (doc) {
-		const tk = doc.get_token(0);
-		if ((tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') && tk.content.match(/^\s*[;*]?\s*@(date|version)\b/im)) {
-			return {
-				uri: uri,
-				content: tk.content,
-				range: {
-					start: doc.document.positionAt(tk.offset),
-					end: doc.document.positionAt(tk.offset + tk.length)
-				}
-			};
-		}
-	}
-	return null;
-});
+connection.onRequest('ahk2.getVersionInfo', getVersionInfo);
 connection.onNotification('onDidCloseTextDocument', (params: { uri: string, id: string }) => {
 	if (params.id === 'ahk2')
 		lexers[params.uri.toLowerCase()]?.close(true);

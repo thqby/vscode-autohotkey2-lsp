@@ -9,7 +9,7 @@ import {
 } from 'vscode-languageserver/browser';
 import {
 	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, commands, completionProvider,
-	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols,
+	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols, getVersionInfo,
 	hoverProvider, initahk2cache, Lexer, lexers, loadahk2, loadlocalize, prepareRename, rangeFormatting,
 	referenceProvider, renameProvider, SemanticTokenModifiers, semanticTokensOnFull, semanticTokensOnRange,
 	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
@@ -153,23 +153,7 @@ connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
 connection.onRequest('ahk2.exportSymbols', exportSymbols);
 connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
-connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
-	const doc = lexers[uri.toLowerCase()];
-	if (doc) {
-		const tk = doc.get_token(0);
-		if ((tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') && tk.content.match(/^\s*[;*]?\s*@(date|version)\b/im)) {
-			return {
-				uri: uri,
-				content: tk.content,
-				range: {
-					start: doc.document.positionAt(tk.offset),
-					end: doc.document.positionAt(tk.offset + tk.length)
-				}
-			};
-		}
-	}
-	return null;
-});
+connection.onRequest('ahk2.getVersionInfo', getVersionInfo);
 connection.onNotification('onDidCloseTextDocument',
 	(params: { uri: string, id: string }) => {
 		if (params.id === 'ahk2')
