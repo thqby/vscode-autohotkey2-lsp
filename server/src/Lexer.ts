@@ -5323,11 +5323,13 @@ export class Lexer {
 					set_mode(next_mode);
 					output_space_before_token = ck.previous_token?.content !== '(';
 					print_token();
+					flags.last_word = '';
 					return;
 				}
 				if (ck.topofline < 1 && yields_an_operand(ck.previous_token ?? EMPTY_TOKEN)) {
 					set_mode(next_mode);
 					print_token();
+					flags.last_word = '';
 					flags.indentation_level = real_indentation_level() + 1;
 					if (opt.space_in_paren) {
 						output_space_before_token = true;
@@ -5361,6 +5363,7 @@ export class Lexer {
 			}
 
 			set_mode(next_mode);
+			flags.last_word = '';
 			flags.indentation_level = real_indentation_level();
 			print_token();
 
@@ -5445,6 +5448,7 @@ export class Lexer {
 					print_newline(true);
 				else output_space_before_token = space_in_other;
 			}
+			flags.last_word = '';
 		}
 
 		function handle_end_block() {
