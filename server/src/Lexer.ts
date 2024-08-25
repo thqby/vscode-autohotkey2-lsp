@@ -346,7 +346,7 @@ class ParseStopError {
 export type ActionType = 'Continue' | 'Warn' | 'SkipLine' | 'SwitchToV1' | 'Stop';
 
 export class Lexer {
-	public actionwhenv1?: ActionType;
+	public actionwhenv1?: ActionType = 'Continue';
 	public actived = false;
 	public beautify: (options: FormatOptions, range?: Range) => string;
 	public checkmember: boolean | undefined;
@@ -686,7 +686,7 @@ export class Lexer {
 			format_mode = false, output_lines = [];
 		}
 
-		if (d || document.uri.match(/\.d\.(ahk2?|ah2)(?=(\?|$))/i)) {
+		if (d || /\.d\.(ahk2?|ah2)$/i.test(this.fsPath)) {
 			this.d = d || 1, allow_$ ||= true;
 			this.parseScript = function (): void {
 				const p: ClassNode[] = [], cls: string[] = [], uri = this.uri
@@ -1172,6 +1172,8 @@ export class Lexer {
 				}
 				return '';
 			});
+			if (!this.fsPath.endsWith('2'))
+				delete this.actionwhenv1;
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
 				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
