@@ -315,10 +315,6 @@ export const SUPER: Variable = { ...THIS, name: 'super', detail: completionitem.
 
 export const allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+$');
 let commentTags = new RegExp('^;;\\s*(?<tag>.+)');
-const ahkprotos = {
-	ANY, OBJECT, STRING, NUMBER, INTEGER, FLOAT,
-	CLASS: ANY, FUNC: ANY, REGEXMATCHINFO: ANY
-};
 const S2O: { [n: string]: AhkSymbol } = {
 	$DIRPATH,
 	$DLLFUNC,
@@ -917,9 +913,6 @@ export class Lexer {
 						} else if ((s = this.declaration.STRUCT)?.kind === SymbolKind.Class)
 							s.def = false;
 					}
-					for (const k in ahkprotos)
-						if ((s = (ahkvars[k] as ClassNode)?.prototype))
-							ahkprotos[k as keyof typeof ahkprotos] = s;
 				}
 				parse_unresolved_typedef();
 				check_same_name_error({}, this.children, this.diagnostics);
@@ -4035,7 +4028,7 @@ export class Lexer {
 		}
 
 		function set_extends(tn: ClassNode, str: string) {
-			tn.extends = str.trim().replace(/^(.+[\\/])?/, m => {
+			tn.extends = (str = str.trim()).replace(/^(.+[\\/])?/, m => {
 				if ((m = m.slice(0, -1))) {
 					let u: URI;
 					m = m.replace(/\\/g, '/').toLowerCase();
@@ -4060,6 +4053,8 @@ export class Lexer {
 				}
 				return '';
 			});
+			if (!tn.extendsuri && tn.extends.startsWith('#'))
+				tn.extendsuri = ahkvars[(tn.extends = tn.extends.substring(1)).toUpperCase()]?.uri ?? ahkuris.ahk2;
 		}
 
 		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
@@ -6528,27 +6523,31 @@ export function parse_include(lex: Lexer, dir: string, _set = new Set()) {
 }
 
 export function get_class_base(node: AhkSymbol, lex?: Lexer) {
+	let iscls = false, uri, base, name: string, cls: ClassNode;
 	switch (node.kind) {
 		case SymbolKind.Method:
-		case SymbolKind.Function: return ahkprotos.FUNC;
-		case SymbolKind.Number: return ahkprotos[node.name.toUpperCase() as keyof typeof ahkprotos];
-		case SymbolKind.String: return ahkprotos.STRING;
+		case SymbolKind.Function: name = 'func'; break;
+		case SymbolKind.Number: name = node.name; break;
+		case SymbolKind.String: name = 'string'; break;
 		default: if (!(node as ClassNode).property) return;
 		// fall through
-		case SymbolKind.Class: {
-			let cls = node as ClassNode, base, iscls;
+		case SymbolKind.Class:
+			cls = node as ClassNode, base;
 			if ((base = cls.base))
 				return base;
-			if ((iscls = !!cls.prototype, cls.extends)) {
-				cls = find_class(lex ?? lexers[cls.uri!], cls.extends, cls.extendsuri)!;
-				return iscls ? cls : cls?.prototype;
-			} else switch (cls) {
-				case ahkprotos.ANY: return;
-				case ahkvars.ANY: return ahkprotos.CLASS;
-				default: return iscls ? ahkvars.OBJECT : ahkprotos.OBJECT;
+			iscls = !!cls.prototype, name = cls.extends;
+			lex ??= lexers[cls.uri!], uri = cls.extendsuri;
+			if (!name) {
+				if ((cls.full || cls.name).toLowerCase() === 'any')
+					if (iscls)
+						iscls = false, name = 'class';
+					else return;
+				else name = 'object';
 			}
-		}
+			break;
 	}
+	cls = find_class(lex ?? lexers[ahkuris.ahk2], name, uri)!;
+	return iscls ? cls : cls?.prototype;
 }
 
 export function get_class_member(lex: Lexer, node: AhkSymbol, name: string, ismethod: boolean, bases?: (ClassNode | null)[]): AhkSymbol | undefined {

@@ -190,6 +190,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		Object.keys(doc.labels).forEach(lb => lbs[lb] = true);
 		for (const uri in doc.relevance) {
 			if ((dd = lexers[uri])) {
+				if (dd.d) continue;
 				dd.diagnostics.splice(dd.diags);
 				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
 				for (const lb in dd.labels)
