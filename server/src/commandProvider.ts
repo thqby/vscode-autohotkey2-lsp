@@ -9,7 +9,7 @@ import {
 function checkCommand(cmd: string) {
 	if (extsettings.commands?.includes(cmd))
 		return true;
-	connection.console.warn(`Command '${cmd}' is not implemented!`);
+	connection?.console.warn(`Command '${cmd}' is not implemented!`);
 	return false;
 }
 
@@ -21,13 +21,13 @@ function trim_jsdoc(detail?: string) {
 function insertSnippet(value: string, range?: Range) {
 	if (!checkCommand('ahk2.insertSnippet'))
 		return;
-	connection.sendRequest('ahk2.insertSnippet', [value, range]);
+	connection?.sendRequest('ahk2.insertSnippet', [value, range]);
 }
 
 export function setTextDocumentLanguage(uri: string, lang?: string) {
 	if (!checkCommand('ahk2.setTextDocumentLanguage'))
 		return;
-	return connection.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
+	return connection?.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
 }
 
 export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
@@ -77,7 +77,7 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 async function generateComment() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
 		return;
-	const { uri, position } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
+	const { uri, position } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
 	const doc = lexers[uri.toLowerCase()];
 	let scope = doc.searchScopedNode(position);
 	const ts = scope?.children || doc.children;
@@ -206,7 +206,7 @@ export function exportSymbols(uri: string) {
 async function diagnosticFull() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
 		return;
-	const { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
 	const doc = lexers[uri.toLowerCase()];
 	if (!doc) return;
 	update_include_cache();
@@ -218,7 +218,7 @@ async function diagnosticFull() {
 async function setscriptdir() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
 		return;
-	const { uri } = await connection.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex) return;
 	if (lex.scriptdir !== lex.scriptpath)

@@ -1245,7 +1245,7 @@ export class Lexer {
 				case 'SwitchToV1':
 					if (!_this.actived)
 						break;
-					connection.console.info([_this.document.uri, message, diagnostic.tryswitchtov1()].join(' '));
+					connection?.console.info([_this.document.uri, message, diagnostic.tryswitchtov1()].join(' '));
 					message = '', setTextDocumentLanguage(_this.document.uri);
 					break;
 				case 'Continue':
@@ -1253,7 +1253,7 @@ export class Lexer {
 				case 'Warn': {
 					if (!_this.actived)
 						break;
-					connection.window.showWarningMessage(
+					connection?.window.showWarningMessage(
 						`file: '${_this.fsPath}', ${message}`,
 						{ title: action.switchtov1(), action: 'SwitchToV1' },
 						{ title: action.skipline(), action: 'SkipLine' },
@@ -2305,14 +2305,15 @@ export class Lexer {
 						maybe && v && (v.returns = null);
 						while (nexttoken()) {
 							if (tk.type as string === 'TK_WORD') {
+								let maybecaller = true;
 								if (input.charAt(parser_pos) === '%') {
-									//
+									maybecaller = false;
 								} else if (addprop(tk), nexttoken(), ASSIGN_TYPE.includes(tk.content))
-									maybeclassprop(lk, undefined, result);
+									maybecaller = false, maybeclassprop(lk, undefined, result);
 								else if (tk.ignore && tk.content === '?' && (tk = get_next_token()), tk.type === 'TK_DOT')
 									continue;
 								next = false;
-								if (tk.type as string !== 'TK_EQUALS' && !'=??'.includes(tk.content || ' ') &&
+								if (maybecaller && tk.type as string !== 'TK_EQUALS' && !'=??'.includes(tk.content || ' ') &&
 									', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))
 									parse_funccall(SymbolKind.Method, c);
 								else
@@ -2838,10 +2839,10 @@ export class Lexer {
 								} else
 									next = false, lk.ignore = true;
 							} else {
+								addprop(lk);
 								if ((next = tk.type as string === 'TK_EQUALS'))
 									if (ASSIGN_TYPE.includes(tk.content))
 										maybeclassprop(lk, undefined, result);
-								addprop(lk);
 							}
 							break;
 						}
@@ -5634,7 +5635,14 @@ export class Lexer {
 			if (start_of_statement()) {
 				if (input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
-				else output_space_before_token = flags.declaration_statement ? last_type !== 'TK_OPERATOR' : space_in_other;
+				else {
+					if (flags.declaration_statement)
+						output_space_before_token = last_type !== 'TK_OPERATOR';
+					else {
+						const pk = ck.previous_token!;
+						output_space_before_token = pk.op_type !== -1 && !pk.next_pair_pos && space_in_other;
+					}
+				}
 			} else if (last_type === 'TK_RESERVED' || last_type === 'TK_WORD') {
 				if (input_wanted_newline)
 					print_newline();
@@ -6379,13 +6387,13 @@ export class Lexer {
 		if (!this.last_diags)
 			return;
 		this.include = {}, this.last_diags = 0;
-		connection.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
+		connection?.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
 	}
 
 	public sendDiagnostics(update = false, all = false) {
 		const last_diags = this.last_diags;
 		if (last_diags !== this.diagnostics.length || update && last_diags) {
-			connection.sendDiagnostics({ uri: this.document.uri, diagnostics: this.diagnostics });
+			connection?.sendDiagnostics({ uri: this.document.uri, diagnostics: this.diagnostics });
 			this.last_diags = this.diagnostics.length;
 		}
 		if (!all) return;

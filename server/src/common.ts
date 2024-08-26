@@ -100,7 +100,7 @@ export const utils = {
 };
 
 export type Maybe<T> = T | undefined;
-export let connection: Connection;
+export let connection: Connection | undefined;
 export let ahkpath_cur = '', locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahk_version = encode_version('3.0.0.0');
 export let ahkuris: { [name: string]: string } = {};
@@ -136,7 +136,7 @@ export function read_ahk_file(path: string, showError = true) {
 		try {
 			return new TextDecoder('utf8', { fatal: true }).decode(buf);
 		} catch {
-			showError && connection.window.showErrorMessage(diagnostic.invalidencoding(path));
+			showError && connection?.window.showErrorMessage(diagnostic.invalidencoding(path));
 		}
 	}
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
