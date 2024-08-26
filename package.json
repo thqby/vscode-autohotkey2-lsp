@@ -56,8 +56,15 @@
 					"light": "icon_filetype.png"
 				}
 			},
-			{ "id": "ahk", "aliases": ["AutoHotkey"] },
-			{ "id": "~ahk2-output" }
+			{
+				"id": "ahk",
+				"aliases": [
+					"AutoHotkey"
+				]
+			},
+			{
+				"id": "~ahk2-output"
+			}
 		],
 		"grammars": [
 			{
@@ -614,15 +621,15 @@
 		"publish": "vsce publish",
 		"package": "vsce package",
 		"chrome": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ./test-data",
-		"compile-test": "cd client && tsc",
-		"pretest": "npm run compile-test",
-		"test": "cd client && vscode-test",
+		"test": "cd client && tsc && vscode-test",
 		"test-grammar": "vscode-tmgrammar-snap tmgrammar-test/*.ahk",
 		"validate": "npm run test-grammar && npm run test"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.4.0",
 		"@types/vscode": "^1.82.0",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.4.1",
 		"@vscode/vsce": "^2.27.0",
 		"eslint": "^9.4.0",
 		"globals": "^15.4.0",
@@ -640,5 +647,7 @@
 		"vscode-languageserver-textdocument": "^1.0.11",
 		"vscode-uri": "^3.0.8"
 	},
-	"overrides": { "eslint": "^9.4.0" }
+	"overrides": {
+		"eslint": "^9.4.0"
+	}
 }

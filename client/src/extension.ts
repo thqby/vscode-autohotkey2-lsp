@@ -30,7 +30,7 @@ import {
 	ServerOptions,
 	TransportKind
 } from 'vscode-languageclient/node';
-import { resolve } from 'path';
+import { resolve, basename } from 'path';
 import { ChildProcess, exec, execSync, spawn } from 'child_process';
 import { readdirSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
 
@@ -42,9 +42,9 @@ const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), n
 const isWindows = process.platform === 'win32';
 let extlist: string[] = [], debugexts: { [type: string]: string } = {}, langs: string[] = [];
 
-export async function activate(context: ExtensionContext) {
-	// The server is implemented in node
-	const serverModule = context.asAbsolutePath(`server/${process.env.VSCODE_AHK_SERVER_PATH ?? __dirname.replace(/^.*[\\/]/, '')}/server.js`);
+export function activate(context: ExtensionContext): Promise<LanguageClient> {
+	/** Absolute path to `server.js` */
+	const serverModule = context.asAbsolutePath(`server/${process.env.VSCODE_AHK_SERVER_PATH ?? basename(__dirname)}/server.js`);
 
 	// If the extension is launched in debug mode then the debug server options are used
 	// Otherwise the run options are used
@@ -58,9 +58,8 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const request_handlers: { [cmd: string]: any } = {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		'ahk2.executeCommand': (params: any[]) => commands.executeCommand(params.shift(), ...params),
+	const request_handlers: Record<string, any> = {
+		'ahk2.executeCommand': (params: string[]) => commands.executeCommand(params.shift() as string, ...params),
 		'ahk2.getActiveTextEditorUriAndPosition': () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
@@ -105,6 +104,7 @@ export async function activate(context: ExtensionContext) {
 			...ahkconfig
 		},
 	};
+
 	if (ahkconfig.FormatOptions?.one_true_brace !== undefined)
 		window.showWarningMessage('configuration "AutoHotkey2.FormatOptions.one_true_brace" is deprecated!\nplease use "AutoHotkey2.FormatOptions.brace_style"');
 
@@ -114,12 +114,15 @@ export async function activate(context: ExtensionContext) {
 	textdecoders.push(new TextDecoder(zhcn ? 'gbk' : 'windows-1252'));
 
 	// Start the client. This will also launch the server
+	let onInitialized: undefined | ((value: LanguageClient) => void);
 	client.start().then(() => {
 		Object.entries(request_handlers).forEach(handler => client.onRequest(...handler));
 		onDidChangegetInterpreter();
 		if (window.activeTextEditor?.document.languageId === 'ahk2')
 			ahkStatusBarItem.show();
 		server_is_ready = true;
+		onInitialized!(client);
+		onInitialized = undefined;
 	});
 
 	const id_has_register: string[] = [];
@@ -265,6 +268,7 @@ export async function activate(context: ExtensionContext) {
 		window.onDidChangeActiveTextEditor(e => e?.document.languageId === 'ahk2'
 			? ahkStatusBarItem.show() : ahkStatusBarItem.hide()),
 	);
+	return new Promise(resolve => onInitialized = resolve);
 }
 
 export function deactivate() {
@@ -689,27 +693,33 @@ function findfile(files: string[], workspace: string) {
 }
 
 async function onDidChangegetInterpreter() {
-	let path = ahkpath_cur;
 	const uri = window.activeTextEditor?.document.uri;
 	const ws = uri ? workspace.getWorkspaceFolder(uri)?.uri.fsPath : undefined;
-	path = resolvePath(path, ws, false);
-	if (path.toLowerCase().endsWith('.exe') && existsSync(path)) {
-		if (path !== ahkStatusBarItem.tooltip) {
-			ahkStatusBarItem.tooltip = path;
-			ahkStatusBarItem.text = (await getAHKversion([path]))[0] || (zhcn ? '未知版本' : 'Unknown version');
+	let ahkPath = resolvePath(ahkpath_cur, ws, false);
+	if (ahkPath.toLowerCase().endsWith('.exe') && existsSync(ahkPath)) {
+		// ahkStatusBarItem.tooltip is the current saved interpreter path
+		if (ahkPath !== ahkStatusBarItem.tooltip) {
+			ahkStatusBarItem.tooltip = ahkPath;
+			ahkStatusBarItem.text = (await getAHKversion([ahkPath]))[0] || (zhcn ? '未知版本' : 'Unknown version');
 		}
 	} else {
 		ahkStatusBarItem.text = (zhcn ? '选择AutoHotkey2解释器' : 'Select AutoHotkey2 Interpreter');
-		ahkStatusBarItem.tooltip = undefined, path = '';
+		ahkStatusBarItem.tooltip = undefined, ahkPath = '';
 	}
 }
 
+/**
+ * Resolves a given path to an absolute path.
+ * Returns empty string if the file does not exist or has no access rights.
+ */
 function resolvePath(path: string, workspace?: string, resolveSymbolicLink = true): string {
 	if (!path)
 		return '';
 	const paths: string[] = [];
+	// If the path does not contain a colon, resolve it relative to the workspace
 	if (!path.includes(':'))
 		paths.push(resolve(workspace ?? '', path));
+	// If there are no slashes or backslashes in the path and the platform is Windows
 	if (!/[\\/]/.test(path) && isWindows)
 		paths.push(execSync(`where ${path}`, { encoding: 'utf-8' }).trim());
 	paths.push(path);
@@ -719,24 +729,26 @@ function resolvePath(path: string, workspace?: string, resolveSymbolicLink = tru
 			if (lstatSync(path).isSymbolicLink() && resolveSymbolicLink)
 				path = resolve(path, '..', readlinkSync(path));
 			return path;
-		} catch {
-			continue;
-		}
+		} catch { }
 	}
 	return '';
 }
 
+/**
+ * Returns whether the given path exists.
+ * Only returns false if lstatSync give an ENOENT error.
+ */
 function existsSync(path: string): boolean {
 	try {
 		lstatSync(path);
 	} catch (err) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		if ((err as any)?.code === 'ENOENT')
+		if ((err as { code: string })?.code === 'ENOENT')
 			return false;
 	}
 	return true;
 }
 
+/** Returns lstatSync on the file, resolving the symbolic link if it exists. */
 function statSync(path: string) {
 	const st = lstatSync(path);
 	if (st.isSymbolicLink())
