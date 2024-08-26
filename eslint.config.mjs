@@ -15,7 +15,7 @@ export default [
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ['**/*.js', '!**/src/*']
+    ignores: ['**/*.js', '!**/src/*', '**/*.d.ts', '**/.vscode-test-web/*', '**/.vscode-test/*'],
   },
   {
     rules: {
