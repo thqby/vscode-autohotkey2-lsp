@@ -168,10 +168,8 @@ documents.onDidOpen(e => {
 	const uri = e.document.uri.toLowerCase();
 	let doc = lexers[uri];
 	if (doc) doc.document = e.document;
-	else {
-		lexers[uri] = doc = new Lexer(e.document);
-		Object.defineProperty(doc.include = {}, '', { value: '', enumerable: false });
-	}
+	else lexers[uri] = doc = new Lexer(e.document);
+	Object.defineProperty(doc.include, '', { value: '', enumerable: false });
 	doc.actived = true;
 	if (to_ahk2)
 		doc.actionwhenv1 = 'Continue';

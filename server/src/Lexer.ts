@@ -6347,8 +6347,7 @@ export class Lexer {
 		let l = Object.keys(after).length, change = 0;
 		for (const u in initial)
 			if (!after[u]) { change = 2; break; }
-		if (!change && (l > Object.keys(initial).length ||
-			!l && initial[''] === '' && Object.keys(includedcache[uri] ?? {}).length))
+		if (!change && (l > Object.keys(initial).length || '' in initial))
 			change = 1;
 		if (!change)
 			return this.sendDiagnostics(true);
