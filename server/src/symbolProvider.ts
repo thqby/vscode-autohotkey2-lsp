@@ -297,8 +297,8 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 	if (!(params = node?.params)) return;
 	const { max, min } = get_func_param_count(node), l = params.length - (node.variadic ? 1 : 0);
 	const _miss: { [index: number]: boolean } = {};
-	// eslint-disable-next-line prefer-const
 	let { count, miss } = paraminfo, index;
+	miss = [...miss];
 	while ((index = miss.pop()) !== undefined) {
 		if (index !== --count) {
 			count++, miss.push(index);
