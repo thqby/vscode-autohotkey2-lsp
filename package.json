@@ -45,7 +45,7 @@
 		"eslint:fix": "npm run eslint:files -- client server --fix",
 		"format": "prettier --check .",
 		"format:fix": "prettier --write .",
-		"lint": "npm run eslint && npm run sort-package-json",
+		"lint": "npm run format && npm run eslint && npm run sort-package-json",
 		"package": "vsce package",
 		"sort-package-json": "sort-package-json --check",
 		"sort-package-json:fix": "sort-package-json",
