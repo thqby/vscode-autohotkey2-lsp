@@ -255,7 +255,7 @@ export function initahk2cache() {
 // (proven by skipping this func and seeing the results)
 export function loadahk2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
-	const syntaxesPath = process.env.SYNTAXES_PATH ?? 'ahk2/syntaxes';
+	const syntaxesPath = process.env.SYNTAXES_PATH || 'syntaxes';
 	const file = `${rootdir}/${syntaxesPath}/<>/${filename}`;
 	if (isBrowser) {
 		const td = openFile(file + '.d.ahk');
