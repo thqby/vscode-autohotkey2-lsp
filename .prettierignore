@@ -10,8 +10,6 @@ server/expr_parser/*
 
 client/src/browserClientMain.ts
 client/src/extension.ts
-client/src/test/extension.test.ts
-client/src/test/formattingProvider.test.ts
 client/src/test/utils.ts
 server/src/ahkProvider.ts
 server/src/browserServerMain.ts
