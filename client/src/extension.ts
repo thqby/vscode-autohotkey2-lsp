@@ -31,7 +31,7 @@ import {
 	TransportKind
 } from 'vscode-languageclient/node';
 import { resolve } from 'path';
-import { ChildProcess, exec, execSync, spawn } from 'child_process';
+import { ChildProcess, execSync, spawn } from 'child_process';
 import { readdirSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
