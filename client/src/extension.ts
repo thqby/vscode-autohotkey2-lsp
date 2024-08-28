@@ -198,12 +198,10 @@ export async function activate(context: ExtensionContext) {
 		extensions.onDidChange(update_extensions_info),
 		// todo remove this, AHK++ already has it
 		commands.registerTextEditorCommand('ahk2.help', quickHelp),
-		commands.registerTextEditorCommand('ahk2.compile', compileScript),
 		commands.registerTextEditorCommand('ahk2.run', textEditor => runScript(textEditor)),
 		commands.registerTextEditorCommand('ahk2.selection.run', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk2.stop', stopRunningScript),
 		commands.registerCommand('ahk2.setinterpreter', setInterpreter),
-		commands.registerCommand('ahk2.debug', () => beginDebug(extlist, debugexts)),
 		commands.registerCommand('ahk2.debug.params', () => beginDebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk2.debug.attach', () => beginDebug(extlist, debugexts, false, true)),
 		commands.registerCommand('ahk2.selectsyntaxes', selectSyntaxes),
@@ -370,62 +368,6 @@ async function stopRunningScript() {
 		execSync('taskkill /pid ' + pid + ' /T /F');
 		ahkprocesses.delete(pid);
 	}
-}
-
-async function compileScript(textEditor: TextEditor) {
-	let cmd = '', cmdop = workspace.getConfiguration('AutoHotkey2').CompilerCMD as string;
-	const ws = workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath ?? '';
-	const compilePath = findfile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
-	const executePath = resolvePath(ahkpath_cur, ws);
-	if (!compilePath) {
-		window.showErrorMessage(zhcn ? `"Ahk2Exe.exe"未找到!` : `"Ahk2Exe.exe" was not found!`);
-		return;
-	}
-	if (!executePath) {
-		const s = ahkpath_cur || 'AutoHotkey.exe';
-		window.showErrorMessage(zhcn ? `"${s}"未找到!` : `"${s}" was not found!`);
-		return;
-	}
-	if (textEditor.document.isUntitled || !textEditor.document.uri.toString().startsWith('file:///')) {
-		window.showErrorMessage(zhcn ? '编译前请先保存脚本' : 'Please save the script before compiling');
-		return;
-	}
-	commands.executeCommand('workbench.action.files.save');
-	const currentPath = textEditor.document.uri.fsPath;
-	const exePath = currentPath.replace(/\.\w+$/, '.exe');
-	try {
-		if (existsSync(exePath))
-			unlinkSync(exePath);
-	} catch (e) {
-		window.showErrorMessage((e as Error).message);
-		return;
-	}
-	cmdop = cmdop.replace(/(['"]?)\$\{execPath\}\1/gi, `"${executePath}"`);
-	if (cmdop.match(/\bahk2exe\w*\.exe/i)) {
-		cmd = cmdop + ' /in ' + currentPath;
-		if (!cmd.toLowerCase().includes(' /out '))
-			cmd += '/out "' + exePath + '"';
-	} else {
-		cmd = `"${compilePath}" ${cmdop} /in "${currentPath}" `;
-		if (!cmdop.toLowerCase().includes(' /out '))
-			cmd += '/out "' + exePath + '"';
-	}
-	const process = exec(cmd, { cwd: resolve(currentPath, '..') });
-	if (process.pid) {
-		if ((cmd += ' ').toLowerCase().includes(' /gui '))
-			return;
-		outputchannel.show(true);
-		outputchannel.clear();
-		process.on('exit', () => {
-			if (existsSync(exePath))
-				window.showInformationMessage(zhcn ? '编译成功!' : 'Compiled successfully!');
-			else
-				window.showErrorMessage(zhcn ? '编译失败!' : 'Compiled failed!');
-		});
-		process.stderr?.on('data', (error) => outputchannel.appendLine(error));
-		process.stdout?.on('data', (msg) => outputchannel.appendLine(msg));
-	} else
-		window.showErrorMessage(zhcn ? '编译失败!' : 'Compilation failed!');
 }
 
 async function quickHelp(textEditor: TextEditor) {

@@ -66,13 +66,6 @@
 		],
 		"commands": [
 			{
-				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
-				"command": "ahk2.debug",
-				"title": "%ahk2.debug%",
-				"icon": "$(debug)",
-				"category": "ahk2"
-			},
-			{
 				"enablement": "!isWeb",
 				"command": "ahk2.debug.attach",
 				"title": "%ahk2.debug.attach%",
@@ -114,12 +107,6 @@
 				"command": "ahk2.stop",
 				"title": "%ahk2.stop%",
 				"icon": "$(stop)",
-				"category": "ahk2"
-			},
-			{
-				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
-				"command": "ahk2.compile",
-				"title": "%ahk2.compile%",
 				"category": "ahk2"
 			},
 			{
@@ -467,16 +454,6 @@
 				"when": "editorLangId == ahk2 && !isWeb && editorHasSelection"
 			},
 			{
-				"command": "ahk2.compile",
-				"key": "ctrl+shift+f5",
-				"when": "editorLangId == ahk2 && !isWeb"
-			},
-			{
-				"command": "ahk2.debug",
-				"key": "f5",
-				"when": "editorLangId == ahk2 && !isWeb && !inDebugMode"
-			},
-			{
 				"command": "ahk2.debug.params",
 				"key": "shift+f5",
 				"when": "editorLangId == ahk2 && !isWeb"
@@ -525,11 +502,6 @@
 			"editor/context": [
 				{
 					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.debug",
-					"group": "navigation@1"
-				},
-				{
-					"when": "editorLangId == ahk2 && !isWeb",
 					"command": "ahk2.debug.attach",
 					"group": "navigation@2"
 				},
@@ -547,11 +519,6 @@
 					"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection",
 					"command": "ahk2.run",
 					"group": "navigation@0"
-				},
-				{
-					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.compile",
-					"group": "navigation@2"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb",
@@ -584,11 +551,6 @@
 					"command": "ahk2.stop",
 					"group": "navigation@0",
 					"when": "resourceLangId == ahk2 && ahk2:isRunning && shellExecutionSupported"
-				},
-				{
-					"command": "ahk2.debug",
-					"group": "navigation@1",
-					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				}
 			]
 		},
