@@ -127,11 +127,11 @@ export function exportSymbols(uri: string) {
 		let includes;
 		includes = Object.entries(doc.include).map(p => lexers[p[0]]?.fsPath ?? restorePath(p[1]));
 		!includes.length && (includes = undefined);
-		dump(Object.values(doc.declaration), result[doc.fsPath || doc.document.uri] = { includes });
+		dump(Object.values(doc.declaration), result[doc.fsPath || doc.document.uri] = { includes }, doc);
 	}
 	return result;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	function dump(nodes: AhkSymbol[], result: any) {
+	function dump(nodes: AhkSymbol[], result: any, lex: Lexer, _this?: ClassNode) {
 		let kind: SymbolKind, fn: FuncNode, cl: ClassNode, t;
 		for (let it of nodes) {
 			if (!it.selectionRange.end.character)
@@ -144,8 +144,8 @@ export function exportSymbols(uri: string) {
 						extends: _extends(cl),
 						detail: get_detail(it)
 					});
-					dump(Object.values(cl.property ?? {}), t);
-					dump(Object.values(cl.$property ?? {}), t);
+					dump(Object.values(cl.property ?? {}), t, lex, cl);
+					dump(Object.values(cl.$property ?? {}), t, lex, cl.prototype);
 					break;
 				case SymbolKind.Property:
 					fn = it as FuncNode;
@@ -155,7 +155,8 @@ export function exportSymbols(uri: string) {
 						variadic: fn.variadic ?? false,
 						params: dump_params(fn.params),
 						readonly: fn.params && !(it as Property).set || false,
-						detail: get_detail(it)
+						type: generate_type_annotation(fn, lex, _this),
+						detail: get_detail(it),
 					});
 					if (!(it = (it as Property).call!))
 						break;
@@ -168,7 +169,8 @@ export function exportSymbols(uri: string) {
 						static: fn.static ?? false,
 						variadic: fn.variadic ?? false,
 						params: dump_params(fn.params),
-						detail: get_detail(it)
+						returns: generate_type_annotation(fn, lex, _this),
+						detail: get_detail(it),
 					});
 					break;
 			}

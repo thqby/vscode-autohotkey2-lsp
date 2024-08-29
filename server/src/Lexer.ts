@@ -7453,8 +7453,8 @@ function type_naming(sym: AhkSymbol) {
 	}
 }
 
-export function generate_type_annotation(sym: AhkSymbol, lex?: Lexer) {
-	return join_types((sym.type_annotations || decltype_returns(sym, lexers[sym.uri!] ?? lex)));
+export function generate_type_annotation(sym: AhkSymbol, lex?: Lexer, _this?: ClassNode) {
+	return join_types((sym.type_annotations || decltype_returns(sym, lexers[sym.uri!] ?? lex, _this)));
 }
 
 export function join_types(tps?: Array<string | AhkSymbol> | false) {
