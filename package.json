@@ -368,18 +368,21 @@
 				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk2.debug.configs",
 				"title": "%ahk2.debug.configs%",
+				"icon": "$(debug-all)",
 				"category": "ahk2"
 			},
 			{
 				"enablement": "shellExecutionSupported",
 				"command": "ahk2.debug.attach",
 				"title": "%ahk2.debug.attach%",
+				"icon": "$(debug-alt)",
 				"category": "ahk2"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk2.debug.params",
 				"title": "%ahk2.debug.params%",
+				"icon": "$(debug-console)",
 				"category": "ahk2"
 			},
 			{
@@ -473,32 +476,32 @@
 			"editor/title/run": [
 				{
 					"command": "ahk2.run",
-					"group": "navigation",
+					"group": "navigation@0",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				},
 				{
 					"command": "ahk2.stop",
-					"group": "navigation",
+					"group": "navigation@1",
 					"when": "resourceLangId == ahk2 && ahk2:isRunning && shellExecutionSupported"
 				},
 				{
 					"command": "ahk2.debug.file",
-					"group": "navigation",
+					"group": "navigation@2",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				},
 				{
 					"command": "ahk2.debug.configs",
-					"group": "navigation",
+					"group": "navigation@3",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				},
 				{
 					"command": "ahk2.debug.params",
-					"group": "navigation",
+					"group": "navigation@4",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				},
 				{
 					"command": "ahk2.debug.attach",
-					"group": "navigation",
+					"group": "navigation@5",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				}
 			],
@@ -514,6 +517,11 @@
 					"group": "navigation@0"
 				},
 				{
+					"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning",
+					"command": "ahk2.stop",
+					"group": "navigation@1"
+				},
+				{
 					"command": "ahk2.debug.file",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported",
 					"group": "navigation@2"
@@ -521,17 +529,17 @@
 				{
 					"command": "ahk2.debug.configs",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported",
-					"group": "navigation@2"
+					"group": "navigation@3"
 				},
 				{
 					"command": "ahk2.debug.params",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported",
-					"group": "navigation@2"
+					"group": "navigation@4"
 				},
 				{
 					"command": "ahk2.debug.attach",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported",
-					"group": "navigation@2"
+					"group": "navigation@5"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb",
@@ -540,11 +548,6 @@
 				{
 					"when": "editorLangId == ahk2 && !isWeb",
 					"command": "ahk2.help"
-				},
-				{
-					"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning",
-					"command": "ahk2.stop",
-					"group": "navigation@0"
 				},
 				{
 					"when": "editorLangId == ahk2",

@@ -143,17 +143,18 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			context.subscriptions.push(debug.registerDebugConfigurationProvider(id, {
 				async resolveDebugConfiguration(folder, config) {
 					if (config.__ahk2debug || window.activeTextEditor?.document.languageId !== 'ahk') {
-						const append_configs: (DebugConfiguration | undefined)[] = [];
-						let configs = get_debug_configs();
-						config.request ||= 'launch';
-						configs = configs?.filter(it => it.request === config.request && it.type === config.type);
+						let runtime: string | undefined;
 						if (!config.__ahk2debug) {
+							config.request ||= 'launch';
+							const match_config = get_debug_configs()?.filter(it =>
+								Object.entries(it).every(([k, v]) => equal(v, config[k]))
+							)?.sort((a, b) => Object.keys(a).length - Object.keys(b).length).pop();
 							// eslint-disable-next-line @typescript-eslint/no-explicit-any
 							const def = { ...ahkconfig.get('DebugConfiguration') as any };
 							delete def.request, delete def.type;
-							append_configs.push(def, configs?.filter(it =>
-								Object.entries(it).every(([k, v]) => equal(v, config[k]))
-							)?.sort((a, b) => Object.keys(a).length - Object.keys(b).length).pop());
+							Object.assign(config, def, match_config);
+							if (match_config?.type === 'autohotkey')
+								runtime = match_config.runtime_v2;
 							// eslint-disable-next-line @typescript-eslint/no-explicit-any
 							function equal(a: any, b: any): boolean {
 								if (a === b)
@@ -165,17 +166,17 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 								const kv = Object.entries(a);
 								return kv.length === Object.keys(b).length && kv.every(([k, v]) => equal(v, b[k]));
 							}
-						} else if (configs)
-							append_configs.push(configs.find(it => it.name === config.name) ?? configs[0]);
-						Object.assign(config, ...append_configs);
-						if (!config.runtime && (!config.runtime_v2 || config.type !== 'autohotkey')) {
+						} else if (config.runtime === 'autohotkey')
+							runtime = config.runtime_v2;
+						if (!(config.runtime ||= runtime)) {
 							config.runtime = resolvePath(ahkpath_cur, folder?.uri.fsPath);
 							if (ahkStatusBarItem.text.endsWith('[UIAccess]'))
 								config.useUIAVersion = true;
 						}
 						if (config.request === 'launch')
 							config.program ||= '${file}';
-						config.AhkExecutable ||= config.runtime;
+						if (config.type === 'ahkdbg')
+							config.AhkExecutable ||= config.runtime;
 					}
 					return config;
 				}
@@ -284,7 +285,7 @@ function decode(buf: Buffer) {
 	return buf.toString();
 }
 
-function runScript(textEditor: TextEditor, selection = false) {
+async function runScript(textEditor: TextEditor, selection = false) {
 	const executePath = resolvePath(ahkpath_cur, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
 	if (!executePath) {
 		const s = ahkpath_cur || 'AutoHotkey.exe';
@@ -323,7 +324,7 @@ function runScript(textEditor: TextEditor, selection = false) {
 	} else {
 		if (textEditor.document.isUntitled)
 			return;
-		commands.executeCommand('workbench.action.files.save');
+		await commands.executeCommand('workbench.action.files.save');
 		path = textEditor.document.fileName, command += `"${path}"`, startTime = new Date();
 		process = spawn(command, { cwd: resolve(path, '..'), shell: true });
 	}
@@ -392,7 +393,7 @@ async function compileScript(textEditor: TextEditor) {
 		window.showErrorMessage(zhcn ? '编译前请先保存脚本' : 'Please save the script before compiling');
 		return;
 	}
-	commands.executeCommand('workbench.action.files.save');
+	await commands.executeCommand('workbench.action.files.save');
 	const currentPath = textEditor.document.uri.fsPath;
 	const exePath = currentPath.replace(/\.\w+$/, '.exe');
 	try {
@@ -497,7 +498,7 @@ function get_debug_configs() {
 	return allconfigs && [
 		...allconfigs.workspaceFolderValue ?? [],
 		...allconfigs.workspaceValue ?? [],
-		...allconfigs.globalValue ?? []].filter(it => !!debugexts[it.type]);
+		...allconfigs.globalValue ?? []].filter(it => it.type in debugexts);
 }
 
 async function beginDebug(type: string) {
@@ -519,7 +520,9 @@ async function beginDebug(type: string) {
 		config.type = Object.entries(debugexts).find(([, v]) => v === extname)![0];
 		if (type === 'p') {
 			let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
-			if ((input = input?.trim())) {
+			if (input === undefined)
+				return;
+			if ((input = input.trim())) {
 				const args: string[] = [];
 				input.replace(/('|")(.*?(?<!\\))\1(?=(\s|$))|(\S+)/g, (...m) => {
 					args.push(m[4] || m[2]);
