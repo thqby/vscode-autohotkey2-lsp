@@ -250,7 +250,7 @@
 ## 1.9.7
 - 修复[#306](https://github.com/thqby/vscode-autohotkey2-lsp/issues/306)
 - 支持同时运行多个脚本[#307]
-- 增加命令`ahk2.export.symbols`, 导出类、函数等信息
+- 增加命令`ahk2.extract.symbols`, 提取类、函数等信息
 
 ## 1.9.5
 - 修复[#300](https://github.com/thqby/vscode-autohotkey2-lsp/issues/300)

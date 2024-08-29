@@ -21,6 +21,7 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: watch",
 			"args": [
 				"--disable-extensions",
 				"--extensionDevelopmentPath=${workspaceFolder}",
@@ -35,6 +36,7 @@
 			"request": "launch",
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: watch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],

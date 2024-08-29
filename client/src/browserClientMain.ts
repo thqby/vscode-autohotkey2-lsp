@@ -66,7 +66,7 @@ export function activate(context: ExtensionContext) {
 	}, new Worker(serverMain.toString()));
 
 	context.subscriptions.push(
-		commands.registerTextEditorCommand('ahk2.updateversioninfo', async textEditor => {
+		commands.registerTextEditorCommand('ahk2.update.versioninfo', async textEditor => {
 			const info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
 			if (!info) {
 				await textEditor.insertSnippet(new SnippetString([

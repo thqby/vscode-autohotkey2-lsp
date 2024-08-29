@@ -100,7 +100,7 @@ suite('Start ahk language server', () => {
 					});
 
 					test(ExecuteCommandRequest.method, async function () {
-						const params: ExecuteCommandParams = { command: 'ahk2.diagnostic.full' };
+						const params: ExecuteCommandParams = { command: 'ahk2.diagnose.all' };
 						await client.sendRequest(this.runnable().title, params);
 					});
 

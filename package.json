@@ -387,14 +387,14 @@
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.diagnostic.full",
-				"title": "%ahk2.diagnostic.full%",
+				"command": "ahk2.diagnose.all",
+				"title": "%ahk2.diagnose.all%",
 				"category": "ahk2"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.export.symbols",
-				"title": "%ahk2.export.symbols%",
+				"command": "ahk2.extract.symbols",
+				"title": "%ahk2.extract.symbols%",
 				"category": "ahk2"
 			},
 			{
@@ -406,8 +406,8 @@
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.selection.run",
-				"title": "%ahk2.selection.run%",
+				"command": "ahk2.run.selection",
+				"title": "%ahk2.run.selection%",
 				"category": "ahk2"
 			},
 			{
@@ -432,19 +432,19 @@
 			{
 				"enablement": "editorLangId == ahk2",
 				"command": "ahk2.generate.comment",
-				"title": "%ahk2.generatecomment%",
+				"title": "%ahk2.generate.comment%",
 				"category": "ahk2"
 			},
 			{
 				"enablement": "!isWeb",
-				"command": "ahk2.setinterpreter",
-				"title": "%ahk2.setinterpreter%",
+				"command": "ahk2.set.interpreter",
+				"title": "%ahk2.set.interpreter%",
 				"category": "ahk2"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.updateversioninfo",
-				"title": "%ahk2.updateversioninfo%",
+				"command": "ahk2.update.versioninfo",
+				"title": "%ahk2.update.versioninfo%",
 				"category": "ahk2"
 			},
 			{
@@ -455,14 +455,14 @@
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.selectsyntaxes",
-				"title": "Select syntaxes",
+				"command": "ahk2.select.syntaxes",
+				"title": "%ahk2.select.syntaxes%",
 				"category": "ahk2"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && resourceScheme == file",
-				"command": "ahk2.setscriptdir",
-				"title": "%ahk2.setscriptdir%",
+				"command": "ahk2.set.scriptdir",
+				"title": "%ahk2.set.scriptdir%",
 				"category": "ahk2"
 			}
 		],
@@ -508,7 +508,7 @@
 			"ahk2.context": [
 				{
 					"when": "editorLangId == ahk2 && !isWeb && editorHasSelection",
-					"command": "ahk2.selection.run",
+					"command": "ahk2.run.selection",
 					"group": "navigation@0"
 				},
 				{
@@ -543,19 +543,38 @@
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.compile"
+					"command": "ahk2.help",
+					"group": "other@0"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.help"
+					"command": "ahk2.compile",
+					"group": "other@1"
 				},
 				{
 					"when": "editorLangId == ahk2",
-					"command": "ahk2.generate.comment"
+					"command": "ahk2.generate.comment",
+					"group": "other@2"
 				},
 				{
 					"when": "editorLangId == ahk2",
-					"command": "ahk2.updateversioninfo"
+					"command": "ahk2.update.versioninfo",
+					"group": "other@3"
+				},
+				{
+					"when": "editorLangId == ahk2",
+					"command": "ahk2.diagnose.all",
+					"group": "other@4"
+				},
+				{
+					"when": "editorLangId == ahk2",
+					"command": "ahk2.extract.symbols",
+					"group": "other@5"
+				},
+				{
+					"when": "editorLangId == ahk2 && resourceScheme == file",
+					"command": "ahk2.set.scriptdir",
+					"group": "other@6"
 				}
 			]
 		},
@@ -572,7 +591,7 @@
 				"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection"
 			},
 			{
-				"command": "ahk2.selection.run",
+				"command": "ahk2.run.selection",
 				"key": "ctrl+f5",
 				"when": "editorLangId == ahk2 && !isWeb && editorHasSelection"
 			},

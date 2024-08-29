@@ -216,7 +216,7 @@ async function patherr(msg: string) {
 	if (!extsettings.commands?.includes('ahk2.executeCommand'))
 		return connection.window.showErrorMessage(msg);
 	if (await connection.window.showErrorMessage(msg, { title: 'Select Interpreter' }))
-		connection.sendRequest('ahk2.executeCommand', ['ahk2.setinterpreter']);
+		connection.sendRequest('ahk2.executeCommand', ['ahk2.set.interpreter']);
 }
 
 async function initpathenv(samefolder = false, retry = true): Promise<boolean> {

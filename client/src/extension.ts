@@ -32,15 +32,33 @@ import {
 } from 'vscode-languageclient/node';
 import { resolve, basename } from 'path';
 import { ChildProcess, exec, execSync, spawn } from 'child_process';
-import { readdirSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
+import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
-let ahkpath_cur: string = ahkconfig.InterpreterPath, server_is_ready = false, zhcn = false;
+let ahkpath_cur: string = ahkconfig.InterpreterPath, server_is_ready = false;
 const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const isWindows = process.platform === 'win32';
-let extlist: string[] = [], debugexts: { [type: string]: string } = {}, langs: string[] = [];
+let extlist: string[] = [], debugexts: Record<string, string> = {}, langs: string[] = [];
+const loadedCollection = {
+	'ahk2.browse': 'Browse your file system to find AutoHotkey2 interpreter',
+	'ahk2.compiledfailed': 'Compiled failed!',
+	'ahk2.compiledsuccessfully': 'Compiled successfully!',
+	'ahk2.current': 'Current: {0}',
+	'ahk2.debugextnotexist': 'The debug extension was not found, please install the debug extension first!',
+	'ahk2.diagnose.all': 'Diagnostic All',
+	'ahk2.enterahkpath': 'Enter path to AutoHotkey2 interpreter',
+	'ahk2.entercmd': 'Enter the command line parameters that need to be passed',
+	'ahk2.enterorfind': 'Enter path or find an existing interpreter',
+	'ahk2.enterversion': 'Enter version',
+	'ahk2.filenotexist': '\'{0}\' does not exist',
+	'ahk2.find': 'Find...',
+	'ahk2.savebeforecompilation': 'Please save the script before compilation',
+	'ahk2.select': 'Select',
+	'ahk2.set.interpreter': 'Select AutoHotkey2 Interpreter',
+	'ahk2.unknownversion': 'Unknown version',
+};
 
 export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	/** Absolute path to `server.js` */
@@ -110,8 +128,8 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 
 	// Create the language client and start the client.
 	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', serverOptions, clientOptions);
-	zhcn = env.language.startsWith('zh-');
-	textdecoders.push(new TextDecoder(zhcn ? 'gbk' : 'windows-1252'));
+	loadlocalize(context.extensionPath + '/package.nls');
+	textdecoders.push(new TextDecoder(env.language.startsWith('zh-') ? 'gbk' : 'windows-1252'));
 
 	// Start the client. This will also launch the server
 	let onInitialized: undefined | ((value: LanguageClient) => void);
@@ -187,25 +205,26 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
-	ahkStatusBarItem.command = 'ahk2.setinterpreter';
-	const ahkLanguageStatusItem = languages.createLanguageStatusItem('AutoHotkey2', { language: 'ahk2' });
-	ahkLanguageStatusItem.text = '$(folder)syntaxes';
-	ahkLanguageStatusItem.command = { title: 'Select Syntaxes', command: 'ahk2.selectsyntaxes' };
+	ahkStatusBarItem.command = 'ahk2.set.interpreter';
+	for (const it of [
+		{ text: '$(folder)syntaxes', command: { title: localize('ahk2.select'), command: 'ahk2.select.syntaxes' } },
+	])
+		context.subscriptions.push(Object.assign(languages.createLanguageStatusItem(it.command.command, { language: 'ahk2' }), it));
 	context.subscriptions.push(
-		ahkStatusBarItem, ahkLanguageStatusItem, outputchannel, fsw,
+		ahkStatusBarItem, outputchannel, fsw,
 		extensions.onDidChange(update_extensions_info),
 		commands.registerTextEditorCommand('ahk2.help', quickHelp),
 		commands.registerTextEditorCommand('ahk2.compile', compileScript),
 		commands.registerTextEditorCommand('ahk2.run', textEditor => runScript(textEditor)),
-		commands.registerTextEditorCommand('ahk2.selection.run', textEditor => runScript(textEditor, true)),
+		commands.registerTextEditorCommand('ahk2.run.selection', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk2.stop', stopRunningScript),
-		commands.registerCommand('ahk2.setinterpreter', setInterpreter),
+		commands.registerCommand('ahk2.set.interpreter', setInterpreter),
 		commands.registerCommand('ahk2.debug.file', () => beginDebug('f')),
 		commands.registerCommand('ahk2.debug.configs', () => beginDebug('c')),
 		commands.registerCommand('ahk2.debug.params', () => beginDebug('p')),
 		commands.registerCommand('ahk2.debug.attach', () => beginDebug('a')),
-		commands.registerCommand('ahk2.selectsyntaxes', selectSyntaxes),
-		commands.registerTextEditorCommand('ahk2.updateversioninfo', async textEditor => {
+		commands.registerCommand('ahk2.select.syntaxes', selectSyntaxes),
+		commands.registerTextEditorCommand('ahk2.update.versioninfo', async textEditor => {
 			if (!server_is_ready)
 				return;
 			const info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
@@ -228,7 +247,9 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 						n => n.toString().padStart(2, '0')).join(date.includes('.') ? '.' : '/')
 				).replace(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S+|(?=[\r\n]))/im, s => (value = s, '\0'));
 				if (value !== undefined) {
-					value = await window.showInputBox({ value, prompt: zhcn ? '输入版本信息' : 'Enter version info' }) ?? value;
+					value = await window.showInputBox({
+						value, prompt: localize('ahk2.filenotexist')
+					}) ?? value;
 					content = content.replace('\0', value);
 				}
 				if (content !== info.content) {
@@ -242,7 +263,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			const doc = textEditor.document;
 			languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
 		}),
-		commands.registerTextEditorCommand('ahk2.export.symbols', textEditor => {
+		commands.registerTextEditorCommand('ahk2.extract.symbols', textEditor => {
 			const doc = textEditor.document;
 			if (doc.languageId !== 'ahk2')
 				return;
@@ -289,8 +310,8 @@ async function runScript(textEditor: TextEditor, selection = false) {
 	const executePath = resolvePath(ahkpath_cur, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
 	if (!executePath) {
 		const s = ahkpath_cur || 'AutoHotkey.exe';
-		window.showErrorMessage(zhcn ? `"${s}"未找到!` : `"${s}" not find!`, 'Select Interpreter')
-			.then(r => r && setInterpreter());
+		window.showErrorMessage(localize('ahk2.filenotexist', s), localize('ahk2.set.interpreter'))
+			.then(r => r ? setInterpreter() : undefined);
 		return;
 	}
 	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
@@ -381,16 +402,16 @@ async function compileScript(textEditor: TextEditor) {
 	const compilePath = findfile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
 	const executePath = resolvePath(ahkpath_cur, ws);
 	if (!compilePath) {
-		window.showErrorMessage(zhcn ? `"Ahk2Exe.exe"未找到!` : `"Ahk2Exe.exe" was not found!`);
+		window.showErrorMessage(localize('ahk2.filenotexist', 'Ahk2Exe.exe'));
 		return;
 	}
 	if (!executePath) {
 		const s = ahkpath_cur || 'AutoHotkey.exe';
-		window.showErrorMessage(zhcn ? `"${s}"未找到!` : `"${s}" was not found!`);
+		window.showErrorMessage(localize('ahk2.filenotexist', s));
 		return;
 	}
 	if (textEditor.document.isUntitled || !textEditor.document.uri.toString().startsWith('file:///')) {
-		window.showErrorMessage(zhcn ? '编译前请先保存脚本' : 'Please save the script before compiling');
+		window.showErrorMessage(localize('ahk2.savebeforecompilation'));
 		return;
 	}
 	await commands.executeCommand('workbench.action.files.save');
@@ -421,14 +442,14 @@ async function compileScript(textEditor: TextEditor) {
 		outputchannel.clear();
 		process.on('exit', () => {
 			if (existsSync(exePath))
-				window.showInformationMessage(zhcn ? '编译成功!' : 'Compiled successfully!');
+				window.showInformationMessage(localize('ahk2.compiledsuccessfully'));
 			else
-				window.showErrorMessage(zhcn ? '编译失败!' : 'Compiled failed!');
+				window.showErrorMessage(localize('ahk2.compiledfailed'));
 		});
 		process.stderr?.on('data', (error) => outputchannel.appendLine(error));
 		process.stdout?.on('data', (msg) => outputchannel.appendLine(msg));
 	} else
-		window.showErrorMessage(zhcn ? '编译失败!' : 'Compilation failed!');
+		window.showErrorMessage(localize('ahk2.compiledfailed'));
 }
 
 async function quickHelp(textEditor: TextEditor) {
@@ -441,13 +462,13 @@ async function quickHelp(textEditor: TextEditor) {
 			word = '#' + word;
 	}
 	if (!helpPath) {
-		window.showErrorMessage(zhcn ? `"AutoHotkey.chm"未找到!` : `"AutoHotkey.chm" was not found!`);
+		window.showErrorMessage(localize('ahk2.filenotexist', 'AutoHotkey.chm'));
 		return;
 	}
 	const executePath = resolvePath(ahkpath_cur, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
 	if (!executePath) {
 		const s = ahkpath_cur || 'AutoHotkey.exe';
-		window.showErrorMessage(zhcn ? `"${s}"未找到!` : `"${s}" was not found!`);
+		window.showErrorMessage(localize('ahk2.filenotexist', s));
 		return;
 	}
 	const script = `
@@ -506,7 +527,7 @@ async function beginDebug(type: string) {
 	const editor = window.activeTextEditor;
 	let config = { ...ahkconfig.get('DebugConfiguration'), request: 'launch', __ahk2debug: true } as DebugConfiguration;
 	if (!extlist.length) {
-		window.showErrorMessage(zhcn ? '未找到debug扩展, 请先安装debug扩展!' : 'The debug extension was not found, please install the debug extension first!');
+		window.showErrorMessage(localize('ahk2.debugextnotexist'));
 		extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'mark-wiemer.vscode-autohotkey-plus-plus', 'cweijan.vscode-autohotkey-plus']);
 		if (extname)
 			commands.executeCommand('workbench.extensions.installExtension', extname);
@@ -519,7 +540,7 @@ async function beginDebug(type: string) {
 		}
 		config.type = Object.entries(debugexts).find(([, v]) => v === extname)![0];
 		if (type === 'p') {
-			let input = await window.showInputBox({ prompt: zhcn ? '输入需要传递的命令行参数' : 'Enter the command line parameters that need to be passed' });
+			let input = await window.showInputBox({ prompt: localize('ahk2.entercmd') });
 			if (input === undefined)
 				return;
 			if ((input = input.trim())) {
@@ -559,13 +580,8 @@ async function setInterpreter() {
 	const list: QuickPickItem[] = [], _ = (ahkpath = resolvePath(ahkpath_cur || ahkpath, undefined, false)).toLowerCase();
 	const pick = window.createQuickPick();
 	let it: QuickPickItem, active: QuickPickItem | undefined, sel: QuickPickItem = { label: '' };
-	if (zhcn) {
-		list.push({ alwaysShow: true, label: '输入解释器路径...', detail: '输入路径或选择一个现有的解释器' });
-		it = { label: '浏览...', detail: '浏览文件系统来选择一个 AutoHotkey2 解释器。' };
-	} else {
-		list.push({ alwaysShow: true, label: 'Enter interpreter path...', detail: 'Enter path or find an existing interpreter' });
-		it = { label: 'Find...', detail: 'Browse your file system to find a AutoHotkey2 interpreter.' };
-	}
+	list.push({ alwaysShow: true, label: localize('ahk2.enterahkpath') + '...', detail: localize('ahk2.enterorfind') });
+	it = { label: localize('ahk2.find'), detail: localize('ahk2.browse') };
 	if (ahkpath)
 		await addpath(resolve(ahkpath, '..'), _.includes('autohotkey') ? 20 : 5);
 	if (!_.includes('c:\\program files\\autohotkey\\'))
@@ -575,22 +591,22 @@ async function setInterpreter() {
 		active = list[index];
 
 	pick.matchOnDetail = true, pick.items = list;
-	pick.title = zhcn ? '选择解释器' : 'Select Interpreter';
+	pick.title = localize('ahk2.set.interpreter');
 	if (active)
 		pick.activeItems = [active];
-	pick.placeholder = (zhcn ? '当前: ' : 'Current: ') + ahkpath_cur;
+	pick.placeholder = localize('ahk2.current', ahkpath_cur);
 	pick.show();
 	pick.onDidAccept(async () => {
 		if (pick.selectedItems[0] === list[0]) {
 			pick.title = undefined, pick.activeItems = [], pick.value = '', pick.items = [it];
-			pick.placeholder = zhcn ? '请输入 AutoHotkey2 解释器的路径。' : 'Enter path to a AutoHotkey2 interpreter.';
+			pick.placeholder = localize('ahk2.enterahkpath');
 			return;
 		} else if (pick.selectedItems[0] === it) {
 			pick.ignoreFocusOut = true;
 			const path = await window.showOpenDialog({
 				defaultUri: ahkpath ? Uri.file(ahkpath) : undefined,
 				filters: { Executables: ['exe'] },
-				openLabel: zhcn ? '选择解释器' : 'Select Interpreter'
+				openLabel: localize('ahk2.set.interpreter')
 			});
 			if (path)
 				sel.detail = path[0].fsPath;
@@ -703,10 +719,10 @@ async function onDidChangegetInterpreter() {
 		// ahkStatusBarItem.tooltip is the current saved interpreter path
 		if (ahkPath !== ahkStatusBarItem.tooltip) {
 			ahkStatusBarItem.tooltip = ahkPath;
-			ahkStatusBarItem.text = (await getAHKversion([ahkPath]))[0] || (zhcn ? '未知版本' : 'Unknown version');
+			ahkStatusBarItem.text = (await getAHKversion([ahkPath]))[0] || localize('ahk2.unknownversion');
 		}
 	} else {
-		ahkStatusBarItem.text = (zhcn ? '选择AutoHotkey2解释器' : 'Select AutoHotkey2 Interpreter');
+		ahkStatusBarItem.text = localize('ahk2.set.interpreter')
 		ahkStatusBarItem.tooltip = undefined, ahkPath = '';
 	}
 }
@@ -757,4 +773,34 @@ function statSync(path: string) {
 	if (st.isSymbolicLink())
 		return lstatSync(resolve(path, '..', readlinkSync(path)));
 	return st;
+}
+
+function loadlocalize(nls: string) {
+	let s = `${nls}.${env.language}.json`;
+	if (!existsSync(s)) {
+		if (!env.language.startsWith('zh-') || !existsSync(s = `${nls}.zh-cn.json`))
+			return;
+	}
+	try {
+		const obj = JSON.parse(readFileSync(s, { encoding: 'utf8' }));
+		for (const key of Object.keys(loadedCollection) as Array<keyof typeof loadedCollection>)
+			if ((s = obj[key]))
+				loadedCollection[key] = s;
+	} catch { }
+}
+
+function localize(key: keyof typeof loadedCollection, ...args: unknown[]) {
+	const val = loadedCollection[key];
+	if (args.length)
+		return format(val, ...args as string[]);
+	return val;
+}
+
+function format(message: string, ...args: string[]): string {
+	return message.replace(/\{(\d+)\}/g, (...m) => {
+		const i = parseInt(m[1]);
+		if (i < args.length)
+			return args[i];
+		return ' ';
+	});
 }

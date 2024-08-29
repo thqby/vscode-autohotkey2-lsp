@@ -203,7 +203,7 @@ export function exportSymbols(uri: string) {
 	}
 }
 
-async function diagnosticFull() {
+async function diagnoseAll() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
 		return;
 	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
@@ -251,9 +251,9 @@ export function getVersionInfo(uri: string) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const commands: { [command: string]: (args: any[]) => any } = {
-	'ahk2.diagnostic.full': () => diagnosticFull(),
+	'ahk2.diagnose.all': () => diagnoseAll(),
 	'ahk2.generate.comment': () => generateComment(),
-	'ahk2.setscriptdir': setscriptdir
+	'ahk2.set.scriptdir': setscriptdir
 };
 
 export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
