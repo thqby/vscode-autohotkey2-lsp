@@ -13,13 +13,13 @@ export async function referenceProvider(params: ReferenceParams, token: Cancella
 	return result;
 }
 
-export function getAllReferences(doc: Lexer, context: Context, allow_builtin = true): { [uri: string]: Range[] } | null | undefined {
+export function getAllReferences(doc: Lexer, context: Context, allow_builtin = true): Record<string, Range[]> | null | undefined {
 	if (context.kind === SymbolKind.Null) return;
 	const nodes = find_symbols(doc, context);
 	if (nodes?.length !== 1)
 		return;
 	let name = context.text.toUpperCase();
-	const references: { [uri: string]: Range[] } = {};
+	const references: Record<string, Range[]> = {};
 	const { node, uri, scope, is_this, is_global } = nodes[0];
 	if (!uri || !node.selectionRange.end.character || is_this === false)
 		return;
@@ -87,7 +87,7 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 					else return;
 				}
 				const c = name.split('.'), l = c.length;
-				let i = 0, refs: { [uri: string]: Range[] } = {};
+				let i = 0, refs: Record<string, Range[]> = {};
 				for (const uri of new Set([doc.uri, ...Object.keys(doc.relevance)]))
 					refs[lexers[uri].document.uri] = findAllFromScope(lexers[uri] as unknown as AhkSymbol, c[0], SymbolKind.Variable);
 				while (i < l) {
@@ -137,7 +137,7 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 	}
 	if (Object.keys(references).length) {
 		for (const u in references) {
-			const m: { [k: string]: Range } = {};
+			const m: Record<string, Range> = {};
 			for (const range of references[u])
 				m[`${range.start.line},${range.start.character}`] ??= range;
 			references[u] = Object.values(m);

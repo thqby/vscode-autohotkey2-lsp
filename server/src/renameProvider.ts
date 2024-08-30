@@ -2,7 +2,7 @@ import { CancellationToken, PrepareRenameParams, Range, RenameParams, WorkspaceE
 import { ResponseError } from 'vscode-jsonrpc';
 import { Maybe, lexers, getAllReferences, response } from './common';
 
-let renameranges: { [uri: string]: Range[] } | null | undefined;
+let renameranges: Record<string, Range[]> | null | undefined;
 
 export async function prepareRename(params: PrepareRenameParams, token: CancellationToken): Promise<Maybe<{ range: Range, placeholder: string } | ResponseError>> {
 	const doc = lexers[params.textDocument.uri.toLowerCase()];

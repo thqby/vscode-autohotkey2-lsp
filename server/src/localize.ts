@@ -1,6 +1,6 @@
 import { rootdir, getlocalefile, getwebfile, isBrowser } from './common';
 
-let loadedCollection: { [key: string]: string } = {};
+let loadedCollection: Record<string, string> = {};
 
 export const completionitem = {
 	author: localize('completionitem.author', 'Add file infos about author, description, date, version.'),

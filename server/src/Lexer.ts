@@ -95,17 +95,17 @@ export interface FuncNode extends AhkSymbol {
 	params: Variable[]
 	param_offsets: number[]
 	param_def_len: number
-	global: { [name: string]: Variable }
-	local: { [name: string]: Variable }
+	global: Record<string, Variable>
+	local: Record<string, Variable>
 	full: string
 	hasref: boolean
 	variadic: boolean
-	labels: { [name: string]: AhkSymbol[] }
-	declaration: { [name: string]: AhkSymbol }
+	labels: Record<string, AhkSymbol[]>
+	declaration: Record<string, AhkSymbol>
 	overloads?: string | FuncNode[]
-	overload_params?: { [name: string]: Variable }
+	overload_params?: Record<string, Variable>
 	has_this_param?: boolean
-	unresolved_vars?: { [name: string]: Variable }
+	unresolved_vars?: Record<string, Variable>
 	ranges?: [number, number][]	// class's __init
 }
 
@@ -116,14 +116,14 @@ export interface ClassNode extends AhkSymbol {
 	extendsuri?: string
 	parent?: AhkSymbol
 	prototype?: ClassNode
-	property: { [name: string]: FuncNode | ClassNode | Variable }
-	$property?: { [name: string]: FuncNode | ClassNode | Variable } // aliases for prototype.property
+	property: Record<string, FuncNode | ClassNode | Variable>
+	$property?: Record<string, FuncNode | ClassNode | Variable> // aliases for prototype.property
 	cache?: Variable[]
-	undefined?: { [name: string]: Token[] }
+	undefined?: Record<string, Token>
 	checkmember?: boolean
 	static?: boolean	// not use
 	generic_types?: (string | AhkSymbol)[][]
-	type_params?: { [name: string]: AhkSymbol }
+	type_params?: Record<string, AhkSymbol>
 }
 
 export interface Variable extends AhkSymbol {
@@ -141,8 +141,8 @@ export interface Variable extends AhkSymbol {
 }
 
 export interface Property extends Variable {
-	local?: { [name: string]: AhkSymbol }
-	declaration?: { [name: string]: AhkSymbol }
+	local?: Record<string, AhkSymbol>
+	declaration?: Record<string, AhkSymbol>
 	has_this_param?: boolean
 	params?: Variable[]
 	param_offsets?: number[]
@@ -315,7 +315,7 @@ export const SUPER: Variable = { ...THIS, name: 'super', detail: completionitem.
 
 export const allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+$');
 let commentTags = new RegExp('^;;\\s*(?<tag>.+)');
-const S2O: { [n: string]: AhkSymbol } = {
+const S2O: Record<string, AhkSymbol> = {
 	$DIRPATH,
 	$DLLFUNC,
 	$FILEPATH,
@@ -349,7 +349,7 @@ export class Lexer {
 	public children: AhkSymbol[] = [];
 	public d = 0;
 	public d_uri = '';
-	public declaration: { [name: string]: AhkSymbol } = {};
+	public declaration: Record<string, AhkSymbol> = {};
 	public diagnostics: Diagnostic[] = [];
 	public diags = 0;
 	public last_diags = 0;
@@ -361,32 +361,32 @@ export class Lexer {
 	public fsPath = '';
 	public get_token: (offset?: number, ignorecomment?: boolean) => Token;
 	public need_scriptdir = false;
-	public include: { [uri: string]: string } = {};
+	public include: Record<string, string> = {};
 	public includedir = new Map<number, string>();
 	public isparsed = false;
 	public is_virtual = false;		// uris like `vscode-local-history:`
-	public labels: { [name: string]: AhkSymbol[] } = {};
+	public labels: Record<string, AhkSymbol[]> = {};
 	public libdirs: string[] = [];
-	public linepos: { [line: number]: number } = {};
+	public linepos: Record<number, number> = {};
 	public maybev1?: number;
-	public object: { method: { [name: string]: FuncNode[] }, property: { [name: string]: Variable[] } } = { method: {}, property: {} };
+	public object: { method: Record<string, FuncNode[]>, property: Record<string, Variable[]> } = { method: {}, property: {} };
 	public parseScript: () => void;
 	public scriptdir = '';
 	public scriptpath = '';
 	public STB = new SemanticTokensBuilder;
 	public symbolInformation: SymbolInformation[] | undefined;
-	public texts: { [text: string]: string } = {};
-	public typedef: { [name: string]: AhkSymbol } = {};
+	public texts: Record<string, string> = {};
+	public typedef: Record<string, AhkSymbol> = {};
 	public tokenranges: { start: number, end: number, type: number, previous?: number }[] = [];
-	public tokens: { [offset: number]: Token } = {};
+	public tokens: Record<number, Token> = {};
 	public uri = '';
 	public workspaceFolder = '';
 	private hotstringExecuteAction = false;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
-		let begin_line: boolean, callWithoutParentheses: boolean | 1, comments: { [line: number]: Token };
+		let begin_line: boolean, callWithoutParentheses: boolean | 1, comments: Record<number, Token>;
 		let continuation_sections_mode: boolean | null, currsymbol: AhkSymbol | undefined;
 		let customblocks: { region: number[], bracket: number[] };
-		let dlldir: string, includedir: string, includetable: { [uri: string]: string };
+		let dlldir: string, includedir: string, includetable: Record<string, string>;
 		let input: string, input_length: number, input_wanted_newline: boolean;
 		let last_comment_fr: FoldingRange | undefined, last_LF: number, lst: Token;
 		let n_newlines: number, parser_pos: number, sharp_offsets: number[];
@@ -425,7 +425,7 @@ export class Lexer {
 		let opt: FormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string;
 		let output_space_before_token: boolean | undefined, is_conditional: boolean;
-		const handlers: { [index: string]: () => void } = {
+		const handlers: Record<string, () => void> = {
 			'TK_START_EXPR': handle_start_expr,
 			'TK_END_EXPR': handle_end_expr,
 			'TK_START_BLOCK': handle_start_block,
@@ -660,7 +660,7 @@ export class Lexer {
 			}
 		};
 
-		function format_params_default_val(tokens: { [offset: number]: Token }, params: ParamList) {
+		function format_params_default_val(tokens: Record<number, Token>, params: ParamList) {
 			opt = { max_preserve_newlines: 1 };
 			space_in_other = true, indent_string = '\t';
 			format_mode = true, preindent_string = '';
@@ -975,7 +975,7 @@ export class Lexer {
 									break;
 								case 'TK_START_BLOCK': {
 									let full = '';
-									const props: { [name: string]: AhkSymbol } = {}, b = lk;
+									const props: Record<string, AhkSymbol> = {}, b = lk;
 									const prop_types = ['TK_NUMBER', 'TK_RESERVED', 'TK_WORD'];
 									while (prop_types.includes((lk = skip_comment())?.type)) {
 										const p = Variable.create(lk.content, SymbolKind.Property, make_range(lk.offset, lk.length));
@@ -2491,7 +2491,7 @@ export class Lexer {
 					case '#dllimport':
 						if ((m = data.content.match(/^((\w|[^\x00-\x7f])+)/i))) {
 							const rg = make_range(data.offset, m[0].length), rg2 = Range.create(0, 0, 0, 0);
-							const tps: { [t: string]: string } = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', I: 'int64' };
+							const tps: Record<string, string> = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', I: 'int64' };
 							const n = m[0], args: Variable[] = [];
 							let arg: Variable | undefined, u = '', i = 0, rt = 'i';
 							h = true, m = data.content.substring(m[0].length).match(/^[ \t]*,[^,]+,([^,]*)/);
@@ -3225,7 +3225,7 @@ export class Lexer {
 			}
 
 			function parse_obj(must = false): boolean {
-				const l = lk, b = tk, rl = result.length, mark: number[] = [], props: { [k: string]: AhkSymbol } = {};
+				const l = lk, b = tk, rl = result.length, mark: number[] = [], props: Record<string, AhkSymbol> = {};
 				let isobj = true, k: Token | undefined, e: Token | undefined;
 				block_mode = false, next = true, tk.data = OBJECT;
 				while (isobj) {
@@ -3808,7 +3808,7 @@ export class Lexer {
 
 			function adddeclaration(node: FuncNode | ClassNode) {
 				const _diags = _this.diagnostics, severity = DiagnosticSeverity.Error;
-				let t: Variable, lpv = false, pars: { [name: string]: Variable } = {};
+				let t: Variable, lpv = false, pars: Record<string, Variable> = {};
 				if (node.kind === SymbolKind.Class) {
 					const cls = node as ClassNode, dec = cls.$property!, sdec = cls.property ??= {}, children = cls.children ??= [];
 					const __init = [sdec.__INIT], prototype = cls.prototype!;
@@ -3868,7 +3868,7 @@ export class Lexer {
 					delete cls.prototype!.cache;
 				} else {
 					const fn = node as FuncNode, dec = fn.declaration, has_this_param = fn.has_this_param;
-					let vars: { [k: string]: Variable } = {}, unresolved_vars: { [k: string]: Variable } = {}, vr: Variable;
+					let vars: Record<string, Variable> = {}, unresolved_vars: Record<string, Variable> = {}, vr: Variable;
 					let named_params: Variable[] | undefined = [];
 					if (has_this_param) {
 						pars.THIS = dec.THIS = THIS;
@@ -4171,10 +4171,10 @@ export class Lexer {
 					type_str?: string
 				}
 			} | undefined, tp = '', t;
-			const fn = sym as FuncNode, objs: { [name: string]: ClassNode } = {}, params: { [name: string]: Variable } = {};
+			const fn = sym as FuncNode, objs: Record<string, ClassNode> = {}, params: Record<string, Variable> = {};
 			let get_param = (_: string) => undefined as Variable | undefined;
 			let m: RegExpMatchArray | null, vr: Variable | undefined, obj: ClassNode | undefined;
-			const kind = ({ [SymbolKind.Variable]: 'var', [SymbolKind.Property]: 'prop' } as { [k: number]: string })[sym.kind];
+			const kind = ({ [SymbolKind.Variable]: 'var', [SymbolKind.Property]: 'prop' } as Record<number, string>)[sym.kind];
 			if (fn.params) {
 				const _params = fn.params;
 				get_param = (name: string) => {
@@ -6242,7 +6242,7 @@ export class Lexer {
 		return;
 	}
 
-	public getScopeSymbols(scope?: AhkSymbol): { [name: string]: Variable } {
+	public getScopeSymbols(scope?: AhkSymbol): Record<string, Variable> {
 		if (!scope || scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Property)
 			return {};
 		let fn = scope as FuncNode;
@@ -6251,7 +6251,7 @@ export class Lexer {
 			if (fn.kind === SymbolKind.Class)
 				break;
 			else roots.push(fn);
-		let vars: { [name: string]: Variable } = fn?.kind === SymbolKind.Class ? { THIS, SUPER } : {};
+		let vars: Record<string, Variable> = fn?.kind === SymbolKind.Class ? { THIS, SUPER } : {};
 		while ((fn = roots.pop() as FuncNode)) {
 			if (fn.kind === SymbolKind.Property)
 				continue;
@@ -6596,7 +6596,7 @@ export function get_class_member(lex: Lexer, node: AhkSymbol, name: string, isme
 		return prop;
 }
 
-export function get_class_members(lex: Lexer, node: AhkSymbol, bases?: ClassNode[]): { [name: string]: AhkSymbol } {
+export function get_class_members(lex: Lexer, node: AhkSymbol, bases?: ClassNode[]): Record<string, AhkSymbol> {
 	let cls = node as ClassNode;
 	const _bases = bases ?? [], properties = [];
 	while (cls && !_bases.includes(cls))
@@ -7295,7 +7295,7 @@ function var_in_for_block(it: Variable, offset: number) {
 	return range[0] <= offset && offset < range[1];
 }
 
-function decltype_type_annotations(annotations: (string | AhkSymbol)[], lex: Lexer, _this?: ClassNode, type_params?: { [name: string]: AhkSymbol }) {
+function decltype_type_annotations(annotations: (string | AhkSymbol)[], lex: Lexer, _this?: ClassNode, type_params?: Record<string, AhkSymbol>) {
 	const types = new Set<string | AhkSymbol>;
 	let is_typeof;
 	for (let tp of annotations) {
@@ -7319,7 +7319,7 @@ function decltype_type_annotations(annotations: (string | AhkSymbol)[], lex: Lex
 }
 
 function resolve_cached_types(tps: (string | AhkSymbol)[], resolved_types: Set<AhkSymbol>, lex: Lexer,
-	_this?: ClassNode, type_params?: { [name: string]: AhkSymbol }) {
+	_this?: ClassNode, type_params?: Record<string, AhkSymbol>) {
 	let re: RegExp, i = -1, is_this, is_typeof, t, param, update;
 	for (let tp of tps) {
 		if (i++, typeof tp === 'string') {
@@ -7541,7 +7541,7 @@ export function find_symbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos
 			if ((t = lexers[uri = ahkuris.winapi]?.declaration[name]))
 				return t.uri ??= uri, t;
 	}
-	function find_include_symbol(list: { [uri: string]: string }, name: string) {
+	function find_include_symbol(list: Record<string, string>, name: string) {
 		let ret, t;
 		for (const uri in list) {
 			if ((t = (lexers[uri] ?? openAndParse(restorePath(list[uri]), false))?.findSymbol(name, kind)))
@@ -7635,14 +7635,14 @@ export function get_callinfo(doc: Lexer, position: Position, pi?: ParamInfo) {
 	}
 }
 
-let includecache: { [uri: string]: { [uri: string]: string } } = {};
-let includedcache: { [uri: string]: { [uri: string]: string } } = {};
+let includecache: Record<string, Record<string, string>> = {};
+let includedcache: Record<string, Record<string, string>> = {};
 export function update_include_cache() {
 	includecache = {}, includedcache = {};
 	for (const lex of Object.values(lexers))
 		traverse_include(lex);
 }
-export function traverse_include(lex: Lexer, included?: { [uri: string]: string }) {
+export function traverse_include(lex: Lexer, included?: Record<string, string>) {
 	const { uri, include } = lex;
 	let hascache = true;
 	let cache = includecache[uri] ??= (hascache = false, { [uri]: lex.fsPath });
@@ -7726,7 +7726,7 @@ export function make_same_name_error(a: AhkSymbol, b: AhkSymbol): string {
 	}
 }
 
-export function check_same_name_error(decs: { [name: string]: AhkSymbol }, arr: AhkSymbol[], diags: Diagnostic[]) {
+export function check_same_name_error(decs: Record<string, AhkSymbol>, arr: AhkSymbol[], diags: Diagnostic[]) {
 	let _low = '', v1: Variable, v2: Variable;
 	for (const it of arr) {
 		if (!it.name || !it.selectionRange.end.character)

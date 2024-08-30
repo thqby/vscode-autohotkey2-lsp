@@ -32,7 +32,7 @@ export function setTextDocumentLanguage(uri: string, lang?: string) {
 
 export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 	const comments = detail?.replace(/\$/g, '\\$').split('\n');
-	const params: { [name: string]: string[] } = {}, returns: string[] = [];
+	const params: Record<string, string[]> = {}, returns: string[] = [];
 	const details: string[] = [], result = ['/**'];
 	let lastarr: string[] | undefined, m: RegExpMatchArray | null;
 	let i = 0, z = true;
@@ -117,7 +117,7 @@ async function generateComment() {
 export function exportSymbols(uri: string) {
 	let doc = lexers[uri.toLowerCase()];
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const cache: { [k: string]: string } = {}, result: any = {};
+	const cache: Record<string, string> = {}, result: any = {};
 	if (!doc)
 		return;
 	update_include_cache();
@@ -252,7 +252,7 @@ export function getVersionInfo(uri: string) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const commands: { [command: string]: (args: any[]) => any } = {
+export const commands: Record<string, (args: any[]) => any> = {
 	'ahk2.diagnose.all': () => diagnoseAll(),
 	'ahk2.generate.comment': () => generateComment(),
 	'ahk2.set.scriptdir': setscriptdir

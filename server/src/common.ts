@@ -64,7 +64,7 @@ export interface AHKLSSettings {
 }
 
 export const winapis: string[] = [];
-export const lexers: { [uri: string]: Lexer } = {};
+export const lexers: Record<string, Lexer> = {};
 export const alpha_3 = encode_version('2.1-alpha.3');
 export const extsettings: AHKLSSettings = {
 	ActionWhenV1IsDetected: 'Warn',
@@ -103,18 +103,18 @@ export type Maybe<T> = T | undefined;
 export let connection: Connection | undefined;
 export let ahkpath_cur = '', locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahk_version = encode_version('3.0.0.0');
-export let ahkuris: { [name: string]: string } = {};
-export let ahkvars: { [key: string]: AhkSymbol } = {};
-export let libfuncs: { [uri: string]: LibSymbol } = {};
-export const hoverCache: { [key: string]: [string, Hover | undefined] } = {};
+export let ahkuris: Record<string, string> = {};
+export let ahkvars: Record<string, AhkSymbol> = {};
+export let libfuncs: Record<string, LibSymbol> = {};
+export const hoverCache: Record<string, [string, Hover | undefined]> = {};
 export const libdirs: string[] = [];
 export let workspaceFolders: string[] = [];
 export let completionItemCache: {
 	constant: CompletionItem[];
-	directive: { [c: string]: CompletionItem[] };
+	directive: Record<string, CompletionItem[]>;
 	key: CompletionItem[];
 	keyword: CompletionItem[];
-	option: { [k: string]: CompletionItem[] };
+	option: Record<string, CompletionItem[]>;
 	snippet: CompletionItem[];
 	static: CompletionItem
 	text: CompletionItem[];
@@ -483,7 +483,7 @@ export function update_settings(configs: AHKLSSettings) {
 }
 
 function encode_version(version: string) {
-	const STAGE: { [t: string]: number } = { ALPHA: -3, BETA: -2, RC: -1 };
+	const STAGE: Record<string, number> = { ALPHA: -3, BETA: -2, RC: -1 };
 	const v = (version.replace(/-\w+/, s => `.${STAGE[s.substring(1).toUpperCase()]}`) + '.0').split('.');
 	let n = 0;
 	for (let i = 0; i < 4; i++)

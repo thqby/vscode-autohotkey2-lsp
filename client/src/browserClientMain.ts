@@ -13,7 +13,7 @@ export function activate(context: ExtensionContext) {
 	const zhcn = env.language.startsWith('zh-');
 	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
 	/* eslint-disable-next-line */
-	const request_handlers: { [cmd: string]: (...params: any[]) => any } = {
+	const request_handlers: Record<string, (...params: any[]) => any> = {
 		'ahk2.getActiveTextEditorUriAndPosition': () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;

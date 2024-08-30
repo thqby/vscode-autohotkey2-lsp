@@ -12,7 +12,7 @@ import {
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
 
-export let globalsymbolcache: { [name: string]: AhkSymbol } = {};
+export let globalsymbolcache: Record<string, AhkSymbol> = {};
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase();
@@ -21,8 +21,8 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		return [];
 	if (token !== null && doc.symbolInformation)
 		return doc.symbolInformation;
-	const gvar: { [name: string]: Variable } = globalsymbolcache = { ...ahkvars };
-	let list = [uri, ...Object.keys(doc.relevance)], winapis: { [name: string]: AhkSymbol } = {};
+	const gvar: Record<string, Variable> = globalsymbolcache = { ...ahkvars };
+	let list = [uri, ...Object.keys(doc.relevance)], winapis: Record<string, AhkSymbol> = {};
 	list = list.map(u => lexers[u]?.d_uri).concat(list);
 	for (const uri of list) {
 		const lex = lexers[uri];
@@ -69,7 +69,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		if (!(k.assigned ||= v.assigned) && v.returns === undefined)
 			unset_vars.has(k) || unset_vars.set(k, v);
 	}
-	function flatTree(node: { children?: AhkSymbol[] }, vars: { [key: string]: Variable } = {}, outer_is_global = false) {
+	function flatTree(node: { children?: AhkSymbol[] }, vars: Record<string, Variable> = {}, outer_is_global = false) {
 		const t: AhkSymbol[] = [], iscls = (node as AhkSymbol).kind === SymbolKind.Class;
 		let tk: Token;
 		node.children?.forEach((info: Variable) => {
@@ -95,7 +95,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				result.push(info);
 		});
 		for (const info of t) {
-			let inherit: { [key: string]: AhkSymbol } = {}, s: Variable;
+			let inherit: Record<string, AhkSymbol> = {}, s: Variable;
 			const oig = outer_is_global, fn = info as FuncNode;
 			switch (info.kind) {
 				case SymbolKind.Class: {
@@ -185,7 +185,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	function checksamename(doc: Lexer) {
 		if (doc.d)
 			return;
-		const dec = { ...ahkvars }, lbs: { [k: string]: boolean } = {};
+		const dec = { ...ahkvars }, lbs: Record<string, boolean> = {};
 		let dd: Lexer;
 		Object.keys(doc.labels).forEach(lb => lbs[lb] = true);
 		for (const uri in doc.relevance) {
@@ -296,7 +296,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 		node = get_class_constructor(node as unknown as ClassNode) as FuncNode;
 	if (!(params = node?.params)) return;
 	const { max, min } = get_func_param_count(node), l = params.length - (node.variadic ? 1 : 0);
-	const _miss: { [index: number]: boolean } = {};
+	const _miss: Record<number, boolean> = {};
 	let { count, miss } = paraminfo, index;
 	miss = [...miss];
 	while ((index = miss.pop()) !== undefined) {

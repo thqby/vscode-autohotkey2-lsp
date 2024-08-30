@@ -190,7 +190,7 @@ connection.onDocumentFormatting(documentFormatting);
 connection.onDocumentRangeFormatting(rangeFormatting);
 connection.onDocumentOnTypeFormatting(typeFormatting);
 connection.onDocumentSymbol(symbolProvider);
-connection.onFoldingRanges(params => lexers[params.textDocument.uri.toLowerCase()].foldingranges);
+connection.onFoldingRanges(params => lexers[params.textDocument.uri.toLowerCase()]?.foldingranges);
 connection.onHover(hoverProvider);
 connection.onPrepareRename(prepareRename);
 connection.onReferences(referenceProvider);
@@ -409,7 +409,7 @@ async function getAHKversion(params: string[]) {
 }
 
 async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
-	const funcs: { [name: string]: true } = {};
+	const funcs: Record<string, true> = {};
 	for (const path of paths) {
 		const pe = await searchAndOpenPEFile(path, a_vars.is64bit === '1' ? true : a_vars.is64bit === '0' ? false : undefined);
 		if (!pe) continue;
@@ -422,7 +422,7 @@ async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 	return Object.keys(funcs);
 }
 
-let curPERCDATA: { [key: string]: Buffer } | undefined = undefined;
+let curPERCDATA: Record<string, Buffer> | undefined = undefined;
 function getRCDATA(name?: string) {
 	const exe = resolvePath(ahkpath_cur, true);
 	if (!exe) return;

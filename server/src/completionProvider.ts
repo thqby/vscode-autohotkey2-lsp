@@ -15,7 +15,7 @@ import {
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
-	const doc = lexers[uri = uri.toLowerCase()], vars: { [key: string]: unknown } = {};
+	const doc = lexers[uri = uri.toLowerCase()], vars: Record<string, unknown> = {};
 	if (!doc || _token.isCancellationRequested) return;
 	let items: CompletionItem[] = [], cpitem = items.pop()!;
 	let l: string, path: string, pt: Token | undefined, scope: AhkSymbol | undefined, temp;
@@ -541,10 +541,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	if (kind === SymbolKind.Property || kind === SymbolKind.Method) {
 		if (!token.symbol && token.semantic?.type === SemanticTokenTypes.property)
 			return;
-		const props: { [k: string]: CompletionItem } = {};
+		const props: Record<string, CompletionItem> = {};
 		let tps = decltype_expr(doc, token, range.end), index = 0;
 		const is_any = tps.includes(ANY), bases: ClassNode[] = [];
-		const clsindex: { [k: string]: string } = {};
+		const clsindex: Record<string, string> = {};
 		if (linetext[range.end.character] === '.')
 			right_is_paren = '(['.includes(linetext.charAt(range.end.character + word.length + 1) || '\0');
 		if (is_any)
@@ -555,7 +555,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (node.kind === SymbolKind.Interface) {
 				const params = ((node as ClassNode).generic_types?.[0] as string[])?.map(s => `'"`.includes(s[0]) ? s.slice(1, -1) : s);
 				if (!params?.length) continue;
-				const result = (await sendAhkRequest('GetDispMember', params) ?? {}) as { [func: string]: number };
+				const result = (await sendAhkRequest('GetDispMember', params) ?? {}) as Record<string, number>;
 				Object.entries(result).forEach(it => expg.test(it[0]) &&
 					add_item(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
 				continue;
@@ -685,7 +685,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 
 	// auto-include
 	if (extsettings.AutoLibInclude) {
-		const libdirs = doc.libdirs, caches: { [path: string]: TextEdit[] } = {};
+		const libdirs = doc.libdirs, caches: Record<string, TextEdit[]> = {};
 		let exportnum = 0, line = -1, first_is_comment: boolean | undefined, cm: Token;
 		let dir = doc.workspaceFolder;
 		dir = (dir ? URI.parse(dir).fsPath : doc.scriptdir).toLowerCase();
@@ -826,7 +826,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return;
 		offset ??= doc.document.offsetAt(position);
 		let pre = token.content.substring(1, offset - token.offset), suf = '', t;
-		const docs = [doc], ls: { [k: string]: unknown } = {};
+		const docs = [doc], ls: Record<string, unknown> = {};
 		for (const u in list)
 			(t = lexers[u]) && docs.push(t);
 		pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
