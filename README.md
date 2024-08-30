@@ -191,7 +191,7 @@ Generate JSDOC-style comments for a function or method.
 ```shell
 mkdir vscode-autohotkey2-lsp
 cd vscode-autohotkey2-lsp
-curl -L -o install.js https://raw.githubusercontent.com/thqby/vscode-autohotkey2-lsp/main/tools/install.js
+curl.exe -L -o install.js https://raw.githubusercontent.com/thqby/vscode-autohotkey2-lsp/main/tools/install.js
 node install.js
 ```
 
