@@ -200,7 +200,7 @@ export async function activate(context: ExtensionContext) {
 		commands.registerTextEditorCommand('ahk2.selection.run', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk2.stop', stopRunningScript),
 		commands.registerCommand('ahk2.setinterpreter', setInterpreter),
-		commands.registerCommand('ahk2.debug.params', () => beginDebug(extlist, debugexts, true)),
+		commands.registerCommand('ahk++.debug.params', () => beginDebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk++.debug.attach', () => beginDebug(extlist, debugexts, false, true)),
 		commands.registerCommand('ahk2.selectsyntaxes', selectSyntaxes),
 		commands.registerTextEditorCommand('ahk2.updateversioninfo', async textEditor => {
