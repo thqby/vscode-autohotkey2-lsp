@@ -196,8 +196,6 @@ export async function activate(context: ExtensionContext) {
 	context.subscriptions.push(
 		ahkStatusBarItem, ahkLanguageStatusItem, outputchannel,
 		extensions.onDidChange(update_extensions_info),
-		// todo remove this, AHK++ already has it
-		commands.registerTextEditorCommand('ahk2.help', quickHelp),
 		commands.registerTextEditorCommand('ahk2.run', textEditor => runScript(textEditor)),
 		commands.registerTextEditorCommand('ahk2.selection.run', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk2.stop', stopRunningScript),
@@ -370,68 +368,6 @@ async function stopRunningScript() {
 	}
 }
 
-async function quickHelp(textEditor: TextEditor) {
-	const document = textEditor.document, position = textEditor.selection.active;
-	const range = document.getWordRangeAtPosition(position), line = position.line;
-	const helpPath = findfile(['AutoHotkey.chm', '../v2/AutoHotkey.chm'], workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath ?? '');
-	let word = '';
-	if (range && (word = document.getText(range)).match(/^[a-z_]+$/i)) {
-		if (range.start.character > 0 && document.getText(new Range(line, range.start.character - 1, line, range.start.character)) === '#')
-			word = '#' + word;
-	}
-	if (!helpPath) {
-		window.showErrorMessage(zhcn ? `"AutoHotkey.chm"未找到!` : `"AutoHotkey.chm" was not found!`);
-		return;
-	}
-	const executePath = resolvePath(ahkpath_cur, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
-	if (!executePath) {
-		const s = ahkpath_cur || 'AutoHotkey.exe';
-		window.showErrorMessage(zhcn ? `"${s}"未找到!` : `"${s}" was not found!`);
-		return;
-	}
-	const script = `
-#NoTrayIcon
-#DllLoad oleacc.dll
-chm_hwnd := 0, chm_path := '${helpPath}', DetectHiddenWindows(true), !(WinGetExStyle(top := WinExist('A')) & 8) && (top := 0)
-for hwnd in WinGetList('AutoHotkey ahk_class HH Parent')
-	for item in ComObjGet('winmgmts:').ExecQuery('SELECT CommandLine FROM Win32_Process WHERE ProcessID=' WinGetPID(hwnd))
-		if InStr(item.CommandLine, chm_path) {
-			chm_hwnd := WinExist(hwnd)
-			break 2
-		}
-if top && top != chm_hwnd
-	WinSetAlwaysOnTop(0, top)
-if !chm_hwnd
-	Run(chm_path, , , &pid), chm_hwnd := WinWait('AutoHotkey ahk_class HH Parent ahk_pid' pid)
-WinShow(), WinActivate(), WinWaitActive(), ctl := 0, endt := A_TickCount + 3000
-while (!ctl && A_TickCount < endt)
-	try ctl := ControlGetHwnd('Internet Explorer_Server1')
-NumPut('int64', 0x11CF3C3D618736E0, 'int64', 0x719B3800AA000C81, IID_IAccessible := Buffer(16))
-if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint', 0, 'ptr', IID_IAccessible, 'ptr*', IAccessible := ComValue(13, 0)) {
-	IServiceProvider := ComObjQuery(IAccessible, IID_IServiceProvider := '{6D5140C1-7436-11CE-8034-00AA006009FA}')
-	NumPut('int64', 0x11D026CB332C4427, 'int64', 0x1901D94FC00083B4, IID_IHTMLWindow2 := Buffer(16))
-	ComCall(3, IServiceProvider, 'ptr', IID_IHTMLWindow2, 'ptr', IID_IHTMLWindow2, 'ptr*', IHTMLWindow2 := ComValue(9, 0))
-	IHTMLWindow2.execScript('
-	(
-		document.querySelector('#head > div > div.h-tabs > ul > li:nth-child(3) > button').click()
-		searchinput = document.querySelector('#left > div.search > div.input > input[type=search]')
-		keyevent = document.createEvent('KeyboardEvent')
-		keyevent.initKeyboardEvent('keyup', false, true, document.defaultView, 13, null, false, false, false, false)
-		searchinput.value = '${word}'
-		searchinput.dispatchEvent(keyevent)
-		Object.defineProperties(keyevent, { type: { get: function() { return 'keydown' } }, which: { get: function() { return 13 } } })
-		searchinput.dispatchEvent(keyevent)
-	)')
-}`;
-	if (ahkStatusBarItem.text.endsWith('[UIAccess]')) {
-		const file = resolve(__dirname, 'temp.ahk');
-		writeFileSync(file, script, { encoding: 'utf-8' });
-		execSync(`"${executePath}" /ErrorStdOut ${file}`);
-		unlinkSync(file);
-	} else
-		execSync(`"${executePath}" /ErrorStdOut *`, { input: script });
-}
-
 async function beginDebug(extlist: string[], debugexts: { [type: string]: string }, params = false, attach = false) {
 	let extname: string | undefined;
 	const editor = window.activeTextEditor;
@@ -580,31 +516,6 @@ function getInterpreterPath() {
 			return { path, from: ConfigurationTarget.Global };
 		else path = t.defaultValue as string ?? '';
 	return { path };
-}
-
-function findfile(files: string[], workspace: string) {
-	let s: string;
-	const paths: string[] = [];
-	const t = ahkconfig.inspect('InterpreterPath');
-	if (add(ahkpath_cur), t) {
-		add(t.workspaceFolderValue as string);
-		add(t.workspaceValue as string);
-		add(t.globalValue as string);
-		add(t.defaultValue as string);
-	}
-	for (const path of paths)
-		for (const file of files)
-			if (existsSync(s = resolve(path, '..', file)))
-				return s;
-	return '';
-
-	function add(path: string) {
-		path = resolvePath(path, workspace);
-		if (!path) return;
-		path = path.toLowerCase();
-		if (!paths.includes(path))
-			paths.push(path);
-	}
 }
 
 async function onDidChangegetInterpreter() {

@@ -22,7 +22,6 @@
 	"ahk2.files.exclude": "配置 glob 模式以在扫描ahk文件时排除文件和文件夹.",
 	"ahk2.files.scanmaxdepth": "控制扫描ahk文件时的深度.",
 	"ahk2.generatecomment": "生成注释模板",
-	"ahk2.help": "快捷帮助",
 	"ahk2.interpreterpath": "`AutoHotkey.exe`可执行文件的路径. 如果选择`AutoHotkeyUX.exe`, 将使用UX Launcher启动脚本.",
 	"ahk2.run": "运行脚本",
 	"ahk2.selection.run": "运行选择的脚本",

@@ -110,12 +110,6 @@
 				"category": "ahk2"
 			},
 			{
-				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.help",
-				"title": "%ahk2.help%",
-				"category": "ahk2"
-			},
-			{
 				"enablement": "editorLangId == ahk2",
 				"command": "ahk2.generate.comment",
 				"title": "%ahk2.generatecomment%",
@@ -459,11 +453,6 @@
 				"when": "editorLangId == ahk2 && !isWeb"
 			},
 			{
-				"command": "ahk2.help",
-				"key": "ctrl+f1",
-				"when": "editorLangId == ahk2 && !isWeb"
-			},
-			{
 				"command": "ahk2.stop",
 				"key": "ctrl+f6",
 				"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning"
@@ -519,11 +508,6 @@
 					"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection",
 					"command": "ahk2.run",
 					"group": "navigation@0"
-				},
-				{
-					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.help",
-					"group": "navigation@1"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning",
