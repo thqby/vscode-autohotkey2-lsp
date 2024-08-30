@@ -24,7 +24,7 @@
 	"ahk2.generatecomment": "生成注释模板",
 	"ahk2.interpreterpath": "`AutoHotkey.exe`可执行文件的路径. 如果选择`AutoHotkeyUX.exe`, 将使用UX Launcher启动脚本.",
 	"ahk2.run": "运行脚本",
-	"ahk2.selection.run": "运行选择的脚本",
+	"ahk++.runSelection": "运行选择的脚本",
 	"ahk2.setinterpreter": "选择AutoHotkey2解释器",
 	"ahk2.setscriptdir": "设置此处为A_ScriptDir",
 	"ahk2.stop": "停止运行中的脚本",

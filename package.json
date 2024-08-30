@@ -98,8 +98,8 @@
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.selection.run",
-				"title": "%ahk2.selection.run%",
+				"command": "ahk++.runSelection",
+				"title": "%ahk++.runSelection%",
 				"category": "ahk2"
 			},
 			{
@@ -443,7 +443,7 @@
 				"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection"
 			},
 			{
-				"command": "ahk2.selection.run",
+				"command": "ahk++.runSelection",
 				"key": "ctrl+f5",
 				"when": "editorLangId == ahk2 && !isWeb && editorHasSelection"
 			},
@@ -501,7 +501,7 @@
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb && editorHasSelection",
-					"command": "ahk2.selection.run",
+					"command": "ahk++.runSelection",
 					"group": "navigation@0"
 				},
 				{
