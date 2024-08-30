@@ -6568,13 +6568,17 @@ export function get_class_member(lex: Lexer, node: AhkSymbol, name: string, isme
 			_bases.push(cls);
 		}
 		if ((sym = cls.property?.[name])) {
-			if (sym.kind === SymbolKind.Method === ismethod)
-				return sym.uri ??= cls.uri, sym;
-			if (ismethod && ((t = sym).kind === SymbolKind.Class || (t = (sym as Property).call)))
-				return t.uri ??= cls.uri, t;
-			if (ismethod)
+			if (ismethod) {
+				if (sym.kind === SymbolKind.Method)
+					return sym.uri ??= cls.uri, sym;
+				if ((t = sym).kind === SymbolKind.Class || (t = (sym as Property).call))
+					return t.uri ??= cls.uri, t;
 				prop ??= (sym.uri ??= cls.uri, sym);
-			else method ??= (sym.uri ??= cls.uri, sym);
+			} else if (sym.kind === SymbolKind.Method)
+				method ??= (sym.uri ??= cls.uri, sym);
+			else if (sym.children)
+				return sym.uri ??= cls.uri, sym;
+			else prop ??= (sym.uri ??= cls.uri, sym);
 		}
 
 		if ((t = _bases[++i]) === null)
