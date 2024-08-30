@@ -5422,12 +5422,16 @@ export class Lexer {
 				else output_space_before_token = space_in_other;
 			} else {
 				let level;
-				if (['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally', 'switch'].includes(flags.last_word))
+				// fn := () {\n}
+				if (ck.in_expr)
+					level = real_indentation_level();
+				else if (['try', 'if', 'for', 'while', 'loop', 'catch', 'else', 'finally', 'switch'].includes(flags.last_word))
 					level = real_indentation_level();
 				else while (flags.mode === MODE.Statement)
 					restore_mode();
 				flags.declaration_statement = false;
 				set_mode(MODE.BlockStatement);
+				flags.in_expression = false;
 				flags.indentation_level = level ??= flags.indentation_level;
 				output_space_before_token ??= space_in_other;
 
