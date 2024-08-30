@@ -78,6 +78,7 @@ export interface AhkSymbol extends DocumentSymbol {
 	data?: unknown
 	def?: boolean
 	full?: string
+	has_warned?: boolean | number
 	markdown_detail?: string
 	ignore?: boolean
 	overwrite?: number
@@ -163,6 +164,7 @@ export interface Token {
 	data?: unknown
 	definition?: AhkSymbol
 	fat_arrow_end?: boolean
+	has_warned?: boolean | number
 	hover_word?: string
 	ignore?: boolean
 	in_expr?: number
@@ -351,7 +353,6 @@ export class Lexer {
 	public d_uri = '';
 	public declaration: Record<string, AhkSymbol> = {};
 	public diagnostics: Diagnostic[] = [];
-	public diags = 0;
 	public last_diags = 0;
 	public dlldir = new Map<number, string>();
 	public dllpaths: string[] = [];
@@ -916,7 +917,7 @@ export class Lexer {
 				}
 				parse_unresolved_typedef();
 				check_same_name_error({}, this.children, this.diagnostics);
-				this.diags = this.diagnostics.length, this.isparsed = true;
+				this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 
 				function parse_types(sym: AhkSymbol) {
@@ -1186,7 +1187,7 @@ export class Lexer {
 				}
 				parse_unresolved_typedef();
 				check_same_name_error(this.declaration, this.children, this.diagnostics);
-				this.diags = this.diagnostics.length, this.isparsed = true;
+				this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 				if (this.actived)
 					this.actionwhenv1 ??= 'Continue';
@@ -7728,6 +7729,7 @@ export function make_same_name_error(a: AhkSymbol, b: AhkSymbol): string {
 
 export function check_same_name_error(decs: Record<string, AhkSymbol>, arr: AhkSymbol[], diags: Diagnostic[]) {
 	let _low = '', v1: Variable, v2: Variable;
+	const severity = DiagnosticSeverity.Error;
 	for (const it of arr) {
 		if (!it.name || !it.selectionRange.end.character)
 			continue;
@@ -7743,30 +7745,35 @@ export function check_same_name_error(decs: Record<string, AhkSymbol>, arr: AhkS
 					if (v1.kind === SymbolKind.Variable) {
 						if (v1.def && v2.kind !== SymbolKind.Variable) {
 							if (v1.assigned !== 1)
-								diags.push({ message: diagnostic.assignerr(v2.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+								it.has_warned ??= diags.push({ message: diagnostic.assignerr(v2.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange, severity });
 							continue;
 						}
-					} else if (v2.def)
-						v2.assigned !== 1 && diags.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange, severity: DiagnosticSeverity.Error });
-					else if (v2.kind === SymbolKind.Function) {
-						diags.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+					} else if (v2.kind === SymbolKind.Function) {
+						it.has_warned ??= diags.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity });
 						continue;
-					}
+					} else if (v2.def && v2.assigned !== 1)
+						v2.has_warned ??= diags.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange, severity });
 					decs[_low] = it;
 				} else if (v1.kind === SymbolKind.Variable) {
 					if (v2.kind === SymbolKind.Variable) {
 						if (v1.def && !v2.def)
 							decs[_low] = it;
 						else v2.assigned ||= v1.assigned;
-					} else if (v1.def)
-						delete v1.def, v1.assigned !== 1 && diags.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+					} else if (v1.def) {
+						delete v1.def;
+						if (v1.assigned !== 1)
+							it.has_warned ??= diags.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity });
+					}
 				} else {
 					if (v2.kind === SymbolKind.Variable) {
-						if (v2.def)
-							delete v2.def, v2.assigned !== 1 && diags.push({ message: make_same_name_error(it, v2), range: v2.selectionRange, severity: DiagnosticSeverity.Error });
+						if (v2.def) {
+							delete v2.def;
+							if (v2.assigned !== 1)
+								v2.has_warned ??= diags.push({ message: make_same_name_error(it, v2), range: v2.selectionRange, severity });
+						}
 						decs[_low] = it;
 					} else if (v2.def !== false)
-						diags.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity: DiagnosticSeverity.Error });
+						it.has_warned ??= diags.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity });
 					else if (v1.def !== false)
 						decs[_low] = it;
 				}

@@ -172,11 +172,13 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 
 function resolve_class_undefined_member(doc: Lexer) {
 	for (const cls of memscache.keys()) {
-		if (cls.undefined) {
-			const name = cls.name;
-			for (const tk of Object.values(cls.undefined))
+		if (!cls.undefined)
+			continue;
+		const name = cls.name;
+		for (const tk of Object.values(cls.undefined))
+			if (!tk.has_warned) {
+				tk.has_warned = true;
 				doc.addDiagnostic(diagnostic.maybehavenotmember(name, tk.content), tk.offset, tk.length, 2);
-			delete cls.undefined;
-		}
+			}
 	}
 }

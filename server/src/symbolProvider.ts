@@ -55,13 +55,15 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	}
 	flatTree(doc);
 	if (extsettings.Warn?.VarUnset)
-		for (const [k, v] of unset_vars)
-			k.assigned || doc.diagnostics.push({ message: warn.varisunset(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+		for (const [k, v] of unset_vars) {
+			if (k.assigned)
+				continue;
+			doc.diagnostics.push({ message: warn.varisunset(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+		}
 	if (doc.actived) {
 		checksamename(doc);
 		doc.sendDiagnostics(false, true);
 	}
-	doc.diags = doc.diagnostics.length;
 	uri = doc.document.uri;
 	return doc.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
@@ -186,18 +188,18 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		if (doc.d)
 			return;
 		const dec = { ...ahkvars }, lbs: Record<string, boolean> = {};
-		let dd: Lexer;
+		let dd: Lexer, sym: AhkSymbol;
 		Object.keys(doc.labels).forEach(lb => lbs[lb] = true);
 		for (const uri in doc.relevance) {
 			if ((dd = lexers[uri])) {
 				if (dd.d) continue;
-				dd.diagnostics.splice(dd.diags);
 				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
 				for (const lb in dd.labels)
-					if ((dd.labels[lb][0]).def)
-						if (lbs[lb])
-							dd.diagnostics.push({ message: diagnostic.duplabel(), range: dd.labels[lb][0].selectionRange, severity: DiagnosticSeverity.Error });
-						else lbs[lb] = true;
+					if ((sym = dd.labels[lb][0]).def)
+						if (lbs[lb]) {
+							sym.has_warned ??=
+								dd.diagnostics.push({ message: diagnostic.duplabel(), range: sym.selectionRange, severity: DiagnosticSeverity.Error });
+						} else lbs[lb] = true;
 			}
 		}
 		const t = Object.values(doc.declaration);
@@ -230,9 +232,9 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		function err_extends(doc: Lexer, it: ClassNode, not_exist = true) {
 			let o = doc.document.offsetAt(it.selectionRange.start), tk: Token;
 			const tks = doc.tokens;
-			if (!(tk = tks[tks[o].next_token_offset]) || !(tk = tks[tk.next_token_offset]))
+			if (!(tk = tks[tks[o].next_token_offset]) || !(tk = tks[tk.next_token_offset]) || tk.has_warned)
 				return;
-			o = tk.offset;
+			o = tk.offset, tk.has_warned = true;
 			const rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
 			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Warning });
 		}
