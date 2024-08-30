@@ -501,7 +501,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// fn|()=>...
 	if (symbol) {
 		if (!symbol.children && (scope ??= doc.searchScopedNode(position))?.kind === SymbolKind.Class) {
-			const cls = scope as ClassNode;
+			let cls = scope as ClassNode;
 			const metafns = ['__Init()', '__Call(${1:Name}, ${2:Params})', '__Delete()',
 				'__Enum(${1:NumberOfVars})', '__Get(${1:Key}, ${2:Params})',
 				'__Item[$1]', '__New($1)', '__Set(${1:Key}, ${2:Params}, ${3:Value})'];
@@ -516,6 +516,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			const is_static = (symbol as Variable).static ?? false;
 			if (is_static)
 				metafns.splice(0, 1);
+			else cls = cls.prototype ?? {} as ClassNode;
 			if (token.topofline)
 				metafns.forEach(s => {
 					const label = s.replace(/[([].*$/, '');

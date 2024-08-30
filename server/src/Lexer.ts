@@ -6227,7 +6227,7 @@ export class Lexer {
 						offset = this.document.offsetAt(pos), cls = item as ClassNode;
 						for (fn of [cls.property.__INIT, cls.$property?.__INIT] as FuncNode[])
 							for (const rg of fn?.ranges ?? [])
-								if (offset <= rg[0]) break;
+								if (offset < rg[0]) break;
 								else if (offset <= rg[1])
 									return this.searchScopedNode(pos, fn.children) ?? fn;
 				}
