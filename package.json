@@ -111,8 +111,8 @@
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.generate.comment",
-				"title": "%ahk2.generatecomment%",
+				"command": "ahk++.addDocComment",
+				"title": "%ahk++.addDocComment%",
 				"category": "ahk2"
 			},
 			{
@@ -516,7 +516,7 @@
 				},
 				{
 					"when": "editorLangId == ahk2",
-					"command": "ahk2.generate.comment",
+					"command": "ahk++.addDocComment",
 					"group": "navigation@2"
 				},
 				{

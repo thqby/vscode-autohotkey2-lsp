@@ -18,7 +18,7 @@
 	"ahk++.exportSymbols": "Export AHK Symbols",
 	"ahk2.files.exclude": "Configure glob patterns for excluding files and folders when scanning ahk files.",
 	"ahk2.files.scanmaxdepth": "Controls the depth when scanning ahk files.",
-	"ahk2.generatecomment": "Generate Comment Template",
+	"ahk++.addDocComment": "Add Doc Comment",
 	"ahk2.interpreterpath": "The path of the `AutoHotkey.exe` executable file. If `AutoHotkeyUX.exe` is selected, the script will be launched using UX Launcher.",
 	"ahk++.run": "Run Script",
 	"ahk++.runSelection": "Run Selected Script",
