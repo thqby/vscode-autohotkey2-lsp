@@ -15,7 +15,7 @@
 				}
 			},
 			"match": "^(\\[Running\\])(.*)$",
-			"name": "ahk2.running"
+			"name": "ahk++.running"
 		},
 		{
 			"captures": {

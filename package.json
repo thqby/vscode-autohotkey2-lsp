@@ -67,89 +67,83 @@
 		"commands": [
 			{
 				"enablement": "!isWeb",
-				"command": "ahk2.debug.attach",
-				"title": "%ahk2.debug.attach%",
-				"category": "ahk2"
+				"command": "ahk++.debugAttach",
+				"title": "%ahk++.debugAttach%",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
-				"command": "ahk2.debug.params",
-				"title": "%ahk2.debug.params%",
-				"category": "ahk2"
+				"command": "ahk++.debugParams",
+				"title": "%ahk++.debugParams%",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.diagnostic.full",
-				"title": "%ahk2.diagnostic.full%",
-				"category": "ahk2"
+				"command": "ahk++.diagnostic.full",
+				"title": "%ahk++.diagnostic.full%",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.export.symbols",
-				"title": "%ahk2.export.symbols%",
-				"category": "ahk2"
+				"command": "ahk++.exportSymbols",
+				"title": "%ahk++.exportSymbols%",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
-				"command": "ahk2.run",
-				"title": "%ahk2.run%",
+				"command": "ahk++.run",
+				"title": "%ahk++.run%",
 				"icon": "$(play)",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.selection.run",
-				"title": "%ahk2.selection.run%",
-				"category": "ahk2"
+				"command": "ahk++.runSelection",
+				"title": "%ahk++.runSelection%",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.stop",
-				"title": "%ahk2.stop%",
+				"command": "ahk++.stop",
+				"title": "%ahk++.stop%",
 				"icon": "$(stop)",
-				"category": "ahk2"
-			},
-			{
-				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.help",
-				"title": "%ahk2.help%",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.generate.comment",
-				"title": "%ahk2.generatecomment%",
-				"category": "ahk2"
+				"command": "ahk++.addDocComment",
+				"title": "%ahk++.addDocComment%",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "!isWeb",
-				"command": "ahk2.setinterpreter",
-				"title": "%ahk2.setinterpreter%",
-				"category": "ahk2"
+				"command": "ahk++.setV2Interpreter",
+				"title": "%ahk++.setV2Interpreter%",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.updateversioninfo",
-				"title": "%ahk2.updateversioninfo%",
-				"category": "ahk2"
+				"command": "ahk++.updateVersionInfo",
+				"title": "%ahk++.updateVersionInfo%",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 || editorLangId == ahk",
-				"command": "ahk2.switch",
-				"title": "Switch v1/v2",
-				"category": "ahk2"
+				"command": "ahk++.switchAhkVersion",
+				"title": "Switch AHK Version",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.selectsyntaxes",
-				"title": "Select syntaxes",
-				"category": "ahk2"
+				"command": "ahk++.selectSyntaxes",
+				"title": "Select AHK Syntaxes",
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && resourceScheme == file",
-				"command": "ahk2.setscriptdir",
-				"title": "%ahk2.setscriptdir%",
-				"category": "ahk2"
+				"command": "ahk++.setAScriptDir",
+				"title": "%ahk++.setAScriptDir%",
+				"category": "AHK++"
 			}
 		],
 		"configuration": {
@@ -444,27 +438,22 @@
 		],
 		"keybindings": [
 			{
-				"command": "ahk2.run",
+				"command": "ahk++.run",
 				"key": "ctrl+f5",
 				"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection"
 			},
 			{
-				"command": "ahk2.selection.run",
+				"command": "ahk++.runSelection",
 				"key": "ctrl+f5",
 				"when": "editorLangId == ahk2 && !isWeb && editorHasSelection"
 			},
 			{
-				"command": "ahk2.debug.params",
+				"command": "ahk++.debugParams",
 				"key": "shift+f5",
 				"when": "editorLangId == ahk2 && !isWeb"
 			},
 			{
-				"command": "ahk2.help",
-				"key": "ctrl+f1",
-				"when": "editorLangId == ahk2 && !isWeb"
-			},
-			{
-				"command": "ahk2.stop",
+				"command": "ahk++.stop",
 				"key": "ctrl+f6",
 				"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning"
 			}
@@ -502,53 +491,48 @@
 			"editor/context": [
 				{
 					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.debug.attach",
+					"command": "ahk++.debugAttach",
 					"group": "navigation@2"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.debug.params",
+					"command": "ahk++.debugParams",
 					"group": "navigation@2"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb && editorHasSelection",
-					"command": "ahk2.selection.run",
+					"command": "ahk++.runSelection",
 					"group": "navigation@0"
 				},
 				{
 					"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection",
-					"command": "ahk2.run",
+					"command": "ahk++.run",
 					"group": "navigation@0"
 				},
 				{
-					"when": "editorLangId == ahk2 && !isWeb",
-					"command": "ahk2.help",
-					"group": "navigation@1"
-				},
-				{
 					"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning",
-					"command": "ahk2.stop",
+					"command": "ahk++.stop",
 					"group": "navigation@0"
 				},
 				{
 					"when": "editorLangId == ahk2",
-					"command": "ahk2.generate.comment",
+					"command": "ahk++.addDocComment",
 					"group": "navigation@2"
 				},
 				{
 					"when": "editorLangId == ahk2",
-					"command": "ahk2.updateversioninfo",
+					"command": "ahk++.updateVersionInfo",
 					"group": "navigation@2"
 				}
 			],
 			"editor/title": [
 				{
-					"command": "ahk2.run",
+					"command": "ahk++.run",
 					"group": "navigation@0",
 					"when": "resourceLangId == ahk2 && shellExecutionSupported"
 				},
 				{
-					"command": "ahk2.stop",
+					"command": "ahk++.stop",
 					"group": "navigation@0",
 					"when": "resourceLangId == ahk2 && ahk2:isRunning && shellExecutionSupported"
 				}

@@ -74,6 +74,7 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 	return text;
 }
 
+/** Add a function header comment for the currently active function */
 async function generateComment() {
 	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
 		return;
@@ -230,9 +231,9 @@ async function setscriptdir() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const commands: { [command: string]: (args: any[]) => any } = {
-	'ahk2.diagnostic.full': () => diagnosticFull(),
-	'ahk2.generate.comment': () => generateComment(),
-	'ahk2.setscriptdir': setscriptdir
+	'ahk++.diagnostic.full': () => diagnosticFull(),
+	'ahk++.addDocComment': () => generateComment(),
+	'ahk++.setAScriptDir': setscriptdir
 };
 
 export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
