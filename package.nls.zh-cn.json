@@ -27,7 +27,7 @@
 	"ahk++.runSelection": "运行选择的脚本",
 	"ahk2.setinterpreter": "选择AutoHotkey2解释器",
 	"ahk2.setscriptdir": "设置此处为A_ScriptDir",
-	"ahk2.stop": "停止运行中的脚本",
+	"ahk++.stop": "停止运行中的脚本",
 	"ahk2.symbolfoldingfromopenbrace": "强制符号折叠从大括号处开始",
 	"ahk2.syntaxes": "指定用于智能感知的`ahk2.json`, `*.snippet.json`和`ahk2.d.ahk`文件的文件夹路径.",
 	"ahk2.updateversioninfo": "更新文件版本信息",

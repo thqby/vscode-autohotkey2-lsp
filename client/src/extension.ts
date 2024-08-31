@@ -198,7 +198,7 @@ export async function activate(context: ExtensionContext) {
 		extensions.onDidChange(update_extensions_info),
 		commands.registerTextEditorCommand('ahk++.run', textEditor => runScript(textEditor)),
 		commands.registerTextEditorCommand('ahk++.runSelection', textEditor => runScript(textEditor, true)),
-		commands.registerCommand('ahk2.stop', stopRunningScript),
+		commands.registerCommand('ahk++.stop', stopRunningScript),
 		commands.registerCommand('ahk2.setinterpreter', setInterpreter),
 		commands.registerCommand('ahk++.debugParams', () => beginDebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk++.debugAttach', () => beginDebug(extlist, debugexts, false, true)),
