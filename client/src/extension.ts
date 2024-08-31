@@ -227,12 +227,11 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		commands.registerTextEditorCommand('ahk2.update.versioninfo', async textEditor => {
 			if (!server_is_ready)
 				return;
-			const info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
-			if (!info) {
+			const infos: { content: string, uri: string, range: Range, single: boolean }[] | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
+			if (!infos?.length) {
 				await textEditor.insertSnippet(new SnippetString([
 					"/************************************************************************",
 					" * @description ${1:}",
-					" * @file $TM_FILENAME",
 					" * @author ${2:}",
 					" * @date ${3:$CURRENT_YEAR/$CURRENT_MONTH/$CURRENT_DATE}",
 					" * @version ${4:0.0.0}",
@@ -241,22 +240,30 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 				].join('\n')), new Range(0, 0, 0, 0));
 			} else {
 				const d = new Date;
-				let content = info.content, value;
-				content = content.replace(/(?<=^\s*[;*]?\s*@date[:\s]\s*)(\S+|(?=[\r\n]))/im,
-					date => [d.getFullYear(), d.getMonth() + 1, d.getDate()].map(
-						n => n.toString().padStart(2, '0')).join(date.includes('.') ? '.' : '/')
-				).replace(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S+|(?=[\r\n]))/im, s => (value = s, '\0'));
+				let contents: string[] = [], value: string | undefined;
+				for (const info of infos) {
+					if (info.single)
+						contents.push(info.content.replace(
+							/(?<=^;\s*@ahk2exe-setversion\s+)(\S+|(?=[\r\n]))/i,
+							s => (value ||= s, '\0')));
+					else contents.push(info.content.replace(
+						/(?<=^\s*[;*]?\s*@date[:\s]\s*)(\S+|(?=[\r\n]))/im,
+						date => [d.getFullYear(), d.getMonth() + 1, d.getDate()].map(
+							n => n.toString().padStart(2, '0')).join(date.includes('.') ? '.' : '/')
+					).replace(/(?<=^\s*[;*]?\s*@version[:\s]\s*)(\S+|(?=[\r\n]))/im, s => (value ||= s, '\0')));
+				}
 				if (value !== undefined) {
 					value = await window.showInputBox({
-						value, prompt: localize('ahk2.filenotexist')
-					}) ?? value;
-					content = content.replace('\0', value);
+						value, prompt: localize('ahk2.enterversion')
+					});
+					if (!value)
+						return;
+					contents = contents.map(s => s.replace('\0', value!));
 				}
-				if (content !== info.content) {
-					const ed = new WorkspaceEdit();
-					ed.replace(Uri.parse(info.uri), info.range, content);
-					workspace.applyEdit(ed);
-				}
+				const ed = new WorkspaceEdit(), uri = textEditor.document.uri;
+				infos.forEach(it => it.content !== (value = contents.shift()) &&
+					ed.replace(uri, it.range, value!));
+				ed.size && workspace.applyEdit(ed);
 			}
 		}),
 		commands.registerTextEditorCommand('ahk2.switch', textEditor => {

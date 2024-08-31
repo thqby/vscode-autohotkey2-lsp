@@ -233,22 +233,34 @@ async function setscriptdir() {
 export function getVersionInfo(uri: string) {
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex) return;
-	const doc = lex.document, pos = { line: 0, character: 0 };
+	const doc = lex.document, tks = lex.tokens, pos = { line: 0, character: 0 };
 	let tk = lex.get_token(0);
 	while (tk.type === 'TK_SHARP') {
 		pos.line = doc.positionAt(tk.offset).line + 1;
 		tk = lex.get_token(doc.offsetAt(pos));
 	}
+	const info = [];
 	if ((!tk.type || tk.type.endsWith('COMMENT')) && /^\s*[;*]?\s*@(date|version)\b/im.test(tk.content)) {
-		return {
-			uri: uri,
-			content: tk.content,
+		info.push({
+			uri, content: tk.content, single: false,
 			range: {
-				start: lex.document.positionAt(tk.offset),
-				end: lex.document.positionAt(tk.offset + tk.length)
+				start: doc.positionAt(tk.offset),
+				end: doc.positionAt(tk.offset + tk.length)
 			}
-		};
+		});
 	}
+	for (const it of lex.tokenranges) {
+		if (it.type === 1 && (tk = tks[it.start])?.topofline &&
+			/^;\s*@ahk2exe-setversion\b/i.test(tk.content))
+			return info.concat({
+				uri, content: tk.content, single: true,
+				range: {
+					start: doc.positionAt(it.start),
+					end: doc.positionAt(it.end)
+				}
+			});
+	}
+	return info;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

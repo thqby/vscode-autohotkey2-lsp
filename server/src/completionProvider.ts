@@ -37,7 +37,6 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					}, [
 						'/************************************************************************',
 						' * @description ${1:}',
-						' * @file $TM_FILENAME',
 						' * @author ${2:}',
 						' * @date ${3:$CURRENT_YEAR/$CURRENT_MONTH/$CURRENT_DATE}',
 						' * @version ${4:0.0.0}',
