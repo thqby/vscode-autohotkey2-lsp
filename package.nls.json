@@ -23,10 +23,10 @@
 	"ahk++.run": "Run Script",
 	"ahk++.runSelection": "Run Selected Script",
 	"ahk2.setinterpreter": "Select AutoHotkey2 Interpreter",
-	"ahk2.setscriptdir": "Set here as A_ScriptDir",
+	"ahk++.setAScriptDir": "Set A_ScriptDir Here",
 	"ahk++.stop": "Stop AHK Script",
 	"ahk2.symbolfoldingfromopenbrace": "Forced symbol folding starts at open brace",
 	"ahk2.syntaxes": "Specifies the folder path to the `ahk2.json`, `*.snippet.json` and `ahk2.d.ahk` files used for IntelliSense.",
-	"ahk2.updateversioninfo": "Update File Version Info",
+	"ahk++.updateVersionInfo": "Update File Version Info",
 	"ahk2.workingdirs": "Sets the working directory for the script"
 }

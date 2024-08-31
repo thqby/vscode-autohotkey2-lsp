@@ -123,26 +123,26 @@
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.updateversioninfo",
-				"title": "%ahk2.updateversioninfo%",
+				"command": "ahk++.updateVersionInfo",
+				"title": "%ahk++.updateVersionInfo%",
 				"category": "ahk2"
 			},
 			{
 				"enablement": "editorLangId == ahk2 || editorLangId == ahk",
-				"command": "ahk2.switch",
-				"title": "Switch v1/v2",
+				"command": "ahk++.switchAhkVersion",
+				"title": "Switch AHK Version",
 				"category": "ahk2"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
-				"command": "ahk2.selectsyntaxes",
-				"title": "Select syntaxes",
+				"command": "ahk++.selectSyntaxes",
+				"title": "Select AHK Syntaxes",
 				"category": "ahk2"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && resourceScheme == file",
-				"command": "ahk2.setscriptdir",
-				"title": "%ahk2.setscriptdir%",
+				"command": "ahk++.setAScriptDir",
+				"title": "%ahk++.setAScriptDir%",
 				"category": "ahk2"
 			}
 		],
@@ -521,7 +521,7 @@
 				},
 				{
 					"when": "editorLangId == ahk2",
-					"command": "ahk2.updateversioninfo",
+					"command": "ahk++.updateVersionInfo",
 					"group": "navigation@2"
 				}
 			],

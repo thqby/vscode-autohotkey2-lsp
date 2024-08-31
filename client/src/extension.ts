@@ -192,7 +192,7 @@ export async function activate(context: ExtensionContext) {
 	ahkStatusBarItem.command = 'ahk2.setinterpreter';
 	const ahkLanguageStatusItem = languages.createLanguageStatusItem('AutoHotkey2', { language: 'ahk2' });
 	ahkLanguageStatusItem.text = '$(folder)syntaxes';
-	ahkLanguageStatusItem.command = { title: 'Select Syntaxes', command: 'ahk2.selectsyntaxes' };
+	ahkLanguageStatusItem.command = { title: 'Select AHK Syntaxes', command: 'ahk++.selectSyntaxes' };
 	context.subscriptions.push(
 		ahkStatusBarItem, ahkLanguageStatusItem, outputchannel,
 		extensions.onDidChange(update_extensions_info),
@@ -202,8 +202,8 @@ export async function activate(context: ExtensionContext) {
 		commands.registerCommand('ahk2.setinterpreter', setInterpreter),
 		commands.registerCommand('ahk++.debugParams', () => beginDebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk++.debugAttach', () => beginDebug(extlist, debugexts, false, true)),
-		commands.registerCommand('ahk2.selectsyntaxes', selectSyntaxes),
-		commands.registerTextEditorCommand('ahk2.updateversioninfo', async textEditor => {
+		commands.registerCommand('ahk++.selectSyntaxes', selectSyntaxes),
+		commands.registerTextEditorCommand('ahk++.updateVersionInfo', async textEditor => {
 			if (!server_is_ready)
 				return;
 			const info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
@@ -232,7 +232,7 @@ export async function activate(context: ExtensionContext) {
 				}
 			}
 		}),
-		commands.registerTextEditorCommand('ahk2.switch', textEditor => {
+		commands.registerTextEditorCommand('ahk++.switchAhkVersion', textEditor => {
 			const doc = textEditor.document;
 			languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
 		}),

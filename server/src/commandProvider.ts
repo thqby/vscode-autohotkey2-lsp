@@ -233,7 +233,7 @@ async function setscriptdir() {
 export const commands: { [command: string]: (args: any[]) => any } = {
 	'ahk++.diagnostic.full': () => diagnosticFull(),
 	'ahk++.addDocComment': () => generateComment(),
-	'ahk2.setscriptdir': setscriptdir
+	'ahk++.setAScriptDir': setscriptdir
 };
 
 export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
