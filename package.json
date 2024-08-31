@@ -117,8 +117,8 @@
 			},
 			{
 				"enablement": "!isWeb",
-				"command": "ahk2.setinterpreter",
-				"title": "%ahk2.setinterpreter%",
+				"command": "ahk++.setV2Interpreter",
+				"title": "%ahk++.setV2Interpreter%",
 				"category": "AHK++"
 			},
 			{

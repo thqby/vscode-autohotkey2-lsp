@@ -189,7 +189,7 @@ export async function activate(context: ExtensionContext) {
 
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
-	ahkStatusBarItem.command = 'ahk2.setinterpreter';
+	ahkStatusBarItem.command = 'ahk++.setV2Interpreter';
 	const ahkLanguageStatusItem = languages.createLanguageStatusItem('AutoHotkey2', { language: 'ahk2' });
 	ahkLanguageStatusItem.text = '$(folder)syntaxes';
 	ahkLanguageStatusItem.command = { title: 'Select AHK Syntaxes', command: 'ahk++.selectSyntaxes' };
@@ -199,7 +199,7 @@ export async function activate(context: ExtensionContext) {
 		commands.registerTextEditorCommand('ahk++.run', textEditor => runScript(textEditor)),
 		commands.registerTextEditorCommand('ahk++.runSelection', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk++.stop', stopRunningScript),
-		commands.registerCommand('ahk2.setinterpreter', setInterpreter),
+		commands.registerCommand('ahk++.setV2Interpreter', setInterpreter),
 		commands.registerCommand('ahk++.debugParams', () => beginDebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk++.debugAttach', () => beginDebug(extlist, debugexts, false, true)),
 		commands.registerCommand('ahk++.selectSyntaxes', selectSyntaxes),

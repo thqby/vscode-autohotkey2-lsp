@@ -331,7 +331,7 @@ async function patherr(msg: string) {
 			title: 'Select Interpreter',
 		})
 	)
-		connection.sendRequest('ahk2.executeCommand', ['ahk2.setinterpreter']);
+		connection.sendRequest('ahk2.executeCommand', ['ahk++.setV2Interpreter']);
 }
 
 async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
