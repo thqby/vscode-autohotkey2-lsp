@@ -9,7 +9,7 @@
 	"ahk++.debug.params": "Debug Script with Params",
 	"ahk2.debugconfiguration": "Append debugging configuration to the currently started debugger, same as launch.json configuration",
 	"ahk2.description": "Autohotkey2 Language Support using vscode-lsp",
-	"ahk2.diagnostic.full": "Diagnostic full text",
+	"ahk++.diagnostic.full": "Diagnostic full text",
 	"ahk2.diagnostics.class-non-dynamic-member-check": "Check whether non-dynamic members of class exist",
 	"ahk2.diagnostics.paramscheck": "Check that the function call has the correct number of arguments",
 	"ahk2.warn.varunset": "Display warnings for each variable that has never been directly assigned or used with the reference operator",

@@ -230,7 +230,7 @@ async function setscriptdir() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const commands: { [command: string]: (args: any[]) => any } = {
-	'ahk2.diagnostic.full': () => diagnosticFull(),
+	'ahk++.diagnostic.full': () => diagnosticFull(),
 	'ahk2.generate.comment': () => generateComment(),
 	'ahk2.setscriptdir': setscriptdir
 };

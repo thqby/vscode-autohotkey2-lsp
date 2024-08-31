@@ -79,8 +79,8 @@
 			},
 			{
 				"enablement": "editorLangId == ahk2",
-				"command": "ahk2.diagnostic.full",
-				"title": "%ahk2.diagnostic.full%",
+				"command": "ahk++.diagnostic.full",
+				"title": "%ahk++.diagnostic.full%",
 				"category": "ahk2"
 			},
 			{
