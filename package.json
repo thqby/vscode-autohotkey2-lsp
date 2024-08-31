@@ -69,81 +69,81 @@
 				"enablement": "!isWeb",
 				"command": "ahk++.debugAttach",
 				"title": "%ahk++.debugAttach%",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk++.debugParams",
 				"title": "%ahk++.debugParams%",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
 				"command": "ahk++.diagnostic.full",
 				"title": "%ahk++.diagnostic.full%",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
 				"command": "ahk++.exportSymbols",
 				"title": "%ahk++.exportSymbols%",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
 				"command": "ahk++.run",
 				"title": "%ahk++.run%",
 				"icon": "$(play)",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
 				"command": "ahk++.runSelection",
 				"title": "%ahk++.runSelection%",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
 				"command": "ahk++.stop",
 				"title": "%ahk++.stop%",
 				"icon": "$(stop)",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
 				"command": "ahk++.addDocComment",
 				"title": "%ahk++.addDocComment%",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "!isWeb",
 				"command": "ahk2.setinterpreter",
 				"title": "%ahk2.setinterpreter%",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2",
 				"command": "ahk++.updateVersionInfo",
 				"title": "%ahk++.updateVersionInfo%",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 || editorLangId == ahk",
 				"command": "ahk++.switchAhkVersion",
 				"title": "Switch AHK Version",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && !isWeb",
 				"command": "ahk++.selectSyntaxes",
 				"title": "Select AHK Syntaxes",
-				"category": "ahk2"
+				"category": "AHK++"
 			},
 			{
 				"enablement": "editorLangId == ahk2 && resourceScheme == file",
 				"command": "ahk++.setAScriptDir",
 				"title": "%ahk++.setAScriptDir%",
-				"category": "ahk2"
+				"category": "AHK++"
 			}
 		],
 		"configuration": {
