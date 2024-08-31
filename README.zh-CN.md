@@ -26,6 +26,7 @@ AutoHotkey v2 语言支持 for VS Code, 功能实现基于 v2 语法分析。
     - [查找所有引用](#查找所有引用)
     - [代码格式化](#代码格式化)
     - [自定义折叠](#自定义折叠)
+    - [声明文件](#声明文件)
   - [上下文菜单](#上下文菜单)
     - [快速帮助](#快速帮助)
     - [运行脚本](#运行脚本)
@@ -152,6 +153,33 @@ class abc {
 ;@region tag
 code
 ;@endregion
+```
+
+### 声明文件
+
+声明文件是以 .d.ahk 为文件名后缀的文件, 用来描述已实现的函数或类等, 不包含代码的实现部分, 默认被同名的ahk文件引用, 语法参考扩展提供的 `ahk2.d.ahk`. 声明文件可以扩展或改写ahk内置函数或类的声明, 也可以将注释文档从源码中分离来提供多语言版本的智能感知等. 
+
+```
+; array.d.ahk
+; #ClsName represents the ahk built-in class
+/** @extends {#Array} */
+class Array<T = Any> {
+  /** jsdoc-默认 */
+  Filter(FilterFunc) => Array<T>
+}
+
+; array.zh-cn.d.ahk
+; #ClsName 表示ahk内置类
+/** @extends {#Array} */
+class Array<T = Any> {
+  /** jsdoc-zh */
+  Filter(FilterFunc) => Array<T>
+}
+
+; array.ahk
+; %A_Locale% 是VSCode的显示语言
+;@reference array.%A_Locale%.d.ahk
+Array.Prototype.DefineProp('Filter', { call: Array_Filter_impl })
 ```
 
 ## 上下文菜单

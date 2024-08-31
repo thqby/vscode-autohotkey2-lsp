@@ -606,7 +606,7 @@ async function setInterpreter() {
 			const path = await window.showOpenDialog({
 				defaultUri: ahkpath ? Uri.file(ahkpath) : undefined,
 				filters: { Executables: ['exe'] },
-				openLabel: localize('ahk2.set.interpreter')
+				openLabel: localize('ahk2.select')
 			});
 			if (path)
 				sel.detail = path[0].fsPath;

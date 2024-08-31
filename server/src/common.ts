@@ -323,7 +323,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 							label: snip.prefix.replace(/^[^#\w]/, ''),
 							insertText: snip.body.replace(/^\W+/, ''),
 							kind, insertTextFormat,
-							documentation: snip.description && { kind: 'markdown', value: snip.description },
+							detail: snip.description,
 							data: snip.body.charAt(0)
 						});
 						if (c === '#')
@@ -337,7 +337,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					for (snip of arr) {
 						completionItemCache.key.push({
 							label: snip.body, kind,
-							documentation: snip.description
+							detail: snip.description
 						});
 					}
 					break;
@@ -349,7 +349,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						completionItemCache.keyword.push({
 							label: snip.prefix, kind, insertTextFormat,
 							insertText: snip.body,
-							documentation: snip.description,
+							detail: snip.description,
 							preselect: true
 						});
 						hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, { contents: { kind: 'markdown', value: '```ahk2\n' + (snip.syntax ?? trim(snip.body)) + '\n```\n\n' + (snip.description ?? '') } }];
@@ -362,7 +362,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						completionItemCache.snippet.push({
 							label: snip.prefix!,
 							insertText: bodytostring(snip.body),
-							documentation: snip.description,
+							detail: snip.description,
 							kind, insertTextFormat
 						});
 					}
@@ -389,7 +389,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						for (snip of arr[k])
 							t.push({
 								label: snip.body, kind,
-								documentation: snip.description && { kind: 'markdown', value: snip.description }
+								detail: snip.description
 							});
 					}
 					break;

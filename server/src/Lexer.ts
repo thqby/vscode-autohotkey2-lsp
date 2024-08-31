@@ -22,7 +22,7 @@ import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
 	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings,
-	hoverCache, isBrowser, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile,
+	hoverCache, isBrowser, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
 
@@ -1158,14 +1158,7 @@ export class Lexer {
 				}
 			}
 		} else {
-			this.fsPath.replace(/^(.*)\.(ahk2?|ah2)$/i, (m, m0) => {
-				const path = m0 + '.d.ahk', uri = this.d_uri = URI.file(path).toString().toLowerCase();
-				if (!isBrowser && !lexers[this.d_uri]) {
-					const t = openFile(restorePath(path), false);
-					t && (lexers[uri] = new Lexer(t, undefined, 1)).parseScript();
-				}
-				return '';
-			});
+			const d_path = this.fsPath.replace(/\.\w+$/, '.d.ahk');
 			if (!this.fsPath.endsWith('2'))
 				delete this.actionwhenv1;
 			this.parseScript = function (): void {
@@ -1184,6 +1177,12 @@ export class Lexer {
 						e.message && this.addDiagnostic(e.message, e.token.offset, e.token.length, DiagnosticSeverity.Warning);
 					} else
 						console.error(e);
+				}
+				if (!isBrowser) {
+					const m = _this.d_uri && find_d_ahk(resolve_scriptdir(_this.d_uri)) || find_d_ahk(d_path);
+					if (m)
+						includetable[_this.d_uri = m.uri] = m.path;
+					else _this.d_uri = '';
 				}
 				parse_unresolved_typedef();
 				check_same_name_error(this.declaration, this.children, this.diagnostics);
@@ -4059,15 +4058,19 @@ export class Lexer {
 				tn.extendsuri = ahkvars[(tn.extends = tn.extends.substring(1)).toUpperCase()]?.uri ?? ahkuris.ahk2;
 		}
 
+		function resolve_scriptdir(path: string) {
+			return path.replace(/%(a_scriptdir|a_workingdir)%/i, () => (_this.need_scriptdir = true, _this.scriptdir))
+				.replace(/%a_linefile%/i, _this.fsPath);
+		}
+
 		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
-			let m, raw: string, ignore = false;
+			let m, ignore = false;
 			const q = text[0];
 			if (`'"`.includes(q) && text.endsWith(q))
 				text = text.slice(1, -1);
 			if ((m = text.match(/^(\*[iI][ \t])?(.*)$/))) {
-				raw = m[2], ignore = Boolean(m[1]);
-				m = raw.replace(/%(a_scriptdir|a_workingdir)%/i, () => (_this.need_scriptdir = true, _this.scriptdir))
-					.replace(/%a_linefile%/i, _this.fsPath);
+				ignore = Boolean(m[1]);
+				m = resolve_scriptdir(m[2]);
 				if (tk)
 					_this[isdll ? 'dlldir' : 'includedir'].set(
 						(tk.pos ??= _this.document.positionAt(tk.offset)).line, isdll ? dlldir : includedir);
@@ -4106,13 +4109,24 @@ export class Lexer {
 							else
 								includetable[m.uri] = m.path, tk.data = [m.path, m.uri];
 							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
-						} else if ((m = find_include_path(m.replace(/(\.d)?>$/i, '.d>'), _this.libdirs, _this.scriptpath)) && existsSync(m.path) && !statSync(m.path).isDirectory())
+						} else if ((m = find_d_ahk(m)))
 							includetable[m.uri] = m.path;
 						_this.need_scriptdir ||= islib && (!m || m.path.toLowerCase().startsWith(_this.libdirs[0].toLowerCase()));
 					}
 				}
 			} else if (text && tk)
 				_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
+		}
+
+		function find_d_ahk(path: string) {
+			if (path.startsWith('<'))
+				path = path.replace(/(\.d)?>$/i, '.d>');
+			else path = path.replace(/(\.d\.ahk)?$/i, '.d.ahk');
+			const m = find_include_path(path,
+				_this.libdirs, _this.scriptpath, true,
+				{ ...a_vars, locale });
+			if (m && !statSync(m.path).isDirectory())
+				return m;
 		}
 
 		function join_markdown(s1: string, s2: string) {
@@ -5117,16 +5131,28 @@ export class Lexer {
 					if (line.startsWith(';')) {
 						ln++;
 						if ((t = line.match(/^;\s*@/))) {
-							let s = line.substring(t[0].length);
-							if ((s = s.toLowerCase()) === 'include-winapi') {
-								h && (t = lexers[ahkuris.winapi]) && Object.defineProperty(includetable, ahkuris.winapi, { value: t.fsPath, enumerable: false });
-							} else if ((t = s.match(/^include\s+(.*)/i)))
-								add_include_dllload(t[1].replace(/\s+;.*$/, '').trim());
-							else if ((t = s.match(/^lint-(enable|disable)\b\s*(\S*)/))) {
-								if (t[2] === 'class-non-dynamic-member-check')
-									if (t[1] === 'enable')
-										delete (currsymbol as ClassNode ?? _this).checkmember;
-									else (currsymbol as ClassNode ?? _this).checkmember = false;
+							let s = line.substring(t[0].length).replace(/\s+;.*$/, '').toLowerCase();
+							if ((t = s.match(/^([-.\w]+)(?=(\s|$))/))) {
+								switch (t[1]) {
+									case 'include':
+										(s = s.substring(t[1].length).trimStart()) && add_include_dllload(s);
+										break;
+									case 'include-winapi':
+										h && (t = lexers[ahkuris.winapi]) && Object.defineProperty(
+											includetable, ahkuris.winapi, { value: t.fsPath, enumerable: false });
+										break;
+									case 'reference':
+										_this.d_uri ||= s.substring(t[1].length).trimStart();
+										break;
+									case 'lint-disable':
+									case 'lint-enable':
+										s = s.substring(t[1].length).trimStart();
+										if (s === 'class-non-dynamic-member-check')
+											if (t[1] === 'lint-enable')
+												delete (currsymbol as ClassNode ?? _this).checkmember;
+											else (currsymbol as ClassNode ?? _this).checkmember = false;
+										break;
+								}
 							}
 							ignore = true;
 						} else if ((t = line.match(/^;+\s*([{}])/))) {
@@ -5987,10 +6013,11 @@ export class Lexer {
 	private clear() {
 		this.texts = {}, this.declaration = {}, this.include = {}, this.tokens = {}, this.linepos = {};
 		this.labels = {}, this.typedef = {}, this.object = { method: {}, property: {} };
-		this.diagnostics.length = this.foldingranges.length = 0;
-		this.children.length = this.dllpaths.length = this.tokenranges.length = 0;
-		this.includedir.clear(), this.dlldir.clear();
 		this.need_scriptdir = this.hotstringExecuteAction = this.isparsed = false;
+		this.children.length = this.dllpaths.length = this.tokenranges.length = 0;
+		this.diagnostics.length = this.foldingranges.length = 0;
+		this.includedir.clear(), this.dlldir.clear();
+		this.d_uri = '';
 		delete this.maybev1;
 		delete this.checkmember;
 		delete this.symbolInformation;
@@ -6351,7 +6378,7 @@ export class Lexer {
 		const after = this.include;
 		let l = Object.keys(after).length, change = 0;
 		for (const u in initial)
-			if (!after[u]) { change = 2; break; }
+			if (!(u in after)) { change = 2; break; }
 		if (!change && (l > Object.keys(initial).length || '' in initial))
 			change = 1;
 		if (!change)
@@ -6422,8 +6449,8 @@ export class Lexer {
 		if (d) {
 			if (d > 2 && !uri.includes('?'))
 				return true;
-			if (lexers[uri.slice(0, -5) + 'ahk']?.keepAlive())
-				return true;
+			// if (lexers[uri.slice(0, -5) + 'ahk']?.keepAlive())
+			// 	return true;
 		}
 		let it;
 		for (const u in this.relevance)
@@ -6485,7 +6512,7 @@ function is_valid_hotkey(s: string) {
 	return true;
 }
 
-export function find_include_path(path: string, libdirs: string[], workdir: string = '', check_exists = false) {
+function find_include_path(path: string, libdirs: string[], workdir: string = '', check_exists = false, vars = a_vars) {
 	let m: RegExpMatchArray | null, uri = '';
 	const raw = path;
 
@@ -6503,8 +6530,8 @@ export function find_include_path(path: string, libdirs: string[], workdir: stri
 	} else {
 		while ((m = path.match(/%a_(\w+)%/i))) {
 			const a_ = m[1].toLowerCase();
-			if (a_vars[a_])
-				path = path.replace(m[0], <string>a_vars[a_]);
+			if (vars[a_])
+				path = path.replace(m[0], vars[a_]);
 			else return;
 		}
 		if (path.indexOf(':') < 0)

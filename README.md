@@ -26,6 +26,7 @@ Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https:
     - [Find All References](#find-all-references)
     - [CodeFormat](#codeformat)
     - [Custom folding](#custom-folding)
+    - [Declaration document](#declaration-document)
   - [Context Menu](#context-menu)
     - [Quick Help](#quick-help)
     - [Run Script](#run-script)
@@ -155,6 +156,33 @@ Fold the part between `;@region tag` and `;@endregion`, `;{` and `;}`
 ;#region tag
 code
 ;#endregion
+```
+
+### Declaration document
+
+The declaration file is a file with the suffix of `.d.ahk` as the file name, which is used to describe the implemented functions or classes, etc., does not contain the implementation part of the code, and is referenced by the ahk file with the same name by default, and the syntax refers to `ahk2.d.ahk` provided by the extension. The declaration file can extend or rewrite the declaration of ahk built-in functions or classes, and the annotation document can be separated from the source code to provide a multilingual version of intellisense.
+
+```
+; array.d.ahk
+; #ClsName represents the ahk built-in class
+/** @extends {#Array} */
+class Array<T = Any> {
+  /** jsdoc-default */
+  Filter(FilterFunc) => Array<T>
+}
+
+; array.zh-cn.d.ahk
+; #ClsName 表示ahk内置类
+/** @extends {#Array} */
+class Array<T = Any> {
+  /** jsdoc-zh */
+  Filter(FilterFunc) => Array<T>
+}
+
+; array.ahk
+; %A_Locale% is VSCode's Display Language
+;@reference array.%A_Locale%.d.ahk
+Array.Prototype.DefineProp('Filter', { call: Array_Filter_impl })
 ```
 
 ## Context Menu

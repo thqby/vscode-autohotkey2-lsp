@@ -7,7 +7,7 @@ import {
 import { URI } from 'vscode-uri';
 import { get_ahkProvider } from './ahkProvider';
 import {
-	a_vars, AHKLSSettings, ahkpath_cur, chinese_punctuations, clearLibfuns, codeActionProvider,
+	a_vars, AHKLSSettings, ahkpath_cur, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
 	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
 	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, extsettings, getVersionInfo, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile,
@@ -223,11 +223,11 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	const script = `
 	#NoTrayIcon
 	#Warn All, Off
-	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 1) = "1" ? "FileAppend2" : "FileAppend"
-	for _, p in ["a_ahkpath","a_appdata","a_appdatacommon","a_computername","a_comspec","a_desktop","a_desktopcommon","a_iscompiled","a_mydocuments","a_programfiles","a_programs","a_programscommon","a_startmenu","a_startmenucommon","a_startup","a_startupcommon","a_temp","a_username","a_windir","a_ahkversion"]
-		s .= SubStr(p, 3) "\`t" %p% "|"
-	try _H := !!A_ThreadID
-	%Append%(s "is64bit\`t" (A_PtrSize = 8) "|h\`t" _H "\`n", "*", "UTF-8")
+	s := "", Append := SubStr(A_AhkVersion, 1, 1) = "1" ? "FileAppend2" : "FileAppend"
+	for _, k in ${JSON.stringify([...builtin_variable, ...builtin_variable_h])}
+		try if SubStr(k, 1, 2) = "a_" && !IsObject(v := %k%)
+			s .= SubStr(k, 3) "|" v "\`n"
+	%Append%(s, "*", "utf-8")
 	FileAppend2(text, file, encode) {
 		FileAppend %text%, %file%, %encode%
 	}`;
@@ -260,8 +260,8 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 			connection.window.showErrorMessage(setting.getenverr());
 		return false;
 	}
-	Object.assign(a_vars, Object.fromEntries(data.replace(/\t[A-Z]:\\/g, m => m.toLowerCase()).split('|').map(l => l.split('\t'))));
-	a_vars.ahkpath = ahkpath_cur;
+	Object.assign(a_vars, Object.fromEntries(data.replace(/|[A-Z]:\\/g, m => m.toLowerCase()).split('\n').map(l => l.split('|'))));
+	a_vars.ahkpath ??= ahkpath_cur;
 	set_version(a_vars.ahkversion ??= '2.0.0');
 	if (a_vars.ahkversion.startsWith('1.'))
 		patherr(setting.versionerr());
@@ -273,14 +273,14 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		for (lb of Object.values(libfuncs))
 			lb.islib = inlibdirs(lb.fsPath);
 	}
-	a_vars.h = (a_vars.h ?? '0').slice(0, 1);
-	if (a_vars.h === '1') {
+	if (a_vars.threadid) {
 		if (!isahk2_h)
 			set_ahk_h(true), samefolder = false, loadahk2('ahk2_h'), loadahk2('winapi', 4);
 	} else {
 		if (isahk2_h)
 			set_ahk_h(false), samefolder = false, initahk2cache(), loadahk2();
 	}
+	Object.assign(a_vars, { index: '0', clipboard: '', threadid: '' });
 	await update_rcdata();
 	if (samefolder)
 		return true;
@@ -411,7 +411,7 @@ async function getAHKversion(params: string[]) {
 async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 	const funcs: Record<string, true> = {};
 	for (const path of paths) {
-		const pe = await searchAndOpenPEFile(path, a_vars.is64bit === '1' ? true : a_vars.is64bit === '0' ? false : undefined);
+		const pe = await searchAndOpenPEFile(path, a_vars.ptrsize === '8' ? true : a_vars.ptrsize === '4' ? false : undefined);
 		if (!pe) continue;
 		try {
 			(await pe.getExport())?.Functions.forEach((it) => funcs[it.Name] = true);

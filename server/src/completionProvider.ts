@@ -661,16 +661,16 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (expg.test(l = it.name.toUpperCase()) && !at_edit_pos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
 			vars[l] = convertNodeCompletion(it);
 	}
-	const list_arr = Object.keys(list);
-	for (const uri of [doc.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr]) {
-		if (!(temp = lexers[uri]?.declaration))
+	const list_arr = Object.keys(list).reverse();
+	for (const uri of new Set([doc.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr])) {
+		if (!(temp = lexers[uri]))
 			continue;
-		path = lexers[uri].fsPath;
-		const all = !!list[uri];
+		const d = temp.d;
+		path = temp.fsPath, temp = temp.declaration;
 		for (const n in temp) {
 			const it = temp[n];
-			if (all && expg.test(n) && (!vars[n] || ((vars[n] as CompletionItem).kind === CompletionItemKind.Variable && it.kind !== SymbolKind.Variable)))
-				vars[n] = cpitem = convertNodeCompletion(it), cpitem.detail = `${completionitem.include(path)}\n\n${cpitem.detail ?? ''}`;
+			if (expg.test(n) && (d || !vars[n] || ((vars[n] as CompletionItem).kind === CompletionItemKind.Variable && it.kind !== SymbolKind.Variable)))
+				vars[n] = cpitem = convertNodeCompletion(it);
 		}
 	}
 

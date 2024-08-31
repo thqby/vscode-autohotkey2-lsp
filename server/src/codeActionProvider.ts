@@ -4,7 +4,7 @@ import { codeaction, diagnostic } from './localize';
 import { Maybe, lexers, restorePath, warn } from './common';
 
 export async function codeActionProvider(params: CodeActionParams, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
-	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()], document = lex.document;
+	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()], document = lex?.document;
 	if (!lex || token.isCancellationRequested) return;
 	const acts: CodeAction[] = [], replaces: Record<string, TextEdit[]> = {}, parens: TextEdit[] = [];
 	let r: string, t: RegExpExecArray | null;
