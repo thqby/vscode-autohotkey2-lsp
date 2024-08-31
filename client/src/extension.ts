@@ -200,8 +200,8 @@ export async function activate(context: ExtensionContext) {
 		commands.registerTextEditorCommand('ahk++.runSelection', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk2.stop', stopRunningScript),
 		commands.registerCommand('ahk2.setinterpreter', setInterpreter),
-		commands.registerCommand('ahk++.debug.params', () => beginDebug(extlist, debugexts, true)),
-		commands.registerCommand('ahk++.debug.attach', () => beginDebug(extlist, debugexts, false, true)),
+		commands.registerCommand('ahk++.debugParams', () => beginDebug(extlist, debugexts, true)),
+		commands.registerCommand('ahk++.debugAttach', () => beginDebug(extlist, debugexts, false, true)),
 		commands.registerCommand('ahk2.selectsyntaxes', selectSyntaxes),
 		commands.registerTextEditorCommand('ahk2.updateversioninfo', async textEditor => {
 			if (!server_is_ready)
@@ -236,7 +236,7 @@ export async function activate(context: ExtensionContext) {
 			const doc = textEditor.document;
 			languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
 		}),
-		commands.registerTextEditorCommand('ahk2.export.symbols', textEditor => {
+		commands.registerTextEditorCommand('ahk++.exportSymbols', textEditor => {
 			const doc = textEditor.document;
 			if (doc.languageId !== 'ahk2')
 				return;
