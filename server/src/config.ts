@@ -57,24 +57,52 @@ export enum CallWithoutParentheses {
 	On = 'On',
 }
 
+export enum CfgKey {
+	ActionWhenV1Detected = 'v2.general.actionWhenV1Detected',
+	CommentTagRegex = 'v2.general.commentTagRegex', // still used directly in some places
+	CompleteFunctionCalls = 'v2.general.completeFunctionCalls',
+	CompletionCommitCharacters = 'v2.completionCommitCharacters',
+	LibrarySuggestions = 'v2.general.librarySuggestions',
+	SymbolFoldingFromOpenBrace = 'v2.general.symbolFoldingFromOpenBrace',
+	Syntaxes = 'v2.general.syntaxes',
+	ClassNonDynamicMemberCheck = 'v2.diagnostics.classNonDynamicMemberCheck',
+	ParamsCheck = 'v2.diagnostics.paramsCheck',
+	Exclude = 'v2.exclude', // still used directly in some places
+	InterpreterPath = 'v2.file.interpreterPath', // still used directly in some places
+	MaxScanDepth = 'v2.file.maxScanDepth',
+	Formatter = 'v2.formatter',
+	VarUnset = 'v2.warn.varUnset',
+	LocalSameAsGlobal = 'v2.warn.localSameAsGlobal',
+	CallWithoutParentheses = 'v2.warn.callWithoutParentheses',
+	WorkingDirectories = 'v2.workingDirectories', // still used directly in some places
+}
+
+export interface CompletionCommitCharacters {
+	Class: string;
+	Function: string;
+}
+
 export interface AhkppConfig {
 	v2: {
-		actionWhenV1Detected: ActionType;
-		/** The regex denoting a custom symbol. Defaults to `;;` */
-		commentTagRegex?: string;
-		/** Automatically insert parentheses on function call */
-		completeFunctionCalls: boolean;
-		completionCommitCharacters: {
-			Class: string;
-			Function: string;
+		general: {
+			actionWhenV1Detected: ActionType;
+			/** The regex denoting a custom symbol. Defaults to `;;` */
+			commentTagRegex?: string;
+			/** Automatically insert parentheses on function call */
+			completeFunctionCalls: boolean;
+			/** Suggest library functions */
+			librarySuggestions: LibrarySuggestions;
+			symbolFoldingFromOpenBrace: boolean;
+			syntaxes: string;
 		};
+		completionCommitCharacters: CompletionCommitCharacters;
 		diagnostics: {
 			classNonDynamicMemberCheck: boolean;
 			paramsCheck: boolean;
 		};
+		/** Glob pattern of files to ignore */
+		exclude: string[];
 		file: {
-			/** Glob pattern of files to ignore */
-			exclude: string[];
 			/** Path to the AHK v2 intepreter */
 			interpreterPath: string;
 			/** Depth of folders to scan for IntelliSense */
@@ -82,8 +110,6 @@ export interface AhkppConfig {
 		};
 		/** Config of the v2 formatter */
 		formatter: FormatterConfig;
-		/** Suggest library functions */
-		librarySuggestions: LibrarySuggestions;
 		warn: {
 			/** Ref to a potentially-unset variable */
 			varUnset: boolean;
@@ -92,8 +118,7 @@ export interface AhkppConfig {
 			/** Function call without parentheses */
 			callWithoutParentheses: CallWithoutParentheses;
 		};
-		symbolFoldingFromOpenBrace: boolean;
-		syntaxes: string;
+		/** Directories containing AHK files that can be #included */
 		workingDirectories: string[];
 	};
 	locale?: string;
@@ -135,10 +160,14 @@ export const newAhkppConfig = (
 	config: Partial<AhkppConfig> = {},
 ): AhkppConfig => ({
 	v2: {
-		actionWhenV1Detected: 'SwitchToV1',
-		librarySuggestions: LibrarySuggestions.Off,
-		commentTagRegex: '^;;\\s*(.*)',
-		completeFunctionCalls: false,
+		general: {
+			actionWhenV1Detected: 'SwitchToV1',
+			commentTagRegex: '^;;\\s*(.*)',
+			completeFunctionCalls: false,
+			librarySuggestions: LibrarySuggestions.Off,
+			symbolFoldingFromOpenBrace: false,
+			syntaxes: '',
+		},
 		completionCommitCharacters: {
 			Class: '.(',
 			Function: '(',
@@ -147,21 +176,31 @@ export const newAhkppConfig = (
 			classNonDynamicMemberCheck: true,
 			paramsCheck: true,
 		},
-		warn: {
-			varUnset: true,
-			localSameAsGlobal: false,
-			callWithoutParentheses: CallWithoutParentheses.Off,
-		},
+		exclude: [],
 		file: {
-			exclude: [],
 			interpreterPath:
 				'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe',
 			maxScanDepth: 2,
 		},
 		formatter: newFormatterConfig(),
-		symbolFoldingFromOpenBrace: false,
+		warn: {
+			varUnset: true,
+			localSameAsGlobal: false,
+			callWithoutParentheses: CallWithoutParentheses.Off,
+		},
 		workingDirectories: [],
-		syntaxes: '',
 	},
 	...config,
 });
+
+/** Gets a single config value from the given config */
+export const getCfg = <T>(config: AhkppConfig, key: CfgKey): T => {
+	const keyPath = key.split('.');
+	// ConfigKey values are guaranteed to work ;)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let value: any = config;
+	for (const k of keyPath) {
+		value = value[k];
+	}
+	return value;
+};

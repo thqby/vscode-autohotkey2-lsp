@@ -7,7 +7,7 @@ import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, Sym
 import { AhkSymbol, Lexer, setCommentTagRegex } from './Lexer';
 import { diagnostic } from './localize';
 import { isBrowser, jsDocTagNames } from './constants';
-import { AhkppConfig, newAhkppConfig } from './config';
+import { AhkppConfig, CfgKey, getCfg, newAhkppConfig } from './config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -36,7 +36,7 @@ export const utils = {
 
 export type Maybe<T> = T | undefined;
 export let connection: Connection;
-export let ahkpath_cur = '', locale = 'en-us', rootdir = '', isahk2_h = false;
+export let interpreterPathV2 = '', locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahk_version = encode_version('3.0.0.0');
 export let ahkuris: { [name: string]: string } = {};
 export let ahkvars: { [key: string]: AhkSymbol } = {};
@@ -205,7 +205,9 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		if ((data = getwebfile(file + '.json')))
 			build_item_cache(JSON.parse(data.text));
 	} else {
-		const syntaxes = ahkppConfig.v2.syntaxes && existsSync(ahkppConfig.v2.syntaxes) ? ahkppConfig.v2.syntaxes : '';
+		const cfgSyntaxes: string = getCfg(ahkppConfig, CfgKey.Syntaxes);
+		/** The validated syntax path. Empty string if config syntax path failed to validate. */
+		const syntaxes = cfgSyntaxes && existsSync(cfgSyntaxes) ? cfgSyntaxes : '';
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
 		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
@@ -342,7 +344,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enum_ahkfiles(dirpath: string) {
-	const maxScanDepth = ahkppConfig.v2.file.maxScanDepth;
+	const maxScanDepth = getCfg<number>(ahkppConfig, CfgKey.MaxScanDepth);
 	const { file: fileExclude, folder: folderExclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
@@ -366,20 +368,18 @@ export function enum_ahkfiles(dirpath: string) {
 /** Updates `extsettings` with the provided config values */
 export function updateAhkppConfig(newConfig: AhkppConfig) {
 	try {
-		setCommentTagRegex(newConfig.v2.commentTagRegex!);
+		setCommentTagRegex(getCfg(newConfig, CfgKey.CommentTagRegex));
 	} catch (e) {
 		delete (e as { stack: unknown }).stack;
-		delete newConfig.v2.commentTagRegex;
+		delete newConfig.v2.general.commentTagRegex;
 		connection.console.error(e as string);
 	}
-	if (newConfig.v2.workingDirectories instanceof Array)
-		newConfig.v2.workingDirectories = newConfig.v2.workingDirectories.map(dir =>
-			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
-				.endsWith('/') ? dir : dir + '/');
-	else newConfig.v2.workingDirectories = [];
+	newConfig.v2.workingDirectories = newConfig.v2.workingDirectories.map(dir =>
+		(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
+			.endsWith('/') ? dir : dir + '/');
 	scanExclude = {};
 	const file: RegExp[] = [], folder: RegExp[] = [];
-	for (const s of newConfig.v2.file.exclude ?? [])
+	for (const s of getCfg<string[]>(newConfig, CfgKey.Exclude) ?? [])
 		try {
 			(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
 		} catch (e) {
@@ -391,8 +391,8 @@ export function updateAhkppConfig(newConfig: AhkppConfig) {
 		scanExclude.folder = folder;
 	if (newConfig.v2.file.maxScanDepth < 0)
 		newConfig.v2.file.maxScanDepth = Infinity;
-	if (newConfig.v2.syntaxes)
-		newConfig.v2.syntaxes = resolve(newConfig.v2.syntaxes).toLowerCase();
+	if (newConfig.v2.general.syntaxes)
+		newConfig.v2.general.syntaxes = resolve(newConfig.v2.general.syntaxes).toLowerCase();
 	Object.assign(ahkppConfig, newConfig);
 }
 
@@ -431,7 +431,7 @@ export function arrayEqual(a: string[], b: string[]) {
 
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
-export function set_ahkpath(path: string) { ahkpath_cur = path.replace(/^.:/, s => s.toLowerCase()); }
+export function setInterpreterPathV2(path: string) { interpreterPathV2 = path.replace(/^.:/, s => s.toLowerCase()); }
 export function set_Connection(conn: Connection) { return connection = conn; }
 export function set_dirname(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }

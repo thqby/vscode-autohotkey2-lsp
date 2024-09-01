@@ -1,4 +1,5 @@
 import { rootdir, getlocalefile, getwebfile, isBrowser } from './common';
+import { CfgKey } from './config';
 
 let loadedCollection: { [key: string]: string } = {};
 
@@ -83,7 +84,7 @@ export const warn = {
 }
 
 export const setting = {
-	ahkpatherr: localize('setting.ahkpatherr', "AutoHotkey interpreter not found, check settings: ahk++.v2.file.interpreterPath"),
+	ahkpatherr: localize('setting.ahkpatherr', `AutoHotkey interpreter not found, check settings: AHK++.${CfgKey.InterpreterPath}`),
 	getenverr: localize('setting.getenverr', 'Failed to get environment variables'),
 	uialimit: localize('setting.uialimit', 'The UIA executable does not allow redirection to stdin/stdout due to security restrictions, so some features that depend on this will not work'),
 	versionerr: localize('setting.versionerr', 'The current AutoHotkey.exe is not the v2 version, and cannot get the correct syntax analysis, completion and other functions'),

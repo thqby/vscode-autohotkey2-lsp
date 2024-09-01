@@ -1,10 +1,14 @@
 import { execSync, spawnSync } from 'child_process';
-import { ahkpath_cur, isWindows } from './common';
+import { interpreterPathV2, isWindows } from './common';
 import { lstatSync, readlinkSync } from 'fs';
 import { resolve } from 'path';
 
+/**
+ * Simple runner for LSP server initializiaton via AHK.
+ * Not used for running user-defined scripts.
+ */
 export function runscript(script: string) {
-	const executePath = resolvePath(ahkpath_cur, true);
+	const executePath = resolvePath(interpreterPathV2, true);
 	if (!executePath)
 		return;
 	const process = spawnSync(`"${executePath}" /CP65001 /ErrorStdOut=utf-8 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });

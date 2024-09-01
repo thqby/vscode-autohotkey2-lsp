@@ -25,7 +25,7 @@ import {
 	hoverCache, isBrowser, isahk2_h, lexers, libdirs, libfuncs, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { newFormatterConfig, FormatterConfig, ObjectOrArrayStyle, BraceStyle, ActionType, newAhkppConfig, CallWithoutParentheses } from './config';
+import { newFormatterConfig, FormatterConfig, BraceStyle, ActionType, newAhkppConfig, CallWithoutParentheses, getCfg, CfgKey } from './config';
 
 export interface ParamInfo {
 	offset: number
@@ -323,7 +323,7 @@ class ParseStopError {
 }
 
 export class Lexer {
-	public actionWhenV1Detected: ActionType = newAhkppConfig().v2.actionWhenV1Detected;
+	public actionWhenV1Detected: ActionType = getCfg(newAhkppConfig(), CfgKey.ActionWhenV1Detected);
 	public actived = false;
 	public beautify: (options: FormatterConfig, range?: Range) => string;
 	public checkmember: boolean | undefined;
@@ -1142,7 +1142,7 @@ export class Lexer {
 				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
-				callWithoutParentheses = ahkppConfig.v2.warn.callWithoutParentheses;
+				callWithoutParentheses = getCfg(ahkppConfig, CfgKey.CallWithoutParentheses);
 				try {
 					const rs = utils.get_RCDATA('#2');
 					rs && (includetable[rs.uri] = rs.path);
@@ -1175,7 +1175,7 @@ export class Lexer {
 			if (requirev2)
 				return false;
 			_this.maybev1 ??= maybev1 = 1;
-			switch (_this.actionWhenV1Detected ??= ahkppConfig.v2.actionWhenV1Detected) {
+			switch (_this.actionWhenV1Detected ??= getCfg(ahkppConfig, CfgKey.ActionWhenV1Detected)) {
 				case 'SkipLine': {
 					if (!allow_skip)
 						return true;
@@ -3632,8 +3632,8 @@ export class Lexer {
 					addvariable(tk);
 					nexttoken(), parse_pair('(', ')');
 					const pc = tokens[tk.previous_pair_pos!]?.paraminfo?.count ?? 0;
-					if (pc !== 1)
-						ahkppConfig.v2.diagnostics.paramsCheck && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
+					if (pc !== 1 && getCfg(ahkppConfig, CfgKey.ParamsCheck))
+						_this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
 					else if (result.length > l && lk.type === 'TK_WORD') {
 						const vr = result.at(-1) as Variable;
 						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
@@ -6209,23 +6209,23 @@ export class Lexer {
 	public initLibDirs(dir?: string) {
 		if (isBrowser)
 			return;
-		let workfolder: string;
+		let workDir: string;
 		if (!dir) {
-			for (workfolder of ahkppConfig.v2.workingDirectories)
-				if (this.uri.startsWith(workfolder)) {
-					dir = restorePath(URI.parse(workfolder).fsPath.replace(/[\\/]$/, ''));
+			for (workDir of getCfg<string[]>(ahkppConfig, CfgKey.WorkingDirectories))
+				if (this.uri.startsWith(workDir)) {
+					dir = restorePath(URI.parse(workDir).fsPath.replace(/[\\/]$/, ''));
 					break;
 				}
 		}
 		if (dir)
 			this.scriptdir = dir;
-		else if ((workfolder = resolve()).toLowerCase() !== this.scriptpath.toLowerCase()
-			&& workfolder.toLowerCase() !== process.argv0.toLowerCase()
-			&& this.scriptpath.toLowerCase().startsWith(workfolder.toLowerCase())
+		else if ((workDir = resolve()).toLowerCase() !== this.scriptpath.toLowerCase()
+			&& workDir.toLowerCase() !== process.argv0.toLowerCase()
+			&& this.scriptpath.toLowerCase().startsWith(workDir.toLowerCase())
 			&& !/\\lib(\\.+)?$/i.test(this.scriptpath)) {
 			if (existsSync(this.scriptpath + '\\Lib') && statSync(this.scriptpath + '\\Lib').isDirectory())
 				this.scriptdir = this.scriptpath;
-			else this.scriptdir = workfolder;
+			else this.scriptdir = workDir;
 		} else this.scriptdir = this.scriptpath.replace(/\\Lib(\\.+)?$/i, '');
 		this.libdirs = [dir = this.scriptdir + '\\Lib\\'];
 		dir = dir.toLowerCase();
@@ -6269,7 +6269,7 @@ export class Lexer {
 	}
 
 	private addSymbolFolding(symbol: AhkSymbol, first_brace: number) {
-		const l1 = ahkppConfig.v2.symbolFoldingFromOpenBrace ? this.document.positionAt(first_brace).line : symbol.range.start.line;
+		const l1 = getCfg(ahkppConfig, CfgKey.SymbolFoldingFromOpenBrace) ? this.document.positionAt(first_brace).line : symbol.range.start.line;
 		const l2 = symbol.range.end.line - 1;
 		const ranges = this.foldingranges;
 		if (l1 < l2) {

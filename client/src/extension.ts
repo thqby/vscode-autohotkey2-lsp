@@ -36,8 +36,8 @@ import { readdirSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
-const ahkppConfig = workspace.getConfiguration('ahk++');
-let ahkpath_cur: string = ahkppConfig.v2.file.interpreterPath, server_is_ready = false, zhcn = false;
+const ahkppConfig = workspace.getConfiguration('AHK++');
+let v2Interpreter: string = ahkppConfig?.v2?.file?.interpreterPath, server_is_ready = false, zhcn = false;
 const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const isWindows = process.platform === 'win32';
 
@@ -85,7 +85,7 @@ export async function activate(context: ExtensionContext) {
 			it && languages.setTextDocumentLanguage(it, lang);
 		},
 		'ahk2.updateStatusBar': async (params: [string]) => {
-			ahkpath_cur = params[0];
+			v2Interpreter = params[0];
 			onDidChangegetInterpreter();
 		}
 	};
@@ -94,8 +94,8 @@ export async function activate(context: ExtensionContext) {
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{ language: 'ahk2' }],
 		markdown: { isTrusted: true, supportHtml: true },
-		outputChannel: outputchannel = window.createOutputChannel('ahk++', '~ahk2-output'),
-		outputChannelName: 'ahk++',
+		outputChannel: outputchannel = window.createOutputChannel('AHK++', '~ahk2-output'),
+		outputChannelName: 'AHK++',
 		initializationOptions: {
 			commands: Object.keys(request_handlers),
 			GlobalStorage: context.globalStorageUri.fsPath,
@@ -104,7 +104,7 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	// Create the language client and start the client.
-	client = new LanguageClient('ahk++', 'ahk++', serverOptions, clientOptions);
+	client = new LanguageClient('AHK++', 'AHK++', serverOptions, clientOptions);
 	zhcn = env.language.startsWith('zh-');
 	textdecoders.push(new TextDecoder(zhcn ? 'gbk' : 'windows-1252'));
 
@@ -167,7 +167,7 @@ export async function activate(context: ExtensionContext) {
 							append_configs.push(configs.find(it => it.name === config.name) ?? configs[0]);
 						Object.assign(config, ...append_configs);
 						if (!config.runtime && (!config.runtime_v2 || config.type !== 'autohotkey')) {
-							config.runtime = resolvePath(ahkpath_cur, folder?.uri.fsPath);
+							config.runtime = resolvePath(v2Interpreter, folder?.uri.fsPath);
 							if (ahkStatusBarItem.text.endsWith('[UIAccess]'))
 								config.useUIAVersion = true;
 						}
@@ -182,7 +182,7 @@ export async function activate(context: ExtensionContext) {
 	}
 	update_extensions_info();
 
-	commands.executeCommand('setContext', 'ahk2:isRunning', false);
+	commands.executeCommand('setContext', 'ahk:isRunning', false);
 	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 	ahkStatusBarItem.command = 'ahk++.setV2Interpreter';
 	const ahkLanguageStatusItem = languages.createLanguageStatusItem('ahk++', { language: 'ahk2' });
@@ -194,7 +194,7 @@ export async function activate(context: ExtensionContext) {
 		commands.registerTextEditorCommand('ahk++.run', textEditor => runScript(textEditor)),
 		commands.registerTextEditorCommand('ahk++.runSelection', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk++.stop', stopRunningScript),
-		commands.registerCommand('ahk++.setV2Interpreter', setInterpreter),
+		commands.registerCommand('ahk++.setV2Interpreter', setInterpreterV2),
 		commands.registerCommand('ahk++.debugParams', () => beginDebug(extlist, debugexts, true)),
 		commands.registerCommand('ahk++.debugAttach', () => beginDebug(extlist, debugexts, false, true)),
 		commands.registerCommand('ahk++.selectSyntaxes', selectSyntaxes),
@@ -273,41 +273,55 @@ function decode(buf: Buffer) {
 	return buf.toString();
 }
 
-function runScript(textEditor: TextEditor, selection = false) {
-	const executePath = resolvePath(ahkpath_cur, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
+/** Also in original src */
+export enum LanguageId {
+    ahk1 = 'ahk',
+    ahk2 = 'ahk2',
+}
+
+const isV1 = (): boolean =>
+    window.activeTextEditor?.document.languageId === LanguageId.ahk1;
+
+function runScript(textEditor: TextEditor, runSelection = false) {
+	const interpreter: string | undefined = isV1() ? ahkppConfig.get('v1.file.interpreterPath') : ahkppConfig.get('v2.file.interpreterPath');
+	const executePath = resolvePath(interpreter, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
 	if (!executePath) {
-		const s = ahkpath_cur || 'AutoHotkey.exe';
-		window.showErrorMessage(zhcn ? `"${s}"未找到!` : `"${s}" not find!`, 'Select Interpreter')
-			.then(r => r && setInterpreter());
+		const s = interpreter || 'AutoHotkey.exe';
+		window.showErrorMessage(zhcn ? `"${s}"未找到` : `"${s}" not found`, 'Select Interpreter')
+			.then(r => r && setInterpreterV2());
 		return;
 	}
-	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
+	let selectedText = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
 	let startTime: Date;
 	outputchannel.show(true);
 	if (!ahkprocesses.size)
 		outputchannel.clear();
-	if (selection)
-		selecttext = textEditor.selections.map(textEditor.document.getText).join('\n');
+
+	// Build the command
+	if (runSelection)
+		selectedText = textEditor.selections.map(textEditor.document.getText).join('\n');
 	else if (textEditor.document.isUntitled || !textEditor.document.uri.toString().startsWith('file:///'))
-		selecttext = textEditor.document.getText();
+		selectedText = textEditor.document.getText();
 	executePath.replace(/^(.+[\\/])AutoHotkeyUX\.exe$/i, (...m) => {
 		const lc = m[1] + 'launcher.ahk';
 		if (existsSync(lc))
 			command = `"${executePath}" "${lc}" `;
 		return '';
 	})
+
+	// Spawn the process
 	let process: ChildProcess & { path?: string };
-	if (selecttext !== '') {
+	if (selectedText !== '') {
 		if (ahkStatusBarItem.text.endsWith('[UIAccess]')) {
 			path = resolve(__dirname, 'temp.ahk');
-			writeFileSync(path, selecttext);
+			writeFileSync(path, selectedText);
 			command += `"${path}"`, startTime = new Date();
 			process = spawn(command, { cwd: `${resolve(textEditor.document.fileName, '..')}`, shell: true });
 			unlinkSync(path);
 		} else {
 			command += path, startTime = new Date();
 			process = spawn(command, { cwd: `${resolve(textEditor.document.fileName, '..')}`, shell: true });
-			process.stdin?.write(selecttext), process.stdin?.end();
+			process.stdin?.write(selectedText), process.stdin?.end();
 		}
 	} else {
 		if (textEditor.document.isUntitled)
@@ -316,11 +330,12 @@ function runScript(textEditor: TextEditor, selection = false) {
 		path = textEditor.document.fileName, command += `"${path}"`, startTime = new Date();
 		process = spawn(command, { cwd: resolve(path, '..'), shell: true });
 	}
+
 	if (process.pid) {
 		outputchannel.appendLine(`[Running] [pid:${process.pid}] ${command}`);
 		ahkprocesses.set(process.pid, process);
 		process.path = path;
-		commands.executeCommand('setContext', 'ahk2:isRunning', true);
+		commands.executeCommand('setContext', 'ahk:isRunning', true);
 		process.stderr?.on('data', (data) => {
 			outputchannel.appendLine(decode(data));
 		});
@@ -335,7 +350,7 @@ function runScript(textEditor: TextEditor, selection = false) {
 			outputchannel.appendLine(`[Done] [pid:${process.pid}] exited with code=${code} in ${((new Date()).getTime() - startTime.getTime()) / 1000} seconds`);
 			ahkprocesses.delete(process.pid!);
 			if (!ahkprocesses.size)
-				commands.executeCommand('setContext', 'ahk2:isRunning', false);
+				commands.executeCommand('setContext', 'ahk:isRunning', false);
 		});
 	} else
 		outputchannel.appendLine(`[Fail] ${command}`);
@@ -396,10 +411,15 @@ async function beginDebug(extlist: string[], debugexts: { [type: string]: string
 	debug.startDebugging(editor && workspace.getWorkspaceFolder(editor.document.uri), config);
 }
 
-async function setInterpreter() {
+/**
+ * Sets the v2 interpreter path via quick pick.
+ * Updates the most local configuration target that has a custom interpreter path.
+ * If no target has a custom path, updates workspace folder config.
+ */
+async function setInterpreterV2() {
 	// eslint-disable-next-line prefer-const
-	let index = -1, { path: ahkpath, from } = getInterpreterPath();
-	const list: QuickPickItem[] = [], _ = (ahkpath = resolvePath(ahkpath_cur || ahkpath, undefined, false)).toLowerCase();
+	let index = -1, { path: ahkpath, from } = getInterpreterV2Path();
+	const list: QuickPickItem[] = [], _ = (ahkpath = resolvePath(v2Interpreter || ahkpath, undefined, false)).toLowerCase();
 	const pick = window.createQuickPick();
 	let it: QuickPickItem, active: QuickPickItem | undefined, sel: QuickPickItem = { label: '' };
 	if (zhcn) {
@@ -413,7 +433,7 @@ async function setInterpreter() {
 		await addpath(resolve(ahkpath, '..'), _.includes('autohotkey') ? 20 : 5);
 	if (!_.includes('c:\\program files\\autohotkey\\'))
 		await addpath('C:\\Program Files\\AutoHotkey\\', 20);
-	index = list.map(it => it.detail?.toLowerCase()).indexOf((ahkpath_cur || ahkpath).toLowerCase());
+	index = list.map(it => it.detail?.toLowerCase()).indexOf((v2Interpreter || ahkpath).toLowerCase());
 	if (index !== -1)
 		active = list[index];
 
@@ -421,7 +441,7 @@ async function setInterpreter() {
 	pick.title = zhcn ? '选择解释器' : 'Select Interpreter';
 	if (active)
 		pick.activeItems = [active];
-	pick.placeholder = (zhcn ? '当前: ' : 'Current: ') + ahkpath_cur;
+	pick.placeholder = (zhcn ? '当前: ' : 'Current: ') + v2Interpreter;
 	pick.show();
 	pick.onDidAccept(async () => {
 		if (pick.selectedItems[0] === list[0]) {
@@ -446,11 +466,11 @@ async function setInterpreter() {
 		}
 		pick.dispose();
 		if (sel.detail) {
-			ahkStatusBarItem.tooltip = ahkpath_cur = sel.detail;
-			ahkppConfig.update('v2.file.interpreterPath', ahkpath_cur, from);
-			ahkStatusBarItem.text = sel.label ||= (await getAHKversion([ahkpath_cur]))[0];
+			ahkStatusBarItem.tooltip = v2Interpreter = sel.detail;
+			ahkppConfig.update('v2.file.interpreterPath', v2Interpreter, from);
+			ahkStatusBarItem.text = sel.label ||= (await getAHKversion([v2Interpreter]))[0];
 			if (server_is_ready)
-				commands.executeCommand('ahk++.v2.setIntepreterPath', ahkpath_cur);
+				commands.executeCommand('ahk++.v2.setIntepreterPath', v2Interpreter);
 		}
 	});
 	pick.onDidHide(() => pick.dispose());
@@ -499,7 +519,12 @@ function getAHKversion(paths: string[]): Thenable<string[]> {
 	return client.sendRequest('ahk2.getAHKversion', paths.map(p => resolvePath(p, undefined, true) || p));
 }
 
-function getInterpreterPath() {
+/**
+ * Gets the interpreter v2 path from the folder, workspace, global, or default value.
+ * Returns both the value and the target it was retrieved from.
+ * `from` is undefined if default value was used.
+ */
+function getInterpreterV2Path(): { path: string, from?: ConfigurationTarget } {
 	const configDetails = ahkppConfig.inspect('v2.file.interpreterPath');
 	let path = '';
 	if (configDetails)
@@ -516,7 +541,7 @@ function getInterpreterPath() {
 async function onDidChangegetInterpreter() {
 	const uri = window.activeTextEditor?.document.uri;
 	const ws = uri ? workspace.getWorkspaceFolder(uri)?.uri.fsPath : undefined;
-	let ahkPath = resolvePath(ahkpath_cur, ws, false);
+	let ahkPath = resolvePath(v2Interpreter, ws, false);
 	if (ahkPath.toLowerCase().endsWith('.exe') && existsSync(ahkPath)) {
 		// ahkStatusBarItem.tooltip is the current saved interpreter path
 		if (ahkPath !== ahkStatusBarItem.tooltip) {
@@ -529,8 +554,13 @@ async function onDidChangegetInterpreter() {
 	}
 }
 
-/** Resolves a given path to an absolute path. Returns empty string if resolution fails. */
-export function resolvePath(path: string, workspace?: string, resolveSymbolicLink = true): string {
+/**
+ * Returns the provided path as an absolute path.
+ * Resolves the provided path against the provided workspace.
+ * Resolves symbolic links by default.
+ * Returns empty string if resolution fails.
+ */
+export function resolvePath(path: string | undefined, workspace?: string, resolveSymbolicLink = true): string {
 	if (!path)
 		return '';
 	const paths: string[] = [];
