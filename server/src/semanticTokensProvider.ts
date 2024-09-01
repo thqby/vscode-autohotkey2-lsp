@@ -1,7 +1,7 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import {
 	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
-	checkParams, diagnostic, extsettings, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
+	checkParams, diagnostic, ahkppConfig, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
 } from './common';
 
 let curclass: ClassNode | undefined;
@@ -124,13 +124,12 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						return sem.type = SemanticTokenTypes.property;
 					}
 					case undefined:
-						if ((curclass.checkmember ?? doc.checkmember) !== false && extsettings.Diagnostics.ClassNonDynamicMemberCheck) {
+						if ((curclass.checkmember ?? doc.checkmember) !== false && ahkppConfig.v2.diagnostics.classNonDynamicMemberCheck) {
 							const tt = doc.tokens[tk.next_token_offset];
 							if (ASSIGN_TYPE.includes(tt?.content)) {
 								cls_add_prop(curclass, tk.content, tk.offset);
 							} else if ((memscache.get(curclass) as _Flag)?.['#checkmember'] !== false)
 								((curclass.undefined ??= {})[tk.content.toUpperCase()] ??= []).push(tk);
-							// doc.addDiagnostic(diagnostic.maybehavenotmember(curclass.name, tk.content), tk.offset, tk.length, 2);
 						}
 				}
 			}

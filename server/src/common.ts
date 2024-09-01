@@ -4,9 +4,10 @@ import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { AhkSymbol, ActionType, FormatOptions, Lexer, update_comment_tags } from './Lexer';
+import { AhkSymbol, Lexer, setCommentTagRegex } from './Lexer';
 import { diagnostic } from './localize';
 import { isBrowser, jsDocTagNames } from './constants';
+import { AhkppConfig, newAhkppConfig } from './config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -23,76 +24,10 @@ export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
 
-enum LibIncludeType {
-	'Disabled',
-	'Local',
-	'User and Standard',
-	'All'
-}
-
-export interface AHKLSSettings {
-	locale?: string
-	commands?: string[]
-	extensionUri?: string
-	ActionWhenV1IsDetected: ActionType
-	AutoLibInclude: LibIncludeType
-	CommentTags?: string
-	CompleteFunctionParens: boolean
-	CompletionCommitCharacters?: {
-		Class: string
-		Function: string
-	}
-	Diagnostics: {
-		ClassNonDynamicMemberCheck: boolean
-		ParamsCheck: boolean
-	}
-	Files: {
-		Exclude: string[]
-		MaxDepth: number
-	}
-	FormatOptions: FormatOptions
-	InterpreterPath: string
-	GlobalStorage?: string
-	Syntaxes?: string
-	SymbolFoldingFromOpenBrace: boolean
-	Warn: {
-		VarUnset: boolean
-		LocalSameAsGlobal: boolean
-		CallWithoutParentheses: boolean | /* Parentheses */ 1
-	}
-	WorkingDirs: string[]
-}
-
 export const winapis: string[] = [];
 export const lexers: { [uri: string]: Lexer } = {};
 export const alpha_3 = encode_version('2.1-alpha.3');
-export const extsettings: AHKLSSettings = {
-	ActionWhenV1IsDetected: 'Warn',
-	AutoLibInclude: 0,
-	CommentTags: '^;;\\s*(.*)',
-	CompleteFunctionParens: false,
-	CompletionCommitCharacters: {
-		Class: '.(',
-		Function: '('
-	},
-	Diagnostics: {
-		ClassNonDynamicMemberCheck: true,
-		ParamsCheck: true
-	},
-	Files: {
-		Exclude: [],
-		MaxDepth: 2
-	},
-	FormatOptions: {},
-	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe',
-	SymbolFoldingFromOpenBrace: false,
-	Warn: {
-		VarUnset: true,
-		LocalSameAsGlobal: false,
-		CallWithoutParentheses: false
-	},
-	WorkingDirs: []
-};
+export const ahkppConfig: AhkppConfig = newAhkppConfig();
 export const utils = {
 	get_DllExport: (_paths: string[] | Set<string>, _onlyone = false) => Promise.resolve([] as string[]),
 	get_RCDATA: (_path?: string) => ({ uri: '', path: '' } as { uri: string, path: string, paths?: string[] } | undefined),
@@ -270,7 +205,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		if ((data = getwebfile(file + '.json')))
 			build_item_cache(JSON.parse(data.text));
 	} else {
-		const syntaxes = extsettings.Syntaxes && existsSync(extsettings.Syntaxes) ? extsettings.Syntaxes : '';
+		const syntaxes = ahkppConfig.v2.syntaxes && existsSync(ahkppConfig.v2.syntaxes) ? ahkppConfig.v2.syntaxes : '';
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
 		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
@@ -407,20 +342,20 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enum_ahkfiles(dirpath: string) {
-	const maxdepth = extsettings.Files.MaxDepth;
-	const { file: file_exclude, folder: folder_exclude } = scanExclude;
+	const maxScanDepth = ahkppConfig.v2.file.maxScanDepth;
+	const { file: fileExclude, folder: folderExclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
 		try {
 			const dir = await fs.opendir(dirpath);
 			for await (const t of dir) {
-				if (t.isDirectory() && depth < maxdepth) {
+				if (t.isDirectory() && depth < maxScanDepth) {
 					const path = resolve(dirpath, t.name);
-					if (!folder_exclude?.some(re => re.test(path)))
+					if (!folderExclude?.some(re => re.test(path)))
 						yield* enumfile(path, depth + 1);
 				} else if (t.isFile() && /\.(ahk2?|ah2)$/i.test(t.name)) {
 					const path = resolve(dirpath, t.name);
-					if (!file_exclude?.some(re => re.test(path)))
+					if (!fileExclude?.some(re => re.test(path)))
 						yield path;
 				}
 			}
@@ -428,60 +363,37 @@ export function enum_ahkfiles(dirpath: string) {
 	}
 }
 
-export function update_settings(configs: AHKLSSettings) {
-	if (typeof configs.AutoLibInclude === 'string')
-		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
-	else if (typeof configs.AutoLibInclude === 'boolean')
-		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
-	if (typeof configs.Warn?.CallWithoutParentheses === 'string')
-		configs.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[configs.Warn.CallWithoutParentheses];
-	if (typeof configs.FormatOptions?.brace_style === 'string')
-		switch (configs.FormatOptions.brace_style) {
-			case '0':
-			case 'Allman': configs.FormatOptions.brace_style = 0; break;
-			case '1':
-			case 'One True Brace': configs.FormatOptions.brace_style = 1; break;
-			case '-1':
-			case 'One True Brace Variant': configs.FormatOptions.brace_style = -1; break;
-			default: delete configs.FormatOptions.brace_style; break;
-		}
-	for (const k of ['array_style', 'object_style'] as Array<keyof FormatOptions>)
-		if (typeof configs.FormatOptions?.[k] === 'string')
-			// todo fix update_settings
-			// @ts-expect-error undefined not assignable to never
-			configs.FormatOptions[k] = { collapse: 2, expand: 1, none: 0 }[configs.FormatOptions[k] as string];
+/** Updates `extsettings` with the provided config values */
+export function updateAhkppConfig(newConfig: AhkppConfig) {
 	try {
-		update_comment_tags(configs.CommentTags!);
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	} catch (e: any) {
-		delete e.stack;
-		delete configs.CommentTags;
-		console.log(e);
+		setCommentTagRegex(newConfig.v2.commentTagRegex!);
+	} catch (e) {
+		delete (e as { stack: unknown }).stack;
+		delete newConfig.v2.commentTagRegex;
+		connection.console.error(e as string);
 	}
-	if (configs.WorkingDirs instanceof Array)
-		configs.WorkingDirs = configs.WorkingDirs.map(dir =>
+	if (newConfig.v2.workingDirectories instanceof Array)
+		newConfig.v2.workingDirectories = newConfig.v2.workingDirectories.map(dir =>
 			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
 				.endsWith('/') ? dir : dir + '/');
-	else configs.WorkingDirs = [];
+	else newConfig.v2.workingDirectories = [];
 	scanExclude = {};
-	if (configs.Files) {
-		const file: RegExp[] = [], folder: RegExp[] = [];
-		for (const s of configs.Files.Exclude ?? [])
-			try {
-				(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
-			} catch (e) {
-				console.log(`[Error] Invalid glob pattern: ${s}`);
-			}
-		if (file.length)
-			scanExclude.file = file;
-		if (folder.length)
-			scanExclude.folder = folder;
-		if ((configs.Files.MaxDepth ??= 2) < 0)
-			configs.Files.MaxDepth = Infinity;
-	}
-	if (configs.Syntaxes)
-		configs.Syntaxes = resolve(configs.Syntaxes).toLowerCase();
-	Object.assign(extsettings, configs);
+	const file: RegExp[] = [], folder: RegExp[] = [];
+	for (const s of newConfig.v2.file.exclude ?? [])
+		try {
+			(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
+		} catch (e) {
+			console.log(`[Error] Invalid glob pattern: ${s}`);
+		}
+	if (file.length)
+		scanExclude.file = file;
+	if (folder.length)
+		scanExclude.folder = folder;
+	if (newConfig.v2.file.maxScanDepth < 0)
+		newConfig.v2.file.maxScanDepth = Infinity;
+	if (newConfig.v2.syntaxes)
+		newConfig.v2.syntaxes = resolve(newConfig.v2.syntaxes).toLowerCase();
+	Object.assign(ahkppConfig, newConfig);
 }
 
 function encode_version(version: string) {
@@ -527,7 +439,7 @@ export function set_version(version: string) { ahk_version = encode_version(vers
 export function set_WorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
-	extsettings.WorkingDirs.forEach(it => !folders.has(it) && workspaceFolders.push(it));
+	ahkppConfig.v2.workingDirectories.forEach(dir => { if (!folders.has(dir)) workspaceFolders.push(dir) });
 	workspaceFolders.sort().reverse();
 	if (old.length === workspaceFolders.length &&
 		!old.some((v, i) => workspaceFolders[i] !== v))

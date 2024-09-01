@@ -13,7 +13,6 @@ import { URI } from 'vscode-uri';
 import { get_ahkProvider } from './ahkProvider';
 import {
 	a_vars,
-	AHKLSSettings,
 	ahkpath_cur,
 	chinese_punctuations,
 	clearLibfuns,
@@ -27,7 +26,7 @@ import {
 	enum_ahkfiles,
 	executeCommandProvider,
 	exportSymbols,
-	extsettings,
+	ahkppConfig,
 	hoverProvider,
 	initahk2cache,
 	isahk2_h,
@@ -60,7 +59,7 @@ import {
 	symbolProvider,
 	traverse_include,
 	typeFormatting,
-	update_settings,
+	updateAhkppConfig,
 	utils,
 	winapis,
 	workspaceSymbolProvider,
@@ -68,6 +67,8 @@ import {
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
 import { TextDecoder } from 'util';
+import { includeLocalLibrary, includeUserAndStandardLibrary } from './utils';
+import { AhkppConfig } from './config';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -77,7 +78,7 @@ let hasConfigurationCapability = false,
 	hasWorkspaceFolderCapability = false;
 let uri_switch_to_ahk2 = '';
 
-commands['ahk2.resetinterpreterpath'] = (args: string[]) =>
+commands['ahk++.v2.setIntepreterPath'] = (args: string[]) =>
 	setInterpreter(args[0].replace(/^[A-Z]:/, (m) => m.toLowerCase()));
 
 connection.onInitialize(async (params) => {
@@ -147,27 +148,27 @@ connection.onInitialize(async (params) => {
 		};
 	}
 
-	let configs: AHKLSSettings | undefined;
+	let envAhkppConfig: AhkppConfig | undefined;
 	const env = process.env;
 	if (env.AHK2_LS_CONFIG)
 		try {
-			configs = JSON.parse(env.AHK2_LS_CONFIG);
+			envAhkppConfig = JSON.parse(env.AHK2_LS_CONFIG);
 		} catch {
 			/* do nothing */
 		}
 	if (params.initializationOptions)
-		configs = Object.assign(configs ?? {}, params.initializationOptions);
+		envAhkppConfig = Object.assign(envAhkppConfig ?? {}, params.initializationOptions);
 	set_dirname(resolve(__dirname, '../..'));
-	set_locale(configs?.locale ?? params.locale);
+	set_locale(envAhkppConfig?.locale ?? params.locale);
 	utils.get_RCDATA = getRCDATA;
 	utils.get_DllExport = getDllExport;
 	utils.get_ahkProvider = get_ahkProvider;
 	loadlocalize();
 	initahk2cache();
-	if (configs) update_settings(configs);
+	if (envAhkppConfig) updateAhkppConfig(envAhkppConfig);
 	if (
 		!(await setInterpreter(
-			resolvePath((extsettings.InterpreterPath ??= '')),
+			resolvePath((ahkppConfig.v2.file.interpreterPath ??= '')),
 		))
 	)
 		patherr(setting.ahkpatherr());
@@ -200,36 +201,32 @@ connection.onInitialized(() => {
 });
 
 connection.onDidChangeConfiguration(async (change) => {
-	let newset: AHKLSSettings | undefined = change?.settings;
-	if (hasConfigurationCapability && !newset)
-		// todo AutoHotkey2 config is provided by the ahk2 package.json
-		newset = await connection.workspace.getConfiguration('AutoHotkey2');
-	if (!newset) {
-		connection.window.showWarningMessage(
-			'Failed to obtain the configuration',
-		);
+	let newAhkppConfig: AhkppConfig | undefined = change?.settings;
+	if (hasConfigurationCapability && !newAhkppConfig)
+		newAhkppConfig = await connection.workspace.getConfiguration('ahk++');
+	if (!newAhkppConfig) {
+		connection.window.showWarningMessage('Failed to obtain the AHK++ configuration');
 		return;
 	}
-	const { AutoLibInclude, InterpreterPath, Syntaxes } = extsettings;
-	update_settings(newset);
+	const { v2: oldV2 } = ahkppConfig;
+	updateAhkppConfig(newAhkppConfig);
+	const { v2: newV2 } = ahkppConfig;
 	set_WorkspaceFolders(workspaceFolders);
-	if (InterpreterPath !== extsettings.InterpreterPath) {
+	if (oldV2.file.interpreterPath !== newV2.file.interpreterPath) {
 		if (
 			await setInterpreter(
-				resolvePath((extsettings.InterpreterPath ??= '')),
+				resolvePath((newV2.file.interpreterPath ??= '')),
 			)
 		)
-			connection.sendRequest('ahk2.updateStatusBar', [
-				extsettings.InterpreterPath,
-			]);
+		connection.sendRequest('ahk2.updateStatusBar', [newV2.file.interpreterPath]);
 	}
-	if (AutoLibInclude !== extsettings.AutoLibInclude) {
-		if (extsettings.AutoLibInclude > 1 && AutoLibInclude <= 1)
+	if (oldV2.librarySuggestions !== newV2.librarySuggestions) {
+		if (includeUserAndStandardLibrary(newV2.librarySuggestions) && !includeUserAndStandardLibrary(oldV2.librarySuggestions))
 			parseuserlibs();
-		if (extsettings.AutoLibInclude & 1 && !(AutoLibInclude & 1))
+		if (includeLocalLibrary(newV2.librarySuggestions) && !includeLocalLibrary(oldV2.librarySuggestions))
 			documents.all().forEach((e) => parseproject(e.uri.toLowerCase()));
 	}
-	if (Syntaxes !== extsettings.Syntaxes) {
+	if (oldV2.syntaxes !== newV2.syntaxes) {
 		initahk2cache();
 		loadahk2();
 		if (isahk2_h) {
@@ -252,8 +249,8 @@ documents.onDidOpen((e) => {
 		});
 	}
 	doc.actived = true;
-	if (to_ahk2) doc.actionwhenv1 = 'Continue';
-	if (extsettings.AutoLibInclude & 1)
+	if (to_ahk2) doc.actionWhenV1Detected = 'Continue';
+	if (includeLocalLibrary(ahkppConfig.v2.librarySuggestions))
 		parseproject(uri).then(
 			() =>
 				doc.last_diags &&
@@ -293,7 +290,7 @@ connection.onRequest('ahk2.getAHKversion', getAHKversion);
 connection.onRequest('ahk2.getContent', (uri: string) =>
 	lexers[uri.toLowerCase()]?.document.getText(),
 );
-connection.onRequest('ahk2.getVersionInfo', (uri: string) => {
+connection.onRequest('ahk++.getVersionInfo', (uri: string) => {
 	const doc = lexers[uri.toLowerCase()];
 	if (doc) {
 		const tk = doc.get_token(0);
@@ -324,7 +321,7 @@ documents.listen(connection);
 connection.listen();
 
 async function patherr(msg: string) {
-	if (!extsettings.commands?.includes('ahk2.executeCommand'))
+	if (!ahkppConfig.commands?.includes('ahk2.executeCommand'))
 		return connection.window.showErrorMessage(msg);
 	if (
 		await connection.window.showErrorMessage(msg, {
@@ -425,7 +422,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		}
 	}
 	clearLibfuns();
-	if (extsettings.AutoLibInclude > 1) parseuserlibs();
+	if (includeUserAndStandardLibrary(ahkppConfig.v2.librarySuggestions)) parseuserlibs();
 	return true;
 	async function update_rcdata() {
 		const pe = new PEFile(ahkpath_cur);
@@ -491,7 +488,7 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 		const doc = lexers[td.uri.toLowerCase()];
 		if (!doc) return;
 		doc.initLibDirs(doc.scriptdir);
-		if (extsettings.AutoLibInclude & 1) parseproject(doc.uri);
+		if (includeLocalLibrary(ahkppConfig.v2.librarySuggestions)) parseproject(doc.uri);
 	});
 	return true;
 }

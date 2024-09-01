@@ -47,7 +47,6 @@ const nodeClientConfig = /** @type WebpackConfig */ {
 	performance: {
 		hints: false,
 	},
-	// todo minify production build
 	devtool: 'source-map',
 };
 

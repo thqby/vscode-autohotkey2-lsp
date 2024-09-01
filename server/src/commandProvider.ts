@@ -1,13 +1,13 @@
 import { CancellationToken, ExecuteCommandParams, Position, Range, SymbolKind } from 'vscode-languageserver';
 import {
 	AhkSymbol, ClassNode, FuncNode, Lexer, Property, Token, Variable,
-	connection, extsettings, find_class, generate_type_annotation,
+	connection, ahkppConfig, find_class, generate_type_annotation,
 	join_types, lexers, parse_include, restorePath, semanticTokensOnFull,
 	traverse_include, update_include_cache
 } from './common';
 
 function checkCommand(cmd: string) {
-	if (extsettings.commands?.includes(cmd))
+	if (ahkppConfig.commands?.includes(cmd))
 		return true;
 	connection.console.warn(`Command '${cmd}' is not implemented!`);
 	return false;

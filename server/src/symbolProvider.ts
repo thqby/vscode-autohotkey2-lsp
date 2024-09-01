@@ -8,7 +8,7 @@ import {
 	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable,
 	ahkuris, ahkvars, check_same_name_error, connection, decltype_expr,
-	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor, isBrowser,
+	diagnostic, enum_ahkfiles, ahkppConfig, find_class, get_class_constructor, isBrowser,
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
 
@@ -40,7 +40,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		return doc.symbolInformation;
 	if (ahkuris.winapi && !list.includes(ahkuris.winapi))
 		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
-	const warnLocalSameAsGlobal = extsettings.Warn?.LocalSameAsGlobal;
+	const warnLocalSameAsGlobal = ahkppConfig.v2.warn.localSameAsGlobal;
 	const result: AhkSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class];
 	for (const [k, v] of Object.entries(doc.declaration)) {
@@ -54,7 +54,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			result.push(v), converttype(v, v, islib || v === ahkvars[k]).definition = v;
 	}
 	flatTree(doc);
-	if (extsettings.Warn?.VarUnset)
+	if (ahkppConfig.v2.warn.varUnset)
 		for (const [k, v] of unset_vars)
 			k.assigned || doc.diagnostics.push({ message: warn.varisunset(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 	if (doc.actived) {
@@ -290,7 +290,7 @@ function get_func_param_count(fn: FuncNode) {
 export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 	const paraminfo = info.paraminfo;
 	let is_cls: boolean, params;
-	if (!paraminfo || !extsettings.Diagnostics.ParamsCheck) return;
+	if (!paraminfo || !ahkppConfig.v2.diagnostics.paramsCheck) return;
 	if ((is_cls = node?.kind === SymbolKind.Class))
 		node = get_class_constructor(node as unknown as ClassNode) as FuncNode;
 	if (!(params = node?.params)) return;

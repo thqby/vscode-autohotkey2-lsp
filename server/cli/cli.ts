@@ -1,4 +1,5 @@
 import { openFile } from '../src/common';
+import { newFormatterConfig } from '../src/config';
 import { Lexer } from '../src/Lexer';
 
 function main() {
@@ -13,7 +14,7 @@ function main() {
 	try {
 		const td = openFile(path, false);
 		if (!td) return;
-		const sc = new Lexer(td).beautify({});
+		const sc = new Lexer(td).beautify(newFormatterConfig());
 		console.log(sc);
 	} catch (e) {
 		console.error(e);

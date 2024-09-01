@@ -54,19 +54,19 @@ export function activate(context: ExtensionContext) {
 		'ahk2.getWorkspaceFileContent': async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText()
 	};
 
-	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', {
+	client = new LanguageClient('ahk++', 'ahk++', {
 		documentSelector: [{ language: 'ahk2' }],
 		markdown: { isTrusted: true, supportHtml: true },
 		initializationOptions: {
 			extensionUri: context.extensionUri.toString(),
 			commands: Object.keys(request_handlers),
-			...JSON.parse(JSON.stringify(workspace.getConfiguration('AutoHotkey2')))
+			...JSON.parse(JSON.stringify(workspace.getConfiguration('ahk++')))
 		}
 	}, new Worker(serverMain.toString()));
 
 	context.subscriptions.push(
 		commands.registerTextEditorCommand('ahk++.updateVersionInfo', async textEditor => {
-			const info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
+			const info: { content: string, uri: string, range: Range } | null = await client.sendRequest('ahk++.getVersionInfo', textEditor.document.uri.toString());
 			if (!info) {
 				await textEditor.insertSnippet(new SnippetString([
 					"/************************************************************************",

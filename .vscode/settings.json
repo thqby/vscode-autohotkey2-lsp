@@ -3,6 +3,5 @@
 	"typescript.tsc.autoDetect": "off",
 	"typescript.preferences.quoteStyle": "single",
 	"git.ignoreLimitWarning": true,
-	"AutoHotkey2.InterpreterPath": "c:\\Program Files\\AutoHotkey\\v2\\AutoHotkey64.exe",
 	"editor.formatOnSave": false
 }
