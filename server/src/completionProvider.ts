@@ -348,7 +348,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						if (set.includes(fn)) continue; set.push(fn);
 						is_builtin = uris.includes(fn.uri!), index = ci.index, l = fn.name.toLowerCase();
 						kind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
-						switch (is_builtin && ci.kind) {
+						switch (is_builtin && ((it as { kind?: SymbolKind }).kind ?? ci.kind)) {
 							case SymbolKind.Method:
 								switch (l) {
 									case 'deleteprop': case 'getmethod': case 'getownpropdesc':
@@ -363,11 +363,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 										continue;
 									}
 									case 'bind': case 'call':
+										set.pop();
 										// eslint-disable-next-line @typescript-eslint/no-explicit-any
-										if (![SymbolKind.Function, l === 'call' && SymbolKind.Class].includes(it.parent?.kind as any))
+										if (!it.parent || ![SymbolKind.Function, l === 'call' && SymbolKind.Class].includes(it.parent.kind as any))
 											break;
-										syms.push({ node: it.parent!, uri: '' });
-										continue;
+										else {
+											const node = it.parent;
+											syms.push({ node, uri: node.uri!, kind: node.kind } as typeof syms[0]);
+											continue;
+										}
 								}
 								break;
 							case SymbolKind.Function:
@@ -411,7 +415,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 									case 'objbindmethod': case 'hasmethod':
 									case 'objhasownprop': case 'hasprop':
 										if (index === 1) {
-											const comma = pi!.comma[0];
+											const comma = pi?.comma[0];
 											if (!comma) continue;
 											const filter = l.endsWith('method') ? (kind: SymbolKind) => kind !== SymbolKind.Method : undefined;
 											for (const cls of decltype_expr(doc, doc.find_token(pi!.offset + 1, true), comma))
