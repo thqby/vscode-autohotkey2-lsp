@@ -2767,7 +2767,7 @@ ToolTip([Text, X, Y, WhichToolTip]) => Integer
  * @param IconNumber To use an icon group other than the first group of icons in the file, please specify its number in IconNumber (if omitted, it defaults to 1). For example, 2 will load the default icon in the second group of icons . If IconNumber is negative, it is assumed that its absolute value represents the resource ID of the icon in the executable file.
  * @param Freeze Specify 1 (true) to freeze the icon, or 0 (false) to unfreeze it (or leave it blank to keep the frozen/thawed state unchanged). When the icon is frozen, Pause and Suspend will not change it. Note : To freeze or unfreeze the current icon, please use 1 (true) or 0 (false), as shown in the following example: TraySetIcon(,, 1).
  */
-TraySetIcon(FileName: $FilePath, IconNumber := 1, Freeze := false) => void
+TraySetIcon(FileName?: $FilePath, IconNumber := 1, Freeze := false) => void
 
 /**
  * Create a balloon prompt window near the tray icon. In Windows 10, a toast notification may be displayed instead.
