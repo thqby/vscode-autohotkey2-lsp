@@ -2309,7 +2309,11 @@ export class Lexer {
 								if (input.charAt(parser_pos) === '%') {
 									maybecaller = false;
 								} else if (addprop(tk), nexttoken(), ASSIGN_TYPE.includes(tk.content))
-									maybecaller = false, maybeclassprop(lk, undefined, result);
+									maybecaller = false, maybeclassprop(lk, undefined, () => {
+										const beg = parser_pos;
+										result.push(...parse_expression());
+										return [beg, lk.offset + lk.length];
+									});
 								else if (tk.ignore && tk.content === '?' && (tk = get_next_token()), tk.type === 'TK_DOT')
 									continue;
 								next = false;
@@ -2842,7 +2846,11 @@ export class Lexer {
 								addprop(lk);
 								if ((next = tk.type as string === 'TK_EQUALS'))
 									if (ASSIGN_TYPE.includes(tk.content))
-										maybeclassprop(lk, undefined, result);
+										maybeclassprop(lk, undefined, () => {
+											const beg = parser_pos;
+											result.push(...parse_expression(inpair, mustexp, end ?? (ternarys.length ? ':' : undefined)));
+											return [beg, lk.offset + lk.length];
+										});
 							}
 							break;
 						}
@@ -3545,7 +3553,11 @@ export class Lexer {
 								addprop(tk), nexttoken(), next = false;
 								if (tk.type as string === 'TK_EQUALS')
 									if (ASSIGN_TYPE.includes(tk.content))
-										maybeclassprop(lk, undefined, result);
+										maybeclassprop(lk, undefined, () => {
+											const beg = parser_pos;
+											result.push(...parse_expression(e, 2, ternarys.length ? ':' : undefined));
+											return [beg, lk.offset + lk.length];
+										});
 							}
 							break;
 						case 'TK_START_BLOCK':
@@ -3693,7 +3705,7 @@ export class Lexer {
 				}
 			}
 
-			function maybeclassprop(tk: Token, flag: boolean | null = false, result?: AhkSymbol[]) {
+			function maybeclassprop(tk: Token, flag: boolean | null = false, parse_expr?: () => number[]) {
 				if (classfullname === '')
 					return;
 				let rg: Range, cls: ClassNode | undefined;
@@ -3743,11 +3755,7 @@ export class Lexer {
 						return cls.checkmember = false, undefined;
 					const t = Variable.create(tk.content, SymbolKind.Property, rg = make_range(tk.offset, tk.length));
 					t.static = !!cls.prototype, cls.cache.push(t), t.def = false, t.parent = cls;
-					if (result) {
-						const beg = parser_pos;
-						result.push(...parse_expression());
-						t.returns = [beg, lk.offset + lk.length];
-					}
+					t.returns = parse_expr?.();
 				}
 				return;
 
