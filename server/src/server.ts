@@ -179,7 +179,7 @@ documents.onDidOpen(e => {
 });
 
 documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
-documents.onDidChangeContent(e => lexers[e.document.uri.toLowerCase()].update());
+documents.onDidChangeContent(e => lexers[e.document.uri.toLowerCase()]?.update());
 
 connection.onCodeAction(codeActionProvider);
 connection.onCompletion(completionProvider);

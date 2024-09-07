@@ -228,7 +228,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			items.push(...completionItemCache.key), kind = SymbolKind.Event;
 			break;
 		case 'TK_BLOCK_COMMENT':
-			if (!/[<{|,][ \t]*$/.test(linetext.substring(0, range.start.character)))
+			if (!/[<{|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
 				return;
 			if (text.includes('.')) {
 				for (const it of Object.values(find_class(doc, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
@@ -784,8 +784,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return;
 		offset ??= doc.document.offsetAt(position);
 		let path = token.content.substring(1, offset - token.offset), suf = '';
-		if (!/^\w:[\\/]/.test(path) || /[*?"<>|\t]/.test(path))
+		if (/[*?"<>|\t]/.test(path))
 			return;
+		if (!/^\w:[\\/]/.test(path))
+			path = `${doc.scriptdir}/${path}`;
 		path = path.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 		try {
 			if (!existsSync(path) || !statSync(path).isDirectory())

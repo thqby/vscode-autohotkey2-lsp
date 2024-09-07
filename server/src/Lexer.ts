@@ -1046,6 +1046,18 @@ export class Lexer {
 					let defVal = 0, full = '', star_offset = 0;
 					loop: while ((lk = tokens[++j]) && lk.content !== endc) {
 						switch (lk.type) {
+							case 'TK_STRING':
+								if (next_is_param !== true) {
+									skip(endc);
+									break;
+								}
+								vr = Variable.create(lk.content, SymbolKind.String, make_range(lk.offset, lk.length));
+								offset.push(full.length), full += lk.content;
+								params.push(vr), next_is_param = false;
+								if ((lk = tokens[++j])?.content === '[')
+									defVal++, lk.ignore = true, full += ' [';
+								else j--;
+								break;
 							case 'TK_WORD':
 								if (!next_is_param) {
 									skip(endc);
@@ -2600,6 +2612,8 @@ export class Lexer {
 												if (!dots && assign && _parent.static && llk.content.toLowerCase() === 'prototype') {
 													const prop = Variable.create(p.content, SymbolKind.Property, make_range(p.offset, p.length));
 													const cls = (_parent.parent as ClassNode).prototype!;
+													if ((_cm = comments[prop.selectionRange.start.line]))
+														set_detail(prop, _cm);
 													prop.parent = cls, prop.returns = t;
 													cls.cache!.push(prop);
 												}
@@ -3730,13 +3744,13 @@ export class Lexer {
 							cls.checkmember = false;
 						else {
 							const o = tokens[tokens[end].next_token_offset], prop = nk.content.slice(1, -1);
-							let t: Property | FuncNode, pp;
+							let t: Property | FuncNode, pp, sym;
 							rg = make_range(nk.offset + 1, prop.length);
 							if (o.type !== 'TK_START_BLOCK' || !(pp = (o.data as ClassNode)?.property) ||
 								pp.GET || pp.VALUE || pp.SET) {
 								t = Variable.create(prop, SymbolKind.Property, rg);
 								t.full = `(${classfullname.slice(0, -1)}) ${((t.static = s)) ? 'static ' : ''}${prop}`;
-								cls.cache.push(t), t.parent = cls;
+								t.parent = cls, sym = t;
 								if ((t.returns = pp?.GET?.returns))
 									(t as FuncNode).alias = true;
 								else t.returns = pp?.VALUE?.returns;
@@ -3744,10 +3758,19 @@ export class Lexer {
 							if ((pp = pp?.CALL)) {
 								t = Variable.create('', SymbolKind.Variable, make_range(0, 0)), t.arr = true;
 								t = FuncNode.create(prop, SymbolKind.Method, rg, rg, [t], undefined, s);
-								t.full = `(${classfullname.slice(0, -1)}) ` + t.full;
+								t.full = `(${classfullname.slice(0, -1)}) ${t.full}`;
 								t.returns = pp.returns, (t as FuncNode).alias = true;
-								cls.cache.push(t), t.parent = cls;
+								t.parent = cls;
+								if (!sym)
+									sym = t;
+								else {
+									sym = { ...sym, [(sym as FuncNode).alias ? 'get' : sym.returns ? 'val' : 'set']: sym };
+									if (!sym.val)
+										sym.call = t as FuncNode;
+									else sym = t;
+								}
 							}
+							sym && cls.cache.push(sym);
 						}
 					}
 				} else {
@@ -3756,6 +3779,8 @@ export class Lexer {
 					const t = Variable.create(tk.content, SymbolKind.Property, rg = make_range(tk.offset, tk.length));
 					t.static = !!cls.prototype, cls.cache.push(t), t.def = false, t.parent = cls;
 					t.returns = parse_expr?.();
+					if ((_cm = comments[t.selectionRange.start.line]))
+						set_detail(t, _cm);
 				}
 				return;
 
@@ -4325,6 +4350,17 @@ export class Lexer {
 						continue;
 					case 'ignore': sym.ignore = true; break;
 					case 'deprecated': sym.tags ??= [1]; break;
+					case 'alias':
+						if (sym.kind === SymbolKind.Class && (tp = line.trim()).endsWith('>') && tp.startsWith(sym.name + '<')) {
+							const lex = new Lexer(TextDocument.create('', 'ahk2', 0, `class ${tp}{\n}`), undefined, 1);
+							lex.parseScript();
+							const params = (lex.declaration[sym.name.toUpperCase()] as ClassNode)?.type_params;;
+							if (params) {
+								(sym as ClassNode).type_params = params;
+								Object.values(params).forEach(it => it.range = it.selectionRange = ZERO_RANGE);
+							}
+						}
+						break;
 				}
 				details.push(`*@${t}*${join_detail(line)}`);
 			}
@@ -5139,6 +5175,7 @@ export class Lexer {
 					if (line.startsWith(';')) {
 						ln++;
 						if ((t = line.match(/^;\s*@/))) {
+							if (ln > 1) break;
 							let s = line.substring(t[0].length).replace(/\s+;.*$/, '').toLowerCase();
 							if ((t = s.match(/^([-.\w]+)(?=(\s|$))/))) {
 								switch (t[1]) {
@@ -7103,7 +7140,7 @@ export function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], 
 					else continue;
 				if (n.kind !== SymbolKind.Property) {
 					if ((n as FuncNode).alias) {
-						if (paraminfo) continue;
+						// if (paraminfo) continue;
 						const tt = decltype_returns(n, lexers[n.uri!] ?? lex, _this);
 						for (const t of call ? decltype_invoke(lex, tt, 'call', true) : tt)
 							tps.add(t);

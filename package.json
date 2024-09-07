@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.5.1",
+	"version": "2.5.2",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -603,12 +603,12 @@
 			{
 				"command": "ahk2.debug.file",
 				"key": "f5",
-				"when": "editorLangId == ahk2 && !isWeb"
+				"when": "editorLangId == ahk2 && debuggersAvailable && debugState == 'inactive'"
 			},
 			{
 				"command": "ahk2.debug.params",
 				"key": "shift+f5",
-				"when": "editorLangId == ahk2 && !isWeb"
+				"when": "editorLangId == ahk2 && debuggersAvailable && debugState == 'inactive'"
 			},
 			{
 				"command": "ahk2.help",
@@ -639,11 +639,10 @@
 		"eslint": "eslint --fix",
 		"watch": "tsc -b -w",
 		"watch-web": "webpack --watch",
-		"patch": "npm version patch",
 		"publish": "vsce publish",
 		"package": "vsce package",
 		"chrome": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ./test-data",
-		"test": "cd client && tsc && vscode-test",
+		"test": "tsc && vscode-test",
 		"test-grammar": "vscode-tmgrammar-snap tmgrammar-test/*.ahk",
 		"validate": "npm run test-grammar && npm run test"
 	},
