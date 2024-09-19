@@ -371,7 +371,8 @@ export function updateAhkppConfig(newConfig: AhkppConfig) {
 		setCommentTagRegex(getCfg(newConfig, CfgKey.CommentTagRegex));
 	} catch (e) {
 		delete (e as { stack: unknown }).stack;
-		delete newConfig.v2.general.commentTagRegex;
+		// reset to default if invalid
+		setCommentTagRegex(getCfg(newAhkppConfig(), CfgKey.CommentTagRegex))
 		connection.console.error(e as string);
 	}
 	newConfig.v2.workingDirectories = newConfig.v2.workingDirectories.map(dir =>
