@@ -33,7 +33,7 @@ import {
 import { resolve } from 'path';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { readdirSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
-import { CfgKey, getAhkppConfig, getCfg, ShowOutputView } from './config';
+import { CfgKey, getAhkppConfig, getCfg, ShowOutput } from './config';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
@@ -296,8 +296,8 @@ function runScript(textEditor: TextEditor, runSelection = false) {
 	}
 	let selectedText = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
 	let startTime: Date;
-	const showOutputView = getCfg<ShowOutputView>(CfgKey.ShowOutputView);
-	if (showOutputView === 'always')
+	const showOutput = getCfg<ShowOutput>(CfgKey.ShowOutput);
+	if (showOutput === 'always')
 		outputchannel.show(true);
 	if (!ahkprocesses.size)
 		outputchannel.clear();
@@ -508,7 +508,7 @@ async function setInterpreterV2() {
 
 async function selectSyntaxes() {
 	const path = (await window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true }))?.[0].fsPath;
-	const t = getAhkppConfig().inspect('Syntaxes');
+	const t = getAhkppConfig().inspect(CfgKey.Syntaxes);
 	let v = '', f = ConfigurationTarget.Global;
 	if (t) {
 		v = ((f = ConfigurationTarget.WorkspaceFolder, t.workspaceFolderValue) ??
@@ -517,7 +517,7 @@ async function selectSyntaxes() {
 	}
 	if (path === undefined || v.toLowerCase() === path.toLowerCase())
 		return;
-	getAhkppConfig().update('Syntaxes', path || undefined, f);
+	getAhkppConfig().update(CfgKey.Syntaxes, path || undefined, f);
 }
 
 function getAHKversion(paths: string[]): Thenable<string[]> {
