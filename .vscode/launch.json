@@ -22,9 +22,9 @@
 			"preLaunchTask": "npm: watch",
 			"args": [
 				"--disable-extensions",
-				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionTestsPath=${workspaceFolder}/client/dist/test/runTest"
+				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
+			"testConfiguration": "${workspaceFolder}/.vscode-test.js",
 			"outFiles": ["${workspaceFolder}/client/dist/test/**/*.js"]
 		},
 		{

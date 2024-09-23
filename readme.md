@@ -11,34 +11,34 @@
 AutoHotkey v2 Language support for VS Code, features realization based on v2 syntax analysis.
 Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https://github.dev/github/dev
 
-- [AutoHotkey v2 Language Support](#autohotkey-v2-language-support)
-  - [Language Features](#language-features)
-    - [Rename Symbol](#rename-symbol)
-    - [Diagnostics](#diagnostics)
-    - [IntelliSense](#intellisense)
-    - [Signature](#signature)
-    - [Document Symbol](#document-symbol)
-    - [Semantic Highlight](#semantic-highlight)
-    - [Tags](#tags)
-    - [Document Color](#document-color)
-    - [Hover](#hover)
-    - [Goto Definition](#goto-definition)
-    - [Find All References](#find-all-references)
-    - [CodeFormat](#codeformat)
-    - [Custom folding](#custom-folding)
-    - [Declaration document](#declaration-document)
-  - [Context Menu](#context-menu)
-    - [Quick Help](#quick-help)
-    - [Run Script](#run-script)
-    - [Run Selected Script](#run-selected-script)
-    - [Compile Script](#compile-script)
-    - [Debug Script](#debug-script)
-    - [Generate Comment](#generate-comment)
-  - [Use in other editors](#use-in-other-editors)
-    - [Sublime Text4](#sublime-text4)
-    - [Vim and Neovim](#vim-and-neovim)
-    - [Emacs](#Emacs)
-  - [Use in Web Browser](#use-in-web-browser)
+-   [AutoHotkey v2 Language Support](#autohotkey-v2-language-support)
+    -   [Language Features](#language-features)
+        -   [Rename Symbol](#rename-symbol)
+        -   [Diagnostics](#diagnostics)
+        -   [IntelliSense](#intellisense)
+        -   [Signature](#signature)
+        -   [Document Symbol](#document-symbol)
+        -   [Semantic Highlight](#semantic-highlight)
+        -   [Tags](#tags)
+        -   [Document Color](#document-color)
+        -   [Hover](#hover)
+        -   [Goto Definition](#goto-definition)
+        -   [Find All References](#find-all-references)
+        -   [CodeFormat](#codeformat)
+        -   [Custom folding](#custom-folding)
+        -   [Declaration document](#declaration-document)
+    -   [Context Menu](#context-menu)
+        -   [Quick Help](#quick-help)
+        -   [Run Script](#run-script)
+        -   [Run Selected Script](#run-selected-script)
+        -   [Compile Script](#compile-script)
+        -   [Debug Script](#debug-script)
+        -   [Generate Comment](#generate-comment)
+    -   [Use in other editors](#use-in-other-editors)
+        -   [Sublime Text4](#sublime-text4)
+        -   [Vim and Neovim](#vim-and-neovim)
+        -   [Emacs](#Emacs)
+    -   [Use in Web Browser](#use-in-web-browser)
 
 ## Language Features
 
@@ -141,10 +141,10 @@ See all the source code locations where a certain variable/function is being use
 
 usage:
 
-- Right-click the popup menu and click "Format document".
-- Press `Shift+Alt+F`.
-- Supports formatting code blocks when typing '}', formatting lines and indenting lines when typing '\n'. (`editor.formatOnType` needs to be enabled)
-- Supports the use of formatting instructions `;@format array_style: collapse, object_style: expand` to change the object style of different blocks
+-   Right-click the popup menu and click "Format document".
+-   Press `Shift+Alt+F`.
+-   Supports formatting code blocks when typing '}', formatting lines and indenting lines when typing '\n'. (`editor.formatOnType` needs to be enabled)
+-   Supports the use of formatting instructions `;@format array_style: collapse, object_style: expand` to change the object style of different blocks
 
 ![codeFormat](./pic/codeFormat.gif)
 
@@ -227,87 +227,89 @@ node install.js
 
 ### Sublime Text4
 
-- `Package Control: Install Package`, and install [Sublime LSP](https://github.com/sublimelsp/LSP) plug-in.
-- `Preferences: LSP Settings`, add lsp configuration, language selector, and syntax highlighting. This is a simple example [syntax highlighting](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), save the file in a similar path `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`.
+-   `Package Control: Install Package`, and install [Sublime LSP](https://github.com/sublimelsp/LSP) plug-in.
+-   `Preferences: LSP Settings`, add lsp configuration, language selector, and syntax highlighting. This is a simple example [syntax highlighting](https://github.com/thqby/vscode-autohotkey2-lsp/files/9843973/AutoHotkey2.sublime-syntax.zip), save the file in a similar path `C:\Users\<USERNAME>\AppData\Roaming\Sublime Text\Packages\User\LSP-ahk2\AutoHotkey2.sublime-syntax`.
 
 ```json
 {
-  "clients": {
-    "lsp-ahk2": {
-      "enabled": true,
-      "command": [
-        "node",
-        "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-        "--stdio"
-      ], // Update the path of node.exe(maybe it's already in PATH, so you don't need to set it) and the folder of vscode-autohotkey2-lsp
-      "selector": "source.ahk2", // Same as scope in AutoHotkey2.sublime-syntax
-      "schemes": ["file", "buffer", "res"],
-      "initializationOptions": {
-        "locale": "en-us", // or "zh-cn"
-        "AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
-        "CommentTags": "^;;\\s*(?<tag>.+)",
-        "CompleteFunctionParens": false,
-        "Diagnostics": {
-          "ClassStaticMemberCheck": true,
-          "ParamsCheck": true
-        },
-        "ActionWhenV1IsDetected": "Continue",
-        "FormatOptions": {
-          "array_style": "none",           // or "collapse" or "expand"
-          "break_chained_methods": false,
-          "ignore_comment": false,
-          "indent_string": "\t",
-          "max_preserve_newlines": 2,
-          "brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
-          "object_style": "none",          // or "collapse" or "expand"
-          "preserve_newlines": true,
-          "space_after_double_colon": true,
-          "space_before_conditional": true,
-          "space_in_empty_paren": false,
-          "space_in_other": true,
-          "space_in_paren": false,
-          "wrap_line_length": 0
-        },
-        "InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
-        "WorkingDirs": [],
-        "SymbolFoldingFromOpenBrace": false
-      }
-    }
-  },
-  "semantic_highlighting": true
+	"clients": {
+		"lsp-ahk2": {
+			"enabled": true,
+			"command": [
+				"node",
+				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+				"--stdio"
+			], // Update the path of node.exe(maybe it's already in PATH, so you don't need to set it) and the folder of vscode-autohotkey2-lsp
+			"selector": "source.ahk2", // Same as scope in AutoHotkey2.sublime-syntax
+			"schemes": ["file", "buffer", "res"],
+			"initializationOptions": {
+				"locale": "en-us", // or "zh-cn"
+				"AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
+				"CommentTags": "^;;\\s*(?<tag>.+)",
+				"CompleteFunctionParens": false,
+				"Diagnostics": {
+					"ClassStaticMemberCheck": true,
+					"ParamsCheck": true
+				},
+				"ActionWhenV1IsDetected": "Continue",
+				"FormatOptions": {
+					"array_style": "none", // or "collapse" or "expand"
+					"break_chained_methods": false,
+					"ignore_comment": false,
+					"indent_string": "\t",
+					"max_preserve_newlines": 2,
+					"brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
+					"object_style": "none", // or "collapse" or "expand"
+					"preserve_newlines": true,
+					"space_after_double_colon": true,
+					"space_before_conditional": true,
+					"space_in_empty_paren": false,
+					"space_in_other": true,
+					"space_in_paren": false,
+					"wrap_line_length": 0
+				},
+				"InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+				"WorkingDirs": [],
+				"SymbolFoldingFromOpenBrace": false
+			}
+		}
+	},
+	"semantic_highlighting": true
 }
 ```
 
 ### Vim and Neovim
 
 #### COC
-- Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim).
+
+-   Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim).
 
 ```bat
 cd $VIMRUNTIME\plugin
 git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 ```
 
-- Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
+-   Open (n)vim and enter the command `:CocConfig` to enter the `coc.nvim` configuration file to add configuration information.
 
 ```json
 {
-  "languageserver": {
-    "lsp-ahk2": {
-      "module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-      "filetypes": ["autohotkey"],
-      "args": ["--node-ipc"],
-      "initializationOptions": {
-        // Same as initializationOptions for Sublime Text4
-      }
-    }
-  }
+	"languageserver": {
+		"lsp-ahk2": {
+			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+			"filetypes": ["autohotkey"],
+			"args": ["--node-ipc"],
+			"initializationOptions": {
+				// Same as initializationOptions for Sublime Text4
+			}
+		}
+	}
 }
 ```
 
 #### nvim-lspconfig
-- Download [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig).
-- Add the following to your NVIM configuration (init.lua e.g.). Ensure that `cmd` points to the path of your vscode-autohotkey2-lsp installation and `InterpreterPath` points to your AHK exe.
+
+-   Download [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig).
+-   Add the following to your NVIM configuration (init.lua e.g.). Ensure that `cmd` points to the path of your vscode-autohotkey2-lsp installation and `InterpreterPath` points to your AHK exe.
 
 ```lua
 local function custom_attach(client, bufnr)
@@ -349,9 +351,10 @@ nvim_lsp.ahk2.setup({})
 ### Emacs
 
 #### Eglot
-- Add the following lines to your emacs config file
 
-``` emacs-lisp
+-   Add the following lines to your emacs config file
+
+```emacs-lisp
 (add-to-list 'eglot-server-programs '(ahk-mode "node" "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js" "--stdio"))
 
 ```
