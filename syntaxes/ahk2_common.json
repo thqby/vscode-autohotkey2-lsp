@@ -35,6 +35,11 @@
 			"body": ";@format ${1|arrayStyle,objectStyle|}: ${2|collapse,expand,none|}",
 			"prefix": "@format",
 			"description": "Sets the object or array style of the current block for formatting"
+		},
+		{
+			"body": ";@reference ${1:$TM_FILENAME_BASE.%A_Locale%.d.ahk}",
+			"prefix": "@reference",
+			"description": "Set the `.d.ahk` file associated with the current file. `%A_Locale%` is same as VS Code's locale."
 		}
 	],
 	"texts": [

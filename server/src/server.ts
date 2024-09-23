@@ -63,6 +63,10 @@ import {
 	utils,
 	winapis,
 	workspaceSymbolProvider,
+	read_ahk_file,
+	getVersionInfo,
+	builtin_variable,
+	builtin_variable_h,
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
@@ -237,18 +241,33 @@ connection.onDidChangeConfiguration(async (change) => {
 	}
 });
 
-documents.onDidOpen((e) => {
+connection.onDidChangeWatchedFiles((change) => {
+	let uri, lex;
+	for (const c of change.changes)
+		switch (c.type) {
+			case 2:
+				if ((lex = lexers[c.uri.toLowerCase()])?.actived === false)
+					TextDocument.update(lex.document, [{ text: read_ahk_file(lex.fsPath) ?? '' }], 0), lex.update();
+				break;
+			case 3:
+				if ((lex = lexers[uri = c.uri.toLowerCase()]))
+					lex.close(true), delete lexers[uri];
+				break;
+		}
+});
+
+documents.onDidOpen(e => {
 	const to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
 	const uri = e.document.uri.toLowerCase();
 	let doc = lexers[uri];
 	if (doc) doc.document = e.document;
 	else {
 		lexers[uri] = doc = new Lexer(e.document);
-		Object.defineProperty((doc.include = {}), '', {
-			value: '',
-			enumerable: false,
-		});
 	}
+	Object.defineProperty((doc.include = {}), '', {
+		value: '',
+		enumerable: false,
+	});
 	doc.actived = true;
 	if (to_ahk2) doc.actionWhenV1Detected = 'Continue';
 	if (includeLocalLibrary(ahkppConfig.v2.general.librarySuggestions))
@@ -260,10 +279,8 @@ documents.onDidOpen((e) => {
 		);
 });
 
-documents.onDidClose((e) => lexers[e.document.uri.toLowerCase()]?.close());
-documents.onDidChangeContent((e) =>
-	lexers[e.document.uri.toLowerCase()].update(),
-);
+documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
+documents.onDidChangeContent(e => lexers[e.document.uri.toLowerCase()]?.update());
 
 connection.onCodeAction(codeActionProvider);
 connection.onCompletion(completionProvider);
@@ -274,9 +291,7 @@ connection.onDocumentFormatting(documentFormatting);
 connection.onDocumentRangeFormatting(rangeFormatting);
 connection.onDocumentOnTypeFormatting(typeFormatting);
 connection.onDocumentSymbol(symbolProvider);
-connection.onFoldingRanges(
-	(params) => lexers[params.textDocument.uri.toLowerCase()].foldingranges,
-);
+connection.onFoldingRanges(params => lexers[params.textDocument.uri.toLowerCase()]?.foldingranges);
 connection.onHover(hoverProvider);
 connection.onPrepareRename(prepareRename);
 connection.onReferences(referenceProvider);
@@ -288,47 +303,20 @@ connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
 connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
 connection.onRequest('ahk2.getAHKversion', getAHKversion);
-connection.onRequest('ahk2.getContent', (uri: string) =>
-	lexers[uri.toLowerCase()]?.document.getText(),
-);
-connection.onRequest('ahk++.getVersionInfo', (uri: string) => {
-	const doc = lexers[uri.toLowerCase()];
-	if (doc) {
-		const tk = doc.get_token(0);
-		if (
-			(tk.type === 'TK_BLOCK_COMMENT' || tk.type === '') &&
-			tk.content.match(/^\s*[;*]?\s*@(date|version)\b/im)
-		) {
-			return {
-				uri: uri,
-				content: tk.content,
-				range: {
-					start: doc.document.positionAt(tk.offset),
-					end: doc.document.positionAt(tk.offset + tk.length),
-				},
-			};
-		}
-	}
-	return null;
+connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
+connection.onRequest('ahk2.getVersionInfo', getVersionInfo);
+connection.onNotification('onDidCloseTextDocument', (params: { uri: string, id: string }) => {
+	if (params.id === 'ahk2')
+		lexers[params.uri.toLowerCase()]?.close(true);
+	else uri_switch_to_ahk2 = params.uri;
 });
-connection.onNotification(
-	'onDidCloseTextDocument',
-	(params: { uri: string; id: string }) => {
-		if (params.id === 'ahk2') lexers[params.uri.toLowerCase()]?.close(true);
-		else uri_switch_to_ahk2 = params.uri;
-	},
-);
 documents.listen(connection);
 connection.listen();
 
 async function patherr(msg: string) {
 	if (!ahkppConfig.commands?.includes('ahk2.executeCommand'))
 		return connection.window.showErrorMessage(msg);
-	if (
-		await connection.window.showErrorMessage(msg, {
-			title: 'Select Interpreter',
-		})
-	)
+	if (await connection.window.showErrorMessage(msg, { title: 'Select Interpreter' }))
 		connection.sendRequest('ahk2.executeCommand', ['ahk++.setV2Interpreter']);
 }
 
@@ -336,11 +324,11 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	const script = `
 	#NoTrayIcon
 	#Warn All, Off
-	s := "", _H := false, Append := SubStr(A_AhkVersion, 1, 1) = "1" ? "FileAppend2" : "FileAppend"
-	for _, p in ["a_ahkpath","a_appdata","a_appdatacommon","a_computername","a_comspec","a_desktop","a_desktopcommon","a_iscompiled","a_mydocuments","a_programfiles","a_programs","a_programscommon","a_startmenu","a_startmenucommon","a_startup","a_startupcommon","a_temp","a_username","a_windir","a_ahkversion"]
-		s .= SubStr(p, 3) "\`t" %p% "|"
-	try _H := !!A_ThreadID
-	%Append%(s "is64bit\`t" (A_PtrSize = 8) "|h\`t" _H "\`n", "*", "UTF-8")
+	s := "", Append := SubStr(A_AhkVersion, 1, 1) = "1" ? "FileAppend2" : "FileAppend"
+	for _, k in ${JSON.stringify([...builtin_variable, ...builtin_variable_h])}
+		try if SubStr(k, 1, 2) = "a_" && !IsObject(v := %k%)
+			s .= SubStr(k, 3) "|" v "\`n"
+	%Append%(s, "*", "utf-8")
 	FileAppend2(text, file, encode) {
 		FileAppend %text%, %file%, %encode%
 	}`;
@@ -375,18 +363,11 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 			connection.window.showErrorMessage(setting.getenverr());
 		return false;
 	}
-	Object.assign(
-		a_vars,
-		Object.fromEntries(
-			data
-				.replace(/\t[A-Z]:\\/g, (m) => m.toLowerCase())
-				.split('|')
-				.map((l) => l.split('\t')),
-		),
-	);
-	a_vars.ahkpath = interpreterPathV2;
-	set_version((a_vars.ahkversion ??= '2.0.0'));
-	if (a_vars.ahkversion.startsWith('1.')) patherr(setting.versionerr());
+	Object.assign(a_vars, Object.fromEntries(data.replace(/|[A-Z]:\\/g, m => m.toLowerCase()).split('\n').map(l => l.split('|'))));
+	a_vars.ahkpath ??= interpreterPathV2;
+	set_version(a_vars.ahkversion ??= '2.0.0');
+	if (a_vars.ahkversion.startsWith('1.'))
+		patherr(setting.versionerr());
 	if (!samefolder || !libdirs.length) {
 		libdirs.length = 0;
 		libdirs.push(
@@ -396,14 +377,9 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		let lb;
 		for (lb of Object.values(libfuncs)) lb.islib = inlibdirs(lb.fsPath);
 	}
-	a_vars.h = (a_vars.h ?? '0').slice(0, 1);
-	if (a_vars.h === '1') {
-		if (!isahk2_h) {
-			set_ahk_h(true);
-			samefolder = false;
-			loadahk2('ahk2_h');
-			loadahk2('winapi', 4);
-		}
+	if (a_vars.threadid) {
+		if (!isahk2_h)
+			set_ahk_h(true), samefolder = false, loadahk2('ahk2_h'), loadahk2('winapi', 4);
 	} else {
 		if (isahk2_h) {
 			set_ahk_h(false);
@@ -412,6 +388,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 			loadahk2();
 		}
 	}
+	Object.assign(a_vars, { index: '0', clipboard: '', threadid: '' });
 	await update_rcdata();
 	if (samefolder) return true;
 	for (const uri in lexers) {
@@ -567,16 +544,9 @@ async function getAHKversion(params: string[]) {
 }
 
 async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
-	const funcs: { [name: string]: true } = {};
+	const funcs: Record<string, true> = {};
 	for (const path of paths) {
-		const pe = await searchAndOpenPEFile(
-			path,
-			a_vars.is64bit === '1'
-				? true
-				: a_vars.is64bit === '0'
-				? false
-				: undefined,
-		);
+		const pe = await searchAndOpenPEFile(path, a_vars.ptrsize === '8' ? true : a_vars.ptrsize === '4' ? false : undefined);
 		if (!pe) continue;
 		try {
 			(await pe.getExport())?.Functions.forEach(
@@ -591,7 +561,7 @@ async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 	return Object.keys(funcs);
 }
 
-let curPERCDATA: { [key: string]: Buffer } | undefined = undefined;
+let curPERCDATA: Record<string, Buffer> | undefined = undefined;
 function getRCDATA(name?: string) {
 	const exe = resolvePath(interpreterPathV2, true);
 	if (!exe) return;

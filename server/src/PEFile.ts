@@ -20,7 +20,7 @@ export class PEFile {
 		readUInt32LE(offset?: number): Promise<number>,
 		RVA2Offset(addr: number): number
 	}>;
-	private resource: { [key: number]: any } = {};
+	private resource: Record<number, any> = {};
 	private dataDirectory: { virtualAddress: number, size: number, data?: any }[] = [];
 	private sectionTable: { virtualAddress: number, sizeOfRawData: number, pointerToRawData: number }[] = [];
 	constructor(path: string) {
@@ -96,7 +96,7 @@ export class PEFile {
 		const funcTblOffset = fd.RVA2Offset(buf.readUInt32LE(0x1c));
 		let nameTblOffset = fd.RVA2Offset(buf.readUInt32LE(0x20));
 		let ordTblOffset = fd.RVA2Offset(buf.readUInt32LE(0x24));
-		const Exports: ExportInfo = { Module: await fd.readString(modNamePtr), Functions: [], OrdinalBase }, ordinalList: { [ord: number]: boolean } = {};
+		const Exports: ExportInfo = { Module: await fd.readString(modNamePtr), Functions: [], OrdinalBase }, ordinalList: Record<number, boolean> = {};
 		for (let i = 0; i < nameCount; i++) {
 			const nameOffset = await fd.readUInt32LE(nameTblOffset), ordinal = await fd.readUInt16LE(ordTblOffset), fnOffset = await fd.readUInt32LE(funcTblOffset + ordinal * 4);
 			nameTblOffset += 4, ordTblOffset += 2, ordinalList[ordinal] = true;
@@ -124,7 +124,7 @@ export class PEFile {
 		if (await this.is_bit64)
 			ptrsize = 8, ffff = BigInt(0xffff), IMAGE_ORDINAL_FLAG = BigInt('0x8000000000000000'), readPtr = async (offset: number) => (await fd.read(offset, 8)).readBigUInt64LE();
 		else ffff = 0xffff, IMAGE_ORDINAL_FLAG = 0x80000000, readPtr = fd.readUInt32LE;
-		const Imports: { [dll: string]: string[] } = {};
+		const Imports: Record<string, string[]> = {};
 		while (firstThunk) {
 			const dllname = await fd.readString(nameOffset), arr = Imports[dllname] ??= [];
 			for (let i = 0; (ordinal = await readPtr(fd.RVA2Offset(firstThunk + i * ptrsize))); i++)
@@ -141,7 +141,7 @@ export class PEFile {
 			return;
 		if (types.length === 1 && this.resource[types[0]])
 			return this.resource[types[0]];
-		const baseOffset = fd.RVA2Offset(resinfo.virtualAddress), dirs = [baseOffset], resources: { [k: number]: any } = {};
+		const baseOffset = fd.RVA2Offset(resinfo.virtualAddress), dirs = [baseOffset], resources: Record<number, any> = {};
 		types.forEach(type => this.resource[type] ??= resources[type] = []);
 		resources[RESOURCE_TYPE.RCDATA] &&= this.resource[RESOURCE_TYPE.RCDATA] = {};
 		await parseResourcesDirectory(baseOffset);

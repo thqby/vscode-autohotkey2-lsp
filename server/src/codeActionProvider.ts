@@ -4,9 +4,9 @@ import { codeaction, diagnostic } from './localize';
 import { Maybe, lexers, restorePath, warn } from './common';
 
 export async function codeActionProvider(params: CodeActionParams, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
-	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()], document = lex.document;
+	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()], document = lex?.document;
 	if (!lex || token.isCancellationRequested) return;
-	const acts: CodeAction[] = [], replaces: { [k: string]: TextEdit[] } = {}, parens: TextEdit[] = [];
+	const acts: CodeAction[] = [], replaces: Record<string, TextEdit[]> = {}, parens: TextEdit[] = [];
 	let r: string, t: RegExpExecArray | null;
 	const cwp = warn.callwithoutparentheses();
 	const include_re = new RegExp('^' + diagnostic.filenotexist('(.+?)\\*\\.(\\w+)'));

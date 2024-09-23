@@ -1,7 +1,7 @@
 {
 	"name": "vscode-autohotkey2-lsp",
 	"displayName": "AutoHotkey v2 Language Support",
-	"version": "2.4.9",
+	"version": "2.5.2",
 	"description": "AutoHotkey v2 language support, forked from thqby's extension",
 	"categories": [
 		"Debuggers",

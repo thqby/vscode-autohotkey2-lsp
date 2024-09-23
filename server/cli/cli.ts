@@ -3,7 +3,7 @@ import { newFormatterConfig } from '../src/config';
 import { Lexer } from '../src/Lexer';
 
 function main() {
-	const options: { [k: string]: string } = {};
+	const options: Record<string, string> = {};
 	process.argv.slice(2).forEach((s) => {
 		const arr = s.split('=');
 		options[arr[0]] = arr[1];

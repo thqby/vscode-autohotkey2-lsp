@@ -17,7 +17,7 @@ import { BraceStyle, CompletionCommitCharacters, CfgKey, FormatterConfig, getCfg
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
-	const doc = lexers[uri = uri.toLowerCase()], vars: { [key: string]: unknown } = {};
+	const doc = lexers[uri = uri.toLowerCase()], vars: Record<string, unknown> = {};
 	if (!doc || _token.isCancellationRequested) return;
 	let items: CompletionItem[] = [], cpitem = items.pop()!;
 	let l: string, path: string, pt: Token | undefined, scope: AhkSymbol | undefined, temp;
@@ -40,7 +40,6 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					}, [
 						'/************************************************************************',
 						' * @description ${1:}',
-						' * @file $TM_FILENAME',
 						' * @author ${2:}',
 						' * @date ${3:$CURRENT_YEAR/$CURRENT_MONTH/$CURRENT_DATE}',
 						' * @version ${4:0.0.0}',
@@ -238,7 +237,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			items.push(...completionItemCache.key), kind = SymbolKind.Event;
 			break;
 		case 'TK_BLOCK_COMMENT':
-			if (!/[<{|,][ \t]*$/.test(linetext.substring(0, range.start.character)))
+			if (!/[<{|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
 				return;
 			if (text.includes('.')) {
 				for (const it of Object.values(find_class(doc, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
@@ -358,7 +357,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						if (set.includes(fn)) continue; set.push(fn);
 						is_builtin = uris.includes(fn.uri!), index = ci.index, l = fn.name.toLowerCase();
 						kind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
-						switch (is_builtin && ci.kind) {
+						switch (is_builtin && ((it as { kind?: SymbolKind }).kind ?? ci.kind)) {
 							case SymbolKind.Method:
 								switch (l) {
 									case 'deleteprop': case 'getmethod': case 'getownpropdesc':
@@ -373,11 +372,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 										continue;
 									}
 									case 'bind': case 'call':
+										set.pop();
 										// eslint-disable-next-line @typescript-eslint/no-explicit-any
-										if (![SymbolKind.Function, l === 'call' && SymbolKind.Class].includes(it.parent?.kind as any))
+										if (!it.parent || ![SymbolKind.Function, l === 'call' && SymbolKind.Class].includes(it.parent.kind as any))
 											break;
-										syms.push({ node: it.parent!, uri: '' });
-										continue;
+										else {
+											const node = it.parent;
+											syms.push({ node, uri: node.uri!, kind: node.kind } as typeof syms[0]);
+											continue;
+										}
 								}
 								break;
 							case SymbolKind.Function:
@@ -421,7 +424,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 									case 'objbindmethod': case 'hasmethod':
 									case 'objhasownprop': case 'hasprop':
 										if (index === 1) {
-											const comma = pi!.comma[0];
+											const comma = pi?.comma[0];
 											if (!comma) continue;
 											const filter = l.endsWith('method') ? (kind: SymbolKind) => kind !== SymbolKind.Method : undefined;
 											for (const cls of decltype_expr(doc, doc.find_token(pi!.offset + 1, true), comma))
@@ -510,7 +513,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// fn|()=>...
 	if (symbol) {
 		if (!symbol.children && (scope ??= doc.searchScopedNode(position))?.kind === SymbolKind.Class) {
-			const cls = scope as ClassNode;
+			let cls = scope as ClassNode;
 			const metafns = ['__Init()', '__Call(${1:Name}, ${2:Params})', '__Delete()',
 				'__Enum(${1:NumberOfVars})', '__Get(${1:Key}, ${2:Params})',
 				'__Item[$1]', '__New($1)', '__Set(${1:Key}, ${2:Params}, ${3:Value})'];
@@ -525,6 +528,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			const is_static = (symbol as Variable).static ?? false;
 			if (is_static)
 				metafns.splice(0, 1);
+			else cls = cls.prototype ?? {} as ClassNode;
 			if (token.topofline)
 				metafns.forEach(s => {
 					const label = s.replace(/[([].*$/, '');
@@ -549,10 +553,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	if (kind === SymbolKind.Property || kind === SymbolKind.Method) {
 		if (!token.symbol && token.semantic?.type === SemanticTokenTypes.property)
 			return;
-		const props: { [k: string]: CompletionItem } = {};
+		const props: Record<string, CompletionItem> = {};
 		let tps = decltype_expr(doc, token, range.end), index = 0;
 		const is_any = tps.includes(ANY), bases: ClassNode[] = [];
-		const clsindex: { [k: string]: string } = {};
+		const clsindex: Record<string, string> = {};
 		if (linetext[range.end.character] === '.')
 			right_is_paren = '(['.includes(linetext.charAt(range.end.character + word.length + 1) || '\0');
 		if (is_any)
@@ -563,7 +567,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (node.kind === SymbolKind.Interface) {
 				const params = ((node as ClassNode).generic_types?.[0] as string[])?.map(s => `'"`.includes(s[0]) ? s.slice(1, -1) : s);
 				if (!params?.length) continue;
-				const result = (await sendAhkRequest('GetDispMember', params) ?? {}) as { [func: string]: number };
+				const result = (await sendAhkRequest('GetDispMember', params) ?? {}) as Record<string, number>;
 				Object.entries(result).forEach(it => expg.test(it[0]) &&
 					add_item(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
 				continue;
@@ -669,16 +673,16 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (expg.test(l = it.name.toUpperCase()) && !at_edit_pos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
 			vars[l] = convertNodeCompletion(it);
 	}
-	const list_arr = Object.keys(list);
-	for (const uri of [doc.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr]) {
-		if (!(temp = lexers[uri]?.declaration))
+	const list_arr = Object.keys(list).reverse();
+	for (const uri of new Set([doc.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr])) {
+		if (!(temp = lexers[uri]))
 			continue;
-		path = lexers[uri].fsPath;
-		const all = !!list[uri];
+		const d = temp.d;
+		path = temp.fsPath, temp = temp.declaration;
 		for (const n in temp) {
 			const it = temp[n];
-			if (all && expg.test(n) && (!vars[n] || ((vars[n] as CompletionItem).kind === CompletionItemKind.Variable && it.kind !== SymbolKind.Variable)))
-				vars[n] = cpitem = convertNodeCompletion(it), cpitem.detail = `${completionitem.include(path)}\n\n${cpitem.detail ?? ''}`;
+			if (expg.test(n) && (d || !vars[n] || ((vars[n] as CompletionItem).kind === CompletionItemKind.Variable && it.kind !== SymbolKind.Variable)))
+				vars[n] = cpitem = convertNodeCompletion(it);
 		}
 	}
 
@@ -694,7 +698,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// library suggestions
 	if (ahkppConfig.v2.general.librarySuggestions) {
 		const librarySuggestions = ahkppConfig.v2.general.librarySuggestions;
-		const libdirs = doc.libdirs, caches: { [path: string]: TextEdit[] } = {};
+		const libdirs = doc.libdirs, caches: Record<string, TextEdit[]> = {};
 		let exportnum = 0, line = -1, first_is_comment: boolean | undefined, cm: Token;
 		let dir = doc.workspaceFolder;
 		dir = (dir ? URI.parse(dir).fsPath : doc.scriptdir).toLowerCase();
@@ -794,8 +798,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return;
 		offset ??= doc.document.offsetAt(position);
 		let path = token.content.substring(1, offset - token.offset), suf = '';
-		if (!/^\w:[\\/]/.test(path) || /[*?"<>|\t]/.test(path))
+		if (/[*?"<>|\t]/.test(path))
 			return;
+		if (!/^\w:[\\/]/.test(path))
+			path = `${doc.scriptdir}/${path}`;
 		path = path.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 		try {
 			if (!existsSync(path) || !statSync(path).isDirectory())
@@ -839,7 +845,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return;
 		offset ??= doc.document.offsetAt(position);
 		let pre = token.content.substring(1, offset - token.offset), suf = '', t;
-		const docs = [doc], ls: { [k: string]: unknown } = {};
+		const docs = [doc], ls: Record<string, unknown> = {};
 		for (const u in list)
 			(t = lexers[u]) && docs.push(t);
 		pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));

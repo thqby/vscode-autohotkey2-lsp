@@ -1,3 +1,28 @@
+## 2.5.2
+
+-   修复[#591](https://github.com/thqby/vscode-autohotkey2-lsp/issues/591)
+-   修复[#594](https://github.com/thqby/vscode-autohotkey2-lsp/issues/594)
+-   修复[#595](https://github.com/thqby/vscode-autohotkey2-lsp/issues/595)
+-   修复[#596](https://github.com/thqby/vscode-autohotkey2-lsp/issues/596)
+
+## 2.5.1
+
+-   修复[#584](https://github.com/thqby/vscode-autohotkey2-lsp/issues/584)
+    -57](https://github.com/thqby/vscode-autohotkey2-lsp/issues/587)
+-   [FR #565](https://github.com/thqby/vscode-autohotkey2-lsp/issues/565)
+-   修复一些bug
+
+## 2.5.0
+
+-   修复[#533](https://github.com/thqby/vscode-autohotkey2-lsp/issues/533)
+-   修复[#562](https://github.com/thqby/vscode-autohotkey2-lsp/issues/562)
+-   修复[#563](https://github.com/thqby/vscode-autohotkey2-lsp/issues/563)
+-   修复[#571](https://github.com/thqby/vscode-autohotkey2-lsp/issues/571)
+-   修复[#574](https://github.com/thqby/vscode-autohotkey2-lsp/issues/574)
+-   修复[#576](https://github.com/thqby/vscode-autohotkey2-lsp/issues/576)
+-   [FR #564](https://github.com/thqby/vscode-autohotkey2-lsp/issues/564)
+-   [FR #570](https://github.com/thqby/vscode-autohotkey2-lsp/issues/570)
+
 ## 2.4.9
 
 -   修复[#548](https://github.com/thqby/vscode-autohotkey2-lsp/issues/548)
@@ -287,7 +312,7 @@
 
 -   修复[#306](https://github.com/thqby/vscode-autohotkey2-lsp/issues/306)
 -   支持同时运行多个脚本[#307]
--   增加命令`ahk2.export.symbols`, 导出类、函数等信息
+-   增加命令`ahk2.extract.symbols`, 提取类、函数等信息
 
 ## 1.9.5
 

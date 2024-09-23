@@ -15,16 +15,29 @@
 			"preLaunchTask": "npm: build:watch"
 		},
 		{
+			"name": "Extension Tests",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: watch",
+			"args": [
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--extensionTestsPath=${workspaceFolder}/client/dist/test/runTest"
+			],
+			"outFiles": ["${workspaceFolder}/client/dist/test/**/*.js"]
+		},
+		{
 			"type": "extensionHost",
 			"request": "launch",
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
 			"env": {
 				"VSCODE_AHK_SERVER_PATH": "server/dist/server.js",
 				"SYNTAXES_PATH": "syntaxes"
 			},
-			"outFiles": ["${workspaceRoot}/client/dist/**/*.js"],
+			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"],
 			"preLaunchTask": "npm: build:dev"
 		},
 		{
@@ -34,8 +47,8 @@
 			"port": 6009,
 			"restart": true,
 			"outFiles": [
-				"${workspaceRoot}/server/out/**/*.js",
-				"${workspaceRoot}/server/dist/**/*.js"
+				"${workspaceFolder}/server/out/**/*.js",
+				"${workspaceFolder}/server/dist/**/*.js"
 			]
 		}
 	],

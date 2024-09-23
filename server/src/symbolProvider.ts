@@ -13,7 +13,7 @@ import {
 } from './common';
 import { CfgKey, getCfg } from './config';
 
-export let globalsymbolcache: { [name: string]: AhkSymbol } = {};
+export let globalsymbolcache: Record<string, AhkSymbol> = {};
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase();
@@ -22,8 +22,8 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		return [];
 	if (token !== null && doc.symbolInformation)
 		return doc.symbolInformation;
-	const gvar: { [name: string]: Variable } = globalsymbolcache = { ...ahkvars };
-	let list = [uri, ...Object.keys(doc.relevance)], winapis: { [name: string]: AhkSymbol } = {};
+	const gvar: Record<string, Variable> = globalsymbolcache = { ...ahkvars };
+	let list = [uri, ...Object.keys(doc.relevance)], winapis: Record<string, AhkSymbol> = {};
 	list = list.map(u => lexers[u]?.d_uri).concat(list);
 	for (const uri of list) {
 		const lex = lexers[uri];
@@ -56,13 +56,15 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	}
 	flatTree(doc);
 	if (getCfg(ahkppConfig, CfgKey.VarUnset))
-		for (const [k, v] of unset_vars)
-			k.assigned || doc.diagnostics.push({ message: warn.varisunset(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+		for (const [k, v] of unset_vars) {
+			if (k.assigned)
+				continue;
+			doc.diagnostics.push({ message: warn.varisunset(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+		}
 	if (doc.actived) {
 		checksamename(doc);
 		doc.sendDiagnostics(false, true);
 	}
-	doc.diags = doc.diagnostics.length;
 	uri = doc.document.uri;
 	return doc.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
@@ -70,7 +72,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		if (!(k.assigned ||= v.assigned) && v.returns === undefined)
 			unset_vars.has(k) || unset_vars.set(k, v);
 	}
-	function flatTree(node: { children?: AhkSymbol[] }, vars: { [key: string]: Variable } = {}, outer_is_global = false) {
+	function flatTree(node: { children?: AhkSymbol[] }, vars: Record<string, Variable> = {}, outer_is_global = false) {
 		const t: AhkSymbol[] = [], iscls = (node as AhkSymbol).kind === SymbolKind.Class;
 		let tk: Token;
 		node.children?.forEach((info: Variable) => {
@@ -96,7 +98,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				result.push(info);
 		});
 		for (const info of t) {
-			let inherit: { [key: string]: AhkSymbol } = {}, s: Variable;
+			let inherit: Record<string, AhkSymbol> = {}, s: Variable;
 			const oig = outer_is_global, fn = info as FuncNode;
 			switch (info.kind) {
 				case SymbolKind.Class: {
@@ -186,18 +188,19 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	function checksamename(doc: Lexer) {
 		if (doc.d)
 			return;
-		const dec = { ...ahkvars }, lbs: { [k: string]: boolean } = {};
-		let dd: Lexer;
+		const dec = { ...ahkvars }, lbs: Record<string, boolean> = {};
+		let dd: Lexer, sym: AhkSymbol;
 		Object.keys(doc.labels).forEach(lb => lbs[lb] = true);
 		for (const uri in doc.relevance) {
 			if ((dd = lexers[uri])) {
-				dd.diagnostics.splice(dd.diags);
+				if (dd.d) continue;
 				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
 				for (const lb in dd.labels)
-					if ((dd.labels[lb][0]).def)
-						if (lbs[lb])
-							dd.diagnostics.push({ message: diagnostic.duplabel(), range: dd.labels[lb][0].selectionRange, severity: DiagnosticSeverity.Error });
-						else lbs[lb] = true;
+					if ((sym = dd.labels[lb][0]).def)
+						if (lbs[lb]) {
+							sym.has_warned ??=
+								dd.diagnostics.push({ message: diagnostic.duplabel(), range: sym.selectionRange, severity: DiagnosticSeverity.Error });
+						} else lbs[lb] = true;
 			}
 		}
 		const t = Object.values(doc.declaration);
@@ -230,9 +233,9 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		function err_extends(doc: Lexer, it: ClassNode, not_exist = true) {
 			let o = doc.document.offsetAt(it.selectionRange.start), tk: Token;
 			const tks = doc.tokens;
-			if (!(tk = tks[tks[o].next_token_offset]) || !(tk = tks[tk.next_token_offset]))
+			if (!(tk = tks[tks[o].next_token_offset]) || !(tk = tks[tk.next_token_offset]) || tk.has_warned)
 				return;
-			o = tk.offset;
+			o = tk.offset, tk.has_warned = true;
 			const rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
 			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Warning });
 		}
@@ -297,9 +300,9 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 	if (!(params = node?.params)) return;
 
 	const { max, min } = get_func_param_count(node), l = params.length - (node.variadic ? 1 : 0);
-	const _miss: { [index: number]: boolean } = {};
-	// eslint-disable-next-line prefer-const
+	const _miss: Record<number, boolean> = {};
 	let { count, miss } = paraminfo, index;
+	miss = [...miss];
 	while ((index = miss.pop()) !== undefined) {
 		if (index !== --count) {
 			count++, miss.push(index);
@@ -384,12 +387,12 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 			}
 		}
 	} else {
-		const uris = (await connection.sendRequest('ahk2.getWorkspaceFiles', []) || []) as string[];
+		const uris = (await connection?.sendRequest('ahk2.getWorkspaceFiles', []) || []) as string[];
 		for (const uri_ of uris) {
 			const uri = uri_.toLowerCase();
 			let d: Lexer;
 			if (!lexers[uri]) {
-				const content = (await connection.sendRequest('ahk2.getWorkspaceFileContent', [uri_])) as string;
+				const content = (await connection?.sendRequest('ahk2.getWorkspaceFileContent', [uri_])) as string;
 				d = new Lexer(TextDocument.create(uri_, 'ahk2', -10, content));
 				d.parseScript(), lexers[uri] = d;
 				if (filterSymbols(uri)) return symbols;

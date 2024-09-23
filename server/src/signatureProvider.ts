@@ -91,7 +91,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 					}
 					fn = it as FuncNode;
 				// fall through
-				case SymbolKind.Class:
+				default:
 					add_cls();
 					break;
 			}

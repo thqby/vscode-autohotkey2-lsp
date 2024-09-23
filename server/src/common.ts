@@ -25,7 +25,7 @@ export * from './signatureProvider';
 export * from './symbolProvider';
 
 export const winapis: string[] = [];
-export const lexers: { [uri: string]: Lexer } = {};
+export const lexers: Record<string, Lexer> = {};
 export const alpha_3 = encode_version('2.1-alpha.3');
 export const ahkppConfig: AhkppConfig = newAhkppConfig();
 export const utils = {
@@ -38,18 +38,18 @@ export type Maybe<T> = T | undefined;
 export let connection: Connection;
 export let interpreterPathV2 = '', locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahk_version = encode_version('3.0.0.0');
-export let ahkuris: { [name: string]: string } = {};
-export let ahkvars: { [key: string]: AhkSymbol } = {};
-export let libfuncs: { [uri: string]: LibSymbol } = {};
-export const hoverCache: { [key: string]: [string, Hover | undefined] } = {};
+export let ahkuris: Record<string, string> = {};
+export let ahkvars: Record<string, AhkSymbol> = {};
+export let libfuncs: Record<string, LibSymbol> = {};
+export const hoverCache: Record<string, [string, Hover | undefined]> = {};
 export const libdirs: string[] = [];
 export let workspaceFolders: string[] = [];
 export let completionItemCache: {
 	constant: CompletionItem[];
-	directive: { [c: string]: CompletionItem[] };
+	directive: Record<string, CompletionItem[]>;
 	key: CompletionItem[];
 	keyword: CompletionItem[];
-	option: { [k: string]: CompletionItem[] };
+	option: Record<string, CompletionItem[]>;
 	snippet: CompletionItem[];
 	static: CompletionItem
 	text: CompletionItem[];
@@ -60,37 +60,39 @@ interface LibSymbol extends Array<AhkSymbol> {
 	islib: boolean
 }
 
+export function read_ahk_file(path: string, showError = true) {
+	let buf: Buffer;
+	try {
+		buf = readFileSync(path);
+		if (buf[0] === 0xff && buf[1] === 0xfe)
+			return buf.toString('utf16le');
+		if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
+			return buf.toString('utf8').substring(1);
+		try {
+			return new TextDecoder('utf8', { fatal: true }).decode(buf);
+		} catch {
+			showError && connection?.window.showErrorMessage(diagnostic.invalidencoding(path));
+		}
+	}
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	catch (e: any) {
+		if (showError) {
+			delete e.stack;
+			e.path = path;
+			console.log(e);
+		}
+	}
+}
+
 export function openFile(path: string, showError = true): TextDocument | undefined {
 	if (isBrowser) {
 		const data = getwebfile(path);
 		if (data)
 			return TextDocument.create(data.url, 'ahk2', -10, data.text);
-		return undefined;
 	} else {
-		let buf: Buffer | string;
-		try { buf = readFileSync(path); }
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		catch (e: any) {
-			if (showError) {
-				delete e.stack;
-				e.path = path;
-				console.log(e);
-			}
-			return undefined;
-		}
-		if (buf[0] === 0xff && buf[1] === 0xfe)
-			buf = buf.toString('utf16le');
-		else if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
-			buf = buf.toString('utf8').substring(1);
-		else {
-			try {
-				buf = new TextDecoder('utf8', { fatal: true }).decode(buf);
-			} catch {
-				showError && connection.window.showErrorMessage(diagnostic.invalidencoding(path));
-				return undefined;
-			}
-		}
-		return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, buf);
+		const text = read_ahk_file(path, showError);
+		if (text !== undefined)
+			return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, text);
 	}
 }
 
@@ -261,7 +263,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 							label: snip.prefix.replace(/^[^#\w]/, ''),
 							insertText: snip.body.replace(/^\W+/, ''),
 							kind, insertTextFormat,
-							documentation: snip.description && { kind: 'markdown', value: snip.description },
+							detail: snip.description,
 							data: snip.body.charAt(0)
 						});
 						if (c === '#')
@@ -275,7 +277,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					for (snip of arr) {
 						completionItemCache.key.push({
 							label: snip.body, kind,
-							documentation: snip.description
+							detail: snip.description
 						});
 					}
 					break;
@@ -287,7 +289,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						completionItemCache.keyword.push({
 							label: snip.prefix, kind, insertTextFormat,
 							insertText: snip.body,
-							documentation: snip.description,
+							detail: snip.description,
 							preselect: true
 						});
 						hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, { contents: { kind: 'markdown', value: '```ahk2\n' + (snip.syntax ?? trim(snip.body)) + '\n```\n\n' + (snip.description ?? '') } }];
@@ -300,7 +302,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						completionItemCache.snippet.push({
 							label: snip.prefix!,
 							insertText: bodytostring(snip.body),
-							documentation: snip.description,
+							detail: snip.description,
 							kind, insertTextFormat
 						});
 					}
@@ -327,7 +329,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						for (snip of arr[k])
 							t.push({
 								label: snip.body, kind,
-								documentation: snip.description && { kind: 'markdown', value: snip.description }
+								detail: snip.description
 							});
 					}
 					break;
@@ -398,7 +400,7 @@ export function updateAhkppConfig(newConfig: AhkppConfig) {
 }
 
 function encode_version(version: string) {
-	const STAGE: { [t: string]: number } = { ALPHA: -3, BETA: -2, RC: -1 };
+	const STAGE: Record<string, number> = { ALPHA: -3, BETA: -2, RC: -1 };
 	const v = (version.replace(/-\w+/, s => `.${STAGE[s.substring(1).toUpperCase()]}`) + '.0').split('.');
 	let n = 0;
 	for (let i = 0; i < 4; i++)

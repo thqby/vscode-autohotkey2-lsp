@@ -6,7 +6,7 @@ import {
 import { CfgKey, getCfg } from './config';
 
 let curclass: ClassNode | undefined;
-const memscache = new Map<ClassNode, { [name: string]: AhkSymbol }>();
+const memscache = new Map<ClassNode, Record<string, AhkSymbol>>();
 
 function resolve_sem(tk: Token, doc: Lexer) {
 	const sem = tk.semantic;
@@ -79,7 +79,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 		case SemanticTokenTypes.method:
 		case SemanticTokenTypes.property:
 			if (curclass && !tk.ignore) {
-				let n = curclass.property[name], kind = n?.kind, temp: { [name: string]: AhkSymbol };
+				let n = curclass.property[name], kind = n?.kind, temp: Record<string, AhkSymbol>;
 				if (!n || n.def === false) {
 					const t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = get_class_members(doc, curclass)), temp))[name];
 					if (t)
@@ -130,7 +130,8 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 							if (ASSIGN_TYPE.includes(tt?.content)) {
 								cls_add_prop(curclass, tk.content, tk.offset);
 							} else if ((memscache.get(curclass) as _Flag)?.['#checkmember'] !== false)
-								((curclass.undefined ??= {})[tk.content.toUpperCase()] ??= []).push(tk);
+								(curclass.undefined ??= {})[tk.content.toUpperCase()] ??= tk;
+							// doc.addDiagnostic(diagnostic.maybehavenotmember(curclass.name, tk.content), tk.offset, tk.length, 2);
 						}
 				}
 			}
@@ -172,12 +173,13 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 
 function resolve_class_undefined_member(doc: Lexer) {
 	for (const cls of memscache.keys()) {
-		if (cls.undefined) {
-			const name = cls.name;
-			for (const tks of Object.values(cls.undefined))
-				for (const tk of tks)
-					doc.addDiagnostic(diagnostic.maybehavenotmember(name, tk.content), tk.offset, tk.length, 2);
-			delete cls.undefined;
-		}
+		if (!cls.undefined)
+			continue;
+		const name = cls.name;
+		for (const tk of Object.values(cls.undefined))
+			if (!tk.has_warned) {
+				tk.has_warned = true;
+				doc.addDiagnostic(diagnostic.maybehavenotmember(name, tk.content), tk.offset, tk.length, 2);
+			}
 	}
 }
