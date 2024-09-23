@@ -3,6 +3,12 @@ import path from 'path';
 
 const isProd = process.argv.indexOf('--mode=production') >= 0;
 
+console.log(
+	'Building v2 support in',
+	isProd ? 'production' : 'development',
+	'mode',
+);
+
 // Node server
 // https://esbuild.github.io/api
 build({
