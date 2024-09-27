@@ -34,12 +34,12 @@ import { resolve } from 'path';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
 import { CfgKey, getAhkppConfig, getCfg, ShowOutput } from './config';
+import { resolvePath } from './utils';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
 let v2Interpreter = getCfg<string>(CfgKey.InterpreterPathV2), server_is_ready = false
 const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
-const isWindows = process.platform === 'win32';
 let extlist: string[] = [], debugexts: Record<string, string> = {}, langs: string[] = [];
 const loadedCollection = {
 	'ahk2.browse': 'Browse your file system to find AutoHotkey2 interpreter',
@@ -621,34 +621,6 @@ async function onDidChangegetInterpreter() {
 		ahkStatusBarItem.text = localize('ahk2.set.interpreter')
 		ahkStatusBarItem.tooltip = undefined, ahkPath = '';
 	}
-}
-
-/**
- * Returns the provided path as an absolute path.
- * Resolves the provided path against the provided workspace.
- * Resolves symbolic links by default.
- * Returns empty string if resolution fails.
- */
-export function resolvePath(path: string | undefined, workspace?: string, resolveSymbolicLink = true): string {
-	if (!path)
-		return '';
-	const paths: string[] = [];
-	// If the path does not contain a colon, resolve it relative to the workspace
-	if (!path.includes(':'))
-		paths.push(resolve(workspace ?? '', path));
-	// If there are no slashes or backslashes in the path and the platform is Windows
-	if (!/[\\/]/.test(path) && isWindows)
-		paths.push(execSync(`where ${path}`, { encoding: 'utf-8' }).trim());
-	paths.push(path);
-	for (let path of paths) {
-		if (!path) continue;
-		try {
-			if (lstatSync(path).isSymbolicLink() && resolveSymbolicLink)
-				path = resolve(path, '..', readlinkSync(path));
-			return path;
-		} catch { }
-	}
-	return '';
 }
 
 /**

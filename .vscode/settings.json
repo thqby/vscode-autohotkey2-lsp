@@ -2,6 +2,5 @@
 	"editor.insertSpaces": false,
 	"typescript.tsc.autoDetect": "off",
 	"typescript.preferences.quoteStyle": "single",
-	"git.ignoreLimitWarning": true,
-	"editor.formatOnSave": false
+	"git.ignoreLimitWarning": true
 }

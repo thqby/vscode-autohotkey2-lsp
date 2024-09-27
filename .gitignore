@@ -8,3 +8,6 @@ scripts/*
 *.js.map
 *.tsbuildinfo
 **/dist/**/*.d.ts
+
+# Vitest
+coverage

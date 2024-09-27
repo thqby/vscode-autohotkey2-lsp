@@ -12,7 +12,7 @@ try {
 } catch {}
 
 export default defineConfig({
-	files: 'client/dist/test/**/*.test.js',
+	files: 'client/dist/test/**/*.e2e.js',
 	useInstallation: vscode_path && {
 		fromPath: vscode_path,
 	},
