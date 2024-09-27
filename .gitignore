@@ -6,3 +6,5 @@ node_modules
 scripts/*
 *.js
 *.js.map
+*.tsbuildinfo
+**/dist/**/*.d.ts

@@ -30,8 +30,8 @@ import {
 	ServerOptions,
 	TransportKind
 } from 'vscode-languageclient/node';
-import { resolve, basename } from 'path';
-import { ChildProcess, exec, execSync, spawn } from 'child_process';
+import { resolve } from 'path';
+import { ChildProcess, execSync, spawn } from 'child_process';
 import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
 import { CfgKey, getAhkppConfig, getCfg, ShowOutput } from './config';
 
