@@ -29,6 +29,7 @@
 	"publisher": "mark-wiemer",
 	"main": "./client/dist/extension",
 	"scripts": {
+		"prebuild": "npm run clean",
 		"build": "node build.mjs --mode=production",
 		"prebuild:dev": "npm run clean",
 		"build:dev": "node build.mjs",

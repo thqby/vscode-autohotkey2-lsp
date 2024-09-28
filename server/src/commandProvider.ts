@@ -19,15 +19,15 @@ function trim_jsdoc(detail?: string) {
 }
 
 function insertSnippet(value: string, range?: Range) {
-	if (!checkCommand('ahk2.insertSnippet'))
+	if (!checkCommand('ahk++.insertSnippet'))
 		return;
-	connection?.sendRequest('ahk2.insertSnippet', [value, range]);
+	connection?.sendRequest('ahk++.insertSnippet', [value, range]);
 }
 
 export function setTextDocumentLanguage(uri: string, lang?: string) {
-	if (!checkCommand('ahk2.setTextDocumentLanguage'))
+	if (!checkCommand('ahk++.setTextDocumentLanguage'))
 		return;
-	return connection?.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
+	return connection?.sendRequest('ahk++.setTextDocumentLanguage', [uri, lang]);
 }
 
 export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
@@ -76,9 +76,9 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 
 /** Add a function header comment for the currently active function */
 async function generateComment() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
+	if (!checkCommand('ahk++.getActiveTextEditorUriAndPosition') || !checkCommand('ahk++.insertSnippet'))
 		return;
-	const { uri, position } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
+	const { uri, position } = await connection?.sendRequest('ahk++.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
 	const doc = lexers[uri.toLowerCase()];
 	let scope = doc.searchScopedNode(position);
 	const ts = scope?.children || doc.children;
@@ -207,9 +207,9 @@ export function exportSymbols(uri: string) {
 }
 
 async function diagnoseAll() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+	if (!checkCommand('ahk++.getActiveTextEditorUriAndPosition'))
 		return;
-	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest('ahk++.getActiveTextEditorUriAndPosition') as { uri: string };
 	const doc = lexers[uri.toLowerCase()];
 	if (!doc) return;
 	update_include_cache();
@@ -219,9 +219,9 @@ async function diagnoseAll() {
 }
 
 async function setscriptdir() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+	if (!checkCommand('ahk++.getActiveTextEditorUriAndPosition'))
 		return;
-	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest('ahk++.getActiveTextEditorUriAndPosition') as { uri: string };
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex) return;
 	if (lex.scriptdir !== lex.scriptpath)

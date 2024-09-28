@@ -78,14 +78,14 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const request_handlers: Record<string, any> = {
-		'ahk2.executeCommand': (params: string[]) => commands.executeCommand(params.shift() as string, ...params),
-		'ahk2.getActiveTextEditorUriAndPosition': () => {
+		'ahk++.executeCommand': (params: string[]) => commands.executeCommand(params.shift() as string, ...params),
+		'ahk++.getActiveTextEditorUriAndPosition': () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			const uri = editor.document.uri.toString(), position = editor.selection.end;
 			return { uri, position };
 		},
-		'ahk2.insertSnippet': async (params: [string, Range?]) => {
+		'ahk++.insertSnippet': async (params: [string, Range?]) => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			if (params[1]) {
@@ -94,7 +94,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			} else
 				editor.insertSnippet(new SnippetString(params[0]));
 		},
-		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
+		'ahk++.setTextDocumentLanguage': async (params: [string, string?]) => {
 			const lang = params[1] || 'ahk';
 			if (!langs.includes(lang)) {
 				window.showErrorMessage(`Unknown language id: ${lang}`);
@@ -103,7 +103,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			const uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
 			it && languages.setTextDocumentLanguage(it, lang);
 		},
-		'ahk2.updateStatusBar': async (params: [string]) => {
+		'ahk++.updateStatusBar': async (params: [string]) => {
 			v2Interpreter = params[0];
 			onDidChangegetInterpreter();
 		}
@@ -204,7 +204,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 	ahkStatusBarItem.command = 'ahk++.setv2Interpreter';
 	for (const it of [
-		{ text: '$(folder)syntaxes', command: { title: localize('ahk2.select'), command: 'ahk2.select.syntaxes' } },
+		{ text: '$(folder)syntaxes', command: { title: localize('ahk2.select'), command: 'ahk++.select.syntaxes' } },
 	])
 	context.subscriptions.push(Object.assign(languages.createLanguageStatusItem(it.command.command, { language: 'ahk2' }), it));
 	const ahkLanguageStatusItem = languages.createLanguageStatusItem('ahk++', { language: 'ahk2' });
@@ -216,10 +216,10 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		commands.registerTextEditorCommand('ahk++.run', textEditor => runScript(textEditor)),
 		commands.registerTextEditorCommand('ahk++.runSelection', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk++.stop', stopRunningScript),
-		commands.registerCommand('ahk2.debug.file', () => beginDebug('f')),
-		commands.registerCommand('ahk2.debug.configs', () => beginDebug('c')),
-		commands.registerCommand('ahk2.debug.params', () => beginDebug('p')),
-		commands.registerCommand('ahk2.debug.attach', () => beginDebug('a')),
+		commands.registerCommand('ahk++.debug.file', () => beginDebug('f')),
+		commands.registerCommand('ahk++.debug.configs', () => beginDebug('c')),
+		commands.registerCommand('ahk++.debug.params', () => beginDebug('p')),
+		commands.registerCommand('ahk++.debug.attach', () => beginDebug('a')),
 		commands.registerCommand('ahk++.selectSyntaxes', selectSyntaxes),
 		commands.registerTextEditorCommand('ahk++.updateVersionInfo', async textEditor => {
 			if (!server_is_ready)
@@ -271,7 +271,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			const doc = textEditor.document;
 			if (doc.languageId !== 'ahk2')
 				return;
-			client.sendRequest('ahk2.exportSymbols', doc.uri.toString())
+			client.sendRequest('ahk++.exportSymbols', doc.uri.toString())
 				.then(result => workspace.openTextDocument({
 					language: 'json', content: JSON.stringify(result, undefined, 2)
 				}).then(d => window.showTextDocument(d, 2)));
@@ -280,7 +280,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			provideTextDocumentContent(uri, token) {
 				if (token.isCancellationRequested)
 					return;
-				return client.sendRequest('ahk2.getContent', uri.toString()).then(content => {
+				return client.sendRequest('ahk++.getContent', uri.toString()).then(content => {
 					setTimeout(() => {
 						const it = workspace.textDocuments.find(it => it.uri.scheme === 'ahkres' && it.uri.path === uri.path);
 						it && it.languageId !== 'ahk2' && languages.setTextDocumentLanguage(it, 'ahk2');
@@ -585,7 +585,7 @@ async function selectSyntaxes() {
 }
 
 function getAHKversion(paths: string[]): Thenable<string[]> {
-	return client.sendRequest('ahk2.getAHKversion', paths.map(p => resolvePath(p, undefined, true) || p));
+	return client.sendRequest('ahk++.getAHKversion', paths.map(p => resolvePath(p, undefined, true) || p));
 }
 
 /**

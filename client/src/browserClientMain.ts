@@ -15,13 +15,13 @@ export function activate(context: ExtensionContext) {
 	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
 	/* eslint-disable-next-line */
 	const request_handlers: Record<string, (...params: any[]) => any> = {
-		'ahk2.getActiveTextEditorUriAndPosition': () => {
+		'ahk++.getActiveTextEditorUriAndPosition': () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			const uri = editor.document.uri.toString(), position = editor.selection.end;
 			return { uri, position };
 		},
-		'ahk2.insertSnippet': async (params: [string, Range?]) => {
+		'ahk++.insertSnippet': async (params: [string, Range?]) => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			if (params[1]) {
@@ -30,7 +30,7 @@ export function activate(context: ExtensionContext) {
 			} else
 				editor.insertSnippet(new SnippetString(params[0]));
 		},
-		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
+		'ahk++.setTextDocumentLanguage': async (params: [string, string?]) => {
 			const lang = params[1] || 'ahk';
 			if (!(await languages.getLanguages()).includes(lang)) {
 				window.showErrorMessage(`Unknown language id: ${lang}`);
