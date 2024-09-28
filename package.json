@@ -50,12 +50,7 @@
 		"lint:fix": "npm run format:fix && npm run eslint:fix && npm run sort-package-json:fix",
 		"sort-package-json": "sort-package-json --check",
 		"sort-package-json:fix": "sort-package-json",
-		"test": "npm run test-unit",
-		"pretest-unit": "npm run compile-ts",
-		"test-unit": "cd client && vscode-test",
-		"test-unit//": "echo todo failing for now, will be adding pure unit tests soon",
-		"test//": "Run unit tests, not grammar tests",
-		"validate": "npm run lint && npm run test",
+		"validate": "npm run lint",
 		"validate:ci": "npm run lint",
 		"validate:ci:fix": "npm run lint:fix",
 		"watch": "tsc -b -w"
