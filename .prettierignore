@@ -9,7 +9,7 @@ scripts/*
 server/expr_parser/*
 
 client/src/browserClientMain.ts
-client/src/extension.cts
+client/src/extension.ts
 client/src/test/utils.ts
 server/src/ahkProvider.ts
 server/src/browserServerMain.ts

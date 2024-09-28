@@ -2,11 +2,12 @@
 	"compilerOptions": {
 		"target": "ES2022",
 		"lib": ["ES2022", "WebWorker"],
-		"module": "NodeNext",
-		"moduleResolution": "NodeNext",
+		"module": "commonjs",
+		"moduleResolution": "node",
 		"sourceMap": true,
 		"strict": true,
 		"outDir": "dist",
+		"rootDirs": ["src", "../server/src"],
 		"composite": true
 	},
 	"include": ["src"],

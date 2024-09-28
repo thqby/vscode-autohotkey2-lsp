@@ -1,7 +1,7 @@
-import { createClientSocketTransport, createMessageConnection, createServerSocketTransport, MessageConnection } from 'vscode-languageserver/node.js';
+import { createClientSocketTransport, createMessageConnection, createServerSocketTransport, MessageConnection } from 'vscode-languageserver/node';
 import { spawn } from 'child_process';
-import { resolvePath } from './scriptrunner.js';
-import { interpreterPathV2, isWindows, rootdir } from './common.js';
+import { resolvePath } from './scriptrunner';
+import { interpreterPathV2, isWindows, rootdir } from './common';
 let ahk_server: MessageConnection | undefined | null;
 
 async function get_ahkProvider_port(): Promise<number> {

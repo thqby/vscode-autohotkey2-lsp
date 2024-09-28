@@ -2,8 +2,8 @@ import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticToken
 import {
 	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
 	checkParams, diagnostic, ahkppConfig, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
-} from './common.js';
-import { CfgKey, getCfg } from './config.js';
+} from './common';
+import { CfgKey, getCfg } from './config';
 
 let curclass: ClassNode | undefined;
 const memscache = new Map<ClassNode, Record<string, AhkSymbol>>();

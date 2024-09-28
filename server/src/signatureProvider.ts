@@ -4,7 +4,7 @@ import {
 	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, Variable,
 	ahkuris, decltype_expr, decltype_invoke, decltype_returns, get_detail,
 	get_callinfo, get_class_constructor, get_class_member, lexers
-} from './common.js';
+} from './common';
 
 let cache: {
 	index?: number,

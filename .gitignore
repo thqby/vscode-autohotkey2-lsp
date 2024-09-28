@@ -5,7 +5,9 @@ node_modules
 *.vsix
 scripts/*
 *.js
-*.cjs
 *.js.map
 *.tsbuildinfo
 **/dist/**/*.d.ts
+
+# Vitest
+coverage

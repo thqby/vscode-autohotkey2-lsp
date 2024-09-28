@@ -1,5 +1,5 @@
 import { CancellationToken, ColorInformation, ColorPresentation, ColorPresentationParams, DocumentColorParams } from 'vscode-languageserver';
-import { Maybe, lexers } from './common.js';
+import { Maybe, lexers } from './common';
 
 export async function colorPresentation(params: ColorPresentationParams, token: CancellationToken): Promise<Maybe<ColorPresentation[]>> {
 	const { range, color, textDocument: { uri } } = params, text = lexers[uri.toLowerCase()]?.document.getText(range);

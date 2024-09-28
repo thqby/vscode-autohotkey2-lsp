@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from 'child_process';
-import { interpreterPathV2, isWindows } from './common.js';
+import { interpreterPathV2, isWindows } from './common';
 import { lstatSync, readlinkSync } from 'fs';
 import { resolve } from 'path';
 

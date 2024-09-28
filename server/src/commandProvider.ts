@@ -4,7 +4,7 @@ import {
 	connection, ahkppConfig, find_class, generate_type_annotation,
 	join_types, lexers, parse_include, restorePath, semanticTokensOnFull,
 	traverse_include, update_include_cache
-} from './common.js';
+} from './common';
 
 function checkCommand(cmd: string) {
 	if (ahkppConfig.commands?.includes(cmd))

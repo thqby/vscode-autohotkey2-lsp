@@ -1,5 +1,5 @@
-import { rootdir, getlocalefile, getwebfile, isBrowser } from './common.js';
-import { CfgKey } from './config.js';
+import { rootdir, getlocalefile, getwebfile, isBrowser } from './common';
+import { CfgKey } from './config';
 
 let loadedCollection: Record<string, string> = {};
 

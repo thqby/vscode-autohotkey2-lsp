@@ -34,7 +34,7 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
 			"env": {
-				"VSCODE_AHK_SERVER_PATH": "server/dist/server.cjs",
+				"VSCODE_AHK_SERVER_PATH": "server/dist/server.js",
 				"SYNTAXES_PATH": "syntaxes"
 			},
 			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"],
