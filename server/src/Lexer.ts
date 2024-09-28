@@ -18,14 +18,14 @@ import {
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
-import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
-import { action, completionitem, diagnostic, warn } from './localize';
+import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants.js';
+import { action, completionitem, diagnostic, warn } from './localize.js';
 import {
 	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, ahkppConfig,
 	hoverCache, isBrowser, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
-} from './common';
-import { newFormatterConfig, FormatterConfig, BraceStyle, ActionType, newAhkppConfig, CallWithoutParentheses, getCfg, CfgKey } from './config';
+} from './common.js';
+import { newFormatterConfig, FormatterConfig, BraceStyle, ActionType, newAhkppConfig, CallWithoutParentheses, getCfg, CfgKey } from './config.js';
 
 export interface ParamInfo {
 	offset: number

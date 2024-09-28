@@ -8,9 +8,9 @@ import {
 	SymbolKind,
 	TextDocuments,
 	TextDocumentSyncKind,
-} from 'vscode-languageserver/node';
+} from 'vscode-languageserver/node.js';
 import { URI } from 'vscode-uri';
-import { get_ahkProvider } from './ahkProvider';
+import { get_ahkProvider } from './ahkProvider.js';
 import {
 	a_vars,
 	interpreterPathV2,
@@ -67,12 +67,12 @@ import {
 	getVersionInfo,
 	builtin_variable,
 	builtin_variable_h,
-} from './common';
-import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
-import { resolvePath, runscript } from './scriptrunner';
+} from './common.js';
+import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile.js';
+import { resolvePath, runscript } from './scriptrunner.js';
 import { TextDecoder } from 'util';
-import { includeLocalLibrary, includeUserAndStandardLibrary } from './utils';
-import { AhkppConfig, CfgKey, getCfg, LibrarySuggestions } from './config';
+import { includeLocalLibrary, includeUserAndStandardLibrary } from './utils.js';
+import { AhkppConfig, CfgKey, getCfg, LibrarySuggestions } from './config.js';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -86,6 +86,9 @@ commands['ahk++.v2.setIntepreterPath'] = (args: string[]) =>
 	setInterpreter(args[0].replace(/^[A-Z]:/, (m) => m.toLowerCase()));
 
 connection.onInitialize(async (params) => {
+	// Shows up in extension development host
+	// Output > AHK++
+	connection.console.log(`Initializing language server`);
 	const capabilities = params.capabilities;
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration

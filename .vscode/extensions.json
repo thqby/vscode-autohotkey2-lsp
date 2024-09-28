@@ -2,7 +2,6 @@
 	"recommendations": [
 		"aaron-bond.better-comments",
 		"dbaeumer.vscode-eslint",
-		"esbenp.prettier-vscode",
-		"vitest.explorer"
+		"esbenp.prettier-vscode"
 	]
 }

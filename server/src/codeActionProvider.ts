@@ -1,7 +1,7 @@
 import { readdirSync } from 'fs';
 import { CancellationToken, CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
-import { codeaction, diagnostic } from './localize';
-import { Maybe, lexers, restorePath, warn } from './common';
+import { codeaction, diagnostic } from './localize.js';
+import { Maybe, lexers, restorePath, warn } from './common.js';
 
 export async function codeActionProvider(params: CodeActionParams, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
 	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()], document = lex?.document;

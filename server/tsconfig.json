@@ -2,12 +2,11 @@
 	"compilerOptions": {
 		"target": "ES2022",
 		"lib": ["ES2022", "WebWorker"],
-		"module": "commonjs",
-		"moduleResolution": "node",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
 		"sourceMap": true,
 		"strict": true,
-		"outDir": "out",
-		"rootDirs": ["src", "../client/src"]
+		"outDir": "out"
 	},
 	"include": ["src"],
 	"exclude": ["node_modules", ".vscode-test", ".vscode-test-web"]

@@ -10,8 +10,8 @@ import {
 	ahkuris, ahkvars, check_same_name_error, connection, decltype_expr,
 	diagnostic, enum_ahkfiles, ahkppConfig, find_class, get_class_constructor, isBrowser,
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
-} from './common';
-import { CfgKey, getCfg } from './config';
+} from './common.js';
+import { CfgKey, getCfg } from './config.js';
 
 export let globalsymbolcache: Record<string, AhkSymbol> = {};
 

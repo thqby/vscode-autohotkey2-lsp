@@ -1,5 +1,5 @@
 import { DefinitionParams, LocationLink, SymbolKind, Range, CancellationToken } from 'vscode-languageserver';
-import { AhkSymbol, lexers, restorePath, find_symbols, Token } from './common';
+import { AhkSymbol, lexers, restorePath, find_symbols, Token } from './common.js';
 import { URI } from 'vscode-uri';
 
 export async function defintionProvider(params: DefinitionParams, token: CancellationToken): Promise<LocationLink[] | undefined> {

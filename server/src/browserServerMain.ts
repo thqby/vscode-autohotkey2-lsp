@@ -6,7 +6,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, BrowserMessageReader, BrowserMessageWriter, DidChangeConfigurationNotification,
 	InitializeResult, TextDocuments, TextDocumentSyncKind
-} from 'vscode-languageserver/browser';
+} from 'vscode-languageserver/browser.js';
 import {
 	chinese_punctuations, colorPresentation, colorProvider, commands, completionProvider,
 	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols, getVersionInfo,
@@ -14,8 +14,8 @@ import {
 	referenceProvider, renameProvider, SemanticTokenModifiers, semanticTokensOnFull, semanticTokensOnRange,
 	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
 	signatureProvider, symbolProvider, typeFormatting, updateAhkppConfig, workspaceSymbolProvider
-} from './common';
-import { AhkppConfig } from './config';
+} from './common.js';
+import { AhkppConfig } from './config.js';
 
 const languageServer = 'ahk2-language-server';
 const messageReader = new BrowserMessageReader(self);

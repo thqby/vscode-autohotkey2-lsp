@@ -1,6 +1,6 @@
-import { openFile } from '../src/common';
-import { newFormatterConfig } from '../src/config';
-import { Lexer } from '../src/Lexer';
+import { openFile } from '../src/common.js';
+import { newFormatterConfig } from '../src/config.js';
+import { Lexer } from '../src/Lexer.js';
 
 function main() {
 	const options: Record<string, string> = {};

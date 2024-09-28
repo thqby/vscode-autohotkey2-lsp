@@ -1,6 +1,6 @@
 import { CancellationToken, PrepareRenameParams, Range, RenameParams, WorkspaceEdit } from 'vscode-languageserver';
 import { ResponseError } from 'vscode-jsonrpc';
-import { Maybe, lexers, getAllReferences, response } from './common';
+import { Maybe, lexers, getAllReferences, response } from './common.js';
 
 let renameranges: Record<string, Range[]> | null | undefined;
 

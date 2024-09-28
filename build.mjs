@@ -14,7 +14,7 @@ console.log(
 build({
 	entryPoints: [path.join('./server/src/server.ts')],
 	bundle: true,
-	outfile: path.join('./server/dist/server.js'),
+	outfile: path.join('./server/dist/server.cjs'),
 	external: ['vscode'],
 	format: 'cjs',
 	platform: 'node',
@@ -25,9 +25,9 @@ build({
 // Node client (not necessary for AHK++, but super fast)
 // https://esbuild.github.io/api
 build({
-	entryPoints: [path.join('./client/src/extension.ts')],
+	entryPoints: [path.join('./client/src/extension.cts')],
 	bundle: true,
-	outfile: path.join('./client/dist/extension.js'),
+	outfile: path.join('./client/dist/extension.cjs'),
 	external: ['vscode'],
 	format: 'cjs',
 	platform: 'node',

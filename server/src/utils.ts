@@ -1,4 +1,4 @@
-import { LibrarySuggestions } from './config';
+import { LibrarySuggestions } from './config.js';
 
 export function includeUserAndStandardLibrary(
 	librarySuggestions: LibrarySuggestions,
