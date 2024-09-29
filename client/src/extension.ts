@@ -125,7 +125,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	};
 
 	// Create the language client and start the client.
-	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', serverOptions, clientOptions);
+	client = new LanguageClient('AHK++', 'AHK++', serverOptions, clientOptions);
 	loadlocalize(context.extensionPath + '/package.nls');
 	textdecoders.push(new TextDecoder(env.language.startsWith('zh-') ? 'gbk' : 'windows-1252'));
 
@@ -216,10 +216,9 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		commands.registerTextEditorCommand('ahk++.run', textEditor => runScript(textEditor)),
 		commands.registerTextEditorCommand('ahk++.runSelection', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk++.stop', stopRunningScript),
-		commands.registerCommand('ahk++.debug.file', () => beginDebug('f')),
-		commands.registerCommand('ahk++.debug.configs', () => beginDebug('c')),
-		commands.registerCommand('ahk++.debug.params', () => beginDebug('p')),
-		commands.registerCommand('ahk++.debug.attach', () => beginDebug('a')),
+		commands.registerCommand('ahk++.debugConfigs', () => beginDebug('c')),
+		commands.registerCommand('ahk++.debugParams', () => beginDebug('p')),
+		commands.registerCommand('ahk++.debugAttach', () => beginDebug('a')),
 		commands.registerCommand('ahk++.selectSyntaxes', selectSyntaxes),
 		commands.registerTextEditorCommand('ahk++.updateVersionInfo', async textEditor => {
 			if (!server_is_ready)
