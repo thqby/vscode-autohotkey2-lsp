@@ -6,8 +6,7 @@
 		"moduleResolution": "node",
 		"sourceMap": true,
 		"strict": true,
-		"outDir": "dist",
-		"rootDirs": ["src", "../server/src"],
+		"outDir": "out",
 		"composite": true
 	},
 	"include": ["src"],

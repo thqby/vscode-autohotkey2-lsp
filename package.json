@@ -29,16 +29,17 @@
 	"publisher": "mark-wiemer",
 	"main": "./client/dist/extension",
 	"scripts": {
-		"prebuild": "npm run clean",
+		"prebuild": "npm run clean:dist",
 		"build": "node build.mjs --mode=production",
 		"prebuild:dev": "npm run clean",
 		"build:dev": "node build.mjs",
 		"build:old": "webpack",
 		"chrome": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ./test-data",
-		"clean": "del-cli client/dist server/dist/*.js*",
-		"clean//": "Remove both the compiled extension and compiled test files",
+		"clean:dist": "del-cli client/dist server/dist/*.js*",
+		"clean:out": "del-cli client/out server/out",
 		"compile-cli": "webpack --config webpack.config.cli.js --mode production --devtool hidden-source-map",
-		"compile-ts": "cd client && tsc && cd ../server && tsc",
+		"precompile-ts": "npm run clean:out",
+		"compile-ts": "tsc -b",
 		"compile-ts//": "Compile TS files",
 		"compile//": "Compile the extension for packaging and publishing",
 		"eslint": "npm run eslint:files -- client server && echo No ESLint problems",
@@ -50,9 +51,12 @@
 		"lint:fix": "npm run format:fix && npm run eslint:fix && npm run sort-package-json:fix",
 		"sort-package-json": "sort-package-json --check",
 		"sort-package-json:fix": "sort-package-json",
-		"validate": "npm run lint",
-		"validate:ci": "npm run lint",
-		"validate:ci:fix": "npm run lint:fix",
+		"pretest-unit": "npm run compile-ts",
+		"test-unit": "mocha",
+		"validate": "npm run lint && npm run test-unit",
+		"validate:ci": "npm run lint && npm run test-unit",
+		"validate:ci:fix": "npm run lint:fix && npm run test-unit",
+		"validate:fix": "npm run lint:fix && npm run test-unit",
 		"watch": "tsc -b -w"
 	},
 	"prettier": {
@@ -71,6 +75,9 @@
 				}
 			}
 		]
+	},
+	"mocha": {
+		"spec": "./**/out/**/*.test.js"
 	},
 	"dependencies": {
 		"vscode-languageclient": "^9.0.1",

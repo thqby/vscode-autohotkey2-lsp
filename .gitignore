@@ -7,4 +7,4 @@ scripts/*
 *.js
 *.js.map
 *.tsbuildinfo
-**/dist/**/*.d.ts
+**/out/**/*.d.ts
