@@ -13,5 +13,8 @@ export default defineConfig({
 	files: 'client/dist/test/**/*.test.js',
 	useInstallation: vscode_path && {
 		fromPath: vscode_path
+	},
+	mocha: {
+		failZero: true, // fail if no tests found
 	}
 });
