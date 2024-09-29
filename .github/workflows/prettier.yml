@@ -4,12 +4,12 @@
 name: Prettier diff
 
 on:
-  push:
-    branches: ['main']
-  pull_request:
-    branches: ['main']
+  #   push:
+  #     branches: ['main']
+  #   pull_request:
+  #     branches: ['main']
   workflow_dispatch:
-  merge_group:
+  # merge_group:
 
 jobs:
   build:
