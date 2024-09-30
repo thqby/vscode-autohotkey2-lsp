@@ -26,7 +26,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	if (triggerCharacter === '*') {
 		const tk = doc.tokens[doc.document.offsetAt(position) - 3];
 		if (tk?.type === 'TK_BLOCK_COMMENT') {
-			if (!tk.previous_token?.type) {
+			if (!tk.previous_token?.type && tk === doc.get_token(0, false)) {
 				items.push({
 					label: '/** */', detail: 'File Doc',
 					kind: CompletionItemKind.Text,
