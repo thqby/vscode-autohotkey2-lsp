@@ -2580,6 +2580,8 @@ export class Lexer {
 								if (bak.type === 'TK_DOT') {
 									addprop(lk);
 								} else if ((vr = addvariable(lk, mode, sta))) {
+									if (mode === 2 && local)
+										lk.semantic!.modifier = SemanticTokenModifiers.static;
 									if ((pc = comments[vr.selectionRange.start.line]))
 										set_detail(vr, pc);
 								} else if (local)
@@ -2598,7 +2600,8 @@ export class Lexer {
 								if (mode === 2) {
 									let llk = lk, ttk = tk, err = diagnostic.propnotinit(), dots = 0;
 									const v = addvariable(lk, 2, sta)!;
-									v.def = false;
+									if (v.def = false, local)
+										lk.semantic!.modifier = SemanticTokenModifiers.static;
 									if (tk.type as string === 'TK_DOT') {
 										while (nexttoken() && tk.type === 'TK_WORD') {
 											if (!nexttoken())
