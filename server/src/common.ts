@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { AhkSymbol, ActionType, FormatOptions, Lexer, update_comment_tags } from './Lexer';
+import { AhkSymbol, ActionType, FormatOptions, Lexer, check_formatopts, update_comment_tags } from './Lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
 export * from './codeActionProvider';
@@ -434,25 +434,11 @@ export function update_settings(configs: AHKLSSettings) {
 		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
 	if (typeof configs.Warn?.CallWithoutParentheses === 'string')
 		configs.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[configs.Warn.CallWithoutParentheses];
-	if (typeof configs.FormatOptions?.brace_style === 'string')
-		switch (configs.FormatOptions.brace_style) {
-			case '0':
-			case 'Allman': configs.FormatOptions.brace_style = 0; break;
-			case '1':
-			case 'One True Brace': configs.FormatOptions.brace_style = 1; break;
-			case '-1':
-			case 'One True Brace Variant': configs.FormatOptions.brace_style = -1; break;
-			default: delete configs.FormatOptions.brace_style; break;
-		}
-	for (const k of ['array_style', 'object_style'] as Array<keyof FormatOptions>)
-		if (typeof configs.FormatOptions?.[k] === 'string')
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			configs.FormatOptions[k] = { collapse: 2, expand: 1, none: 0 }[configs.FormatOptions[k] as string] as any;
+	check_formatopts(configs.FormatOptions ?? {});
 	try {
 		update_comment_tags(configs.CommentTags!);
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	} catch (e: any) {
-		delete e.stack;
+	} catch (e) {
+		delete (e as { stack?: string }).stack;
 		delete configs.CommentTags;
 		console.log(e);
 	}

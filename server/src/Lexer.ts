@@ -289,7 +289,7 @@ const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectL
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[012])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|help|sleep|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
 const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 export const ASSIGN_TYPE = [':=', '??='];
-const STYLE = { collapse: 2, expand: 1, none: 0 };
+const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 };
 const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 const META_FUNCNAME = ['__NEW', '__INIT', '__ITEM', '__ENUM', '__GET', '__CALL', '__SET', '__DELETE'];
 export const ANY = create_prototype('Any');
@@ -5437,7 +5437,9 @@ export class Lexer {
 
 			set_mode(next_mode);
 			flags.last_word = '';
-			flags.indentation_level = real_indentation_level();
+			previous_flags.indentation_level = Math.min(
+				previous_flags.indentation_level,
+				flags.indentation_level = real_indentation_level())
 			print_token();
 
 			// (options\n...\n)
@@ -5451,7 +5453,7 @@ export class Lexer {
 			// In all cases, if we newline while inside an expression it should be indented.
 			indent();
 
-			if (token_text === '[' && (flags.array_style ?? opt.array_style) === STYLE.expand)
+			if (token_text === '[' && (flags.array_style ?? opt.array_style) === OBJECT_STYLE.expand)
 				print_newline(true);
 		}
 
@@ -5461,25 +5463,21 @@ export class Lexer {
 			while (flags.mode === MODE.Statement)
 				restore_mode();
 
-			if (token_text === ']' && flags.mode === MODE.ArrayLiteral) {
+			const is_array = token_text === ']' && flags.mode === MODE.ArrayLiteral;
+			restore_mode();
+			if (is_array) {
 				const style = flags.array_style ?? opt.array_style;
-				if (style === STYLE.collapse || last_text === '[')
+				if (style === OBJECT_STYLE.collapse || last_text === '[' || flags.indentation_level >= previous_flags.indentation_level)
 					trim_newlines();
 				else if (style || input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
-			} else if ((last_type === 'TK_END_EXPR' || last_type === 'TK_END_BLOCK') && flags.indentation_level < flags.parent.indentation_level)
+			} else if ((last_type === 'TK_END_EXPR' || last_type === 'TK_END_BLOCK') && flags.indentation_level >= previous_flags.indentation_level)
 				trim_newlines();
 			else if (last_type !== 'TK_START_EXPR')
 				allow_wrap_or_preserved_newline();
 
 			output_space_before_token = Boolean(opt.space_in_paren && !(last_type === 'TK_START_EXPR' && !opt.space_in_empty_paren));
-			restore_mode();
-			if (just_added_newline() && output_lines.length > 1) {
-				const level = flags.indentation_level;
-				flags.indentation_level = real_indentation_level(previous_flags.start_line_index);
-				print_token();
-				flags.indentation_level = level;
-			} else print_token();
+			print_token();
 			continuation_sections_mode ??= false;
 		}
 
@@ -5492,7 +5490,7 @@ export class Lexer {
 
 				output_space_before_token ||= space_in_other && last_type !== 'TK_START_EXPR';
 				print_token(), indent();
-				if ((flags.object_style ?? opt.object_style) === STYLE.expand)
+				if ((flags.object_style ?? opt.object_style) === OBJECT_STYLE.expand)
 					print_newline(true);
 				else output_space_before_token = space_in_other;
 			} else {
@@ -5536,7 +5534,7 @@ export class Lexer {
 			const is_obj = flags.mode === MODE.ObjectLiteral, is_exp = is_obj || (ck.in_expr !== undefined);
 			if (is_obj) {
 				const style = flags.object_style ?? opt.object_style;
-				if (style === STYLE.collapse || last_text === '{')
+				if (style === OBJECT_STYLE.collapse || last_text === '{')
 					trim_newlines();
 				else if (style || input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
@@ -5552,8 +5550,7 @@ export class Lexer {
 				if (opt.brace_style !== undefined)
 					print_newline(true);
 				output_space_before_token = space_in_other;
-			} else if (flags.mode !== MODE.BlockStatement)
-				flags.indentation_level = (flags.parent ?? flags).indentation_level + 1;
+			}
 		}
 
 		function handle_word() {
@@ -5695,7 +5692,7 @@ export class Lexer {
 					!is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))
 					print_newline(preserve_statement_flags);
 				else if (input_wanted_newline && (opt.preserve_newlines || ck.symbol)) {
-					if (ck.symbol || get_style() !== STYLE.collapse)
+					if (ck.symbol || get_style() !== OBJECT_STYLE.collapse)
 						print_newline(!ck.symbol);
 				} else if (['TK_COMMA', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR'].includes(last_type))
 					if (!start_of_object_property())
@@ -5787,7 +5784,7 @@ export class Lexer {
 			if (style)
 				trim_newlines();
 			print_token();
-			if (style === STYLE.expand)
+			if (style === OBJECT_STYLE.expand)
 				print_newline(true);
 			else output_space_before_token = space_in_other;
 		}
@@ -5937,17 +5934,14 @@ export class Lexer {
 		function format_directives(str: string) {
 			const m = str.match(/^;\s*@format\b/i);
 			if (!m) return;
-			str = str.substring(m[0].length);
-			for (const s of str.split(',')) {
+			const new_opts = check_formatopts(Object.fromEntries(str.substring(m[0].length).split(',').map(s => {
 				const p = s.indexOf(':');
-				let k;
-				switch (k = s.substring(0, p).trim()) {
-					case 'array_style':
-					case 'object_style':
-						flags[k] = STYLE[s.substring(p + 1).trim() as keyof typeof STYLE];
-						break;
-				}
-			}
+				return [s.substring(0, p).trim(), s.substring(p + 1).trim()];
+			})));
+			for (const k of ['array_style', 'object_style'] as const)
+				if (k in new_opts)
+					flags[k] = new_opts[k], delete new_opts[k];
+			Object.assign(opt, new_opts);
 		}
 
 		function handle_inline_comment() {
@@ -6415,6 +6409,7 @@ export class Lexer {
 	public update() {
 		const uri = this.uri, initial = this.include;
 		this.parseScript();
+		this.foldingranges.reverse();
 		if (libfuncs[uri]) {
 			libfuncs[uri].length = 0;
 			libfuncs[uri].push(...Object.values(this.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
@@ -7895,9 +7890,30 @@ export function is_line_continue(lk: Token, tk: Token, parent?: AhkSymbol): bool
 export function update_comment_tags(regexp: string) {
 	const old = commentTags;
 	try {
+		if (!regexp) return;
 		commentTags = new RegExp(regexp, 'i');
 	} catch (e) {
 		commentTags = old;
 		throw e;
 	}
+}
+
+export function check_formatopts(opts: FormatOptions) {
+	if (typeof opts.brace_style === 'string') {
+		switch (opts.brace_style) {
+			case '0':
+			case 'Allman': opts.brace_style = 0; break;
+			case '1':
+			case 'One True Brace': opts.brace_style = 1; break;
+			case '-1':
+			case 'One True Brace Variant': opts.brace_style = -1; break;
+			default: delete opts.brace_style; break;
+		}
+	}
+	for (const k of ['array_style', 'object_style'] as const) {
+		const v = opts[k];
+		if (typeof v === 'string')
+			opts[k] = OBJECT_STYLE[v];
+	}
+	return opts;
 }
