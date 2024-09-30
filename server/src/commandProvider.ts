@@ -267,7 +267,7 @@ export function getVersionInfo(uri: string) {
 export const commands: Record<string, (args: any[]) => any> = {
 	'ahk2.diagnose.all': () => diagnoseAll(),
 	'ahk2.generate.comment': () => generateComment(),
-	'ahk2.set.scriptdir': setscriptdir
+	'ahk2.set.scriptdir': process.env.BROWSER ? () => 0 : setscriptdir
 };
 
 export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {

@@ -3,35 +3,6 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Run Web Extension in VS Code",
-			"type": "pwa-extensionHost",
-			"debugWebWorkerHost": true,
-			"request": "launch",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionDevelopmentKind=web"
-			],
-			"outFiles": [
-				"${workspaceFolder}/client/dist/**/*.js"
-			],
-			"preLaunchTask": "npm: watch-web"
-		},
-		{
-			"name": "Extension Tests",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"preLaunchTask": "npm: watch",
-			"args": [
-				"--disable-extensions",
-				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionTestsPath=${workspaceFolder}/client/dist/test/runTest"
-			],
-			"outFiles": [
-				"${workspaceFolder}/client/dist/test/**/*.js"
-			]
-		},
-		{
 			"type": "extensionHost",
 			"request": "launch",
 			"name": "Launch Client",
@@ -40,9 +11,6 @@
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
-			"env": {
-				"VSCODE_AHK_SERVER_PATH": "out"
-			},
 			"outFiles": [
 				"${workspaceFolder}/client/dist/**/*.js"
 			]
@@ -57,6 +25,37 @@
 				"${workspaceFolder}/server/out/**/*.js",
 				"${workspaceFolder}/server/dist/**/*.js"
 			]
+		},
+		{
+			"name": "Extension Tests",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: watch",
+			"args": [
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"outFiles": [
+				"${workspaceFolder}/client/dist/test/**/*.js"
+			],
+			"testConfiguration": "${workspaceFolder}/.vscode-test.mjs"
+		},
+		{
+			"name": "Run Web Extension",
+			"type": "extensionHost",
+			"debugWebWorkerHost": true,
+			"request": "launch",
+			"args": [
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--extensionDevelopmentKind=web"
+			],
+			"outFiles": [
+				"${workspaceFolder}/client/dist/**/*.js",
+				"${workspaceFolder}/server/dist/**/*.js"
+			],
+			"preLaunchTask": "npm: watch-web"
 		}
 	],
 	"compounds": [

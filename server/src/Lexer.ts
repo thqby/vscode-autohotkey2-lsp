@@ -22,7 +22,7 @@ import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
 	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings,
-	hoverCache, isBrowser, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
+	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
 
@@ -1190,7 +1190,7 @@ export class Lexer {
 					} else
 						console.error(e);
 				}
-				if (!isBrowser) {
+				if (!process.env.BROWSER) {
 					const m = _this.d_uri && find_d_ahk(resolve_scriptdir(_this.d_uri)) || find_d_ahk(d_path);
 					if (m)
 						includetable[_this.d_uri = m.uri] = m.path;
@@ -4069,7 +4069,7 @@ export class Lexer {
 					if (!m.endsWith('.ahk'))
 						m += '.d.ahk';
 					if (m.startsWith('~/'))
-						u = isBrowser ? URI.parse(rootdir + m.slice(1)) : URI.file(rootdir + m.slice(1));
+						u = process.env.BROWSER ? URI.parse(rootdir + m.slice(1)) : URI.file(rootdir + m.slice(1));
 					else if (/^([a-z]:)?\//.test(m))
 						u = URI.file(m);
 					else if (!m.includes(':')) {
@@ -4112,7 +4112,7 @@ export class Lexer {
 						dlldir = '';
 					else if (tk)
 						_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
-				} else if (!isBrowser) {
+				} else if (!process.env.BROWSER) {
 					if (isdll) {
 						if (existsSync(m) && statSync(m).isDirectory())
 							dlldir = m.endsWith('/') || m.endsWith('\\') ? m : m + '\\';
@@ -6337,7 +6337,7 @@ export class Lexer {
 	}
 
 	public initLibDirs(dir?: string) {
-		if (isBrowser)
+		if (process.env.BROWSER)
 			return;
 		let workfolder: string;
 		if (!dir) {
@@ -6424,7 +6424,8 @@ export class Lexer {
 			change = 1;
 		if (!change)
 			return this.sendDiagnostics(true);
-		parse_include(this, this.scriptdir);
+		if (!process.env.BROWSER)
+			parse_include(this, this.scriptdir);
 		if (change === 1) {
 			const c = traverse_include(this);
 			for (const u in this.included)

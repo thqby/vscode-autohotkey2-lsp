@@ -1,8 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
 import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 
@@ -17,7 +12,7 @@ export function activate(context: ExtensionContext) {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			const uri = editor.document.uri.toString(), position = editor.selection.end;
-			return { uri, position };
+			return { uri, position: { line: position.line, character: position.character } };
 		},
 		'ahk2.insertSnippet': async (params: [string, Range?]) => {
 			const editor = window.activeTextEditor;
@@ -58,7 +53,7 @@ export function activate(context: ExtensionContext) {
 		documentSelector: [{ language: 'ahk2' }],
 		markdown: { isTrusted: true, supportHtml: true },
 		initializationOptions: {
-			extensionUri: context.extensionUri.toString(),
+			extensionUri: !process.env.DEBUG ? context.extensionUri.toString() : unpkg_url(context),
 			commands: Object.keys(request_handlers),
 			...JSON.parse(JSON.stringify(workspace.getConfiguration('AutoHotkey2')))
 		}
@@ -122,4 +117,9 @@ export function activate(context: ExtensionContext) {
 
 export function deactivate() {
 	return client?.stop();
+}
+
+function unpkg_url(context: ExtensionContext) {
+	const pk = context.extension.packageJSON;
+	return `https://${pk.publisher}.vscode-unpkg.net/${pk.publisher}/${pk.name}/${pk.version}/extension/`;
 }

@@ -1,8 +1,3 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-
 import {
 	commands,
 	ConfigurationTarget,
@@ -30,7 +25,7 @@ import {
 	ServerOptions,
 	TransportKind
 } from 'vscode-languageclient/node';
-import { resolve, basename } from 'path';
+import { resolve } from 'path';
 import { ChildProcess, exec, execSync, spawn } from 'child_process';
 import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
 
@@ -38,7 +33,7 @@ let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: Stat
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
 let ahkpath_cur: string = ahkconfig.InterpreterPath, server_is_ready = false;
-const textdecoders: TextDecoder[] = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
+const textdecoders = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const isWindows = process.platform === 'win32';
 let extlist: string[] = [], debugexts: Record<string, string> = {}, langs: string[] = [];
 const loadedCollection = {
@@ -62,7 +57,7 @@ const loadedCollection = {
 
 export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	/** Absolute path to `server.js` */
-	const serverModule = context.asAbsolutePath(`server/${process.env.VSCODE_AHK_SERVER_PATH ?? basename(__dirname)}/server.js`);
+	const serverModule = context.asAbsolutePath(`server/${process.env.DEBUG ? 'out' : 'dist'}/server.js`);
 
 	// If the extension is launched in debug mode then the debug server options are used
 	// Otherwise the run options are used
@@ -167,8 +162,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 							const match_config = get_debug_configs()?.filter(it =>
 								Object.entries(it).every(([k, v]) => equal(v, config[k]))
 							)?.sort((a, b) => Object.keys(a).length - Object.keys(b).length).pop();
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
-							const def = { ...ahkconfig.get('DebugConfiguration') as any };
+							const def = { ...ahkconfig.get('DebugConfiguration') as Partial<DebugConfiguration> };
 							delete def.request, delete def.type;
 							Object.assign(config, def, match_config);
 							if (match_config?.type === 'autohotkey')
