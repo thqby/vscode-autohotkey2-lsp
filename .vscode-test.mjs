@@ -21,5 +21,8 @@ export default defineConfig({
 	},
 	useInstallation: vscode_path && {
 		fromPath: vscode_path
+	},
+	mocha: {
+		failZero: true, // fail if no tests found
 	}
 });
