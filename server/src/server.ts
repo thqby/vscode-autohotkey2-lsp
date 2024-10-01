@@ -172,7 +172,7 @@ connection.onInitialize(async (params) => {
 	if (envAhkppConfig) updateAhkppConfig(envAhkppConfig);
 	if (
 		!(await setInterpreter(
-			resolvePath((ahkppConfig.v2.file.interpreterPath ??= '')),
+			resolvePath(getCfg<string>(ahkppConfig, CfgKey.InterpreterPath) ?? ''),
 		))
 	)
 		patherr(setting.ahkpatherr());
@@ -261,16 +261,11 @@ documents.onDidOpen(e => {
 	const uri = e.document.uri.toLowerCase();
 	let doc = lexers[uri];
 	if (doc) doc.document = e.document;
-	else {
-		lexers[uri] = doc = new Lexer(e.document);
-	}
-	Object.defineProperty((doc.include = {}), '', {
-		value: '',
-		enumerable: false,
-	});
+	else lexers[uri] = doc = new Lexer(e.document);
+	Object.defineProperty(doc.include, '', { value: '', enumerable: false });
 	doc.actived = true;
 	if (to_ahk2) doc.actionWhenV1Detected = 'Continue';
-	if (includeLocalLibrary(ahkppConfig.v2.general.librarySuggestions))
+	if (includeLocalLibrary(getCfg<LibrarySuggestions>(ahkppConfig, CfgKey.LibrarySuggestions)))
 		parseproject(uri).then(
 			() =>
 				doc.last_diags &&
@@ -400,7 +395,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		}
 	}
 	clearLibfuns();
-	if (includeUserAndStandardLibrary(ahkppConfig.v2.general.librarySuggestions)) parseuserlibs();
+	if (includeUserAndStandardLibrary(getCfg<LibrarySuggestions>(ahkppConfig, CfgKey.LibrarySuggestions))) parseuserlibs();
 	return true;
 	async function update_rcdata() {
 		const pe = new PEFile(interpreterPathV2);
@@ -466,7 +461,7 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 		const doc = lexers[td.uri.toLowerCase()];
 		if (!doc) return;
 		doc.initLibDirs(doc.scriptdir);
-		if (includeLocalLibrary(ahkppConfig.v2.general.librarySuggestions)) parseproject(doc.uri);
+		if (includeLocalLibrary(getCfg<LibrarySuggestions>(ahkppConfig, CfgKey.LibrarySuggestions))) parseproject(doc.uri);
 	});
 	return true;
 }

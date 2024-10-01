@@ -6,8 +6,9 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
 import { AhkSymbol, Lexer, setCommentTagRegex } from './Lexer';
 import { diagnostic } from './localize';
-import { isBrowser, jsDocTagNames } from './constants';
+import { jsDocTagNames } from './constants';
 import { AhkppConfig, CfgKey, getCfg, newAhkppConfig } from './config';
+
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -30,7 +31,7 @@ export const alpha_3 = encode_version('2.1-alpha.3');
 export const ahkppConfig: AhkppConfig = newAhkppConfig();
 export const utils = {
 	get_DllExport: (_paths: string[] | Set<string>, _onlyone = false) => Promise.resolve([] as string[]),
-	get_RCDATA: (_path?: string) => ({ uri: '', path: '' } as { uri: string, path: string, paths?: string[] } | undefined),
+	get_RCDATA: (_path?: string) => undefined as { uri: string, path: string, paths?: string[] } | undefined,
 	get_ahkProvider: async () => null as unknown as Promise<MessageConnection | null>
 };
 
@@ -85,7 +86,7 @@ export function read_ahk_file(path: string, showError = true) {
 }
 
 export function openFile(path: string, showError = true): TextDocument | undefined {
-	if (isBrowser) {
+	if (process.env.BROWSER) {
 		const data = getwebfile(path);
 		if (data)
 			return TextDocument.create(data.url, 'ahk2', -10, data.text);
@@ -107,7 +108,7 @@ export function openAndParse(path: string, showError = true, cache = true) {
 }
 
 export function restorePath(path: string): string {
-	if (isBrowser || !existsSync(path))
+	if (process.env.BROWSER || !existsSync(path))
 		return path;
 	if (path.includes('..'))
 		path = resolve(path);
@@ -194,7 +195,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
 	const syntaxesPath = process.env.SYNTAXES_PATH || 'syntaxes';
 	const file = `${rootdir}/${syntaxesPath}/<>/${filename}`;
-	if (isBrowser) {
+	if (process.env.BROWSER) {
 		const td = openFile(file + '.d.ahk');
 		if (td) {
 			const doc = new Lexer(td, undefined, d);
@@ -367,7 +368,10 @@ export function enum_ahkfiles(dirpath: string) {
 	}
 }
 
-/** Updates `extsettings` with the provided config values */
+/**
+ * Updates `extsettings` with the provided config values
+ * Formerly `update_settings`
+ */
 export function updateAhkppConfig(newConfig: AhkppConfig) {
 	try {
 		setCommentTagRegex(getCfg(newConfig, CfgKey.CommentTagRegex));
@@ -377,7 +381,7 @@ export function updateAhkppConfig(newConfig: AhkppConfig) {
 		setCommentTagRegex(getCfg(newAhkppConfig(), CfgKey.CommentTagRegex))
 		connection.console.error(e as string);
 	}
-	newConfig.v2.workingDirectories = newConfig.v2.workingDirectories.map(dir =>
+	(newConfig as any)[CfgKey.WorkingDirectories] = getCfg<string[]>(newConfig, CfgKey.WorkingDirectories).map(dir =>
 		(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
 			.endsWith('/') ? dir : dir + '/');
 	scanExclude = {};
@@ -392,10 +396,10 @@ export function updateAhkppConfig(newConfig: AhkppConfig) {
 		scanExclude.file = file;
 	if (folder.length)
 		scanExclude.folder = folder;
-	if (newConfig.v2.file.maxScanDepth < 0)
-		newConfig.v2.file.maxScanDepth = Infinity;
-	if (newConfig.v2.general.syntaxes)
-		newConfig.v2.general.syntaxes = resolve(newConfig.v2.general.syntaxes).toLowerCase();
+	if (getCfg<number>(newConfig, CfgKey.MaxScanDepth) < 0)
+		(newConfig as any)[CfgKey.MaxScanDepth] = Infinity;
+	if (getCfg(newConfig, CfgKey.Syntaxes))
+		(newConfig as any)[CfgKey.Syntaxes] = resolve(getCfg(newConfig, CfgKey.Syntaxes)).toLowerCase();
 	Object.assign(ahkppConfig, newConfig);
 }
 
@@ -409,7 +413,7 @@ function encode_version(version: string) {
 }
 
 export async function sendAhkRequest(method: string, params: unknown[]) {
-	if (isBrowser)
+	if (process.env.BROWSER)
 		return undefined;
 	return utils.get_ahkProvider().then((server) => server?.sendRequest(method, ...params));
 }
@@ -442,7 +446,7 @@ export function set_version(version: string) { ahk_version = encode_version(vers
 export function set_WorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
-	ahkppConfig.v2.workingDirectories.forEach(dir => { if (!folders.has(dir)) workspaceFolders.push(dir) });
+	getCfg<string[]>(ahkppConfig, CfgKey.WorkingDirectories).forEach(dir => { if (!folders.has(dir)) workspaceFolders.push(dir) });
 	workspaceFolders.sort().reverse();
 	if (old.length === workspaceFolders.length &&
 		!old.some((v, i) => workspaceFolders[i] !== v))

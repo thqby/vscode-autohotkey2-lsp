@@ -10,10 +10,10 @@ import {
 	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache, completionitem,
 	decltype_expr, dllcalltpe, ahkppConfig, find_class, find_symbol, find_symbols, get_detail,
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
-	isBrowser, lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis,
+	lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
 import { includeLocalLibrary, includeUserAndStandardLibrary } from './utils';
-import { BraceStyle, CompletionCommitCharacters, CfgKey, FormatterConfig, getCfg } from './config';
+import { BraceStyle, CompletionCommitCharacters, CfgKey, FormatterConfig, getCfg, LibrarySuggestions } from './config';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
@@ -29,7 +29,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	if (triggerCharacter === '*') {
 		const tk = doc.tokens[doc.document.offsetAt(position) - 3];
 		if (tk?.type === 'TK_BLOCK_COMMENT') {
-			if (!tk.previous_token?.type) {
+			if (!tk.previous_token?.type && tk === doc.get_token(0, false)) {
 				items.push({
 					label: '/** */', detail: 'File Doc',
 					kind: CompletionItemKind.Text,
@@ -127,7 +127,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					// fall through
 					case '#include':
 					case '#includeagain': {
-						if (isBrowser)
+						if (process.env.BROWSER)
 							return;
 						const l = doc.document.offsetAt(position) - token.offset;
 						const text = token!.content;
@@ -696,8 +696,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	// library suggestions
-	if (ahkppConfig.v2.general.librarySuggestions) {
-		const librarySuggestions = ahkppConfig.v2.general.librarySuggestions;
+	if (getCfg(ahkppConfig, CfgKey.LibrarySuggestions)) {
+		const librarySuggestions = getCfg<LibrarySuggestions>(ahkppConfig, CfgKey.LibrarySuggestions);
 		const libdirs = doc.libdirs, caches: Record<string, TextEdit[]> = {};
 		let exportnum = 0, line = -1, first_is_comment: boolean | undefined, cm: Token;
 		let dir = doc.workspaceFolder;
@@ -794,7 +794,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					vars[cl] ??= items.push(convertNodeCompletion(t));
 	}
 	function add_paths(only_folder = false, ext_re?: RegExp) {
-		if (isBrowser)
+		if (process.env.BROWSER)
 			return;
 		offset ??= doc.document.offsetAt(position);
 		let path = token.content.substring(1, offset - token.offset), suf = '';
@@ -841,7 +841,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		} catch { }
 	}
 	async function add_dllexports() {
-		if (isBrowser)
+		if (process.env.BROWSER)
 			return;
 		offset ??= doc.document.offsetAt(position);
 		let pre = token.content.substring(1, offset - token.offset), suf = '', t;

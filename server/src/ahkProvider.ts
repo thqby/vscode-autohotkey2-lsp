@@ -1,7 +1,7 @@
 import { createClientSocketTransport, createMessageConnection, createServerSocketTransport, MessageConnection } from 'vscode-languageserver/node';
 import { spawn } from 'child_process';
 import { resolvePath } from './scriptrunner';
-import { interpreterPathV2, isWindows, rootdir } from './common';
+import { interpreterPathV2, rootdir } from './common';
 let ahk_server: MessageConnection | undefined | null;
 
 async function get_ahkProvider_port(): Promise<number> {
@@ -40,7 +40,7 @@ export async function get_ahkProvider(): Promise<MessageConnection | null> {
 	if (ahk_server !== undefined)
 		return ahk_server;
 	let port = 0;
-	if (isWindows)
+	if (!process.env.BROWSER && process.platform === 'win32')
 		port = await get_ahkProvider_port();
 	if (!port)
 		return ahk_server = null;

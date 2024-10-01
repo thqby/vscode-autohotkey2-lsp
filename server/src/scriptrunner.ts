@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from 'child_process';
-import { interpreterPathV2, isWindows } from './common';
+import { interpreterPathV2 } from './common';
 import { lstatSync, readlinkSync } from 'fs';
 import { resolve } from 'path';
 
@@ -33,7 +33,7 @@ export function resolvePath(path: string, resolveSymbolicLink = false): string {
 	const paths: string[] = [];
 	if (!path.includes(':'))
 		paths.push(resolve(path));
-	if (isWindows && !/[\\/]/.test(path))
+	if (!process.env.BROWSER && process.platform === 'win32' && !/[\\/]/.test(path))
 		paths.push(execSync(`where ${path}`, { encoding: 'utf-8' }).trim());
 	paths.push(path);
 	for (let path of paths) {

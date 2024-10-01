@@ -7,14 +7,23 @@ import * as vscode from 'vscode';
 export type ShowOutput = 'always' | 'never';
 
 export enum CfgKey {
-	DebugConfiguration = 'v2.debugConfiguration',
+	//* AHK++ values
+	// DebugConfiguration = 'v2.debugConfiguration',
 	InterpreterPathV1 = 'v1.file.interpreterPath',
-	InterpreterPathV2 = 'v2.file.interpreterPath',
+	// InterpreterPathV2 = 'v2.file.interpreterPath',
 	ShowOutput = 'general.showOutput',
-	Syntaxes = 'v2.general.syntaxes',
+	// Syntaxes = 'v2.general.syntaxes',
+
+	//* thqby values
+	DebugConfiguration = 'debugConfiguration',
+	// InterpreterPathV1 = 'v1.file.interpreterPath',
+	InterpreterPathV2 = 'InterpreterPath',
+	// ShowOutput = 'general.showOutput',
+	Syntaxes = 'Syntaxes',
 }
 
-const configPrefix = 'AHK++';
+// const configPrefix = 'AHK++'; // AHK++
+const configPrefix = 'AutoHotkey2'; // thqby
 
 /**
  * Gets AHK++ config value from VS Code.

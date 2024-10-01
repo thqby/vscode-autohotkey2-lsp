@@ -1,111 +1,666 @@
 {
 	"name": "vscode-autohotkey2-lsp",
 	"displayName": "AutoHotkey v2 Language Support",
-	"version": "2.5.2",
-	"description": "AutoHotkey v2 language support, forked from thqby's extension",
+	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
+	"author": "thqby",
+	"publisher": "thqby",
+	"version": "2.5.3",
+	"license": "LGPLv3.0",
 	"categories": [
-		"Debuggers",
 		"Formatters",
 		"Programming Languages",
 		"Snippets"
 	],
 	"keywords": [
-		"vscode",
-		"autohotkey",
 		"ahk",
 		"ahk2",
-		"ahk v2"
+		"autohotkey",
+		"autohotkey2"
 	],
-	"homepage": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp/blob/main/README.md",
-	"bugs": {
-		"url": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp/issues"
-	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/mark-wiemer-org/vscode-autohotkey2-lsp"
+		"url": "https://github.com/thqby/vscode-autohotkey2-lsp"
 	},
-	"license": "LGPLv3.0",
-	"author": "thqby and Mark Wiemer",
-	"publisher": "mark-wiemer",
-	"main": "./client/dist/extension",
-	"scripts": {
-		"prebuild": "npm run clean:dist",
-		"build": "node build.mjs --mode=production",
-		"prebuild:dev": "npm run clean",
-		"build:dev": "node build.mjs",
-		"build:old": "webpack",
-		"clean:dist": "del-cli client/dist server/dist/*.js*",
-		"clean:out": "del-cli client/out server/out",
-		"compile-cli": "webpack --config webpack.config.cli.js --mode production --devtool hidden-source-map",
-		"precompile-ts": "npm run clean:out",
-		"compile-ts": "tsc -b",
-		"compile-ts//": "Compile TS files",
-		"compile//": "Compile the extension for packaging and publishing",
-		"eslint": "npm run eslint:files -- client server && echo No ESLint problems",
-		"eslint:files": "eslint --max-warnings=0",
-		"eslint:fix": "npm run eslint:files -- client server --fix",
-		"format": "prettier --check .",
-		"format:fix": "prettier --write .",
-		"lint": "npm run format && npm run eslint && npm run sort-package-json",
-		"lint:fix": "npm run format:fix && npm run eslint:fix && npm run sort-package-json:fix",
-		"sort-package-json": "sort-package-json --check",
-		"sort-package-json:fix": "sort-package-json",
-		"pretest-unit": "npm run compile-ts",
-		"test-unit": "mocha",
-		"validate": "npm run lint && npm run test-unit",
-		"validate:ci": "npm run lint && npm run test-unit",
-		"validate:ci:fix": "npm run lint:fix && npm run test-unit",
-		"validate:fix": "npm run lint:fix && npm run test-unit",
-		"watch": "tsc -b -w"
-	},
-	"prettier": {
-		"singleQuote": true,
-		"tabWidth": 4,
-		"trailingComma": "all",
-		"useTabs": true,
-		"overrides": [
-			{
-				"files": [
-					"*.yml",
-					"*.yaml"
-				],
-				"options": {
-					"tabWidth": 2
-				}
-			}
-		]
-	},
-	"mocha": {
-		"spec": "./**/out/**/*.test.js"
-	},
-	"dependencies": {
-		"vscode-languageclient": "^9.0.1",
-		"vscode-languageserver": "^9.0.1",
-		"vscode-languageserver-textdocument": "^1.0.11",
-		"vscode-uri": "^3.0.8"
-	},
-	"devDependencies": {
-		"@eslint/js": "^9.4.0",
-		"@types/mocha": "^10.0.8",
-		"@types/node": "^20.16.0",
-		"@types/vscode": "^1.82.0",
-		"del-cli": "^5.1.0",
-		"esbuild": "^0.23.1",
-		"eslint": "^9.4.0",
-		"globals": "^15.4.0",
-		"mocha": "^10.7.0",
-		"prettier": "3.3.3",
-		"sort-package-json": "^2.10.0",
-		"ts-loader": "^9.4.0",
-		"typescript": "^5.3.2",
-		"typescript-eslint": "^7.12.0",
-		"webpack": "^5.74.0",
-		"webpack-cli": "^4.10.0"
+	"homepage": "https://github.com/thqby/vscode-autohotkey2-lsp/blob/main/README.md",
+	"icon": "icon.png",
+	"bugs": {
+		"url": "https://github.com/thqby/vscode-autohotkey2-lsp/issues"
 	},
 	"engines": {
 		"vscode": "^1.82.0"
 	},
-	"overrides": {
-		"eslint": "^9.4.0"
+	"main": "./client/dist/extension",
+	"browser": "./client/dist/browserClientMain",
+	"contributes": {
+		"breakpoints": [
+			{
+				"language": "ahk2"
+			}
+		],
+		"languages": [
+			{
+				"id": "ahk2",
+				"aliases": [
+					"AutoHotkey2",
+					"autohotkey2",
+					"ahk2"
+				],
+				"extensions": [
+					".ahk",
+					".ah2",
+					".ahk2"
+				],
+				"configuration": "./ahk2.configuration.json",
+				"icon": {
+					"dark": "icon_filetype.png",
+					"light": "icon_filetype.png"
+				}
+			},
+			{
+				"id": "ahk",
+				"aliases": [
+					"AutoHotkey"
+				]
+			},
+			{
+				"id": "~ahk2-output"
+			}
+		],
+		"grammars": [
+			{
+				"language": "ahk2",
+				"scopeName": "source.ahk2",
+				"path": "./syntaxes/ahk2.tmLanguage.json",
+				"embeddedLanguages": {
+					"meta.embedded.ahk2": "ahk2"
+				},
+				"unbalancedBracketScopes": [
+					"keyword.keys.ahk2"
+				]
+			},
+			{
+				"language": "~ahk2-output",
+				"scopeName": "ahk2.output",
+				"path": "./syntaxes/ahk2-output.tmLanguage.json"
+			}
+		],
+		"configuration": {
+			"title": "AutoHotkey2",
+			"properties": {
+				"AutoHotkey2.AutoLibInclude": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"Disabled",
+						"Local",
+						"User and Standard",
+						"All"
+					],
+					"default": "Disabled",
+					"description": "%ahk2.autolibinclude%"
+				},
+				"AutoHotkey2.CommentTags": {
+					"scope": "window",
+					"type": "string",
+					"default": "^;;\\s*(?<tag>.+)",
+					"description": "%ahk2.commenttags%"
+				},
+				"AutoHotkey2.CompilerCMD": {
+					"scope": "window",
+					"type": "string",
+					"default": "/compress 0 /base ${execPath}",
+					"markdownDescription": "%ahk2.compilercmd%"
+				},
+				"AutoHotkey2.CompleteFunctionParens": {
+					"scope": "window",
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "%ahk2.completefunctionparens%"
+				},
+				"AutoHotkey2.DebugConfiguration": {
+					"scope": "window",
+					"type": "object",
+					"default": {
+						"port": "9002-9100",
+						"useAnnounce": "detail",
+						"useAutoJumpToError": true,
+						"useDebugDirective": true,
+						"usePerfTips": true
+					},
+					"description": "%ahk2.debugconfiguration%"
+				},
+				"AutoHotkey2.Diagnostics.ClassNonDynamicMemberCheck": {
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "%ahk2.diagnostics.class-non-dynamic-member-check%"
+				},
+				"AutoHotkey2.Diagnostics.ParamsCheck": {
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "%ahk2.diagnostics.paramscheck%"
+				},
+				"AutoHotkey2.Warn.VarUnset": {
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "%ahk2.warn.varunset%"
+				},
+				"AutoHotkey2.Warn.LocalSameAsGlobal": {
+					"scope": "window",
+					"type": "boolean",
+					"default": false,
+					"description": "%ahk2.warn.localsameasglobal%"
+				},
+				"AutoHotkey2.Warn.CallWithoutParentheses": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"Off",
+						"Parentheses",
+						"On"
+					],
+					"default": "Off",
+					"description": "%ahk2.warn.callwithoutparentheses%"
+				},
+				"AutoHotkey2.ActionWhenV1IsDetected": {
+					"scope": "window",
+					"type": "string",
+					"default": "Warn",
+					"enum": [
+						"Continue",
+						"Warn",
+						"StopParsing",
+						"SwitchToV1",
+						"SkipLine"
+					],
+					"description": "%ahk2.actionwhenv1isdetected%"
+				},
+				"AutoHotkey2.CompletionCommitCharacters": {
+					"scope": "window",
+					"type": "object",
+					"properties": {
+						"Class": {
+							"type": "string"
+						},
+						"Function": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": {
+						"type": "string"
+					},
+					"default": {
+						"Class": ".(",
+						"Function": "("
+					},
+					"markdownDescription": "%ahk2.completioncommitcharacters%"
+				},
+				"AutoHotkey2.Files.Exclude": {
+					"scope": "window",
+					"type": "array",
+					"default": [],
+					"items": {
+						"type": "string"
+					},
+					"uniqueItems": true,
+					"description": "%ahk2.files.exclude%"
+				},
+				"AutoHotkey2.Files.ScanMaxDepth": {
+					"scope": "window",
+					"type": "integer",
+					"default": 2,
+					"description": "%ahk2.files.scanmaxdepth%"
+				},
+				"AutoHotkey2.FormatOptions": {
+					"scope": "window",
+					"type": "object",
+					"properties": {
+						"array_style": {
+							"type": "string",
+							"enum": [
+								"collapse",
+								"expand",
+								"none"
+							],
+							"default": "none"
+						},
+						"brace_style": {
+							"type": "string",
+							"enum": [
+								"One True Brace",
+								"Allman",
+								"One True Brace Variant"
+							],
+							"enumDescriptions": [
+								"if 1 {\n} else {\n}",
+								"if 1\n{\n}\nelse\n{\n}",
+								"if 1 {\n}\nelse {\n}"
+							]
+						},
+						"break_chained_methods": {
+							"type": "boolean",
+							"default": false
+						},
+						"ignore_comment": {
+							"type": "boolean",
+							"default": false
+						},
+						"indent_string": {
+							"type": "string",
+							"default": "\t"
+						},
+						"indent_between_hotif_directive": {
+							"type": "boolean",
+							"default": false
+						},
+						"keyword_start_with_uppercase": {
+							"type": "boolean",
+							"default": false
+						},
+						"max_preserve_newlines": {
+							"type": "number",
+							"default": 2
+						},
+						"object_style": {
+							"type": "string",
+							"enum": [
+								"collapse",
+								"expand",
+								"none"
+							],
+							"default": "none"
+						},
+						"preserve_newlines": {
+							"type": "boolean",
+							"default": true
+						},
+						"space_before_conditional": {
+							"type": "boolean",
+							"default": true
+						},
+						"space_after_double_colon": {
+							"type": "boolean",
+							"default": true
+						},
+						"space_in_empty_paren": {
+							"type": "boolean",
+							"default": false
+						},
+						"space_in_other": {
+							"type": "boolean",
+							"default": true
+						},
+						"space_in_paren": {
+							"type": "boolean",
+							"default": false
+						},
+						"switch_case_alignment": {
+							"type": "boolean",
+							"default": false
+						},
+						"symbol_with_same_case": {
+							"type": "boolean",
+							"default": false
+						},
+						"white_space_before_inline_comment": {
+							"type": "string"
+						},
+						"wrap_line_length": {
+							"type": "number",
+							"default": 0
+						}
+					},
+					"additionalProperties": {
+						"type": "string"
+					},
+					"default": {}
+				},
+				"AutoHotkey2.InterpreterPath": {
+					"scope": "window",
+					"type": "string",
+					"default": "C:\\Program Files\\Autohotkey\\v2\\AutoHotkey.exe",
+					"markdownDescription": "%ahk2.interpreterpath%"
+				},
+				"AutoHotkey2.SymbolFoldingFromOpenBrace": {
+					"scope": "window",
+					"type": "boolean",
+					"default": false,
+					"description": "%ahk2.symbolfoldingfromopenbrace%"
+				},
+				"AutoHotkey2.WorkingDirs": {
+					"scope": "window",
+					"type": "array",
+					"default": [],
+					"items": {
+						"type": "string"
+					},
+					"uniqueItems": true,
+					"description": "%ahk2.workingdirs%"
+				},
+				"AutoHotkey2.Syntaxes": {
+					"scope": "window",
+					"type": "string",
+					"markdownDescription": "%ahk2.syntaxes%"
+				}
+			}
+		},
+		"configurationDefaults": {
+			"[ahk2]": {
+				"editor.defaultFormatter": "thqby.vscode-autohotkey2-lsp",
+				"editor.quickSuggestions": {
+					"other": true,
+					"comments": false,
+					"strings": true
+				}
+			}
+		},
+		"commands": [
+			{
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.debug.file",
+				"title": "%ahk2.debug.file%",
+				"icon": "$(debug)",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.debug.configs",
+				"title": "%ahk2.debug.configs%",
+				"icon": "$(debug-all)",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "shellExecutionSupported",
+				"command": "ahk2.debug.attach",
+				"title": "%ahk2.debug.attach%",
+				"icon": "$(debug-alt)",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.debug.params",
+				"title": "%ahk2.debug.params%",
+				"icon": "$(debug-console)",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2",
+				"command": "ahk2.diagnose.all",
+				"title": "%ahk2.diagnose.all%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2",
+				"command": "ahk2.extract.symbols",
+				"title": "%ahk2.extract.symbols%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.run",
+				"title": "%ahk2.run%",
+				"icon": "$(play)",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.run.selection",
+				"title": "%ahk2.run.selection%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.stop",
+				"title": "%ahk2.stop%",
+				"icon": "$(stop)",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && shellExecutionSupported",
+				"command": "ahk2.compile",
+				"title": "%ahk2.compile%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.help",
+				"title": "%ahk2.help%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2",
+				"command": "ahk2.generate.comment",
+				"title": "%ahk2.generate.comment%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "!isWeb",
+				"command": "ahk2.set.interpreter",
+				"title": "%ahk2.set.interpreter%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2",
+				"command": "ahk2.update.versioninfo",
+				"title": "%ahk2.update.versioninfo%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 || editorLangId == ahk",
+				"command": "ahk2.switch",
+				"title": "Switch v1/v2",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && !isWeb",
+				"command": "ahk2.select.syntaxes",
+				"title": "%ahk2.select.syntaxes%",
+				"category": "ahk2"
+			},
+			{
+				"enablement": "editorLangId == ahk2 && resourceScheme == file",
+				"command": "ahk2.set.scriptdir",
+				"title": "%ahk2.set.scriptdir%",
+				"category": "ahk2"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"submenu": "ahk2.context",
+					"group": "navigation@0"
+				}
+			],
+			"editor/title/run": [
+				{
+					"command": "ahk2.run",
+					"group": "navigation@0",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
+				},
+				{
+					"command": "ahk2.stop",
+					"group": "navigation@1",
+					"when": "resourceLangId == ahk2 && ahk2:isRunning && shellExecutionSupported"
+				},
+				{
+					"command": "ahk2.debug.file",
+					"group": "navigation@2",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
+				},
+				{
+					"command": "ahk2.debug.configs",
+					"group": "navigation@3",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
+				},
+				{
+					"command": "ahk2.debug.params",
+					"group": "navigation@4",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
+				},
+				{
+					"command": "ahk2.debug.attach",
+					"group": "navigation@5",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported"
+				}
+			],
+			"ahk2.context": [
+				{
+					"when": "editorLangId == ahk2 && !isWeb && editorHasSelection",
+					"command": "ahk2.run.selection",
+					"group": "navigation@0"
+				},
+				{
+					"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection",
+					"command": "ahk2.run",
+					"group": "navigation@0"
+				},
+				{
+					"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning",
+					"command": "ahk2.stop",
+					"group": "navigation@1"
+				},
+				{
+					"command": "ahk2.debug.file",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported",
+					"group": "navigation@2"
+				},
+				{
+					"command": "ahk2.debug.configs",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported",
+					"group": "navigation@3"
+				},
+				{
+					"command": "ahk2.debug.params",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported",
+					"group": "navigation@4"
+				},
+				{
+					"command": "ahk2.debug.attach",
+					"when": "resourceLangId == ahk2 && shellExecutionSupported",
+					"group": "navigation@5"
+				},
+				{
+					"when": "editorLangId == ahk2 && !isWeb",
+					"command": "ahk2.help",
+					"group": "other@0"
+				},
+				{
+					"when": "editorLangId == ahk2 && !isWeb",
+					"command": "ahk2.compile",
+					"group": "other@1"
+				},
+				{
+					"when": "editorLangId == ahk2",
+					"command": "ahk2.generate.comment",
+					"group": "other@2"
+				},
+				{
+					"when": "editorLangId == ahk2",
+					"command": "ahk2.update.versioninfo",
+					"group": "other@3"
+				},
+				{
+					"when": "editorLangId == ahk2",
+					"command": "ahk2.diagnose.all",
+					"group": "other@4"
+				},
+				{
+					"when": "editorLangId == ahk2",
+					"command": "ahk2.extract.symbols",
+					"group": "other@5"
+				},
+				{
+					"when": "editorLangId == ahk2 && resourceScheme == file",
+					"command": "ahk2.set.scriptdir",
+					"group": "other@6"
+				}
+			]
+		},
+		"submenus": [
+			{
+				"id": "ahk2.context",
+				"label": "AutoHotkey v2"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "ahk2.run",
+				"key": "ctrl+f5",
+				"when": "editorLangId == ahk2 && !isWeb && !editorHasSelection"
+			},
+			{
+				"command": "ahk2.run.selection",
+				"key": "ctrl+f5",
+				"when": "editorLangId == ahk2 && !isWeb && editorHasSelection"
+			},
+			{
+				"command": "ahk2.compile",
+				"key": "ctrl+shift+f5",
+				"when": "editorLangId == ahk2 && !isWeb"
+			},
+			{
+				"command": "ahk2.debug.file",
+				"key": "f5",
+				"when": "editorLangId == ahk2 && debuggersAvailable && debugState == 'inactive'"
+			},
+			{
+				"command": "ahk2.debug.params",
+				"key": "shift+f5",
+				"when": "editorLangId == ahk2 && debuggersAvailable && debugState == 'inactive'"
+			},
+			{
+				"command": "ahk2.help",
+				"key": "ctrl+f1",
+				"when": "editorLangId == ahk2 && !isWeb"
+			},
+			{
+				"command": "ahk2.stop",
+				"key": "ctrl+f6",
+				"when": "editorLangId == ahk2 && !isWeb && ahk2:isRunning"
+			}
+		],
+		"semanticTokenScopes": [
+			{
+				"language": "ahk2",
+				"scopes": {
+					"operator": [
+						"keyword.operator.wordlike.ahk2"
+					]
+				}
+			}
+		]
+	},
+	"scripts": {
+		"check-types": "tsc",
+		"build-cli": "node esbuild.mjs --cli",
+		"eslint": "eslint --fix",
+		"package": "vsce package",
+		"publish": "vsce publish",
+		"test": "vscode-test",
+		"test-grammar": "vscode-tmgrammar-snap tmgrammar-test/*.ahk",
+		"vscode:prepublish": "node esbuild.mjs && npm run test && npm run test-grammar",
+		"watch": "node esbuild.mjs --dev",
+		"watch-web": "node esbuild.mjs --web"
+	},
+	"devDependencies": {
+		"@types/node": "^20.14.0",
+		"@types/vscode": "1.93.0",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.4.1",
+		"@vscode/vsce": "^2.32.0",
+		"esbuild": "^0.24.0",
+		"eslint": "^9.11.0",
+		"typescript": "5.5.4",
+		"typescript-eslint": "^8.7.0",
+		"vscode-tmgrammar-test": "^0.1.3"
+	},
+	"dependencies": {
+		"path-browserify": "^1.0.1",
+		"vscode-languageclient": "^9.0.1",
+		"vscode-languageserver": "^9.0.1",
+		"vscode-languageserver-textdocument": "^1.0.12",
+		"vscode-uri": "^3.0.8"
 	}
 }

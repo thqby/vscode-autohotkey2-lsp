@@ -24,6 +24,7 @@ export enum BraceStyle {
 }
 
 export interface FormatterConfig {
+	// AHK++ values
 	arrayStyle: ObjectOrArrayStyle;
 	braceStyle: BraceStyle;
 	breakChainedMethods: boolean;
@@ -43,6 +44,27 @@ export interface FormatterConfig {
 	symbolWithSameCase: boolean;
 	whitespaceBeforeInlineComment: string;
 	wrapLineLength: number;
+
+	// thqby values
+	array_style?: 'collapse' | 'expand' | 'none';
+	brace_style?: 'One True Brace' | 'Allman' | 'One True Brace Variant';
+	break_chained_methods?: boolean;
+	ignore_comment?: boolean;
+	indent_string?: string;
+	indent_between_hot_if_directives?: boolean;
+	keyword_start_with_uppercase?: boolean;
+	max_preserve_newlines?: number;
+	object_style?: 'collapse' | 'expand' | 'none';
+	preserve_newlines?: boolean;
+	space_before_conditional?: boolean;
+	space_after_double_colon?: boolean;
+	space_in_empty_paren?: boolean;
+	space_in_other?: boolean;
+	space_in_paren?: boolean;
+	switch_case_alignment?: boolean;
+	symbol_with_same_case?: boolean;
+	whitespace_before_inline_comment?: string;
+	wrap_line_length?: number;
 }
 
 /** Defined in package.json */
@@ -61,23 +83,43 @@ export enum CallWithoutParentheses {
 }
 
 export enum CfgKey {
-	ActionWhenV1Detected = 'v2.general.actionWhenV1Detected',
-	CallWithoutParentheses = 'v2.warn.callWithoutParentheses',
-	ClassNonDynamicMemberCheck = 'v2.diagnostics.classNonDynamicMemberCheck',
-	CommentTagRegex = 'v2.general.commentTagRegex', // still used directly in some places
-	CompleteFunctionCalls = 'v2.general.completeFunctionCalls',
-	CompletionCommitCharacters = 'v2.completionCommitCharacters',
-	Exclude = 'v2.exclude', // still used directly in some places
-	Formatter = 'v2.formatter',
-	InterpreterPath = 'v2.file.interpreterPath', // still used directly in some places
-	LibrarySuggestions = 'v2.general.librarySuggestions',
-	LocalSameAsGlobal = 'v2.warn.localSameAsGlobal',
-	MaxScanDepth = 'v2.file.maxScanDepth',
-	ParamsCheck = 'v2.diagnostics.paramsCheck',
-	SymbolFoldingFromOpenBrace = 'v2.general.symbolFoldingFromOpenBrace',
-	Syntaxes = 'v2.general.syntaxes',
-	VarUnset = 'v2.warn.varUnset',
-	WorkingDirectories = 'v2.workingDirectories', // still used directly in some places
+	//* ahkpp values
+	// ActionWhenV1Detected = 'v2.general.actionWhenV1Detected',
+	// CallWithoutParentheses = 'v2.warn.callWithoutParentheses',
+	// ClassNonDynamicMemberCheck = 'v2.diagnostics.classNonDynamicMemberCheck',
+	// CommentTagRegex = 'v2.general.commentTagRegex',
+	// CompleteFunctionCalls = 'v2.general.completeFunctionCalls',
+	// CompletionCommitCharacters = 'v2.completionCommitCharacters',
+	// Exclude = 'v2.exclude',
+	// Formatter = 'v2.formatter',
+	// InterpreterPath = 'v2.file.interpreterPath',
+	// LibrarySuggestions = 'v2.general.librarySuggestions',
+	// LocalSameAsGlobal = 'v2.warn.localSameAsGlobal',
+	// MaxScanDepth = 'v2.file.maxScanDepth',
+	// ParamsCheck = 'v2.diagnostics.paramsCheck',
+	// SymbolFoldingFromOpenBrace = 'v2.general.symbolFoldingFromOpenBrace',
+	// Syntaxes = 'v2.general.syntaxes',
+	// VarUnset = 'v2.warn.varUnset',
+	// WorkingDirectories = 'v2.workingDirectories',
+	
+	//* thqby values
+	ActionWhenV1Detected = 'ActionWhenV1IsDetected',
+	CallWithoutParentheses = 'Warn.CallWithoutParentheses',
+	ClassNonDynamicMemberCheck = 'Diagnostics.ClassNonDynamicMemberCheck',
+	CommentTagRegex = 'CommentTags',
+	CompleteFunctionCalls = 'CompleteFunctionParens',
+	CompletionCommitCharacters = 'CompletionCommitCharacters',
+	Exclude = 'Files.Exclude',
+	Formatter = 'FormatOptions',
+	InterpreterPath = 'InterpreterPath',
+	LibrarySuggestions = 'AutoLibInclude',
+	LocalSameAsGlobal = 'Warn.LocalSameAsGlobal',
+	MaxScanDepth = 'Files.ScanMaxDepth',
+	ParamsCheck = 'Diagnostics.ParamsCheck',
+	SymbolFoldingFromOpenBrace = 'SymbolFoldingFromOpenBrace',
+	Syntaxes = 'Syntaxes',
+	VarUnset = 'Warn.varUnset',
+	WorkingDirectories = 'WorkingDirs',
 }
 
 export interface CompletionCommitCharacters {

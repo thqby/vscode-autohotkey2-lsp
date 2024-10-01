@@ -1,0 +1,70 @@
+// A launch configuration that compiles the extension and then opens it inside a new window
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Launch Client",
+			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: watch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"outFiles": [
+				"${workspaceFolder}/client/dist/**/*.js"
+			]
+		},
+		{
+			"type": "node",
+			"request": "attach",
+			"name": "Attach to Server",
+			"port": 6009,
+			"restart": true,
+			"outFiles": [
+				"${workspaceFolder}/server/out/**/*.js",
+				"${workspaceFolder}/server/dist/**/*.js"
+			]
+		},
+		{
+			"name": "Extension Tests",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: watch",
+			"args": [
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"outFiles": [
+				"${workspaceFolder}/client/dist/test/**/*.js"
+			],
+			"testConfiguration": "${workspaceFolder}/.vscode-test.mjs"
+		},
+		{
+			"name": "Run Web Extension",
+			"type": "extensionHost",
+			"debugWebWorkerHost": true,
+			"request": "launch",
+			"args": [
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--extensionDevelopmentKind=web"
+			],
+			"outFiles": [
+				"${workspaceFolder}/client/dist/**/*.js",
+				"${workspaceFolder}/server/dist/**/*.js"
+			],
+			"preLaunchTask": "npm: watch-web"
+		}
+	],
+	"compounds": [
+		{
+			"name": "Client + Server",
+			"configurations": [
+				"Launch Client",
+				"Attach to Server"
+			]
+		}
+	]
+}

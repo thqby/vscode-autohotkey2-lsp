@@ -1,6 +1,6 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import {
-	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
+	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
 	checkParams, diagnostic, ahkppConfig, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
 } from './common';
 import { CfgKey, getCfg } from './config';
@@ -118,9 +118,8 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						if (tk.callsite) checkParams(doc, curclass as unknown as FuncNode, tk.callsite);
 						return sem.type = SemanticTokenTypes.class;
 					case SymbolKind.Property: {
-						const t = n.children;
-						if (t?.length === 1 && t[0].name.toLowerCase() === 'get')
-							sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | SemanticTokenModifiers.static;
+						const t = n as Property;
+						sem.modifier = (sem.modifier ?? 0) | (n.static ? SemanticTokenModifiers.static : 0) | (!t.set && t.children ? SemanticTokenModifiers.readonly : 0);
 						curclass = curclass.range === n.range ? curclass.prototype : undefined;
 						return sem.type = SemanticTokenTypes.property;
 					}

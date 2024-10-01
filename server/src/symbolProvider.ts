@@ -8,7 +8,7 @@ import {
 	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable,
 	ahkuris, ahkvars, check_same_name_error, connection, decltype_expr,
-	diagnostic, enum_ahkfiles, ahkppConfig, find_class, get_class_constructor, isBrowser,
+	diagnostic, enum_ahkfiles, ahkppConfig, find_class, get_class_constructor,
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
 import { CfgKey, getCfg } from './config';
@@ -374,7 +374,7 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 	const reg = new RegExp(query.match(/[^\w]/) ? query.replace(/(.)/g, '$1.*') : '(' + query.replace(/(.)/g, '$1.*') + '|[^\\w])', 'i');
 	for (const uri in lexers)
 		if (filterSymbols(uri)) return symbols;
-	if (!isBrowser) {
+	if (!process.env.BROWSER) {
 		let uri: string, d: Lexer, t: TextDocument | undefined;
 		for (let dir of workspaceFolders) {
 			dir = URI.parse(dir).fsPath;

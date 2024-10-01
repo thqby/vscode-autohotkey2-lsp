@@ -1,9 +1,7 @@
 {
-	"name": "vscode-autohotkey2-server",
-	"description": "Autohotkey2 Language Server using vscode-lsp.",
-	"license": "LGPLv3.0",
-	"engines": {
-		"node": "*"
-	},
-	"dependencies": {}
+	"browser": {
+		"child_process": false,
+		"fs": false,
+		"path": "path-browserify"
+	}
 }

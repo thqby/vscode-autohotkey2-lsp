@@ -24,9 +24,6 @@ export const chinese_punctuations: Record<string, string> = {
 	'！': '!'
 };
 
-export const isBrowser = typeof process === 'undefined';
-export const isWindows = !isBrowser && process.platform === 'win32';
-
 export const jsDocTagNames = [
 	"abstract",
 	"access",

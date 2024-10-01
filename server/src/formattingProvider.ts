@@ -1,10 +1,10 @@
 import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, Position, Range, TextEdit } from 'vscode-languageserver';
 import { chinese_punctuations, ahkppConfig, lexers, Token } from './common';
-import { FormatterConfig } from './config';
+import { CfgKey, FormatterConfig, getCfg } from './config';
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	const doc = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, doc.document.lineCount, 0);
-	const opts = { ...ahkppConfig.v2.formatter };
+	const opts = getCfg<FormatterConfig>(ahkppConfig, CfgKey.Formatter);
 	opts.indentString ??= params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
 	const newText = doc.beautify(opts);
 	return [{ range, newText }];
@@ -12,7 +12,7 @@ export async function documentFormatting(params: DocumentFormattingParams): Prom
 
 export async function rangeFormatting(params: DocumentRangeFormattingParams): Promise<TextEdit[] | undefined> {
 	const doc = lexers[params.textDocument.uri.toLowerCase()], range = params.range;
-	const opts = { ...ahkppConfig.v2.formatter };
+	const opts = getCfg<FormatterConfig>(ahkppConfig, CfgKey.Formatter);
 	opts.indentString = params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
 	const newText = doc.beautify(opts, range).trim();
 	return [{ range, newText }];
@@ -20,7 +20,7 @@ export async function rangeFormatting(params: DocumentRangeFormattingParams): Pr
 
 export async function typeFormatting(params: DocumentOnTypeFormattingParams): Promise<TextEdit[] | undefined> {
 	const doc = lexers[params.textDocument.uri.toLowerCase()], { ch, position } = params;
-	const options: FormatterConfig = { ...ahkppConfig.v2.formatter };
+	const options = getCfg<FormatterConfig>(ahkppConfig, CfgKey.Formatter);
 	let tk: Token, s: string, pp: number | undefined, result: TextEdit[] | undefined;
 	options.indentString = ' '.repeat(params.options.tabSize);
 	s = doc.document.getText({ start: { line: 0, character: 0 }, end: { line: 0, character: 1 } });

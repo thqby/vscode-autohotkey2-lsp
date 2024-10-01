@@ -1,8 +1,3 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-
 import {
 	commands,
 	ConfigurationTarget,
@@ -62,7 +57,8 @@ const loadedCollection = {
 
 export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	/** Absolute path to `server.js` */
-	const defaultServerModule = context.asAbsolutePath(`ahk2/server/dist/server.js`);
+	// todo needs to start with `ahk2` for compatibility with AHK++
+	const defaultServerModule = context.asAbsolutePath(`server/dist/server.js`);
 	const serverModule = process.env.VSCODE_AHK_SERVER_PATH ? context.asAbsolutePath(process.env.VSCODE_AHK_SERVER_PATH) : defaultServerModule;
 
 	// If the extension is launched in debug mode then the debug server options are used
