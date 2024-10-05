@@ -7,5 +7,5 @@
 		"noEmit": true,
 		"strict": true
 	},
-	"include": ["client/src", "server/src"]
+	"include": ["client/src", "server/src", "util/src"]
 }
