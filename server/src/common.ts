@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { AhkSymbol, Lexer, check_formatopts, update_comment_tags } from './Lexer';
+import { AhkSymbol, Lexer, check_formatopts, updateCommentTagRegex } from './Lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
 import { ahklsConfig, AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg } from '../../util/src/config';
@@ -362,10 +362,10 @@ export function enum_ahkfiles(dirpath: string) {
 }
 
 /**
- * Update the extension config in-memory.
+ * Update the extension config (`ahklsConfig`) in-memory.
  * Does not update user settings.
  */
-export function updateConfig(newConfig: AHKLSConfig) {
+export function updateConfig(newConfig: AHKLSConfig): void {
 	const newConfigLibSuggestions = getCfg(CfgKey.LibrarySuggestions, newConfig);
 	if (typeof newConfigLibSuggestions === 'string')
 		setCfg(CfgKey.LibrarySuggestions, LibIncludeType[newConfigLibSuggestions as unknown as LibIncludeType], newConfig);
@@ -375,10 +375,11 @@ export function updateConfig(newConfig: AHKLSConfig) {
 		newConfig.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[newConfig.Warn.CallWithoutParentheses];
 	check_formatopts(newConfig.FormatOptions ?? {});
 	try {
-		update_comment_tags(newConfig.CommentTags!);
+		updateCommentTagRegex(getCfg(CfgKey.CommentTagRegex, newConfig));
 	} catch (e) {
 		delete (e as { stack?: string }).stack;
-		delete newConfig.CommentTags;
+		// reset value of `newConfig` to avoid corrupting `ahklsConfig`
+		setCfg(CfgKey.CommentTagRegex, getCfg(CfgKey.CommentTagRegex), newConfig);
 		console.log(e);
 	}
 	if (newConfig.WorkingDirs instanceof Array)
