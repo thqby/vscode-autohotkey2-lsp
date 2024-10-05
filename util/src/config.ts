@@ -154,7 +154,10 @@ export const ahklsConfig: AHKLSConfig = newConfig();
 /** The start of each config value in package.json */
 export const configPrefix = 'AutoHotkey2';
 
-/** Gets a single config value from the given config */
+/**
+ * Gets a single config value from the provided config.
+ * If no config provided, uses the global config.
+ */
 export const getCfg = <T = string>(
 	key: CfgKey,
 	config: AHKLSConfig = ahklsConfig,
@@ -169,6 +172,10 @@ export const getCfg = <T = string>(
 	return value;
 };
 
+/**
+ * Sets the value of the key in the provided config.
+ * If no config provided, updates the global config.
+ */
 export const setCfg = <T>(
 	key: CfgKey,
 	value: T,
