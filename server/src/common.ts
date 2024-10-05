@@ -7,7 +7,7 @@ import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, Sym
 import { AhkSymbol, Lexer, check_formatopts, update_comment_tags } from './Lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
-import { ahklsConfig, AHKLSConfig, LibIncludeType } from '../../util/src/config';
+import { ahklsConfig, AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg } from '../../util/src/config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -366,10 +366,11 @@ export function enum_ahkfiles(dirpath: string) {
  * Does not update user settings.
  */
 export function updateConfig(newConfig: AHKLSConfig) {
-	if (typeof newConfig.AutoLibInclude === 'string')
-		newConfig.AutoLibInclude = LibIncludeType[newConfig.AutoLibInclude] as unknown as LibIncludeType;
-	else if (typeof newConfig.AutoLibInclude === 'boolean')
-		newConfig.AutoLibInclude = newConfig.AutoLibInclude ? 3 : 0;
+	const newConfigLibSuggestions = getCfg(CfgKey.LibrarySuggestions, newConfig);
+	if (typeof newConfigLibSuggestions === 'string')
+		setCfg(CfgKey.LibrarySuggestions, LibIncludeType[newConfigLibSuggestions as unknown as LibIncludeType], newConfig);
+	else if (typeof newConfigLibSuggestions === 'boolean')
+		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? 3 : 0, newConfig);
 	if (typeof newConfig.Warn?.CallWithoutParentheses === 'string')
 		newConfig.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[newConfig.Warn.CallWithoutParentheses];
 	check_formatopts(newConfig.FormatOptions ?? {});

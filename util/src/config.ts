@@ -93,11 +93,10 @@ export interface AHKLSConfig {
 }
 
 /**
- * The global object shared across the server.
- * The client fetches the config from VS Code directly.
- * Updated when the user changes their settings.
+ * With no arg provided, returns initial values of the config object.
+ * Any values provided in the arg are preserved in the new object.
  */
-export const ahklsConfig: AHKLSConfig = {
+export const newConfig = (config: Partial<AHKLSConfig> = {}): AHKLSConfig => ({
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
 	CommentTags: '^;;\\s*(.*)',
@@ -123,7 +122,15 @@ export const ahklsConfig: AHKLSConfig = {
 		CallWithoutParentheses: false,
 	},
 	WorkingDirs: [],
-};
+	...config,
+});
+
+/**
+ * The global object shared across the server.
+ * The client fetches the config from VS Code directly.
+ * Updated when the user changes their settings.
+ */
+export const ahklsConfig: AHKLSConfig = newConfig();
 
 /** The start of each config value in package.json */
 export const configPrefix = 'AutoHotkey2';
@@ -143,9 +150,9 @@ export const getCfg = <T = string>(
 	return value;
 };
 
-export const setCfg = (
+export const setCfg = <T>(
 	key: CfgKey,
-	value: unknown,
+	value: T,
 	config: AHKLSConfig = ahklsConfig,
 ): void => {
 	const keyPath = key.split('.');
@@ -157,3 +164,4 @@ export const setCfg = (
 	}
 	obj[keyPath[keyPath.length - 1]] = value;
 };
+
