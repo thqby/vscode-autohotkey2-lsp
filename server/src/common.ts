@@ -7,7 +7,7 @@ import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, Sym
 import { AhkSymbol, Lexer, check_formatopts, update_comment_tags } from './Lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
-import { AHKLSConfig, LibIncludeType } from '../../util/src/config';
+import { ahklsConfig, AHKLSConfig, LibIncludeType } from '../../util/src/config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -27,33 +27,6 @@ export * from './symbolProvider';
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
 export const alpha_3 = encode_version('2.1-alpha.3');
-export const ahklsConfig: AHKLSConfig = {
-	ActionWhenV1IsDetected: 'Warn',
-	AutoLibInclude: 0,
-	CommentTags: '^;;\\s*(.*)',
-	CompleteFunctionParens: false,
-	CompletionCommitCharacters: {
-		Class: '.(',
-		Function: '('
-	},
-	Diagnostics: {
-		ClassNonDynamicMemberCheck: true,
-		ParamsCheck: true
-	},
-	Files: {
-		Exclude: [],
-		MaxDepth: 2
-	},
-	FormatOptions: {},
-	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe',
-	SymbolFoldingFromOpenBrace: false,
-	Warn: {
-		VarUnset: true,
-		LocalSameAsGlobal: false,
-		CallWithoutParentheses: false
-	},
-	WorkingDirs: []
-};
 export const utils = {
 	get_DllExport: (_paths: string[] | Set<string>, _onlyone = false) => Promise.resolve([] as string[]),
 	get_RCDATA: (_path?: string) => undefined as { uri: string, path: string, paths?: string[] } | undefined,

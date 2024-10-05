@@ -8,10 +8,11 @@ import { URI } from 'vscode-uri';
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AhkSymbol, ClassNode, FuncNode, Maybe, Property, STRING, SemanticTokenTypes, Token, Variable,
 	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache, completionitem,
-	decltype_expr, dllcalltpe, ahklsConfig, find_class, find_symbol, find_symbols, get_detail,
+	decltype_expr, dllcalltpe, find_class, find_symbol, find_symbols, get_detail,
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
 	lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
+import { ahklsConfig } from '../../util/src/config';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;

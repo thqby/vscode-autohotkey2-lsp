@@ -87,6 +87,34 @@ export interface AHKLSConfig {
 	WorkingDirs: string[]
 }
 
+export const ahklsConfig: AHKLSConfig = {
+	ActionWhenV1IsDetected: 'Warn',
+	AutoLibInclude: 0,
+	CommentTags: '^;;\\s*(.*)',
+	CompleteFunctionParens: false,
+	CompletionCommitCharacters: {
+		Class: '.(',
+		Function: '('
+	},
+	Diagnostics: {
+		ClassNonDynamicMemberCheck: true,
+		ParamsCheck: true
+	},
+	Files: {
+		Exclude: [],
+		MaxDepth: 2
+	},
+	FormatOptions: {},
+	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe',
+	SymbolFoldingFromOpenBrace: false,
+	Warn: {
+		VarUnset: true,
+		LocalSameAsGlobal: false,
+		CallWithoutParentheses: false
+	},
+	WorkingDirs: []
+};
+
 /** The start of each config value in package.json */
 export const configPrefix = 'AutoHotkey2';
 

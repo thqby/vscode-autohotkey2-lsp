@@ -21,11 +21,11 @@ import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
-	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, ahklsConfig,
+	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection,
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, FormatOptions } from '../../util/src/config';
+import { ActionType, ahklsConfig, FormatOptions } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number

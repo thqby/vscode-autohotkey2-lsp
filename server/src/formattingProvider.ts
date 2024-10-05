@@ -1,5 +1,6 @@
 import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, Position, Range, TextEdit } from 'vscode-languageserver';
-import { chinese_punctuations, ahklsConfig, lexers, Token } from './common';
+import { chinese_punctuations, lexers, Token } from './common';
+import { ahklsConfig } from '../../util/src/config';
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	const doc = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, doc.document.lineCount, 0);

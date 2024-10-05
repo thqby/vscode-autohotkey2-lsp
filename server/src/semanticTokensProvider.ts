@@ -1,8 +1,9 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import {
 	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
-	checkParams, diagnostic, ahklsConfig, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
+	checkParams, diagnostic, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
 } from './common';
+import { ahklsConfig } from '../../util/src/config';
 
 let curclass: ClassNode | undefined;
 const memscache = new Map<ClassNode, Record<string, AhkSymbol>>();

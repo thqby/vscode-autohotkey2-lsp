@@ -8,9 +8,10 @@ import {
 	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable,
 	ahkuris, ahkvars, check_same_name_error, connection, decltype_expr,
-	diagnostic, enum_ahkfiles, ahklsConfig, find_class, get_class_constructor,
+	diagnostic, enum_ahkfiles, find_class, get_class_constructor,
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
+import { ahklsConfig } from '../../util/src/config';
 
 export let globalsymbolcache: Record<string, AhkSymbol> = {};
 
