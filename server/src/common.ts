@@ -340,7 +340,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enum_ahkfiles(dirpath: string) {
-	const maxdepth = ahklsConfig.Files.MaxDepth;
+	const maxdepth = getCfg<number>(CfgKey.MaxScanDepth);
 	const { file: file_exclude, folder: folder_exclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
@@ -388,9 +388,9 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 				.endsWith('/') ? dir : dir + '/');
 	else newConfig.WorkingDirs = [];
 	scanExclude = {};
-	if (newConfig.Files) {
+	if (getCfg(CfgKey.Exclude, newConfig)) {
 		const file: RegExp[] = [], folder: RegExp[] = [];
-		for (const s of newConfig.Files.Exclude ?? [])
+		for (const s of getCfg(CfgKey.Exclude, newConfig))
 			try {
 				(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
 			} catch (e) {
@@ -400,8 +400,13 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 			scanExclude.file = file;
 		if (folder.length)
 			scanExclude.folder = folder;
-		if ((newConfig.Files.MaxDepth ??= 2) < 0)
-			newConfig.Files.MaxDepth = Infinity;
+		let maxScanDepth = getCfg<number | undefined>(CfgKey.MaxScanDepth, newConfig);
+		if (maxScanDepth === undefined) {
+			maxScanDepth = 2;
+		}
+		if (maxScanDepth < 0)
+			maxScanDepth = Infinity;
+		setCfg(CfgKey.MaxScanDepth, maxScanDepth, newConfig);
 	}
 	if (newConfig.Syntaxes)
 		newConfig.Syntaxes = resolve(newConfig.Syntaxes).toLowerCase();
