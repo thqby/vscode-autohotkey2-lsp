@@ -98,7 +98,7 @@ export interface AHKLSConfig {
  */
 export const newConfig = (config: Partial<AHKLSConfig> = {}): AHKLSConfig => ({
 	ActionWhenV1IsDetected: 'Warn',
-	AutoLibInclude: 0,
+	AutoLibInclude: LibIncludeType.Disabled,
 	CommentTags: '^;;\\s*(.*)',
 	CompleteFunctionParens: false,
 	CompletionCommitCharacters: {
