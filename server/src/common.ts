@@ -388,7 +388,11 @@ export function enum_ahkfiles(dirpath: string) {
 	}
 }
 
-export function update_settings(configs: AHKLSConfig) {
+/**
+ * Update the extension config in-memory.
+ * Does not update user settings.
+ */
+export function updateConfig(configs: AHKLSConfig) {
 	if (typeof configs.AutoLibInclude === 'string')
 		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 	else if (typeof configs.AutoLibInclude === 'boolean')

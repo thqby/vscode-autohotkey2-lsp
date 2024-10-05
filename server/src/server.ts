@@ -14,7 +14,7 @@ import {
 	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
 	set_dirname, set_locale, set_version, set_WorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
-	traverse_include, typeFormatting, update_settings, utils, winapis, workspaceSymbolProvider
+	traverse_include, typeFormatting, updateConfig, utils, winapis, workspaceSymbolProvider
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
@@ -97,7 +97,7 @@ connection.onInitialize(async params => {
 	loadlocalize();
 	initahk2cache();
 	if (configs)
-		update_settings(configs);
+		updateConfig(configs);
 	if (!(await setInterpreter(resolvePath(ahklsConfig.InterpreterPath ??= ''))))
 		patherr(setting.ahkpatherr());
 	set_WorkspaceFolders(workspaceFolders);
@@ -130,7 +130,7 @@ connection.onDidChangeConfiguration(async change => {
 		return;
 	}
 	const { AutoLibInclude, InterpreterPath, Syntaxes } = ahklsConfig;
-	update_settings(newset);
+	updateConfig(newset);
 	set_WorkspaceFolders(workspaceFolders);
 	if (InterpreterPath !== ahklsConfig.InterpreterPath) {
 		if (await setInterpreter(resolvePath(ahklsConfig.InterpreterPath ??= '')))
