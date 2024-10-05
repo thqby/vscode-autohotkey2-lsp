@@ -28,10 +28,11 @@ import {
 import { resolve } from 'path';
 import { ChildProcess, exec, execSync, spawn } from 'child_process';
 import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
+import { configPrefix } from '../../util/src/config';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
-const ahkconfig = workspace.getConfiguration('AutoHotkey2');
+const ahkconfig = workspace.getConfiguration(configPrefix);
 let ahkpath_cur: string = ahkconfig.InterpreterPath, server_is_ready = false;
 const textdecoders = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const isWindows = process.platform === 'win32';
@@ -398,7 +399,7 @@ async function stopRunningScript() {
 }
 
 async function compileScript(textEditor: TextEditor) {
-	let cmd = '', cmdop = workspace.getConfiguration('AutoHotkey2').CompilerCMD as string;
+	let cmd = '', cmdop = workspace.getConfiguration(configPrefix).CompilerCMD as string;
 	const ws = workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath ?? '';
 	const compilePath = findfile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
 	const executePath = resolvePath(ahkpath_cur, ws);

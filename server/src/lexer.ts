@@ -21,10 +21,11 @@ import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
-	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings,
+	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection,
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
+import { ActionType, ahklsConfig, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -196,28 +197,6 @@ export interface Context {
 	symbol?: AhkSymbol;
 };
 
-export interface FormatOptions {
-	array_style?: number
-	brace_style?: number
-	break_chained_methods?: boolean
-	ignore_comment?: boolean
-	indent_string?: string
-	indent_between_hotif_directive?: boolean
-	keyword_start_with_uppercase?: boolean
-	max_preserve_newlines?: number
-	object_style?: number
-	preserve_newlines?: boolean
-	space_before_conditional?: boolean
-	space_after_double_colon?: boolean
-	space_in_empty_paren?: boolean
-	space_in_other?: boolean
-	space_in_paren?: boolean
-	switch_case_alignment?: boolean
-	symbol_with_same_case?: boolean
-	white_space_before_inline_comment?: string
-	wrap_line_length?: number
-}
-
 interface ParamList extends Array<Variable> {
 	format?: (params: Variable[]) => void
 	hasref?: boolean
@@ -316,7 +295,7 @@ export const THIS: Variable = {
 export const SUPER: Variable = { ...THIS, name: 'super', detail: completionitem.super() };
 
 export const allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+$');
-let commentTags = new RegExp('^;;\\s*(?<tag>.+)');
+let commentTagRegex = new RegExp('^;;\\s*(?<tag>.+)');
 const S2O: Record<string, AhkSymbol> = {
 	$DIRPATH,
 	$DLLFUNC,
@@ -340,8 +319,6 @@ class ParseStopError {
 		this.token = token;
 	}
 }
-
-export type ActionType = 'Continue' | 'Warn' | 'SkipLine' | 'SwitchToV1' | 'Stop';
 
 export class Lexer {
 	public actionwhenv1?: ActionType = 'Continue';
@@ -1178,7 +1155,7 @@ export class Lexer {
 				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
-				callWithoutParentheses = extsettings.Warn?.CallWithoutParentheses;
+				callWithoutParentheses = ahklsConfig.Warn?.CallWithoutParentheses;
 				try {
 					const rs = utils.get_RCDATA('#2');
 					rs && (includetable[rs.uri] = rs.path);
@@ -1217,7 +1194,7 @@ export class Lexer {
 			if (requirev2)
 				return false;
 			_this.maybev1 ??= maybev1 = 1;
-			switch (_this.actionwhenv1 ??= extsettings.ActionWhenV1IsDetected) {
+			switch (_this.actionwhenv1 ??= getCfg(CfgKey.ActionWhenV1Detected)) {
 				case 'SkipLine': {
 					if (!allow_skip)
 						return true;
@@ -3694,7 +3671,7 @@ export class Lexer {
 					nexttoken(), parse_pair('(', ')');
 					const pc = tokens[tk.previous_pair_pos!]?.paraminfo?.count ?? 0;
 					if (pc !== 1)
-						extsettings.Diagnostics.ParamsCheck && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
+						getCfg(CfgKey.ParamsCheck) && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
 					else if (result.length > l && lk.type === 'TK_WORD') {
 						const vr = result.at(-1) as Variable;
 						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
@@ -5232,7 +5209,7 @@ export class Lexer {
 											rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
 								} else if ((t = customblocks.region.pop()) !== undefined)
 									_this.addFoldingRange(t, parser_pos + 1, 'region');
-							} else if ((t = line.match(commentTags))) {
+							} else if ((t = line.match(commentTagRegex))) {
 								const g = t.groups;
 								for (const tag in g)
 									if (tag.startsWith('tag') && (t = g[tag]?.trim()))
@@ -6338,7 +6315,7 @@ export class Lexer {
 			return;
 		let workfolder: string;
 		if (!dir) {
-			for (workfolder of extsettings.WorkingDirs)
+			for (workfolder of ahklsConfig.WorkingDirs)
 				if (this.uri.startsWith(workfolder)) {
 					dir = restorePath(URI.parse(workfolder).fsPath.replace(/[\\/]$/, ''));
 					break;
@@ -6396,7 +6373,7 @@ export class Lexer {
 	}
 
 	private addSymbolFolding(symbol: AhkSymbol, first_brace: number) {
-		const l1 = extsettings.SymbolFoldingFromOpenBrace ? this.document.positionAt(first_brace).line : symbol.range.start.line;
+		const l1 = ahklsConfig.SymbolFoldingFromOpenBrace ? this.document.positionAt(first_brace).line : symbol.range.start.line;
 		const l2 = symbol.range.end.line - 1;
 		const ranges = this.foldingranges;
 		if (l1 < l2) {
@@ -7887,15 +7864,21 @@ export function is_line_continue(lk: Token, tk: Token, parent?: AhkSymbol): bool
 	}
 }
 
-export function update_comment_tags(regexp: string) {
-	const old = commentTags;
+/**
+ * Tries to update the commentTagRegex to the provided value.
+ * If a new regex cannot be made from the provied value, throws an error.
+ */
+export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
+	const oldCommentTagRegex = commentTagRegex;
 	try {
-		if (!regexp) return;
-		commentTags = new RegExp(regexp, 'i');
+		if (newCommentTagRegex) {
+			commentTagRegex = new RegExp(newCommentTagRegex, 'i');
+		}
 	} catch (e) {
-		commentTags = old;
+		commentTagRegex = oldCommentTagRegex;
 		throw e;
 	}
+	return commentTagRegex;
 }
 
 export function check_formatopts(opts: FormatOptions) {

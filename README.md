@@ -232,55 +232,56 @@ node install.js
 
 ```json
 {
-  "clients": {
-    "lsp-ahk2": {
-      "enabled": true,
-      "command": [
-        "node",
-        "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-        "--stdio"
-      ], // Update the path of node.exe(maybe it's already in PATH, so you don't need to set it) and the folder of vscode-autohotkey2-lsp
-      "selector": "source.ahk2", // Same as scope in AutoHotkey2.sublime-syntax
-      "schemes": ["file", "buffer", "res"],
-      "initializationOptions": {
-        "locale": "en-us", // or "zh-cn"
-        "AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
-        "CommentTags": "^;;\\s*(?<tag>.+)",
-        "CompleteFunctionParens": false,
-        "Diagnostics": {
-          "ClassStaticMemberCheck": true,
-          "ParamsCheck": true
-        },
-        "ActionWhenV1IsDetected": "Continue",
-        "FormatOptions": {
-          "array_style": "none",           // or "collapse" or "expand"
-          "break_chained_methods": false,
-          "ignore_comment": false,
-          "indent_string": "\t",
-          "max_preserve_newlines": 2,
-          "brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
-          "object_style": "none",          // or "collapse" or "expand"
-          "preserve_newlines": true,
-          "space_after_double_colon": true,
-          "space_before_conditional": true,
-          "space_in_empty_paren": false,
-          "space_in_other": true,
-          "space_in_paren": false,
-          "wrap_line_length": 0
-        },
-        "InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
-        "WorkingDirs": [],
-        "SymbolFoldingFromOpenBrace": false
-      }
-    }
-  },
-  "semantic_highlighting": true
+	"clients": {
+		"lsp-ahk2": {
+			"enabled": true,
+			"command": [
+				"node",
+				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+				"--stdio"
+			], // Update the path of node.exe(maybe it's already in PATH, so you don't need to set it) and the folder of vscode-autohotkey2-lsp
+			"selector": "source.ahk2", // Same as scope in AutoHotkey2.sublime-syntax
+			"schemes": ["file", "buffer", "res"],
+			"initializationOptions": {
+				"locale": "en-us", // or "zh-cn"
+				"AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
+				"CommentTags": "^;;\\s*(?<tag>.+)",
+				"CompleteFunctionParens": false,
+				"Diagnostics": {
+					"ClassStaticMemberCheck": true,
+					"ParamsCheck": true
+				},
+				"ActionWhenV1IsDetected": "Continue",
+				"FormatOptions": {
+					"array_style": "none", // or "collapse" or "expand"
+					"break_chained_methods": false,
+					"ignore_comment": false,
+					"indent_string": "\t",
+					"max_preserve_newlines": 2,
+					"brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
+					"object_style": "none", // or "collapse" or "expand"
+					"preserve_newlines": true,
+					"space_after_double_colon": true,
+					"space_before_conditional": true,
+					"space_in_empty_paren": false,
+					"space_in_other": true,
+					"space_in_paren": false,
+					"wrap_line_length": 0
+				},
+				"InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+				"WorkingDirs": [],
+				"SymbolFoldingFromOpenBrace": false
+			}
+		}
+	},
+	"semantic_highlighting": true
 }
 ```
 
 ### Vim and Neovim
 
 #### COC
+
 - Download [coc.nvim plugin](https://github.com/neoclide/coc.nvim).
 
 ```bat
@@ -292,20 +293,21 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 
 ```json
 {
-  "languageserver": {
-    "lsp-ahk2": {
-      "module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-      "filetypes": ["autohotkey"],
-      "args": ["--node-ipc"],
-      "initializationOptions": {
-        // Same as initializationOptions for Sublime Text4
-      }
-    }
-  }
+	"languageserver": {
+		"lsp-ahk2": {
+			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+			"filetypes": ["autohotkey"],
+			"args": ["--node-ipc"],
+			"initializationOptions": {
+				// Same as initializationOptions for Sublime Text4
+			}
+		}
+	}
 }
 ```
 
 #### nvim-lspconfig
+
 - Download [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig).
 - Add the following to your NVIM configuration (init.lua e.g.). Ensure that `cmd` points to the path of your vscode-autohotkey2-lsp installation and `InterpreterPath` points to your AHK exe.
 
@@ -349,9 +351,10 @@ nvim_lsp.ahk2.setup({})
 ### Emacs
 
 #### Eglot
+
 - Add the following lines to your emacs config file
 
-``` emacs-lisp
+```emacs-lisp
 (add-to-list 'eglot-server-programs '(ahk-mode "node" "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js" "--stdio"))
 
 ```
