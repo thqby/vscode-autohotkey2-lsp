@@ -18,7 +18,7 @@ import {
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
-import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig, shouldIncludeUserStdLib, shouldIncludeLocalLib } from '../../util/src/config';
+import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
 import { klona } from 'klona/json';
 
 const languageServer = 'ahk2-language-server';
@@ -99,7 +99,8 @@ connection.onInitialize(async params => {
 	initahk2cache();
 	if (initialConfig)
 		updateConfig(initialConfig);
-	if (!(await setInterpreter(resolvePath(ahklsConfig.InterpreterPath ??= ''))))
+	if (!getCfg(CfgKey.InterpreterPath)) setCfg(CfgKey.InterpreterPath, '');
+	if (!(await setInterpreter(resolvePath(getCfg(CfgKey.InterpreterPath)))))
 		patherr(setting.ahkpatherr());
 	set_WorkspaceFolders(workspaceFolders);
 	loadahk2();
@@ -130,13 +131,14 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	const { InterpreterPath, Syntaxes } = ahklsConfig;
+	const { Syntaxes } = ahklsConfig;
 	const oldConfig = klona(ahklsConfig);
 	updateConfig(newConfig);
 	set_WorkspaceFolders(workspaceFolders);
-	if (InterpreterPath !== ahklsConfig.InterpreterPath) {
-		if (await setInterpreter(resolvePath(ahklsConfig.InterpreterPath ??= '')))
-			connection.sendRequest('ahk2.updateStatusBar', [ahklsConfig.InterpreterPath]);
+	const newInterpreterPath = getCfg(CfgKey.InterpreterPath);
+	if (newInterpreterPath !== getCfg(CfgKey.InterpreterPath, oldConfig)) {
+		if (await setInterpreter(resolvePath(newInterpreterPath)))
+			connection.sendRequest('ahk2.updateStatusBar', [newInterpreterPath]);
 	}
 	if (getCfg(CfgKey.LibrarySuggestions) !== getCfg(CfgKey.LibrarySuggestions, oldConfig)) {
 		if (shouldIncludeUserStdLib() && !shouldIncludeUserStdLib(oldConfig))
