@@ -94,7 +94,7 @@ export interface AHKLSConfig {
 		ClassNonDynamicMemberCheck: boolean;
 		ParamsCheck: boolean;
 	};
-	Files: {
+	Files?: {
 		Exclude: string[];
 		MaxDepth: number;
 	};
@@ -163,11 +163,14 @@ export const getCfg = <T = string>(
 	config: AHKLSConfig = ahklsConfig,
 ): T => {
 	const keyPath = key.split('.');
-	// ConfigKey values are guaranteed to work ;)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let value: any = config;
 	for (const k of keyPath) {
-		value = value[k];
+		if (!value) {
+			console.warn('Failed to get config', key);
+			return undefined as T;
+		}
+		value = value?.[k];
 	}
 	return value;
 };
@@ -182,11 +185,14 @@ export const setCfg = <T>(
 	config: AHKLSConfig = ahklsConfig,
 ): void => {
 	const keyPath = key.split('.');
-	// ConfigKey values are guaranteed to work ;)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let obj: any = config;
 	for (const k of keyPath.slice(0, -1)) {
-		obj = obj[k];
+		obj = obj?.[k];
+	}
+	if (!obj) {
+		console.warn('Failed to set config', key, value);
+		return;
 	}
 	obj[keyPath[keyPath.length - 1]] = value;
 };
