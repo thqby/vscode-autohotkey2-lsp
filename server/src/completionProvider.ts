@@ -12,7 +12,7 @@ import {
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
 	lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
-import { ahklsConfig, shouldIncludeLocalLib, shouldIncludeUserStdLib } from '../../util/src/config';
+import { ahklsConfig, CfgKey, getCfg, shouldIncludeLocalLib, shouldIncludeUserStdLib } from '../../util/src/config';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
@@ -927,7 +927,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			// fall through
 			case SymbolKind.Function:
 				ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
-				if (ahklsConfig.CompleteFunctionParens) {
+				if (getCfg(CfgKey.CompleteFunctionCalls)) {
 					const fn = info as FuncNode;
 					if (right_is_paren)
 						ci.command = { title: 'cursorRight', command: 'cursorRight' };
