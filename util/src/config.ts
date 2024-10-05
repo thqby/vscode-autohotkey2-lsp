@@ -199,4 +199,3 @@ export const shouldIncludeLocalLib = (
 		LibIncludeType.Local ||
 	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
 		LibIncludeType.All;
-
