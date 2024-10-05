@@ -667,6 +667,7 @@
 		"spec": "out/**/*.spec.js"
 	},
 	"dependencies": {
+		"klona": "^2.0.6",
 		"path-browserify": "^1.0.1",
 		"vscode-languageclient": "^9.0.1",
 		"vscode-languageserver": "^9.0.1",
@@ -695,3 +696,4 @@
 	},
 	"icon": "icon.png"
 }
+

@@ -18,7 +18,8 @@ import {
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
-import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig } from '../../util/src/config';
+import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig, shouldIncludeUserStdLib, shouldIncludeLocalLib } from '../../util/src/config';
+import { klona } from 'klona/json';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -129,17 +130,18 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	const { AutoLibInclude, InterpreterPath, Syntaxes } = ahklsConfig;
+	const { InterpreterPath, Syntaxes } = ahklsConfig;
+	const oldConfig = klona(ahklsConfig);
 	updateConfig(newset);
 	set_WorkspaceFolders(workspaceFolders);
 	if (InterpreterPath !== ahklsConfig.InterpreterPath) {
 		if (await setInterpreter(resolvePath(ahklsConfig.InterpreterPath ??= '')))
 			connection.sendRequest('ahk2.updateStatusBar', [ahklsConfig.InterpreterPath]);
 	}
-	if (AutoLibInclude !== ahklsConfig.AutoLibInclude) {
-		if ((ahklsConfig.AutoLibInclude > 1) && (AutoLibInclude <= 1))
+	if (getCfg(CfgKey.LibrarySuggestions) !== getCfg(CfgKey.LibrarySuggestions, oldConfig)) {
+		if (shouldIncludeUserStdLib() && !shouldIncludeUserStdLib(oldConfig))
 			parseuserlibs();
-		if ((ahklsConfig.AutoLibInclude & 1) && !(AutoLibInclude & 1))
+		if (shouldIncludeLocalLib() && !shouldIncludeLocalLib(oldConfig))
 			documents.all().forEach(e => parseproject(e.uri.toLowerCase()));
 	}
 	if (Syntaxes !== ahklsConfig.Syntaxes) {
@@ -174,7 +176,7 @@ documents.onDidOpen(e => {
 	doc.actived = true;
 	if (to_ahk2)
 		doc.actionwhenv1 = 'Continue';
-	if (ahklsConfig.AutoLibInclude & 1)
+	if (shouldIncludeLocalLib())
 		parseproject(uri).then(() => doc.last_diags &&
 			Object.keys(doc.included).length && doc.update());
 });
@@ -294,7 +296,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		}
 	}
 	clearLibfuns();
-	if (ahklsConfig.AutoLibInclude > 1)
+	if (shouldIncludeUserStdLib())
 		parseuserlibs();
 	return true;
 	async function update_rcdata() {
@@ -347,7 +349,7 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 		const doc = lexers[td.uri.toLowerCase()];
 		if (!doc) return;
 		doc.initLibDirs(doc.scriptdir);
-		if (ahklsConfig.AutoLibInclude & 1)
+		if (shouldIncludeLocalLib())
 			parseproject(doc.uri);
 	});
 	return true;

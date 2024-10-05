@@ -1,6 +1,9 @@
 //* Utility functions to access the config variable from either client or server
 export enum CfgKey {
 	ActionWhenV1Detected = 'ActionWhenV1IsDetected',
+	ArrayStyle = 'FormatOptions.array_style',
+	BraceStyle = 'FormatOptions.brace_style',
+	BreakChainedMethods = 'FormatOptions.break_chained_methods',
 	CallWithoutParentheses = 'Warn.CallWithoutParentheses',
 	ClassNonDynamicMemberCheck = 'Diagnostics.ClassNonDynamicMemberCheck',
 	Commands = 'commands',
@@ -10,16 +13,32 @@ export enum CfgKey {
 	Exclude = 'Files.Exclude',
 	ExtensionUri = 'extensionUri',
 	Formatter = 'FormatOptions',
+	IgnoreComment = 'FormatOptions.ignore_comment',
+	IndentBetweenHotIfDirective = 'FormatOptions.indent_between_hotif_directive',
+	IndentString = 'FormatOptions.indent_string',
 	InterpreterPath = 'InterpreterPath',
+	KeywordStartWithUppercase = 'FormatOptions.keyword_start_with_uppercase',
 	LibrarySuggestions = 'AutoLibInclude',
 	LocalSameAsGlobal = 'Warn.LocalSameAsGlobal',
 	Locale = 'locale',
+	MaxPreserveNewlines = 'FormatOptions.max_preserve_newlines',
 	MaxScanDepth = 'Files.ScanMaxDepth',
+	ObjectStyle = 'FormatOptions.object_style',
 	ParamsCheck = 'Diagnostics.ParamsCheck',
+	PreserveNewlines = 'FormatOptions.preserve_newlines',
+	SpaceAfterDoubleColon = 'FormatOptions.space_after_double_colon',
+	SpaceBeforeConditional = 'FormatOptions.space_before_conditional',
+	SpaceInEmptyParen = 'FormatOptions.space_in_empty_paren',
+	SpaceInOther = 'FormatOptions.space_in_other',
+	SpaceInParen = 'FormatOptions.space_in_paren',
+	SwitchCaseAlignment = 'FormatOptions.switch_case_alignment',
 	SymbolFoldingFromOpenBrace = 'SymbolFoldingFromOpenBrace',
+	SymbolWithSameCase = 'FormatOptions.symbol_with_same_case',
 	Syntaxes = 'Syntaxes',
 	VarUnset = 'Warn.varUnset',
+	WhiteSpaceBeforeInlineComment = 'FormatOptions.white_space_before_inline_comment',
 	WorkingDirectories = 'WorkingDirs',
+	WrapLineLength = 'FormatOptions.wrap_line_length',
 }
 
 export type ActionType =
@@ -168,12 +187,16 @@ export const setCfg = <T>(
 export const shouldIncludeUserStdLib = (
 	config: AHKLSConfig = ahklsConfig,
 ): boolean =>
-	config.AutoLibInclude === LibIncludeType['User and Standard'] ||
-	config.AutoLibInclude === LibIncludeType.All;
+	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
+		LibIncludeType['User and Standard'] ||
+	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
+		LibIncludeType.All;
 
 export const shouldIncludeLocalLib = (
 	config: AHKLSConfig = ahklsConfig,
 ): boolean =>
-	config.AutoLibInclude === LibIncludeType.Local ||
-	config.AutoLibInclude === LibIncludeType.All;
+	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
+		LibIncludeType.Local ||
+	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
+		LibIncludeType.All;
 
