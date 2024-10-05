@@ -54,7 +54,7 @@ export interface FormatOptions {
 }
 
 /** Matches the contributed extension configuration */
-export interface AHKLSSettings {
+export interface AHKLSConfig {
 	locale?: string
 	commands?: string[]
 	extensionUri?: string

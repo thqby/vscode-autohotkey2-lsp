@@ -18,7 +18,7 @@ import {
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
-import { AHKLSSettings, configPrefix } from '../../util/src/config';
+import { AHKLSConfig, configPrefix } from '../../util/src/config';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -83,7 +83,7 @@ connection.onInitialize(async params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	let configs: AHKLSSettings | undefined;
+	let configs: AHKLSConfig | undefined;
 	const env = process.env;
 	if (env.AHK2_LS_CONFIG)
 		try { configs = JSON.parse(env.AHK2_LS_CONFIG); } catch { }
@@ -122,7 +122,7 @@ connection.onInitialized(() => {
 });
 
 connection.onDidChangeConfiguration(async change => {
-	let newset: AHKLSSettings | undefined = change?.settings;
+	let newset: AHKLSConfig | undefined = change?.settings;
 	if (hasConfigurationCapability && !newset)
 		newset = await connection.workspace.getConfiguration(configPrefix);
 	if (!newset) {

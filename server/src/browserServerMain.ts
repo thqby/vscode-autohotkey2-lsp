@@ -11,7 +11,7 @@ import {
 	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
 	signatureProvider, symbolProvider, typeFormatting, update_settings, workspaceSymbolProvider
 } from './common';
-import { AHKLSSettings, configPrefix } from '../../util/src/config';
+import { AHKLSConfig, configPrefix } from '../../util/src/config';
 
 const languageServer = 'ahk2-language-server';
 const messageReader = new BrowserMessageReader(self);
@@ -75,7 +75,7 @@ connection.onInitialize(params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	const configs: AHKLSSettings = params.initializationOptions;
+	const configs: AHKLSConfig = params.initializationOptions;
 	set_ahk_h(true);
 	set_locale(params.locale);
 	set_dirname(configs.extensionUri!);
@@ -105,7 +105,7 @@ connection.onInitialized(() => {
 });
 
 connection.onDidChangeConfiguration(async change => {
-	let newset: AHKLSSettings | undefined = change?.settings;
+	let newset: AHKLSConfig | undefined = change?.settings;
 	if (hasConfigurationCapability && !newset)
 		newset = await connection.workspace.getConfiguration(configPrefix);
 	if (!newset) {

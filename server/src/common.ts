@@ -7,7 +7,7 @@ import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, Sym
 import { AhkSymbol, Lexer, check_formatopts, update_comment_tags } from './Lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
-import { AHKLSSettings, LibIncludeType } from '../../util/src/config';
+import { AHKLSConfig, LibIncludeType } from '../../util/src/config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -27,7 +27,7 @@ export * from './symbolProvider';
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
 export const alpha_3 = encode_version('2.1-alpha.3');
-export const extsettings: AHKLSSettings = {
+export const extsettings: AHKLSConfig = {
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
 	CommentTags: '^;;\\s*(.*)',
@@ -388,7 +388,7 @@ export function enum_ahkfiles(dirpath: string) {
 	}
 }
 
-export function update_settings(configs: AHKLSSettings) {
+export function update_settings(configs: AHKLSConfig) {
 	if (typeof configs.AutoLibInclude === 'string')
 		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 	else if (typeof configs.AutoLibInclude === 'boolean')
