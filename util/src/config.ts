@@ -30,10 +30,10 @@ export type ActionType =
 	| 'Stop';
 
 export enum LibIncludeType {
-	'Disabled',
-	'Local',
-	'User and Standard',
-	'All',
+	'Disabled' = 0,
+	'Local' = 1,
+	'User and Standard' = 2,
+	'All' = 3,
 }
 
 export interface FormatOptions {

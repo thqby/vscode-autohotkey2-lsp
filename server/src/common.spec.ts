@@ -10,23 +10,43 @@ import {
 } from '../../util/src/config';
 
 suite('updateConfig', () => {
-	test('updates LibrarySuggestions', () => {
-		const config = newConfig();
-		setCfg<LibIncludeType>(
-			CfgKey.LibrarySuggestions,
-			LibIncludeType.All,
-			config,
-		);
-		setCfg<LibIncludeType>(CfgKey.LibrarySuggestions, LibIncludeType.Disabled);
-		// Ensure we've set up the test correctly
-		assert.strictEqual(
-			getCfg(CfgKey.LibrarySuggestions),
-			LibIncludeType.Disabled,
-		);
+	suite('LibrarySuggestions', () => {
+		test('LibIncludeType', () => {
+			const config = newConfig();
+			setCfg<LibIncludeType>(
+				CfgKey.LibrarySuggestions,
+				LibIncludeType.All,
+				config,
+			);
+			setCfg<LibIncludeType>(
+				CfgKey.LibrarySuggestions,
+				LibIncludeType.Disabled,
+			);
 
-		updateConfig(config);
+			updateConfig(config);
 
-		// Ensure updateConfig works
-		assert.strictEqual(getCfg(CfgKey.LibrarySuggestions), LibIncludeType.All);
+			// Ensure updateConfig works
+			assert.strictEqual(getCfg(CfgKey.LibrarySuggestions), LibIncludeType.All);
+		});
+
+		test('string', () => {
+			const config = newConfig();
+			setCfg<string>(CfgKey.LibrarySuggestions, 'All', config);
+
+			updateConfig(config);
+
+			// Ensure updateConfig works
+			assert.strictEqual(getCfg(CfgKey.LibrarySuggestions), LibIncludeType.All);
+		});
+
+		test('boolean', () => {
+			const config = newConfig();
+			setCfg<boolean>(CfgKey.LibrarySuggestions, true, config);
+
+			updateConfig(config);
+
+			// Ensure updateConfig works
+			assert.strictEqual(getCfg(CfgKey.LibrarySuggestions), LibIncludeType.All);
+		});
 	});
 });

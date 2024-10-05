@@ -370,7 +370,7 @@ export function updateConfig(newConfig: AHKLSConfig) {
 	if (typeof newConfigLibSuggestions === 'string')
 		setCfg(CfgKey.LibrarySuggestions, LibIncludeType[newConfigLibSuggestions as unknown as LibIncludeType], newConfig);
 	else if (typeof newConfigLibSuggestions === 'boolean')
-		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? 3 : 0, newConfig);
+		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? LibIncludeType.All : LibIncludeType.Disabled, newConfig);
 	if (typeof newConfig.Warn?.CallWithoutParentheses === 'string')
 		newConfig.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[newConfig.Warn.CallWithoutParentheses];
 	check_formatopts(newConfig.FormatOptions ?? {});
