@@ -11,6 +11,10 @@ import {
 
 suite('updateConfig', () => {
 	suite('LibrarySuggestions', () => {
+		beforeEach(() => {
+			setCfg(CfgKey.LibrarySuggestions, LibIncludeType.Disabled);
+		});
+
 		test('LibIncludeType', () => {
 			const config = newConfig();
 			setCfg<LibIncludeType>(
