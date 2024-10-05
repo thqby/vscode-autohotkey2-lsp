@@ -9,7 +9,7 @@ import { get_ahkProvider } from './ahkProvider';
 import {
 	a_vars, ahkpath_cur, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
 	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
-	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, getVersionInfo, hoverProvider,
+	documentFormatting, enumerateAHKFiles, executeCommandProvider, exportSymbols, getVersionInfo, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile,
 	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
@@ -319,7 +319,7 @@ function get_lib_symbols(lex: Lexer) {
 async function parseuserlibs() {
 	let dir: string, path: string, uri: string, d: Lexer, t: TextDocument | undefined;
 	for (dir of libdirs)
-		for await (path of enum_ahkfiles(dir)) {
+		for await (path of enumerateAHKFiles(dir)) {
 			if (!libfuncs[uri = URI.file(path).toString().toLowerCase()]) {
 				if (!(d = lexers[uri]))
 					if (!(t = openFile(path)) || (d = new Lexer(t)).d || (d.parseScript(), d.maybev1))
@@ -375,7 +375,7 @@ async function parseproject(uri: string) {
 		searchdir = URI.parse(searchdir).fsPath, workspace = true;
 	else
 		searchdir = lex.scriptdir + '\\lib';
-	for await (path of enum_ahkfiles(searchdir)) {
+	for await (path of enumerateAHKFiles(searchdir)) {
 		if (!libfuncs[uri = URI.file(path).toString().toLowerCase()]) {
 			if (!(lex = lexers[uri])) {
 				if (!(t = openFile(path)) || (lex = new Lexer(t)).d || (lex.parseScript(), lex.maybev1))

@@ -338,22 +338,27 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 }
 
 
-let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
-export function enum_ahkfiles(dirpath: string) {
-	const maxdepth = ahklsConfig.Files.MaxDepth;
-	const { file: file_exclude, folder: folder_exclude } = scanExclude;
-	return enumfile(restorePath(dirpath), 0);
-	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
+let scanExclude: { fileExcludeRegex?: RegExp[], folderExcludeRegex?: RegExp[] } = {};
+
+/**
+ * Yields each file and folder in the provided path that is not excluded
+ */
+export function enumerateAHKFiles(dirPath: string) {
+	const maxScanDepth = getCfg<number>(CfgKey.MaxScanDepth);
+	const { fileExcludeRegex, folderExcludeRegex } = scanExclude;
+	return enumerateFiles(restorePath(dirPath), 0);
+	
+	async function* enumerateFiles(dirpath: string, depth: number): AsyncGenerator<string> {
 		try {
 			const dir = await fs.opendir(dirpath);
 			for await (const t of dir) {
-				if (t.isDirectory() && depth < maxdepth) {
+				if (t.isDirectory() && depth < maxScanDepth) {
 					const path = resolve(dirpath, t.name);
-					if (!folder_exclude?.some(re => re.test(path)))
-						yield* enumfile(path, depth + 1);
+					if (!folderExcludeRegex?.some(re => re.test(path)))
+						yield* enumerateFiles(path, depth + 1);
 				} else if (t.isFile() && /\.(ahk2?|ah2)$/i.test(t.name)) {
 					const path = resolve(dirpath, t.name);
-					if (!file_exclude?.some(re => re.test(path)))
+					if (!fileExcludeRegex?.some(re => re.test(path)))
 						yield path;
 				}
 			}
@@ -363,6 +368,7 @@ export function enum_ahkfiles(dirpath: string) {
 
 /**
  * Update the extension config (`ahklsConfig`) in-memory.
+ * Also updates `scanExclude` based on the provided value.
  * Does not update user settings.
  */
 export function updateConfig(newConfig: AHKLSConfig): void {
@@ -388,20 +394,22 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 				.endsWith('/') ? dir : dir + '/');
 	else newConfig.WorkingDirs = [];
 	scanExclude = {};
-	if (newConfig.Files) {
+	if (getCfg(CfgKey.Exclude, newConfig)) {
 		const file: RegExp[] = [], folder: RegExp[] = [];
-		for (const s of newConfig.Files.Exclude ?? [])
+		for (const s of getCfg(CfgKey.Exclude, newConfig) ?? [])
 			try {
 				(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
 			} catch (e) {
 				console.log(`[Error] Invalid glob pattern: ${s}`);
 			}
 		if (file.length)
-			scanExclude.file = file;
+			scanExclude.fileExcludeRegex = file;
 		if (folder.length)
-			scanExclude.folder = folder;
-		if ((newConfig.Files.MaxDepth ??= 2) < 0)
-			newConfig.Files.MaxDepth = Infinity;
+			scanExclude.folderExcludeRegex = folder;
+		let newMaxScanDepth = getCfg<number | undefined>(CfgKey.MaxScanDepth, newConfig);
+		if (newMaxScanDepth === undefined) setCfg(CfgKey.MaxScanDepth, newMaxScanDepth = 2, newConfig);
+		if (newMaxScanDepth < 0)
+			setCfg(CfgKey.MaxScanDepth, Infinity, newConfig);
 	}
 	if (newConfig.Syntaxes)
 		newConfig.Syntaxes = resolve(newConfig.Syntaxes).toLowerCase();

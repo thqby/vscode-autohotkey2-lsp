@@ -25,7 +25,6 @@ suite('updateConfig', () => {
 
 			updateConfig(config);
 
-			// Ensure updateConfig works
 			assert.strictEqual(getCfg(CfgKey.LibrarySuggestions), LibIncludeType.All);
 		});
 
@@ -35,7 +34,6 @@ suite('updateConfig', () => {
 
 			updateConfig(config);
 
-			// Ensure updateConfig works
 			assert.strictEqual(getCfg(CfgKey.LibrarySuggestions), LibIncludeType.All);
 		});
 
@@ -45,8 +43,37 @@ suite('updateConfig', () => {
 
 			updateConfig(config);
 
-			// Ensure updateConfig works
 			assert.strictEqual(getCfg(CfgKey.LibrarySuggestions), LibIncludeType.All);
+		});
+	});
+
+	test('Exclude', () => {
+		const config = newConfig();
+		setCfg(CfgKey.Exclude, ['potato'], config);
+
+		updateConfig(config);
+
+		assert.deepStrictEqual(getCfg(CfgKey.Exclude), ['potato']);
+	});
+
+	suite('MaxScanDepth', () => {
+		test('positive', () => {
+			const config = newConfig();
+			setCfg(CfgKey.MaxScanDepth, 4, config);
+
+			updateConfig(config);
+
+			// Ensure updateConfig works
+			assert.strictEqual(getCfg(CfgKey.MaxScanDepth), 4);
+		});
+
+		test('negative', () => {
+			const config = newConfig();
+			setCfg(CfgKey.MaxScanDepth, -1, config);
+
+			updateConfig(config);
+
+			assert.strictEqual(getCfg(CfgKey.MaxScanDepth), Infinity);
 		});
 	});
 });
