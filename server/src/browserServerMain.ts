@@ -11,7 +11,7 @@ import {
 	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
 	signatureProvider, symbolProvider, typeFormatting, updateConfig, workspaceSymbolProvider
 } from './common';
-import { AHKLSConfig, configPrefix } from '../../util/src/config';
+import { AHKLSConfig, CfgKey, configPrefix, getCfg } from '../../util/src/config';
 
 const languageServer = 'ahk2-language-server';
 const messageReader = new BrowserMessageReader(self);
@@ -75,12 +75,12 @@ connection.onInitialize(params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	const configs: AHKLSConfig = params.initializationOptions;
+	const initialConfig: AHKLSConfig = params.initializationOptions;
 	set_ahk_h(true);
 	set_locale(params.locale);
-	set_dirname(configs.extensionUri!);
+	set_dirname(getCfg(initialConfig, CfgKey.ExtensionUri));
 	loadlocalize();
-	updateConfig(configs);
+	updateConfig(initialConfig);
 	set_WorkspaceFolders(workspaceFolders);
 	set_version('3.0.0');
 	initahk2cache();
