@@ -53,7 +53,7 @@ export interface FormatOptions {
 	wrap_line_length?: number
 }
 
-/** Matches the contributed extension configuration */
+/** Matches the contributed extension configuration in package.json */
 export interface AHKLSConfig {
 	locale?: string
 	commands?: string[]
@@ -87,6 +87,11 @@ export interface AHKLSConfig {
 	WorkingDirs: string[]
 }
 
+/**
+ * The global object shared across the server.
+ * The client fetches the config from VS Code directly.
+ * Updated when the user changes their settings.
+ */
 export const ahklsConfig: AHKLSConfig = {
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
@@ -129,4 +134,15 @@ export const getCfg = <T = string>(key: CfgKey, config: AHKLSConfig = ahklsConfi
 		value = value[k];
 	}
 	return value;
+};
+
+export const setCfg = (key: CfgKey, value: unknown, config: AHKLSConfig = ahklsConfig): void => {
+	const keyPath = key.split('.');
+	// ConfigKey values are guaranteed to work ;)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let obj: any = config;
+	for (const k of keyPath.slice(0, -1)) {
+		obj = obj[k];
+	}
+	obj[keyPath[keyPath.length - 1]] = value;
 };

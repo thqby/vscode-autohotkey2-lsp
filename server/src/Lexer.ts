@@ -25,7 +25,7 @@ import {
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, ahklsConfig, FormatOptions } from '../../util/src/config';
+import { ActionType, ahklsConfig, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -1194,7 +1194,7 @@ export class Lexer {
 			if (requirev2)
 				return false;
 			_this.maybev1 ??= maybev1 = 1;
-			switch (_this.actionwhenv1 ??= ahklsConfig.ActionWhenV1IsDetected) {
+			switch (_this.actionwhenv1 ??= getCfg(CfgKey.ActionWhenV1Detected)) {
 				case 'SkipLine': {
 					if (!allow_skip)
 						return true;
