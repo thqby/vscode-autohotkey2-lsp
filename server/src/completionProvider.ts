@@ -78,7 +78,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 	//#endregion
 
-	const commitCharacters = Object.fromEntries(Object.entries(ahklsConfig.CompletionCommitCharacters ?? {})
+	const commitCharacters = Object.fromEntries(Object.entries(getCfg(CfgKey.CompletionCommitCharacters) ?? {})
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 	// eslint-disable-next-line prefer-const
