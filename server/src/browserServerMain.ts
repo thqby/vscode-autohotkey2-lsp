@@ -4,13 +4,14 @@ import {
 	InitializeResult, TextDocuments, TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import {
-	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, commands, completionProvider,
+	chinese_punctuations, colorPresentation, colorProvider, commands, completionProvider,
 	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols, getVersionInfo,
 	hoverProvider, initahk2cache, Lexer, lexers, loadahk2, loadlocalize, prepareRename, rangeFormatting,
 	referenceProvider, renameProvider, SemanticTokenModifiers, semanticTokensOnFull, semanticTokensOnRange,
 	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
-	signatureProvider, symbolProvider, typeFormatting, update_settings, workspaceSymbolProvider
+	signatureProvider, symbolProvider, typeFormatting, updateConfig, workspaceSymbolProvider
 } from './common';
+import { AHKLSConfig, CfgKey, configPrefix, getCfg } from '../../util/src/config';
 
 const languageServer = 'ahk2-language-server';
 const messageReader = new BrowserMessageReader(self);
@@ -74,12 +75,12 @@ connection.onInitialize(params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	const configs: AHKLSSettings = params.initializationOptions;
+	const initialConfig: AHKLSConfig = params.initializationOptions;
 	set_ahk_h(true);
 	set_locale(params.locale);
-	set_dirname(configs.extensionUri!);
+	set_dirname(getCfg(CfgKey.ExtensionUri, initialConfig));
 	loadlocalize();
-	update_settings(configs);
+	updateConfig(initialConfig);
 	set_WorkspaceFolders(workspaceFolders);
 	set_version('3.0.0');
 	initahk2cache();
@@ -104,14 +105,14 @@ connection.onInitialized(() => {
 });
 
 connection.onDidChangeConfiguration(async change => {
-	let newset: AHKLSSettings | undefined = change?.settings;
+	let newset: AHKLSConfig | undefined = change?.settings;
 	if (hasConfigurationCapability && !newset)
-		newset = await connection.workspace.getConfiguration('AutoHotkey2');
+		newset = await connection.workspace.getConfiguration(configPrefix);
 	if (!newset) {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	update_settings(newset);
+	updateConfig(newset);
 	set_WorkspaceFolders(workspaceFolders);
 });
 

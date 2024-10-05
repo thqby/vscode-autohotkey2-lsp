@@ -8,12 +8,8 @@
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
 			"preLaunchTask": "npm: watch",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
-			],
-			"outFiles": [
-				"${workspaceFolder}/client/dist/**/*.js"
-			]
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"]
 		},
 		{
 			"type": "node",
@@ -36,9 +32,7 @@
 				"--disable-extensions",
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
-			"outFiles": [
-				"${workspaceFolder}/client/dist/test/**/*.js"
-			],
+			"outFiles": ["${workspaceFolder}/client/dist/test/**/*.js"],
 			"testConfiguration": "${workspaceFolder}/.vscode-test.mjs"
 		},
 		{
@@ -61,10 +55,7 @@
 	"compounds": [
 		{
 			"name": "Client + Server",
-			"configurations": [
-				"Launch Client",
-				"Attach to Server"
-			]
+			"configurations": ["Launch Client", "Attach to Server"]
 		}
 	]
 }
