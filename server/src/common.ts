@@ -365,30 +365,30 @@ export function enum_ahkfiles(dirpath: string) {
  * Update the extension config in-memory.
  * Does not update user settings.
  */
-export function updateConfig(configs: AHKLSConfig) {
-	if (typeof configs.AutoLibInclude === 'string')
-		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
-	else if (typeof configs.AutoLibInclude === 'boolean')
-		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
-	if (typeof configs.Warn?.CallWithoutParentheses === 'string')
-		configs.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[configs.Warn.CallWithoutParentheses];
-	check_formatopts(configs.FormatOptions ?? {});
+export function updateConfig(newConfig: AHKLSConfig) {
+	if (typeof newConfig.AutoLibInclude === 'string')
+		newConfig.AutoLibInclude = LibIncludeType[newConfig.AutoLibInclude] as unknown as LibIncludeType;
+	else if (typeof newConfig.AutoLibInclude === 'boolean')
+		newConfig.AutoLibInclude = newConfig.AutoLibInclude ? 3 : 0;
+	if (typeof newConfig.Warn?.CallWithoutParentheses === 'string')
+		newConfig.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[newConfig.Warn.CallWithoutParentheses];
+	check_formatopts(newConfig.FormatOptions ?? {});
 	try {
-		update_comment_tags(configs.CommentTags!);
+		update_comment_tags(newConfig.CommentTags!);
 	} catch (e) {
 		delete (e as { stack?: string }).stack;
-		delete configs.CommentTags;
+		delete newConfig.CommentTags;
 		console.log(e);
 	}
-	if (configs.WorkingDirs instanceof Array)
-		configs.WorkingDirs = configs.WorkingDirs.map(dir =>
+	if (newConfig.WorkingDirs instanceof Array)
+		newConfig.WorkingDirs = newConfig.WorkingDirs.map(dir =>
 			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
 				.endsWith('/') ? dir : dir + '/');
-	else configs.WorkingDirs = [];
+	else newConfig.WorkingDirs = [];
 	scanExclude = {};
-	if (configs.Files) {
+	if (newConfig.Files) {
 		const file: RegExp[] = [], folder: RegExp[] = [];
-		for (const s of configs.Files.Exclude ?? [])
+		for (const s of newConfig.Files.Exclude ?? [])
 			try {
 				(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
 			} catch (e) {
@@ -398,12 +398,12 @@ export function updateConfig(configs: AHKLSConfig) {
 			scanExclude.file = file;
 		if (folder.length)
 			scanExclude.folder = folder;
-		if ((configs.Files.MaxDepth ??= 2) < 0)
-			configs.Files.MaxDepth = Infinity;
+		if ((newConfig.Files.MaxDepth ??= 2) < 0)
+			newConfig.Files.MaxDepth = Infinity;
 	}
-	if (configs.Syntaxes)
-		configs.Syntaxes = resolve(configs.Syntaxes).toLowerCase();
-	Object.assign(ahklsConfig, configs);
+	if (newConfig.Syntaxes)
+		newConfig.Syntaxes = resolve(newConfig.Syntaxes).toLowerCase();
+	Object.assign(ahklsConfig, newConfig);
 }
 
 function encode_version(version: string) {
