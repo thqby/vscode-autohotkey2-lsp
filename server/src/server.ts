@@ -83,21 +83,21 @@ connection.onInitialize(async params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	let configs: AHKLSConfig | undefined;
+	let initialConfig: AHKLSConfig | undefined;
 	const env = process.env;
 	if (env.AHK2_LS_CONFIG)
-		try { configs = JSON.parse(env.AHK2_LS_CONFIG); } catch { }
+		try { initialConfig = JSON.parse(env.AHK2_LS_CONFIG); } catch { }
 	if (params.initializationOptions)
-		configs = Object.assign(configs ?? {}, params.initializationOptions);
+		initialConfig = Object.assign(initialConfig ?? {}, params.initializationOptions);
 	set_dirname(resolve(__dirname, '../..'));
-	set_locale((configs ? getCfg(configs, CfgKey.Locale) : undefined) ?? params.locale);
+	set_locale((initialConfig ? getCfg(CfgKey.Locale, initialConfig) : undefined) ?? params.locale);
 	utils.get_RCDATA = getRCDATA;
 	utils.get_DllExport = getDllExport;
 	utils.get_ahkProvider = get_ahkProvider;
 	loadlocalize();
 	initahk2cache();
-	if (configs)
-		updateConfig(configs);
+	if (initialConfig)
+		updateConfig(initialConfig);
 	if (!(await setInterpreter(resolvePath(ahklsConfig.InterpreterPath ??= ''))))
 		patherr(setting.ahkpatherr());
 	set_WorkspaceFolders(workspaceFolders);
@@ -214,7 +214,7 @@ documents.listen(connection);
 connection.listen();
 
 async function patherr(msg: string) {
-	if (!getCfg(ahklsConfig, CfgKey.Commands)?.includes('ahk2.executeCommand'))
+	if (!getCfg(CfgKey.Commands)?.includes('ahk2.executeCommand'))
 		return connection.window.showErrorMessage(msg);
 	if (await connection.window.showErrorMessage(msg, { title: 'Select Interpreter' }))
 		connection.sendRequest('ahk2.executeCommand', ['ahk2.set.interpreter']);

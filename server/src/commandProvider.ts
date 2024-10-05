@@ -5,10 +5,10 @@ import {
 	join_types, lexers, parse_include, restorePath, semanticTokensOnFull,
 	traverse_include, update_include_cache
 } from './common';
-import { CfgKey, getCfg, ahklsConfig } from '../../util/src/config';
+import { CfgKey, getCfg } from '../../util/src/config';
 
 function checkCommand(cmd: string) {
-	if (getCfg(ahklsConfig, CfgKey.Commands)?.includes(cmd))
+	if (getCfg(CfgKey.Commands)?.includes(cmd))
 		return true;
 	connection?.console.warn(`Command '${cmd}' is not implemented!`);
 	return false;

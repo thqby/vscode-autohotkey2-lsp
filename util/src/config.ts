@@ -120,7 +120,7 @@ export const configPrefix = 'AutoHotkey2';
 
 
 /** Gets a single config value from the given config */
-export const getCfg = <T = string>(config: AHKLSConfig, key: CfgKey): T => {
+export const getCfg = <T = string>(key: CfgKey, config: AHKLSConfig = ahklsConfig): T => {
 	const keyPath = key.split('.');
 	// ConfigKey values are guaranteed to work ;)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

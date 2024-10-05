@@ -78,7 +78,7 @@ connection.onInitialize(params => {
 	const initialConfig: AHKLSConfig = params.initializationOptions;
 	set_ahk_h(true);
 	set_locale(params.locale);
-	set_dirname(getCfg(initialConfig, CfgKey.ExtensionUri));
+	set_dirname(getCfg(CfgKey.ExtensionUri, initialConfig));
 	loadlocalize();
 	updateConfig(initialConfig);
 	set_WorkspaceFolders(workspaceFolders);
