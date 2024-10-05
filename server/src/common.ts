@@ -4,10 +4,10 @@ import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { AhkSymbol, Lexer, check_formatopts, update_comment_tags } from './Lexer';
+import { AhkSymbol, Lexer, check_formatopts, updateCommentTagRegex } from './lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
-import { ahklsConfig, AHKLSConfig, LibIncludeType } from '../../util/src/config';
+import { ahklsConfig, AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg } from '../../util/src/config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -16,7 +16,7 @@ export * from './constants';
 export * from './definitionProvider';
 export * from './formattingProvider';
 export * from './hoverProvider';
-export * from './Lexer';
+export * from './lexer';
 export * from './localize';
 export * from './referencesProvider';
 export * from './renameProvider';
@@ -362,33 +362,35 @@ export function enum_ahkfiles(dirpath: string) {
 }
 
 /**
- * Update the extension config in-memory.
+ * Update the extension config (`ahklsConfig`) in-memory.
  * Does not update user settings.
  */
-export function updateConfig(configs: AHKLSConfig) {
-	if (typeof configs.AutoLibInclude === 'string')
-		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
-	else if (typeof configs.AutoLibInclude === 'boolean')
-		configs.AutoLibInclude = configs.AutoLibInclude ? 3 : 0;
-	if (typeof configs.Warn?.CallWithoutParentheses === 'string')
-		configs.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[configs.Warn.CallWithoutParentheses];
-	check_formatopts(configs.FormatOptions ?? {});
+export function updateConfig(newConfig: AHKLSConfig): void {
+	const newConfigLibSuggestions = getCfg(CfgKey.LibrarySuggestions, newConfig);
+	if (typeof newConfigLibSuggestions === 'string')
+		setCfg(CfgKey.LibrarySuggestions, LibIncludeType[newConfigLibSuggestions as unknown as LibIncludeType], newConfig);
+	else if (typeof newConfigLibSuggestions === 'boolean')
+		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? LibIncludeType.All : LibIncludeType.Disabled, newConfig);
+	if (typeof newConfig.Warn?.CallWithoutParentheses === 'string')
+		newConfig.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[newConfig.Warn.CallWithoutParentheses];
+	check_formatopts(newConfig.FormatOptions ?? {});
 	try {
-		update_comment_tags(configs.CommentTags!);
+		updateCommentTagRegex(getCfg(CfgKey.CommentTagRegex, newConfig));
 	} catch (e) {
 		delete (e as { stack?: string }).stack;
-		delete configs.CommentTags;
+		// reset value of `newConfig` to avoid corrupting `ahklsConfig`
+		setCfg(CfgKey.CommentTagRegex, getCfg(CfgKey.CommentTagRegex), newConfig);
 		console.log(e);
 	}
-	if (configs.WorkingDirs instanceof Array)
-		configs.WorkingDirs = configs.WorkingDirs.map(dir =>
+	if (newConfig.WorkingDirs instanceof Array)
+		newConfig.WorkingDirs = newConfig.WorkingDirs.map(dir =>
 			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
 				.endsWith('/') ? dir : dir + '/');
-	else configs.WorkingDirs = [];
+	else newConfig.WorkingDirs = [];
 	scanExclude = {};
-	if (configs.Files) {
+	if (newConfig.Files) {
 		const file: RegExp[] = [], folder: RegExp[] = [];
-		for (const s of configs.Files.Exclude ?? [])
+		for (const s of newConfig.Files.Exclude ?? [])
 			try {
 				(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
 			} catch (e) {
@@ -398,12 +400,12 @@ export function updateConfig(configs: AHKLSConfig) {
 			scanExclude.file = file;
 		if (folder.length)
 			scanExclude.folder = folder;
-		if ((configs.Files.MaxDepth ??= 2) < 0)
-			configs.Files.MaxDepth = Infinity;
+		if ((newConfig.Files.MaxDepth ??= 2) < 0)
+			newConfig.Files.MaxDepth = Infinity;
 	}
-	if (configs.Syntaxes)
-		configs.Syntaxes = resolve(configs.Syntaxes).toLowerCase();
-	Object.assign(ahklsConfig, configs);
+	if (newConfig.Syntaxes)
+		newConfig.Syntaxes = resolve(newConfig.Syntaxes).toLowerCase();
+	Object.assign(ahklsConfig, newConfig);
 }
 
 function encode_version(version: string) {

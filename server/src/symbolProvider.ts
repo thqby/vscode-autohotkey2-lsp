@@ -11,7 +11,7 @@ import {
 	diagnostic, enum_ahkfiles, find_class, get_class_constructor,
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
-import { ahklsConfig } from '../../util/src/config';
+import { ahklsConfig, CfgKey, getCfg } from '../../util/src/config';
 
 export let globalsymbolcache: Record<string, AhkSymbol> = {};
 
@@ -294,7 +294,7 @@ function get_func_param_count(fn: FuncNode) {
 export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 	const paraminfo = info.paraminfo;
 	let is_cls: boolean, params;
-	if (!paraminfo || !ahklsConfig.Diagnostics.ParamsCheck) return;
+	if (!paraminfo || !getCfg(CfgKey.ParamsCheck)) return;
 	if ((is_cls = node?.kind === SymbolKind.Class))
 		node = get_class_constructor(node as unknown as ClassNode) as FuncNode;
 	if (!(params = node?.params)) return;
