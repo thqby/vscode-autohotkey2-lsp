@@ -18,7 +18,7 @@ import {
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
-import { AHKLSSettings } from '../../util/src/config';
+import { AHKLSSettings, configPrefix } from '../../util/src/config';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -124,7 +124,7 @@ connection.onInitialized(() => {
 connection.onDidChangeConfiguration(async change => {
 	let newset: AHKLSSettings | undefined = change?.settings;
 	if (hasConfigurationCapability && !newset)
-		newset = await connection.workspace.getConfiguration('AutoHotkey2');
+		newset = await connection.workspace.getConfiguration(configPrefix);
 	if (!newset) {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;

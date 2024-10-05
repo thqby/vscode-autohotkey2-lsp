@@ -3,14 +3,17 @@ export enum CfgKey {
 	ActionWhenV1Detected = 'ActionWhenV1IsDetected',
 	CallWithoutParentheses = 'Warn.CallWithoutParentheses',
 	ClassNonDynamicMemberCheck = 'Diagnostics.ClassNonDynamicMemberCheck',
+	Commands = 'commands',
 	CommentTagRegex = 'CommentTags',
 	CompleteFunctionCalls = 'CompleteFunctionParens',
 	CompletionCommitCharacters = 'CompletionCommitCharacters',
 	Exclude = 'Files.Exclude',
+	ExtensionUri = 'extensionUri',
 	Formatter = 'FormatOptions',
 	InterpreterPath = 'InterpreterPath',
 	LibrarySuggestions = 'AutoLibInclude',
 	LocalSameAsGlobal = 'Warn.LocalSameAsGlobal',
+	Locale = 'locale',
 	MaxScanDepth = 'Files.ScanMaxDepth',
 	ParamsCheck = 'Diagnostics.ParamsCheck',
 	SymbolFoldingFromOpenBrace = 'SymbolFoldingFromOpenBrace',
@@ -50,6 +53,7 @@ export interface FormatOptions {
 	wrap_line_length?: number
 }
 
+/** Matches the contributed extension configuration */
 export interface AHKLSSettings {
 	locale?: string
 	commands?: string[]
@@ -82,3 +86,6 @@ export interface AHKLSSettings {
 	}
 	WorkingDirs: string[]
 }
+
+/** The start of each config value in package.json */
+export const configPrefix = 'AutoHotkey2';
