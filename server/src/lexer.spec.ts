@@ -10,4 +10,12 @@ suite('updateCommentTagRegex', () => {
 			new RegExp(newRegex, 'i'),
 		);
 	});
+
+	test('invalid regex', () => {
+		const newRegex = '^;;;\\s*(.*)';
+		let regex = updateCommentTagRegex(newRegex);
+		assert.throws(() => (regex = updateCommentTagRegex('[')));
+		// doesn't update the regex
+		assert.deepStrictEqual(regex, new RegExp(newRegex, 'i'));
+	});
 });
