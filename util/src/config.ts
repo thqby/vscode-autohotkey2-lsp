@@ -165,3 +165,15 @@ export const setCfg = <T>(
 	obj[keyPath[keyPath.length - 1]] = value;
 };
 
+export const shouldIncludeUserStdLib = (
+	config: AHKLSConfig = ahklsConfig,
+): boolean =>
+	config.AutoLibInclude === LibIncludeType['User and Standard'] ||
+	config.AutoLibInclude === LibIncludeType.All;
+
+export const shouldIncludeLocalLib = (
+	config: AHKLSConfig = ahklsConfig,
+): boolean =>
+	config.AutoLibInclude === LibIncludeType.Local ||
+	config.AutoLibInclude === LibIncludeType.All;
+

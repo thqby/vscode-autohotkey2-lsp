@@ -12,7 +12,7 @@ import {
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
 	lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
-import { ahklsConfig } from '../../util/src/config';
+import { ahklsConfig, shouldIncludeLocalLib, shouldIncludeUserStdLib } from '../../util/src/config';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
@@ -688,15 +688,17 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	// auto-include
-	if (ahklsConfig.AutoLibInclude) {
+	const includeUserStdLib = shouldIncludeUserStdLib();
+	const includeLocalLib = shouldIncludeLocalLib();
+	if (includeUserStdLib || includeLocalLib) {
 		const libdirs = doc.libdirs, caches: Record<string, TextEdit[]> = {};
 		let exportnum = 0, line = -1, first_is_comment: boolean | undefined, cm: Token;
 		let dir = doc.workspaceFolder;
 		dir = (dir ? URI.parse(dir).fsPath : doc.scriptdir).toLowerCase();
 		doc.includedir.forEach((v, k) => line = k);
 		for (const u in libfuncs) {
-			if (!list[u] && (path = libfuncs[u].fsPath) && ((ahklsConfig.AutoLibInclude > 1 && libfuncs[u].islib) ||
-				((ahklsConfig.AutoLibInclude & 1) && path.toLowerCase().startsWith(dir)))) {
+			if (!list[u] && (path = libfuncs[u].fsPath) && ((includeUserStdLib && libfuncs[u].islib) ||
+				(includeLocalLib && path.toLowerCase().startsWith(dir)))) {
 				for (const it of libfuncs[u]) {
 					expg.test(l = it.name) && (vars[l.toUpperCase()] ??= (
 						cpitem = convertNodeCompletion(it), exportnum++,
