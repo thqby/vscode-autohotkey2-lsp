@@ -8,7 +8,7 @@ import {
 	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable,
 	ahkuris, ahkvars, check_same_name_error, connection, decltype_expr,
-	diagnostic, enumerateAHKFiles, find_class, get_class_constructor,
+	diagnostic, enum_ahkfiles, find_class, get_class_constructor,
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
 import { ahklsConfig, CfgKey, getCfg } from '../../util/src/config';
@@ -377,7 +377,7 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 		let uri: string, d: Lexer, t: TextDocument | undefined;
 		for (let dir of workspaceFolders) {
 			dir = URI.parse(dir).fsPath;
-			for await (const path of enumerateAHKFiles(dir)) {
+			for await (const path of enum_ahkfiles(dir)) {
 				uri = URI.file(path).toString().toLowerCase();
 				if (!lexers[uri] && (t = openFile(path))) {
 					if ((d = new Lexer(t)).parseScript(), d.maybev1) continue;
