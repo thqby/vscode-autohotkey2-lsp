@@ -634,18 +634,29 @@
 	},
 	"scripts": {
 		"check-types": "tsc",
-		"build-cli": "node esbuild.mjs --cli",
+		"build:cli": "npm run build -- --cli",
+		"build": "node esbuild.mjs",
+		"clean:out": "rimraf out",
+		"precompile-ts": "npm run clean:out",
+		"compile-ts": "tsc --noEmit false --outDir out",
 		"eslint": "eslint --fix",
 		"package": "vsce package",
 		"publish": "vsce publish",
-		"test": "vscode-test",
-		"test-grammar": "vscode-tmgrammar-snap tmgrammar-test/*.ahk",
-		"validate": "node esbuild.mjs && npm run test && npm run test-grammar",
-		"vscode:prepublish": "npm run validate",
-		"watch": "node esbuild.mjs --dev",
-		"watch-web": "node esbuild.mjs --web"
+		"test": "npm run test:grammar && npm run test:unit && npm run test:e2e",
+		"pretest:e2e": "npm run build",
+		"test:e2e": "vscode-test",
+		"test:grammar": "vscode-tmgrammar-snap tmgrammar-test/*.ahk",
+		"pretest:unit": "npm run compile-ts",
+		"test:unit": "mocha",
+		"vscode:prepublish": "npm run test",
+		"watch": "npm run build -- --dev",
+		"watch-web": "npm run build -- --web"
+	},
+	"mocha": {
+		"spec": "out/**/*.spec.js"
 	},
 	"devDependencies": {
+		"@types/mocha": "^10.0.8",
 		"@types/node": "^20.14.0",
 		"@types/vscode": "1.93.0",
 		"@vscode/test-cli": "^0.0.10",
@@ -653,6 +664,8 @@
 		"@vscode/vsce": "^2.32.0",
 		"esbuild": "^0.24.0",
 		"eslint": "^9.11.0",
+		"mocha": "^10.7.3",
+		"rimraf": "^6.0.1",
 		"typescript": "5.5.4",
 		"typescript-eslint": "^8.7.0",
 		"vscode-tmgrammar-test": "^0.1.3"

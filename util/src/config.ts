@@ -53,8 +53,8 @@ export interface FormatOptions {
 	wrap_line_length?: number
 }
 
-/** Matches the contributed extension configuration */
-export interface AHKLSSettings {
+/** Matches the contributed extension configuration in package.json */
+export interface AHKLSConfig {
 	locale?: string
 	commands?: string[]
 	extensionUri?: string
@@ -87,5 +87,62 @@ export interface AHKLSSettings {
 	WorkingDirs: string[]
 }
 
+/**
+ * The global object shared across the server.
+ * The client fetches the config from VS Code directly.
+ * Updated when the user changes their settings.
+ */
+export const ahklsConfig: AHKLSConfig = {
+	ActionWhenV1IsDetected: 'Warn',
+	AutoLibInclude: 0,
+	CommentTags: '^;;\\s*(.*)',
+	CompleteFunctionParens: false,
+	CompletionCommitCharacters: {
+		Class: '.(',
+		Function: '('
+	},
+	Diagnostics: {
+		ClassNonDynamicMemberCheck: true,
+		ParamsCheck: true
+	},
+	Files: {
+		Exclude: [],
+		MaxDepth: 2
+	},
+	FormatOptions: {},
+	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe',
+	SymbolFoldingFromOpenBrace: false,
+	Warn: {
+		VarUnset: true,
+		LocalSameAsGlobal: false,
+		CallWithoutParentheses: false
+	},
+	WorkingDirs: []
+};
+
 /** The start of each config value in package.json */
 export const configPrefix = 'AutoHotkey2';
+
+
+/** Gets a single config value from the given config */
+export const getCfg = <T = string>(key: CfgKey, config: AHKLSConfig = ahklsConfig): T => {
+	const keyPath = key.split('.');
+	// ConfigKey values are guaranteed to work ;)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let value: any = config;
+	for (const k of keyPath) {
+		value = value[k];
+	}
+	return value;
+};
+
+export const setCfg = (key: CfgKey, value: unknown, config: AHKLSConfig = ahklsConfig): void => {
+	const keyPath = key.split('.');
+	// ConfigKey values are guaranteed to work ;)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let obj: any = config;
+	for (const k of keyPath.slice(0, -1)) {
+		obj = obj[k];
+	}
+	obj[keyPath[keyPath.length - 1]] = value;
+};

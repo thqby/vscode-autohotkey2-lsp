@@ -21,11 +21,11 @@ import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
-	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings,
+	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection,
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, FormatOptions } from '../../util/src/config';
+import { ActionType, ahklsConfig, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -1155,7 +1155,7 @@ export class Lexer {
 				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
-				callWithoutParentheses = extsettings.Warn?.CallWithoutParentheses;
+				callWithoutParentheses = ahklsConfig.Warn?.CallWithoutParentheses;
 				try {
 					const rs = utils.get_RCDATA('#2');
 					rs && (includetable[rs.uri] = rs.path);
@@ -1194,7 +1194,7 @@ export class Lexer {
 			if (requirev2)
 				return false;
 			_this.maybev1 ??= maybev1 = 1;
-			switch (_this.actionwhenv1 ??= extsettings.ActionWhenV1IsDetected) {
+			switch (_this.actionwhenv1 ??= getCfg(CfgKey.ActionWhenV1Detected)) {
 				case 'SkipLine': {
 					if (!allow_skip)
 						return true;
@@ -3671,7 +3671,7 @@ export class Lexer {
 					nexttoken(), parse_pair('(', ')');
 					const pc = tokens[tk.previous_pair_pos!]?.paraminfo?.count ?? 0;
 					if (pc !== 1)
-						extsettings.Diagnostics.ParamsCheck && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
+						ahklsConfig.Diagnostics.ParamsCheck && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
 					else if (result.length > l && lk.type === 'TK_WORD') {
 						const vr = result.at(-1) as Variable;
 						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
@@ -6315,7 +6315,7 @@ export class Lexer {
 			return;
 		let workfolder: string;
 		if (!dir) {
-			for (workfolder of extsettings.WorkingDirs)
+			for (workfolder of ahklsConfig.WorkingDirs)
 				if (this.uri.startsWith(workfolder)) {
 					dir = restorePath(URI.parse(workfolder).fsPath.replace(/[\\/]$/, ''));
 					break;
@@ -6373,7 +6373,7 @@ export class Lexer {
 	}
 
 	private addSymbolFolding(symbol: AhkSymbol, first_brace: number) {
-		const l1 = extsettings.SymbolFoldingFromOpenBrace ? this.document.positionAt(first_brace).line : symbol.range.start.line;
+		const l1 = ahklsConfig.SymbolFoldingFromOpenBrace ? this.document.positionAt(first_brace).line : symbol.range.start.line;
 		const l2 = symbol.range.end.line - 1;
 		const ranges = this.foldingranges;
 		if (l1 < l2) {
