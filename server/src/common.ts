@@ -4,9 +4,10 @@ import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { AhkSymbol, ActionType, FormatOptions, Lexer, check_formatopts, update_comment_tags } from './Lexer';
+import { AhkSymbol, Lexer, check_formatopts, update_comment_tags } from './Lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
+import { AHKLSSettings, LibIncludeType } from '../../util/src/config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -22,46 +23,6 @@ export * from './renameProvider';
 export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
-
-enum LibIncludeType {
-	'Disabled',
-	'Local',
-	'User and Standard',
-	'All'
-}
-
-export interface AHKLSSettings {
-	locale?: string
-	commands?: string[]
-	extensionUri?: string
-	ActionWhenV1IsDetected: ActionType
-	AutoLibInclude: LibIncludeType
-	CommentTags?: string
-	CompleteFunctionParens: boolean
-	CompletionCommitCharacters?: {
-		Class: string
-		Function: string
-	}
-	Diagnostics: {
-		ClassNonDynamicMemberCheck: boolean
-		ParamsCheck: boolean
-	}
-	Files: {
-		Exclude: string[]
-		MaxDepth: number
-	}
-	FormatOptions: FormatOptions
-	InterpreterPath: string
-	GlobalStorage?: string
-	Syntaxes?: string
-	SymbolFoldingFromOpenBrace: boolean
-	Warn: {
-		VarUnset: boolean
-		LocalSameAsGlobal: boolean
-		CallWithoutParentheses: boolean | /* Parentheses */ 1
-	}
-	WorkingDirs: string[]
-}
 
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
