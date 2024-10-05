@@ -123,16 +123,16 @@ connection.onInitialized(() => {
 });
 
 connection.onDidChangeConfiguration(async change => {
-	let newset: AHKLSConfig | undefined = change?.settings;
-	if (hasConfigurationCapability && !newset)
-		newset = await connection.workspace.getConfiguration(configPrefix);
-	if (!newset) {
+	let newConfig: AHKLSConfig | undefined = change?.settings;
+	if (hasConfigurationCapability && !newConfig)
+		newConfig = await connection.workspace.getConfiguration(configPrefix);
+	if (!newConfig) {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
 	const { InterpreterPath, Syntaxes } = ahklsConfig;
 	const oldConfig = klona(ahklsConfig);
-	updateConfig(newset);
+	updateConfig(newConfig);
 	set_WorkspaceFolders(workspaceFolders);
 	if (InterpreterPath !== ahklsConfig.InterpreterPath) {
 		if (await setInterpreter(resolvePath(ahklsConfig.InterpreterPath ??= '')))
