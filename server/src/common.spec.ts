@@ -18,10 +18,6 @@ suite('updateConfig', () => {
 				LibIncludeType.All,
 				config,
 			);
-			setCfg<LibIncludeType>(
-				CfgKey.LibrarySuggestions,
-				LibIncludeType.Disabled,
-			);
 
 			updateConfig(config);
 
