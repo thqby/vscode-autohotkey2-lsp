@@ -9,7 +9,7 @@ import { get_ahkProvider } from './ahkProvider';
 import {
 	a_vars, ahkpath_cur, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
 	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
-	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, extsettings, getVersionInfo, hoverProvider,
+	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, ahklsConfig, getVersionInfo, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile,
 	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
@@ -18,7 +18,7 @@ import {
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
-import { AHKLSConfig, configPrefix } from '../../util/src/config';
+import { AHKLSConfig, CfgKey, configPrefix, getCfg } from '../../util/src/config';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -90,7 +90,7 @@ connection.onInitialize(async params => {
 	if (params.initializationOptions)
 		configs = Object.assign(configs ?? {}, params.initializationOptions);
 	set_dirname(resolve(__dirname, '../..'));
-	set_locale(configs?.locale ?? params.locale);
+	set_locale((configs ? getCfg(configs, CfgKey.Locale) : undefined) ?? params.locale);
 	utils.get_RCDATA = getRCDATA;
 	utils.get_DllExport = getDllExport;
 	utils.get_ahkProvider = get_ahkProvider;
@@ -98,7 +98,7 @@ connection.onInitialize(async params => {
 	initahk2cache();
 	if (configs)
 		update_settings(configs);
-	if (!(await setInterpreter(resolvePath(extsettings.InterpreterPath ??= ''))))
+	if (!(await setInterpreter(resolvePath(ahklsConfig.InterpreterPath ??= ''))))
 		patherr(setting.ahkpatherr());
 	set_WorkspaceFolders(workspaceFolders);
 	loadahk2();
@@ -129,20 +129,20 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	const { AutoLibInclude, InterpreterPath, Syntaxes } = extsettings;
+	const { AutoLibInclude, InterpreterPath, Syntaxes } = ahklsConfig;
 	update_settings(newset);
 	set_WorkspaceFolders(workspaceFolders);
-	if (InterpreterPath !== extsettings.InterpreterPath) {
-		if (await setInterpreter(resolvePath(extsettings.InterpreterPath ??= '')))
-			connection.sendRequest('ahk2.updateStatusBar', [extsettings.InterpreterPath]);
+	if (InterpreterPath !== ahklsConfig.InterpreterPath) {
+		if (await setInterpreter(resolvePath(ahklsConfig.InterpreterPath ??= '')))
+			connection.sendRequest('ahk2.updateStatusBar', [ahklsConfig.InterpreterPath]);
 	}
-	if (AutoLibInclude !== extsettings.AutoLibInclude) {
-		if ((extsettings.AutoLibInclude > 1) && (AutoLibInclude <= 1))
+	if (AutoLibInclude !== ahklsConfig.AutoLibInclude) {
+		if ((ahklsConfig.AutoLibInclude > 1) && (AutoLibInclude <= 1))
 			parseuserlibs();
-		if ((extsettings.AutoLibInclude & 1) && !(AutoLibInclude & 1))
+		if ((ahklsConfig.AutoLibInclude & 1) && !(AutoLibInclude & 1))
 			documents.all().forEach(e => parseproject(e.uri.toLowerCase()));
 	}
-	if (Syntaxes !== extsettings.Syntaxes) {
+	if (Syntaxes !== ahklsConfig.Syntaxes) {
 		initahk2cache(), loadahk2();
 		if (isahk2_h)
 			loadahk2('ahk_h'), loadahk2('winapi', 4);
@@ -174,7 +174,7 @@ documents.onDidOpen(e => {
 	doc.actived = true;
 	if (to_ahk2)
 		doc.actionwhenv1 = 'Continue';
-	if (extsettings.AutoLibInclude & 1)
+	if (ahklsConfig.AutoLibInclude & 1)
 		parseproject(uri).then(() => doc.last_diags &&
 			Object.keys(doc.included).length && doc.update());
 });
@@ -214,7 +214,7 @@ documents.listen(connection);
 connection.listen();
 
 async function patherr(msg: string) {
-	if (!extsettings.commands?.includes('ahk2.executeCommand'))
+	if (!getCfg(ahklsConfig, CfgKey.Commands)?.includes('ahk2.executeCommand'))
 		return connection.window.showErrorMessage(msg);
 	if (await connection.window.showErrorMessage(msg, { title: 'Select Interpreter' }))
 		connection.sendRequest('ahk2.executeCommand', ['ahk2.set.interpreter']);
@@ -294,7 +294,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		}
 	}
 	clearLibfuns();
-	if (extsettings.AutoLibInclude > 1)
+	if (ahklsConfig.AutoLibInclude > 1)
 		parseuserlibs();
 	return true;
 	async function update_rcdata() {
@@ -347,7 +347,7 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 		const doc = lexers[td.uri.toLowerCase()];
 		if (!doc) return;
 		doc.initLibDirs(doc.scriptdir);
-		if (extsettings.AutoLibInclude & 1)
+		if (ahklsConfig.AutoLibInclude & 1)
 			parseproject(doc.uri);
 	});
 	return true;

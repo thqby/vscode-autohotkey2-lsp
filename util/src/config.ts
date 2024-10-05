@@ -89,3 +89,16 @@ export interface AHKLSConfig {
 
 /** The start of each config value in package.json */
 export const configPrefix = 'AutoHotkey2';
+
+
+/** Gets a single config value from the given config */
+export const getCfg = <T = string>(config: AHKLSConfig, key: CfgKey): T => {
+	const keyPath = key.split('.');
+	// ConfigKey values are guaranteed to work ;)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let value: any = config;
+	for (const k of keyPath) {
+		value = value[k];
+	}
+	return value;
+};

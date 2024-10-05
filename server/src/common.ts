@@ -27,7 +27,7 @@ export * from './symbolProvider';
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
 export const alpha_3 = encode_version('2.1-alpha.3');
-export const extsettings: AHKLSConfig = {
+export const ahklsConfig: AHKLSConfig = {
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
 	CommentTags: '^;;\\s*(.*)',
@@ -230,7 +230,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		if ((data = getwebfile(file + '.json')))
 			build_item_cache(JSON.parse(data.text));
 	} else {
-		const syntaxes = extsettings.Syntaxes && existsSync(extsettings.Syntaxes) ? extsettings.Syntaxes : '';
+		const syntaxes = ahklsConfig.Syntaxes && existsSync(ahklsConfig.Syntaxes) ? ahklsConfig.Syntaxes : '';
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
 		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
@@ -367,7 +367,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enum_ahkfiles(dirpath: string) {
-	const maxdepth = extsettings.Files.MaxDepth;
+	const maxdepth = ahklsConfig.Files.MaxDepth;
 	const { file: file_exclude, folder: folder_exclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
@@ -426,7 +426,7 @@ export function update_settings(configs: AHKLSConfig) {
 	}
 	if (configs.Syntaxes)
 		configs.Syntaxes = resolve(configs.Syntaxes).toLowerCase();
-	Object.assign(extsettings, configs);
+	Object.assign(ahklsConfig, configs);
 }
 
 function encode_version(version: string) {
@@ -472,7 +472,7 @@ export function set_version(version: string) { ahk_version = encode_version(vers
 export function set_WorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
-	extsettings.WorkingDirs.forEach(it => !folders.has(it) && workspaceFolders.push(it));
+	ahklsConfig.WorkingDirs.forEach(it => !folders.has(it) && workspaceFolders.push(it));
 	workspaceFolders.sort().reverse();
 	if (old.length === workspaceFolders.length &&
 		!old.some((v, i) => workspaceFolders[i] !== v))
