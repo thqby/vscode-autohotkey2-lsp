@@ -1,5 +1,5 @@
 //* Utility functions to access the config variable from either client or server
-export enum CfgKey {	
+export enum CfgKey {
 	ActionWhenV1Detected = 'ActionWhenV1IsDetected',
 	CallWithoutParentheses = 'Warn.CallWithoutParentheses',
 	ClassNonDynamicMemberCheck = 'Diagnostics.ClassNonDynamicMemberCheck',
@@ -22,69 +22,74 @@ export enum CfgKey {
 	WorkingDirectories = 'WorkingDirs',
 }
 
-export type ActionType = 'Continue' | 'Warn' | 'SkipLine' | 'SwitchToV1' | 'Stop';
+export type ActionType =
+	| 'Continue'
+	| 'Warn'
+	| 'SkipLine'
+	| 'SwitchToV1'
+	| 'Stop';
 
 export enum LibIncludeType {
 	'Disabled',
 	'Local',
 	'User and Standard',
-	'All'
+	'All',
 }
 
 export interface FormatOptions {
-	array_style?: number
-	brace_style?: number
-	break_chained_methods?: boolean
-	ignore_comment?: boolean
-	indent_string?: string
-	indent_between_hotif_directive?: boolean
-	keyword_start_with_uppercase?: boolean
-	max_preserve_newlines?: number
-	object_style?: number
-	preserve_newlines?: boolean
-	space_before_conditional?: boolean
-	space_after_double_colon?: boolean
-	space_in_empty_paren?: boolean
-	space_in_other?: boolean
-	space_in_paren?: boolean
-	switch_case_alignment?: boolean
-	symbol_with_same_case?: boolean
-	white_space_before_inline_comment?: string
-	wrap_line_length?: number
+	array_style?: number;
+	brace_style?: number;
+	break_chained_methods?: boolean;
+	ignore_comment?: boolean;
+	indent_string?: string;
+	indent_between_hotif_directive?: boolean;
+	keyword_start_with_uppercase?: boolean;
+	max_preserve_newlines?: number;
+	object_style?: number;
+	preserve_newlines?: boolean;
+	space_before_conditional?: boolean;
+	space_after_double_colon?: boolean;
+	space_in_empty_paren?: boolean;
+	space_in_other?: boolean;
+	space_in_paren?: boolean;
+	switch_case_alignment?: boolean;
+	symbol_with_same_case?: boolean;
+	white_space_before_inline_comment?: string;
+	wrap_line_length?: number;
 }
 
 /** Matches the contributed extension configuration in package.json */
 export interface AHKLSConfig {
-	locale?: string
-	commands?: string[]
-	extensionUri?: string
-	ActionWhenV1IsDetected: ActionType
-	AutoLibInclude: LibIncludeType
-	CommentTags?: string
-	CompleteFunctionParens: boolean
+	locale?: string;
+	commands?: string[];
+	extensionUri?: string;
+	ActionWhenV1IsDetected: ActionType;
+	AutoLibInclude: LibIncludeType;
+	CommentTags?: string;
+	CompleteFunctionParens: boolean;
 	CompletionCommitCharacters?: {
-		Class: string
-		Function: string
-	}
+		Class: string;
+		Function: string;
+	};
 	Diagnostics: {
-		ClassNonDynamicMemberCheck: boolean
-		ParamsCheck: boolean
-	}
+		ClassNonDynamicMemberCheck: boolean;
+		ParamsCheck: boolean;
+	};
 	Files: {
-		Exclude: string[]
-		MaxDepth: number
-	}
-	FormatOptions: FormatOptions
-	InterpreterPath: string
-	GlobalStorage?: string
-	Syntaxes?: string
-	SymbolFoldingFromOpenBrace: boolean
+		Exclude: string[];
+		MaxDepth: number;
+	};
+	FormatOptions: FormatOptions;
+	InterpreterPath: string;
+	GlobalStorage?: string;
+	Syntaxes?: string;
+	SymbolFoldingFromOpenBrace: boolean;
 	Warn: {
-		VarUnset: boolean
-		LocalSameAsGlobal: boolean
-		CallWithoutParentheses: boolean | /* Parentheses */ 1
-	}
-	WorkingDirs: string[]
+		VarUnset: boolean;
+		LocalSameAsGlobal: boolean;
+		CallWithoutParentheses: boolean | /* Parentheses */ 1;
+	};
+	WorkingDirs: string[];
 }
 
 /**
@@ -99,15 +104,15 @@ export const ahklsConfig: AHKLSConfig = {
 	CompleteFunctionParens: false,
 	CompletionCommitCharacters: {
 		Class: '.(',
-		Function: '('
+		Function: '(',
 	},
 	Diagnostics: {
 		ClassNonDynamicMemberCheck: true,
-		ParamsCheck: true
+		ParamsCheck: true,
 	},
 	Files: {
 		Exclude: [],
-		MaxDepth: 2
+		MaxDepth: 2,
 	},
 	FormatOptions: {},
 	InterpreterPath: 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe',
@@ -115,17 +120,19 @@ export const ahklsConfig: AHKLSConfig = {
 	Warn: {
 		VarUnset: true,
 		LocalSameAsGlobal: false,
-		CallWithoutParentheses: false
+		CallWithoutParentheses: false,
 	},
-	WorkingDirs: []
+	WorkingDirs: [],
 };
 
 /** The start of each config value in package.json */
 export const configPrefix = 'AutoHotkey2';
 
-
 /** Gets a single config value from the given config */
-export const getCfg = <T = string>(key: CfgKey, config: AHKLSConfig = ahklsConfig): T => {
+export const getCfg = <T = string>(
+	key: CfgKey,
+	config: AHKLSConfig = ahklsConfig,
+): T => {
 	const keyPath = key.split('.');
 	// ConfigKey values are guaranteed to work ;)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -136,7 +143,11 @@ export const getCfg = <T = string>(key: CfgKey, config: AHKLSConfig = ahklsConfi
 	return value;
 };
 
-export const setCfg = (key: CfgKey, value: unknown, config: AHKLSConfig = ahklsConfig): void => {
+export const setCfg = (
+	key: CfgKey,
+	value: unknown,
+	config: AHKLSConfig = ahklsConfig,
+): void => {
 	const keyPath = key.split('.');
 	// ConfigKey values are guaranteed to work ;)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

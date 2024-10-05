@@ -639,7 +639,11 @@
 		"clean:out": "rimraf out",
 		"precompile-ts": "npm run clean:out",
 		"compile-ts": "tsc --noEmit false --outDir out",
-		"eslint": "eslint --fix",
+		"eslint": "eslint . --max-warnings 0",
+		"eslint:fix": "eslint --fix",
+		"format": "prettier --check .",
+		"format:fix": "prettier --write .",
+		"lint": "npm run eslint && npm run format",
 		"package": "vsce package",
 		"publish": "vsce publish",
 		"test": "npm run test:grammar && npm run test:unit && npm run test:e2e",
@@ -648,12 +652,19 @@
 		"test:grammar": "vscode-tmgrammar-snap tmgrammar-test/*.ahk",
 		"pretest:unit": "npm run compile-ts",
 		"test:unit": "mocha",
-		"vscode:prepublish": "npm run test",
+		"validate": "npm run lint && npm run test",
+		"vscode:prepublish": "npm run validate",
 		"watch": "npm run build -- --dev",
 		"watch-web": "npm run build -- --web"
 	},
 	"mocha": {
 		"spec": "out/**/*.spec.js"
+	},
+	"prettier": {
+		"singleQuote": true,
+		"useTabs": true,
+		"trailingComma": "all",
+		"endOfLine": "crlf"
 	},
 	"devDependencies": {
 		"@types/mocha": "^10.0.8",
@@ -665,6 +676,7 @@
 		"esbuild": "^0.24.0",
 		"eslint": "^9.11.0",
 		"mocha": "^10.7.3",
+		"prettier": "3.3.3",
 		"rimraf": "^6.0.1",
 		"typescript": "5.5.4",
 		"typescript-eslint": "^8.7.0",

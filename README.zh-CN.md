@@ -157,7 +157,7 @@ code
 
 ### 声明文件
 
-声明文件是以 .d.ahk 为文件名后缀的文件, 用来描述已实现的函数或类等, 不包含代码的实现部分, 默认被同名的ahk文件引用, 语法参考扩展提供的 `ahk2.d.ahk`. 声明文件可以扩展或改写ahk内置函数或类的声明, 也可以将注释文档从源码中分离来提供多语言版本的智能感知等. 
+声明文件是以 .d.ahk 为文件名后缀的文件, 用来描述已实现的函数或类等, 不包含代码的实现部分, 默认被同名的ahk文件引用, 语法参考扩展提供的 `ahk2.d.ahk`. 声明文件可以扩展或改写ahk内置函数或类的声明, 也可以将注释文档从源码中分离来提供多语言版本的智能感知等.
 
 ```
 ; array.d.ahk
@@ -229,55 +229,56 @@ node install.js
 
 ```json
 {
-  "clients": {
-    "lsp-ahk2": {
-      "enabled": true,
-      "command": [
-        "node",
-        "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-        "--stdio"
-      ], // 更新node.exe的路径(可能已经在环境变量中，所以你不需要设置)和vscode-autohotkey2-lsp的文件夹
-      "selector": "source.ahk2", // 与AutoHotkey2.sublime-syntax中的scope相同
-      "schemes": ["file", "buffer", "res"],
-      "initializationOptions": {
-        "locale": "en-us", // or "zh-cn"
-        "AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
-        "CommentTags": "^;;\\s*(?<tag>.+)",
-        "CompleteFunctionParens": false,
-        "Diagnostics": {
-          "ClassStaticMemberCheck": true,
-          "ParamsCheck": true
-        },
-        "ActionWhenV1IsDetected": "Continue",
-        "FormatOptions": {
-          "array_style": "none",           // or "collapse" or "expand"
-          "break_chained_methods": false,
-          "ignore_comment": false,
-          "indent_string": "\t",
-          "max_preserve_newlines": 2,
-          "brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
-          "object_style": "none",          // or "collapse" or "expand"
-          "preserve_newlines": true,
-          "space_after_double_colon": true,
-          "space_before_conditional": true,
-          "space_in_empty_paren": false,
-          "space_in_other": true,
-          "space_in_paren": false,
-          "wrap_line_length": 0
-        },
-        "InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
-        "WorkingDirs": [],
-        "SymbolFoldingFromOpenBrace": false
-      }
-    }
-  },
-  "semantic_highlighting": true
+	"clients": {
+		"lsp-ahk2": {
+			"enabled": true,
+			"command": [
+				"node",
+				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+				"--stdio"
+			], // 更新node.exe的路径(可能已经在环境变量中，所以你不需要设置)和vscode-autohotkey2-lsp的文件夹
+			"selector": "source.ahk2", // 与AutoHotkey2.sublime-syntax中的scope相同
+			"schemes": ["file", "buffer", "res"],
+			"initializationOptions": {
+				"locale": "en-us", // or "zh-cn"
+				"AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
+				"CommentTags": "^;;\\s*(?<tag>.+)",
+				"CompleteFunctionParens": false,
+				"Diagnostics": {
+					"ClassStaticMemberCheck": true,
+					"ParamsCheck": true
+				},
+				"ActionWhenV1IsDetected": "Continue",
+				"FormatOptions": {
+					"array_style": "none", // or "collapse" or "expand"
+					"break_chained_methods": false,
+					"ignore_comment": false,
+					"indent_string": "\t",
+					"max_preserve_newlines": 2,
+					"brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
+					"object_style": "none", // or "collapse" or "expand"
+					"preserve_newlines": true,
+					"space_after_double_colon": true,
+					"space_before_conditional": true,
+					"space_in_empty_paren": false,
+					"space_in_other": true,
+					"space_in_paren": false,
+					"wrap_line_length": 0
+				},
+				"InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+				"WorkingDirs": [],
+				"SymbolFoldingFromOpenBrace": false
+			}
+		}
+	},
+	"semantic_highlighting": true
 }
 ```
 
 ### Vim 和 Neovim
 
 #### COC
+
 - 下载[coc.nvim 插件](https://github.com/neoclide/coc.nvim)。
 
 ```bat
@@ -289,20 +290,21 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 
 ```json
 {
-  "languageserver": {
-    "lsp-ahk2": {
-      "module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-      "filetypes": ["autohotkey"],
-      "args": ["--node-ipc"],
-      "initializationOptions": {
-        // Same as initializationOptions for Sublime Text4
-      }
-    }
-  }
+	"languageserver": {
+		"lsp-ahk2": {
+			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+			"filetypes": ["autohotkey"],
+			"args": ["--node-ipc"],
+			"initializationOptions": {
+				// Same as initializationOptions for Sublime Text4
+			}
+		}
+	}
 }
 ```
 
 #### nvim-lspconfig
+
 - 下载[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)。
 - 将以下内容添加到您的NVIM配置中(init.lua 等). 确定`cmd`指向vscode-autohotkey2-lsp的安装路径，`InterpreterPath`指向AHK exe.
 
@@ -346,9 +348,10 @@ nvim_lsp.ahk2.setup({})
 ### Emacs
 
 #### Eglot
+
 - 将以下内容添加到您的emacs配置文件中
 
-``` emacs-lisp
+```emacs-lisp
 (add-to-list 'eglot-server-programs '(ahk-mode "node" "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js" "--stdio"))
 
 ```
