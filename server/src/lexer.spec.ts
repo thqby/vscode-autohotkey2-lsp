@@ -1,6 +1,6 @@
 import { suite, test } from 'mocha';
 import * as assert from 'assert';
-import { updateCommentTagRegex } from './Lexer';
+import { updateCommentTagRegex } from './lexer2';
 
 suite('updateCommentTagRegex', () => {
 	test('should update the comment tag regex', () => {
