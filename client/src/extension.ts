@@ -39,6 +39,9 @@ import {
 	clientInsertSnippet,
 	clientSetTextDocumentLanguage,
 	clientUpdateStatusBar,
+	extHelp,
+	extCompile,
+	extRun,
 } from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
@@ -219,9 +222,9 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	context.subscriptions.push(
 		ahkStatusBarItem, outputchannel, fsw,
 		extensions.onDidChange(update_extensions_info),
-		commands.registerTextEditorCommand('ahk2.help', quickHelp),
-		commands.registerTextEditorCommand('ahk2.compile', compileScript),
-		commands.registerTextEditorCommand('ahk2.run', textEditor => runScript(textEditor)),
+		commands.registerTextEditorCommand(extHelp, quickHelp),
+		commands.registerTextEditorCommand(extCompile, compileScript),
+		commands.registerTextEditorCommand(extRun, textEditor => runScript(textEditor)),
 		commands.registerTextEditorCommand('ahk2.run.selection', textEditor => runScript(textEditor, true)),
 		commands.registerCommand('ahk2.stop', stopRunningScript),
 		commands.registerCommand('ahk2.set.interpreter', setInterpreter),
