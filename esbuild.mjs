@@ -14,11 +14,22 @@ const server_opt = {
 	platform: 'node',
 	sourcemap: true,
 };
+
+/** @type {import('esbuild').BuildOptions} */
 const client_opt = {
 	...server_opt,
 	entryPoints: ['client/src/extension.ts', 'client/src/test/*.ts'],
 	outbase: 'client/src',
 	outdir: 'client/dist',
+};
+
+/** @type {import('esbuild').BuildOptions} */
+const util_opt = {
+	...server_opt,
+	entryPoints: ['util/src/*.ts'],
+	outbase: 'util/src',
+	// build in-place as files are only imported incrementally
+	outdir: 'util/src',
 };
 
 switch (process.argv[2]) {
@@ -36,6 +47,7 @@ switch (process.argv[2]) {
 		break;
 }
 
+/** Build the server to be installed via CLI */
 async function build_cli() {
 	server_opt.bundle = true;
 	server_opt.minify = true;
@@ -45,6 +57,7 @@ async function build_cli() {
 	console.log(`build finished in ${new Date() - start} ms`);
 }
 
+/** Build the client and server for production */
 async function build_prod() {
 	const opts = [
 		client_opt,
@@ -60,6 +73,7 @@ async function build_prod() {
 	console.log(`build finished in ${new Date() - start} ms`);
 }
 
+/** Build incrementally, non-bundling, for local development */
 function build_watch(web = false) {
 	let start, timer, opts;
 	/** @type {import('esbuild').Plugin} */
@@ -85,20 +99,24 @@ function build_watch(web = false) {
 			});
 		},
 	};
-	client_opt.logLevel = server_opt.logLevel = 'silent';
+	client_opt.logLevel = server_opt.logLevel = util_opt.logLevel = 'silent';
 	server_opt.define['process.env.DEBUG'] = 'true';
 	if (web) opts = browser_opts(false);
 	else {
 		server_opt.entryPoints = ['server/src/*.ts'];
 		server_opt.outdir = 'server/out';
-		opts = [client_opt, server_opt];
+		opts = [client_opt, server_opt, util_opt];
 	}
 	for (const opt of opts) {
 		opt.plugins = [plugin];
 		context(opt).then((ctx) => ctx.watch());
 	}
 }
-/** @returns {Array<import('esbuild').BuildOptions>} */
+
+/**
+ * Returns the options for building the browser extension
+ * @returns {Array<import('esbuild').BuildOptions>}
+ */
 function browser_opts(minify) {
 	const browser_opt = {
 		bundle: true,
