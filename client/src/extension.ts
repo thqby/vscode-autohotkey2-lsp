@@ -49,6 +49,7 @@ import {
 	extDebugConfig,
 	extDebugFile,
 	extDebugParams,
+	extSelectSyntaxes,
 } from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
@@ -223,7 +224,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 	ahkStatusBarItem.command = extSetInterpreter;
 	for (const it of [
-		{ text: '$(folder)syntaxes', command: { title: localize('ahk2.select'), command: 'ahk2.select.syntaxes' } },
+		{ text: '$(folder)syntaxes', command: { title: localize('ahk2.select'), command: extSelectSyntaxes } },
 	])
 		context.subscriptions.push(Object.assign(languages.createLanguageStatusItem(it.command.command, { language: 'ahk2' }), it));
 	context.subscriptions.push(
@@ -239,7 +240,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		commands.registerCommand(extDebugConfig, () => beginDebug('c')),
 		commands.registerCommand(extDebugParams, () => beginDebug('p')),
 		commands.registerCommand(extDebugAttach, () => beginDebug('a')),
-		commands.registerCommand('ahk2.select.syntaxes', selectSyntaxes),
+		commands.registerCommand(extSelectSyntaxes, selectSyntaxes),
 		commands.registerTextEditorCommand('ahk2.update.versioninfo', async textEditor => {
 			if (!server_is_ready)
 				return;
