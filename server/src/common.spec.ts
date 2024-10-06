@@ -77,4 +77,33 @@ suite('updateConfig', () => {
 			assert.strictEqual(getCfg<number>(CfgKey.MaxScanDepth), Infinity);
 		});
 	});
+
+	suite('CallWithoutParentheses', () => {
+		beforeEach(() => {
+			setCfg(CfgKey.CallWithoutParentheses, undefined);
+		});
+
+		const theories: [
+			value: 'On' | 'Off' | 'Parentheses',
+			expected: boolean | 1,
+		][] = [
+			['On', true],
+			['Off', false],
+			['Parentheses', 1],
+		];
+
+		theories.forEach(([value, expected]) => {
+			test(value, () => {
+				const config = newConfig();
+				setCfg(CfgKey.CallWithoutParentheses, value, config);
+
+				updateConfig(config);
+
+				assert.strictEqual(
+					getCfg<number>(CfgKey.CallWithoutParentheses),
+					expected,
+				);
+			});
+		});
+	});
 });

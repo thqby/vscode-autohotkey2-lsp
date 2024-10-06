@@ -371,8 +371,9 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 		setCfg(CfgKey.LibrarySuggestions, LibIncludeType[newConfigLibSuggestions as unknown as LibIncludeType], newConfig);
 	else if (typeof newConfigLibSuggestions === 'boolean')
 		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? LibIncludeType.All : LibIncludeType.Disabled, newConfig);
-	if (typeof newConfig.Warn?.CallWithoutParentheses === 'string')
-		newConfig.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[newConfig.Warn.CallWithoutParentheses];
+	const newConfigCallWithoutParentheses = getCfg(CfgKey.CallWithoutParentheses, newConfig);
+	if (typeof newConfigCallWithoutParentheses === 'string')
+		setCfg(CfgKey.CallWithoutParentheses, { On: true, Off: false, Parentheses: 1 }[newConfigCallWithoutParentheses], newConfig);
 	check_formatopts(newConfig.FormatOptions ?? {});
 	try {
 		updateCommentTagRegex(getCfg(CfgKey.CommentTagRegex, newConfig));
