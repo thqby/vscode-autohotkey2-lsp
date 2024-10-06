@@ -235,7 +235,7 @@ suite('Formatting', async () => {
 				DocumentFormattingRequest.method,
 				params,
 			);
-			assert.ok(result?.[0].newText === content);
+			assert.strictEqual(result?.[0].newText, content);
 		});
 	}
 });
