@@ -65,7 +65,7 @@ suite('Lexer', () => {
 			[
 				'uses flags only',
 				';@format array_style: expand, object_style: expand',
-				{ array_style: 1, object_style: 1 },
+				{ array_style: 'expand', object_style: 'expand' },
 				{},
 			],
 		];

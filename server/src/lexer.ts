@@ -25,7 +25,7 @@ import {
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
+import { ActionType, BlockStyle, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -204,10 +204,9 @@ interface ParamList extends Array<Variable> {
 	full?: string
 	variadic?: boolean
 }
-
 /** Flags used for formatter directives and other lexer conditions. */
 export interface Flag {
-	array_style?: number,
+	array_style?: BlockStyle,
 	case_body: boolean | null,
 	catch_block: boolean,
 	declaration_statement: boolean,
@@ -225,13 +224,69 @@ export interface Flag {
 	last_word: string,
 	loop_block: number,
 	mode: string,
-	object_style?: number,
+	object_style?: BlockStyle,
 	parent: Flag,
 	start_line_index: number,
 	ternary_depth?: number,
 	ternary_indent?: number,
 	try_block: boolean
 };
+
+export interface InternalFormatOptions {
+	array_style: BlockStyle;
+	brace_style: number;
+	break_chained_methods: boolean;
+	ignore_comment: boolean;
+	indent_string: string;
+	indent_between_hotif_directive: boolean;
+	keyword_start_with_uppercase: boolean;
+	max_preserve_newlines: number;
+	object_style: BlockStyle;
+	preserve_newlines: boolean;
+	space_before_conditional: boolean;
+	space_after_double_colon: boolean;
+	space_in_empty_paren: boolean;
+	space_in_other: boolean;
+	space_in_paren: boolean;
+	switch_case_alignment: boolean;
+	symbol_with_same_case: boolean;
+	white_space_before_inline_comment: string;
+	wrap_line_length: number;
+}
+
+/**
+ * When not provided a value, returns the default internal formatter options.
+ * Otherwise, properties of the provided value are preserved and merged with the defaults.
+ */
+export const newInternalFormatOptions = (partial: Partial<InternalFormatOptions> = {}): InternalFormatOptions => ({
+	array_style: 'expand',
+	brace_style: 0,
+	break_chained_methods: false,
+	ignore_comment: false,
+	indent_string: '\t',
+	indent_between_hotif_directive: false,
+	keyword_start_with_uppercase: false,
+	max_preserve_newlines: 3,
+	object_style: 'expand',
+	preserve_newlines: true,
+	space_before_conditional: true,
+	space_after_double_colon: true,
+	space_in_empty_paren: false,
+	space_in_other: true,
+	space_in_paren: false,
+	switch_case_alignment: false,
+	symbol_with_same_case: false,
+	white_space_before_inline_comment: '',
+	wrap_line_length: 0,
+	...partial
+});
+
+/**
+ * For now, just uses the same keys.
+ * But if `InternalFormatOptions` type ever changes (to have camelCase keys, for example),
+ * we can update this function instead of pushing breaking changes to user settings.
+ */
+export const mapToInternalFormatOptions = newInternalFormatOptions;
 
 namespace SymbolNode {
 	export function create(name: string, kind: SymbolKind, range: Range, selectionRange: Range, children?: AhkSymbol[]): AhkSymbol {
@@ -296,7 +351,8 @@ const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectL
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[012])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|help|sleep|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
 const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 export const ASSIGN_TYPE = [':=', '??='];
-const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 };
+
+const OBJECT_STYLE: Record<BlockStyle, BlockStyle> = { collapse: 'collapse', expand: 'expand', none: 'none' };
 const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 const META_FUNCNAME = ['__NEW', '__INIT', '__ITEM', '__ENUM', '__GET', '__CALL', '__SET', '__DELETE'];
 export const ANY = create_prototype('Any');
@@ -401,7 +457,7 @@ export class Lexer {
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
 		let in_loop = false, maybev1 = 0, requirev2 = false, string_mode = false;
 		let output_lines: { text: string[], indent: number }[], flags: Flag, previous_flags: Flag, flag_store: Flag[];
-		let opt: FormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
+		let opt: InternalFormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string;
 		let output_space_before_token: boolean | undefined, is_conditional: boolean;
 		const handlers: Record<string, () => void> = {
@@ -497,20 +553,7 @@ export class Lexer {
 			let end_pos: number;
 			!_this.isparsed && _this.parseScript();
 
-			opt = {
-				break_chained_methods: false,
-				ignore_comment: false,
-				indent_string: '\t',
-				max_preserve_newlines: 3,
-				preserve_newlines: true,
-				space_before_conditional: true,
-				space_after_double_colon: true,
-				space_in_empty_paren: false,
-				space_in_other: true,
-				space_in_paren: false,
-				wrap_line_length: 0,
-				...options
-			};
+			opt = mapToInternalFormatOptions(options);
 
 			last_type = last_text = '', begin_line = true, lst = { ...EMPTY_TOKEN };
 			last_LF = -1, end_pos = input_length, ck = _this.get_token(0);
@@ -640,7 +683,7 @@ export class Lexer {
 		};
 
 		function format_params_default_val(tokens: Record<number, Token>, params: ParamList) {
-			opt = { max_preserve_newlines: 1 };
+			opt = newInternalFormatOptions({ max_preserve_newlines: 1 });
 			space_in_other = true, indent_string = '\t';
 			format_mode = true, preindent_string = '';
 			delete params.format;
@@ -7870,27 +7913,23 @@ export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
 }
 
 /**
+ * Updates the provided options in-place (not pure).
  * Convert the provided format config from user settings to in-memory interface.
  * This is mostly just converting strings to numbers.
  */
-export function fixupFormatConfig(opts: FormatOptions) {
-	if (typeof opts.brace_style === 'string') {
-		switch (opts.brace_style) {
+export function fixupFormatConfig(options: FormatOptions) {
+	if (typeof options.brace_style === 'string') {
+		switch (options.brace_style) {
 			case '0':
-			case 'Allman': opts.brace_style = 0; break;
+			case 'Allman': options.brace_style = 0; break;
 			case '1':
-			case 'One True Brace': opts.brace_style = 1; break;
+			case 'One True Brace': options.brace_style = 1; break;
 			case '-1':
-			case 'One True Brace Variant': opts.brace_style = -1; break;
-			default: delete opts.brace_style; break;
+			case 'One True Brace Variant': options.brace_style = -1; break;
+			default: delete options.brace_style; break;
 		}
 	}
-	for (const k of ['array_style', 'object_style'] as const) {
-		const v = opts[k];
-		if (typeof v === 'string')
-			opts[k] = OBJECT_STYLE[v];
-	}
-	return opts;
+	return options;
 }
 
 /**
@@ -7923,7 +7962,7 @@ export function applyFormatDirective(directive: string, flags: Partial<Flag>, op
 	const newFormatConfig = fixupFormatConfig(parsedDirective);
 	for (const k of ['array_style', 'object_style'] as const) {
 		if (k in newFormatConfig) {
-				flags[k] = newFormatConfig[k];
+				flags[k] = newFormatConfig[k] as BlockStyle;
 				delete newFormatConfig[k];
 		}
 	}
