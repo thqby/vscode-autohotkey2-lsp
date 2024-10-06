@@ -45,6 +45,10 @@ import {
 	extSetInterpreter,
 	extRunSelection,
 	extStop,
+	extDebugAttach,
+	extDebugConfig,
+	extDebugFile,
+	extDebugParams,
 } from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
@@ -231,10 +235,10 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		commands.registerTextEditorCommand(extRunSelection, textEditor => runScript(textEditor, true)),
 		commands.registerCommand(extStop, stopRunningScript),
 		commands.registerCommand(extSetInterpreter, setInterpreter),
-		commands.registerCommand('ahk2.debug.file', () => beginDebug('f')),
-		commands.registerCommand('ahk2.debug.configs', () => beginDebug('c')),
-		commands.registerCommand('ahk2.debug.params', () => beginDebug('p')),
-		commands.registerCommand('ahk2.debug.attach', () => beginDebug('a')),
+		commands.registerCommand(extDebugFile, () => beginDebug('f')),
+		commands.registerCommand(extDebugConfig, () => beginDebug('c')),
+		commands.registerCommand(extDebugParams, () => beginDebug('p')),
+		commands.registerCommand(extDebugAttach, () => beginDebug('a')),
 		commands.registerCommand('ahk2.select.syntaxes', selectSyntaxes),
 		commands.registerTextEditorCommand('ahk2.update.versioninfo', async textEditor => {
 			if (!server_is_ready)
