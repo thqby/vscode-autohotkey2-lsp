@@ -28,7 +28,7 @@ import {
 import { resolve } from 'path';
 import { ChildProcess, exec, execSync, spawn } from 'child_process';
 import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
-import { CfgKey, configPrefix } from '../../util/src/config';
+import { CfgKey, configPrefix, getCfg } from '../../util/src/config';
 import {
 	ClientCommand,
 	languageClientId,
@@ -44,7 +44,7 @@ import {
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
 const ahkconfig = workspace.getConfiguration(configPrefix);
-let interpreterPath: string = ahkconfig.InterpreterPath, server_is_ready = false;
+let interpreterPath: string = getCfg(CfgKey.InterpreterPath, ahkconfig), server_is_ready = false;
 const textdecoders = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const isWindows = process.platform === 'win32';
 let extlist: string[] = [], debugexts: Record<string, string> = {}, langs: string[] = [];
@@ -130,7 +130,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		},
 	};
 
-	if (ahkconfig.FormatOptions?.one_true_brace !== undefined)
+	if (getCfg(CfgKey.OneTrueBrace, ahkconfig) !== undefined)
 		window.showWarningMessage(`Configuration "${configPrefix}.FormatOptions.one_true_brace" is no longer supported.\nPlease use "${configPrefix}.${CfgKey.BraceStyle}"`);
 
 	// Create the language client and start the client.
@@ -174,7 +174,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 							const match_config = get_debug_configs()?.filter(it =>
 								Object.entries(it).every(([k, v]) => equal(v, config[k]))
 							)?.sort((a, b) => Object.keys(a).length - Object.keys(b).length).pop();
-							const def = { ...ahkconfig.get('DebugConfiguration') as Partial<DebugConfiguration> };
+							const def = getCfg<Partial<DebugConfiguration>>(CfgKey.DebugConfiguration, ahkconfig);
 							delete def.request, delete def.type;
 							Object.assign(config, def, match_config);
 							if (match_config?.type === 'autohotkey')
