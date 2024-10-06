@@ -135,7 +135,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 
 	// Create the language client and start the client.
 	client = new LanguageClient(languageClientId, languageClientName, serverOptions, clientOptions);
-	loadlocalize(context.extensionPath + '/package.nls');
+	loadLocalize(context.extensionPath + '/package.nls');
 	textdecoders.push(new TextDecoder(env.language.startsWith('zh-') ? 'gbk' : 'windows-1252'));
 
 	// Start the client. This will also launch the server
@@ -795,7 +795,7 @@ function statSync(path: string) {
 	return st;
 }
 
-function loadlocalize(nls: string) {
+function loadLocalize(nls: string) {
 	let s = `${nls}.${env.language}.json`;
 	if (!existsSync(s)) {
 		if (!env.language.startsWith('zh-') || !existsSync(s = `${nls}.zh-cn.json`))
