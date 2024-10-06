@@ -2,6 +2,7 @@ import { suite, test } from 'mocha';
 import { updateConfig } from './common';
 import * as assert from 'assert';
 import {
+	BraceStyle,
 	CfgKey,
 	getCfg,
 	LibIncludeType,
@@ -160,6 +161,43 @@ suite('updateConfig', () => {
 				updateConfig(config);
 
 				assert.strictEqual(getCfg<string>(CfgKey.Syntaxes), expected);
+			});
+		});
+	});
+
+	suite('BraceStyle', () => {
+		beforeEach(() => {
+			setCfg(CfgKey.BraceStyle, undefined);
+		});
+
+		const theories: [
+			name: string,
+			value: string | undefined,
+			expected: BraceStyle,
+		][] = [
+			['Allman', 'Allman', 'Allman'],
+			['One True Brace', 'One True Brace', 'One True Brace'],
+			[
+				'One True Brace Variant',
+				'One True Brace Variant',
+				'One True Brace Variant',
+			],
+			['Preserve', 'Preserve', 'Preserve'],
+			['undefined', undefined, 'Preserve'],
+			['0', '0', 'Allman'],
+			['1', '1', 'One True Brace'],
+			['-1', '-1', 'One True Brace Variant'],
+			['other value', 'potato', 'Preserve'],
+		];
+
+		theories.forEach(([name, value, expected]) => {
+			test(name, () => {
+				const config = newConfig();
+				setCfg<string | undefined>(CfgKey.BraceStyle, value, config);
+
+				updateConfig(config);
+
+				assert.strictEqual(getCfg(CfgKey.BraceStyle), expected);
 			});
 		});
 	});

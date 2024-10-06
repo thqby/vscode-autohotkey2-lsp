@@ -25,7 +25,7 @@ import {
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
+import { ActionType, BlockStyle, BraceStyle, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -204,6 +204,89 @@ interface ParamList extends Array<Variable> {
 	full?: string
 	variadic?: boolean
 }
+/** Flags used for formatter directives and other lexer conditions. */
+export interface Flag {
+	array_style?: BlockStyle,
+	case_body: boolean | null,
+	catch_block: boolean,
+	declaration_statement: boolean,
+	else_block: boolean,
+	finally_block: boolean,
+	had_comment: number,
+	hotif_block?: boolean,
+	if_block: boolean,
+	in_case_statement: boolean,
+	in_case: boolean,
+	in_expression: boolean,
+	in_fat_arrow?: boolean,
+	indentation_level: number,
+	last_text: string,
+	last_word: string,
+	loop_block: number,
+	mode: string,
+	object_style?: BlockStyle,
+	parent: Flag,
+	start_line_index: number,
+	ternary_depth?: number,
+	ternary_indent?: number,
+	try_block: boolean
+};
+
+export interface InternalFormatOptions {
+	array_style: BlockStyle;
+	brace_style: BraceStyle;
+	break_chained_methods: boolean;
+	ignore_comment: boolean;
+	indent_string: string;
+	indent_between_hotif_directive: boolean;
+	keyword_start_with_uppercase: boolean;
+	max_preserve_newlines: number;
+	object_style: BlockStyle;
+	preserve_newlines: boolean;
+	space_before_conditional: boolean;
+	space_after_double_colon: boolean;
+	space_in_empty_paren: boolean;
+	space_in_other: boolean;
+	space_in_paren: boolean;
+	switch_case_alignment: boolean;
+	symbol_with_same_case: boolean;
+	white_space_before_inline_comment: string;
+	wrap_line_length: number;
+}
+
+/**
+ * When not provided a value, returns the default internal formatter options.
+ * Otherwise, properties of the provided value are preserved and merged with the defaults.
+ */
+export const newInternalFormatOptions = (partial: Partial<InternalFormatOptions> = {}): InternalFormatOptions => ({
+	array_style: 'expand',
+	brace_style: 'Preserve',
+	break_chained_methods: false,
+	ignore_comment: false,
+	indent_string: '\t',
+	indent_between_hotif_directive: false,
+	keyword_start_with_uppercase: false,
+	max_preserve_newlines: 3,
+	object_style: 'expand',
+	preserve_newlines: true,
+	space_before_conditional: true,
+	space_after_double_colon: true,
+	space_in_empty_paren: false,
+	space_in_other: true,
+	space_in_paren: false,
+	switch_case_alignment: false,
+	symbol_with_same_case: false,
+	white_space_before_inline_comment: '',
+	wrap_line_length: 0,
+	...partial
+});
+
+/**
+ * For now, just uses the same keys.
+ * But if `InternalFormatOptions` type ever changes (to have camelCase keys, for example),
+ * we can update this function instead of pushing breaking changes to user settings.
+ */
+export const mapToInternalFormatOptions = newInternalFormatOptions;
 
 namespace SymbolNode {
 	export function create(name: string, kind: SymbolKind, range: Range, selectionRange: Range, children?: AhkSymbol[]): AhkSymbol {
@@ -268,7 +351,8 @@ const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectL
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[012])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|help|sleep|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
 const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 export const ASSIGN_TYPE = [':=', '??='];
-const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 };
+
+const OBJECT_STYLE: Record<BlockStyle, BlockStyle> = { collapse: 'collapse', expand: 'expand', none: 'none' };
 const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 const META_FUNCNAME = ['__NEW', '__INIT', '__ITEM', '__ENUM', '__GET', '__CALL', '__SET', '__DELETE'];
 export const ANY = create_prototype('Any');
@@ -372,35 +456,8 @@ export class Lexer {
 		const _this = this, uri = URI.parse(document.uri);
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
 		let in_loop = false, maybev1 = 0, requirev2 = false, string_mode = false;
-
-		interface Flag {
-			array_style?: number,
-			case_body: boolean | null,
-			catch_block: boolean,
-			declaration_statement: boolean,
-			else_block: boolean,
-			finally_block: boolean,
-			had_comment: number,
-			hotif_block?: boolean,
-			if_block: boolean,
-			in_case_statement: boolean,
-			in_case: boolean,
-			in_expression: boolean,
-			in_fat_arrow?: boolean,
-			indentation_level: number,
-			last_text: string,
-			last_word: string,
-			loop_block: number,
-			mode: string,
-			object_style?: number,
-			parent: Flag,
-			start_line_index: number,
-			ternary_depth?: number,
-			ternary_indent?: number,
-			try_block: boolean
-		};
 		let output_lines: { text: string[], indent: number }[], flags: Flag, previous_flags: Flag, flag_store: Flag[];
-		let opt: FormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
+		let opt: InternalFormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string;
 		let output_space_before_token: boolean | undefined, is_conditional: boolean;
 		const handlers: Record<string, () => void> = {
@@ -496,20 +553,7 @@ export class Lexer {
 			let end_pos: number;
 			!_this.isparsed && _this.parseScript();
 
-			opt = {
-				break_chained_methods: false,
-				ignore_comment: false,
-				indent_string: '\t',
-				max_preserve_newlines: 3,
-				preserve_newlines: true,
-				space_before_conditional: true,
-				space_after_double_colon: true,
-				space_in_empty_paren: false,
-				space_in_other: true,
-				space_in_paren: false,
-				wrap_line_length: 0,
-				...options
-			};
+			opt = mapToInternalFormatOptions(options);
 
 			last_type = last_text = '', begin_line = true, lst = { ...EMPTY_TOKEN };
 			last_LF = -1, end_pos = input_length, ck = _this.get_token(0);
@@ -639,7 +683,7 @@ export class Lexer {
 		};
 
 		function format_params_default_val(tokens: Record<number, Token>, params: ParamList) {
-			opt = { max_preserve_newlines: 1 };
+			opt = newInternalFormatOptions({ max_preserve_newlines: 1 });
 			space_in_other = true, indent_string = '\t';
 			format_mode = true, preindent_string = '';
 			delete params.format;
@@ -5487,7 +5531,7 @@ export class Lexer {
 
 				if (previous_flags.in_case_statement && last_type === 'TK_LABEL' && /^(default)?:$/.test(last_text))
 					flags.case_body = null, print_newline(), flags.indentation_level--;
-				else if (opt.brace_style === 0 || input_wanted_newline && opt.preserve_newlines && !opt.brace_style)
+				else if (opt.brace_style === 'Allman' || input_wanted_newline && opt.preserve_newlines && opt.brace_style !== 'Preserve')
 					if (ck.in_expr === undefined || flags.mode === MODE.Expression)
 						print_newline(true);
 
@@ -5496,7 +5540,7 @@ export class Lexer {
 				previous_flags.indentation_level = Math.min(previous_flags.indentation_level, flags.indentation_level);
 				if (!(opt.switch_case_alignment && flags.last_word === 'switch'))
 					indent();
-				if (need_newline || opt.brace_style !== undefined)
+				if (need_newline || opt.brace_style !== 'Preserve')
 					print_newline(true);
 				else output_space_before_token = space_in_other;
 			}
@@ -5516,7 +5560,7 @@ export class Lexer {
 				else if (style || input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
 				output_space_before_token = space_in_other && last_text !== '{';
-			} else if (opt.brace_style !== undefined || input_wanted_newline)
+			} else if (opt.brace_style !== 'Preserve' || input_wanted_newline)
 				print_newline(true);
 
 			restore_mode();
@@ -5524,7 +5568,7 @@ export class Lexer {
 			if (!is_exp) {
 				if (previous_flags.case_body === null)
 					indent();
-				if (opt.brace_style !== undefined)
+				if (opt.brace_style !== 'Preserve')
 					print_newline(true);
 				output_space_before_token = space_in_other;
 			}
@@ -5637,7 +5681,14 @@ export class Lexer {
 					}
 					if (maybe_need_newline) {
 						trim_newlines();
-						if (flags.last_text !== '}' || opt.brace_style! < 1 || input_wanted_newline && opt.preserve_newlines && !opt.brace_style)
+						if (
+							flags.last_text !== '}' 
+							|| opt.brace_style === 'Allman'
+							|| opt.brace_style === 'One True Brace Variant'
+							|| input_wanted_newline 
+								&& opt.preserve_newlines 
+								&& opt.brace_style !== 'Preserve'
+						)
 							print_newline(true);
 						else output_space_before_token = space_in_other;
 					} else if (input_wanted_newline)
@@ -5908,21 +5959,8 @@ export class Lexer {
 			flags.had_comment = 3;
 		}
 
-		function formatDirectives(str: string) {
-			const m = str.match(/^;\s*@format\b/i);
-			if (!m) return;
-			const new_opts = fixupFormatOpts(Object.fromEntries(str.substring(m[0].length).split(',').map(s => {
-				const p = s.indexOf(':');
-				return [s.substring(0, p).trim(), s.substring(p + 1).trim()];
-			})));
-			for (const k of ['array_style', 'object_style'] as const)
-				if (k in new_opts)
-					flags[k] = new_opts[k], delete new_opts[k];
-			Object.assign(opt, new_opts);
-		}
-
 		function handle_inline_comment() {
-			formatDirectives(token_text);
+			applyFormatDirective(token_text, flags, opt);
 			if (opt.ignore_comment)
 				return;
 			if (just_added_newline() && output_lines.length > 1)
@@ -5944,7 +5982,7 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
-			formatDirectives(token_text);
+			applyFormatDirective(token_text, flags, opt);
 			if (opt.ignore_comment)
 				return;
 			token_text.split('\n').forEach(s => {
@@ -7881,22 +7919,56 @@ export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
 	return commentTagRegex;
 }
 
-export function fixupFormatOpts(opts: FormatOptions) {
-	if (typeof opts.brace_style === 'string') {
-		switch (opts.brace_style) {
-			case '0':
-			case 'Allman': opts.brace_style = 0; break;
-			case '1':
-			case 'One True Brace': opts.brace_style = 1; break;
-			case '-1':
-			case 'One True Brace Variant': opts.brace_style = -1; break;
-			default: delete opts.brace_style; break;
+/**
+ * Updates the provided options in-place (not pure).
+ * Convert the provided format config from user settings to in-memory interface.
+ * This is mostly just converting strings to numbers.
+ */
+export function fixupFormatConfig(options: { brace_style?: string | undefined }) {
+	switch (options.brace_style) {
+		case 'Allman':
+		case '0': options.brace_style = 'Allman'; break;
+		case 'One True Brace':
+		case '1': options.brace_style = 'One True Brace'; break;
+		case 'One True Brace Variant':
+		case '-1': options.brace_style = 'One True Brace Variant'; break;
+		default: options.brace_style = 'Preserve'; break;
+	}
+	return options;
+}
+
+/**
+ * Parse a directive of the form `; @format key1: value1, key2: value2, ...`
+ * Returns an object with the key-value pairs.
+ * Whitespace-insensitive.
+ * Does not validate that keys are valid FormatOptions keys.
+ */
+export function parseFormatDirective(directive: string): Partial<FormatOptions> {
+	// Run regex against the directive to confirm it matches
+	const m = directive.match(/^;\s*@format\b/i);
+	if (!m) return {};
+	
+	// Get all the key-value pairs of the directive
+	const record = Object.fromEntries(directive.substring(m[0].length).split(',').map(s => {
+		const p = s.indexOf(':');
+		return [s.substring(0, p).trim(), s.substring(p + 1).trim()];
+	}));
+
+	return record;
+}
+
+/**
+ * Handle format directives. Format directives dictate options for every line below them.
+ * Example: `;@format array_style: expand, object_style: expand`
+ * See `client/src/test/formatting/array_object_style.ahk` for an in-code example.
+ */
+export function applyFormatDirective(directive: string, flags: Partial<Flag>, opt: Partial<FormatOptions>) {
+	const parsedDirective = parseFormatDirective(directive);
+	for (const k of ['array_style', 'object_style'] as const) {
+		if (k in parsedDirective) {
+				flags[k] = parsedDirective[k] as BlockStyle;
+				delete parsedDirective[k];
 		}
 	}
-	for (const k of ['array_style', 'object_style'] as const) {
-		const v = opts[k];
-		if (typeof v === 'string')
-			opts[k] = OBJECT_STYLE[v];
-	}
-	return opts;
+	Object.assign(opt, parsedDirective);
 }

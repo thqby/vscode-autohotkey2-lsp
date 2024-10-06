@@ -55,16 +55,28 @@ export enum LibIncludeType {
 	'All' = 3,
 }
 
+/**
+ * Possible values for `array_style` and `object_style`
+ * Defined in package.json, do not change.
+ */
+export type BlockStyle = 'collapse' | 'expand' | 'none';
+
+export type BraceStyle =
+	| 'One True Brace'
+	| 'Allman'
+	| 'One True Brace Variant'
+	| 'Preserve';
+
 export interface FormatOptions {
-	array_style?: number;
-	brace_style?: number;
+	array_style?: BlockStyle;
+	brace_style?: BraceStyle;
 	break_chained_methods?: boolean;
 	ignore_comment?: boolean;
 	indent_string?: string;
 	indent_between_hotif_directive?: boolean;
 	keyword_start_with_uppercase?: boolean;
 	max_preserve_newlines?: number;
-	object_style?: number;
+	object_style?: BlockStyle;
 	preserve_newlines?: boolean;
 	space_before_conditional?: boolean;
 	space_after_double_colon?: boolean;
