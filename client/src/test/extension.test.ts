@@ -56,8 +56,8 @@ test('should be running', async () => {
 	assert.equal(client?.isRunning(), true);
 });
 
-suite('Open ahk file', () => {
-	test('should be opened', async () => {
+suite('Open AHK file', () => {
+	test('opens', async () => {
 		const path = resolve(__dirname, '../../../server/dist/ahkProvider.ahk');
 		let document = await vscode.workspace.openTextDocument(path);
 		const uri = document.uri.toString();
@@ -73,7 +73,7 @@ suite('Open ahk file', () => {
 		)) as string;
 		assert.equal(document.getText() === content, true);
 
-		suite('Test language server features', () => {
+		suite('Send language server requests', () => {
 			const textDocument = { uri };
 			const position = { line: 10, character: 5 };
 
@@ -205,7 +205,7 @@ suite('Open ahk file', () => {
 	});
 });
 
-suite('Test formatting', async () => {
+suite('Formatting', async () => {
 	before(async () => {
 		await client.sendNotification(DidChangeConfigurationNotification.method, {
 			settings: { FormatOptions: {} },
