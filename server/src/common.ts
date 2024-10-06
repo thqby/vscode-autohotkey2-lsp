@@ -187,6 +187,7 @@ export function initahk2cache() {
 	};
 }
 
+/** Loads IntelliSense hover text */
 export function loadAHK2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
 	const file = `${rootdir}/syntaxes/<>/${filename}`;
