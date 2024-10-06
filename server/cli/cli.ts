@@ -1,5 +1,5 @@
 import { openFile } from '../src/common';
-import { Lexer } from '../src/Lexer';
+import { Lexer } from '../src/lexer';
 
 function main() {
 	const options: Record<string, string> = {};
