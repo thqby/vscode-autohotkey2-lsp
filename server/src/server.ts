@@ -20,7 +20,7 @@ import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
 import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
 import { klona } from 'klona/json';
-import { clientExecuteCommand, clientUpdateStatusBar } from '../../util/src/env';
+import { clientExecuteCommand, clientUpdateStatusBar, extSetInterpreter } from '../../util/src/env';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -225,7 +225,7 @@ async function patherr(msg: string) {
 	if (!getCfg(CfgKey.Commands)?.includes(clientExecuteCommand))
 		return connection.window.showErrorMessage(msg);
 	if (await connection.window.showErrorMessage(msg, { title: 'Select AHK v2 interpreter' }))
-		connection.sendRequest(clientExecuteCommand, ['ahk2.set.interpreter']);
+		connection.sendRequest(clientExecuteCommand, [extSetInterpreter]);
 }
 
 async function initpathenv(samefolder = false, retry = true): Promise<boolean> {

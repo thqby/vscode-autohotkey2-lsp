@@ -42,6 +42,9 @@ import {
 	extHelp,
 	extCompile,
 	extRun,
+	extSetInterpreter,
+	extRunSelection,
+	extStop,
 } from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
@@ -214,7 +217,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 
 	commands.executeCommand('setContext', 'ahk2:isRunning', false);
 	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
-	ahkStatusBarItem.command = 'ahk2.set.interpreter';
+	ahkStatusBarItem.command = extSetInterpreter;
 	for (const it of [
 		{ text: '$(folder)syntaxes', command: { title: localize('ahk2.select'), command: 'ahk2.select.syntaxes' } },
 	])
@@ -225,9 +228,9 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		commands.registerTextEditorCommand(extHelp, quickHelp),
 		commands.registerTextEditorCommand(extCompile, compileScript),
 		commands.registerTextEditorCommand(extRun, textEditor => runScript(textEditor)),
-		commands.registerTextEditorCommand('ahk2.run.selection', textEditor => runScript(textEditor, true)),
-		commands.registerCommand('ahk2.stop', stopRunningScript),
-		commands.registerCommand('ahk2.set.interpreter', setInterpreter),
+		commands.registerTextEditorCommand(extRunSelection, textEditor => runScript(textEditor, true)),
+		commands.registerCommand(extStop, stopRunningScript),
+		commands.registerCommand(extSetInterpreter, setInterpreter),
 		commands.registerCommand('ahk2.debug.file', () => beginDebug('f')),
 		commands.registerCommand('ahk2.debug.configs', () => beginDebug('c')),
 		commands.registerCommand('ahk2.debug.params', () => beginDebug('p')),
