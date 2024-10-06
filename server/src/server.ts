@@ -20,7 +20,7 @@ import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
 import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
 import { klona } from 'klona/json';
-import { clientExecuteCommand } from '../../util/src/env';
+import { clientExecuteCommand, clientUpdateStatusBar } from '../../util/src/env';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -138,7 +138,7 @@ connection.onDidChangeConfiguration(async change => {
 	const newInterpreterPath = getCfg(CfgKey.InterpreterPath);
 	if (newInterpreterPath !== getCfg(CfgKey.InterpreterPath, oldConfig)) {
 		if (await setInterpreter(resolvePath(newInterpreterPath)))
-			connection.sendRequest('ahk2.updateStatusBar', [newInterpreterPath]);
+			connection.sendRequest(clientUpdateStatusBar, [newInterpreterPath]);
 	}
 	if (getCfg(CfgKey.LibrarySuggestions) !== getCfg(CfgKey.LibrarySuggestions, oldConfig)) {
 		if (shouldIncludeUserStdLib() && !shouldIncludeUserStdLib(oldConfig))
