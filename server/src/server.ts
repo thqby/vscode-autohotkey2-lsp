@@ -7,7 +7,7 @@ import {
 import { URI } from 'vscode-uri';
 import { get_ahkProvider } from './ahkProvider';
 import {
-	a_vars, ahkpath_cur, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
+	a_vars, interpreterPath, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
 	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
 	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, getVersionInfo, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadAHK2, loadlocalize, openFile,
@@ -249,7 +249,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		return false;
 	}
 	if (!(data = data.trim())) {
-		const path = ahkpath_cur;
+		const path = interpreterPath;
 		if ((await getAHKversion([path]))[0].endsWith('[UIAccess]')) {
 			let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
 			fail = 2;
@@ -271,7 +271,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		return false;
 	}
 	Object.assign(a_vars, Object.fromEntries(data.replace(/|[A-Z]:\\/g, m => m.toLowerCase()).split('\n').map(l => l.split('|'))));
-	a_vars.ahkpath ??= ahkpath_cur;
+	a_vars.ahkpath ??= interpreterPath;
 	set_version(a_vars.ahkversion ??= '2.0.0');
 	if (a_vars.ahkversion.startsWith('1.'))
 		patherr(setting.versionerr());
@@ -307,7 +307,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		parseuserlibs();
 	return true;
 	async function update_rcdata() {
-		const pe = new PEFile(ahkpath_cur);
+		const pe = new PEFile(interpreterPath);
 		try {
 			const rc = await pe.getResource(RESOURCE_TYPE.RCDATA);
 			curPERCDATA = rc;
@@ -363,7 +363,7 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 }
 
 async function setInterpreter(path: string) {
-	const old = ahkpath_cur;
+	const old = interpreterPath;
 	if (!path || path.toLowerCase() === old.toLowerCase())
 		return false;
 	set_ahkpath(path);
@@ -434,7 +434,7 @@ async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 
 let curPERCDATA: Record<string, Buffer> | undefined = undefined;
 function getRCDATA(name?: string) {
-	const exe = resolvePath(ahkpath_cur, true);
+	const exe = resolvePath(interpreterPath, true);
 	if (!exe) return;
 	if (!name) return { uri: '', path: '', paths: Object.keys(curPERCDATA ?? {}) };
 	const path = `${exe.toLowerCase()}:${name}`;
