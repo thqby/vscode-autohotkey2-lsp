@@ -10,11 +10,10 @@ export const languageClientName = 'AutoHotkey2';
 /** Name of the output channel for debugging information, displayed to users */
 export const outputChannelName = 'AutoHotkey2';
 
-//* Internal commands
+//* Internal commands - Client-side
 
 /** Prefix for commands handled by the client. These are not registered in package.json */
 const clientCommandPrefix = 'ahk2.';
-
 export type ClientCommand = `${typeof clientCommandPrefix}${string}`;
 
 /**
@@ -41,9 +40,24 @@ export const clientGetWorkspaceFiles: ClientCommand = `${clientCommandPrefix}get
 /** Get the text content of the provided file */
 export const clientGetWorkspaceFileContent: ClientCommand = `${clientCommandPrefix}getWorkspaceFileContent`;
 
-//* ExtensionCommand values are contributed by package.json
-const extCommandPrefix = 'ahk2.';
+//* Internal commands - Server-side
 
+/** Prefix for commands handled by the server. These are not registered in package.json */
+const serverCommandPrefix = 'ahk2.';
+export type ServerCommand = `${typeof serverCommandPrefix}${string}`;
+
+export const serverExportSymbols = `${serverCommandPrefix}exportSymbols`;
+
+export const serverGetAHKVersion = `${serverCommandPrefix}getAHKVersion`;
+
+export const serverGetContent = `${serverCommandPrefix}getContent`;
+
+export const serverGetVersionInfo = `${serverCommandPrefix}getVersionInfo`;
+
+//* External commands (contributed by package.json)
+//* These should not change unless package.json changes
+
+const extCommandPrefix = 'ahk2.';
 export type ExtensionCommand = `${typeof extCommandPrefix}${string}`;
 
 /** Diagnose all files */

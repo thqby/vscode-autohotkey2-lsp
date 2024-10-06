@@ -43,6 +43,7 @@ import {
 } from 'vscode-languageclient/node';
 import { readdirSync } from 'fs';
 import { suite, before, test } from 'mocha';
+import { serverGetContent } from '../../../util/src/env';
 
 let client: LanguageClient;
 before(async () => {
@@ -69,10 +70,7 @@ suite('Open AHK file', () => {
 				document,
 				'ahk2',
 			);
-		const content = (await client.sendRequest(
-			'ahk2.getContent',
-			uri,
-		)) as string;
+		const content = (await client.sendRequest(serverGetContent, uri)) as string;
 		assert.equal(document.getText() === content, true);
 
 		suite('Send language server requests', () => {

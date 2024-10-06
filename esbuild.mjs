@@ -39,6 +39,9 @@ switch (process.argv[2]) {
 	case '--dev':
 		build_watch();
 		break;
+	case '--e2e':
+		build_e2e();
+		break;
 	case '--web':
 		build_watch(true);
 		break;
@@ -57,13 +60,27 @@ async function build_cli() {
 	console.log(`build finished in ${new Date() - start} ms`);
 }
 
-/** Build the client and server for production */
-async function build_prod() {
+/** Build the client and server for e2e testing (include tests) */
+async function build_e2e() {
 	const opts = [
 		client_opt,
 		server_opt,
 		{ ...client_opt, entryPoints: [client_opt.entryPoints.pop()] },
+		util_opt,
 	];
+	client_opt.external = ['vscode'];
+	client_opt.bundle = server_opt.bundle = true;
+	client_opt.minify = server_opt.minify = true;
+	opts.push(...browser_opts(true));
+	const start = new Date();
+	await Promise.all(opts.map((o) => build(o)));
+	console.log(`build finished in ${new Date() - start} ms`);
+}
+
+/** Build the client and server for production (excludes tests) */
+async function build_prod() {
+	client_opt.entryPoints.pop(); // remove the test endpoints for prod
+	const opts = [client_opt, server_opt];
 	client_opt.external = ['vscode'];
 	client_opt.bundle = server_opt.bundle = true;
 	client_opt.minify = server_opt.minify = true;

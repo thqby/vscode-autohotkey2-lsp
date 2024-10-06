@@ -51,6 +51,10 @@ import {
 	extDebugParams,
 	extSelectSyntaxes,
 	extUpdateVersionInfo,
+	serverExportSymbols,
+	serverGetAHKVersion,
+	serverGetContent,
+	serverGetVersionInfo,
 } from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
@@ -245,7 +249,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		commands.registerTextEditorCommand(extUpdateVersionInfo, async textEditor => {
 			if (!server_is_ready)
 				return;
-			const infos: { content: string, uri: string, range: Range, single: boolean }[] | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
+			const infos: { content: string, uri: string, range: Range, single: boolean }[] | null = await client.sendRequest(serverGetVersionInfo, textEditor.document.uri.toString());
 			if (!infos?.length) {
 				await textEditor.insertSnippet(new SnippetString([
 					"/************************************************************************",
@@ -292,7 +296,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			const doc = textEditor.document;
 			if (doc.languageId !== 'ahk2')
 				return;
-			client.sendRequest('ahk2.exportSymbols', doc.uri.toString())
+			client.sendRequest(serverExportSymbols, doc.uri.toString())
 				.then(result => workspace.openTextDocument({
 					language: 'json', content: JSON.stringify(result, undefined, 2)
 				}).then(d => window.showTextDocument(d, 2)));
@@ -301,7 +305,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			provideTextDocumentContent(uri, token) {
 				if (token.isCancellationRequested)
 					return;
-				return client.sendRequest('ahk2.getContent', uri.toString()).then(content => {
+				return client.sendRequest(serverGetContent, uri.toString()).then(content => {
 					setTimeout(() => {
 						const it = workspace.textDocuments.find(it => it.uri.scheme === 'ahkres' && it.uri.path === uri.path);
 						it && it.languageId !== 'ahk2' && languages.setTextDocumentLanguage(it, 'ahk2');
@@ -702,7 +706,7 @@ async function selectSyntaxes() {
 }
 
 function getAHKVersion(paths: string[]): Thenable<string[]> {
-	return client.sendRequest('ahk2.getAHKversion', paths.map(p => resolvePath(p, undefined, true) || p));
+	return client.sendRequest(serverGetAHKVersion, paths.map(p => resolvePath(p, undefined, true) || p));
 }
 
 function getInterpreterPath() {
