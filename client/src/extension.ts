@@ -641,7 +641,7 @@ async function setInterpreter() {
 		if (sel.detail) {
 			ahkStatusBarItem.tooltip = interpreterPath = sel.detail;
 			ahkconfig.update(CfgKey.InterpreterPath, interpreterPath, from);
-			ahkStatusBarItem.text = sel.label ||= (await getAHKversion([interpreterPath]))[0];
+			ahkStatusBarItem.text = sel.label ||= (await getAHKVersion([interpreterPath]))[0];
 			if (server_is_ready)
 				commands.executeCommand('ahk2.resetinterpreterpath', interpreterPath);
 		}
@@ -667,7 +667,7 @@ async function setInterpreter() {
 					break;
 			} catch { }
 		}
-		(await getAHKversion(paths)).forEach((label, i) => {
+		(await getAHKVersion(paths)).forEach((label, i) => {
 			if (label.match(/\bautohotkey.*?2\./i) && !label.endsWith('[UIAccess]'))
 				list.push({ label, detail: paths[i] });
 		});
@@ -688,7 +688,7 @@ async function selectSyntaxes() {
 	ahkconfig.update('Syntaxes', path || undefined, f);
 }
 
-function getAHKversion(paths: string[]): Thenable<string[]> {
+function getAHKVersion(paths: string[]): Thenable<string[]> {
 	return client.sendRequest('ahk2.getAHKversion', paths.map(p => resolvePath(p, undefined, true) || p));
 }
 
@@ -739,7 +739,7 @@ async function onDidChangeInterpreter() {
 		// ahkStatusBarItem.tooltip is the current saved interpreter path
 		if (ahkPath !== ahkStatusBarItem.tooltip) {
 			ahkStatusBarItem.tooltip = ahkPath;
-			ahkStatusBarItem.text = (await getAHKversion([ahkPath]))[0] || localize('ahk2.unknownversion');
+			ahkStatusBarItem.text = (await getAHKVersion([ahkPath]))[0] || localize('ahk2.unknownversion');
 		}
 	} else {
 		ahkStatusBarItem.text = localize('ahk2.set.interpreter')
