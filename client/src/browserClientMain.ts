@@ -1,7 +1,7 @@
 import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 import { configPrefix } from '../../util/src/config';
-import { ClientCommand, clientGetActiveEditorInfo, clientGetWorkspaceFileContent, clientGetWorkspaceFiles, clientInsertSnippet, clientSetTextDocumentLanguage } from '../../util/src/env';
+import { ClientCommand, clientGetActiveEditorInfo, clientGetWorkspaceFileContent, clientGetWorkspaceFiles, clientInsertSnippet, clientSetTextDocumentLanguage, extUpdateVersionInfo } from '../../util/src/env';
 
 let client: LanguageClient;
 
@@ -67,7 +67,7 @@ export function activate(context: ExtensionContext) {
 	}, new Worker(serverMain.toString()));
 
 	context.subscriptions.push(
-		commands.registerTextEditorCommand('ahk2.update.versioninfo', async textEditor => {
+		commands.registerTextEditorCommand(extUpdateVersionInfo, async textEditor => {
 			const infos: { content: string, uri: string, range: Range, single: boolean }[] | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
 			if (!infos?.length) {
 				await textEditor.insertSnippet(new SnippetString([

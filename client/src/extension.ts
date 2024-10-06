@@ -50,6 +50,7 @@ import {
 	extDebugFile,
 	extDebugParams,
 	extSelectSyntaxes,
+	extUpdateVersionInfo,
 } from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
@@ -241,7 +242,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		commands.registerCommand(extDebugParams, () => beginDebug('p')),
 		commands.registerCommand(extDebugAttach, () => beginDebug('a')),
 		commands.registerCommand(extSelectSyntaxes, selectSyntaxes),
-		commands.registerTextEditorCommand('ahk2.update.versioninfo', async textEditor => {
+		commands.registerTextEditorCommand(extUpdateVersionInfo, async textEditor => {
 			if (!server_is_ready)
 				return;
 			const infos: { content: string, uri: string, range: Range, single: boolean }[] | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
