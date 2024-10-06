@@ -640,7 +640,7 @@ async function setInterpreter() {
 		pick.dispose();
 		if (sel.detail) {
 			ahkStatusBarItem.tooltip = interpreterPath = sel.detail;
-			ahkconfig.update('InterpreterPath', interpreterPath, from);
+			ahkconfig.update(CfgKey.InterpreterPath, interpreterPath, from);
 			ahkStatusBarItem.text = sel.label ||= (await getAHKversion([interpreterPath]))[0];
 			if (server_is_ready)
 				commands.executeCommand('ahk2.resetinterpreterpath', interpreterPath);
@@ -693,7 +693,7 @@ function getAHKversion(paths: string[]): Thenable<string[]> {
 }
 
 function getInterpreterPath() {
-	const t = ahkconfig.inspect('InterpreterPath');
+	const t = ahkconfig.inspect(CfgKey.InterpreterPath);
 	let path = '';
 	if (t)
 		if ((path = t.workspaceFolderValue as string))
@@ -709,7 +709,7 @@ function getInterpreterPath() {
 function findfile(files: string[], workspace: string) {
 	let s: string;
 	const paths: string[] = [];
-	const t = ahkconfig.inspect('InterpreterPath');
+	const t = ahkconfig.inspect(CfgKey.InterpreterPath);
 	if (add(interpreterPath), t) {
 		add(t.workspaceFolderValue as string);
 		add(t.workspaceValue as string);
