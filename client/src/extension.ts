@@ -568,18 +568,17 @@ async function beginDebug(type: string) {
 	} else if (type === 'c') {
 		const configs = get_debug_configs();
 		if (configs?.length) {
-			const pick = window.createQuickPick();
+			const pick = window.createQuickPick<{ label: string, data: DebugConfiguration }>();
 			pick.items = configs.map(it => ({ label: it.name, data: it }));
 			pick.show();
-			const it = await new Promise(resolve => {
-				pick.onDidAccept(() => resolve(
-					(pick.selectedItems[0] as unknown as { data: DebugConfiguration })?.data));
+			const pickedDebugConfig = await new Promise<DebugConfiguration | undefined>(resolve => {
+				pick.onDidAccept(() => resolve(pick.selectedItems[0]?.data));
 				pick.onDidHide(() => resolve(undefined));
 			});
 			pick.dispose();
-			if (!it)
+			if (!pickedDebugConfig)
 				return;
-			config = it as DebugConfiguration;
+			config = pickedDebugConfig;
 		}
 	} else config.program = '${file}';
 	config.type ||= Object.keys(debugexts).sort().pop()!;
