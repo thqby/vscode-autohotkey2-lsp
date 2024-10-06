@@ -28,7 +28,8 @@ import {
 import { resolve } from 'path';
 import { ChildProcess, exec, execSync, spawn } from 'child_process';
 import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
-import { configPrefix } from '../../util/src/config';
+import { CfgKey, configPrefix } from '../../util/src/config';
+import { languageClientId, languageClientName, outputChannelName } from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
@@ -109,8 +110,8 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{ language: 'ahk2' }],
 		markdown: { isTrusted: true, supportHtml: true },
-		outputChannel: outputchannel = window.createOutputChannel('AutoHotkey2', '~ahk2-output'),
-		outputChannelName: 'AutoHotkey2',
+		outputChannel: outputchannel = window.createOutputChannel(outputChannelName, '~ahk2-output'),
+		outputChannelName: outputChannelName,
 		synchronize: { fileEvents: fsw },
 		initializationOptions: {
 			commands: Object.keys(request_handlers),
@@ -120,10 +121,10 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	};
 
 	if (ahkconfig.FormatOptions?.one_true_brace !== undefined)
-		window.showWarningMessage('configuration "AutoHotkey2.FormatOptions.one_true_brace" is deprecated!\nplease use "AutoHotkey2.FormatOptions.brace_style"');
+		window.showWarningMessage(`Configuration "${configPrefix}.FormatOptions.one_true_brace" is no longer supported.\nPlease use "${configPrefix}.${CfgKey.BraceStyle}"`);
 
 	// Create the language client and start the client.
-	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', serverOptions, clientOptions);
+	client = new LanguageClient(languageClientId, languageClientName, serverOptions, clientOptions);
 	loadlocalize(context.extensionPath + '/package.nls');
 	textdecoders.push(new TextDecoder(env.language.startsWith('zh-') ? 'gbk' : 'windows-1252'));
 
