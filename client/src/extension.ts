@@ -538,7 +538,7 @@ function get_debug_configs() {
 async function beginDebug(type: string) {
 	let extname: string | undefined;
 	const editor = window.activeTextEditor;
-	let config = { ...ahkconfig.get('DebugConfiguration'), request: 'launch', __ahk2debug: true } as DebugConfiguration;
+	let config = { ...getCfg<DebugConfiguration>(CfgKey.DebugConfiguration, ahkconfig), request: 'launch', __ahk2debug: true } as DebugConfiguration;
 	if (!extlist.length) {
 		window.showErrorMessage(localize('ahk2.debugextnotexist'));
 		extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'mark-wiemer.vscode-autohotkey-plus-plus', 'cweijan.vscode-autohotkey-plus']);
