@@ -1,7 +1,7 @@
 import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 import { configPrefix } from '../../util/src/config';
-import { ClientCommand, clientGetActiveEditorInfo, clientGetWorkspaceFileContent, clientGetWorkspaceFiles, clientInsertSnippet, clientSetTextDocumentLanguage, extUpdateVersionInfo, languageClientId, languageClientName, serverGetVersionInfo } from '../../util/src/env';
+import { ClientCommand, clientGetActiveEditorInfo, clientGetWorkspaceFileContent, clientGetWorkspaceFiles, clientInsertSnippet, clientSetTextDocumentLanguage, extSwitchAHKVersion, extUpdateVersionInfo, languageClientId, languageClientName, serverGetVersionInfo } from '../../util/src/env';
 
 let client: LanguageClient;
 
@@ -107,7 +107,7 @@ export function activate(context: ExtensionContext) {
 				ed.size && workspace.applyEdit(ed);
 			}
 		}),
-		commands.registerTextEditorCommand('ahk2.switch', textEditor => {
+		commands.registerTextEditorCommand(extSwitchAHKVersion, textEditor => {
 			const doc = textEditor.document;
 			languages.setTextDocumentLanguage(doc, doc.languageId === 'ahk2' ? 'ahk' : 'ahk2');
 		}),

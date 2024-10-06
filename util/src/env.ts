@@ -104,3 +104,9 @@ export const extSelectSyntaxes = `${extCommandPrefix}select.syntaxes`;
 
 /** Update version info file header comment */
 export const extUpdateVersionInfo = `${extCommandPrefix}update.versioninfo`;
+
+/** Extract the symbols from the active editor */
+export const extExtractSymbols = `${extCommandPrefix}extract.symbols`;
+
+/** Switch the current editor from AHK v1 to AHK v2 and vice versa */
+export const extSwitchAHKVersion = `${extCommandPrefix}switch`;
