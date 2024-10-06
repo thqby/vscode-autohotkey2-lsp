@@ -203,7 +203,8 @@ export function loadAHK2(filename = 'ahk2', d = 3) {
 		if ((data = getwebfile(file + '.json')))
 			build_item_cache(JSON.parse(data.text));
 	} else {
-		const syntaxes = ahklsConfig.Syntaxes && existsSync(ahklsConfig.Syntaxes) ? ahklsConfig.Syntaxes : '';
+		const syntaxConfig = getCfg(CfgKey.Syntaxes);
+		const syntaxes = syntaxConfig && existsSync(syntaxConfig) ? syntaxConfig : '';
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
 		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
@@ -410,8 +411,9 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 			maxScanDepth = Infinity;
 		setCfg(CfgKey.MaxScanDepth, maxScanDepth, newConfig);
 	}
-	if (newConfig.Syntaxes)
-		newConfig.Syntaxes = resolve(newConfig.Syntaxes).toLowerCase();
+	const newSyntaxes = getCfg<string>(CfgKey.Syntaxes, newConfig);
+	if (newSyntaxes)
+		setCfg(CfgKey.Syntaxes, resolve(newSyntaxes).toLowerCase(), newConfig);
 	Object.assign(ahklsConfig, newConfig);
 }
 

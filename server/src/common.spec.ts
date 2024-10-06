@@ -137,4 +137,30 @@ suite('updateConfig', () => {
 			});
 		});
 	});
+
+	suite('Syntaxes', () => {
+		beforeEach(() => {
+			setCfg(CfgKey.Syntaxes, undefined);
+		});
+
+		const theories: [
+			name: string,
+			value: string | undefined,
+			expected: string | undefined,
+		][] = [
+			['absolute path with forward slashes', 'C:/ahk.json', 'c:\\ahk.json'],
+			['undefined', undefined, undefined],
+		];
+
+		theories.forEach(([name, value, expected]) => {
+			test(name, () => {
+				const config = newConfig();
+				setCfg<string | undefined>(CfgKey.Syntaxes, value, config);
+
+				updateConfig(config);
+
+				assert.strictEqual(getCfg<string>(CfgKey.Syntaxes), expected);
+			});
+		});
+	});
 });

@@ -131,7 +131,6 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	const { Syntaxes } = ahklsConfig;
 	const oldConfig = klona(ahklsConfig);
 	updateConfig(newConfig);
 	set_WorkspaceFolders(workspaceFolders);
@@ -146,7 +145,7 @@ connection.onDidChangeConfiguration(async change => {
 		if (shouldIncludeLocalLib() && !shouldIncludeLocalLib(oldConfig))
 			documents.all().forEach(e => parseproject(e.uri.toLowerCase()));
 	}
-	if (Syntaxes !== ahklsConfig.Syntaxes) {
+	if (getCfg(CfgKey.Syntaxes) !== getCfg(CfgKey.Syntaxes, oldConfig)) {
 		initahk2cache(), loadAHK2();
 		if (isahk2_h)
 			loadAHK2('ahk_h'), loadAHK2('winapi', 4);
