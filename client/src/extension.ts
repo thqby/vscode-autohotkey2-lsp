@@ -171,7 +171,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 						let runtime: string | undefined;
 						if (!config.__ahk2debug) {
 							config.request ||= 'launch';
-							const match_config = get_debug_configs()?.filter(it =>
+							const match_config = getDebugConfigs()?.filter(it =>
 								Object.entries(it).every(([k, v]) => equal(v, config[k]))
 							)?.sort((a, b) => Object.keys(a).length - Object.keys(b).length).pop();
 							const def = getCfg<Partial<DebugConfiguration>>(CfgKey.DebugConfiguration, ahkconfig);
@@ -527,7 +527,8 @@ if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint
 		execSync(`"${executePath}" /ErrorStdOut *`, { input: script });
 }
 
-function get_debug_configs() {
+/** Return the debug configs for the installed AHK debug extensions */
+function getDebugConfigs() {
 	const allconfigs = workspace.getConfiguration('launch').inspect<DebugConfiguration[]>('configurations');
 	return allconfigs && [
 		...allconfigs.workspaceFolderValue ?? [],
@@ -574,7 +575,7 @@ async function beginDebug(type: 'f' | 'c' | 'p' | 'a') {
 			}
 		} else config.request = 'attach';
 	} else if (type === 'c') {
-		const configs = get_debug_configs();
+		const configs = getDebugConfigs();
 		if (configs?.length) {
 			const pick = window.createQuickPick<{ label: string, data: DebugConfiguration }>();
 			pick.items = configs.map(it => ({ label: it.name, data: it }));
@@ -809,10 +810,10 @@ function loadLocalize(nls: string) {
 	} catch { }
 }
 
-function localize(key: keyof typeof loadedCollection, ...args: unknown[]) {
+function localize(key: keyof typeof loadedCollection, ...args: string[]) {
 	const val = loadedCollection[key];
 	if (args.length)
-		return format(val, ...args as string[]);
+		return format(val, ...args);
 	return val;
 }
 
