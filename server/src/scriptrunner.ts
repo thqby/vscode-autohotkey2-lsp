@@ -23,7 +23,11 @@ export function existsSync(path: string): boolean {
 	return true;
 }
 
-export function resolvePath(path: string, resolveSymbolicLink = false): string {
+/**
+ * Resolves the provided path.
+ * If the path is empty, undefined, or not found, returns an empty string.
+ */
+export function resolvePath(path: string | undefined, resolveSymbolicLink = false): string {
 	if (!path)
 		return '';
 	const paths: string[] = [];
