@@ -7,7 +7,7 @@ export const languageClientName = 'AutoHotkey2';
 /** Name of the output channel for debugging information, displayed to users */
 export const outputChannelName = 'AutoHotkey2';
 
-/** Prefix for commands handled by the client */
+/** Prefix for commands handled by the client. These are not registered in package.json */
 const clientCommandPrefix = 'ahk2.';
 export type ClientCommand = `${typeof clientCommandPrefix}${string}`;
 /**
@@ -27,3 +27,13 @@ export const clientUpdateStatusBar: ClientCommand = `${clientCommandPrefix}updat
 export const clientGetWorkspaceFiles: ClientCommand = `${clientCommandPrefix}getWorkspaceFiles`;
 /** Get the text content of the provided file */
 export const clientGetWorkspaceFileContent: ClientCommand = `${clientCommandPrefix}getWorkspaceFileContent`;
+
+//* ExtensionCommand values are contributed by package.json
+const extCommandPrefix = 'ahk2.';
+export type ExtensionCommand = `${typeof extCommandPrefix}${string}`;
+/** Diagnose all files */
+export const extDiagnoseAll: ExtensionCommand = `${extCommandPrefix}diagnose.all`;
+/** Generate a method header comment */
+export const extGenerateComment: ExtensionCommand = `${extCommandPrefix}generate.comment`;
+/** Set the script directory */
+export const extSetScriptDir: ExtensionCommand = `${extCommandPrefix}set.scriptdir`;

@@ -6,7 +6,7 @@ import {
 	traverse_include, update_include_cache
 } from './common';
 import { CfgKey, getCfg } from '../../util/src/config';
-import { clientGetActiveEditorInfo, clientInsertSnippet, clientSetTextDocumentLanguage } from '../../util/src/env';
+import { clientGetActiveEditorInfo, clientInsertSnippet, clientSetTextDocumentLanguage, ExtensionCommand, extDiagnoseAll, extGenerateComment, extSetScriptDir } from '../../util/src/env';
 
 function checkCommand(cmd: string) {
 	if (getCfg(CfgKey.Commands)?.includes(cmd))
@@ -266,14 +266,19 @@ export function getVersionInfo(uri: string) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const commands: Record<string, (args: any[]) => any> = {
-	'ahk2.diagnose.all': () => diagnoseAll(),
-	'ahk2.generate.comment': () => generateComment(),
-	'ahk2.set.scriptdir': process.env.BROWSER ? () => 0 : setscriptdir
+export const commands: Record<ExtensionCommand, (args: any[]) => any> = {
+	[extDiagnoseAll]: () => diagnoseAll(),
+	[extGenerateComment]: () => generateComment(),
+	[extSetScriptDir]: process.env.BROWSER ? () => 0 : setscriptdir
 };
 
-/** Executes the command requested by the client. */
+/**
+ * Executes the provided command.
+ * Only works for `ExtensionCommand` values.
+ * Does nothing if command not recognized.
+ * Ignores cancellation tokens.
+ */
 export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
 	if (!token?.isCancellationRequested)
-		return commands[params.command](params.arguments ?? []);
+		return commands[params.command as ExtensionCommand]?.(params.arguments ?? []);
 }
