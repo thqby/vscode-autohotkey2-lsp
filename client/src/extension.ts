@@ -29,7 +29,17 @@ import { resolve } from 'path';
 import { ChildProcess, exec, execSync, spawn } from 'child_process';
 import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
 import { CfgKey, configPrefix } from '../../util/src/config';
-import { languageClientId, languageClientName, outputChannelName } from '../../util/src/env';
+import {
+	LSPCommand,
+	languageClientId,
+	languageClientName,
+	outputChannelName,
+	lspExecuteCommand,
+	lspGetActiveTextEditorUriAndPosition,
+	lspInsertSnippet,
+	lspSetTextDocumentLanguage,
+	lspUpdateStatusBar,
+} from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
@@ -73,15 +83,15 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	};
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const request_handlers: Record<string, any> = {
-		'ahk2.executeCommand': (params: string[]) => commands.executeCommand(params.shift() as string, ...params),
-		'ahk2.getActiveTextEditorUriAndPosition': () => {
+	const requestHandlers: Record<LSPCommand, any> = {
+		[lspExecuteCommand]: (params: string[]) => commands.executeCommand(params.shift() as string, ...params),
+		[lspGetActiveTextEditorUriAndPosition]: () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			const uri = editor.document.uri.toString(), position = editor.selection.end;
 			return { uri, position };
 		},
-		'ahk2.insertSnippet': async (params: [string, Range?]) => {
+		[lspInsertSnippet]: async (params: [string, Range?]) => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			if (params[1]) {
@@ -90,7 +100,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			} else
 				editor.insertSnippet(new SnippetString(params[0]));
 		},
-		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
+		[lspSetTextDocumentLanguage]: async (params: [string, string?]) => {
 			const lang = params[1] || 'ahk';
 			if (!langs.includes(lang)) {
 				window.showErrorMessage(`Unknown language id: ${lang}`);
@@ -99,7 +109,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			const uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
 			it && languages.setTextDocumentLanguage(it, lang);
 		},
-		'ahk2.updateStatusBar': async (params: [string]) => {
+		[lspUpdateStatusBar]: async (params: [string]) => {
 			ahkpath_cur = params[0];
 			onDidChangegetInterpreter();
 		}
@@ -114,7 +124,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		outputChannelName: outputChannelName,
 		synchronize: { fileEvents: fsw },
 		initializationOptions: {
-			commands: Object.keys(request_handlers),
+			commands: Object.keys(requestHandlers),
 			GlobalStorage: context.globalStorageUri.fsPath,
 			...ahkconfig
 		},
@@ -131,7 +141,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	// Start the client. This will also launch the server
 	let onInitialized: undefined | ((value: LanguageClient) => void);
 	client.start().then(() => {
-		Object.entries(request_handlers).forEach(handler => client.onRequest(...handler));
+		Object.entries(requestHandlers).forEach(handler => client.onRequest(...handler));
 		onDidChangegetInterpreter();
 		if (window.activeTextEditor?.document.languageId === 'ahk2')
 			ahkStatusBarItem.show();

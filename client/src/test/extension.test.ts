@@ -56,6 +56,8 @@ test('should be running', async () => {
 	assert.equal(client?.isRunning(), true);
 });
 
+suite('Language client request handlers', () => {});
+
 suite('Open AHK file', () => {
 	test('opens', async () => {
 		const path = resolve(__dirname, '../../../server/dist/ahkProvider.ahk');
