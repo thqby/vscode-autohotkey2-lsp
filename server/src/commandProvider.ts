@@ -271,10 +271,7 @@ export const commands: Record<string, (args: any[]) => any> = {
 	'ahk2.set.scriptdir': process.env.BROWSER ? () => 0 : setscriptdir
 };
 
-/**
- * Executes the command requested by the client.
- * See `util/src/env.ts` for a list of possible commands.
- */
+/** Executes the command requested by the client. */
 export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
 	if (!token?.isCancellationRequested)
 		return commands[params.command](params.arguments ?? []);

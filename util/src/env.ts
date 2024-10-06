@@ -8,18 +8,18 @@ export const languageClientName = 'AutoHotkey2';
 export const outputChannelName = 'AutoHotkey2';
 
 /** Prefix for commands sent by the client */
-const lspCommandPrefix = 'ahk2.';
-export type LSPCommand = `${typeof lspCommandPrefix}${string}`;
+const clientCommandPrefix = 'ahk2.';
+export type ClientCommand = `${typeof clientCommandPrefix}${string}`;
 /**
  * Ask the server to execute the provided command.
  * See `executeCommandProvider` in `server/src/commandProvider.ts` for details.
  */
-export const lspExecuteCommand = `${lspCommandPrefix}executeCommand`;
+export const clientExecuteCommand = `${clientCommandPrefix}executeCommand`;
 /** Get the active text editor URI and position */
-export const lspGetActiveTextEditorUriAndPosition: LSPCommand = `${lspCommandPrefix}getActiveTextEditorUriAndPosition`;
+export const clientGetActiveEditorInfo: ClientCommand = `${clientCommandPrefix}getActiveTextEditorUriAndPosition`;
 /** Insert a snippet */
-export const lspInsertSnippet: LSPCommand = `${lspCommandPrefix}insertSnippet`;
+export const clientInsertSnippet: ClientCommand = `${clientCommandPrefix}insertSnippet`;
 /** Set the language of the text document */
-export const lspSetTextDocumentLanguage: LSPCommand = `${lspCommandPrefix}setTextDocumentLanguage`;
+export const clientSetTextDocumentLanguage: ClientCommand = `${clientCommandPrefix}setTextDocumentLanguage`;
 /** LSP command ID to update the status bar */
-export const lspUpdateStatusBar: LSPCommand = `${lspCommandPrefix}updateStatusBar`;
+export const clientUpdateStatusBar: ClientCommand = `${clientCommandPrefix}updateStatusBar`;

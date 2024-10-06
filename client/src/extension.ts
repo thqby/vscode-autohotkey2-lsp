@@ -30,15 +30,15 @@ import { ChildProcess, exec, execSync, spawn } from 'child_process';
 import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
 import { CfgKey, configPrefix } from '../../util/src/config';
 import {
-	LSPCommand,
+	ClientCommand,
 	languageClientId,
 	languageClientName,
 	outputChannelName,
-	lspExecuteCommand,
-	lspGetActiveTextEditorUriAndPosition,
-	lspInsertSnippet,
-	lspSetTextDocumentLanguage,
-	lspUpdateStatusBar,
+	clientExecuteCommand,
+	clientGetActiveEditorInfo,
+	clientInsertSnippet,
+	clientSetTextDocumentLanguage,
+	clientUpdateStatusBar,
 } from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
@@ -83,15 +83,15 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	};
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const requestHandlers: Record<LSPCommand, any> = {
-		[lspExecuteCommand]: (params: string[]) => commands.executeCommand(params.shift() as string, ...params),
-		[lspGetActiveTextEditorUriAndPosition]: () => {
+	const requestHandlers: Record<ClientCommand, any> = {
+		[clientExecuteCommand]: (params: string[]) => commands.executeCommand(params.shift() as string, ...params),
+		[clientGetActiveEditorInfo]: () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			const uri = editor.document.uri.toString(), position = editor.selection.end;
 			return { uri, position };
 		},
-		[lspInsertSnippet]: async (params: [string, Range?]) => {
+		[clientInsertSnippet]: async (params: [string, Range?]) => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			if (params[1]) {
@@ -100,7 +100,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			} else
 				editor.insertSnippet(new SnippetString(params[0]));
 		},
-		[lspSetTextDocumentLanguage]: async (params: [string, string?]) => {
+		[clientSetTextDocumentLanguage]: async (params: [string, string?]) => {
 			const lang = params[1] || 'ahk';
 			if (!langs.includes(lang)) {
 				window.showErrorMessage(`Unknown language id: ${lang}`);
@@ -109,7 +109,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			const uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
 			it && languages.setTextDocumentLanguage(it, lang);
 		},
-		[lspUpdateStatusBar]: async (params: [string]) => {
+		[clientUpdateStatusBar]: async (params: [string]) => {
 			ahkpath_cur = params[0];
 			onDidChangegetInterpreter();
 		}

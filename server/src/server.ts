@@ -20,7 +20,7 @@ import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
 import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
 import { klona } from 'klona/json';
-import { lspExecuteCommand } from '../../util/src/env';
+import { clientExecuteCommand } from '../../util/src/env';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -217,11 +217,15 @@ connection.onNotification('onDidCloseTextDocument', (params: { uri: string, id: 
 documents.listen(connection);
 connection.listen();
 
+/**
+ * Shows error message indicating the path could not be resolved.
+ * If possible, prompts the user to set their AHK v2 interpreter.
+ */
 async function patherr(msg: string) {
-	if (!getCfg(CfgKey.Commands)?.includes(lspExecuteCommand))
+	if (!getCfg(CfgKey.Commands)?.includes(clientExecuteCommand))
 		return connection.window.showErrorMessage(msg);
-	if (await connection.window.showErrorMessage(msg, { title: 'Select Interpreter' }))
-		connection.sendRequest(lspExecuteCommand, ['ahk2.set.interpreter']);
+	if (await connection.window.showErrorMessage(msg, { title: 'Select AHK v2 interpreter' }))
+		connection.sendRequest(clientExecuteCommand, ['ahk2.set.interpreter']);
 }
 
 async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
