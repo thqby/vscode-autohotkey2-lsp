@@ -54,6 +54,9 @@ export const serverGetContent = `${serverCommandPrefix}getContent`;
 
 export const serverGetVersionInfo = `${serverCommandPrefix}getVersionInfo`;
 
+/** Set the path to the AHK v2 interpreter to match the provided value */
+export const serverResetInterpreterPath = `${serverCommandPrefix}resetInterpreterPath`;
+
 //* External commands (contributed by package.json)
 //* These should not change unless package.json changes
 
