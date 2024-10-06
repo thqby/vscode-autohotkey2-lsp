@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { AhkSymbol, Lexer, fixupFormatOpts, updateCommentTagRegex } from './lexer';
+import { AhkSymbol, Lexer, fixupFormatConfig, updateCommentTagRegex } from './lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
 import { ahklsConfig, AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg } from '../../util/src/config';
@@ -375,7 +375,7 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 	const newConfigCallWithoutParentheses = getCfg(CfgKey.CallWithoutParentheses, newConfig);
 	if (typeof newConfigCallWithoutParentheses === 'string')
 		setCfg(CfgKey.CallWithoutParentheses, { On: true, Off: false, Parentheses: 1 }[newConfigCallWithoutParentheses], newConfig);
-	fixupFormatOpts(newConfig.FormatOptions ?? {});
+	fixupFormatConfig(newConfig.FormatOptions ?? {});
 	try {
 		updateCommentTagRegex(getCfg(CfgKey.CommentTagRegex, newConfig));
 	} catch (e) {

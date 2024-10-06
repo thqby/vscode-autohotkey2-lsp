@@ -205,6 +205,34 @@ interface ParamList extends Array<Variable> {
 	variadic?: boolean
 }
 
+/** Flags used for formatter directives and other lexer conditions. */
+export interface Flag {
+	array_style?: number,
+	case_body: boolean | null,
+	catch_block: boolean,
+	declaration_statement: boolean,
+	else_block: boolean,
+	finally_block: boolean,
+	had_comment: number,
+	hotif_block?: boolean,
+	if_block: boolean,
+	in_case_statement: boolean,
+	in_case: boolean,
+	in_expression: boolean,
+	in_fat_arrow?: boolean,
+	indentation_level: number,
+	last_text: string,
+	last_word: string,
+	loop_block: number,
+	mode: string,
+	object_style?: number,
+	parent: Flag,
+	start_line_index: number,
+	ternary_depth?: number,
+	ternary_indent?: number,
+	try_block: boolean
+};
+
 namespace SymbolNode {
 	export function create(name: string, kind: SymbolKind, range: Range, selectionRange: Range, children?: AhkSymbol[]): AhkSymbol {
 		return { name, kind, range, selectionRange, children };
@@ -372,33 +400,6 @@ export class Lexer {
 		const _this = this, uri = URI.parse(document.uri);
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
 		let in_loop = false, maybev1 = 0, requirev2 = false, string_mode = false;
-
-		interface Flag {
-			array_style?: number,
-			case_body: boolean | null,
-			catch_block: boolean,
-			declaration_statement: boolean,
-			else_block: boolean,
-			finally_block: boolean,
-			had_comment: number,
-			hotif_block?: boolean,
-			if_block: boolean,
-			in_case_statement: boolean,
-			in_case: boolean,
-			in_expression: boolean,
-			in_fat_arrow?: boolean,
-			indentation_level: number,
-			last_text: string,
-			last_word: string,
-			loop_block: number,
-			mode: string,
-			object_style?: number,
-			parent: Flag,
-			start_line_index: number,
-			ternary_depth?: number,
-			ternary_indent?: number,
-			try_block: boolean
-		};
 		let output_lines: { text: string[], indent: number }[], flags: Flag, previous_flags: Flag, flag_store: Flag[];
 		let opt: FormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string;
@@ -5908,21 +5909,8 @@ export class Lexer {
 			flags.had_comment = 3;
 		}
 
-		function formatDirectives(str: string) {
-			const m = str.match(/^;\s*@format\b/i);
-			if (!m) return;
-			const new_opts = fixupFormatOpts(Object.fromEntries(str.substring(m[0].length).split(',').map(s => {
-				const p = s.indexOf(':');
-				return [s.substring(0, p).trim(), s.substring(p + 1).trim()];
-			})));
-			for (const k of ['array_style', 'object_style'] as const)
-				if (k in new_opts)
-					flags[k] = new_opts[k], delete new_opts[k];
-			Object.assign(opt, new_opts);
-		}
-
 		function handle_inline_comment() {
-			formatDirectives(token_text);
+			applyFormatDirective(token_text, flags, opt);
 			if (opt.ignore_comment)
 				return;
 			if (just_added_newline() && output_lines.length > 1)
@@ -5944,7 +5932,7 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
-			formatDirectives(token_text);
+			applyFormatDirective(token_text, flags, opt);
 			if (opt.ignore_comment)
 				return;
 			token_text.split('\n').forEach(s => {
@@ -7881,7 +7869,11 @@ export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
 	return commentTagRegex;
 }
 
-export function fixupFormatOpts(opts: FormatOptions) {
+/**
+ * Convert the provided format config from user settings to in-memory interface.
+ * This is mostly just converting strings to numbers.
+ */
+export function fixupFormatConfig(opts: FormatOptions) {
 	if (typeof opts.brace_style === 'string') {
 		switch (opts.brace_style) {
 			case '0':
@@ -7899,4 +7891,41 @@ export function fixupFormatOpts(opts: FormatOptions) {
 			opts[k] = OBJECT_STYLE[v];
 	}
 	return opts;
+}
+
+/**
+ * Parse a directive of the form `; @format key1: value1, key2: value2, ...`
+ * Returns an object with the key-value pairs.
+ * Whitespace-insensitive.
+ * Does not validate that keys are valid FormatOptions keys.
+ */
+export function parseFormatDirective(directive: string): Partial<FormatOptions> {
+	// Run regex against the directive to confirm it matches
+	const m = directive.match(/^;\s*@format\b/i);
+	if (!m) return {};
+	
+	// Get all the key-value pairs of the directive
+	const record = Object.fromEntries(directive.substring(m[0].length).split(',').map(s => {
+		const p = s.indexOf(':');
+		return [s.substring(0, p).trim(), s.substring(p + 1).trim()];
+	}));
+
+	return record;
+}
+
+/**
+ * Handle format directives. Format directives dictate options for every line below them.
+ * Example: `;@format array_style: expand, object_style: expand`
+ * See `client/src/test/formatting/array_object_style.ahk` for an in-code example.
+ */
+export function applyFormatDirective(directive: string, flags: Partial<Flag>, opt: Partial<FormatOptions>) {
+	const parsedDirective = parseFormatDirective(directive);
+	const newFormatConfig = fixupFormatConfig(parsedDirective);
+	for (const k of ['array_style', 'object_style'] as const) {
+		if (k in newFormatConfig) {
+				flags[k] = newFormatConfig[k];
+				delete newFormatConfig[k];
+		}
+	}
+	Object.assign(opt, newFormatConfig);
 }
