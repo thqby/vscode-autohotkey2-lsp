@@ -6,6 +6,7 @@ import {
 	traverse_include, update_include_cache
 } from './common';
 import { CfgKey, getCfg } from '../../util/src/config';
+import { clientGetActiveEditorInfo, clientInsertSnippet, clientSetTextDocumentLanguage, ExtensionCommand, extDiagnoseAll, extGenerateComment, extSetScriptDir } from '../../util/src/env';
 
 function checkCommand(cmd: string) {
 	if (getCfg(CfgKey.Commands)?.includes(cmd))
@@ -20,15 +21,15 @@ function trim_jsdoc(detail?: string) {
 }
 
 function insertSnippet(value: string, range?: Range) {
-	if (!checkCommand('ahk2.insertSnippet'))
+	if (!checkCommand(clientInsertSnippet))
 		return;
-	connection?.sendRequest('ahk2.insertSnippet', [value, range]);
+	connection?.sendRequest(clientInsertSnippet, [value, range]);
 }
 
 export function setTextDocumentLanguage(uri: string, lang?: string) {
-	if (!checkCommand('ahk2.setTextDocumentLanguage'))
+	if (!checkCommand(clientSetTextDocumentLanguage))
 		return;
-	return connection?.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
+	return connection?.sendRequest(clientSetTextDocumentLanguage, [uri, lang]);
 }
 
 export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
@@ -76,9 +77,9 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 }
 
 async function generateComment() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
+	if (!checkCommand(clientGetActiveEditorInfo) || !checkCommand(clientInsertSnippet))
 		return;
-	const { uri, position } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
+	const { uri, position } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string, position: Position };
 	const doc = lexers[uri.toLowerCase()];
 	let scope = doc.searchScopedNode(position);
 	const ts = scope?.children || doc.children;
@@ -207,9 +208,9 @@ export function exportSymbols(uri: string) {
 }
 
 async function diagnoseAll() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+	if (!checkCommand(clientGetActiveEditorInfo))
 		return;
-	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string };
 	const doc = lexers[uri.toLowerCase()];
 	if (!doc) return;
 	update_include_cache();
@@ -219,9 +220,9 @@ async function diagnoseAll() {
 }
 
 async function setscriptdir() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+	if (!checkCommand(clientGetActiveEditorInfo))
 		return;
-	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string };
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex) return;
 	if (lex.scriptdir !== lex.scriptpath)
@@ -265,13 +266,19 @@ export function getVersionInfo(uri: string) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const commands: Record<string, (args: any[]) => any> = {
-	'ahk2.diagnose.all': () => diagnoseAll(),
-	'ahk2.generate.comment': () => generateComment(),
-	'ahk2.set.scriptdir': process.env.BROWSER ? () => 0 : setscriptdir
+export const commands: Record<ExtensionCommand, (args: any[]) => any> = {
+	[extDiagnoseAll]: () => diagnoseAll(),
+	[extGenerateComment]: () => generateComment(),
+	[extSetScriptDir]: process.env.BROWSER ? () => 0 : setscriptdir
 };
 
+/**
+ * Executes the provided command.
+ * Only works for `ExtensionCommand` values.
+ * Does nothing if command not recognized.
+ * Ignores cancellation tokens.
+ */
 export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
 	if (!token?.isCancellationRequested)
-		return commands[params.command](params.arguments ?? []);
+		return commands[params.command as ExtensionCommand]?.(params.arguments ?? []);
 }

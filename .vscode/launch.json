@@ -23,6 +23,7 @@
 			]
 		},
 		{
+			// Results go to Debug Console (Ctrl+Shift+Y)
 			"name": "Extension Tests",
 			"type": "extensionHost",
 			"request": "launch",

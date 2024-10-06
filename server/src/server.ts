@@ -20,6 +20,7 @@ import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
 import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
 import { klona } from 'klona/json';
+import { clientExecuteCommand, clientUpdateStatusBar, extSetInterpreter, serverExportSymbols, serverGetAHKVersion, serverGetContent, serverGetVersionInfo } from '../../util/src/env';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -137,7 +138,7 @@ connection.onDidChangeConfiguration(async change => {
 	const newInterpreterPath = getCfg(CfgKey.InterpreterPath);
 	if (newInterpreterPath !== getCfg(CfgKey.InterpreterPath, oldConfig)) {
 		if (await setInterpreter(resolvePath(newInterpreterPath)))
-			connection.sendRequest('ahk2.updateStatusBar', [newInterpreterPath]);
+			connection.sendRequest(clientUpdateStatusBar, [newInterpreterPath]);
 	}
 	if (getCfg(CfgKey.LibrarySuggestions) !== getCfg(CfgKey.LibrarySuggestions, oldConfig)) {
 		if (shouldIncludeUserStdLib() && !shouldIncludeUserStdLib(oldConfig))
@@ -204,10 +205,10 @@ connection.onExecuteCommand(executeCommandProvider);
 connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
-connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
-connection.onRequest('ahk2.getAHKversion', getAHKversion);
-connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
-connection.onRequest('ahk2.getVersionInfo', getVersionInfo);
+connection.onRequest(serverExportSymbols, (uri: string) => exportSymbols(uri));
+connection.onRequest(serverGetAHKVersion, getAHKversion);
+connection.onRequest(serverGetContent, (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
+connection.onRequest(serverGetVersionInfo, getVersionInfo);
 connection.onNotification('onDidCloseTextDocument', (params: { uri: string, id: string }) => {
 	if (params.id === 'ahk2')
 		lexers[params.uri.toLowerCase()]?.close(true);
@@ -216,11 +217,15 @@ connection.onNotification('onDidCloseTextDocument', (params: { uri: string, id: 
 documents.listen(connection);
 connection.listen();
 
+/**
+ * Shows error message indicating the path could not be resolved.
+ * If possible, prompts the user to set their AHK v2 interpreter.
+ */
 async function patherr(msg: string) {
-	if (!getCfg(CfgKey.Commands)?.includes('ahk2.executeCommand'))
+	if (!getCfg(CfgKey.Commands)?.includes(clientExecuteCommand))
 		return connection.window.showErrorMessage(msg);
-	if (await connection.window.showErrorMessage(msg, { title: 'Select Interpreter' }))
-		connection.sendRequest('ahk2.executeCommand', ['ahk2.set.interpreter']);
+	if (await connection.window.showErrorMessage(msg, { title: 'Select AHK v2 interpreter' }))
+		connection.sendRequest(clientExecuteCommand, [extSetInterpreter]);
 }
 
 async function initpathenv(samefolder = false, retry = true): Promise<boolean> {

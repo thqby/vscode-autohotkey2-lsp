@@ -10,6 +10,7 @@ export enum CfgKey {
 	CommentTagRegex = 'CommentTags',
 	CompleteFunctionCalls = 'CompleteFunctionParens',
 	CompletionCommitCharacters = 'CompletionCommitCharacters',
+	DebugConfiguration = 'DebugConfiguration',
 	Exclude = 'Files.Exclude',
 	ExtensionUri = 'extensionUri',
 	Formatter = 'FormatOptions',
@@ -24,6 +25,8 @@ export enum CfgKey {
 	MaxPreserveNewlines = 'FormatOptions.max_preserve_newlines',
 	MaxScanDepth = 'Files.ScanMaxDepth',
 	ObjectStyle = 'FormatOptions.object_style',
+	/** Not supported, kept to show warning to users that still have it */
+	OneTrueBrace = 'FormatOptions.one_true_brace',
 	ParamsCheck = 'Diagnostics.ParamsCheck',
 	PreserveNewlines = 'FormatOptions.preserve_newlines',
 	SpaceAfterDoubleColon = 'FormatOptions.space_after_double_colon',
@@ -102,6 +105,8 @@ export interface AHKLSConfig {
 		Class: string;
 		Function: string;
 	};
+	/** Only used in client */
+	DebugConfiguration?: Record<string, unknown>;
 	Diagnostics: {
 		ClassNonDynamicMemberCheck: boolean;
 		ParamsCheck: boolean;
@@ -171,7 +176,11 @@ export const configPrefix = 'AutoHotkey2';
  */
 export const getCfg = <T = string>(
 	key: CfgKey,
-	config: AHKLSConfig = ahklsConfig,
+	/**
+	 * AHKLSConfig for server, { readonly ... } for client.
+	 * Since this func just reads values, both are acceptable.
+	 */
+	config: AHKLSConfig | { readonly [key: string]: unknown } = ahklsConfig,
 ): T => {
 	const keyPath = key.split('.');
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -189,6 +198,7 @@ export const getCfg = <T = string>(
 /**
  * Sets the value of the key in the provided config.
  * If no config provided, updates the global config.
+ * Does not update IDE settings.
  */
 export const setCfg = <T>(
 	key: CfgKey,

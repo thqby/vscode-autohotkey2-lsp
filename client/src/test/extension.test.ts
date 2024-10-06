@@ -43,6 +43,7 @@ import {
 } from 'vscode-languageclient/node';
 import { readdirSync } from 'fs';
 import { suite, before, test } from 'mocha';
+import { serverGetContent } from '../../../util/src/env';
 
 let client: LanguageClient;
 before(async () => {
@@ -56,6 +57,8 @@ test('should be running', async () => {
 	assert.equal(client?.isRunning(), true);
 });
 
+suite('Language client request handlers', () => {});
+
 suite('Open AHK file', () => {
 	test('opens', async () => {
 		const path = resolve(__dirname, '../../../server/dist/ahkProvider.ahk');
@@ -67,10 +70,7 @@ suite('Open AHK file', () => {
 				document,
 				'ahk2',
 			);
-		const content = (await client.sendRequest(
-			'ahk2.getContent',
-			uri,
-		)) as string;
+		const content = (await client.sendRequest(serverGetContent, uri)) as string;
 		assert.equal(document.getText() === content, true);
 
 		suite('Send language server requests', () => {
@@ -235,7 +235,7 @@ suite('Formatting', async () => {
 				DocumentFormattingRequest.method,
 				params,
 			);
-			assert.ok(result?.[0].newText === content);
+			assert.strictEqual(result?.[0].newText, content);
 		});
 	}
 });

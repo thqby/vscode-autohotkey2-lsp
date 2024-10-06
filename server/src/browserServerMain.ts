@@ -12,6 +12,7 @@ import {
 	signatureProvider, symbolProvider, typeFormatting, updateConfig, workspaceSymbolProvider
 } from './common';
 import { AHKLSConfig, CfgKey, configPrefix, getCfg } from '../../util/src/config';
+import { serverExportSymbols, serverGetContent, serverGetVersionInfo } from '../../util/src/env';
 
 const languageServer = 'ahk2-language-server';
 const messageReader = new BrowserMessageReader(self);
@@ -148,9 +149,9 @@ connection.onExecuteCommand(executeCommandProvider);
 connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
-connection.onRequest('ahk2.exportSymbols', exportSymbols);
-connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
-connection.onRequest('ahk2.getVersionInfo', getVersionInfo);
+connection.onRequest(serverExportSymbols, exportSymbols);
+connection.onRequest(serverGetContent, (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
+connection.onRequest(serverGetVersionInfo, getVersionInfo);
 connection.onNotification('onDidCloseTextDocument',
 	(params: { uri: string, id: string }) => {
 		if (params.id === 'ahk2')
