@@ -412,7 +412,7 @@ async function stopRunningScript() {
 async function compileScript(textEditor: TextEditor) {
 	let cmd = '', cmdop = workspace.getConfiguration(configPrefix).CompilerCMD as string;
 	const ws = workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath ?? '';
-	const compilePath = findfile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
+	const compilePath = findFile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
 	const executePath = resolvePath(interpreterPath, ws);
 	if (!compilePath) {
 		window.showErrorMessage(localize('ahk2.filenotexist', 'Ahk2Exe.exe'));
@@ -468,7 +468,7 @@ async function compileScript(textEditor: TextEditor) {
 async function quickHelp(textEditor: TextEditor) {
 	const document = textEditor.document, position = textEditor.selection.active;
 	const range = document.getWordRangeAtPosition(position), line = position.line;
-	const helpPath = findfile(['AutoHotkey.chm', '../v2/AutoHotkey.chm'], workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath ?? '');
+	const helpPath = findFile(['AutoHotkey.chm', '../v2/AutoHotkey.chm'], workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath ?? '');
 	let word = '';
 	if (range && (word = document.getText(range)).match(/^[a-z_]+$/i)) {
 		if (range.start.character > 0 && document.getText(new Range(line, range.start.character - 1, line, range.start.character)) === '#')
@@ -706,7 +706,7 @@ function getInterpreterPath() {
 	return { path };
 }
 
-function findfile(files: string[], workspace: string) {
+function findFile(files: string[], workspace: string) {
 	let s: string;
 	const paths: string[] = [];
 	const t = ahkconfig.inspect(CfgKey.InterpreterPath);
