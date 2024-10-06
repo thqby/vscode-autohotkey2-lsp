@@ -63,3 +63,30 @@ export const extCompile = `${extCommandPrefix}compile`;
 
 /** Run the script in the active text editor */
 export const extRun = `${extCommandPrefix}run`;
+
+/** Run the selected text */
+export const extRunSelection = `${extCommandPrefix}run.selection`;
+
+/** Stop an AHK script started by this process */
+export const extStop = `${extCommandPrefix}stop`;
+
+/** Set the interpreter */
+export const extSetInterpreter = `${extCommandPrefix}set.interpreter`;
+
+/** Debug the script in the active text editor */
+export const extDebugFile = `${extCommandPrefix}debug.file`;
+
+/** Debug from a selected config */
+export const extDebugConfig = `${extCommandPrefix}debug.configs`;
+
+/** Debug with params */
+export const extDebugParams = `${extCommandPrefix}debug.params`;
+
+/** Debug and attach */
+export const extDebugAttach = `${extCommandPrefix}debug.attach`;
+
+/** Select syntaxes */
+export const extSelectSyntaxes = `${extCommandPrefix}select.syntaxes`;
+
+/** Update version info file header comment */
+export const extUpdateVersionInfo = `${extCommandPrefix}update.versioninfo`;
