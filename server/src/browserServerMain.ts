@@ -6,7 +6,7 @@ import {
 import {
 	chinese_punctuations, colorPresentation, colorProvider, commands, completionProvider,
 	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols, getVersionInfo,
-	hoverProvider, initahk2cache, Lexer, lexers, loadahk2, loadlocalize, prepareRename, rangeFormatting,
+	hoverProvider, initahk2cache, Lexer, lexers, loadAHK2, loadlocalize, prepareRename, rangeFormatting,
 	referenceProvider, renameProvider, SemanticTokenModifiers, semanticTokensOnFull, semanticTokensOnRange,
 	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
 	signatureProvider, symbolProvider, typeFormatting, updateConfig, workspaceSymbolProvider
@@ -84,9 +84,9 @@ connection.onInitialize(params => {
 	set_WorkspaceFolders(workspaceFolders);
 	set_version('3.0.0');
 	initahk2cache();
-	loadahk2();
-	loadahk2('ahk2_h');
-	loadahk2('winapi', 4);
+	loadAHK2();
+	loadAHK2('ahk2_h');
+	loadAHK2('winapi', 4);
 	return result;
 });
 

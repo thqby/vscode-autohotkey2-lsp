@@ -187,7 +187,7 @@ export function initahk2cache() {
 	};
 }
 
-export function loadahk2(filename = 'ahk2', d = 3) {
+export function loadAHK2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
 	const file = `${rootdir}/syntaxes/<>/${filename}`;
 	if (process.env.BROWSER) {
