@@ -1,7 +1,7 @@
 import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 import { configPrefix } from '../../util/src/config';
-import { ClientCommand, clientGetActiveEditorInfo, clientInsertSnippet } from '../../util/src/env';
+import { ClientCommand, clientGetActiveEditorInfo, clientInsertSnippet, clientSetTextDocumentLanguage } from '../../util/src/env';
 
 let client: LanguageClient;
 
@@ -25,7 +25,7 @@ export function activate(context: ExtensionContext) {
 			} else
 				editor.insertSnippet(new SnippetString(params[0]));
 		},
-		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
+		[clientSetTextDocumentLanguage]: async (params: [string, string?]) => {
 			const lang = params[1] || 'ahk';
 			if (!(await languages.getLanguages()).includes(lang)) {
 				window.showErrorMessage(`Unknown language id: ${lang}`);

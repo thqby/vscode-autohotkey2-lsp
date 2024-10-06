@@ -6,7 +6,7 @@ import {
 	traverse_include, update_include_cache
 } from './common';
 import { CfgKey, getCfg } from '../../util/src/config';
-import { clientGetActiveEditorInfo, clientInsertSnippet } from '../../util/src/env';
+import { clientGetActiveEditorInfo, clientInsertSnippet, clientSetTextDocumentLanguage } from '../../util/src/env';
 
 function checkCommand(cmd: string) {
 	if (getCfg(CfgKey.Commands)?.includes(cmd))
@@ -27,9 +27,9 @@ function insertSnippet(value: string, range?: Range) {
 }
 
 export function setTextDocumentLanguage(uri: string, lang?: string) {
-	if (!checkCommand('ahk2.setTextDocumentLanguage'))
+	if (!checkCommand(clientSetTextDocumentLanguage))
 		return;
-	return connection?.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
+	return connection?.sendRequest(clientSetTextDocumentLanguage, [uri, lang]);
 }
 
 export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
