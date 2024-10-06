@@ -7924,8 +7924,8 @@ export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
  * Convert the provided format config from user settings to in-memory interface.
  * This is mostly just converting strings to numbers.
  */
-export function fixupFormatConfig(options: FormatOptions) {
-	switch (options.brace_style as unknown) {
+export function fixupFormatConfig(options: { brace_style?: string | undefined }) {
+	switch (options.brace_style) {
 		case 'Allman':
 		case '0': options.brace_style = 'Allman'; break;
 		case 'One True Brace':
