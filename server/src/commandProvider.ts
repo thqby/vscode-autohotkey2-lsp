@@ -6,6 +6,7 @@ import {
 	traverse_include, update_include_cache
 } from './common';
 import { CfgKey, getCfg } from '../../util/src/config';
+import { clientGetActiveEditorInfo } from '../../util/src/env';
 
 function checkCommand(cmd: string) {
 	if (getCfg(CfgKey.Commands)?.includes(cmd))
@@ -76,9 +77,9 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 }
 
 async function generateComment() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
+	if (!checkCommand(clientGetActiveEditorInfo) || !checkCommand('ahk2.insertSnippet'))
 		return;
-	const { uri, position } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
+	const { uri, position } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string, position: Position };
 	const doc = lexers[uri.toLowerCase()];
 	let scope = doc.searchScopedNode(position);
 	const ts = scope?.children || doc.children;
@@ -207,9 +208,9 @@ export function exportSymbols(uri: string) {
 }
 
 async function diagnoseAll() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+	if (!checkCommand(clientGetActiveEditorInfo))
 		return;
-	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string };
 	const doc = lexers[uri.toLowerCase()];
 	if (!doc) return;
 	update_include_cache();
@@ -219,9 +220,9 @@ async function diagnoseAll() {
 }
 
 async function setscriptdir() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
+	if (!checkCommand(clientGetActiveEditorInfo))
 		return;
-	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string };
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex) return;
 	if (lex.scriptdir !== lex.scriptpath)

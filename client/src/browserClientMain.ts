@@ -1,6 +1,7 @@
 import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 import { configPrefix } from '../../util/src/config';
+import { ClientCommand, clientGetActiveEditorInfo } from '../../util/src/env';
 
 let client: LanguageClient;
 
@@ -8,8 +9,8 @@ let client: LanguageClient;
 export function activate(context: ExtensionContext) {
 	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
 	/* eslint-disable-next-line */
-	const request_handlers: Record<string, (...params: any[]) => any> = {
-		'ahk2.getActiveTextEditorUriAndPosition': () => {
+	const request_handlers: Record<ClientCommand, (...params: any[]) => any> = {
+		[clientGetActiveEditorInfo]: () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			const uri = editor.document.uri.toString(), position = editor.selection.end;
