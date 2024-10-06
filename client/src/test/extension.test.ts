@@ -210,23 +210,24 @@ function test_fotmatting(client: LanguageClient) {
 	suite('Test formatting', () => {
 		const dir = resolve(__dirname, '../../src/test/formatting');
 		const files = readdirSync(dir);
+		const inSuffix = '.in.ahk';
+		const outSuffix = '.out.ahk';
 		for (const file of files) {
-			if (!file.endsWith('.ahk')) continue;
-			test(file.slice(0, -4), async function () {
-				let document = await vscode.workspace.openTextDocument(
-					resolve(dir, file),
+			if (!file.endsWith(inSuffix)) continue;
+			const filenameRoot = file.slice(0, -inSuffix.length);
+			test(filenameRoot, async function () {
+				let inDoc = await vscode.workspace.openTextDocument(resolve(dir, file));
+				if (inDoc.languageId !== 'ahk2')
+					inDoc = await vscode.languages.setTextDocumentLanguage(inDoc, 'ahk2');
+				const outDoc = await vscode.workspace.openTextDocument(
+					resolve(dir, filenameRoot + outSuffix),
 				);
-				if (document.languageId !== 'ahk2')
-					document = await vscode.languages.setTextDocumentLanguage(
-						document,
-						'ahk2',
-					);
-				const uri = document.uri.toString();
+				const uri = inDoc.uri.toString();
 				const params: DocumentFormattingParams = {
 					textDocument: { uri },
 					options: { insertSpaces: false, tabSize: 4 },
 				};
-				const content = document.getText().replaceAll('\r\n', '\n');
+				const content = outDoc.getText().replaceAll('\r\n', '\n');
 				const result: TextEdit[] | undefined = await client.sendRequest(
 					DocumentFormattingRequest.method,
 					params,
