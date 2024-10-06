@@ -6,7 +6,7 @@ import {
 	traverse_include, update_include_cache
 } from './common';
 import { CfgKey, getCfg } from '../../util/src/config';
-import { clientGetActiveEditorInfo } from '../../util/src/env';
+import { clientGetActiveEditorInfo, clientInsertSnippet } from '../../util/src/env';
 
 function checkCommand(cmd: string) {
 	if (getCfg(CfgKey.Commands)?.includes(cmd))
@@ -21,9 +21,9 @@ function trim_jsdoc(detail?: string) {
 }
 
 function insertSnippet(value: string, range?: Range) {
-	if (!checkCommand('ahk2.insertSnippet'))
+	if (!checkCommand(clientInsertSnippet))
 		return;
-	connection?.sendRequest('ahk2.insertSnippet', [value, range]);
+	connection?.sendRequest(clientInsertSnippet, [value, range]);
 }
 
 export function setTextDocumentLanguage(uri: string, lang?: string) {
@@ -77,7 +77,7 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 }
 
 async function generateComment() {
-	if (!checkCommand(clientGetActiveEditorInfo) || !checkCommand('ahk2.insertSnippet'))
+	if (!checkCommand(clientGetActiveEditorInfo) || !checkCommand(clientInsertSnippet))
 		return;
 	const { uri, position } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string, position: Position };
 	const doc = lexers[uri.toLowerCase()];

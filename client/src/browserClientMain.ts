@@ -1,7 +1,7 @@
 import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 import { configPrefix } from '../../util/src/config';
-import { ClientCommand, clientGetActiveEditorInfo } from '../../util/src/env';
+import { ClientCommand, clientGetActiveEditorInfo, clientInsertSnippet } from '../../util/src/env';
 
 let client: LanguageClient;
 
@@ -16,7 +16,7 @@ export function activate(context: ExtensionContext) {
 			const uri = editor.document.uri.toString(), position = editor.selection.end;
 			return { uri, position: { line: position.line, character: position.character } };
 		},
-		'ahk2.insertSnippet': async (params: [string, Range?]) => {
+		[clientInsertSnippet]: async (params: [string, Range?]) => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			if (params[1]) {
