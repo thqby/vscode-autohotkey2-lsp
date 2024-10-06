@@ -25,7 +25,7 @@ import {
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, ahklsConfig, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
+import { ActionType, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -1155,7 +1155,7 @@ export class Lexer {
 				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
-				callWithoutParentheses = ahklsConfig.Warn?.CallWithoutParentheses;
+				callWithoutParentheses = getCfg(CfgKey.CallWithoutParentheses);
 				try {
 					const rs = utils.get_RCDATA('#2');
 					rs && (includetable[rs.uri] = rs.path);
@@ -5908,10 +5908,10 @@ export class Lexer {
 			flags.had_comment = 3;
 		}
 
-		function format_directives(str: string) {
+		function formatDirectives(str: string) {
 			const m = str.match(/^;\s*@format\b/i);
 			if (!m) return;
-			const new_opts = check_formatopts(Object.fromEntries(str.substring(m[0].length).split(',').map(s => {
+			const new_opts = fixupFormatOpts(Object.fromEntries(str.substring(m[0].length).split(',').map(s => {
 				const p = s.indexOf(':');
 				return [s.substring(0, p).trim(), s.substring(p + 1).trim()];
 			})));
@@ -5922,7 +5922,7 @@ export class Lexer {
 		}
 
 		function handle_inline_comment() {
-			format_directives(token_text);
+			formatDirectives(token_text);
 			if (opt.ignore_comment)
 				return;
 			if (just_added_newline() && output_lines.length > 1)
@@ -5944,7 +5944,7 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
-			format_directives(token_text);
+			formatDirectives(token_text);
 			if (opt.ignore_comment)
 				return;
 			token_text.split('\n').forEach(s => {
@@ -6315,7 +6315,7 @@ export class Lexer {
 			return;
 		let workfolder: string;
 		if (!dir) {
-			for (workfolder of ahklsConfig.WorkingDirs)
+			for (workfolder of getCfg(CfgKey.WorkingDirectories))
 				if (this.uri.startsWith(workfolder)) {
 					dir = restorePath(URI.parse(workfolder).fsPath.replace(/[\\/]$/, ''));
 					break;
@@ -6373,7 +6373,7 @@ export class Lexer {
 	}
 
 	private addSymbolFolding(symbol: AhkSymbol, first_brace: number) {
-		const l1 = ahklsConfig.SymbolFoldingFromOpenBrace ? this.document.positionAt(first_brace).line : symbol.range.start.line;
+		const l1 = getCfg(CfgKey.SymbolFoldingFromOpenBrace) ? this.document.positionAt(first_brace).line : symbol.range.start.line;
 		const l2 = symbol.range.end.line - 1;
 		const ranges = this.foldingranges;
 		if (l1 < l2) {
@@ -7881,7 +7881,7 @@ export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
 	return commentTagRegex;
 }
 
-export function check_formatopts(opts: FormatOptions) {
+export function fixupFormatOpts(opts: FormatOptions) {
 	if (typeof opts.brace_style === 'string') {
 		switch (opts.brace_style) {
 			case '0':

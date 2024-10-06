@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { AhkSymbol, Lexer, check_formatopts, updateCommentTagRegex } from './lexer';
+import { AhkSymbol, Lexer, fixupFormatOpts, updateCommentTagRegex } from './lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
 import { ahklsConfig, AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg } from '../../util/src/config';
@@ -187,7 +187,7 @@ export function initahk2cache() {
 	};
 }
 
-export function loadahk2(filename = 'ahk2', d = 3) {
+export function loadAHK2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
 	const file = `${rootdir}/syntaxes/<>/${filename}`;
 	if (process.env.BROWSER) {
@@ -203,7 +203,8 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		if ((data = getwebfile(file + '.json')))
 			build_item_cache(JSON.parse(data.text));
 	} else {
-		const syntaxes = ahklsConfig.Syntaxes && existsSync(ahklsConfig.Syntaxes) ? ahklsConfig.Syntaxes : '';
+		const syntaxConfig = getCfg(CfgKey.Syntaxes);
+		const syntaxes = syntaxConfig && existsSync(syntaxConfig) ? syntaxConfig : '';
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
 		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
@@ -340,7 +341,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enum_ahkfiles(dirpath: string) {
-	const maxdepth = ahklsConfig.Files.MaxDepth;
+	const maxdepth = getCfg<number>(CfgKey.MaxScanDepth);
 	const { file: file_exclude, folder: folder_exclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
@@ -371,9 +372,10 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 		setCfg(CfgKey.LibrarySuggestions, LibIncludeType[newConfigLibSuggestions as unknown as LibIncludeType], newConfig);
 	else if (typeof newConfigLibSuggestions === 'boolean')
 		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? LibIncludeType.All : LibIncludeType.Disabled, newConfig);
-	if (typeof newConfig.Warn?.CallWithoutParentheses === 'string')
-		newConfig.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[newConfig.Warn.CallWithoutParentheses];
-	check_formatopts(newConfig.FormatOptions ?? {});
+	const newConfigCallWithoutParentheses = getCfg(CfgKey.CallWithoutParentheses, newConfig);
+	if (typeof newConfigCallWithoutParentheses === 'string')
+		setCfg(CfgKey.CallWithoutParentheses, { On: true, Off: false, Parentheses: 1 }[newConfigCallWithoutParentheses], newConfig);
+	fixupFormatOpts(newConfig.FormatOptions ?? {});
 	try {
 		updateCommentTagRegex(getCfg(CfgKey.CommentTagRegex, newConfig));
 	} catch (e) {
@@ -382,15 +384,16 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 		setCfg(CfgKey.CommentTagRegex, getCfg(CfgKey.CommentTagRegex), newConfig);
 		console.log(e);
 	}
-	if (newConfig.WorkingDirs instanceof Array)
-		newConfig.WorkingDirs = newConfig.WorkingDirs.map(dir =>
+	const newConfigWorkingDirs = getCfg<string[]>(CfgKey.WorkingDirectories, newConfig);
+	if (newConfigWorkingDirs instanceof Array)
+		setCfg(CfgKey.WorkingDirectories, newConfigWorkingDirs.map(dir =>
 			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
-				.endsWith('/') ? dir : dir + '/');
-	else newConfig.WorkingDirs = [];
+				.endsWith('/') ? dir : dir + '/'), newConfig);
+	else setCfg(CfgKey.WorkingDirectories, [], newConfig);
 	scanExclude = {};
-	if (newConfig.Files) {
+	if (getCfg(CfgKey.Exclude, newConfig)) {
 		const file: RegExp[] = [], folder: RegExp[] = [];
-		for (const s of newConfig.Files.Exclude ?? [])
+		for (const s of getCfg(CfgKey.Exclude, newConfig))
 			try {
 				(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
 			} catch (e) {
@@ -400,11 +403,17 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 			scanExclude.file = file;
 		if (folder.length)
 			scanExclude.folder = folder;
-		if ((newConfig.Files.MaxDepth ??= 2) < 0)
-			newConfig.Files.MaxDepth = Infinity;
+		let maxScanDepth = getCfg<number | undefined>(CfgKey.MaxScanDepth, newConfig);
+		if (maxScanDepth === undefined) {
+			maxScanDepth = 2;
+		}
+		if (maxScanDepth < 0)
+			maxScanDepth = Infinity;
+		setCfg(CfgKey.MaxScanDepth, maxScanDepth, newConfig);
 	}
-	if (newConfig.Syntaxes)
-		newConfig.Syntaxes = resolve(newConfig.Syntaxes).toLowerCase();
+	const newSyntaxes = getCfg<string>(CfgKey.Syntaxes, newConfig);
+	if (newSyntaxes)
+		setCfg(CfgKey.Syntaxes, resolve(newSyntaxes).toLowerCase(), newConfig);
 	Object.assign(ahklsConfig, newConfig);
 }
 
@@ -451,7 +460,7 @@ export function set_version(version: string) { ahk_version = encode_version(vers
 export function set_WorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
-	ahklsConfig.WorkingDirs.forEach(it => !folders.has(it) && workspaceFolders.push(it));
+	getCfg<string[]>(CfgKey.WorkingDirectories).forEach(it => !folders.has(it) && workspaceFolders.push(it));
 	workspaceFolders.sort().reverse();
 	if (old.length === workspaceFolders.length &&
 		!old.some((v, i) => workspaceFolders[i] !== v))

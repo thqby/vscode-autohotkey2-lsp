@@ -11,7 +11,7 @@ import {
 	diagnostic, enum_ahkfiles, find_class, get_class_constructor,
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
-import { ahklsConfig, CfgKey, getCfg } from '../../util/src/config';
+import { CfgKey, getCfg } from '../../util/src/config';
 
 export let globalsymbolcache: Record<string, AhkSymbol> = {};
 
@@ -41,7 +41,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		return doc.symbolInformation;
 	if (ahkuris.winapi && !list.includes(ahkuris.winapi))
 		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
-	const warnLocalSameAsGlobal = ahklsConfig.Warn?.LocalSameAsGlobal;
+	const warnLocalSameAsGlobal = getCfg(CfgKey.LocalSameAsGlobal);
 	const result: AhkSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class];
 	for (const [k, v] of Object.entries(doc.declaration)) {
@@ -55,7 +55,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			result.push(v), converttype(v, v, islib || v === ahkvars[k]).definition = v;
 	}
 	flatTree(doc);
-	if (ahklsConfig.Warn?.VarUnset)
+	if (getCfg(CfgKey.VarUnset))
 		for (const [k, v] of unset_vars) {
 			if (k.assigned)
 				continue;

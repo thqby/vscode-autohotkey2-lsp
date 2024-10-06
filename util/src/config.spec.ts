@@ -60,4 +60,22 @@ suite('setCfg', () => {
 		assert.strictEqual(2, getCfg<boolean>(CfgKey.ArrayStyle, cfg));
 		assert.strictEqual(0, getCfg<boolean>(CfgKey.BraceStyle, cfg));
 	});
+
+	test('invalid property', () => {
+		// no assertion necessary, just needs not to throw
+		setCfg('potato' as CfgKey, 1);
+	});
+});
+
+suite('getCfg', () => {
+	test('invalid property', () => {
+		const cfg: AHKLSConfig = newConfig();
+		const key: keyof AHKLSConfig = 'Files';
+		const _x: AHKLSConfig['Files'] = { Exclude: [], MaxDepth: 2 };
+		const subkey: keyof typeof _x = 'Exclude';
+		delete cfg[key];
+
+		// no assertion necessary, just needs not to throw
+		getCfg(subkey as CfgKey, cfg);
+	});
 });
