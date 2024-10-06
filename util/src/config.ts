@@ -61,9 +61,15 @@ export enum LibIncludeType {
  */
 export type BlockStyle = 'collapse' | 'expand' | 'none';
 
+export type BraceStyle =
+	| 'One True Brace'
+	| 'Allman'
+	| 'One True Brace Variant'
+	| 'Preserve';
+
 export interface FormatOptions {
 	array_style?: BlockStyle;
-	brace_style?: number;
+	brace_style?: BraceStyle;
 	break_chained_methods?: boolean;
 	ignore_comment?: boolean;
 	indent_string?: string;

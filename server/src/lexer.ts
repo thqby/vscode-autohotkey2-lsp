@@ -25,7 +25,7 @@ import {
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, BlockStyle, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
+import { ActionType, BlockStyle, BraceStyle, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -234,7 +234,7 @@ export interface Flag {
 
 export interface InternalFormatOptions {
 	array_style: BlockStyle;
-	brace_style: number;
+	brace_style: BraceStyle;
 	break_chained_methods: boolean;
 	ignore_comment: boolean;
 	indent_string: string;
@@ -260,7 +260,7 @@ export interface InternalFormatOptions {
  */
 export const newInternalFormatOptions = (partial: Partial<InternalFormatOptions> = {}): InternalFormatOptions => ({
 	array_style: 'expand',
-	brace_style: 0,
+	brace_style: 'Preserve',
 	break_chained_methods: false,
 	ignore_comment: false,
 	indent_string: '\t',
@@ -5531,7 +5531,7 @@ export class Lexer {
 
 				if (previous_flags.in_case_statement && last_type === 'TK_LABEL' && /^(default)?:$/.test(last_text))
 					flags.case_body = null, print_newline(), flags.indentation_level--;
-				else if (opt.brace_style === 0 || input_wanted_newline && opt.preserve_newlines && !opt.brace_style)
+				else if (opt.brace_style === 'Allman' || input_wanted_newline && opt.preserve_newlines && opt.brace_style !== 'Preserve')
 					if (ck.in_expr === undefined || flags.mode === MODE.Expression)
 						print_newline(true);
 
@@ -5540,7 +5540,7 @@ export class Lexer {
 				previous_flags.indentation_level = Math.min(previous_flags.indentation_level, flags.indentation_level);
 				if (!(opt.switch_case_alignment && flags.last_word === 'switch'))
 					indent();
-				if (need_newline || opt.brace_style !== undefined)
+				if (need_newline || opt.brace_style !== 'Preserve')
 					print_newline(true);
 				else output_space_before_token = space_in_other;
 			}
@@ -5560,7 +5560,7 @@ export class Lexer {
 				else if (style || input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
 				output_space_before_token = space_in_other && last_text !== '{';
-			} else if (opt.brace_style !== undefined || input_wanted_newline)
+			} else if (opt.brace_style !== 'Preserve' || input_wanted_newline)
 				print_newline(true);
 
 			restore_mode();
@@ -5568,7 +5568,7 @@ export class Lexer {
 			if (!is_exp) {
 				if (previous_flags.case_body === null)
 					indent();
-				if (opt.brace_style !== undefined)
+				if (opt.brace_style !== 'Preserve')
 					print_newline(true);
 				output_space_before_token = space_in_other;
 			}
@@ -5681,7 +5681,14 @@ export class Lexer {
 					}
 					if (maybe_need_newline) {
 						trim_newlines();
-						if (flags.last_text !== '}' || opt.brace_style! < 1 || input_wanted_newline && opt.preserve_newlines && !opt.brace_style)
+						if (
+							flags.last_text !== '}' 
+							|| opt.brace_style === 'Allman'
+							|| opt.brace_style === 'One True Brace Variant'
+							|| input_wanted_newline 
+								&& opt.preserve_newlines 
+								&& opt.brace_style !== 'Preserve'
+						)
 							print_newline(true);
 						else output_space_before_token = space_in_other;
 					} else if (input_wanted_newline)
@@ -7918,16 +7925,14 @@ export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
  * This is mostly just converting strings to numbers.
  */
 export function fixupFormatConfig(options: FormatOptions) {
-	if (typeof options.brace_style === 'string') {
-		switch (options.brace_style) {
-			case '0':
-			case 'Allman': options.brace_style = 0; break;
-			case '1':
-			case 'One True Brace': options.brace_style = 1; break;
-			case '-1':
-			case 'One True Brace Variant': options.brace_style = -1; break;
-			default: delete options.brace_style; break;
-		}
+	switch (options.brace_style as unknown) {
+		case 'Allman':
+		case '0': options.brace_style = 'Allman'; break;
+		case 'One True Brace':
+		case '1': options.brace_style = 'One True Brace'; break;
+		case 'One True Brace Variant':
+		case '-1': options.brace_style = 'One True Brace Variant'; break;
+		default: options.brace_style = 'Preserve'; break;
 	}
 	return options;
 }
@@ -7959,12 +7964,11 @@ export function parseFormatDirective(directive: string): Partial<FormatOptions> 
  */
 export function applyFormatDirective(directive: string, flags: Partial<Flag>, opt: Partial<FormatOptions>) {
 	const parsedDirective = parseFormatDirective(directive);
-	const newFormatConfig = fixupFormatConfig(parsedDirective);
 	for (const k of ['array_style', 'object_style'] as const) {
-		if (k in newFormatConfig) {
-				flags[k] = newFormatConfig[k] as BlockStyle;
-				delete newFormatConfig[k];
+		if (k in parsedDirective) {
+				flags[k] = parsedDirective[k] as BlockStyle;
+				delete parsedDirective[k];
 		}
 	}
-	Object.assign(opt, newFormatConfig);
+	Object.assign(opt, parsedDirective);
 }
