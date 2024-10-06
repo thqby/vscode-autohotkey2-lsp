@@ -535,7 +535,15 @@ function get_debug_configs() {
 		...allconfigs.globalValue ?? []].filter(it => it.type in debugexts);
 }
 
-async function beginDebug(type: string) {
+/**
+ * Begins debugging with the provided debug type.
+ * @param type 'f' for file, 'c' for configs, 'p' for params, 'a' for attach
+ * - f: Debug the current file.
+ * - c: Debug with the selected configuration.
+ * - p: Debug with the specified parameters. Only available for `zero-plusplus.vscode-autohotkey-debug`.
+ * - a: Attach to the process. Only available for `zero-plusplus.vscode-autohotkey-debug`.
+ */
+async function beginDebug(type: 'f' | 'c' | 'p' | 'a') {
 	let extname: string | undefined;
 	const editor = window.activeTextEditor;
 	let config = { ...getCfg<DebugConfiguration>(CfgKey.DebugConfiguration, ahkconfig), request: 'launch', __ahk2debug: true } as DebugConfiguration;
