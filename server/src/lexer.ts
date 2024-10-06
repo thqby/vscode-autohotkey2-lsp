@@ -25,7 +25,7 @@ import {
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, ahklsConfig, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
+import { ActionType, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -6315,7 +6315,7 @@ export class Lexer {
 			return;
 		let workfolder: string;
 		if (!dir) {
-			for (workfolder of ahklsConfig.WorkingDirs)
+			for (workfolder of getCfg(CfgKey.WorkingDirectories))
 				if (this.uri.startsWith(workfolder)) {
 					dir = restorePath(URI.parse(workfolder).fsPath.replace(/[\\/]$/, ''));
 					break;

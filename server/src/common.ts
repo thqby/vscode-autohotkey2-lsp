@@ -383,11 +383,12 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 		setCfg(CfgKey.CommentTagRegex, getCfg(CfgKey.CommentTagRegex), newConfig);
 		console.log(e);
 	}
-	if (newConfig.WorkingDirs instanceof Array)
-		newConfig.WorkingDirs = newConfig.WorkingDirs.map(dir =>
+	const newConfigWorkingDirs = getCfg<string[]>(CfgKey.WorkingDirectories, newConfig);
+	if (newConfigWorkingDirs instanceof Array)
+		setCfg(CfgKey.WorkingDirectories, newConfigWorkingDirs.map(dir =>
 			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
-				.endsWith('/') ? dir : dir + '/');
-	else newConfig.WorkingDirs = [];
+				.endsWith('/') ? dir : dir + '/'), newConfig);
+	else setCfg(CfgKey.WorkingDirectories, [], newConfig);
 	scanExclude = {};
 	if (getCfg(CfgKey.Exclude, newConfig)) {
 		const file: RegExp[] = [], folder: RegExp[] = [];
@@ -457,7 +458,7 @@ export function set_version(version: string) { ahk_version = encode_version(vers
 export function set_WorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
-	ahklsConfig.WorkingDirs.forEach(it => !folders.has(it) && workspaceFolders.push(it));
+	getCfg<string[]>(CfgKey.WorkingDirectories).forEach(it => !folders.has(it) && workspaceFolders.push(it));
 	workspaceFolders.sort().reverse();
 	if (old.length === workspaceFolders.length &&
 		!old.some((v, i) => workspaceFolders[i] !== v))
