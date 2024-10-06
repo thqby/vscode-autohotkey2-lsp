@@ -5908,10 +5908,10 @@ export class Lexer {
 			flags.had_comment = 3;
 		}
 
-		function format_directives(str: string) {
+		function formatDirectives(str: string) {
 			const m = str.match(/^;\s*@format\b/i);
 			if (!m) return;
-			const new_opts = check_formatopts(Object.fromEntries(str.substring(m[0].length).split(',').map(s => {
+			const new_opts = fixupFormatOpts(Object.fromEntries(str.substring(m[0].length).split(',').map(s => {
 				const p = s.indexOf(':');
 				return [s.substring(0, p).trim(), s.substring(p + 1).trim()];
 			})));
@@ -5922,7 +5922,7 @@ export class Lexer {
 		}
 
 		function handle_inline_comment() {
-			format_directives(token_text);
+			formatDirectives(token_text);
 			if (opt.ignore_comment)
 				return;
 			if (just_added_newline() && output_lines.length > 1)
@@ -5944,7 +5944,7 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
-			format_directives(token_text);
+			formatDirectives(token_text);
 			if (opt.ignore_comment)
 				return;
 			token_text.split('\n').forEach(s => {
@@ -7881,7 +7881,7 @@ export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
 	return commentTagRegex;
 }
 
-export function check_formatopts(opts: FormatOptions) {
+export function fixupFormatOpts(opts: FormatOptions) {
 	if (typeof opts.brace_style === 'string') {
 		switch (opts.brace_style) {
 			case '0':
