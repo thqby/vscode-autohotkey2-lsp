@@ -1,7 +1,7 @@
 import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
 import { configPrefix } from '../../util/src/config';
-import { ClientCommand, clientGetActiveEditorInfo, clientInsertSnippet, clientSetTextDocumentLanguage } from '../../util/src/env';
+import { ClientCommand, clientGetActiveEditorInfo, clientGetWorkspaceFileContent, clientGetWorkspaceFiles, clientInsertSnippet, clientSetTextDocumentLanguage } from '../../util/src/env';
 
 let client: LanguageClient;
 
@@ -34,7 +34,11 @@ export function activate(context: ExtensionContext) {
 			const uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
 			it && languages.setTextDocumentLanguage(it, lang);
 		},
-		'ahk2.getWorkspaceFiles': async (params: string[]) => {
+		/**
+		 * Returns the list of AHK files in the workspace matching the specified folders.
+		 * Returns all AHK files if no folders are specified.
+		 */
+		[clientGetWorkspaceFiles]: async (params: string[]): Promise<void | string[]> => {
 			const all = !params.length;
 			if (workspace.workspaceFolders) {
 				if (all)
@@ -48,7 +52,8 @@ export function activate(context: ExtensionContext) {
 				}
 			}
 		},
-		'ahk2.getWorkspaceFileContent': async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText()
+		/** Returns the content of the provided file. */
+		[clientGetWorkspaceFileContent]: async (params: string[]): Promise<string | undefined> => (await workspace.openTextDocument(Uri.parse(params[0]))).getText()
 	};
 
 	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', {

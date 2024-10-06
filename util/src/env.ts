@@ -7,7 +7,7 @@ export const languageClientName = 'AutoHotkey2';
 /** Name of the output channel for debugging information, displayed to users */
 export const outputChannelName = 'AutoHotkey2';
 
-/** Prefix for commands sent by the client */
+/** Prefix for commands handled by the client */
 const clientCommandPrefix = 'ahk2.';
 export type ClientCommand = `${typeof clientCommandPrefix}${string}`;
 /**
@@ -21,5 +21,9 @@ export const clientGetActiveEditorInfo: ClientCommand = `${clientCommandPrefix}g
 export const clientInsertSnippet: ClientCommand = `${clientCommandPrefix}insertSnippet`;
 /** Set the language of the text document */
 export const clientSetTextDocumentLanguage: ClientCommand = `${clientCommandPrefix}setTextDocumentLanguage`;
-/** LSP command ID to update the status bar */
+/** Update the status bar with the new interpreter info */
 export const clientUpdateStatusBar: ClientCommand = `${clientCommandPrefix}updateStatusBar`;
+/** Get matching AHK files */
+export const clientGetWorkspaceFiles: ClientCommand = `${clientCommandPrefix}getWorkspaceFiles`;
+/** Get the text content of the provided file */
+export const clientGetWorkspaceFileContent: ClientCommand = `${clientCommandPrefix}getWorkspaceFileContent`;
