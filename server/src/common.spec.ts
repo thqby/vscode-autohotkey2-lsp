@@ -106,4 +106,35 @@ suite('updateConfig', () => {
 			});
 		});
 	});
+
+	suite('WorkingDirectories', () => {
+		beforeEach(() => {
+			setCfg(CfgKey.WorkingDirectories, undefined);
+		});
+
+		const theories: [
+			name: string,
+			value: undefined | string[] | string,
+			expected: string[],
+		][] = [
+			['undefined', undefined, []],
+			['one string[]', ['C:\\'], ['file:///c%3a/']],
+			['two string[]', ['C:\\', 'D:\\'], ['file:///c%3a/', 'file:///d%3a/']],
+			['string', 'C:\\', []],
+		];
+
+		theories.forEach(([name, value, expected]) => {
+			test(name, () => {
+				const config = newConfig();
+				setCfg(CfgKey.WorkingDirectories, value, config);
+
+				updateConfig(config);
+
+				assert.deepStrictEqual(
+					getCfg<string[]>(CfgKey.WorkingDirectories),
+					expected,
+				);
+			});
+		});
+	});
 });
