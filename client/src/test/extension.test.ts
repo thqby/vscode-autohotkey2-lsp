@@ -42,13 +42,18 @@ import {
 	DidChangeConfigurationNotification,
 } from 'vscode-languageclient/node';
 import { readdirSync } from 'fs';
+import { suite, before, test } from 'mocha';
+
+let client: LanguageClient;
+before(async () => {
+	client = await vscode.extensions
+		.getExtension('thqby.vscode-autohotkey2-lsp')
+		?.activate();
+});
 
 suite('Start ahk language server', () => {
 	test('should be running', async () => {
 		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-		const client: LanguageClient = await vscode.extensions
-			.getExtension('thqby.vscode-autohotkey2-lsp')
-			?.activate();
 		assert.equal(client?.isRunning(), true);
 
 		suite('Open ahk file', () => {
@@ -195,19 +200,16 @@ suite('Start ahk language server', () => {
 						assert.ok(result?.data);
 					});
 				});
-
-				await client.sendNotification(
-					DidChangeConfigurationNotification.method,
-					{ settings: { FormatOptions: {} } },
-				);
-				testFormatting(client);
 			});
 		});
 	});
-});
 
-function testFormatting(client: LanguageClient) {
-	suite('Test formatting', () => {
+	suite('Test formatting', async () => {
+		before(async () => {
+			await client.sendNotification(DidChangeConfigurationNotification.method, {
+				settings: { FormatOptions: {} },
+			});
+		});
 		const dir = resolve(__dirname, '../../src/test/formatting');
 		const files = readdirSync(dir);
 		const inSuffix = '.in.ahk';
@@ -236,4 +238,4 @@ function testFormatting(client: LanguageClient) {
 			});
 		}
 	});
-}
+});
