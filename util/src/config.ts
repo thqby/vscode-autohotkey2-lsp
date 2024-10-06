@@ -100,7 +100,6 @@ export interface AHKLSConfig {
 	};
 	FormatOptions: FormatOptions;
 	InterpreterPath: string;
-	GlobalStorage?: string;
 	Syntaxes?: string;
 	SymbolFoldingFromOpenBrace: boolean;
 	Warn: {
