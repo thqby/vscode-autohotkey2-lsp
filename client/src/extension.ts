@@ -44,7 +44,7 @@ import {
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
 const ahkconfig = workspace.getConfiguration(configPrefix);
-let ahkpath_cur: string = ahkconfig.InterpreterPath, server_is_ready = false;
+let interpreterPath: string = ahkconfig.InterpreterPath, server_is_ready = false;
 const textdecoders = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const isWindows = process.platform === 'win32';
 let extlist: string[] = [], debugexts: Record<string, string> = {}, langs: string[] = [];
@@ -110,7 +110,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 			it && languages.setTextDocumentLanguage(it, lang);
 		},
 		[clientUpdateStatusBar]: async (params: [string]) => {
-			ahkpath_cur = params[0];
+			interpreterPath = params[0];
 			onDidChangegetInterpreter();
 		}
 	};
@@ -193,7 +193,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 						} else if (config.runtime === 'autohotkey')
 							runtime = config.runtime_v2;
 						if (!(config.runtime ||= runtime)) {
-							config.runtime = resolvePath(ahkpath_cur, folder?.uri.fsPath);
+							config.runtime = resolvePath(interpreterPath, folder?.uri.fsPath);
 							if (ahkStatusBarItem.text.endsWith('[UIAccess]'))
 								config.useUIAVersion = true;
 						}
@@ -320,9 +320,9 @@ function decode(buf: Buffer) {
 }
 
 async function runScript(textEditor: TextEditor, selection = false) {
-	const executePath = resolvePath(ahkpath_cur, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
+	const executePath = resolvePath(interpreterPath, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
 	if (!executePath) {
-		const s = ahkpath_cur || 'AutoHotkey.exe';
+		const s = interpreterPath || 'AutoHotkey.exe';
 		window.showErrorMessage(localize('ahk2.filenotexist', s), localize('ahk2.set.interpreter'))
 			.then(r => r ? setInterpreter() : undefined);
 		return;
@@ -413,13 +413,13 @@ async function compileScript(textEditor: TextEditor) {
 	let cmd = '', cmdop = workspace.getConfiguration(configPrefix).CompilerCMD as string;
 	const ws = workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath ?? '';
 	const compilePath = findfile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
-	const executePath = resolvePath(ahkpath_cur, ws);
+	const executePath = resolvePath(interpreterPath, ws);
 	if (!compilePath) {
 		window.showErrorMessage(localize('ahk2.filenotexist', 'Ahk2Exe.exe'));
 		return;
 	}
 	if (!executePath) {
-		const s = ahkpath_cur || 'AutoHotkey.exe';
+		const s = interpreterPath || 'AutoHotkey.exe';
 		window.showErrorMessage(localize('ahk2.filenotexist', s));
 		return;
 	}
@@ -478,9 +478,9 @@ async function quickHelp(textEditor: TextEditor) {
 		window.showErrorMessage(localize('ahk2.filenotexist', 'AutoHotkey.chm'));
 		return;
 	}
-	const executePath = resolvePath(ahkpath_cur, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
+	const executePath = resolvePath(interpreterPath, workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath);
 	if (!executePath) {
-		const s = ahkpath_cur || 'AutoHotkey.exe';
+		const s = interpreterPath || 'AutoHotkey.exe';
 		window.showErrorMessage(localize('ahk2.filenotexist', s));
 		return;
 	}
@@ -590,7 +590,7 @@ async function beginDebug(type: string) {
 async function setInterpreter() {
 	// eslint-disable-next-line prefer-const
 	let index = -1, { path: ahkpath, from } = getInterpreterPath();
-	const list: QuickPickItem[] = [], _ = (ahkpath = resolvePath(ahkpath_cur || ahkpath, undefined, false)).toLowerCase();
+	const list: QuickPickItem[] = [], _ = (ahkpath = resolvePath(interpreterPath || ahkpath, undefined, false)).toLowerCase();
 	const pick = window.createQuickPick();
 	let it: QuickPickItem, active: QuickPickItem | undefined, sel: QuickPickItem = { label: '' };
 	list.push({ alwaysShow: true, label: localize('ahk2.enterahkpath') + '...', detail: localize('ahk2.enterorfind') });
@@ -599,7 +599,7 @@ async function setInterpreter() {
 		await addpath(resolve(ahkpath, '..'), _.includes('autohotkey') ? 20 : 5);
 	if (!_.includes('c:\\program files\\autohotkey\\'))
 		await addpath('C:\\Program Files\\AutoHotkey\\', 20);
-	index = list.map(it => it.detail?.toLowerCase()).indexOf((ahkpath_cur || ahkpath).toLowerCase());
+	index = list.map(it => it.detail?.toLowerCase()).indexOf((interpreterPath || ahkpath).toLowerCase());
 	if (index !== -1)
 		active = list[index];
 
@@ -607,7 +607,7 @@ async function setInterpreter() {
 	pick.title = localize('ahk2.set.interpreter');
 	if (active)
 		pick.activeItems = [active];
-	pick.placeholder = localize('ahk2.current', ahkpath_cur);
+	pick.placeholder = localize('ahk2.current', interpreterPath);
 	pick.show();
 	pick.onDidAccept(async () => {
 		if (pick.selectedItems[0] === list[0]) {
@@ -632,11 +632,11 @@ async function setInterpreter() {
 		}
 		pick.dispose();
 		if (sel.detail) {
-			ahkStatusBarItem.tooltip = ahkpath_cur = sel.detail;
-			ahkconfig.update('InterpreterPath', ahkpath_cur, from);
-			ahkStatusBarItem.text = sel.label ||= (await getAHKversion([ahkpath_cur]))[0];
+			ahkStatusBarItem.tooltip = interpreterPath = sel.detail;
+			ahkconfig.update('InterpreterPath', interpreterPath, from);
+			ahkStatusBarItem.text = sel.label ||= (await getAHKversion([interpreterPath]))[0];
 			if (server_is_ready)
-				commands.executeCommand('ahk2.resetinterpreterpath', ahkpath_cur);
+				commands.executeCommand('ahk2.resetinterpreterpath', interpreterPath);
 		}
 	});
 	pick.onDidHide(() => pick.dispose());
@@ -703,7 +703,7 @@ function findfile(files: string[], workspace: string) {
 	let s: string;
 	const paths: string[] = [];
 	const t = ahkconfig.inspect('InterpreterPath');
-	if (add(ahkpath_cur), t) {
+	if (add(interpreterPath), t) {
 		add(t.workspaceFolderValue as string);
 		add(t.workspaceValue as string);
 		add(t.globalValue as string);
@@ -727,7 +727,7 @@ function findfile(files: string[], workspace: string) {
 async function onDidChangegetInterpreter() {
 	const uri = window.activeTextEditor?.document.uri;
 	const ws = uri ? workspace.getWorkspaceFolder(uri)?.uri.fsPath : undefined;
-	let ahkPath = resolvePath(ahkpath_cur, ws, false);
+	let ahkPath = resolvePath(interpreterPath, ws, false);
 	if (ahkPath.toLowerCase().endsWith('.exe') && existsSync(ahkPath)) {
 		// ahkStatusBarItem.tooltip is the current saved interpreter path
 		if (ahkPath !== ahkStatusBarItem.tooltip) {
