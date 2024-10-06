@@ -111,7 +111,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		},
 		[clientUpdateStatusBar]: async (params: [string]) => {
 			interpreterPath = params[0];
-			onDidChangegetInterpreter();
+			onDidChangeInterpreter();
 		}
 	};
 
@@ -142,7 +142,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	let onInitialized: undefined | ((value: LanguageClient) => void);
 	client.start().then(() => {
 		Object.entries(requestHandlers).forEach(handler => client.onRequest(...handler));
-		onDidChangegetInterpreter();
+		onDidChangeInterpreter();
 		if (window.activeTextEditor?.document.languageId === 'ahk2')
 			ahkStatusBarItem.show();
 		server_is_ready = true;
@@ -731,7 +731,7 @@ function findfile(files: string[], workspace: string) {
 	}
 }
 
-async function onDidChangegetInterpreter() {
+async function onDidChangeInterpreter() {
 	const uri = window.activeTextEditor?.document.uri;
 	const ws = uri ? workspace.getWorkspaceFolder(uri)?.uri.fsPath : undefined;
 	let ahkPath = resolvePath(interpreterPath, ws, false);
