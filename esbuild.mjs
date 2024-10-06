@@ -22,33 +22,42 @@ const client_opt = {
 };
 
 switch (process.argv[2]) {
-	case '--cli': build_cli(); break;
-	case '--dev': build_watch(); break;
-	case '--web': build_watch(true); break;
-	default: build_prod(); break;
+	case '--cli':
+		build_cli();
+		break;
+	case '--dev':
+		build_watch();
+		break;
+	case '--web':
+		build_watch(true);
+		break;
+	default:
+		build_prod();
+		break;
 }
 
 async function build_cli() {
 	server_opt.bundle = true;
 	server_opt.minify = true;
 	server_opt.outdir = 'server/cli';
-	const start = new Date;
+	const start = new Date();
 	await build(server_opt);
-	console.log(`build finished in ${new Date - start} ms`);
+	console.log(`build finished in ${new Date() - start} ms`);
 }
 
 async function build_prod() {
 	const opts = [
-		client_opt, server_opt,
-		{ ...client_opt, entryPoints: [client_opt.entryPoints.pop()] }
+		client_opt,
+		server_opt,
+		{ ...client_opt, entryPoints: [client_opt.entryPoints.pop()] },
 	];
 	client_opt.external = ['vscode'];
 	client_opt.bundle = server_opt.bundle = true;
 	client_opt.minify = server_opt.minify = true;
 	opts.push(...browser_opts(true));
-	const start = new Date;
-	await Promise.all(opts.map(o => build(o)));
-	console.log(`build finished in ${new Date - start} ms`);
+	const start = new Date();
+	await Promise.all(opts.map((o) => build(o)));
+	console.log(`build finished in ${new Date() - start} ms`);
 }
 
 function build_watch(web = false) {
@@ -58,13 +67,15 @@ function build_watch(web = false) {
 		name: 'esbuild-problem-matcher',
 		setup(build) {
 			build.onStart(() => {
-				start ??= (console.log('\x1bc[watch] build started'), new Date);
+				start ??= (console.log('\x1bc[watch] build started'), new Date());
 			});
-			build.onEnd(result => {
-				const end = new Date;
+			build.onEnd((result) => {
+				const end = new Date();
 				result.errors.forEach(({ text, location }) => {
 					console.error(`✘ [ERROR] ${text}`);
-					console.error(`    ${location.file}:${location.line}:${location.column}:`);
+					console.error(
+						`    ${location.file}:${location.line}:${location.column}:`,
+					);
 				});
 				timer && clearTimeout(timer);
 				timer = setTimeout(() => {
@@ -72,12 +83,11 @@ function build_watch(web = false) {
 					start = timer = undefined;
 				}, 500);
 			});
-		}
+		},
 	};
 	client_opt.logLevel = server_opt.logLevel = 'silent';
 	server_opt.define['process.env.DEBUG'] = 'true';
-	if (web)
-		opts = browser_opts(false);
+	if (web) opts = browser_opts(false);
 	else {
 		server_opt.entryPoints = ['server/src/*.ts'];
 		server_opt.outdir = 'server/out';
@@ -85,7 +95,7 @@ function build_watch(web = false) {
 	}
 	for (const opt of opts) {
 		opt.plugins = [plugin];
-		context(opt).then(ctx => ctx.watch());
+		context(opt).then((ctx) => ctx.watch());
 	}
 }
 /** @returns {Array<import('esbuild').BuildOptions>} */
@@ -100,17 +110,20 @@ function browser_opts(minify) {
 		minify,
 		platform: 'browser',
 	};
-	return [{
-		...client_opt,
-		...browser_opt,
-		entryPoints: ['client/src/browserClientMain.ts'],
-		external: ['vscode'],
-	}, {
-		...server_opt,
-		...browser_opt,
-		entryPoints: ['server/src/browserServerMain.ts'],
-		footer: {
-			js: 'function process_cwd(){return""}'
+	return [
+		{
+			...client_opt,
+			...browser_opt,
+			entryPoints: ['client/src/browserClientMain.ts'],
+			external: ['vscode'],
 		},
-	}];
+		{
+			...server_opt,
+			...browser_opt,
+			entryPoints: ['server/src/browserServerMain.ts'],
+			footer: {
+				js: 'function process_cwd(){return""}',
+			},
+		},
+	];
 }
