@@ -200,13 +200,13 @@ suite('Start ahk language server', () => {
 					DidChangeConfigurationNotification.method,
 					{ settings: { FormatOptions: {} } },
 				);
-				test_fotmatting(client);
+				testFormatting(client);
 			});
 		});
 	});
 });
 
-function test_fotmatting(client: LanguageClient) {
+function testFormatting(client: LanguageClient) {
 	suite('Test formatting', () => {
 		const dir = resolve(__dirname, '../../src/test/formatting');
 		const files = readdirSync(dir);
