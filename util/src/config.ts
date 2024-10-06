@@ -105,6 +105,8 @@ export interface AHKLSConfig {
 		Class: string;
 		Function: string;
 	};
+	/** Only used in client */
+	DebugConfiguration?: Record<string, unknown>;
 	Diagnostics: {
 		ClassNonDynamicMemberCheck: boolean;
 		ParamsCheck: boolean;
