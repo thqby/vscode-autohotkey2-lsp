@@ -12,7 +12,7 @@ import {
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
 	lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
-import { ahklsConfig, CfgKey, getCfg, shouldIncludeLocalLib, shouldIncludeUserStdLib } from '../../util/src/config';
+import { ahklsConfig, BraceStyle, CfgKey, getCfg, shouldIncludeLocalLib, shouldIncludeUserStdLib } from '../../util/src/config';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
@@ -500,7 +500,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	let right_is_paren = '(['.includes(linetext[range.end.character] || '\0');
-	const join_c = getCfg(CfgKey.BraceStyle) === 'Allman' ? '\n' : ' ';
+	const join_c = getCfg<BraceStyle>(CfgKey.BraceStyle) === 'Allman' ? '\n' : ' ';
 
 	// fn|()=>...
 	if (symbol) {
