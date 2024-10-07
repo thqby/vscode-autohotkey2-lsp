@@ -7,7 +7,7 @@ import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, Sym
 import { AhkSymbol, Lexer, fixupFormatConfig, updateCommentTagRegex } from './lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
-import { ahklsConfig, AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg } from '../../util/src/config';
+import { AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg, setConfigRoot } from '../../util/src/config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -35,7 +35,7 @@ export const utils = {
 
 export type Maybe<T> = T | undefined;
 export let connection: Connection | undefined;
-export let ahkpath_cur = '', locale = 'en-us', rootdir = '', isahk2_h = false;
+export let interpreterPath = '', locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahk_version = encode_version('3.0.0.0');
 export let ahkuris: Record<string, string> = {};
 export let ahkvars: Record<string, AhkSymbol> = {};
@@ -187,6 +187,7 @@ export function initahk2cache() {
 	};
 }
 
+/** Loads IntelliSense hover text */
 export function loadAHK2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
 	const file = `${rootdir}/syntaxes/<>/${filename}`;
@@ -341,20 +342,20 @@ export function loadAHK2(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enum_ahkfiles(dirpath: string) {
-	const maxdepth = getCfg<number>(CfgKey.MaxScanDepth);
-	const { file: file_exclude, folder: folder_exclude } = scanExclude;
+	const maxScanDepth = getCfg<number>(CfgKey.MaxScanDepth);
+	const { file: fileExclude, folder: folderExclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
 		try {
 			const dir = await fs.opendir(dirpath);
 			for await (const t of dir) {
-				if (t.isDirectory() && depth < maxdepth) {
+				if (t.isDirectory() && depth < maxScanDepth) {
 					const path = resolve(dirpath, t.name);
-					if (!folder_exclude?.some(re => re.test(path)))
+					if (!folderExclude?.some(re => re.test(path)))
 						yield* enumfile(path, depth + 1);
 				} else if (t.isFile() && /\.(ahk2?|ah2)$/i.test(t.name)) {
 					const path = resolve(dirpath, t.name);
-					if (!file_exclude?.some(re => re.test(path)))
+					if (!fileExclude?.some(re => re.test(path)))
 						yield path;
 				}
 			}
@@ -368,13 +369,8 @@ export function enum_ahkfiles(dirpath: string) {
  */
 export function updateConfig(newConfig: AHKLSConfig): void {
 	const newConfigLibSuggestions = getCfg(CfgKey.LibrarySuggestions, newConfig);
-	if (typeof newConfigLibSuggestions === 'string')
-		setCfg(CfgKey.LibrarySuggestions, LibIncludeType[newConfigLibSuggestions as unknown as LibIncludeType], newConfig);
-	else if (typeof newConfigLibSuggestions === 'boolean')
+	if (typeof newConfigLibSuggestions === 'boolean')
 		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? LibIncludeType.All : LibIncludeType.Disabled, newConfig);
-	const newConfigCallWithoutParentheses = getCfg(CfgKey.CallWithoutParentheses, newConfig);
-	if (typeof newConfigCallWithoutParentheses === 'string')
-		setCfg(CfgKey.CallWithoutParentheses, { On: true, Off: false, Parentheses: 1 }[newConfigCallWithoutParentheses], newConfig);
 	fixupFormatConfig(newConfig.FormatOptions ?? {});
 	try {
 		updateCommentTagRegex(getCfg(CfgKey.CommentTagRegex, newConfig));
@@ -414,7 +410,7 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 	const newSyntaxes = getCfg<string>(CfgKey.Syntaxes, newConfig);
 	if (newSyntaxes)
 		setCfg(CfgKey.Syntaxes, resolve(newSyntaxes).toLowerCase(), newConfig);
-	Object.assign(ahklsConfig, newConfig);
+	setConfigRoot(newConfig);
 }
 
 function encode_version(version: string) {
@@ -452,7 +448,7 @@ export function arrayEqual(a: string[], b: string[]) {
 
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
-export function set_ahkpath(path: string) { ahkpath_cur = path.replace(/^.:/, s => s.toLowerCase()); }
+export function setInterpreterPath(path: string) { interpreterPath = path.replace(/^.:/, s => s.toLowerCase()); }
 export function set_Connection(conn: Connection) { return connection = conn; }
 export function set_dirname(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }

@@ -7,20 +7,20 @@ import {
 import { URI } from 'vscode-uri';
 import { get_ahkProvider } from './ahkProvider';
 import {
-	a_vars, ahkpath_cur, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
+	a_vars, interpreterPath, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
 	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
 	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, getVersionInfo, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadAHK2, loadlocalize, openFile,
 	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, SemanticTokenModifiers,
-	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
+	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, setInterpreterPath, set_Connection,
 	set_dirname, set_locale, set_version, set_WorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
 	traverse_include, typeFormatting, updateConfig, utils, winapis, workspaceSymbolProvider
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
-import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
+import { AHKLSConfig, CfgKey, configPrefix, getCfg, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
 import { klona } from 'klona/json';
-import { clientExecuteCommand, clientUpdateStatusBar, extSetInterpreter, serverExportSymbols, serverGetAHKVersion, serverGetContent, serverGetVersionInfo } from '../../util/src/env';
+import { clientExecuteCommand, clientUpdateStatusBar, extSetInterpreter, serverExportSymbols, serverGetAHKVersion, serverGetContent, serverGetVersionInfo, serverResetInterpreterPath } from '../../util/src/env';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -29,7 +29,8 @@ const workspaceFolders = new Set<string>();
 let hasConfigurationCapability = false, hasWorkspaceFolderCapability = false;
 let uri_switch_to_ahk2 = '';
 
-commands['ahk2.resetinterpreterpath'] = (args: string[]) =>
+// Cannot be done on browser, so added here
+commands[serverResetInterpreterPath] = (args: string[]) =>
 	setInterpreter((args[0]).replace(/^[A-Z]:/, m => m.toLowerCase()));
 
 connection.onInitialize(async params => {
@@ -132,8 +133,9 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	const oldConfig = klona(ahklsConfig);
-	updateConfig(newConfig);
+	// clone the old config to compare
+	const oldConfig = klona(getCfg<AHKLSConfig>());
+	updateConfig(newConfig); // this updates the object in-place, hence the clone above
 	set_WorkspaceFolders(workspaceFolders);
 	const newInterpreterPath = getCfg(CfgKey.InterpreterPath);
 	if (newInterpreterPath !== getCfg(CfgKey.InterpreterPath, oldConfig)) {
@@ -171,16 +173,16 @@ connection.onDidChangeWatchedFiles((change) => {
 documents.onDidOpen(e => {
 	const to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
 	const uri = e.document.uri.toLowerCase();
-	let doc = lexers[uri];
-	if (doc) doc.document = e.document;
-	else lexers[uri] = doc = new Lexer(e.document);
-	Object.defineProperty(doc.include, '', { value: '', enumerable: false });
-	doc.actived = true;
+	let lexer = lexers[uri];
+	if (lexer) lexer.document = e.document;
+	else lexers[uri] = lexer = new Lexer(e.document);
+	Object.defineProperty(lexer.include, '', { value: '', enumerable: false });
+	lexer.actived = true;
 	if (to_ahk2)
-		doc.actionwhenv1 = 'Continue';
+		lexer.actionwhenv1 = 'Continue';
 	if (shouldIncludeLocalLib())
-		parseproject(uri).then(() => doc.last_diags &&
-			Object.keys(doc.included).length && doc.update());
+		parseproject(uri).then(() => lexer.last_diags &&
+			Object.keys(lexer.included).length && lexer.update());
 });
 
 documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
@@ -248,15 +250,15 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		return false;
 	}
 	if (!(data = data.trim())) {
-		const path = ahkpath_cur;
+		const path = interpreterPath;
 		if ((await getAHKversion([path]))[0].endsWith('[UIAccess]')) {
 			let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
 			fail = 2;
 			if (path !== n && (n = resolvePath(n, true)) && !(await getAHKversion([n]))[0].endsWith('[UIAccess]')) {
-				set_ahkpath(n);
+				setInterpreterPath(n);
 				if ((ret = await initpathenv(samefolder)))
 					fail = 0;
-				set_ahkpath(path);
+				setInterpreterPath(path);
 			}
 			fail && connection.window.showWarningMessage(setting.uialimit());
 			await update_rcdata();
@@ -270,7 +272,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		return false;
 	}
 	Object.assign(a_vars, Object.fromEntries(data.replace(/|[A-Z]:\\/g, m => m.toLowerCase()).split('\n').map(l => l.split('|'))));
-	a_vars.ahkpath ??= ahkpath_cur;
+	a_vars.ahkpath ??= interpreterPath;
 	set_version(a_vars.ahkversion ??= '2.0.0');
 	if (a_vars.ahkversion.startsWith('1.'))
 		patherr(setting.versionerr());
@@ -283,11 +285,20 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 			lb.islib = inlibdirs(lb.fsPath);
 	}
 	if (a_vars.threadid) {
-		if (!isahk2_h)
-			set_ahk_h(true), samefolder = false, loadAHK2('ahk2_h'), loadAHK2('winapi', 4);
+		if (!isahk2_h) {
+			set_ahk_h(true);
+			samefolder = false;
+			loadAHK2('ahk2_h');
+			loadAHK2('winapi', 4);
+		}
 	} else {
 		if (isahk2_h)
-			set_ahk_h(false), samefolder = false, initahk2cache(), loadAHK2();
+		{
+			set_ahk_h(false);
+			samefolder = false;
+			initahk2cache();
+			loadAHK2();
+		}
 	}
 	Object.assign(a_vars, { index: '0', clipboard: '', threadid: '' });
 	await update_rcdata();
@@ -306,7 +317,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		parseuserlibs();
 	return true;
 	async function update_rcdata() {
-		const pe = new PEFile(ahkpath_cur);
+		const pe = new PEFile(interpreterPath);
 		try {
 			const rc = await pe.getResource(RESOURCE_TYPE.RCDATA);
 			curPERCDATA = rc;
@@ -362,12 +373,12 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 }
 
 async function setInterpreter(path: string) {
-	const old = ahkpath_cur;
+	const old = interpreterPath;
 	if (!path || path.toLowerCase() === old.toLowerCase())
 		return false;
-	set_ahkpath(path);
+	setInterpreterPath(path);
 	if (!(await changeInterpreter(old, path)))
-		set_ahkpath(old);
+		setInterpreterPath(old);
 	return true;
 }
 
@@ -433,7 +444,7 @@ async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 
 let curPERCDATA: Record<string, Buffer> | undefined = undefined;
 function getRCDATA(name?: string) {
-	const exe = resolvePath(ahkpath_cur, true);
+	const exe = resolvePath(interpreterPath, true);
 	if (!exe) return;
 	if (!name) return { uri: '', path: '', paths: Object.keys(curPERCDATA ?? {}) };
 	const path = `${exe.toLowerCase()}:${name}`;

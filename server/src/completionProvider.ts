@@ -12,7 +12,7 @@ import {
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
 	lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
-import { ahklsConfig, CfgKey, getCfg, shouldIncludeLocalLib, shouldIncludeUserStdLib } from '../../util/src/config';
+import { BraceStyle, CfgKey, getCfg, shouldIncludeLocalLib, shouldIncludeUserStdLib } from '../../util/src/config';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
@@ -500,7 +500,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	let right_is_paren = '(['.includes(linetext[range.end.character] || '\0');
-	const join_c = getCfg(CfgKey.BraceStyle) === 'Allman' ? '\n' : ' ';
+	const join_c = getCfg<BraceStyle>(CfgKey.BraceStyle) === 'Allman' ? '\n' : ' ';
 
 	// fn|()=>...
 	if (symbol) {
@@ -623,8 +623,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	// keyword
-	const keyword_start_with_uppercase = ahklsConfig.FormatOptions?.keyword_start_with_uppercase;
-	const addkeyword = keyword_start_with_uppercase ? function (it: CompletionItem) {
+	const keywordStartWithUpperCase = getCfg<boolean>(CfgKey.KeywordStartWithUppercase);
+	const addkeyword = keywordStartWithUpperCase ? function (it: CompletionItem) {
 		items.push(it = Object.assign({}, it));
 		it.insertText = (it.insertText ?? it.label).replace(/(?<=^(loop\s)?)[a-z]/g, m => m.toUpperCase());
 	} : (it: CompletionItem) => items.push(it);
@@ -636,9 +636,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	} else {
 		const kind = CompletionItemKind.Snippet, insertTextFormat = InsertTextFormat.Snippet;
 		let uppercase = (s: string) => s, remove_indent = uppercase;
-		if (keyword_start_with_uppercase)
+		if (keywordStartWithUpperCase)
 			uppercase = (s: string) => s.replace(/\b[a-z](?=\w)/g, m => m.toUpperCase());
-		if (ahklsConfig.FormatOptions?.switch_case_alignment)
+		if (getCfg(CfgKey.SwitchCaseAlignment))
 			remove_indent = (s: string) => s.replace(/^\t/gm, '');
 		for (const [label, arr] of [
 			['switch', ['switch ${1:[SwitchValue, CaseSense]}', remove_indent('{\n\tcase ${2:}:\n\t\t${3:}\n\tdefault:\n\t\t$0\n}')]],

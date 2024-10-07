@@ -52,10 +52,16 @@ export type ActionType =
 	| 'Stop';
 
 export enum LibIncludeType {
-	'Disabled' = 0,
-	'Local' = 1,
-	'User and Standard' = 2,
-	'All' = 3,
+	Disabled = 'Disabled',
+	Local = 'Local',
+	UserAndStandard = 'User and Standard',
+	All = 'All',
+}
+
+export enum CallWithoutParentheses {
+	Off = 'Off',
+	Parentheses = 'Parentheses',
+	On = 'On',
 }
 
 /**
@@ -122,7 +128,7 @@ export interface AHKLSConfig {
 	Warn: {
 		VarUnset: boolean;
 		LocalSameAsGlobal: boolean;
-		CallWithoutParentheses: boolean | /* Parentheses */ 1;
+		CallWithoutParentheses: CallWithoutParentheses;
 	};
 	WorkingDirs: string[];
 }
@@ -154,7 +160,7 @@ export const newConfig = (config: Partial<AHKLSConfig> = {}): AHKLSConfig => ({
 	Warn: {
 		VarUnset: true,
 		LocalSameAsGlobal: false,
-		CallWithoutParentheses: false,
+		CallWithoutParentheses: CallWithoutParentheses.Off,
 	},
 	WorkingDirs: [],
 	...config,
@@ -165,7 +171,7 @@ export const newConfig = (config: Partial<AHKLSConfig> = {}): AHKLSConfig => ({
  * The client fetches the config from VS Code directly.
  * Updated when the user changes their settings.
  */
-export const ahklsConfig: AHKLSConfig = newConfig();
+const ahklsConfig: AHKLSConfig = newConfig();
 
 /** The start of each config value in package.json */
 export const configPrefix = 'AutoHotkey2';
@@ -175,13 +181,14 @@ export const configPrefix = 'AutoHotkey2';
  * If no config provided, uses the global config.
  */
 export const getCfg = <T = string>(
-	key: CfgKey,
+	key?: CfgKey,
 	/**
 	 * AHKLSConfig for server, { readonly ... } for client.
 	 * Since this func just reads values, both are acceptable.
 	 */
 	config: AHKLSConfig | { readonly [key: string]: unknown } = ahklsConfig,
 ): T => {
+	if (!key) return config as T;
 	const keyPath = key.split('.');
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let value: any = config;
@@ -218,11 +225,19 @@ export const setCfg = <T>(
 	obj[keyPath[keyPath.length - 1]] = value;
 };
 
+/**
+ * Replace the root config with the provided config.
+ * Assumes the provided config is valid.
+ */
+export const setConfigRoot = (config: AHKLSConfig): void => {
+	Object.assign(ahklsConfig, config);
+};
+
 export const shouldIncludeUserStdLib = (
 	config: AHKLSConfig = ahklsConfig,
 ): boolean =>
 	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
-		LibIncludeType['User and Standard'] ||
+		LibIncludeType.UserAndStandard ||
 	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
 		LibIncludeType.All;
 

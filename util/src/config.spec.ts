@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import { suite, test } from 'mocha';
 import {
 	AHKLSConfig,
+	CallWithoutParentheses,
 	CfgKey,
 	getCfg,
 	LibIncludeType,
@@ -31,18 +32,18 @@ suite('setCfg', () => {
 	test('nested property', () => {
 		const cfg: AHKLSConfig = newConfig();
 
-		setCfg(CfgKey.CallWithoutParentheses, false, cfg);
+		setCfg(CfgKey.CallWithoutParentheses, CallWithoutParentheses.Off, cfg);
 
 		assert.strictEqual(
-			false,
-			getCfg<boolean>(CfgKey.CallWithoutParentheses, cfg),
+			CallWithoutParentheses.Off,
+			getCfg(CfgKey.CallWithoutParentheses, cfg),
 		);
 
-		setCfg(CfgKey.CallWithoutParentheses, true, cfg);
+		setCfg(CfgKey.CallWithoutParentheses, CallWithoutParentheses.On, cfg);
 
 		assert.strictEqual(
-			true,
-			getCfg<boolean>(CfgKey.CallWithoutParentheses, cfg),
+			CallWithoutParentheses.On,
+			getCfg(CfgKey.CallWithoutParentheses, cfg),
 		);
 	});
 

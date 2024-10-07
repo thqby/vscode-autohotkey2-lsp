@@ -1,10 +1,10 @@
 import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, Position, Range, TextEdit } from 'vscode-languageserver';
 import { chinese_punctuations, lexers, Token } from './common';
-import { ahklsConfig } from '../../util/src/config';
+import { CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	const doc = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, doc.document.lineCount, 0);
-	const opts = { ...ahklsConfig.FormatOptions };
+	const opts = getCfg<FormatOptions>(CfgKey.Formatter) ?? {};
 	opts.indent_string ??= params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
 	const newText = doc.beautify(opts);
 	return [{ range, newText }];
@@ -12,7 +12,7 @@ export async function documentFormatting(params: DocumentFormattingParams): Prom
 
 export async function rangeFormatting(params: DocumentRangeFormattingParams): Promise<TextEdit[] | undefined> {
 	const doc = lexers[params.textDocument.uri.toLowerCase()], range = params.range;
-	const opts = { ...ahklsConfig.FormatOptions };
+	const opts = getCfg<FormatOptions>(CfgKey.Formatter) ?? {};
 	opts.indent_string = params.options.insertSpaces ? ' '.repeat(params.options.tabSize) : '\t';
 	const newText = doc.beautify(opts, range).trim();
 	return [{ range, newText }];
@@ -20,12 +20,12 @@ export async function rangeFormatting(params: DocumentRangeFormattingParams): Pr
 
 export async function typeFormatting(params: DocumentOnTypeFormattingParams): Promise<TextEdit[] | undefined> {
 	const doc = lexers[params.textDocument.uri.toLowerCase()], { ch, position } = params;
-	const opts = { ...ahklsConfig.FormatOptions };
+	const options = getCfg<FormatOptions>(CfgKey.Formatter) ?? {};
 	let tk: Token, s: string, pp: number | undefined, result: TextEdit[] | undefined;
-	opts.indent_string = ' '.repeat(params.options.tabSize);
+	options.indent_string = ' '.repeat(params.options.tabSize);
 	s = doc.document.getText({ start: { line: 0, character: 0 }, end: { line: 0, character: 1 } });
 	if (s === '\t' || !params.options.insertSpaces && s !== ' ')
-		opts.indent_string = '\t';
+		options.indent_string = '\t';
 	if (ch === '\n') {
 		// eslint-disable-next-line prefer-const
 		let { line, character } = position;
@@ -33,25 +33,25 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 			start: { line: line - 1, character: 0 },
 			end: { line: line + 2, character: 0 }
 		}).split(/\r?\n/);
-		let s = linetexts[0].trimEnd(), indent_string: string;
+		let s = linetexts[0].trimEnd(), indentString: string;
 
 		if (!linetexts[1].trim())
 			character = linetexts[1].length;
 
 		if (s.endsWith('{')) {
-			const prev = opts.indent_string;
+			const prev = options.indent_string;
 			if ((result = format_end_with_brace({ line: line - 1, character: s.length }))) {
-				indent_string = opts.indent_string;
-				if (linetexts[1].substring(0, character) !== indent_string)
+				indentString = options.indent_string;
+				if (linetexts[1].substring(0, character) !== indentString)
 					result.push({
-						newText: indent_string,
+						newText: indentString,
 						range: { start: { line, character: 0 }, end: { line, character } }
 					});
 
 				if ((s = (linetexts[2] ??= '').trimStart()).startsWith('}') &&
-					!linetexts[2].startsWith((indent_string = indent_string.replace(prev, '')) + '}'))
+					!linetexts[2].startsWith((indentString = indentString.replace(prev, '')) + '}'))
 					result.push({
-						newText: indent_string,
+						newText: indentString,
 						range: {
 							start: { line: line + 1, character: 0 },
 							end: { line: line + 1, character: linetexts[2].length - s.length }
@@ -60,12 +60,12 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 			}
 		} else if ((pp = doc.linepos[line - 1]) !== undefined) {
 			const range = { start: doc.document.positionAt(pp), end: { line: line - 1, character: s.length } };
-			const newText = doc.beautify(opts, range).trim();
+			const newText = doc.beautify(options, range).trim();
 			result = [{ range, newText }];
-			indent_string = opts.indent_string;
-			if (linetexts[1].substring(0, character) !== indent_string)
+			indentString = options.indent_string;
+			if (linetexts[1].substring(0, character) !== indentString)
 				result.push({
-					newText: indent_string,
+					newText: indentString,
 					range: { start: { line, character: 0 }, end: { line, character } }
 				});
 		} else if (!s) {
@@ -108,7 +108,7 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 			while ((tk = doc.tokens[pp])?.previous_pair_pos !== undefined)
 				pp = tk.previous_pair_pos;
 			const range = { start: doc.document.positionAt(pp), end: pos };
-			const newText = doc.beautify(opts, range).trim();
+			const newText = doc.beautify(options, range).trim();
 			return [{ range, newText }];
 		}
 	}

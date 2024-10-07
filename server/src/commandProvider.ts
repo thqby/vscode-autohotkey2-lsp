@@ -265,6 +265,9 @@ export function getVersionInfo(uri: string) {
 	return info;
 }
 
+/**
+ * Also modified in `server.ts`, this holds all the commands that the server supports.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const commands: Record<ExtensionCommand, (args: any[]) => any> = {
 	[extDiagnoseAll]: () => diagnoseAll(),

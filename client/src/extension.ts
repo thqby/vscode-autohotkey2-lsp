@@ -57,6 +57,7 @@ import {
 	serverGetVersionInfo,
 	extExtractSymbols,
 	extSwitchAHKVersion,
+	serverResetInterpreterPath,
 } from '../../util/src/env';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
@@ -662,7 +663,7 @@ async function setInterpreter() {
 			ahkconfig.update(CfgKey.InterpreterPath, interpreterPath, from);
 			ahkStatusBarItem.text = sel.label ||= (await getAHKVersion([interpreterPath]))[0];
 			if (server_is_ready)
-				commands.executeCommand('ahk2.resetinterpreterpath', interpreterPath);
+				commands.executeCommand(serverResetInterpreterPath, interpreterPath);
 		}
 	});
 	pick.onDidHide(() => pick.dispose());

@@ -25,7 +25,7 @@ import {
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, BlockStyle, BraceStyle, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
+import { ActionType, BlockStyle, BraceStyle, CallWithoutParentheses, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -445,7 +445,7 @@ export class Lexer {
 	public workspaceFolder = '';
 	private hotstringExecuteAction = false;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
-		let begin_line: boolean, callWithoutParentheses: boolean | 1, comments: Record<number, Token>;
+		let begin_line: boolean, callWithoutParentheses: CallWithoutParentheses, comments: Record<number, Token>;
 		let continuation_sections_mode: boolean | null, currsymbol: AhkSymbol | undefined;
 		let customblocks: { region: number[], bracket: number[] };
 		let dlldir: string, includedir: string, includetable: Record<string, string>;
@@ -599,7 +599,6 @@ export class Lexer {
 								output_lines.pop();
 						}
 						range.end = _this.document.positionAt(end);
-						options.indent_string = preindent_string + indent_string.repeat(flags.indentation_level);
 					}
 					while (flags.mode === MODE.Statement)
 						restore_mode();
@@ -1199,7 +1198,7 @@ export class Lexer {
 				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
-				callWithoutParentheses = getCfg(CfgKey.CallWithoutParentheses);
+				callWithoutParentheses = getCfg<CallWithoutParentheses>(CfgKey.CallWithoutParentheses);
 				try {
 					const rs = utils.get_RCDATA('#2');
 					rs && (includetable[rs.uri] = rs.path);
@@ -2403,7 +2402,7 @@ export class Lexer {
 				}
 				if (type === SymbolKind.Method)
 					maybeclassprop(fc, true);
-				if (callWithoutParentheses && (callWithoutParentheses === true || tp === 'TK_START_EXPR'))
+				if (callWithoutParentheses !== CallWithoutParentheses.Off && (callWithoutParentheses === CallWithoutParentheses.On || tp === 'TK_START_EXPR'))
 					_this.diagnostics.push({ message: warn.callwithoutparentheses(), range: tn.selectionRange, severity: DiagnosticSeverity.Warning });
 			}
 
@@ -3714,8 +3713,8 @@ export class Lexer {
 					addvariable(tk);
 					nexttoken(), parse_pair('(', ')');
 					const pc = tokens[tk.previous_pair_pos!]?.paraminfo?.count ?? 0;
-					if (pc !== 1)
-						getCfg(CfgKey.ParamsCheck) && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
+					if (pc !== 1 && getCfg(CfgKey.ParamsCheck))
+						_this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
 					else if (result.length > l && lk.type === 'TK_WORD') {
 						const vr = result.at(-1) as Variable;
 						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
@@ -4120,7 +4119,7 @@ export class Lexer {
 				.replace(/%a_linefile%/i, _this.fsPath);
 		}
 
-		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
+		function add_include_dllload(text: string, tk?: Pick<Token, 'offset' | 'pos' | 'length' | 'content' | 'data'>, mode = 0, isdll = false) {
 			let m, ignore = false;
 			const q = text[0];
 			if (`'"`.includes(q) && text.endsWith(q))
@@ -6351,23 +6350,23 @@ export class Lexer {
 	public initLibDirs(dir?: string) {
 		if (process.env.BROWSER)
 			return;
-		let workfolder: string;
+		let workDir: string;
 		if (!dir) {
-			for (workfolder of getCfg(CfgKey.WorkingDirectories))
-				if (this.uri.startsWith(workfolder)) {
-					dir = restorePath(URI.parse(workfolder).fsPath.replace(/[\\/]$/, ''));
+			for (workDir of getCfg(CfgKey.WorkingDirectories))
+				if (this.uri.startsWith(workDir)) {
+					dir = restorePath(URI.parse(workDir).fsPath.replace(/[\\/]$/, ''));
 					break;
 				}
 		}
 		if (dir)
 			this.scriptdir = dir;
-		else if ((workfolder = resolve()).toLowerCase() !== this.scriptpath.toLowerCase()
-			&& workfolder.toLowerCase() !== process.argv0.toLowerCase()
-			&& this.scriptpath.toLowerCase().startsWith(workfolder.toLowerCase())
+		else if ((workDir = resolve()).toLowerCase() !== this.scriptpath.toLowerCase()
+			&& workDir.toLowerCase() !== process.argv0.toLowerCase()
+			&& this.scriptpath.toLowerCase().startsWith(workDir.toLowerCase())
 			&& !/\\lib(\\.+)?$/i.test(this.scriptpath)) {
 			if (existsSync(this.scriptpath + '\\Lib') && statSync(this.scriptpath + '\\Lib').isDirectory())
 				this.scriptdir = this.scriptpath;
-			else this.scriptdir = workfolder;
+			else this.scriptdir = workDir;
 		} else this.scriptdir = this.scriptpath.replace(/\\Lib(\\.+)?$/i, '');
 		this.libdirs = [dir = this.scriptdir + '\\Lib\\'];
 		dir = dir.toLowerCase();
