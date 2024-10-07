@@ -285,11 +285,20 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 			lb.islib = inlibdirs(lb.fsPath);
 	}
 	if (a_vars.threadid) {
-		if (!isahk2_h)
-			set_ahk_h(true), samefolder = false, loadAHK2('ahk2_h'), loadAHK2('winapi', 4);
+		if (!isahk2_h) {
+			set_ahk_h(true);
+			samefolder = false;
+			loadAHK2('ahk2_h');
+			loadAHK2('winapi', 4);
+		}
 	} else {
 		if (isahk2_h)
-			set_ahk_h(false), samefolder = false, initahk2cache(), loadAHK2();
+		{
+			set_ahk_h(false);
+			samefolder = false;
+			initahk2cache();
+			loadAHK2();
+		}
 	}
 	Object.assign(a_vars, { index: '0', clipboard: '', threadid: '' });
 	await update_rcdata();
