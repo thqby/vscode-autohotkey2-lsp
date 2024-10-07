@@ -3,6 +3,7 @@ import { updateConfig } from './common';
 import * as assert from 'assert';
 import {
 	BraceStyle,
+	CallWithoutParentheses,
 	CfgKey,
 	getCfg,
 	LibIncludeType,
@@ -84,16 +85,13 @@ suite('updateConfig', () => {
 			setCfg(CfgKey.CallWithoutParentheses, undefined);
 		});
 
-		const theories: [
-			value: 'On' | 'Off' | 'Parentheses',
-			expected: boolean | 1,
-		][] = [
-			['On', true],
-			['Off', false],
-			['Parentheses', 1],
+		const theories: [value: CallWithoutParentheses][] = [
+			[CallWithoutParentheses.On],
+			[CallWithoutParentheses.Off],
+			[CallWithoutParentheses.Parentheses],
 		];
 
-		theories.forEach(([value, expected]) => {
+		theories.forEach(([value]) => {
 			test(value, () => {
 				const config = newConfig();
 				setCfg(CfgKey.CallWithoutParentheses, value, config);
@@ -102,7 +100,7 @@ suite('updateConfig', () => {
 
 				assert.strictEqual(
 					getCfg<number>(CfgKey.CallWithoutParentheses),
-					expected,
+					value,
 				);
 			});
 		});
