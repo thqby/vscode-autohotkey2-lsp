@@ -12,7 +12,7 @@ import {
 	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, getVersionInfo, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadAHK2, loadlocalize, openFile,
 	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, SemanticTokenModifiers,
-	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
+	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, setInterpreterPath, set_Connection,
 	set_dirname, set_locale, set_version, set_WorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
 	traverse_include, typeFormatting, updateConfig, utils, winapis, workspaceSymbolProvider
 } from './common';
@@ -254,10 +254,10 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 			let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
 			fail = 2;
 			if (path !== n && (n = resolvePath(n, true)) && !(await getAHKversion([n]))[0].endsWith('[UIAccess]')) {
-				set_ahkpath(n);
+				setInterpreterPath(n);
 				if ((ret = await initpathenv(samefolder)))
 					fail = 0;
-				set_ahkpath(path);
+				setInterpreterPath(path);
 			}
 			fail && connection.window.showWarningMessage(setting.uialimit());
 			await update_rcdata();
@@ -366,9 +366,9 @@ async function setInterpreter(path: string) {
 	const old = interpreterPath;
 	if (!path || path.toLowerCase() === old.toLowerCase())
 		return false;
-	set_ahkpath(path);
+	setInterpreterPath(path);
 	if (!(await changeInterpreter(old, path)))
-		set_ahkpath(old);
+		setInterpreterPath(old);
 	return true;
 }
 

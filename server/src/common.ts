@@ -448,7 +448,7 @@ export function arrayEqual(a: string[], b: string[]) {
 
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
-export function set_ahkpath(path: string) { interpreterPath = path.replace(/^.:/, s => s.toLowerCase()); }
+export function setInterpreterPath(path: string) { interpreterPath = path.replace(/^.:/, s => s.toLowerCase()); }
 export function set_Connection(conn: Connection) { return connection = conn; }
 export function set_dirname(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }
