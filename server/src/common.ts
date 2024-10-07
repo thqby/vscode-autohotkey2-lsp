@@ -369,9 +369,7 @@ export function enum_ahkfiles(dirpath: string) {
  */
 export function updateConfig(newConfig: AHKLSConfig): void {
 	const newConfigLibSuggestions = getCfg(CfgKey.LibrarySuggestions, newConfig);
-	if (typeof newConfigLibSuggestions === 'string')
-		setCfg(CfgKey.LibrarySuggestions, LibIncludeType[newConfigLibSuggestions as unknown as LibIncludeType], newConfig);
-	else if (typeof newConfigLibSuggestions === 'boolean')
+	if (typeof newConfigLibSuggestions === 'boolean')
 		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? LibIncludeType.All : LibIncludeType.Disabled, newConfig);
 	const newConfigCallWithoutParentheses = getCfg(CfgKey.CallWithoutParentheses, newConfig);
 	if (typeof newConfigCallWithoutParentheses === 'string')

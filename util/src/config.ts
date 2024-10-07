@@ -52,10 +52,10 @@ export type ActionType =
 	| 'Stop';
 
 export enum LibIncludeType {
-	'Disabled' = 0,
-	'Local' = 1,
-	'User and Standard' = 2,
-	'All' = 3,
+	Disabled = 'Disabled',
+	Local = 'Local',
+	UserAndStandard = 'User and Standard',
+	All = 'All',
 }
 
 /**
@@ -222,7 +222,7 @@ export const shouldIncludeUserStdLib = (
 	config: AHKLSConfig = ahklsConfig,
 ): boolean =>
 	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
-		LibIncludeType['User and Standard'] ||
+		LibIncludeType.UserAndStandard ||
 	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
 		LibIncludeType.All;
 
