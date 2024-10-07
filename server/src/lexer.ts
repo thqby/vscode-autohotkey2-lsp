@@ -25,7 +25,7 @@ import {
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { ActionType, BlockStyle, BraceStyle, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
+import { ActionType, BlockStyle, BraceStyle, CallWithoutParentheses, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -445,7 +445,7 @@ export class Lexer {
 	public workspaceFolder = '';
 	private hotstringExecuteAction = false;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
-		let begin_line: boolean, callWithoutParentheses: boolean | 1, comments: Record<number, Token>;
+		let begin_line: boolean, callWithoutParentheses: CallWithoutParentheses, comments: Record<number, Token>;
 		let continuation_sections_mode: boolean | null, currsymbol: AhkSymbol | undefined;
 		let customblocks: { region: number[], bracket: number[] };
 		let dlldir: string, includedir: string, includetable: Record<string, string>;
@@ -1199,7 +1199,7 @@ export class Lexer {
 				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
-				callWithoutParentheses = getCfg(CfgKey.CallWithoutParentheses);
+				callWithoutParentheses = getCfg<CallWithoutParentheses>(CfgKey.CallWithoutParentheses);
 				try {
 					const rs = utils.get_RCDATA('#2');
 					rs && (includetable[rs.uri] = rs.path);
@@ -2403,7 +2403,7 @@ export class Lexer {
 				}
 				if (type === SymbolKind.Method)
 					maybeclassprop(fc, true);
-				if (callWithoutParentheses && (callWithoutParentheses === true || tp === 'TK_START_EXPR'))
+				if (callWithoutParentheses !== CallWithoutParentheses.Off && (callWithoutParentheses === CallWithoutParentheses.On || tp === 'TK_START_EXPR'))
 					_this.diagnostics.push({ message: warn.callwithoutparentheses(), range: tn.selectionRange, severity: DiagnosticSeverity.Warning });
 			}
 

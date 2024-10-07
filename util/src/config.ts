@@ -58,6 +58,12 @@ export enum LibIncludeType {
 	All = 'All',
 }
 
+export enum CallWithoutParentheses {
+	Off = 'Off',
+	Parentheses = 'Parentheses',
+	On = 'On',
+}
+
 /**
  * Possible values for `array_style` and `object_style`
  * Defined in package.json, do not change.
@@ -122,7 +128,7 @@ export interface AHKLSConfig {
 	Warn: {
 		VarUnset: boolean;
 		LocalSameAsGlobal: boolean;
-		CallWithoutParentheses: boolean | /* Parentheses */ 1;
+		CallWithoutParentheses: CallWithoutParentheses;
 	};
 	WorkingDirs: string[];
 }
@@ -154,7 +160,7 @@ export const newConfig = (config: Partial<AHKLSConfig> = {}): AHKLSConfig => ({
 	Warn: {
 		VarUnset: true,
 		LocalSameAsGlobal: false,
-		CallWithoutParentheses: false,
+		CallWithoutParentheses: CallWithoutParentheses.Off,
 	},
 	WorkingDirs: [],
 	...config,
