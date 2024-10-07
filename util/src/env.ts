@@ -94,7 +94,7 @@ export const extDebugParams = `${extCommandPrefix}debugParams`;
 export const extDebugAttach = `${extCommandPrefix}debugAttach`;
 
 /** Select syntaxes */
-export const extSelectSyntaxes = `${extCommandPrefix}select.syntaxes`;
+export const extSelectSyntaxes = `${extCommandPrefix}selectSyntaxes`;
 
 /** Update version info file header comment */
 export const extUpdateVersionInfo = `${extCommandPrefix}updateVersionInfo`;
