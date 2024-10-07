@@ -173,16 +173,16 @@ connection.onDidChangeWatchedFiles((change) => {
 documents.onDidOpen(e => {
 	const to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
 	const uri = e.document.uri.toLowerCase();
-	let doc = lexers[uri];
-	if (doc) doc.document = e.document;
-	else lexers[uri] = doc = new Lexer(e.document);
-	Object.defineProperty(doc.include, '', { value: '', enumerable: false });
-	doc.actived = true;
+	let lexer = lexers[uri];
+	if (lexer) lexer.document = e.document;
+	else lexers[uri] = lexer = new Lexer(e.document);
+	Object.defineProperty(lexer.include, '', { value: '', enumerable: false });
+	lexer.actived = true;
 	if (to_ahk2)
-		doc.actionwhenv1 = 'Continue';
+		lexer.actionwhenv1 = 'Continue';
 	if (shouldIncludeLocalLib())
-		parseproject(uri).then(() => doc.last_diags &&
-			Object.keys(doc.included).length && doc.update());
+		parseproject(uri).then(() => lexer.last_diags &&
+			Object.keys(lexer.included).length && lexer.update());
 });
 
 documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
