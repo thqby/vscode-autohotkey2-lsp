@@ -701,7 +701,7 @@ async function setInterpreter() {
 
 async function selectSyntaxes() {
 	const path = (await window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true }))?.[0].fsPath;
-	const t = getConfigRoot().inspect('Syntaxes');
+	const t = getConfigRoot().inspect(CfgKey.Syntaxes);
 	let v = '', f = ConfigurationTarget.Global;
 	if (t) {
 		v = ((f = ConfigurationTarget.WorkspaceFolder, t.workspaceFolderValue) ??
@@ -710,7 +710,7 @@ async function selectSyntaxes() {
 	}
 	if (path === undefined || v.toLowerCase() === path.toLowerCase())
 		return;
-	getConfigRoot().update('Syntaxes', path || undefined, f);
+	getConfigRoot().update(CfgKey.Syntaxes, path || undefined, f);
 }
 
 function getAHKVersion(paths: string[]): Thenable<string[]> {
