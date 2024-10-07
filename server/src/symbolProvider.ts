@@ -8,10 +8,11 @@ import {
 	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable,
 	ahkuris, ahkvars, check_same_name_error, connection, decltype_expr,
-	diagnostic, enum_ahkfiles, ahkppConfig, find_class, get_class_constructor,
+	diagnostic, enum_ahkfiles, find_class, get_class_constructor,
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
-import { CfgKey, getCfg } from './config';
+import { CfgKey, getCfg } from '../../util/src/config';
+import { clientGetWorkspaceFileContent, clientGetWorkspaceFiles } from '../../util/src/env';
 
 export let globalsymbolcache: Record<string, AhkSymbol> = {};
 
@@ -41,7 +42,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		return doc.symbolInformation;
 	if (ahkuris.winapi && !list.includes(ahkuris.winapi))
 		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
-	const warnLocalSameAsGlobal = getCfg(ahkppConfig, CfgKey.LocalSameAsGlobal);
+	const warnLocalSameAsGlobal = getCfg(CfgKey.LocalSameAsGlobal);
 	const result: AhkSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class];
 	for (const [k, v] of Object.entries(doc.declaration)) {
@@ -55,7 +56,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			result.push(v), converttype(v, v, islib || v === ahkvars[k]).definition = v;
 	}
 	flatTree(doc);
-	if (getCfg(ahkppConfig, CfgKey.VarUnset))
+	if (getCfg(CfgKey.VarUnset))
 		for (const [k, v] of unset_vars) {
 			if (k.assigned)
 				continue;
@@ -294,7 +295,7 @@ function get_func_param_count(fn: FuncNode) {
 export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 	const paraminfo = info.paraminfo;
 	let is_cls: boolean, params;
-	if (!paraminfo || !getCfg(ahkppConfig, CfgKey.ParamsCheck)) return;
+	if (!paraminfo || !getCfg(CfgKey.ParamsCheck)) return;
 	if ((is_cls = node?.kind === SymbolKind.Class))
 		node = get_class_constructor(node as unknown as ClassNode) as FuncNode;
 	if (!(params = node?.params)) return;
@@ -387,12 +388,12 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 			}
 		}
 	} else {
-		const uris = (await connection?.sendRequest('ahk2.getWorkspaceFiles', []) || []) as string[];
+		const uris = (await connection?.sendRequest(clientGetWorkspaceFiles, []) || []) as string[];
 		for (const uri_ of uris) {
 			const uri = uri_.toLowerCase();
 			let d: Lexer;
 			if (!lexers[uri]) {
-				const content = (await connection?.sendRequest('ahk2.getWorkspaceFileContent', [uri_])) as string;
+				const content = (await connection?.sendRequest(clientGetWorkspaceFileContent, [uri_])) as string;
 				d = new Lexer(TextDocument.create(uri_, 'ahk2', -10, content));
 				d.parseScript(), lexers[uri] = d;
 				if (filterSymbols(uri)) return symbols;

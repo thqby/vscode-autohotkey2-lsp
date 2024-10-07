@@ -1,9 +1,9 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import {
 	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
-	checkParams, diagnostic, ahkppConfig, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
+	checkParams, diagnostic, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
 } from './common';
-import { CfgKey, getCfg } from './config';
+import { CfgKey, getCfg } from '../../util/src/config';
 
 let curclass: ClassNode | undefined;
 const memscache = new Map<ClassNode, Record<string, AhkSymbol>>();
@@ -124,7 +124,7 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 						return sem.type = SemanticTokenTypes.property;
 					}
 					case undefined:
-						if ((curclass.checkmember ?? doc.checkmember) !== false && getCfg(ahkppConfig, CfgKey.ClassNonDynamicMemberCheck)) {
+						if ((curclass.checkmember ?? doc.checkmember) !== false && getCfg(CfgKey.ClassNonDynamicMemberCheck)) {
 							const tt = doc.tokens[tk.next_token_offset];
 							if (ASSIGN_TYPE.includes(tt?.content)) {
 								cls_add_prop(curclass, tk.content, tk.offset);

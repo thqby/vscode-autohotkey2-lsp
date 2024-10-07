@@ -21,11 +21,11 @@ import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
-	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, ahkppConfig,
+	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection,
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
-import { newFormatterConfig, FormatterConfig, BraceStyle, ActionType, newAhkppConfig, CallWithoutParentheses, getCfg, CfgKey } from './config';
+import { ActionType, BlockStyle, BraceStyle, CallWithoutParentheses, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -204,6 +204,108 @@ interface ParamList extends Array<Variable> {
 	full?: string
 	variadic?: boolean
 }
+/** Flags used for formatter directives and other lexer conditions. */
+export interface Flag {
+	array_style?: BlockStyle,
+	case_body: boolean | null,
+	catch_block: boolean,
+	declaration_statement: boolean,
+	else_block: boolean,
+	finally_block: boolean,
+	had_comment: number,
+	hotif_block?: boolean,
+	if_block: boolean,
+	in_case_statement: boolean,
+	in_case: boolean,
+	in_expression: boolean,
+	in_fat_arrow?: boolean,
+	indentation_level: number,
+	last_text: string,
+	last_word: string,
+	loop_block: number,
+	mode: string,
+	object_style?: BlockStyle,
+	parent: Flag,
+	start_line_index: number,
+	ternary_depth?: number,
+	ternary_indent?: number,
+	try_block: boolean
+};
+
+export interface InternalFormatOptions {
+	array_style: BlockStyle;
+	brace_style: BraceStyle;
+	break_chained_methods: boolean;
+	ignore_comment: boolean;
+	indent_string: string;
+	indent_between_hotif_directive: boolean;
+	keyword_start_with_uppercase: boolean;
+	max_preserve_newlines: number;
+	object_style: BlockStyle;
+	preserve_newlines: boolean;
+	space_before_conditional: boolean;
+	space_after_double_colon: boolean;
+	space_in_empty_paren: boolean;
+	space_in_other: boolean;
+	space_in_paren: boolean;
+	switch_case_alignment: boolean;
+	symbol_with_same_case: boolean;
+	white_space_before_inline_comment: string;
+	wrap_line_length: number;
+}
+
+/**
+ * When not provided a value, returns the default internal formatter options.
+ * Otherwise, properties of the provided value are preserved and merged with the defaults.
+ */
+export const newInternalFormatOptions = (partial: Partial<InternalFormatOptions> = {}): InternalFormatOptions => ({
+	array_style: 'expand',
+	brace_style: 'Preserve',
+	break_chained_methods: false,
+	ignore_comment: false,
+	indent_string: '\t',
+	indent_between_hotif_directive: false,
+	keyword_start_with_uppercase: false,
+	max_preserve_newlines: 3,
+	object_style: 'expand',
+	preserve_newlines: true,
+	space_before_conditional: true,
+	space_after_double_colon: true,
+	space_in_empty_paren: false,
+	space_in_other: true,
+	space_in_paren: false,
+	switch_case_alignment: false,
+	symbol_with_same_case: false,
+	white_space_before_inline_comment: '',
+	wrap_line_length: 0,
+	...partial
+});
+
+export const mapToInternalFormatOptions = (extOptions: Partial<FormatOptions>): InternalFormatOptions => {
+	const defaultOptions = newInternalFormatOptions();
+	const result =  {
+		array_style: extOptions.arrayStyle ?? defaultOptions.array_style,
+		brace_style: extOptions.braceStyle ?? defaultOptions.brace_style,
+		break_chained_methods: extOptions.breakChainedMethods ?? defaultOptions.break_chained_methods,
+		ignore_comment: extOptions.ignoreComment ?? defaultOptions.ignore_comment,
+		indent_string: extOptions.indentString ?? defaultOptions.indent_string,
+		indent_between_hotif_directive: extOptions.indentBetweenHotIfDirectives ?? defaultOptions.indent_between_hotif_directive,
+		keyword_start_with_uppercase: extOptions.keywordStartWithUppercase ?? defaultOptions.keyword_start_with_uppercase,
+		max_preserve_newlines: extOptions.maxPreserveNewlines ?? defaultOptions.max_preserve_newlines,
+		object_style: extOptions.objectStyle ?? defaultOptions.object_style,
+		preserve_newlines: extOptions.preserveNewlines ?? defaultOptions.preserve_newlines,
+		space_before_conditional: extOptions.spaceBeforeConditional ?? defaultOptions.space_before_conditional,
+		space_after_double_colon: extOptions.spaceAfterDoubleColon ?? defaultOptions.space_after_double_colon,
+		space_in_empty_paren: extOptions.spaceInEmptyParen ?? defaultOptions.space_in_empty_paren,
+		space_in_other: extOptions.spaceInOther ?? defaultOptions.space_in_other,
+		space_in_paren: extOptions.spaceInParen ?? defaultOptions.space_in_paren,
+		switch_case_alignment: extOptions.switchCaseAlignment ?? defaultOptions.switch_case_alignment,
+		symbol_with_same_case: extOptions.symbolWithSameCase ?? defaultOptions.symbol_with_same_case,
+		white_space_before_inline_comment: extOptions.whitespaceBeforeInlineComment ?? defaultOptions.white_space_before_inline_comment,
+		wrap_line_length: extOptions.wrapLineLength ?? defaultOptions.wrap_line_length,
+	}
+	return result;
+};
 
 namespace SymbolNode {
 	export function create(name: string, kind: SymbolKind, range: Range, selectionRange: Range, children?: AhkSymbol[]): AhkSymbol {
@@ -268,7 +370,7 @@ const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectL
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[012])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|help|sleep|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
 const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 export const ASSIGN_TYPE = [':=', '??='];
-const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 };
+const OBJECT_STYLE: Record<BlockStyle, BlockStyle> = { collapse: 'collapse', expand: 'expand', none: 'none' };
 const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 const META_FUNCNAME = ['__NEW', '__INIT', '__ITEM', '__ENUM', '__GET', '__CALL', '__SET', '__DELETE'];
 export const ANY = create_prototype('Any');
@@ -321,9 +423,9 @@ class ParseStopError {
 }
 
 export class Lexer {
-	public actionWhenV1Detected?: ActionType = getCfg(newAhkppConfig(), CfgKey.ActionWhenV1Detected);
+	public actionWhenV1Detected?: ActionType = 'Continue';
 	public actived = false;
-	public beautify: (options: FormatterConfig, range?: Range) => string;
+	public beautify: (options: Partial<FormatOptions>, range?: Range) => string;
 	public checkmember: boolean | undefined;
 	public children: AhkSymbol[] = [];
 	public d = 0;
@@ -372,35 +474,8 @@ export class Lexer {
 		const _this = this, uri = URI.parse(document.uri);
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
 		let in_loop = false, maybev1 = 0, requirev2 = false, string_mode = false;
-
-		interface Flag {
-			arrayStyle?: number,
-			case_body: boolean | null,
-			catch_block: boolean,
-			declaration_statement: boolean,
-			else_block: boolean,
-			finally_block: boolean,
-			had_comment: number,
-			hotif_block?: boolean,
-			if_block: boolean,
-			in_case_statement: boolean,
-			in_case: boolean,
-			in_expression: boolean,
-			in_fat_arrow?: boolean,
-			indentation_level: number,
-			last_text: string,
-			last_word: string,
-			loop_block: number,
-			mode: string,
-			objectStyle?: number,
-			parent: Flag,
-			start_line_index: number,
-			ternary_depth?: number,
-			ternary_indent?: number,
-			try_block: boolean
-		};
 		let output_lines: { text: string[], indent: number }[], flags: Flag, previous_flags: Flag, flag_store: Flag[];
-		let opt: FormatterConfig, preindentString: string, indentString: string, space_in_other: boolean, ck: Token;
+		let opt: InternalFormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
 		let token_text: string, token_text_low: string, token_type: string, last_type: string, last_text: string;
 		let output_space_before_token: boolean | undefined, is_conditional: boolean;
 		const handlers: Record<string, () => void> = {
@@ -492,29 +567,29 @@ export class Lexer {
 			return !ignore && _this.findStrOrComment(offset) || eof;
 		}
 
-		this.beautify = function (options: FormatterConfig, range?: Range) {
+		this.beautify = function (options: Partial<FormatOptions>, range?: Range) {
 			let end_pos: number;
 			!_this.isparsed && _this.parseScript();
 
-			opt = newFormatterConfig(options);
+			opt = mapToInternalFormatOptions(options);
 
 			last_type = last_text = '', begin_line = true, lst = { ...EMPTY_TOKEN };
 			last_LF = -1, end_pos = input_length, ck = _this.get_token(0);
-			preindentString = input.substring(input.lastIndexOf('\n', parser_pos = ck.offset) + 1, parser_pos);
+			preindent_string = input.substring(input.lastIndexOf('\n', parser_pos = ck.offset) + 1, parser_pos);
 			is_conditional = output_space_before_token = false, format_mode = true;
-			indentString = opt.indentString ?? '\t', space_in_other = opt.spaceInOther ?? true;
+			indent_string = opt.indent_string ?? '\t', space_in_other = opt.space_in_other ?? true;
 			output_lines = [create_output_line()];
 			flag_store = [], flags = undefined as unknown as Flag;
 			set_mode(MODE.BlockStatement);
 
-			if (opt.symbolWithSameCase)
+			if (opt.symbol_with_same_case)
 				symbolProvider({ textDocument: _this.document });
 
 			if (range) {
 				end_pos = _this.document.offsetAt(range.end);
 				ck = _this.find_token(_this.document.offsetAt(range.start));
 				range.start = _this.document.positionAt(parser_pos = ck.offset);
-				preindentString = input.substring(input.lastIndexOf('\n', parser_pos) + 1, parser_pos).match(/^[ \t]*/)![0];
+				preindent_string = input.substring(input.lastIndexOf('\n', parser_pos) + 1, parser_pos).match(/^[ \t]*/)![0];
 			}
 
 			while (true) {
@@ -542,7 +617,6 @@ export class Lexer {
 								output_lines.pop();
 						}
 						range.end = _this.document.positionAt(end);
-						options.indentString = preindentString + indentString.repeat(flags.indentation_level);
 					}
 					while (flags.mode === MODE.Statement)
 						restore_mode();
@@ -562,8 +636,8 @@ export class Lexer {
 					} else if (!is_conditional && !flags.in_expression) {
 						if ((ck.type.endsWith('COMMENT') || !is_line_continue(flags.mode === MODE.Statement ? ck.previous_token ?? EMPTY_TOKEN : {} as Token, ck)) &&
 							!(last_type === 'TK_RESERVED' && ['catch', 'else', 'finally', 'until'].includes(last_text))) {
-							if (opt.maxPreserveNewlines && n_newlines > opt.maxPreserveNewlines)
-								n_newlines = opt.maxPreserveNewlines;
+							if (opt.max_preserve_newlines && n_newlines > opt.max_preserve_newlines)
+								n_newlines = opt.max_preserve_newlines;
 
 							if (!just_added_newline())
 								output_lines.push(create_output_line());
@@ -626,9 +700,9 @@ export class Lexer {
 		};
 
 		function format_params_default_val(tokens: Record<number, Token>, params: ParamList) {
-			opt = newFormatterConfig({ maxPreserveNewlines: 1 });
-			space_in_other = true, indentString = '\t';
-			format_mode = true, preindentString = '';
+			opt = newInternalFormatOptions({ max_preserve_newlines: 1 });
+			space_in_other = true, indent_string = '\t';
+			format_mode = true, preindent_string = '';
 			delete params.format;
 			for (const param of params) {
 				if (!param.range_offset)
@@ -1143,7 +1217,7 @@ export class Lexer {
 				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
-				callWithoutParentheses = getCfg(ahkppConfig, CfgKey.CallWithoutParentheses);
+				callWithoutParentheses = getCfg<CallWithoutParentheses>(CfgKey.CallWithoutParentheses);
 				try {
 					const rs = utils.get_RCDATA('#2');
 					rs && (includetable[rs.uri] = rs.path);
@@ -1182,7 +1256,7 @@ export class Lexer {
 			if (requirev2)
 				return false;
 			_this.maybev1 ??= maybev1 = 1;
-			switch (_this.actionWhenV1Detected ??= getCfg(ahkppConfig, CfgKey.ActionWhenV1Detected)) {
+			switch (_this.actionWhenV1Detected ??= getCfg(CfgKey.ActionWhenV1Detected)) {
 				case 'SkipLine': {
 					if (!allow_skip)
 						return true;
@@ -2347,7 +2421,7 @@ export class Lexer {
 				}
 				if (type === SymbolKind.Method)
 					maybeclassprop(fc, true);
-				if (callWithoutParentheses != CallWithoutParentheses.Off && (callWithoutParentheses == CallWithoutParentheses.On || tp === 'TK_START_EXPR'))
+				if (callWithoutParentheses !== CallWithoutParentheses.Off && (callWithoutParentheses === CallWithoutParentheses.On || tp === 'TK_START_EXPR'))
 					_this.diagnostics.push({ message: warn.callwithoutparentheses(), range: tn.selectionRange, severity: DiagnosticSeverity.Warning });
 			}
 
@@ -3658,7 +3732,7 @@ export class Lexer {
 					addvariable(tk);
 					nexttoken(), parse_pair('(', ')');
 					const pc = tokens[tk.previous_pair_pos!]?.paraminfo?.count ?? 0;
-					if (pc !== 1 && getCfg(ahkppConfig, CfgKey.ParamsCheck))
+					if (pc !== 1 && getCfg(CfgKey.ParamsCheck))
 						_this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
 					else if (result.length > l && lk.type === 'TK_WORD') {
 						const vr = result.at(-1) as Variable;
@@ -4471,7 +4545,7 @@ export class Lexer {
 
 		function create_flags(flags_base: Flag | undefined, mode: string) {
 			let indentation_level = 0, had_comment = 0, ternary_depth;
-			let last_text = '', last_word = '', arrayStyle, objectStyle;
+			let last_text = '', last_word = '', array_style, object_style;
 			let in_expression = [MODE.ArrayLiteral, MODE.Expression, MODE.ObjectLiteral].includes(mode);
 			if (flags_base) {
 				indentation_level = flags_base.indentation_level;
@@ -4479,12 +4553,12 @@ export class Lexer {
 				last_text = flags_base.last_text;
 				last_word = flags_base.last_word;
 				in_expression ||= flags_base.in_expression;
-				arrayStyle = flags_base.arrayStyle;
-				objectStyle = flags_base.objectStyle;
+				array_style = flags_base.array_style;
+				object_style = flags_base.object_style;
 			}
 
 			const next_flags: Flag = {
-				arrayStyle,
+				array_style: array_style,
 				case_body: false,
 				catch_block: false,
 				declaration_statement: false,
@@ -4500,7 +4574,7 @@ export class Lexer {
 				last_word,
 				loop_block: 0,
 				mode,
-				objectStyle,
+				object_style: object_style,
 				parent: flags_base!,
 				start_line_index: output_lines.length,
 				ternary_depth,
@@ -4530,19 +4604,19 @@ export class Lexer {
 		}
 
 		function allow_wrap_or_preserved_newline(force_linewrap = false): void {
-			if (opt.wrapLineLength && !force_linewrap) {
+			if (opt.wrap_line_length && !force_linewrap) {
 				const line = output_lines.at(-1)!;
 				let proposed_line_length = 0;
 				// never wrap the first token of a line.
 				if (line.text.length > 0) {
 					proposed_line_length = line.text.join('').length + token_text.length +
 						(output_space_before_token ? 1 : 0);
-					if (proposed_line_length >= opt.wrapLineLength) {
+					if (proposed_line_length >= opt.wrap_line_length) {
 						force_linewrap = true;
 					}
 				}
 			}
-			if (((opt.preserveNewlines && input_wanted_newline) || force_linewrap) && !just_added_newline()) {
+			if (((opt.preserve_newlines && input_wanted_newline) || force_linewrap) && !just_added_newline()) {
 				print_newline(true);
 			}
 		}
@@ -4565,8 +4639,8 @@ export class Lexer {
 		function print_token(printable_token?: string): void {
 			const line = output_lines.at(-1)!;
 			if (!line.text.length) {
-				if (preindentString)
-					line.text.push(preindentString);
+				if (preindent_string)
+					line.text.push(preindent_string);
 				flags.indentation_level = print_indentString(flags.indentation_level);
 			} else if (output_space_before_token)
 				line.text.push(' ');
@@ -4580,7 +4654,7 @@ export class Lexer {
 							level = Math.min(output_lines[i].indent + 1, level);
 							break;
 						}
-					line.text.push(indentString.repeat(line.indent = level));
+					line.text.push(indent_string.repeat(line.indent = level));
 				}
 				return level;
 			}
@@ -5344,9 +5418,9 @@ export class Lexer {
 
 		function get_style() {
 			if (flags.mode === MODE.ObjectLiteral)
-				return flags.objectStyle ?? opt.objectStyle;
+				return flags.object_style ?? opt.object_style;
 			if (flags.mode === MODE.ArrayLiteral)
-				return flags.arrayStyle ?? opt.arrayStyle;
+				return flags.array_style ?? opt.array_style;
 		}
 
 		function handle_start_expr(): void {
@@ -5369,7 +5443,7 @@ export class Lexer {
 					print_token();
 					flags.last_word = '';
 					flags.indentation_level = real_indentation_level() + 1;
-					if (opt.spaceInParen) {
+					if (opt.space_in_paren) {
 						output_space_before_token = true;
 					}
 					return;
@@ -5389,12 +5463,12 @@ export class Lexer {
 					if (last_text.match(/^(break|continue|goto)$/i))
 						output_space_before_token = false;
 					else if (['if', 'for', 'while', 'loop', 'case', 'catch', 'switch'].includes(last_text))
-						output_space_before_token = Boolean(opt.spaceBeforeConditional);
+						output_space_before_token = Boolean(opt.space_before_conditional);
 					else output_space_before_token = space_in_other;
 			}
 
 			if (!start_of_object_property()) {
-				if (input_wanted_newline && opt.preserveNewlines)
+				if (input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
 				else if (last_type === 'TK_EQUALS' || last_type === 'TK_COMMA' || last_type === 'TK_OPERATOR')
 					allow_wrap_or_preserved_newline();
@@ -5412,13 +5486,13 @@ export class Lexer {
 				const c = (ck.data as Token).content;
 				if (c)
 					print_token(c);
-			} else if (opt.spaceInParen)
+			} else if (opt.space_in_paren)
 				output_space_before_token = true;
 
 			// In all cases, if we newline while inside an expression it should be indented.
 			indent();
 
-			if (token_text === '[' && (flags.arrayStyle ?? opt.arrayStyle) === OBJECT_STYLE.expand)
+			if (token_text === '[' && (flags.array_style ?? opt.array_style) === OBJECT_STYLE.expand)
 				print_newline(true);
 		}
 
@@ -5431,17 +5505,17 @@ export class Lexer {
 			const is_array = token_text === ']' && flags.mode === MODE.ArrayLiteral;
 			restore_mode();
 			if (is_array) {
-				const style = flags.arrayStyle ?? opt.arrayStyle;
+				const style = flags.array_style ?? opt.array_style;
 				if (style === OBJECT_STYLE.collapse || last_text === '[' || flags.indentation_level >= previous_flags.indentation_level)
 					trim_newlines();
-				else if (style || input_wanted_newline && opt.preserveNewlines)
+				else if (style || input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
 			} else if ((last_type === 'TK_END_EXPR' || last_type === 'TK_END_BLOCK') && flags.indentation_level >= previous_flags.indentation_level)
 				trim_newlines();
 			else if (last_type !== 'TK_START_EXPR')
 				allow_wrap_or_preserved_newline();
 
-			output_space_before_token = Boolean(opt.spaceInParen && !(last_type === 'TK_START_EXPR' && !opt.spaceInEmptyParen));
+			output_space_before_token = Boolean(opt.space_in_paren && !(last_type === 'TK_START_EXPR' && !opt.space_in_empty_paren));
 			print_token();
 			continuation_sections_mode ??= false;
 		}
@@ -5455,7 +5529,7 @@ export class Lexer {
 
 				output_space_before_token ||= space_in_other && last_type !== 'TK_START_EXPR';
 				print_token(), indent();
-				if ((flags.objectStyle ?? opt.objectStyle) === OBJECT_STYLE.expand)
+				if ((flags.object_style ?? opt.object_style) === OBJECT_STYLE.expand)
 					print_newline(true);
 				else output_space_before_token = space_in_other;
 			} else {
@@ -5473,18 +5547,20 @@ export class Lexer {
 				flags.indentation_level = level ??= flags.indentation_level;
 				output_space_before_token ??= space_in_other;
 
-				if (previous_flags.in_case_statement && last_type === 'TK_LABEL' && /^(default)?:$/.test(last_text))
+				const firstCondition = previous_flags.in_case_statement && last_type === 'TK_LABEL' && /^(default)?:$/.test(last_text);
+				const secondCondition = opt.brace_style === 'Allman' || input_wanted_newline && opt.preserve_newlines && opt.brace_style === 'Preserve';
+				if (firstCondition)
 					flags.case_body = null, print_newline(), flags.indentation_level--;
-				else if (opt.braceStyle === BraceStyle.Allman || input_wanted_newline && opt.preserveNewlines && !opt.braceStyle)
+				else if (secondCondition)
 					if (ck.in_expr === undefined || flags.mode === MODE.Expression)
 						print_newline(true);
 
 				const need_newline = !just_added_newline();
 				print_token();
 				previous_flags.indentation_level = Math.min(previous_flags.indentation_level, flags.indentation_level);
-				if (!(opt.switchCaseAlignment && flags.last_word === 'switch'))
+				if (!(opt.switch_case_alignment && flags.last_word === 'switch'))
 					indent();
-				if (need_newline || opt.braceStyle !== undefined)
+				if (need_newline || opt.brace_style !== 'Preserve')
 					print_newline(true);
 				else output_space_before_token = space_in_other;
 			}
@@ -5497,14 +5573,15 @@ export class Lexer {
 				restore_mode();
 
 			const is_obj = flags.mode === MODE.ObjectLiteral, is_exp = is_obj || (ck.in_expr !== undefined);
+			const secondCondition = opt.brace_style !== 'Preserve' || input_wanted_newline;
 			if (is_obj) {
-				const style = flags.objectStyle ?? opt.objectStyle;
+				const style = flags.object_style ?? opt.object_style;
 				if (style === OBJECT_STYLE.collapse || last_text === '{')
 					trim_newlines();
-				else if (style || input_wanted_newline && opt.preserveNewlines)
+				else if (style || input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
 				output_space_before_token = space_in_other && last_text !== '{';
-			} else if (opt.braceStyle !== undefined || input_wanted_newline)
+			} else if (secondCondition)
 				print_newline(true);
 
 			restore_mode();
@@ -5512,7 +5589,7 @@ export class Lexer {
 			if (!is_exp) {
 				if (previous_flags.case_body === null)
 					indent();
-				if (opt.braceStyle !== undefined)
+				if (opt.brace_style !== 'Preserve')
 					print_newline(true);
 				output_space_before_token = space_in_other;
 			}
@@ -5531,8 +5608,8 @@ export class Lexer {
 			}
 
 			if (token_type === 'TK_RESERVED') {
-				if (opt.keywordStartWithUppercase !== undefined)
-					token_text = opt.keywordStartWithUppercase ?
+				if (opt.keyword_start_with_uppercase !== undefined)
+					token_text = opt.keyword_start_with_uppercase ?
 						token_text_low.replace(/^./, s => s.toUpperCase()) : token_text_low;
 				if (is_special_word(token_text_low)) {
 					if (input_wanted_newline)
@@ -5625,11 +5702,17 @@ export class Lexer {
 					}
 					if (maybe_need_newline) {
 						trim_newlines();
-						if (flags.last_text !== '}' || opt.braceStyle !== BraceStyle.OneTrueBrace || input_wanted_newline && opt.preserveNewlines && !opt.braceStyle)
+						const condition = flags.last_text !== '}' 
+						|| opt.brace_style === 'Allman'
+						|| opt.brace_style === 'One True Brace Variant'
+						|| input_wanted_newline 
+							&& opt.preserve_newlines 
+							&& opt.brace_style !== 'Preserve';
+						if (condition)
 							print_newline(true);
 						else output_space_before_token = space_in_other;
 					} else if (input_wanted_newline)
-						if (last_text === 'else' && !opt.preserveNewlines && ['if', 'for', 'loop', 'while', 'try', 'switch'].includes(token_text_low))
+						if (last_text === 'else' && !opt.preserve_newlines && ['if', 'for', 'loop', 'while', 'try', 'switch'].includes(token_text_low))
 							deindent();
 						else
 							print_newline(preserve_statement_flags);
@@ -5656,7 +5739,7 @@ export class Lexer {
 				if (input_wanted_newline && flags.mode === MODE.Statement && !flags.in_expression &&
 					!is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))
 					print_newline(preserve_statement_flags);
-				else if (input_wanted_newline && (opt.preserveNewlines || ck.symbol)) {
+				else if (input_wanted_newline && (opt.preserve_newlines || ck.symbol)) {
 					if (ck.symbol || get_style() !== OBJECT_STYLE.collapse)
 						print_newline(!ck.symbol);
 				} else if (['TK_COMMA', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR'].includes(last_type))
@@ -5665,7 +5748,7 @@ export class Lexer {
 				if (!is_conditional && flags.mode === MODE.BlockStatement && ck.symbol?.children)
 					set_mode(MODE.Statement), is_conditional = true;
 				flags.last_word = '_';
-				if (opt.symbolWithSameCase)
+				if (opt.symbol_with_same_case)
 					token_text = ck.definition?.name || token_text;
 			}
 
@@ -5674,7 +5757,7 @@ export class Lexer {
 
 		function handle_string() {
 			if (start_of_statement()) {
-				if (input_wanted_newline && opt.preserveNewlines)
+				if (input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
 				else {
 					if (flags.declaration_statement)
@@ -5702,7 +5785,7 @@ export class Lexer {
 			if (ck.ignore) {
 				let p: number;
 				print_newline(true);
-				if (opt.ignoreComment && token_text.trimStart().startsWith('(') && (p = token_text.indexOf('\n')) > 0) {
+				if (opt.ignore_comment && token_text.trimStart().startsWith('(') && (p = token_text.indexOf('\n')) > 0) {
 					const t = token_text.slice(0, p).trimEnd().replace(/[ \t]+;.*$/, '');
 					if (/(^[ \t]*\(|[ \t])c(om(ments?)?)?/i.test(t))
 						token_text = `${t}\n${token_text.slice(p + 1).replace(/^[ \t]*;.*\r?\n/gm, '').replace(/[ \t]+;.*/gm, '')}`;
@@ -5735,12 +5818,12 @@ export class Lexer {
 				set_mode(MODE.Statement), indent();
 			if (last_type === 'TK_WORD' && whitespace.includes(ck.prefix_is_whitespace || '\0') &&
 				ck.previous_token?.callsite)
-				input_wanted_newline && opt.preserveNewlines ? print_newline(true) : output_space_before_token = true;
+				input_wanted_newline && opt.preserve_newlines ? print_newline(true) : output_space_before_token = true;
 			else {
 				output_space_before_token = space_in_other && last_type === 'TK_COMMA' || last_text === 'for' && last_type === 'TK_RESERVED';
 				if (flags.mode === MODE.Statement && flags.parent.mode === MODE.ObjectLiteral)
 					restore_mode();
-				if (input_wanted_newline && opt.preserveNewlines)
+				if (input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
 				else if (!just_added_newline())
 					input_wanted_newline = false;
@@ -5788,7 +5871,7 @@ export class Lexer {
 			if (token_text === '%') {
 				space_after = Boolean(ck.previous_pair_pos !== undefined && ' \t'.includes(input.charAt(ck.offset + 1) || '\0'));
 				output_space_before_token ||= Boolean(ck.next_pair_pos && ' \t'.includes(ck.prefix_is_whitespace || '\0'));
-				if (input_wanted_newline && opt.preserveNewlines)
+				if (input_wanted_newline && opt.preserve_newlines)
 					if (flags.mode === MODE.Statement && is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))
 						print_newline(true);
 				print_token();
@@ -5813,7 +5896,7 @@ export class Lexer {
 				return;
 			}
 
-			if (input_wanted_newline && opt.preserveNewlines)
+			if (input_wanted_newline && opt.preserve_newlines)
 				print_newline(true);
 			else if (last_type === 'TK_OPERATOR' && !last_text.match(/^(--|\+\+|%|!|~|not)$/))
 				allow_wrap_or_preserved_newline();
@@ -5869,7 +5952,7 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
-			if (opt.ignoreComment)
+			if (opt.ignore_comment)
 				return;
 
 			const lines = token_text.split('\n');
@@ -5897,13 +5980,14 @@ export class Lexer {
 		}
 
 		function handle_inline_comment() {
-			if (opt.ignoreComment)
+			applyFormatDirective(token_text, flags, opt);
+			if (opt.ignore_comment)
 				return;
 			if (just_added_newline() && output_lines.length > 1)
 				output_lines.pop();
 			let t;
 			output_lines[output_lines.length - 1].text.push(
-				opt.whitespaceBeforeInlineComment ||
+				opt.white_space_before_inline_comment ||
 				(((t = ck.previous_token)) ? input.substring(t.skip_pos ?? t.offset + t.length, ck.offset) : '\t'),
 				token_text);
 			print_newline(true);
@@ -5918,7 +6002,8 @@ export class Lexer {
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
-			if (opt.ignoreComment)
+			applyFormatDirective(token_text, flags, opt);
+			if (opt.ignore_comment)
 				return;
 			token_text.split('\n').forEach(s => {
 				print_newline(true);
@@ -5935,7 +6020,7 @@ export class Lexer {
 
 			// allow preserved newlines before dots in general
 			// force newlines on dots after close paren when break_chained - for bar().baz()
-			allow_wrap_or_preserved_newline(flags.last_text === ')' && opt.breakChainedMethods);
+			allow_wrap_or_preserved_newline(flags.last_text === ')' && opt.break_chained_methods);
 			print_token();
 		}
 
@@ -5946,9 +6031,9 @@ export class Lexer {
 
 		function handle_sharp() {
 			print_newline();
-			if (opt.symbolWithSameCase && token_type === 'TK_SHARP')
+			if (opt.symbol_with_same_case && token_type === 'TK_SHARP')
 				token_text = hoverCache[token_text_low]?.[0] || token_text;
-			if (token_text_low === '#hotif' && opt.indentBetweenHotIfDirectives) {
+			if (token_text_low === '#hotif' && opt.indent_between_hotif_directive) {
 				if (flags.hotif_block)
 					deindent(), flags.hotif_block = false;
 				print_token();
@@ -5962,7 +6047,7 @@ export class Lexer {
 			if (t)
 				print_token(token_type === 'TK_HOTLINE' ? t : ' ' + t);
 			else if (token_type === 'TK_HOT')
-				output_space_before_token = !!opt.spaceAfterDoubleColon;
+				output_space_before_token = !!opt.space_after_double_colon;
 			else output_space_before_token = space_in_other || token_type === 'TK_SHARP';
 		}
 
@@ -6288,7 +6373,7 @@ export class Lexer {
 			return;
 		let workDir: string;
 		if (!dir) {
-			for (workDir of getCfg<string[]>(ahkppConfig, CfgKey.WorkingDirectories))
+			for (workDir of getCfg(CfgKey.WorkingDirectories))
 				if (this.uri.startsWith(workDir)) {
 					dir = restorePath(URI.parse(workDir).fsPath.replace(/[\\/]$/, ''));
 					break;
@@ -6346,7 +6431,7 @@ export class Lexer {
 	}
 
 	private addSymbolFolding(symbol: AhkSymbol, first_brace: number) {
-		const l1 = getCfg(ahkppConfig, CfgKey.SymbolFoldingFromOpenBrace) ? this.document.positionAt(first_brace).line : symbol.range.start.line;
+		const l1 = getCfg(CfgKey.SymbolFoldingFromOpenBrace) ? this.document.positionAt(first_brace).line : symbol.range.start.line;
 		const l2 = symbol.range.end.line - 1;
 		const ranges = this.foldingranges;
 		if (l1 < l2) {
@@ -7837,12 +7922,72 @@ export function is_line_continue(lk: Token, tk: Token, parent?: AhkSymbol): bool
 	}
 }
 
-export function setCommentTagRegex(regex: string) {
-	const old = commentTagRegex;
+/**
+ * Tries to update the commentTagRegex to the provided value.
+ * If a new regex cannot be made from the provied value, throws an error.
+ */
+export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
+	const oldCommentTagRegex = commentTagRegex;
 	try {
-		commentTagRegex = new RegExp(regex, 'i');
+		if (newCommentTagRegex) {
+			commentTagRegex = new RegExp(newCommentTagRegex, 'i');
+		}
 	} catch (e) {
-		commentTagRegex = old;
+		commentTagRegex = oldCommentTagRegex;
 		throw e;
 	}
+	return commentTagRegex;
+}
+
+/**
+ * Updates the provided options in-place (not pure).
+ * Convert the provided format config from user settings to in-memory interface.
+ */
+export function fixupFormatConfig(options: { braceStyle?: string | undefined }) {
+	switch (options.braceStyle) {
+		case 'Allman':
+		case '0': options.braceStyle = 'Allman'; break;
+		case 'One True Brace':
+		case '1': options.braceStyle = 'One True Brace'; break;
+		case 'One True Brace Variant':
+		case '-1': options.braceStyle = 'One True Brace Variant'; break;
+		default: options.braceStyle = 'Preserve'; break;
+	}
+	return options;
+}
+
+/**
+ * Parse a directive of the form `; @format key1: value1, key2: value2, ...`
+ * Returns an object with the key-value pairs.
+ * Whitespace-insensitive.
+ * Does not validate that keys are valid FormatOptions keys.
+ */
+export function parseFormatDirective(directive: string): Record<string, string> {
+	// Run regex against the directive to confirm it matches
+	const m = directive.match(/^;\s*@format\b/i);
+	if (!m) return {};
+	
+	// Get all the key-value pairs of the directive
+	const record = Object.fromEntries(directive.substring(m[0].length).split(',').map(s => {
+		const p = s.indexOf(':');
+		return [s.substring(0, p).trim(), s.substring(p + 1).trim()];
+	}));
+
+	return record;
+}
+
+/**
+ * Handle format directives. Format directives dictate options for every line below them.
+ * Example: `;@format array_style: expand, object_style: expand`
+ * See `client/src/test/formatting/array_object_style.ahk` for an in-code example.
+ */
+export function applyFormatDirective(directive: string, flags: Partial<Flag>, opt: Partial<InternalFormatOptions>) {
+	const parsedDirective = parseFormatDirective(directive);
+	for (const k of ['array_style', 'object_style'] as const) {
+		if (k in parsedDirective) {
+				flags[k] = parsedDirective[k] as BlockStyle;
+				delete parsedDirective[k];
+		}
+	}
+	Object.assign(opt, parsedDirective);
 }

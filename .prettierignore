@@ -22,7 +22,7 @@ server/src/constants.ts
 server/src/definitionProvider.ts
 server/src/formattingProvider.ts
 server/src/hoverProvider.ts
-server/src/Lexer.ts
+server/src/lexer.ts
 server/src/localize.ts
 server/src/PEFile.ts
 server/src/referencesProvider.ts

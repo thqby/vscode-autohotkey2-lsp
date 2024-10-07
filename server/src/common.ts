@@ -4,11 +4,10 @@ import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
-import { AhkSymbol, Lexer, setCommentTagRegex } from './Lexer';
+import { AhkSymbol, Lexer, fixupFormatConfig, updateCommentTagRegex } from './lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
-import { AhkppConfig, CfgKey, getCfg, newAhkppConfig } from './config';
-
+import { AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg, setConfigRoot } from '../../util/src/config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -17,7 +16,7 @@ export * from './constants';
 export * from './definitionProvider';
 export * from './formattingProvider';
 export * from './hoverProvider';
-export * from './Lexer';
+export * from './lexer';
 export * from './localize';
 export * from './referencesProvider';
 export * from './renameProvider';
@@ -28,7 +27,6 @@ export * from './symbolProvider';
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
 export const alpha_3 = encode_version('2.1-alpha.3');
-export const ahkppConfig: AhkppConfig = newAhkppConfig();
 export const utils = {
 	get_DllExport: (_paths: string[] | Set<string>, _onlyone = false) => Promise.resolve([] as string[]),
 	get_RCDATA: (_path?: string) => undefined as { uri: string, path: string, paths?: string[] } | undefined,
@@ -36,8 +34,8 @@ export const utils = {
 };
 
 export type Maybe<T> = T | undefined;
-export let connection: Connection;
-export let interpreterPathV2 = '', locale = 'en-us', rootdir = '', isahk2_h = false;
+export let connection: Connection | undefined;
+export let interpreterPath = '', locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahk_version = encode_version('3.0.0.0');
 export let ahkuris: Record<string, string> = {};
 export let ahkvars: Record<string, AhkSymbol> = {};
@@ -190,8 +188,7 @@ export function initahk2cache() {
 }
 
 /** Loads IntelliSense hover text */
-// (proven by skipping this func and seeing the results)
-export function loadahk2(filename = 'ahk2', d = 3) {
+export function loadAHK2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
 	const syntaxesPath = process.env.SYNTAXES_PATH || 'syntaxes';
 	const file = `${rootdir}/${syntaxesPath}/<>/${filename}`;
@@ -208,9 +205,8 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		if ((data = getwebfile(file + '.json')))
 			build_item_cache(JSON.parse(data.text));
 	} else {
-		const cfgSyntaxes: string = getCfg(ahkppConfig, CfgKey.Syntaxes);
-		/** The validated syntax path. Empty string if config syntax path failed to validate. */
-		const syntaxes = cfgSyntaxes && existsSync(cfgSyntaxes) ? cfgSyntaxes : '';
+		const syntaxConfig = getCfg(CfgKey.Syntaxes);
+		const syntaxes = syntaxConfig && existsSync(syntaxConfig) ? syntaxConfig : '';
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
 		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
@@ -347,7 +343,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enum_ahkfiles(dirpath: string) {
-	const maxScanDepth = getCfg<number>(ahkppConfig, CfgKey.MaxScanDepth);
+	const maxScanDepth = getCfg<number>(CfgKey.MaxScanDepth);
 	const { file: fileExclude, folder: folderExclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
@@ -369,38 +365,53 @@ export function enum_ahkfiles(dirpath: string) {
 }
 
 /**
- * Updates `extsettings` with the provided config values
- * Formerly `update_settings`
+ * Update the extension config (`ahklsConfig`) in-memory.
+ * Does not update user settings.
  */
-export function updateAhkppConfig(newConfig: AhkppConfig) {
+export function updateConfig(newConfig: AHKLSConfig): void {
+	const newConfigLibSuggestions = getCfg(CfgKey.LibrarySuggestions, newConfig);
+	if (typeof newConfigLibSuggestions === 'boolean')
+		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? LibIncludeType.All : LibIncludeType.Disabled, newConfig);
+	fixupFormatConfig(getCfg(CfgKey.Formatter, newConfig) ?? {});
 	try {
-		setCommentTagRegex(getCfg(newConfig, CfgKey.CommentTagRegex));
+		updateCommentTagRegex(getCfg(CfgKey.CommentTagRegex, newConfig));
 	} catch (e) {
-		delete (e as { stack: unknown }).stack;
-		// reset to default if invalid
-		setCommentTagRegex(getCfg(newAhkppConfig(), CfgKey.CommentTagRegex))
-		connection.console.error(e as string);
+		delete (e as { stack?: string }).stack;
+		// reset value of `newConfig` to avoid corrupting `ahklsConfig`
+		setCfg(CfgKey.CommentTagRegex, getCfg(CfgKey.CommentTagRegex), newConfig);
+		console.log(e);
 	}
-	(newConfig as any)[CfgKey.WorkingDirectories] = getCfg<string[]>(newConfig, CfgKey.WorkingDirectories).map(dir =>
-		(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
-			.endsWith('/') ? dir : dir + '/');
+	const newConfigWorkingDirs = getCfg<string[]>(CfgKey.WorkingDirectories, newConfig);
+	if (newConfigWorkingDirs instanceof Array)
+		setCfg(CfgKey.WorkingDirectories, newConfigWorkingDirs.map(dir =>
+			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
+				.endsWith('/') ? dir : dir + '/'), newConfig);
+	else setCfg(CfgKey.WorkingDirectories, [], newConfig);
 	scanExclude = {};
-	const file: RegExp[] = [], folder: RegExp[] = [];
-	for (const s of getCfg<string[]>(newConfig, CfgKey.Exclude) ?? [])
-		try {
-			(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
-		} catch (e) {
-			console.log(`[Error] Invalid glob pattern: ${s}`);
+	if (getCfg(CfgKey.Exclude, newConfig)) {
+		const file: RegExp[] = [], folder: RegExp[] = [];
+		for (const s of getCfg(CfgKey.Exclude, newConfig))
+			try {
+				(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
+			} catch (e) {
+				console.log(`[Error] Invalid glob pattern: ${s}`);
+			}
+		if (file.length)
+			scanExclude.file = file;
+		if (folder.length)
+			scanExclude.folder = folder;
+		let maxScanDepth = getCfg<number | undefined>(CfgKey.MaxScanDepth, newConfig);
+		if (maxScanDepth === undefined) {
+			maxScanDepth = 2;
 		}
-	if (file.length)
-		scanExclude.file = file;
-	if (folder.length)
-		scanExclude.folder = folder;
-	if (getCfg<number>(newConfig, CfgKey.MaxScanDepth) < 0)
-		(newConfig as any)[CfgKey.MaxScanDepth] = Infinity;
-	if (getCfg(newConfig, CfgKey.Syntaxes))
-		(newConfig as any)[CfgKey.Syntaxes] = resolve(getCfg(newConfig, CfgKey.Syntaxes)).toLowerCase();
-	Object.assign(ahkppConfig, newConfig);
+		if (maxScanDepth < 0)
+			maxScanDepth = Infinity;
+		setCfg(CfgKey.MaxScanDepth, maxScanDepth, newConfig);
+	}
+	const newSyntaxes = getCfg<string>(CfgKey.Syntaxes, newConfig);
+	if (newSyntaxes)
+		setCfg(CfgKey.Syntaxes, resolve(newSyntaxes).toLowerCase(), newConfig);
+	setConfigRoot(newConfig);
 }
 
 function encode_version(version: string) {
@@ -438,7 +449,7 @@ export function arrayEqual(a: string[], b: string[]) {
 
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
-export function setInterpreterPathV2(path: string) { interpreterPathV2 = path.replace(/^.:/, s => s.toLowerCase()); }
+export function setInterpreterPath(path: string) { interpreterPath = path.replace(/^.:/, s => s.toLowerCase()); }
 export function set_Connection(conn: Connection) { return connection = conn; }
 export function set_dirname(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
 export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }
@@ -446,7 +457,7 @@ export function set_version(version: string) { ahk_version = encode_version(vers
 export function set_WorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
-	getCfg<string[]>(ahkppConfig, CfgKey.WorkingDirectories).forEach(dir => { if (!folders.has(dir)) workspaceFolders.push(dir) });
+	getCfg<string[]>(CfgKey.WorkingDirectories).forEach(it => !folders.has(it) && workspaceFolders.push(it));
 	workspaceFolders.sort().reverse();
 	if (old.length === workspaceFolders.length &&
 		!old.some((v, i) => workspaceFolders[i] !== v))

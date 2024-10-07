@@ -8,12 +8,26 @@
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
 			"preLaunchTask": "npm: watch",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
-			],
-			"outFiles": [
-				"${workspaceFolder}/client/dist/**/*.js"
-			]
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"]
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Launch Client (e2e)",
+			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: build:e2e",
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"]
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Launch Client (prod)",
+			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: build",
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"]
 		},
 		{
 			"type": "node",
@@ -27,6 +41,7 @@
 			]
 		},
 		{
+			// Results go to Debug Console (Ctrl+Shift+Y)
 			"name": "Extension Tests",
 			"type": "extensionHost",
 			"request": "launch",
@@ -36,9 +51,7 @@
 				"--disable-extensions",
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
-			"outFiles": [
-				"${workspaceFolder}/client/dist/test/**/*.js"
-			],
+			"outFiles": ["${workspaceFolder}/client/dist/test/**/*.js"],
 			"testConfiguration": "${workspaceFolder}/.vscode-test.mjs"
 		},
 		{
@@ -61,10 +74,7 @@
 	"compounds": [
 		{
 			"name": "Client + Server",
-			"configurations": [
-				"Launch Client",
-				"Attach to Server"
-			]
+			"configurations": ["Launch Client", "Attach to Server"]
 		}
 	]
 }

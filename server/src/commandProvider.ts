@@ -1,13 +1,15 @@
 import { CancellationToken, ExecuteCommandParams, Position, Range, SymbolKind } from 'vscode-languageserver';
 import {
 	AhkSymbol, ClassNode, FuncNode, Lexer, Property, Token, Variable,
-	connection, ahkppConfig, find_class, generate_type_annotation,
+	connection, find_class, generate_type_annotation,
 	join_types, lexers, parse_include, restorePath, semanticTokensOnFull,
 	traverse_include, update_include_cache
 } from './common';
+import { CfgKey, getCfg } from '../../util/src/config';
+import { clientGetActiveEditorInfo, clientInsertSnippet, clientSetTextDocumentLanguage, ExtensionCommand, extDiagnoseAll, extGenerateComment, extSetScriptDir } from '../../util/src/env';
 
 function checkCommand(cmd: string) {
-	if (ahkppConfig.commands?.includes(cmd))
+	if (getCfg(CfgKey.Commands)?.includes(cmd))
 		return true;
 	connection?.console.warn(`Command '${cmd}' is not implemented!`);
 	return false;
@@ -19,15 +21,15 @@ function trim_jsdoc(detail?: string) {
 }
 
 function insertSnippet(value: string, range?: Range) {
-	if (!checkCommand('ahk++.insertSnippet'))
+	if (!checkCommand(clientInsertSnippet))
 		return;
-	connection?.sendRequest('ahk++.insertSnippet', [value, range]);
+	connection?.sendRequest(clientInsertSnippet, [value, range]);
 }
 
 export function setTextDocumentLanguage(uri: string, lang?: string) {
-	if (!checkCommand('ahk++.setTextDocumentLanguage'))
+	if (!checkCommand(clientSetTextDocumentLanguage))
 		return;
-	return connection?.sendRequest('ahk++.setTextDocumentLanguage', [uri, lang]);
+	return connection?.sendRequest(clientSetTextDocumentLanguage, [uri, lang]);
 }
 
 export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
@@ -76,9 +78,9 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 
 /** Add a function header comment for the currently active function */
 async function generateComment() {
-	if (!checkCommand('ahk++.getActiveTextEditorUriAndPosition') || !checkCommand('ahk++.insertSnippet'))
+	if (!checkCommand(clientGetActiveEditorInfo) || !checkCommand(clientInsertSnippet))
 		return;
-	const { uri, position } = await connection?.sendRequest('ahk++.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
+	const { uri, position } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string, position: Position };
 	const doc = lexers[uri.toLowerCase()];
 	let scope = doc.searchScopedNode(position);
 	const ts = scope?.children || doc.children;
@@ -207,9 +209,9 @@ export function exportSymbols(uri: string) {
 }
 
 async function diagnoseAll() {
-	if (!checkCommand('ahk++.getActiveTextEditorUriAndPosition'))
+	if (!checkCommand(clientGetActiveEditorInfo))
 		return;
-	const { uri } = await connection?.sendRequest('ahk++.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string };
 	const doc = lexers[uri.toLowerCase()];
 	if (!doc) return;
 	update_include_cache();
@@ -219,9 +221,9 @@ async function diagnoseAll() {
 }
 
 async function setscriptdir() {
-	if (!checkCommand('ahk++.getActiveTextEditorUriAndPosition'))
+	if (!checkCommand(clientGetActiveEditorInfo))
 		return;
-	const { uri } = await connection?.sendRequest('ahk++.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await connection?.sendRequest(clientGetActiveEditorInfo) as { uri: string };
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex) return;
 	if (lex.scriptdir !== lex.scriptpath)
@@ -264,14 +266,23 @@ export function getVersionInfo(uri: string) {
 	return info;
 }
 
+/**
+ * Also modified in `server.ts`, this holds all the commands that the server supports.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const commands: { [command: string]: (args: any[]) => any } = {
-	'ahk++.diagnostic.full': () => diagnoseAll(),
-	'ahk++.addDocComment': () => generateComment(),
-	'ahk++.setAScriptDir': setscriptdir
+export const commands: Record<ExtensionCommand, (args: any[]) => any> = {
+	[extDiagnoseAll]: () => diagnoseAll(),
+	[extGenerateComment]: () => generateComment(),
+	[extSetScriptDir]: process.env.BROWSER ? () => 0 : setscriptdir
 };
 
+/**
+ * Executes the provided command.
+ * Only works for `ExtensionCommand` values.
+ * Does nothing if command not recognized.
+ * Ignores cancellation tokens.
+ */
 export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
 	if (!token?.isCancellationRequested)
-		return commands[params.command](params.arguments ?? []);
+		return commands[params.command as ExtensionCommand]?.(params.arguments ?? []);
 }

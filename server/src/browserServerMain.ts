@@ -6,12 +6,13 @@ import {
 import {
 	chinese_punctuations, colorPresentation, colorProvider, commands, completionProvider,
 	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols, getVersionInfo,
-	hoverProvider, initahk2cache, Lexer, lexers, loadahk2, loadlocalize, prepareRename, rangeFormatting,
+	hoverProvider, initahk2cache, Lexer, lexers, loadAHK2, loadlocalize, prepareRename, rangeFormatting,
 	referenceProvider, renameProvider, SemanticTokenModifiers, semanticTokensOnFull, semanticTokensOnRange,
 	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
-	signatureProvider, symbolProvider, typeFormatting, updateAhkppConfig, workspaceSymbolProvider
+	signatureProvider, symbolProvider, typeFormatting, updateConfig, workspaceSymbolProvider
 } from './common';
-import { AhkppConfig } from './config';
+import { AHKLSConfig, CfgKey, configPrefix, getCfg } from '../../util/src/config';
+import { serverExportSymbols, serverGetContent, serverGetVersionInfo } from '../../util/src/env';
 
 const languageServer = 'ahk2-language-server';
 const messageReader = new BrowserMessageReader(self);
@@ -75,18 +76,18 @@ connection.onInitialize(params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	const configs: AhkppConfig = params.initializationOptions;
+	const initialConfig: AHKLSConfig = params.initializationOptions;
 	set_ahk_h(true);
 	set_locale(params.locale);
-	set_dirname(configs.extensionUri!);
+	set_dirname(getCfg(CfgKey.ExtensionUri, initialConfig));
 	loadlocalize();
-	updateAhkppConfig(configs);
+	updateConfig(initialConfig);
 	set_WorkspaceFolders(workspaceFolders);
 	set_version('3.0.0');
 	initahk2cache();
-	loadahk2();
-	loadahk2('ahk2_h');
-	loadahk2('winapi', 4);
+	loadAHK2();
+	loadAHK2('ahk2_h');
+	loadAHK2('winapi', 4);
 	return result;
 });
 
@@ -105,14 +106,14 @@ connection.onInitialized(() => {
 });
 
 connection.onDidChangeConfiguration(async change => {
-	let newset: AhkppConfig | undefined = change?.settings;
+	let newset: AHKLSConfig | undefined = change?.settings;
 	if (hasConfigurationCapability && !newset)
-		newset = await connection.workspace.getConfiguration('AutoHotkey2');
+		newset = await connection.workspace.getConfiguration(configPrefix);
 	if (!newset) {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	updateAhkppConfig(newset);
+	updateConfig(newset);
 	set_WorkspaceFolders(workspaceFolders);
 });
 
@@ -148,9 +149,9 @@ connection.onExecuteCommand(executeCommandProvider);
 connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
-connection.onRequest('ahk2.exportSymbols', exportSymbols);
-connection.onRequest('ahk++.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
-connection.onRequest('ahk2.getVersionInfo', getVersionInfo);
+connection.onRequest(serverExportSymbols, exportSymbols);
+connection.onRequest(serverGetContent, (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
+connection.onRequest(serverGetVersionInfo, getVersionInfo);
 connection.onNotification('onDidCloseTextDocument',
 	(params: { uri: string, id: string }) => {
 		if (params.id === 'ahk2')
