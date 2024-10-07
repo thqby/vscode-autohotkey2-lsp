@@ -33,7 +33,7 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 			start: { line: line - 1, character: 0 },
 			end: { line: line + 2, character: 0 }
 		}).split(/\r?\n/);
-		let s = linetexts[0].trimEnd(), indent_string: string;
+		let s = linetexts[0].trimEnd(), indentString: string;
 
 		if (!linetexts[1].trim())
 			character = linetexts[1].length;
@@ -41,17 +41,17 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 		if (s.endsWith('{')) {
 			const prev = options.indent_string;
 			if ((result = format_end_with_brace({ line: line - 1, character: s.length }))) {
-				indent_string = options.indent_string;
-				if (linetexts[1].substring(0, character) !== indent_string)
+				indentString = options.indent_string;
+				if (linetexts[1].substring(0, character) !== indentString)
 					result.push({
-						newText: indent_string,
+						newText: indentString,
 						range: { start: { line, character: 0 }, end: { line, character } }
 					});
 
 				if ((s = (linetexts[2] ??= '').trimStart()).startsWith('}') &&
-					!linetexts[2].startsWith((indent_string = indent_string.replace(prev, '')) + '}'))
+					!linetexts[2].startsWith((indentString = indentString.replace(prev, '')) + '}'))
 					result.push({
-						newText: indent_string,
+						newText: indentString,
 						range: {
 							start: { line: line + 1, character: 0 },
 							end: { line: line + 1, character: linetexts[2].length - s.length }
@@ -62,10 +62,10 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 			const range = { start: doc.document.positionAt(pp), end: { line: line - 1, character: s.length } };
 			const newText = doc.beautify(options, range).trim();
 			result = [{ range, newText }];
-			indent_string = options.indent_string;
-			if (linetexts[1].substring(0, character) !== indent_string)
+			indentString = options.indent_string;
+			if (linetexts[1].substring(0, character) !== indentString)
 				result.push({
-					newText: indent_string,
+					newText: indentString,
 					range: { start: { line, character: 0 }, end: { line, character } }
 				});
 		} else if (!s) {
