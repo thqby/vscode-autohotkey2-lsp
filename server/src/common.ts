@@ -342,20 +342,20 @@ export function loadAHK2(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enum_ahkfiles(dirpath: string) {
-	const maxdepth = getCfg<number>(CfgKey.MaxScanDepth);
-	const { file: file_exclude, folder: folder_exclude } = scanExclude;
+	const maxScanDepth = getCfg<number>(CfgKey.MaxScanDepth);
+	const { file: fileExclude, folder: folderExclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
 		try {
 			const dir = await fs.opendir(dirpath);
 			for await (const t of dir) {
-				if (t.isDirectory() && depth < maxdepth) {
+				if (t.isDirectory() && depth < maxScanDepth) {
 					const path = resolve(dirpath, t.name);
-					if (!folder_exclude?.some(re => re.test(path)))
+					if (!folderExclude?.some(re => re.test(path)))
 						yield* enumfile(path, depth + 1);
 				} else if (t.isFile() && /\.(ahk2?|ah2)$/i.test(t.name)) {
 					const path = resolve(dirpath, t.name);
-					if (!file_exclude?.some(re => re.test(path)))
+					if (!fileExclude?.some(re => re.test(path)))
 						yield path;
 				}
 			}
