@@ -32,7 +32,7 @@
 			"description": "Enables or disables class non-dynamic member checking for the current file/class"
 		},
 		{
-			"body": ";@format ${1|arrayStyle,objectStyle|}: ${2|collapse,expand,none|}",
+			"body": ";@format ${1|array_style,object_style|}: ${2|collapse,expand,none|}",
 			"prefix": "@format",
 			"description": "Sets the object or array style of the current block for formatting"
 		},
