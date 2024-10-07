@@ -371,7 +371,7 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 	const newConfigLibSuggestions = getCfg(CfgKey.LibrarySuggestions, newConfig);
 	if (typeof newConfigLibSuggestions === 'boolean')
 		setCfg(CfgKey.LibrarySuggestions, newConfigLibSuggestions ? LibIncludeType.All : LibIncludeType.Disabled, newConfig);
-	fixupFormatConfig(newConfig.FormatOptions ?? {});
+	fixupFormatConfig(getCfg(CfgKey.Formatter, newConfig) ?? {});
 	try {
 		updateCommentTagRegex(getCfg(CfgKey.CommentTagRegex, newConfig));
 	} catch (e) {
