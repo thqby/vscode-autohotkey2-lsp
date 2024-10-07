@@ -5531,7 +5531,7 @@ export class Lexer {
 
 				if (previous_flags.in_case_statement && last_type === 'TK_LABEL' && /^(default)?:$/.test(last_text))
 					flags.case_body = null, print_newline(), flags.indentation_level--;
-				else if (opt.brace_style === 'Allman' || input_wanted_newline && opt.preserve_newlines && opt.brace_style !== 'Preserve')
+				else if (opt.brace_style === 'Allman' || input_wanted_newline && opt.preserve_newlines && opt.brace_style === 'Preserve')
 					if (ck.in_expr === undefined || flags.mode === MODE.Expression)
 						print_newline(true);
 
