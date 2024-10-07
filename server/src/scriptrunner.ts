@@ -1,10 +1,10 @@
 import { execSync, spawnSync } from 'child_process';
-import { ahkpath_cur } from './common';
+import { interpreterPath } from './common';
 import { lstatSync, readlinkSync } from 'fs';
 import { resolve } from 'path';
 
 export function runscript(script: string) {
-	const executePath = resolvePath(ahkpath_cur, true);
+	const executePath = resolvePath(interpreterPath, true);
 	if (!executePath)
 		return;
 	const process = spawnSync(`"${executePath}" /CP65001 /ErrorStdOut=utf-8 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
@@ -23,7 +23,11 @@ export function existsSync(path: string): boolean {
 	return true;
 }
 
-export function resolvePath(path: string, resolveSymbolicLink = false): string {
+/**
+ * Resolves the provided path.
+ * If the path is empty, undefined, or not found, returns an empty string.
+ */
+export function resolvePath(path: string | undefined, resolveSymbolicLink = false): string {
 	if (!path)
 		return '';
 	const paths: string[] = [];

@@ -1,113 +1,113 @@
 {
-  "name": "ahk2-output",
-  "scopeName": "ahk2.output",
-  "patterns": [
-    {
-      "include": "#url"
-    },
-    {
-      "captures": {
-        "1": {
-          "name": "token.info-token"
-        },
-        "2": {
-          "name": "string"
-        }
-      },
-      "match": "^(\\[Running\\])(.*)$",
-      "name": "ahk2.running"
-    },
-    {
-      "captures": {
-        "1": {
-          "name": "token.info-token"
-        },
-        "2": {
-          "name": "string"
-        },
-        "3": {
-          "name": "token.debug-token"
-        },
-        "4": {
-          "name": "token.error-token"
-        },
-        "5": {
-          "name": "string"
-        },
-        "6": {
-          "name": "constant.numeric"
-        },
-        "7": {
-          "name": "string"
-        }
-      },
-      "match": "^(\\[Done\\])(.+)(?:(code=0)|(code=\\d+))([^\\d]+)(\\d+(?:\\.\\d+)?)([^\\d]+)$",
-      "name": "ahk2.done"
-    },
-    {
-      "match": "\\d{1,3}(\\.\\d{1,3}){3}(:\\d+)",
-      "name": "constant.numeric"
-    },
-    {
-      "match": "^(?i:(\\[error\\])|(\\[info\\])|(\\[warn\\]))(.*)",
-      "captures": {
-        "1": {
-          "name": "token.error-token"
-        },
-        "2": {
-          "name": "token.info-token"
-        },
-        "3": {
-          "name": "token.warn-token"
-        }
-      },
-      "name": "ahk2.log"
-    },
-    {
-      "include": "#numbers"
-    },
-    {
-      "include": "#operators"
-    },
-    {
-      "include": "#string"
-    }
-  ],
-  "repository": {
-    "url": {
-      "match": "\\b((?i:(https?|ws)://\\S+))\\b",
-      "name": "string.url"
-    },
-    "numbers": {
-      "match": "\\b(\\d+(?:\\.\\d+)?|0[xX][\\da-fA-F]+)\\b",
-      "name": "constant.numeric"
-    },
-    "operators": {
-      "patterns": [
-        {
-          "match": "&=|\\^=|<<=|>>=|\\|=|\\.=|\\+=|-=|\\*=|(?<!\\()/=|--|\\+\\+|<<|>>|!=|<=|>=|=?=|<|>|&&|!|\\|\\||&|\\||\\^|~|:=|\\*|/|-|\\+",
-          "name": "keyword.operator"
-        }
-      ]
-    },
-    "string": {
-      "patterns": [
-        {
-          "begin": "(['\"])(?=.*\\1)",
-          "beginCaptures": {
-            "1": {
-              "name": "punctuation.definition.string.begin"
-            }
-          },
-          "end": "(\\1)",
-          "endCaptures": {
-            "1": {
-              "name": "punctuation.definition.string.end"
-            }
-          },
-          "name": "string.quoted"
-        }
-      ]
-    }
-  }
+	"name": "ahk2-output",
+	"scopeName": "ahk2.output",
+	"patterns": [
+		{
+			"include": "#url"
+		},
+		{
+			"captures": {
+				"1": {
+					"name": "token.info-token"
+				},
+				"2": {
+					"name": "string"
+				}
+			},
+			"match": "^(\\[Running\\])(.*)$",
+			"name": "ahk2.running"
+		},
+		{
+			"captures": {
+				"1": {
+					"name": "token.info-token"
+				},
+				"2": {
+					"name": "string"
+				},
+				"3": {
+					"name": "token.debug-token"
+				},
+				"4": {
+					"name": "token.error-token"
+				},
+				"5": {
+					"name": "string"
+				},
+				"6": {
+					"name": "constant.numeric"
+				},
+				"7": {
+					"name": "string"
+				}
+			},
+			"match": "^(\\[Done\\])(.+)(?:(code=0)|(code=\\d+))([^\\d]+)(\\d+(?:\\.\\d+)?)([^\\d]+)$",
+			"name": "ahk2.done"
+		},
+		{
+			"match": "\\d{1,3}(\\.\\d{1,3}){3}(:\\d+)",
+			"name": "constant.numeric"
+		},
+		{
+			"match": "^(?i:(\\[error\\])|(\\[info\\])|(\\[warn\\]))(.*)",
+			"captures": {
+				"1": {
+					"name": "token.error-token"
+				},
+				"2": {
+					"name": "token.info-token"
+				},
+				"3": {
+					"name": "token.warn-token"
+				}
+			},
+			"name": "ahk2.log"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#operators"
+		},
+		{
+			"include": "#string"
+		}
+	],
+	"repository": {
+		"url": {
+			"match": "\\b((?i:(https?|ws)://\\S+))\\b",
+			"name": "string.url"
+		},
+		"numbers": {
+			"match": "\\b(\\d+(?:\\.\\d+)?|0[xX][\\da-fA-F]+)\\b",
+			"name": "constant.numeric"
+		},
+		"operators": {
+			"patterns": [
+				{
+					"match": "&=|\\^=|<<=|>>=|\\|=|\\.=|\\+=|-=|\\*=|(?<!\\()/=|--|\\+\\+|<<|>>|!=|<=|>=|=?=|<|>|&&|!|\\|\\||&|\\||\\^|~|:=|\\*|/|-|\\+",
+					"name": "keyword.operator"
+				}
+			]
+		},
+		"string": {
+			"patterns": [
+				{
+					"begin": "(['\"])(?=.*\\1)",
+					"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.string.begin"
+						}
+					},
+					"end": "(\\1)",
+					"endCaptures": {
+						"1": {
+							"name": "punctuation.definition.string.end"
+						}
+					},
+					"name": "string.quoted"
+				}
+			]
+		}
+	}
 }

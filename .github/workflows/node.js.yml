@@ -5,9 +5,9 @@ name: Build
 
 on:
   push:
-    branches: ["main"]
+    branches: ['main']
   pull_request:
-    branches: ["main"]
+    branches: ['main', 'upstream-main']
   workflow_dispatch:
   merge_group:
 
@@ -27,6 +27,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm"
+          cache: 'npm'
       - run: npm install
-      - run: npm run vscode:prepublish
+      - run: npm run validate

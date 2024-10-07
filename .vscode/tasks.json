@@ -6,6 +6,7 @@
 			"script": "watch",
 			"group": "build",
 			"isBackground": true,
+			// Requires connor4312.esbuild-problem-matchers extension
 			"problemMatcher": "$esbuild-watch"
 		},
 		{
@@ -13,6 +14,7 @@
 			"script": "watch-web",
 			"group": "build",
 			"isBackground": true,
+			// Requires connor4312.esbuild-problem-matchers extension
 			"problemMatcher": "$esbuild-watch"
 		}
 	]
