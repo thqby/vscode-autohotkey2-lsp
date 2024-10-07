@@ -599,7 +599,6 @@ export class Lexer {
 								output_lines.pop();
 						}
 						range.end = _this.document.positionAt(end);
-						options.indent_string = preindent_string + indent_string.repeat(flags.indentation_level);
 					}
 					while (flags.mode === MODE.Statement)
 						restore_mode();
@@ -3714,8 +3713,8 @@ export class Lexer {
 					addvariable(tk);
 					nexttoken(), parse_pair('(', ')');
 					const pc = tokens[tk.previous_pair_pos!]?.paraminfo?.count ?? 0;
-					if (pc !== 1)
-						getCfg(CfgKey.ParamsCheck) && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
+					if (pc !== 1 && getCfg(CfgKey.ParamsCheck))
+						_this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
 					else if (result.length > l && lk.type === 'TK_WORD') {
 						const vr = result.at(-1) as Variable;
 						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
@@ -4120,7 +4119,7 @@ export class Lexer {
 				.replace(/%a_linefile%/i, _this.fsPath);
 		}
 
-		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
+		function add_include_dllload(text: string, tk?: Pick<Token, 'offset' | 'pos' | 'length' | 'content' | 'data'>, mode = 0, isdll = false) {
 			let m, ignore = false;
 			const q = text[0];
 			if (`'"`.includes(q) && text.endsWith(q))
