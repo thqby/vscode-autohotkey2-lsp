@@ -405,7 +405,7 @@ class ParseStopError {
 }
 
 export class Lexer {
-	public actionwhenv1?: ActionType = 'Continue';
+	public actionWhenV1Detected?: ActionType = 'Continue';
 	public actived = false;
 	public beautify: (options: FormatOptions, range?: Range) => string;
 	public checkmember: boolean | undefined;
@@ -1192,7 +1192,7 @@ export class Lexer {
 		} else {
 			const d_path = this.fsPath.replace(/\.\w+$/, '.d.ahk');
 			if (!this.fsPath.endsWith('2'))
-				delete this.actionwhenv1;
+				delete this.actionWhenV1Detected;
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
 				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
@@ -1221,7 +1221,7 @@ export class Lexer {
 				this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 				if (this.actived)
-					this.actionwhenv1 ??= 'Continue';
+					this.actionWhenV1Detected ??= 'Continue';
 			}
 		}
 
@@ -1237,7 +1237,7 @@ export class Lexer {
 			if (requirev2)
 				return false;
 			_this.maybev1 ??= maybev1 = 1;
-			switch (_this.actionwhenv1 ??= getCfg(CfgKey.ActionWhenV1Detected)) {
+			switch (_this.actionWhenV1Detected ??= getCfg(CfgKey.ActionWhenV1Detected)) {
 				case 'SkipLine': {
 					if (!allow_skip)
 						return true;
@@ -1291,8 +1291,8 @@ export class Lexer {
 						{ title: action.skipline(), action: 'SkipLine' },
 						{ title: action.stopparsing(), action: 'Stop' }
 					).then((reason?: { action: string }) => {
-						if ((_this.actionwhenv1 = (reason?.action ?? 'Continue') as ActionType) !== 'Stop')
-							if (_this.actionwhenv1 === 'SwitchToV1')
+						if ((_this.actionWhenV1Detected = (reason?.action ?? 'Continue') as ActionType) !== 'Stop')
+							if (_this.actionWhenV1Detected === 'SwitchToV1')
 								setTextDocumentLanguage(_this.document.uri);
 							else _this.update();
 					});
@@ -7921,7 +7921,6 @@ export function updateCommentTagRegex(newCommentTagRegex: string): RegExp {
 /**
  * Updates the provided options in-place (not pure).
  * Convert the provided format config from user settings to in-memory interface.
- * This is mostly just converting strings to numbers.
  */
 export function fixupFormatConfig(options: { brace_style?: string | undefined }) {
 	switch (options.brace_style) {

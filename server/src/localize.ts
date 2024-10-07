@@ -84,7 +84,7 @@ export const warn = {
 }
 
 export const setting = {
-	ahkpatherr: localize('setting.ahkpatherr', `Couldn't resolve AHK v2 interpreter, please check ${configPrefix}.${CfgKey.InterpreterPath}`),
+	ahkpatherr: localize('setting.ahkpatherr', `Couldn't resolve AHK v2 interpreter, please check settings: ${configPrefix}.${CfgKey.InterpreterPath}`),
 	getenverr: localize('setting.getenverr', 'Failed to get environment variables'),
 	uialimit: localize('setting.uialimit', 'The UIA executable does not allow redirection to stdin/stdout due to security restrictions, so some features that depend on this will not work'),
 	versionerr: localize('setting.versionerr', 'The current AutoHotkey.exe is not the v2 version, and cannot get the correct syntax analysis, completion and other functions'),

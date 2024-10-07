@@ -125,7 +125,7 @@ documents.onDidOpen(e => {
 	else lexers[uri] = doc = new Lexer(e.document);
 	doc.actived = true;
 	if (to_ahk2)
-		doc.actionwhenv1 = 'Continue';
+		doc.actionWhenV1Detected = 'Continue';
 });
 
 documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());

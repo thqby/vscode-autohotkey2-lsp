@@ -623,8 +623,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	// keyword
-	const keywordStartWithUpperCase = getCfg<boolean>(CfgKey.KeywordStartWithUppercase);
-	const addkeyword = keywordStartWithUpperCase ? function (it: CompletionItem) {
+	const keywordStartWithUppercase = getCfg<boolean>(CfgKey.KeywordStartWithUppercase);
+	const addkeyword = keywordStartWithUppercase ? function (it: CompletionItem) {
 		items.push(it = Object.assign({}, it));
 		it.insertText = (it.insertText ?? it.label).replace(/(?<=^(loop\s)?)[a-z]/g, m => m.toUpperCase());
 	} : (it: CompletionItem) => items.push(it);
@@ -636,7 +636,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	} else {
 		const kind = CompletionItemKind.Snippet, insertTextFormat = InsertTextFormat.Snippet;
 		let uppercase = (s: string) => s, remove_indent = uppercase;
-		if (keywordStartWithUpperCase)
+		if (keywordStartWithUppercase)
 			uppercase = (s: string) => s.replace(/\b[a-z](?=\w)/g, m => m.toUpperCase());
 		if (getCfg(CfgKey.SwitchCaseAlignment))
 			remove_indent = (s: string) => s.replace(/^\t/gm, '');

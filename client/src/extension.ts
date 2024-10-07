@@ -28,7 +28,7 @@ import {
 import { resolve } from 'path';
 import { ChildProcess, exec, execSync, spawn } from 'child_process';
 import { readdirSync, readFileSync, lstatSync, readlinkSync, unlinkSync, writeFileSync } from 'fs';
-import { CfgKey, configPrefix, getCfg } from '../../util/src/config';
+import { CfgKey, configPrefix } from '../../util/src/config';
 import {
 	ClientCommand,
 	languageClientId,
@@ -59,11 +59,11 @@ import {
 	extSwitchAHKVersion,
 	serverResetInterpreterPath,
 } from '../../util/src/env';
+import { getConfigIDE, getConfigRoot } from './config';
 
 let client: LanguageClient, outputchannel: OutputChannel, ahkStatusBarItem: StatusBarItem;
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
-const ahkconfig = workspace.getConfiguration(configPrefix);
-let interpreterPath: string = getCfg(CfgKey.InterpreterPath, ahkconfig), server_is_ready = false;
+let interpreterPath: string = getConfigIDE<string>(CfgKey.InterpreterPath, ''), server_is_ready = false;
 const textdecoders = [new TextDecoder('utf8', { fatal: true }), new TextDecoder('utf-16le', { fatal: true })];
 const isWindows = process.platform === 'win32';
 let extlist: string[] = [], debugexts: Record<string, string> = {}, langs: string[] = [];
@@ -145,11 +145,11 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 		initializationOptions: {
 			commands: Object.keys(requestHandlers),
 			GlobalStorage: context.globalStorageUri.fsPath,
-			...ahkconfig
+			...getConfigRoot()
 		},
 	};
 
-	if (getCfg(CfgKey.OneTrueBrace, ahkconfig) !== undefined)
+	if (getConfigIDE<unknown>(CfgKey.OneTrueBrace, undefined) !== undefined)
 		window.showWarningMessage(`Configuration "${configPrefix}.FormatOptions.one_true_brace" is no longer supported.\nPlease use "${configPrefix}.${CfgKey.BraceStyle}"`);
 
 	// Create the language client and start the client.
@@ -190,14 +190,15 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 						let runtime: string | undefined;
 						if (!config.__ahk2debug) {
 							config.request ||= 'launch';
-							const match_config = getDebugConfigs()?.filter(it =>
+							/** The most-populated debug config saved to the IDE */
+							const bestSavedConfig = getDebugConfigs()?.filter(it =>
 								Object.entries(it).every(([k, v]) => equal(v, config[k]))
 							)?.sort((a, b) => Object.keys(a).length - Object.keys(b).length).pop();
-							const def = getCfg<Partial<DebugConfiguration>>(CfgKey.DebugConfiguration, ahkconfig);
+							const def = getConfigIDE<Partial<DebugConfiguration>>(CfgKey.DebugConfiguration, {});
 							delete def.request, delete def.type;
-							Object.assign(config, def, match_config);
-							if (match_config?.type === 'autohotkey')
-								runtime = match_config.runtime_v2;
+							Object.assign(config, def, bestSavedConfig);
+							if (bestSavedConfig?.type === 'autohotkey')
+								runtime = bestSavedConfig.runtime_v2;
 							// eslint-disable-next-line @typescript-eslint/no-explicit-any
 							function equal(a: any, b: any): boolean {
 								if (a === b)
@@ -566,7 +567,11 @@ function getDebugConfigs() {
 async function beginDebug(type: 'f' | 'c' | 'p' | 'a') {
 	let extname: string | undefined;
 	const editor = window.activeTextEditor;
-	let config = { ...getCfg<DebugConfiguration>(CfgKey.DebugConfiguration, ahkconfig), request: 'launch', __ahk2debug: true } as DebugConfiguration;
+	let debugConfig = {
+		...getConfigIDE<Partial<DebugConfiguration>>(CfgKey.DebugConfiguration, {}),
+		request: 'launch',
+		__ahk2debug: true,
+	} as DebugConfiguration;
 	if (!extlist.length) {
 		window.showErrorMessage(localize('ahk2.debugextnotexist'));
 		extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'mark-wiemer.vscode-autohotkey-plus-plus', 'cweijan.vscode-autohotkey-plus']);
@@ -579,7 +584,7 @@ async function beginDebug(type: 'f' | 'c' | 'p' | 'a') {
 			window.showErrorMessage('zero-plusplus.vscode-autohotkey-debug was not found!');
 			return;
 		}
-		config.type = Object.entries(debugexts).find(([, v]) => v === extname)![0];
+		debugConfig.type = Object.entries(debugexts).find(([, v]) => v === extname)![0];
 		if (type === 'p') {
 			let input = await window.showInputBox({ prompt: localize('ahk2.entercmd') });
 			if (input === undefined)
@@ -590,9 +595,9 @@ async function beginDebug(type: 'f' | 'c' | 'p' | 'a') {
 					args.push(m[4] || m[2]);
 					return '';
 				});
-				config.args = args;
+				debugConfig.args = args;
 			}
-		} else config.request = 'attach';
+		} else debugConfig.request = 'attach';
 	} else if (type === 'c') {
 		const configs = getDebugConfigs();
 		if (configs?.length) {
@@ -606,12 +611,12 @@ async function beginDebug(type: 'f' | 'c' | 'p' | 'a') {
 			pick.dispose();
 			if (!pickedDebugConfig)
 				return;
-			config = pickedDebugConfig;
+			debugConfig = pickedDebugConfig;
 		}
-	} else config.program = '${file}';
-	config.type ||= Object.keys(debugexts).sort().pop()!;
-	config.name ||= `AutoHotkey ${config.request === 'attach' ? 'Attach' : 'Debug'}`;
-	debug.startDebugging(editor && workspace.getWorkspaceFolder(editor.document.uri), config);
+	} else debugConfig.program = '${file}';
+	debugConfig.type ||= Object.keys(debugexts).sort().pop()!;
+	debugConfig.name ||= `AutoHotkey ${debugConfig.request === 'attach' ? 'Attach' : 'Debug'}`;
+	debug.startDebugging(editor && workspace.getWorkspaceFolder(editor.document.uri), debugConfig);
 }
 
 async function setInterpreter() {
@@ -660,7 +665,7 @@ async function setInterpreter() {
 		pick.dispose();
 		if (sel.detail) {
 			ahkStatusBarItem.tooltip = interpreterPath = sel.detail;
-			ahkconfig.update(CfgKey.InterpreterPath, interpreterPath, from);
+			getConfigRoot().update(CfgKey.InterpreterPath, interpreterPath, from);
 			ahkStatusBarItem.text = sel.label ||= (await getAHKVersion([interpreterPath]))[0];
 			if (server_is_ready)
 				commands.executeCommand(serverResetInterpreterPath, interpreterPath);
@@ -696,7 +701,7 @@ async function setInterpreter() {
 
 async function selectSyntaxes() {
 	const path = (await window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true }))?.[0].fsPath;
-	const t = ahkconfig.inspect('Syntaxes');
+	const t = getConfigRoot().inspect('Syntaxes');
 	let v = '', f = ConfigurationTarget.Global;
 	if (t) {
 		v = ((f = ConfigurationTarget.WorkspaceFolder, t.workspaceFolderValue) ??
@@ -705,7 +710,7 @@ async function selectSyntaxes() {
 	}
 	if (path === undefined || v.toLowerCase() === path.toLowerCase())
 		return;
-	ahkconfig.update('Syntaxes', path || undefined, f);
+	getConfigRoot().update('Syntaxes', path || undefined, f);
 }
 
 function getAHKVersion(paths: string[]): Thenable<string[]> {
@@ -713,7 +718,7 @@ function getAHKVersion(paths: string[]): Thenable<string[]> {
 }
 
 function getInterpreterPath() {
-	const t = ahkconfig.inspect(CfgKey.InterpreterPath);
+	const t = getConfigRoot().inspect(CfgKey.InterpreterPath);
 	let path = '';
 	if (t)
 		if ((path = t.workspaceFolderValue as string))
@@ -729,7 +734,7 @@ function getInterpreterPath() {
 function findFile(files: string[], workspace: string) {
 	let s: string;
 	const paths: string[] = [];
-	const t = ahkconfig.inspect(CfgKey.InterpreterPath);
+	const t = getConfigRoot().inspect(CfgKey.InterpreterPath);
 	if (add(interpreterPath), t) {
 		add(t.workspaceFolderValue as string);
 		add(t.workspaceValue as string);
