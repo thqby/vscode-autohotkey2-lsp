@@ -18,7 +18,7 @@ import {
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
-import { AHKLSConfig, CfgKey, configPrefix, getCfg, ahklsConfig, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
+import { AHKLSConfig, CfgKey, configPrefix, getCfg, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
 import { klona } from 'klona/json';
 import { clientExecuteCommand, clientUpdateStatusBar, extSetInterpreter, serverExportSymbols, serverGetAHKVersion, serverGetContent, serverGetVersionInfo, serverResetInterpreterPath } from '../../util/src/env';
 
@@ -133,8 +133,9 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	const oldConfig = klona(ahklsConfig);
-	updateConfig(newConfig);
+	// clone the old config to compare
+	const oldConfig = klona(getCfg<AHKLSConfig>());
+	updateConfig(newConfig); // this updates the object in-place, hence the clone above
 	set_WorkspaceFolders(workspaceFolders);
 	const newInterpreterPath = getCfg(CfgKey.InterpreterPath);
 	if (newInterpreterPath !== getCfg(CfgKey.InterpreterPath, oldConfig)) {

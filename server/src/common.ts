@@ -7,7 +7,7 @@ import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, Sym
 import { AhkSymbol, Lexer, fixupFormatConfig, updateCommentTagRegex } from './lexer';
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
-import { ahklsConfig, AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg } from '../../util/src/config';
+import { AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg, setConfigRoot } from '../../util/src/config';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -410,7 +410,7 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 	const newSyntaxes = getCfg<string>(CfgKey.Syntaxes, newConfig);
 	if (newSyntaxes)
 		setCfg(CfgKey.Syntaxes, resolve(newSyntaxes).toLowerCase(), newConfig);
-	Object.assign(ahklsConfig, newConfig);
+	setConfigRoot(newConfig);
 }
 
 function encode_version(version: string) {
