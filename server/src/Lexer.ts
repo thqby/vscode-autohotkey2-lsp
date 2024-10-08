@@ -6907,7 +6907,9 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 				syms = new Set;
 				const node = r.node;
 				if (node.kind === SymbolKind.Variable) {
-					for (const n of decltype_var(node, lex, pos, r.scope, _this))
+					if (r.uri !== lex.uri)
+						pos.line = NaN;
+					for (const n of decltype_var(node, lexers[r.uri] ?? lex, pos, r.scope, _this))
 						syms.add(n);
 				} else if (syms.add(node), r.is_this !== undefined) {
 					that = _this ?? node as ClassNode;
@@ -7470,7 +7472,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 	}
 
 	let tps: AhkSymbol[];
-	if (sym.returns) {
+	if (sym.returns && sym.uri === lex.uri) {
 		sym.cached_types = [ANY], tps = [];
 		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
 			tps.push(...decltype_expr(lex, lex.find_token(r[i], true), r[i + 1], _this));
