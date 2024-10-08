@@ -1132,7 +1132,7 @@ function get_latest_ahk2lsp() {
 							let name = entry.name.toLowerCase();
 							if (name.includes('/client/') || name.includes('/browser'))
 								return false;
-							if (name.endsWith('/ahk2.configuration.json') || name.endsWith('.png') || name.endsWith('.tmlanguage.json'))
+							if (name.endsWith('/language-configuration.json') || name.endsWith('.png') || name.endsWith('.tmlanguage.json'))
 								return false;
 							extract_count++;
 							return true;

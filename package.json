@@ -50,7 +50,7 @@
 					".ah2",
 					".ahk2"
 				],
-				"configuration": "./ahk2.configuration.json",
+				"configuration": "./language-configuration.json",
 				"icon": {
 					"dark": "icon_filetype.png",
 					"light": "icon_filetype.png"
