@@ -190,8 +190,7 @@ export function initahk2cache() {
 /** Loads IntelliSense hover text */
 export function loadAHK2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
-	const syntaxesPath = process.env.SYNTAXES_PATH || 'syntaxes';
-	const file = `${rootdir}/${syntaxesPath}/<>/${filename}`;
+	const file = `${rootdir}/syntaxes/<>/${filename}`;
 	if (process.env.BROWSER) {
 		const td = openFile(file + '.d.ahk');
 		if (td) {

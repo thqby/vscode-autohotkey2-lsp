@@ -55,6 +55,7 @@ import {
 	extExtractSymbols,
 	extSwitchAHKVersion,
 	serverResetInterpreterPath,
+	ahkIsRunningContext,
 } from '../../util/src/env';
 import { getConfigIDE, getConfigRoot } from './config';
 
@@ -86,9 +87,7 @@ const loadedCollection = {
 export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	/** Absolute path to `server.js` */
 	const extId = context.extension.id;
-	// todo should be able to run as part of AHK++ and standalone (external commands will not work standalone)
-	const defaultServerModule = context.asAbsolutePath(`${extId.startsWith('mark-wiemer') ? 'ahk2/' : ''}server/dist/server.js`);
-	const serverModule = process.env.VSCODE_AHK_SERVER_PATH ? context.asAbsolutePath(process.env.VSCODE_AHK_SERVER_PATH) : defaultServerModule;
+	const serverModule = context.asAbsolutePath(`${extId.startsWith('mark-wiemer') ? 'ahk2/' : ''}server/${process.env.DEBUG ? 'out' : 'dist'}/server.js`);
 
 	// If the extension is launched in debug mode then the debug server options are used
 	// Otherwise the run options are used
@@ -229,7 +228,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	}
 	update_extensions_info();
 
-	commands.executeCommand('setContext', 'ahk:isRunning', false);
+	commands.executeCommand('setContext', ahkIsRunningContext, false);
 	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 	ahkStatusBarItem.command = extSetInterpreter;
 	for (const it of [
@@ -405,7 +404,7 @@ async function runScript(textEditor: TextEditor, runSelection = false) {
 		outputchannel.appendLine(`[Running] [pid:${process.pid}] ${command}`);
 		ahkprocesses.set(process.pid, process);
 		process.path = path;
-		commands.executeCommand('setContext', 'ahk:isRunning', true);
+		commands.executeCommand('setContext', ahkIsRunningContext, true);
 		process.stderr?.on('data', (data) => {
 			outputchannel.appendLine(decode(data));
 		});
@@ -420,7 +419,7 @@ async function runScript(textEditor: TextEditor, runSelection = false) {
 			outputchannel.appendLine(`[Done] [pid:${process.pid}] exited with code=${code} in ${((new Date()).getTime() - startTime.getTime()) / 1000} seconds`);
 			ahkprocesses.delete(process.pid!);
 			if (!ahkprocesses.size)
-				commands.executeCommand('setContext', 'ahk:isRunning', false);
+				commands.executeCommand('setContext', ahkIsRunningContext, false);
 		});
 	} else
 		outputchannel.appendLine(`[Fail] ${command}`);

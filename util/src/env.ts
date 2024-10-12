@@ -11,6 +11,8 @@ export const languageClientName = 'AHK++';
 export const outputChannelName = 'AHK++';
 
 //* Internal commands - Client-side
+/** IDE context variable to enable or disable the stop command */
+export const ahkIsRunningContext = 'ahk:isRunning';
 
 /** Prefix for commands handled by the client. These are not registered in package.json */
 const clientCommandPrefix = 'ahk++.';
