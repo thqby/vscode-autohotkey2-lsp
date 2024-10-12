@@ -69,14 +69,10 @@ suite('setCfg', () => {
 });
 
 suite('getCfg', () => {
-	test('invalid property', () => {
+	test('invalid nested property', () => {
 		const cfg: AHKLSConfig = newConfig();
-		const key: keyof AHKLSConfig = 'Files';
-		const _x: AHKLSConfig['Files'] = { Exclude: [], MaxDepth: 2 };
-		const subkey: keyof typeof _x = 'Exclude';
-		delete cfg[key];
 
 		// no assertion necessary, just needs not to throw
-		getCfg(subkey as CfgKey, cfg);
+		getCfg(`${CfgKey.Formatter}.superDuperInvalid` as CfgKey, cfg);
 	});
 });

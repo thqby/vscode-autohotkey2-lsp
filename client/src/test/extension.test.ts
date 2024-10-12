@@ -44,6 +44,7 @@ import {
 import { readdirSync } from 'fs';
 import { suite, before, test } from 'mocha';
 import { serverGetContent } from '../../../util/src/env';
+import { newConfig } from '../../../util/src/config';
 
 let client: LanguageClient;
 before(async () => {
@@ -208,7 +209,7 @@ suite('Open AHK file', () => {
 suite('Formatting', async () => {
 	before(async () => {
 		await client.sendNotification(DidChangeConfigurationNotification.method, {
-			settings: { FormatOptions: {} },
+			settings: newConfig(),
 		});
 	});
 	const dir = resolve(__dirname, '../../src/test/formatting');

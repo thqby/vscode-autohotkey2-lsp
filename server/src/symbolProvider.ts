@@ -272,7 +272,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			if (st < 3)
 				stk.modifier = (stk.modifier ?? 0) | (SemanticTokenModifiers.readonly) | (islib ? SemanticTokenModifiers.defaultLibrary : 0);
 		}
-		return tk ?? {};
+		return tk ?? {} as Token;
 	}
 }
 
@@ -299,6 +299,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 	if ((is_cls = node?.kind === SymbolKind.Class))
 		node = get_class_constructor(node as unknown as ClassNode) as FuncNode;
 	if (!(params = node?.params)) return;
+
 	const { max, min } = get_func_param_count(node), l = params.length - (node.variadic ? 1 : 0);
 	const _miss: Record<number, boolean> = {};
 	let { count, miss } = paraminfo, index;

@@ -30,7 +30,7 @@ async function get_ahkProvider_port(): Promise<number> {
 		};
 		process.on('close', () => resolve2?.());
 		server.onConnected().then(
-			m => resolve2?.(createMessageConnection(...m)),
+			m => resolve2?.(createMessageConnection(m[0], m[1])),
 			() => resolve2?.()
 		);
 	});

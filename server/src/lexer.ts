@@ -351,7 +351,6 @@ const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectL
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[012])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|help|sleep|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
 const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 export const ASSIGN_TYPE = [':=', '??='];
-
 const OBJECT_STYLE: Record<BlockStyle, BlockStyle> = { collapse: 'collapse', expand: 'expand', none: 'none' };
 const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 const META_FUNCNAME = ['__NEW', '__INIT', '__ITEM', '__ENUM', '__GET', '__CALL', '__SET', '__DELETE'];
@@ -407,7 +406,7 @@ class ParseStopError {
 export class Lexer {
 	public actionWhenV1Detected?: ActionType = 'Continue';
 	public actived = false;
-	public beautify: (options: FormatOptions, range?: Range) => string;
+	public beautify: (options: Partial<FormatOptions>, range?: Range) => string;
 	public checkmember: boolean | undefined;
 	public children: AhkSymbol[] = [];
 	public d = 0;
@@ -549,7 +548,7 @@ export class Lexer {
 			return !ignore && _this.findStrOrComment(offset) || eof;
 		}
 
-		this.beautify = function (options: FormatOptions, range?: Range) {
+		this.beautify = function (options: Partial<FormatOptions>, range?: Range) {
 			let end_pos: number;
 			!_this.isparsed && _this.parseScript();
 
@@ -911,19 +910,20 @@ export class Lexer {
 				if (this.d & 2) {
 					const overwrite = uri.endsWith('/ahk2_h.d.ahk') ? 1 : 0;
 					let t;
-					for (const [k, it] of Object.entries(this.declaration)) {
+					for (const [k, i] of Object.entries(this.declaration)) {
+						const it = i as AhkSymbol; // ts is being weird
 						switch (it.kind) {
 							case SymbolKind.Function:
-								it.def = false, it.uri = uri;
+								it.def = false; it.uri = uri;
 							// fall through
 							case SymbolKind.Class:
-								it.overwrite ??= overwrite, it.def ??= true;
+								it.overwrite ??= overwrite; it.def ??= true;
 								if (!(t = ahkvars[k]) || overwrite >= (t.overwrite ?? 0))
 									ahkvars[k] = it;
 								break;
 							case SymbolKind.Variable:
 								if (it.def)
-									ahkvars[k] = it, it.uri = uri;
+									ahkvars[k] = it; it.uri = uri;
 								break;
 						}
 					}
@@ -1258,7 +1258,7 @@ export class Lexer {
 								lst = { ...EMPTY_TOKEN };
 							}
 							string_mode = true;
-							tk = get_token_ignore_comment();
+							tk = get_token_ignoreComment();
 							while (tk.ignore && tk.type === 'TK_STRING') {
 								next_LF = input.indexOf('\n', parser_pos);
 								if (next_LF < 0)
@@ -1266,7 +1266,7 @@ export class Lexer {
 								if ((s = input.substring(parser_pos, next_LF).trimEnd()))
 									tk.content += s, tk.length += s.length;
 								parser_pos = next_LF;
-								tk = get_token_ignore_comment();
+								tk = get_token_ignoreComment();
 							}
 							string_mode = false;
 						} while (is_line_continue({} as Token, tk));
@@ -2165,7 +2165,7 @@ export class Lexer {
 						}
 					// fall through
 					default:
-						nk = get_token_ignore_comment();
+						nk = get_token_ignoreComment();
 						if (nk.type === 'TK_EQUALS' || nk.content.match(/^([<>]=?|~=|&&|\|\||[.|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/))
 							tk.type = 'TK_WORD', parser_pos = tpos, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						else {
@@ -2214,10 +2214,10 @@ export class Lexer {
 				let p: Token | undefined, nk: Token;
 				const bp = tk.offset;
 				line_begin_pos = bp;
-				lk = nk = tk, p = get_token_ignore_comment();
+				lk = nk = tk, p = get_token_ignoreComment();
 				if (p.topofline || p.content !== '(')
 					tk = p, p = undefined;
-				else tk = get_token_ignore_comment();
+				else tk = get_token_ignoreComment();
 				if (tk.topofline || (tk.type !== 'TK_WORD' && !allIdentifierChar.test(tk.content))) {
 					if (p) {
 						parser_pos = p.offset - 1;
@@ -2238,7 +2238,7 @@ export class Lexer {
 							if (tk.type !== 'TK_WORD')
 								_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 							else addvariable(tk), tp += tk.content;
-							lk = tk, tk = get_token_ignore_comment();
+							lk = tk, tk = get_token_ignoreComment();
 							if (tk.type === 'TK_DOT') {
 								nexttoken();
 								while (true) {
@@ -2258,7 +2258,7 @@ export class Lexer {
 							}
 							!tp.startsWith('@') && tps.push(tp);
 							if (tk.content === ',') {
-								lk = tk, tk = get_token_ignore_comment();
+								lk = tk, tk = get_token_ignoreComment();
 								if (!allIdentifierChar.test(tk.content))
 									break;
 							} else
@@ -2278,14 +2278,14 @@ export class Lexer {
 						}
 					}
 					if (tk.content.toLowerCase() === 'as') {
-						lk = tk, tk = get_token_ignore_comment();
+						lk = tk, tk = get_token_ignoreComment();
 						next = false;
 						if (tk.type !== 'TK_WORD' && !allIdentifierChar.test(tk.content)) {
 							_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length);
 						} else if (tk.type !== 'TK_WORD')
 							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length), tk.type = 'TK_WORD';
 						else {
-							const t = get_token_ignore_comment();
+							const t = get_token_ignoreComment();
 							parser_pos = tk.offset + tk.length;
 							if (!t.topofline && t.content !== '{' && !(p && t.content === ')'))
 								_this.addDiagnostic(diagnostic.unexpected(nk.content), nk.offset, nk.length), next = false;
@@ -2309,7 +2309,7 @@ export class Lexer {
 					} else {
 						if (p) {
 							if (tk.content === ')')
-								lk = tk, tk = get_token_ignore_comment();
+								lk = tk, tk = get_token_ignoreComment();
 							else _this.addDiagnostic(diagnostic.missing(')'), p.offset, 1);
 						}
 						if (!tk.topofline)
@@ -2364,7 +2364,7 @@ export class Lexer {
 					let act, offset;
 					/^=>?$/.test(tk.content) && (act = tk.content, offset = tk.offset);
 					if (maybev1 && act === '=' && stop_parse(tk, true) &&
-						(next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
+						(next = false, lk = EMPTY_TOKEN, tk = get_token_ignoreComment()))
 						return;
 					reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN, next = false;
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
@@ -2378,7 +2378,7 @@ export class Lexer {
 				const pi: ParamInfo = { offset: fc.offset, miss: [], comma: [], count: 0, unknown: false, name: fc.content };
 				if (nextc === ',' || maybev1) {
 					if (type === SymbolKind.Function && builtin_ahkv1_commands.includes(fc.content.toLowerCase()) &&
-						stop_parse(fc, true) && (next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
+						stop_parse(fc, true) && (next = false, lk = EMPTY_TOKEN, tk = get_token_ignoreComment()))
 						return;
 					nextc === ',' && _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
 				}
@@ -2501,7 +2501,7 @@ export class Lexer {
 						}
 						if (diag) {
 							if (act === '=' && stop_parse(tokens[nk!.next_token_offset], true) &&
-								(next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
+								(next = false, lk = EMPTY_TOKEN, tk = get_token_ignoreComment()))
 								return [];
 							_this.addDiagnostic(`${diagnostic.unexpected(act)}, ${diagnostic.didyoumean(':=').toLowerCase()}`, min, act.length);
 						}
@@ -2557,7 +2557,7 @@ export class Lexer {
 						if ((m = l.match(/^\w+[ \t]+v(1|2)/))) {
 							if (m[1] === '2')
 								requirev2 = true;
-							else if (_this.maybev1 = 3, !stop_parse(data, false, diagnostic.requirev1()))
+							else if (_this.maybev1 = 3, !stop_parse(data as Token, false, diagnostic.requirev1()))
 								_this.addDiagnostic(diagnostic.unexpected(data.content), data.offset, data.length);
 						}
 						break;
@@ -3211,7 +3211,7 @@ export class Lexer {
 							} else _this.addDiagnostic(diagnostic.unexpected('*'), t.offset, 1);
 						} else if (tk.content === '&') {
 							const t = tk;
-							tk = get_token_ignore_comment();
+							tk = get_token_ignoreComment();
 							if (tk.type === 'TK_WORD') {
 								byref = true, next = false; continue;
 							} else _this.addDiagnostic(diagnostic.unexpected('&'), t.offset, 1);
@@ -3454,7 +3454,7 @@ export class Lexer {
 							lk = llk, parser_pos = tp - 1, tk = get_next_token(), b = tk.offset;
 							rs = [], par = parse_params(true);
 							if (!par) { par = [], _this.addDiagnostic(diagnostic.invalidparam(), b, tk.offset - b + 1); }
-							nk = get_token_ignore_comment();
+							nk = get_token_ignoreComment();
 						} else if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) !== '.') {
 							nk = tk, b = lk.offset;
 							par = [Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length))];
@@ -4079,7 +4079,7 @@ export class Lexer {
 			}
 
 			function nexttoken() {
-				if (next) return lk = tk, next = (tk = get_token_ignore_comment()).type !== 'TK_EOF';
+				if (next) return lk = tk, next = (tk = get_token_ignoreComment()).type !== 'TK_EOF';
 				else return next = tk.type !== 'TK_EOF';
 			}
 		}
@@ -4539,7 +4539,7 @@ export class Lexer {
 			}
 
 			const next_flags: Flag = {
-				array_style,
+				array_style: array_style,
 				case_body: false,
 				catch_block: false,
 				declaration_statement: false,
@@ -4555,7 +4555,7 @@ export class Lexer {
 				last_word,
 				loop_block: 0,
 				mode,
-				object_style,
+				object_style: object_style,
 				parent: flags_base!,
 				start_line_index: output_lines.length,
 				ternary_depth,
@@ -4622,13 +4622,13 @@ export class Lexer {
 			if (!line.text.length) {
 				if (preindent_string)
 					line.text.push(preindent_string);
-				flags.indentation_level = print_indent_string(flags.indentation_level);
+				flags.indentation_level = print_indentString(flags.indentation_level);
 			} else if (output_space_before_token)
 				line.text.push(' ');
 			output_space_before_token = undefined;
 			line.text.push(printable_token ?? token_text);
 
-			function print_indent_string(level: number) {
+			function print_indentString(level: number) {
 				if (level) {
 					for (let i = output_lines.length - 2; i >= 0; i--)
 						if (output_lines[i].text.length) {
@@ -4716,7 +4716,7 @@ export class Lexer {
 			return c === find_char ? local_pos : 0;
 		}
 
-		function get_token_ignore_comment(depth = 0): Token {
+		function get_token_ignoreComment(depth = 0): Token {
 			let tk: Token;
 			do { tk = get_next_token(depth); } while (tk.type.endsWith('COMMENT'));
 			return tk;
@@ -4802,7 +4802,7 @@ export class Lexer {
 							}
 							string_mode = execute = true;
 							const _lst = lst;
-							let tk = get_token_ignore_comment(depth + 1), t: number;
+							let tk = get_token_ignoreComment(depth + 1), t: number;
 							while (tk.ignore && tk.type === 'TK_STRING') {
 								if ((parser_pos = input.indexOf('\n', t = parser_pos)) < 0)
 									parser_pos = input_length;
@@ -4811,7 +4811,7 @@ export class Lexer {
 									tk.content += s, tk.length += s.length;
 								}
 								_this.tokenranges.push({ start: tk.offset, end: tk.offset + tk.length, type: 3 });
-								execute = false, tk = get_token_ignore_comment(depth + 1);
+								execute = false, tk = get_token_ignoreComment(depth + 1);
 							}
 							string_mode = false, lst = _lst;
 							if (!execute && lst.type === 'TK_HOT') {
@@ -4943,7 +4943,7 @@ export class Lexer {
 									lst.data = { content, offset, length: parser_pos - offset };
 									lst.skip_pos = parser_pos;
 									_this.tokenranges.push({ start: offset, end: parser_pos, type: 3, previous: lst.offset });
-									const js = content.match(/(^|[ \t])join([^ \t]*)/i), ignore_comment = /(^|[ \t])[Cc]/.test(content);
+									const js = content.match(/(^|[ \t])join([^ \t]*)/i), ignoreComment = /(^|[ \t])[Cc]/.test(content);
 									const _lst = lst, _mode = format_mode;
 									let lk = lst, optionend = false, llf = parser_pos, sum = 0, tk: Token;
 									let create_tokens: (n: number, LF: number) => typeof lk.previous_extra_tokens = () => undefined;
@@ -4976,7 +4976,7 @@ export class Lexer {
 									}
 									format_mode = true, tk = get_next_token();
 									if (continuation_sections_mode && tk.type !== 'TK_EOF') {
-										if (ignore_comment && tk.topofline && tk.type.endsWith('COMMENT')) {
+										if (ignoreComment && tk.topofline && tk.type.endsWith('COMMENT')) {
 											sum = n_newlines - 2;
 										} else {
 											if (n_newlines > 1)
@@ -4987,7 +4987,7 @@ export class Lexer {
 									}
 									while (continuation_sections_mode && tk.type !== 'TK_EOF') {
 										if (tk.topofline) {
-											if (ignore_comment && tk.type.endsWith('COMMENT')) {
+											if (ignoreComment && tk.type.endsWith('COMMENT')) {
 												sum += n_newlines - 1;
 											} else {
 												if ((sum += n_newlines))
@@ -5105,7 +5105,7 @@ export class Lexer {
 						return lst;
 					}
 					string_mode = block_mode = true;
-					let tk = get_token_ignore_comment(depth + 1);
+					let tk = get_token_ignoreComment(depth + 1);
 					stringend:
 					while (tk.ignore && tk.type === 'TK_STRING') {
 						const p = parser_pos, data = tk.data as number[];
@@ -5136,7 +5136,7 @@ export class Lexer {
 								tk.content += s, tk.length += s.length;
 							_this.tokenranges.push({ start: tk.offset, end: tk.offset + tk.length, type: 3 });
 						}
-						tk = get_token_ignore_comment(depth + 1);
+						tk = get_token_ignoreComment(depth + 1);
 					}
 					if (!tk.ignore || tk.type !== 'TK_STRING')
 						if ((pt = tk.previous_token))
@@ -5333,7 +5333,7 @@ export class Lexer {
 					return lst = createToken(c, 'TK_COMMA', offset, 1, bg);
 				else if (c === '?') {
 					lst = createToken(c, 'TK_OPERATOR', offset, 1, bg);
-					const bak = parser_pos, tk = lst, t = get_token_ignore_comment(depth + 1);
+					const bak = parser_pos, tk = lst, t = get_token_ignoreComment(depth + 1);
 					parser_pos = bak;
 					if (')]},:??'.includes(t.content) || t.content === '.' && t.type !== 'TK_OPERATOR') {
 						tk.ignore = true;
@@ -5530,7 +5530,7 @@ export class Lexer {
 
 				if (previous_flags.in_case_statement && last_type === 'TK_LABEL' && /^(default)?:$/.test(last_text))
 					flags.case_body = null, print_newline(), flags.indentation_level--;
-				else if (opt.brace_style === 'Allman' || input_wanted_newline && opt.preserve_newlines && opt.brace_style !== 'Preserve')
+				else if (opt.brace_style === 'Allman' || input_wanted_newline && opt.preserve_newlines && opt.brace_style === 'Preserve')
 					if (ck.in_expr === undefined || flags.mode === MODE.Expression)
 						print_newline(true);
 
@@ -6547,8 +6547,8 @@ export class Lexer {
 			else break;
 		}
 		if (l <= r && it)
-			return this.tokens[it.start] ?? ((it = this.tokens[it.previous!])?.data
-				&& { ...it.data, previous_token: it, type: '' });
+			return (this.tokens[it.start] ?? ((it = this.tokens[it.previous!])?.data
+				&& { ...it.data, previous_token: it, type: '' })) as Token;
 	}
 }
 
@@ -7941,7 +7941,7 @@ export function fixupFormatConfig(options: { brace_style?: string | undefined })
  * Whitespace-insensitive.
  * Does not validate that keys are valid FormatOptions keys.
  */
-export function parseFormatDirective(directive: string): Partial<FormatOptions> {
+export function parseFormatDirective(directive: string): Record<string, string> {
 	// Run regex against the directive to confirm it matches
 	const m = directive.match(/^;\s*@format\b/i);
 	if (!m) return {};
@@ -7960,7 +7960,7 @@ export function parseFormatDirective(directive: string): Partial<FormatOptions> 
  * Example: `;@format array_style: expand, object_style: expand`
  * See `client/src/test/formatting/array_object_style.ahk` for an in-code example.
  */
-export function applyFormatDirective(directive: string, flags: Partial<Flag>, opt: Partial<FormatOptions>) {
+export function applyFormatDirective(directive: string, flags: Partial<Flag>, opt: Partial<InternalFormatOptions>) {
 	const parsedDirective = parseFormatDirective(directive);
 	for (const k of ['array_style', 'object_style'] as const) {
 		if (k in parsedDirective) {

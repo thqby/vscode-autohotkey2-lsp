@@ -1,8 +1,13 @@
 import { resolve } from 'path';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	createConnection, DidChangeConfigurationNotification, InitializeResult,
-	ProposedFeatures, SymbolKind, TextDocuments, TextDocumentSyncKind
+	createConnection,
+	DidChangeConfigurationNotification,
+	InitializeResult,
+	ProposedFeatures,
+	SymbolKind,
+	TextDocuments,
+	TextDocumentSyncKind,
 } from 'vscode-languageserver/node';
 import { URI } from 'vscode-uri';
 import { get_ahkProvider } from './ahkProvider';
@@ -26,14 +31,15 @@ const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
 const connection = set_Connection(createConnection(ProposedFeatures.all));
 const workspaceFolders = new Set<string>();
-let hasConfigurationCapability = false, hasWorkspaceFolderCapability = false;
+let hasConfigurationCapability = false,
+	hasWorkspaceFolderCapability = false;
 let uri_switch_to_ahk2 = '';
 
 // Cannot be done on browser, so added here
 commands[serverResetInterpreterPath] = (args: string[]) =>
 	setInterpreter((args[0]).replace(/^[A-Z]:/, m => m.toLowerCase()));
 
-connection.onInitialize(async params => {
+connection.onInitialize(async (params) => {
 	const capabilities = params.capabilities;
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
@@ -49,20 +55,26 @@ connection.onInitialize(async params => {
 		capabilities: {
 			textDocumentSync: {
 				change: TextDocumentSyncKind.Incremental,
-				openClose: true
+				openClose: true,
 			},
 			completionProvider: {
 				resolveProvider: false,
-				triggerCharacters: ['.', '#', '*', '@']
+				triggerCharacters: ['.', '#', '*', '@'],
 			},
 			signatureHelpProvider: {
-				triggerCharacters: ['(', ',', ' ']
+				triggerCharacters: ['(', ',', ' '],
 			},
 			documentSymbolProvider: true,
 			definitionProvider: true,
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
-			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinese_punctuations)] },
+			documentOnTypeFormattingProvider: {
+				firstTriggerCharacter: '}',
+				moreTriggerCharacter: [
+					'\n',
+					...Object.keys(chinese_punctuations),
+				],
+			},
 			executeCommandProvider: { commands: Object.keys(commands) },
 			hoverProvider: true,
 			foldingRangeProvider: true,
@@ -72,18 +84,26 @@ connection.onInitialize(async params => {
 			referencesProvider: { workDoneProgress: true },
 			semanticTokensProvider: {
 				legend: {
-					tokenTypes: Object.values(SemanticTokenTypes).filter(t => typeof t === 'string') as string[],
-					tokenModifiers: Object.values(SemanticTokenModifiers).filter(t => typeof t === 'string') as string[]
+					tokenTypes: Object.values(SemanticTokenTypes).filter(
+						(t) => typeof t === 'string',
+					) as string[],
+					tokenModifiers: Object.values(
+						SemanticTokenModifiers,
+					).filter((t) => typeof t === 'string') as string[],
 				},
 				full: true,
-				range: true
+				range: true,
 			},
-			workspaceSymbolProvider: true
-		}
+			workspaceSymbolProvider: true,
+		},
 	};
 	if (hasWorkspaceFolderCapability) {
-		params.workspaceFolders?.forEach(it => workspaceFolders.add(it.uri.toLowerCase() + '/'));
-		result.capabilities.workspace = { workspaceFolders: { supported: true } };
+		params.workspaceFolders?.forEach((it) =>
+			workspaceFolders.add(it.uri.toLowerCase() + '/'),
+		);
+		result.capabilities.workspace = {
+			workspaceFolders: { supported: true },
+		};
 	}
 
 	let initialConfig: AHKLSConfig | undefined;
@@ -115,14 +135,21 @@ connection.onInitialized(() => {
 		connection.client.register(DidChangeConfigurationNotification.type);
 	}
 	if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders(event => {
-			event.removed.forEach(it => workspaceFolders.delete(it.uri.toLowerCase() + '/'));
-			event.added.forEach(it => workspaceFolders.add(it.uri.toLowerCase() + '/'));
+		connection.workspace.onDidChangeWorkspaceFolders((event) => {
+			event.removed.forEach((it) =>
+				workspaceFolders.delete(it.uri.toLowerCase() + '/'),
+			);
+			event.added.forEach((it) =>
+				workspaceFolders.add(it.uri.toLowerCase() + '/'),
+			);
 			set_WorkspaceFolders(workspaceFolders);
 		});
 	}
-	getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(name => `C:\\Windows\\System32\\${name}.dll`))
-		.then(val => winapis.push(...val));
+	getDllExport(
+		['user32', 'kernel32', 'comctl32', 'gdi32'].map(
+			(name) => `C:\\Windows\\System32\\${name}.dll`,
+		),
+	).then((val) => winapis.push(...val));
 });
 
 connection.onDidChangeConfiguration(async change => {
@@ -242,17 +269,18 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	FileAppend2(text, file, encode) {
 		FileAppend %text%, %file%, %encode%
 	}`;
-	let fail = 0, data = runscript(script);
+	let fail = 0,
+		data = runscript(script);
 	if (data === undefined) {
-		if (retry)
-			return initpathenv(samefolder, false);
+		if (retry) return initpathenv(samefolder, false);
 		patherr(setting.ahkpatherr());
 		return false;
 	}
 	if (!(data = data.trim())) {
 		const path = interpreterPath;
 		if ((await getAHKversion([path]))[0].endsWith('[UIAccess]')) {
-			let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
+			let ret = false,
+				n = path.replace(/_uia\.exe$/i, '.exe');
 			fail = 2;
 			if (
 				path !== n &&
@@ -264,13 +292,11 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 					fail = 0;
 				setInterpreterPath(path);
 			}
-			fail && connection.window.showWarningMessage(setting.uialimit());
+			if (fail) connection.window.showWarningMessage(setting.uialimit());
 			await update_rcdata();
-			if (ret)
-				return true;
+			if (ret) return true;
 		} else fail = 1;
-		if (fail !== 2 && retry)
-			return initpathenv(samefolder, false);
+		if (fail !== 2 && retry) return initpathenv(samefolder, false);
 		if (!a_vars.mydocuments)
 			connection.window.showErrorMessage(setting.getenverr());
 		return false;
@@ -282,11 +308,12 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		patherr(setting.versionerr());
 	if (!samefolder || !libdirs.length) {
 		libdirs.length = 0;
-		libdirs.push(a_vars.mydocuments + '\\AutoHotkey\\Lib\\',
-			a_vars.ahkpath.replace(/[^\\/]+$/, 'Lib\\'));
+		libdirs.push(
+			a_vars.mydocuments + '\\AutoHotkey\\Lib\\',
+			a_vars.ahkpath.replace(/[^\\/]+$/, 'Lib\\'),
+		);
 		let lb;
-		for (lb of Object.values(libfuncs))
-			lb.islib = inlibdirs(lb.fsPath);
+		for (lb of Object.values(libfuncs)) lb.islib = inlibdirs(lb.fsPath);
 	}
 	if (a_vars.threadid) {
 		if (!isahk2_h) {
@@ -306,8 +333,7 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	}
 	Object.assign(a_vars, { index: '0', clipboard: '', threadid: '' });
 	await update_rcdata();
-	if (samefolder)
-		return true;
+	if (samefolder) return true;
 	for (const uri in lexers) {
 		const doc = lexers[uri];
 		if (!doc.d) {
@@ -325,25 +351,39 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		try {
 			const rc = await pe.getResource(RESOURCE_TYPE.RCDATA);
 			curPERCDATA = rc;
-		} catch (e) { }
-		finally { pe.close(); }
+		} catch (e) {
+			console.error(e);
+		} finally {
+			pe.close();
+		}
 	}
 }
 
 function get_lib_symbols(lex: Lexer) {
 	return Object.assign(
-		Object.values(lex.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function),
-		{ fsPath: lex.fsPath, islib: inlibdirs(lex.fsPath) }
+		Object.values(lex.declaration).filter(
+			(it) =>
+				it.kind === SymbolKind.Class || it.kind === SymbolKind.Function,
+		),
+		{ fsPath: lex.fsPath, islib: inlibdirs(lex.fsPath) },
 	);
 }
 
 async function parseuserlibs() {
-	let dir: string, path: string, uri: string, d: Lexer, t: TextDocument | undefined;
+	let dir: string,
+		path: string,
+		uri: string,
+		d: Lexer,
+		t: TextDocument | undefined;
 	for (dir of libdirs)
 		for await (path of enum_ahkfiles(dir)) {
-			if (!libfuncs[uri = URI.file(path).toString().toLowerCase()]) {
+			if (!libfuncs[(uri = URI.file(path).toString().toLowerCase())]) {
 				if (!(d = lexers[uri]))
-					if (!(t = openFile(path)) || (d = new Lexer(t)).d || (d.parseScript(), d.maybev1))
+					if (
+						!(t = openFile(path)) ||
+						(d = new Lexer(t)).d ||
+						(d.parseScript(), d.maybev1)
+					)
 						continue;
 				libfuncs[uri] = get_lib_symbols(d);
 				await sleep(50);
@@ -354,19 +394,19 @@ async function parseuserlibs() {
 function inlibdirs(path: string) {
 	path = path.toLowerCase();
 	for (const p of libdirs) {
-		if (path.startsWith(p.toLowerCase()))
-			return true;
+		if (path.startsWith(p.toLowerCase())) return true;
 	}
 	return false;
 }
 
 async function changeInterpreter(oldpath: string, newpath: string) {
-	const samefolder = !!oldpath && resolve(oldpath, '..').toLowerCase() === resolve(newpath, '..').toLowerCase();
-	if (!(await initpathenv(samefolder)))
-		return false;
-	if (samefolder)
-		return true;
-	documents.all().forEach(td => {
+	const samefolder =
+		!!oldpath &&
+		resolve(oldpath, '..').toLowerCase() ===
+			resolve(newpath, '..').toLowerCase();
+	if (!(await initpathenv(samefolder))) return false;
+	if (samefolder) return true;
+	documents.all().forEach((td) => {
 		const doc = lexers[td.uri.toLowerCase()];
 		if (!doc) return;
 		doc.initLibDirs(doc.scriptdir);
@@ -388,21 +428,29 @@ async function setInterpreter(path: string) {
 
 async function parseproject(uri: string) {
 	let lex = lexers[uri];
-	if (!lex || !uri.startsWith('file:'))
-		return;
-	!lex.d && (libfuncs[uri] ??= get_lib_symbols(lex));
-	let searchdir = lex.workspaceFolder, workspace = false, path: string, t: TextDocument | undefined;
-	if (searchdir)
-		searchdir = URI.parse(searchdir).fsPath, workspace = true;
-	else
-		searchdir = lex.scriptdir + '\\lib';
+	if (!lex || !uri.startsWith('file:')) return;
+	if (!lex.d) {
+		libfuncs[uri] ??= get_lib_symbols(lex);
+	}
+	let searchdir = lex.workspaceFolder,
+		workspace = false,
+		path: string,
+		t: TextDocument | undefined;
+	if (searchdir) {
+		searchdir = URI.parse(searchdir).fsPath;
+		workspace = true;
+	} else searchdir = lex.scriptdir + '\\lib';
 	for await (path of enum_ahkfiles(searchdir)) {
-		if (!libfuncs[uri = URI.file(path).toString().toLowerCase()]) {
+		if (!libfuncs[(uri = URI.file(path).toString().toLowerCase())]) {
 			if (!(lex = lexers[uri])) {
-				if (!(t = openFile(path)) || (lex = new Lexer(t)).d || (lex.parseScript(), lex.maybev1))
+				if (
+					!(t = openFile(path)) ||
+					(lex = new Lexer(t)).d ||
+					(lex.parseScript(), lex.maybev1)
+				)
 					continue;
 				if (workspace) {
-					parse_include(lexers[uri] = lex, lex.scriptdir);
+					parse_include((lexers[uri] = lex), lex.scriptdir);
 					traverse_include(lex);
 				}
 			}
@@ -413,23 +461,33 @@ async function parseproject(uri: string) {
 }
 
 async function getAHKversion(params: string[]) {
-	return Promise.all(params.map(async path => {
-		let pe: PEFile | undefined;
-		try {
-			pe = new PEFile(path);
-			const props = (await pe.getResource(RESOURCE_TYPE.VERSION))[0].StringTable[0];
-			if (props.ProductName?.toLowerCase().startsWith('autohotkey')) {
-				const is_bit64 = await pe.is_bit64;
-				const m = (await pe.getResource(RESOURCE_TYPE.MANIFEST))[0]?.replace(/<!--[\s\S]*?-->/g, '') ?? '';
-				let version = `${props.ProductName} ${props.ProductVersion ?? 'unknown version'} ${is_bit64 ? '64' : '32'} bit`;
-				if (m.includes('uiAccess="true"'))
-					version += ' [UIAccess]';
-				return version;
+	return Promise.all(
+		params.map(async (path) => {
+			let pe: PEFile | undefined;
+			try {
+				pe = new PEFile(path);
+				const props = (await pe.getResource(RESOURCE_TYPE.VERSION))[0]
+					.StringTable[0];
+				if (props.ProductName?.toLowerCase().startsWith('autohotkey')) {
+					const is_bit64 = await pe.is_bit64;
+					const m =
+						(
+							await pe.getResource(RESOURCE_TYPE.MANIFEST)
+						)[0]?.replace(/<!--[\s\S]*?-->/g, '') ?? '';
+					let version = `${props.ProductName} ${
+						props.ProductVersion ?? 'unknown version'
+					} ${is_bit64 ? '64' : '32'} bit`;
+					if (m.includes('uiAccess="true"')) version += ' [UIAccess]';
+					return version;
+				}
+			} catch (e) {
+				console.error(e);
+			} finally {
+				pe?.close();
 			}
-		} catch (e) { }
-		finally { pe?.close(); }
-		return 'unknown version';
-	}));
+			return 'unknown version';
+		}),
+	);
 }
 
 async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
@@ -438,9 +496,13 @@ async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 		const pe = await searchAndOpenPEFile(path, a_vars.ptrsize === '8' ? true : a_vars.ptrsize === '4' ? false : undefined);
 		if (!pe) continue;
 		try {
-			(await pe.getExport())?.Functions.forEach((it) => funcs[it.Name] = true);
+			(await pe.getExport())?.Functions.forEach(
+				(it) => (funcs[it.Name] = true),
+			);
 			if (onlyone) break;
-		} finally { pe.close(); }
+		} finally {
+			pe.close();
+		}
 	}
 	delete funcs[''];
 	return Object.keys(funcs);
@@ -450,19 +512,26 @@ let curPERCDATA: Record<string, Buffer> | undefined = undefined;
 function getRCDATA(name?: string) {
 	const exe = resolvePath(interpreterPath, true);
 	if (!exe) return;
-	if (!name) return { uri: '', path: '', paths: Object.keys(curPERCDATA ?? {}) };
+	if (!name)
+		return { uri: '', path: '', paths: Object.keys(curPERCDATA ?? {}) };
 	const path = `${exe.toLowerCase()}:${name}`;
 	const uri = URI.from({ scheme: 'ahkres', path }).toString().toLowerCase();
-	if (lexers[uri])
-		return { uri, path };
-	if (!name || !curPERCDATA)
-		return;
+	if (lexers[uri]) return { uri, path };
+	if (!name || !curPERCDATA) return;
 	const data = curPERCDATA[name];
-	if (!data)
-		return;
+	if (!data) return;
 	try {
-		const doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
+		const doc = (lexers[uri] = new Lexer(
+			TextDocument.create(
+				uri,
+				'ahk2',
+				-10,
+				new TextDecoder('utf8', { fatal: true }).decode(data),
+			),
+		));
 		doc.parseScript();
 		return { uri, path };
-	} catch { delete curPERCDATA[name]; }
+	} catch {
+		delete curPERCDATA[name];
+	}
 }

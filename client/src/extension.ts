@@ -58,6 +58,7 @@ import {
 	extExtractSymbols,
 	extSwitchAHKVersion,
 	serverResetInterpreterPath,
+	ahkIsRunningContext,
 } from '../../util/src/env';
 import { getConfigIDE, getConfigRoot } from './config';
 
@@ -229,7 +230,7 @@ export function activate(context: ExtensionContext): Promise<LanguageClient> {
 	}
 	update_extensions_info();
 
-	commands.executeCommand('setContext', 'ahk2:isRunning', false);
+	commands.executeCommand('setContext', ahkIsRunningContext, false);
 	ahkStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 75);
 	ahkStatusBarItem.command = extSetInterpreter;
 	for (const it of [
@@ -347,33 +348,37 @@ async function runScript(textEditor: TextEditor, selection = false) {
 			.then(r => r ? setInterpreter() : undefined);
 		return;
 	}
-	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
+	let selectedText = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
 	let startTime: Date;
 	outputchannel.show(true);
 	if (!ahkprocesses.size)
 		outputchannel.clear();
+
+	// Build the command
 	if (selection)
-		selecttext = textEditor.selections.map(textEditor.document.getText).join('\n');
+		selectedText = textEditor.selections.map(textEditor.document.getText).join('\n');
 	else if (textEditor.document.isUntitled || !textEditor.document.uri.toString().startsWith('file:///'))
-		selecttext = textEditor.document.getText();
+		selectedText = textEditor.document.getText();
 	executePath.replace(/^(.+[\\/])AutoHotkeyUX\.exe$/i, (...m) => {
 		const lc = m[1] + 'launcher.ahk';
 		if (existsSync(lc))
 			command = `"${executePath}" "${lc}" `;
 		return '';
 	})
+
+	// Spawn the process
 	let process: ChildProcess & { path?: string };
-	if (selecttext !== '') {
+	if (selectedText !== '') {
 		if (ahkStatusBarItem.text.endsWith('[UIAccess]')) {
 			path = resolve(__dirname, 'temp.ahk');
-			writeFileSync(path, selecttext);
+			writeFileSync(path, selectedText);
 			command += `"${path}"`, startTime = new Date();
 			process = spawn(command, { cwd: `${resolve(textEditor.document.fileName, '..')}`, shell: true });
 			unlinkSync(path);
 		} else {
 			command += path, startTime = new Date();
 			process = spawn(command, { cwd: `${resolve(textEditor.document.fileName, '..')}`, shell: true });
-			process.stdin?.write(selecttext), process.stdin?.end();
+			process.stdin?.write(selectedText), process.stdin?.end();
 		}
 	} else {
 		if (textEditor.document.isUntitled)
@@ -382,11 +387,12 @@ async function runScript(textEditor: TextEditor, selection = false) {
 		path = textEditor.document.fileName, command += `"${path}"`, startTime = new Date();
 		process = spawn(command, { cwd: resolve(path, '..'), shell: true });
 	}
+
 	if (process.pid) {
 		outputchannel.appendLine(`[Running] [pid:${process.pid}] ${command}`);
 		ahkprocesses.set(process.pid, process);
 		process.path = path;
-		commands.executeCommand('setContext', 'ahk2:isRunning', true);
+		commands.executeCommand('setContext', ahkIsRunningContext, true);
 		process.stderr?.on('data', (data) => {
 			outputchannel.appendLine(decode(data));
 		});
@@ -401,7 +407,7 @@ async function runScript(textEditor: TextEditor, selection = false) {
 			outputchannel.appendLine(`[Done] [pid:${process.pid}] exited with code=${code} in ${((new Date()).getTime() - startTime.getTime()) / 1000} seconds`);
 			ahkprocesses.delete(process.pid!);
 			if (!ahkprocesses.size)
-				commands.executeCommand('setContext', 'ahk2:isRunning', false);
+				commands.executeCommand('setContext', ahkIsRunningContext, false);
 		});
 	} else
 		outputchannel.appendLine(`[Fail] ${command}`);
@@ -619,6 +625,11 @@ async function beginDebug(type: 'f' | 'c' | 'p' | 'a') {
 	debug.startDebugging(editor && workspace.getWorkspaceFolder(editor.document.uri), debugConfig);
 }
 
+/**
+ * Sets the v2 interpreter path via quick pick.
+ * Updates the most local configuration target that has a custom interpreter path.
+ * If no target has a custom path, updates workspace folder config.
+ */
 async function setInterpreter() {
 	// eslint-disable-next-line prefer-const
 	let index = -1, { path: ahkpath, from } = getInterpreterPath();
@@ -776,7 +787,7 @@ async function onDidChangeInterpreter() {
  * Resolves a given path to an absolute path.
  * Returns empty string if the file does not exist or has no access rights.
  */
-function resolvePath(path: string, workspace?: string, resolveSymbolicLink = true): string {
+function resolvePath(path: string | undefined, workspace?: string, resolveSymbolicLink = true): string {
 	if (!path)
 		return '';
 	const paths: string[] = [];

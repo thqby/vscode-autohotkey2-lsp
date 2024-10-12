@@ -76,6 +76,7 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 	return text;
 }
 
+/** Add a function header comment for the currently active function */
 async function generateComment() {
 	if (!checkCommand(clientGetActiveEditorInfo) || !checkCommand(clientInsertSnippet))
 		return;

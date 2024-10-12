@@ -1,3 +1,13 @@
+out
+dist
+node_modules
+.test-data
+.vscode-test
+.vscode-test-web
+*.vsix
+scripts/*
+server/expr_parser/*
+
 client/src/browserClientMain.ts
 client/src/extension.ts
 client/src/test/utils.ts

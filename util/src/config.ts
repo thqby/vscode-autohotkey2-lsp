@@ -64,10 +64,7 @@ export enum CallWithoutParentheses {
 	On = 'On',
 }
 
-/**
- * Possible values for `array_style` and `object_style`
- * Defined in package.json, do not change.
- */
+/** Possible values for `array_style` and `object_style` */
 export type BlockStyle = 'collapse' | 'expand' | 'none';
 
 export type BraceStyle =
@@ -194,7 +191,9 @@ export const getCfg = <T = string>(
 	let value: any = config;
 	for (const k of keyPath) {
 		if (!value) {
-			console.warn('Failed to get config', key);
+			if (config === ahklsConfig) {
+				console.warn(`Failed to get config`, key);
+			}
 			return undefined as T;
 		}
 		value = value?.[k];
@@ -219,14 +218,16 @@ export const setCfg = <T>(
 		obj = obj?.[k];
 	}
 	if (!obj) {
-		console.warn('Failed to set config', key, value);
+		if (config === ahklsConfig) {
+			console.warn(`(Global) Failed to set config`, key, value);
+		}
 		return;
 	}
 	obj[keyPath[keyPath.length - 1]] = value;
 };
 
 /**
- * Replace the root config with the provided config.
+ * Assign the provided config to the root config.
  * Assumes the provided config is valid.
  */
 export const setConfigRoot = (config: AHKLSConfig): void => {
@@ -235,16 +236,27 @@ export const setConfigRoot = (config: AHKLSConfig): void => {
 
 export const shouldIncludeUserStdLib = (
 	config: AHKLSConfig = ahklsConfig,
-): boolean =>
-	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
-		LibIncludeType.UserAndStandard ||
-	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
-		LibIncludeType.All;
+): boolean => {
+	const result =
+		getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
+			LibIncludeType.UserAndStandard ||
+		getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
+			LibIncludeType.All;
+	return result;
+};
 
 export const shouldIncludeLocalLib = (
 	config: AHKLSConfig = ahklsConfig,
-): boolean =>
-	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
-		LibIncludeType.Local ||
-	getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
-		LibIncludeType.All;
+): boolean => {
+	const result =
+		getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
+			LibIncludeType.Local ||
+		getCfg<LibIncludeType>(CfgKey.LibrarySuggestions, config) ===
+			LibIncludeType.All;
+	return result;
+};
+
+//* Unique to AHK++
+
+/** Defined in package.json */
+export type ShowOutput = 'always' | 'never';

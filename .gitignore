@@ -1,9 +1,10 @@
-out
-dist
 node_modules
 .test-data
 .vscode-test
 .vscode-test-web
 *.vsix
 scripts/*
-server/expr_parser/*
+*.js
+*.js.map
+*.tsbuildinfo
+**/out/**/*.d.ts

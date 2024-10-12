@@ -116,6 +116,7 @@ function build_watch(web = false) {
 			});
 		},
 	};
+	client_opt.entryPoints.push('client/src/**/*.ts');
 	client_opt.logLevel = server_opt.logLevel = util_opt.logLevel = 'silent';
 	server_opt.define['process.env.DEBUG'] = 'true';
 	if (web) opts = browser_opts(false);

@@ -12,6 +12,24 @@
 			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"]
 		},
 		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Launch Client (e2e)",
+			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: build:e2e",
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"]
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Launch Client (prod)",
+			"runtimeExecutable": "${execPath}",
+			"preLaunchTask": "npm: build",
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+			"outFiles": ["${workspaceFolder}/client/dist/**/*.js"]
+		},
+		{
 			"type": "node",
 			"request": "attach",
 			"name": "Attach to Server",

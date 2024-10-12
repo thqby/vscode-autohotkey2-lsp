@@ -84,7 +84,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// eslint-disable-next-line prefer-const
 	let { text, word, token, range, linetext, kind, symbol } = doc.getContext(position, true);
 	const list = doc.relevance, { line, character } = position;
-	let isexpr = false, expg = make_search_re(word), offset;
+	let isexpr = false, expg = make_search_re(word), offset: number;
 
 	switch (token.type) {
 		case 'TK_UNKNOWN':

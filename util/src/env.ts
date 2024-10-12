@@ -11,6 +11,8 @@ export const languageClientName = 'AutoHotkey2';
 export const outputChannelName = 'AutoHotkey2';
 
 //* Internal commands - Client-side
+/** IDE context variable to enable or disable the stop command */
+export const ahkIsRunningContext = 'ahk2:isRunning';
 
 /** Prefix for commands handled by the client. These are not registered in package.json */
 const clientCommandPrefix = 'ahk2.';

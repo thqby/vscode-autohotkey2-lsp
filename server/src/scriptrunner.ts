@@ -3,6 +3,10 @@ import { interpreterPath } from './common';
 import { lstatSync, readlinkSync } from 'fs';
 import { resolve } from 'path';
 
+/**
+ * Simple runner for LSP server initializiaton via AHK.
+ * Not used for running user-defined scripts.
+ */
 export function runscript(script: string) {
 	const executePath = resolvePath(interpreterPath, true);
 	if (!executePath)
