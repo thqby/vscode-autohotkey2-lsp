@@ -5547,11 +5547,9 @@ export class Lexer {
 				flags.indentation_level = level ??= flags.indentation_level;
 				output_space_before_token ??= space_in_other;
 
-				const firstCondition = previous_flags.in_case_statement && last_type === 'TK_LABEL' && /^(default)?:$/.test(last_text);
-				const secondCondition = opt.brace_style === 'Allman' || input_wanted_newline && opt.preserve_newlines && opt.brace_style === 'Preserve';
-				if (firstCondition)
+				if (previous_flags.in_case_statement && last_type === 'TK_LABEL' && /^(default)?:$/.test(last_text))
 					flags.case_body = null, print_newline(), flags.indentation_level--;
-				else if (secondCondition)
+				else if (opt.brace_style === 'Allman' || input_wanted_newline && opt.preserve_newlines && opt.brace_style === 'Preserve')
 					if (ck.in_expr === undefined || flags.mode === MODE.Expression)
 						print_newline(true);
 
@@ -5573,7 +5571,6 @@ export class Lexer {
 				restore_mode();
 
 			const is_obj = flags.mode === MODE.ObjectLiteral, is_exp = is_obj || (ck.in_expr !== undefined);
-			const secondCondition = opt.brace_style !== 'Preserve' || input_wanted_newline;
 			if (is_obj) {
 				const style = flags.object_style ?? opt.object_style;
 				if (style === OBJECT_STYLE.collapse || last_text === '{')
@@ -5581,7 +5578,7 @@ export class Lexer {
 				else if (style || input_wanted_newline && opt.preserve_newlines)
 					print_newline(true);
 				output_space_before_token = space_in_other && last_text !== '{';
-			} else if (secondCondition)
+			} else if (opt.brace_style !== 'Preserve' || input_wanted_newline)
 				print_newline(true);
 
 			restore_mode();
@@ -5702,13 +5699,14 @@ export class Lexer {
 					}
 					if (maybe_need_newline) {
 						trim_newlines();
-						const condition = flags.last_text !== '}' 
-						|| opt.brace_style === 'Allman'
-						|| opt.brace_style === 'One True Brace Variant'
-						|| input_wanted_newline 
-							&& opt.preserve_newlines 
-							&& opt.brace_style !== 'Preserve';
-						if (condition)
+						if (
+							flags.last_text !== '}' 
+							|| opt.brace_style === 'Allman'
+							|| opt.brace_style === 'One True Brace Variant'
+							|| input_wanted_newline 
+								&& opt.preserve_newlines 
+								&& opt.brace_style !== 'Preserve'
+						)
 							print_newline(true);
 						else output_space_before_token = space_in_other;
 					} else if (input_wanted_newline)
