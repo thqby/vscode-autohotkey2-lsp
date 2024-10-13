@@ -46,7 +46,7 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
-			"preLaunchTask": "npm: watch",
+			"preLaunchTask": "npm: build:e2e",
 			"args": [
 				"--disable-extensions",
 				"--extensionDevelopmentPath=${workspaceFolder}"

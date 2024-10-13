@@ -19,7 +19,8 @@ import {
 	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, setInterpreterPath, set_Connection,
 	set_dirname, set_locale, set_version, set_WorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
-	traverse_include, typeFormatting, updateConfig, utils, winapis, workspaceSymbolProvider
+	traverse_include, typeFormatting, updateConfig, utils, winapis, workspaceSymbolProvider,
+	globalScanExclude
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
@@ -198,11 +199,19 @@ connection.onDidChangeWatchedFiles((change) => {
 });
 
 documents.onDidOpen(e => {
+	console.log(`Document opened: ${e.document.uri}`);
 	const to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
 	const uri = e.document.uri.toLowerCase();
 	let lexer = lexers[uri];
+	// don't add excluded documents
+	if (globalScanExclude.file?.some(re => re.test(e.document.uri))) {
+		console.log(`Skipping: ${e.document.uri}`);
+		return;
+	}
 	if (lexer) lexer.document = e.document;
-	else lexers[uri] = lexer = new Lexer(e.document);
+	else {
+		lexers[uri] = lexer = new Lexer(e.document);
+	}
 	Object.defineProperty(lexer.include, '', { value: '', enumerable: false });
 	lexer.actived = true;
 	if (to_ahk2)

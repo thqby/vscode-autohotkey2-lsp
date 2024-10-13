@@ -8,7 +8,7 @@ export const languageClientId = 'AHK++';
 export const languageClientName = 'AHK++';
 
 /** Name of the output channel for debugging information, displayed to users */
-export const outputChannelName = 'AHK++';
+export const outputChannelName = 'AHK++ (v2)';
 
 //* Internal commands - Client-side
 /** IDE context variable to enable or disable the stop command */

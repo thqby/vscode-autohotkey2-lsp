@@ -16,9 +16,10 @@ else {
 
 export default defineConfig({
 	files: 'client/dist/test/**/*.test.js',
+	workspaceFolder: 'e2e',
 	mocha: {
 		failZero: true,
-		timeout,
+		timeout: 60_000,
 	},
 	useInstallation: vscode_path && {
 		fromPath: vscode_path,

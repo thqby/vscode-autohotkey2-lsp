@@ -12,7 +12,7 @@ export enum CfgKey {
 	CompleteFunctionCalls = 'v2.general.completeFunctionCalls',
 	CompletionCommitCharacters = 'v2.completionCommitCharacters',
 	DebugConfiguration = 'DebugConfiguration',
-	Exclude = 'v2.exclude',
+	Exclude = 'exclude',
 	ExtensionUri = 'extensionUri',
 	Formatter = 'v2.formatter',
 	IgnoreComment = 'v2.formatter.ignoreComment',
@@ -104,6 +104,8 @@ export interface CompletionCommitCharacters {
 
 /** Matches the contributed extension configuration in package.json */
 export interface AHKLSConfig {
+	/** Glob pattern of files to ignore */
+	exclude: string[];
 	v2: {
 		general: {
 			actionWhenV1Detected: ActionType;
@@ -121,8 +123,6 @@ export interface AHKLSConfig {
 			classNonDynamicMemberCheck: boolean;
 			paramsCheck: boolean;
 		};
-		/** Glob pattern of files to ignore */
-		exclude: string[];
 		file: {
 			/** Path to the AHK v2 intepreter */
 			interpreterPath: string;
@@ -179,6 +179,7 @@ export const newFormatOptions = (
 
 /** Defaults according to package.json */
 export const newConfig = (config: Partial<AHKLSConfig> = {}): AHKLSConfig => ({
+	exclude: [],
 	v2: {
 		general: {
 			actionWhenV1Detected: 'SwitchToV1',
@@ -196,7 +197,6 @@ export const newConfig = (config: Partial<AHKLSConfig> = {}): AHKLSConfig => ({
 			classNonDynamicMemberCheck: true,
 			paramsCheck: true,
 		},
-		exclude: [],
 		file: {
 			interpreterPath: 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe',
 			maxScanDepth: 2,
