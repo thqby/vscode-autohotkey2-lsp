@@ -22,7 +22,7 @@
 	"ahk++.config.v2.diagnostics.classNonDynamicMemberCheck": "Check whether non-dynamic members of a class exist",
 	"ahk++.config.v2.diagnostics.paramsCheck": "Check that the function call has the correct number of arguments",
 	"ahk++.config.v2.file.interpreterPath": "Path to the `AutoHotkey.exe` executable file for AHK v2.",
-	"ahk++.config.exclude": "⚠️ Not yet supported, ref [issue #488](https://github.com/mark-wiemer-org/ahkpp/issues/488).\n\nGlob patterns for excluding files and folders when scanning AHK files.",
+	"ahk++.config.exclude": "[Glob patterns](<https://en.wikipedia.org/wiki/Glob_(programming)>) for excluding files and folders from completion suggestions. Applies even when files are opened.",
 	"ahk++.config.v2.file.maxScanDepth": "Depth of folders to scan for IntelliSense. Negative values mean infinite depth.",
 	"ahk++.config.v2.librarySuggestions": "Which libraries to suggest functions from, if any. In case of issues, restart your IDE.",
 	"ahk++.config.v2.symbolFoldingFromOpenBrace": "Fold parameter lists separately from definitions.",

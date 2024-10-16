@@ -8,6 +8,7 @@ import { AhkSymbol, Lexer, fixupFormatConfig, updateCommentTagRegex } from './le
 import { diagnostic } from './localize';
 import { jsDocTagNames } from './constants';
 import { AHKLSConfig, CfgKey, getCfg, LibIncludeType, setCfg, setConfigRoot } from '../../util/src/config';
+import { globalScanExclude, ScanExclude, shouldExclude } from '../../util/src/exclude';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -95,7 +96,8 @@ export function openFile(path: string, showError = true): TextDocument | undefin
 	}
 }
 
-export function openAndParse(path: string, showError = true, cache = true) {
+export function openAndParse(path: string, showError = true, cache = true): Lexer | undefined {
+	if (shouldExclude(path)) return undefined;
 	const td = openFile(path, showError);
 	if (td) {
 		const lex = new Lexer(td);
@@ -190,6 +192,7 @@ export function initahk2cache() {
 /** Loads IntelliSense hover text */
 export function loadAHK2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
+	/** Path to included syntax files, with `<>` replacing the locale */
 	const file = `${rootdir}/syntaxes/<>/${filename}`;
 	if (process.env.BROWSER) {
 		const td = openFile(file + '.d.ahk');
@@ -206,7 +209,12 @@ export function loadAHK2(filename = 'ahk2', d = 3) {
 	} else {
 		const syntaxConfig = getCfg(CfgKey.Syntaxes);
 		const syntaxes = syntaxConfig && existsSync(syntaxConfig) ? syntaxConfig : '';
-		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
+		/**
+		 * Path to syntax files to load,
+		 * either chosen by user or included with extension,
+		 * with `<>` replacing the locale
+		 */
+		const syntaxFilesToLoad = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
 		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
 			const doc = new Lexer(td, undefined, d);
@@ -224,7 +232,7 @@ export function loadAHK2(filename = 'ahk2', d = 3) {
 				}
 		}
 		function getfilepath(ext: string) {
-			return getlocalefilepath(file2 + ext) || (file2 !== file ? getlocalefilepath(file + ext) : undefined);
+			return getlocalefilepath(syntaxFilesToLoad + ext) || (syntaxFilesToLoad !== file ? getlocalefilepath(file + ext) : undefined);
 		}
 	}
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -339,8 +347,6 @@ export function loadAHK2(filename = 'ahk2', d = 3) {
 	}
 }
 
-interface ScanExclude { file?: RegExp[], folder?: RegExp[] };
-export let globalScanExclude: ScanExclude = {};
 export function enum_ahkfiles(dirpath: string, localScanExclude: ScanExclude = globalScanExclude): AsyncGenerator<string> {
 	const maxScanDepth = getCfg<number>(CfgKey.MaxScanDepth);
 	const { file: fileExclude, folder: folderExclude } = localScanExclude;
@@ -386,7 +392,6 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
 				.endsWith('/') ? dir : dir + '/'), newConfig);
 	else setCfg(CfgKey.WorkingDirectories, [], newConfig);
-	globalScanExclude = {};
 	if (getCfg(CfgKey.Exclude, newConfig)) {
 		const file: RegExp[] = [], folder: RegExp[] = [];
 		for (const s of getCfg(CfgKey.Exclude, newConfig))
@@ -395,14 +400,10 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 			} catch (e) {
 				console.log(`[Error] Invalid glob pattern: ${s}`);
 			}
-		if (file.length) {
-			globalScanExclude.file = file;
-		}
-		if (folder.length) {
-			globalScanExclude.folder = folder;
-		}
-		console.log(`Excluded files: ${globalScanExclude.file?.map(re => re.source).join('\n') ?? '(none)'}`);
-		console.log(`Excluded folders: ${globalScanExclude.folder?.map(re => re.source).join('\n') ?? '(none)'}`);
+		globalScanExclude.file = file;
+		globalScanExclude.folder = folder;
+		console.log(`Excluded files:\n\t${globalScanExclude.file.map(re => re.source).join('\n\t') || '(none)'}`);
+		console.log(`Excluded folders\n\t ${globalScanExclude.folder.map(re => re.source).join('\n\t') || '(none)'}`);
 		let maxScanDepth = getCfg<number | undefined>(CfgKey.MaxScanDepth, newConfig);
 		if (maxScanDepth === undefined) {
 			maxScanDepth = 2;

@@ -225,6 +225,7 @@ export const configPrefix = 'AHK++';
 /**
  * Gets a single config value from the provided config.
  * If no config provided, uses the global config.
+ * If no key provided, returns the entire config.
  */
 export const getCfg = <T = string>(
 	key?: CfgKey,

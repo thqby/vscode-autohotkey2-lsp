@@ -1,0 +1,38 @@
+{
+	// Place ahk2-lsp workspace snippets here.
+	// Each snippet is defined under a snippet name and has a scope, prefix, body and description.
+	// Add comma-separated IDs of the languages where the snippet is applicable in the scope field.
+	// If scope is left empty or omitted, the snippet gets applied to all languages.
+	// The prefix is what is used to trigger the snippet and the body will be expanded and inserted.
+	// Possible variables are: $1, $2 for tab stops, $0 for the final cursor position,
+	// and ${1:label}, ${2:another} for placeholders.
+	// Placeholders with the same IDs are connected.
+	// Example:
+	// "Print to console": {
+	// 	"scope": "javascript,typescript",
+	// 	"prefix": "log",
+	// 	"body": [
+	// 		"console.log('$1');",
+	// 		"$2"
+	// 	],
+	// 	"description": "Log output to console"
+	// }
+	"Mocha tuple tests": {
+		"scope": "javascript,typescript",
+		"prefix": "suite",
+		"body": [
+			"suite('$1', () => {",
+			"    const tests: [",
+			"        name: string,",
+			"        args: Parameters<typeof $1>,",
+			"        expected: ReturnType<typeof $1>,",
+			"    ][] = [$0];",
+
+			"    tests.forEach(([name, args, expected]) =>",
+			"        test(name, () => assert.strictEqual($1(...args), expected)),",
+			"    );",
+			"});",
+		],
+		"description": "Generate tests for Mocha.",
+	},
+}

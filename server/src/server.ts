@@ -20,13 +20,13 @@ import {
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, setInterpreterPath, set_Connection,
 	set_dirname, set_locale, set_version, set_WorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
 	traverse_include, typeFormatting, updateConfig, utils, winapis, workspaceSymbolProvider,
-	globalScanExclude
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
 import { AHKLSConfig, CfgKey, configPrefix, getCfg, shouldIncludeUserStdLib, shouldIncludeLocalLib, setCfg } from '../../util/src/config';
 import { klona } from 'klona/json';
 import { clientExecuteCommand, clientUpdateStatusBar, extSetInterpreter, serverExportSymbols, serverGetAHKVersion, serverGetContent, serverGetVersionInfo, serverResetInterpreterPath } from '../../util/src/env';
+import { shouldExclude } from '../../util/src/exclude';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -164,16 +164,17 @@ connection.onDidChangeConfiguration(async change => {
 	// clone the old config to compare
 	const oldConfig = klona(getCfg<AHKLSConfig>());
 	updateConfig(newConfig); // this updates the object in-place, hence the clone above
+	const excludeChanged = getCfg(CfgKey.Exclude) !== getCfg(CfgKey.Exclude, oldConfig);
 	set_WorkspaceFolders(workspaceFolders);
 	const newInterpreterPath = getCfg(CfgKey.InterpreterPath);
 	if (newInterpreterPath !== getCfg(CfgKey.InterpreterPath, oldConfig)) {
 		if (await setInterpreter(resolvePath(newInterpreterPath)))
 			connection.sendRequest(clientUpdateStatusBar, [newInterpreterPath]);
 	}
-	if (getCfg(CfgKey.LibrarySuggestions) !== getCfg(CfgKey.LibrarySuggestions, oldConfig)) {
-		if (shouldIncludeUserStdLib() && !shouldIncludeUserStdLib(oldConfig))
+	if (excludeChanged || getCfg(CfgKey.LibrarySuggestions) !== getCfg(CfgKey.LibrarySuggestions, oldConfig)) {
+		if (shouldIncludeUserStdLib() && (excludeChanged || !shouldIncludeUserStdLib(oldConfig)))
 			parseuserlibs();
-		if (shouldIncludeLocalLib() && !shouldIncludeLocalLib(oldConfig))
+		if (shouldIncludeLocalLib() && (excludeChanged || !shouldIncludeLocalLib(oldConfig)))
 			documents.all().forEach(e => parseproject(e.uri.toLowerCase()));
 	}
 	if (getCfg(CfgKey.Syntaxes) !== getCfg(CfgKey.Syntaxes, oldConfig)) {
@@ -199,15 +200,18 @@ connection.onDidChangeWatchedFiles((change) => {
 });
 
 documents.onDidOpen(e => {
-	console.log(`Document opened: ${e.document.uri}`);
 	const to_ahk2 = uri_switch_to_ahk2 === e.document.uri;
 	const uri = e.document.uri.toLowerCase();
 	let lexer = lexers[uri];
+	console.log(`Document opened: ${uri}`);
+
 	// don't add excluded documents
-	if (globalScanExclude.file?.some(re => re.test(e.document.uri))) {
-		console.log(`Skipping: ${e.document.uri}`);
+	if (shouldExclude(uri))
+	{
+		console.log(`Skipping: ${uri}`);
 		return;
 	}
+
 	if (lexer) lexer.document = e.document;
 	else {
 		lexers[uri] = lexer = new Lexer(e.document);

@@ -26,6 +26,7 @@ import {
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
 import { ActionType, BlockStyle, BraceStyle, CallWithoutParentheses, CfgKey, FormatOptions, getCfg } from '../../util/src/config';
+import { shouldExclude } from '../../util/src/exclude';
 
 export interface ParamInfo {
 	offset: number
@@ -6623,6 +6624,7 @@ export function parse_include(lex: Lexer, dir: string, _set = new Set()) {
 	_set.add(lex);
 	for (const uri in include) {
 		const path = include[uri];
+		if (shouldExclude(path)) continue;
 		let lex, t;
 		if (!(lex = lexers[uri])) {
 			if (!existsSync(path) || !(t = openFile(restorePath(path))))

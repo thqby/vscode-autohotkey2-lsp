@@ -186,7 +186,7 @@
 		],
 		"configuration": {
 			"type": "object",
-			"title": "AHK++ (AutoHotkey Plus Plus)",
+			"title": "AHK++ v2 support",
 			"properties": {
 				"AHK++.compiler": {
 					"type": "object",

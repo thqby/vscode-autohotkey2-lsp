@@ -13,7 +13,10 @@ import {
 	lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
 import { BraceStyle, CfgKey, getCfg, shouldIncludeLocalLib, shouldIncludeUserStdLib } from '../../util/src/config';
+import { shouldExclude } from '../../util/src/exclude';
+import { klona } from 'klona';
 
+//* comments including the pipe char | indicate where the cursor is
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
 	const doc = lexers[uri = uri.toLowerCase()], vars: Record<string, unknown> = {};
@@ -83,7 +86,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 	// eslint-disable-next-line prefer-const
 	let { text, word, token, range, linetext, kind, symbol } = doc.getContext(position, true);
-	const list = doc.relevance, { line, character } = position;
+	const relevantUriMaps = klona(doc.relevance), { line, character } = position;
+	// Exclude files according to current user settings (may have changed since extension was activated)
+	for (const uri in relevantUriMaps) {
+		if (shouldExclude(uri)) {
+			console.log('Excluding ' + uri + ' from completion suggestions');
+			delete relevantUriMaps[uri];
+		}
+	}
+
 	let isexpr = false, expg = make_search_re(word), offset: number;
 
 	switch (token.type) {
@@ -311,8 +322,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							}
 						}
 						if (!scope) {
-							for (const u in list) {
-								for (const n in labels = lexers[u]?.labels) {
+							for (const uri in relevantUriMaps) {
+								for (const n in labels = lexers[uri]?.labels) {
 									if (!expg.test(n))
 										continue;
 									for (const it of labels[n]) {
@@ -584,7 +595,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		const objs = new Set([doc.object, lexers[ahkuris.ahk2]?.object, lexers[ahkuris.ahk2_h]?.object]);
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		objs.delete(undefined as any);
-		for (const uri in list)
+		for (const uri in relevantUriMaps)
 			objs.add(lexers[uri].object);
 		for (const k in (temp = doc.object.property)) {
 			const v = temp[k];
@@ -665,8 +676,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (expg.test(l = it.name.toUpperCase()) && !at_edit_pos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
 			vars[l] = convertNodeCompletion(it);
 	}
-	const list_arr = Object.keys(list).reverse();
-	for (const uri of new Set([doc.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr])) {
+	const reversedRelevantUris = Object.keys(relevantUriMaps).reverse();
+	for (const uri of new Set([doc.d_uri, ...reversedRelevantUris.map(p => lexers[p]?.d_uri), ...reversedRelevantUris])) {
 		if (!(temp = lexers[uri]))
 			continue;
 		const d = temp.d;
@@ -696,16 +707,21 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		let dir = doc.workspaceFolder;
 		dir = (dir ? URI.parse(dir).fsPath : doc.scriptdir).toLowerCase();
 		doc.includedir.forEach((v, k) => line = k);
-		for (const u in libfuncs) {
-			if (!list[u] && (path = libfuncs[u].fsPath) && ((includeUserStdLib && libfuncs[u].islib) ||
+		for (const uri in libfuncs) {
+			if (shouldExclude(uri)) {
+				console.log('Excluding', uri);
+				continue;
+			}
+			if (!relevantUriMaps[uri] && (path = libfuncs[uri].fsPath) && ((includeUserStdLib && libfuncs[uri].islib) ||
 				(includeLocalLib && path.toLowerCase().startsWith(dir)))) {
-				for (const it of libfuncs[u]) {
-					expg.test(l = it.name) && (vars[l.toUpperCase()] ??= (
-						cpitem = convertNodeCompletion(it), exportnum++,
-						cpitem.additionalTextEdits = caches[path] ??= autoinclude(path),
-						cpitem.detail = `${completionitem.include(path)}\n\n${cpitem.detail ?? ''}`,
-						cpitem
-					));
+				for (const it of libfuncs[uri]) {
+					if (expg.test(l = it.name) && !vars[l.toUpperCase()]) {
+						cpitem = convertNodeCompletion(it), exportnum++;
+						cpitem.additionalTextEdits = caches[path] ??= autoinclude(path);
+						cpitem.detail = `${completionitem.include(path)}\n\n${cpitem.detail ?? ''}`;
+						console.log(`Adding ${cpitem.label} to vars`);
+						vars[l.toUpperCase()] = cpitem;
+					};
 				}
 				if (exportnum > 300)
 					break;
@@ -750,9 +766,12 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 	}
 
-	if ((list_arr.unshift(doc.uri), !list_arr.includes(ahkuris.winapi)) && list_arr.some(u => lexers[u]?.include[ahkuris.winapi]))
+	if ((reversedRelevantUris.unshift(doc.uri), !reversedRelevantUris.includes(ahkuris.winapi)) && reversedRelevantUris.some(u => lexers[u]?.include[ahkuris.winapi]))
 		for (const n in temp = lexers[ahkuris.winapi]?.declaration)
-			expg.test(n) && (vars[n] ??= convertNodeCompletion(temp[n]));
+			if (expg.test(n) && !vars[n]) {
+				const newValue = convertNodeCompletion(temp[n]);
+				vars[n] = newValue;
+			}
 
 	// constant
 	if (!isexpr && kind !== SymbolKind.Event) {
@@ -760,7 +779,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			for (const it of completionItemCache.constant)
 				expg.test(it.label) && items.push(it);
 	}
-	return items.concat(Object.values(vars) as CompletionItem[]);
+	const result = items.concat(Object.values(vars) as CompletionItem[]);
+	console.log('Vars:', (Object.values(vars) as CompletionItem[]).map(i => i.label).join('\n'));
+	return result;
 	//#endregion
 
 	//#region utils
@@ -775,7 +796,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	function add_classes() {
 		let t;
 		const decls = [ahkvars, doc.declaration];
-		for (const uri in list)
+		for (const uri in relevantUriMaps)
 			(t = lexers[uri]) && decls.push(t.declaration);
 		for (const decl of decls)
 			for (const cl in decl)
@@ -835,8 +856,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		offset ??= doc.document.offsetAt(position);
 		let pre = token.content.substring(1, offset - token.offset), suf = '', t;
 		const docs = [doc], ls: Record<string, unknown> = {};
-		for (const u in list)
-			(t = lexers[u]) && docs.push(t);
+		for (const uri in relevantUriMaps)
+			(t = lexers[uri]) && docs.push(t);
 		pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 		const expg = make_search_re(suf), kind = CompletionItemKind.Function;
 		const range = !allIdentifierChar.test(suf) ? {
@@ -898,8 +919,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 		for (const t in (temp = doc.texts))
 			expg.test(t) && add_item(temp[t], CompletionItemKind.Text);
-		for (const u in list)
-			for (const t in (temp = lexers[u]?.texts))
+		for (const uri in relevantUriMaps)
+			for (const t in (temp = lexers[uri]?.texts))
 				expg.test(t) && add_item(temp[t], CompletionItemKind.Text);
 	}
 	function add_item(label: string, kind: CompletionItemKind) {
