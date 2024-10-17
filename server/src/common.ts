@@ -403,7 +403,7 @@ export function updateConfig(newConfig: AHKLSConfig): void {
 		globalScanExclude.file = file;
 		globalScanExclude.folder = folder;
 		console.log(`Excluded files:\n\t${globalScanExclude.file.map(re => re.source).join('\n\t') || '(none)'}`);
-		console.log(`Excluded folders\n\t ${globalScanExclude.folder.map(re => re.source).join('\n\t') || '(none)'}`);
+		console.log(`Excluded folders:\n\t${globalScanExclude.folder.map(re => re.source).join('\n\t') || '(none)'}`);
 		let maxScanDepth = getCfg<number | undefined>(CfgKey.MaxScanDepth, newConfig);
 		if (maxScanDepth === undefined) {
 			maxScanDepth = 2;

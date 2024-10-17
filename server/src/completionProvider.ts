@@ -701,6 +701,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// auto-include
 	const includeUserStdLib = shouldIncludeUserStdLib();
 	const includeLocalLib = shouldIncludeLocalLib();
+	console.log('includeUserStdLib:', includeUserStdLib, ', includeLocalLib:', includeLocalLib);
 	if (includeUserStdLib || includeLocalLib) {
 		const libdirs = doc.libdirs, caches: Record<string, TextEdit[]> = {};
 		let exportnum = 0, line = -1, first_is_comment: boolean | undefined, cm: Token;

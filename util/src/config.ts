@@ -54,7 +54,7 @@ export type ActionType =
 	| 'Stop';
 
 export enum LibIncludeType {
-	Disabled = 'Off',
+	Disabled = 'Disabled',
 	Local = 'Local',
 	UserAndStandard = 'User and Standard',
 	All = 'All',

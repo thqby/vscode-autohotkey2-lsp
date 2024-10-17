@@ -155,12 +155,14 @@ connection.onInitialized(() => {
 
 connection.onDidChangeConfiguration(async change => {
 	let newConfig: AHKLSConfig | undefined = change?.settings;
+	console.log('Configuration changed');
 	if (hasConfigurationCapability && !newConfig)
 		newConfig = await connection.workspace.getConfiguration(configPrefix);
 	if (!newConfig) {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
+	console.log('New configuration:', newConfig);
 	// clone the old config to compare
 	const oldConfig = klona(getCfg<AHKLSConfig>());
 	updateConfig(newConfig); // this updates the object in-place, hence the clone above
@@ -175,7 +177,10 @@ connection.onDidChangeConfiguration(async change => {
 		if (shouldIncludeUserStdLib() && (excludeChanged || !shouldIncludeUserStdLib(oldConfig)))
 			parseuserlibs();
 		if (shouldIncludeLocalLib() && (excludeChanged || !shouldIncludeLocalLib(oldConfig)))
+		{
+			console.log('Parsing local libraries');
 			documents.all().forEach(e => parseproject(e.uri.toLowerCase()));
+		}
 	}
 	if (getCfg(CfgKey.Syntaxes) !== getCfg(CfgKey.Syntaxes, oldConfig)) {
 		initahk2cache(), loadAHK2();
@@ -388,6 +393,8 @@ async function parseuserlibs() {
 		uri: string,
 		d: Lexer,
 		t: TextDocument | undefined;
+	console.log('Parsing user libraries');
+	console.log('Libraries:\n\t', libdirs.join('\n\t'));
 	for (dir of libdirs)
 		for await (path of enum_ahkfiles(dir)) {
 			if (!libfuncs[(uri = URI.file(path).toString().toLowerCase())]) {
@@ -440,6 +447,7 @@ async function setInterpreter(path: string) {
 }
 
 async function parseproject(uri: string) {
+	console.log(`Parsing project: ${uri}`);
 	let lex = lexers[uri];
 	if (!lex || !uri.startsWith('file:')) return;
 	if (!lex.d) {
