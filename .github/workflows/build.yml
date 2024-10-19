@@ -29,4 +29,4 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm install
-      - run: npm run validate
+      - run: npm run validate:ci
