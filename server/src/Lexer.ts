@@ -1677,6 +1677,7 @@ export class Lexer {
 								const last_case = case_pos.pop();
 								if (case_pos.push(tk.offset), last_case)
 									_this.addFoldingRange(last_case, lk.offset, 'case');
+								tk.hover_word = 'default';
 								nexttoken(), next = false;
 								tk.topofline ||= -1;
 								break;
@@ -6247,7 +6248,7 @@ export class Lexer {
 						case SemanticTokenTypes.parameter: kind = SymbolKind.Variable; break;
 					}
 				} else kind = SymbolKind.Variable;
-			} else if (token.type === 'TK_LABEL')
+			} else if (token.type === 'TK_LABEL' && !token.hover_word)
 				kind = SymbolKind.Field;
 		} else if (pt?.content.startsWith('#'))
 			token = pt, text = pt.content;

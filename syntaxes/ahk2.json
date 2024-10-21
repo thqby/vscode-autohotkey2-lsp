@@ -361,6 +361,11 @@
 			"syntax": "static [Var]\nstatic Method()\nstatic Property"
 		},
 		{
+			"body": "switch",
+			"description": "Compares a value with multiple cases and executes the statements of the first match.",
+			"syntax": "switch [SwitchValue, CaseSense] {\n\tcase Value, Expression: \n\n\tdefault: \n\n}"
+		},
+		{
 			"body": "throw",
 			"description": "Indicates that an error has occurred. The signal can be caught by a try-catch statement.",
 			"syntax": "throw Expression"
