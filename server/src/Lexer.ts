@@ -4123,7 +4123,7 @@ export class Lexer {
 						else {
 							if (!m.match(/\.\w+$/))
 								m = m + '.dll';
-							m = find_include_path(m, [], dlldir, true)?.path ?? m;
+							m = find_include_path(m, [], dlldir || _this.scriptpath, true)?.path ?? m;
 							if (m.includes(':'))
 								_this.dllpaths.push(m.replace(/\\/g, '/'));
 							else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/'));
