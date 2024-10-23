@@ -11,6 +11,9 @@
 AutoHotkey v2 Language support for VS Code, features realization based on v2 syntax analysis.
 Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https://github.dev/github/dev
 
+If you wish to donate, donations can be sent here: [alipay](https://qr.alipay.com/fkx19566u7ctegoppmu5i13) or [alipay qrcode](./pic/alipay.jpg) or [paypal](https://paypal.me/thqby)
+
+
 - [AutoHotkey v2 Language Support](#autohotkey-v2-language-support)
   - [Language Features](#language-features)
     - [Rename Symbol](#rename-symbol)
@@ -39,6 +42,7 @@ Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https:
     - [Vim and Neovim](#vim-and-neovim)
     - [Emacs](#Emacs)
   - [Use in Web Browser](#use-in-web-browser)
+  - [Sponsor](#sponsor)
 
 ## Language Features
 

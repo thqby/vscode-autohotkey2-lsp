@@ -11,6 +11,8 @@
 AutoHotkey v2 语言支持 for VS Code, 功能实现基于 v2 语法分析。
 支持在`Chrome/Edge`等浏览器中使用 https://vscode.dev 或 https://github.dev/github/dev
 
+如果你想捐款，捐款可以寄到这里: [支付宝转账](https://qr.alipay.com/fkx19566u7ctegoppmu5i13) 或 [支付宝二维码](./pic/alipay.jpg) 或 [paypal](https://paypal.me/thqby)
+
 - [AutoHotkey v2 语言支持](#autohotkey-v2-语言支持)
   - [语言特性](#语言特性)
     - [重命名符号](#重命名符号)
