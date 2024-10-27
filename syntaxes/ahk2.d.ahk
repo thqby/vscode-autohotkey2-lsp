@@ -819,9 +819,8 @@ Cos(Number) => Float
 
 /**
  * Prevent the current thread from being interrupted by other threads, or enable it to be interrupted.
- * @param OnOffNumeric
  */
-Critical(OnOffNumeric := 'On') => Integer
+Critical(OnOffNumeric: Integer | 'On' | 'Off' := 'On') => Integer
 
 /**
  * Add or subtract time from the date-time value.

@@ -6095,7 +6095,7 @@ export class Lexer {
 		}
 		let t: AhkSymbol | undefined, parent: AhkSymbol | undefined, is_global: boolean | 1 = true;
 		if (name.startsWith('$'))
-			return (node = from_d(this.d ? uri : this.d_uri)) && { node, uri, is_global: true };
+			return (node = from_d(this.d ? uri : this.d_uri) ?? this.typedef[name]) && { node, uri, is_global: true };
 		if ((scope = position && this.searchScopedNode(position) as FuncNode)) {
 			if (scope.kind === SymbolKind.Class)
 				scope = undefined;
