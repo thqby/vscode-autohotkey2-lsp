@@ -159,7 +159,7 @@ code
 
 ### 声明文件
 
-声明文件是以 .d.ahk 为文件名后缀的文件, 用来描述已实现的函数或类等, 不包含代码的实现部分, 默认被同名的ahk文件引用, 语法参考扩展提供的 `ahk2.d.ahk`. 声明文件可以扩展或改写ahk内置函数或类的声明, 也可以将注释文档从源码中分离来提供多语言版本的智能感知等. 
+声明文件是以 .d.ahk 为文件名后缀的文件, 用来描述已实现的函数或类等, 不包含代码的实现部分, 默认被同名的ahk文件引用, 语法参考扩展提供的 `ahk2.d.ahk`. 声明文件可以扩展或改写ahk内置函数或类的声明, 也可以将注释文档从源码中分离来提供多语言版本的智能感知等. 另外, 可以修改扩展的`AutoHotkey2.Syntaxes`设置项将内置声明文件替换为第三方的声明文件, 如[GroggyOtter's ahkv2_definition_rewrite](https://github.com/GroggyOtter/ahkv2_definition_rewrite).
 
 ```
 ; array.d.ahk
