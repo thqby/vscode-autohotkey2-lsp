@@ -25,6 +25,7 @@ import {
 	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
 } from './common';
+import { ActionType, FormatOptions } from '../../util/src/config';
 
 export interface ParamInfo {
 	offset: number
@@ -196,28 +197,6 @@ export interface Context {
 	symbol?: AhkSymbol;
 };
 
-export interface FormatOptions {
-	array_style?: number
-	brace_style?: number
-	break_chained_methods?: boolean
-	ignore_comment?: boolean
-	indent_string?: string
-	indent_between_hotif_directive?: boolean
-	keyword_start_with_uppercase?: boolean
-	max_preserve_newlines?: number
-	object_style?: number
-	preserve_newlines?: boolean
-	space_before_conditional?: boolean
-	space_after_double_colon?: boolean
-	space_in_empty_paren?: boolean
-	space_in_other?: boolean
-	space_in_paren?: boolean
-	switch_case_alignment?: boolean
-	symbol_with_same_case?: boolean
-	white_space_before_inline_comment?: string
-	wrap_line_length?: number
-}
-
 interface ParamList extends Array<Variable> {
 	format?: (params: Variable[]) => void
 	hasref?: boolean
@@ -340,8 +319,6 @@ class ParseStopError {
 		this.token = token;
 	}
 }
-
-export type ActionType = 'Continue' | 'Warn' | 'SkipLine' | 'SwitchToV1' | 'Stop';
 
 export class Lexer {
 	public actionwhenv1?: ActionType = 'Continue';

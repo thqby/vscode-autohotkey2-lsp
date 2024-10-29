@@ -640,7 +640,8 @@
 		"publish": "vsce publish",
 		"test": "vscode-test",
 		"test-grammar": "vscode-tmgrammar-snap tmgrammar-test/*.ahk",
-		"vscode:prepublish": "node esbuild.mjs && npm run test && npm run test-grammar",
+		"validate": "node esbuild.mjs && npm run test && npm run test-grammar",
+		"vscode:prepublish": "npm run validate",
 		"watch": "node esbuild.mjs --dev",
 		"watch-web": "node esbuild.mjs --web"
 	},

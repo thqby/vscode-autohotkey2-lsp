@@ -7,7 +7,7 @@ import {
 import { URI } from 'vscode-uri';
 import { get_ahkProvider } from './ahkProvider';
 import {
-	a_vars, AHKLSSettings, ahkpath_cur, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
+	a_vars, ahkpath_cur, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
 	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
 	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, extsettings, getVersionInfo, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile,
@@ -18,6 +18,7 @@ import {
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 import { resolvePath, runscript } from './scriptrunner';
+import { AHKLSSettings, configPrefix } from '../../util/src/config';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
@@ -123,7 +124,7 @@ connection.onInitialized(() => {
 connection.onDidChangeConfiguration(async change => {
 	let newset: AHKLSSettings | undefined = change?.settings;
 	if (hasConfigurationCapability && !newset)
-		newset = await connection.workspace.getConfiguration('AutoHotkey2');
+		newset = await connection.workspace.getConfiguration(configPrefix);
 	if (!newset) {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
