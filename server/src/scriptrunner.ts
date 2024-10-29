@@ -7,13 +7,17 @@ import { resolve } from 'path';
  * Simple runner for LSP server initializiaton via AHK.
  * Not used for running user-defined scripts.
  */
-export function runscript(script: string) {
+export function runscript(script: string): string | undefined {
+	const funcName = 'runscript';
 	const executePath = resolvePath(interpreterPath, true);
+	console.log(`${funcName} executePath`, executePath);
 	if (!executePath)
 		return;
 	const process = spawnSync(`"${executePath}" /CP65001 /ErrorStdOut=utf-8 *`, [], { cwd: executePath.replace(/[\\/].+?$/, ''), shell: true, input: script });
+	const result = (process?.stdout ?? '').toString();
+	console.log(`${funcName} result`, result)
 	if (process)
-		return (process.stdout ?? '').toString();
+		return result;
 }
 
 export function existsSync(path: string): boolean {
