@@ -1,5 +1,6 @@
 import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/browser';
+import { configPrefix } from '../../util/src/config';
 
 let client: LanguageClient;
 
@@ -55,7 +56,7 @@ export function activate(context: ExtensionContext) {
 		initializationOptions: {
 			extensionUri: !process.env.DEBUG ? context.extensionUri.toString() : unpkg_url(context),
 			commands: Object.keys(request_handlers),
-			...JSON.parse(JSON.stringify(workspace.getConfiguration('AutoHotkey2')))
+			...JSON.parse(JSON.stringify(workspace.getConfiguration(configPrefix)))
 		}
 	}, new Worker(serverMain.toString()));
 
