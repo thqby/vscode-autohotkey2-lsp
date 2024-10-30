@@ -402,6 +402,12 @@ async function stopRunningScript() {
 	}
 }
 
+function getFileMtime(path: string) {
+	try {
+		return lstatSync(path).mtimeMs;
+	} catch { }
+}
+
 async function compileScript(textEditor: TextEditor) {
 	let cmd = '', cmdop = workspace.getConfiguration('AutoHotkey2').CompilerCMD as string;
 	const ws = workspace.getWorkspaceFolder(textEditor.document.uri)?.uri.fsPath ?? '';
@@ -423,13 +429,7 @@ async function compileScript(textEditor: TextEditor) {
 	await commands.executeCommand('workbench.action.files.save');
 	const currentPath = textEditor.document.uri.fsPath;
 	const exePath = currentPath.replace(/\.\w+$/, '.exe');
-	try {
-		if (existsSync(exePath))
-			unlinkSync(exePath);
-	} catch (e) {
-		window.showErrorMessage((e as Error).message);
-		return;
-	}
+	const prev_mtime = getFileMtime(exePath);
 	cmdop = cmdop.replace(/(['"]?)\$\{execPath\}\1/gi, `"${executePath}"`);
 	if (cmdop.match(/\bahk2exe\w*\.exe/i)) {
 		cmd = cmdop + ' /in ' + currentPath;
@@ -442,18 +442,18 @@ async function compileScript(textEditor: TextEditor) {
 	}
 	const process = exec(cmd, { cwd: resolve(currentPath, '..') });
 	if (process.pid) {
-		if ((cmd += ' ').toLowerCase().includes(' /gui '))
+		if ((cmd.toLowerCase() + ' ').includes(' /gui '))
 			return;
 		outputchannel.show(true);
 		outputchannel.clear();
 		process.on('exit', () => {
-			if (existsSync(exePath))
+			if (prev_mtime !== (getFileMtime(exePath) ?? prev_mtime))
 				window.showInformationMessage(localize('ahk2.compiledsuccessfully'));
 			else
 				window.showErrorMessage(localize('ahk2.compiledfailed'));
 		});
-		process.stderr?.on('data', (error) => outputchannel.appendLine(error));
-		process.stdout?.on('data', (msg) => outputchannel.appendLine(msg));
+		process.stderr?.on('data', (error) => outputchannel.append(error));
+		process.stdout?.on('data', (msg) => outputchannel.append(msg));
 	} else
 		window.showErrorMessage(localize('ahk2.compiledfailed'));
 }
