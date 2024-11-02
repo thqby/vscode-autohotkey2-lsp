@@ -358,7 +358,7 @@ async function runScript(textEditor: TextEditor, runSelection = false) {
 		.then(r => r ? setInterpreter() : undefined);
 		return;
 	}
-	let selectedText = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
+	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
 	let startTime: Date;
 	const showOutput = getConfigIDE<ShowOutput>(CfgKey.ShowOutput, 'always');
 	if (showOutput === 'always')
@@ -368,56 +368,58 @@ async function runScript(textEditor: TextEditor, runSelection = false) {
 
 	// Build the command
 	if (runSelection)
-		selectedText = textEditor.selections.map(textEditor.document.getText).join('\n');
+		selecttext = textEditor.selections.map(textEditor.document.getText).join('\n');
 	else if (textEditor.document.isUntitled || !textEditor.document.uri.toString().startsWith('file:///'))
-		selectedText = textEditor.document.getText();
+		selecttext = textEditor.document.getText();
 	executePath.replace(/^(.+[\\/])AutoHotkeyUX\.exe$/i, (...m) => {
 		const lc = m[1] + 'launcher.ahk';
 		if (existsSync(lc))
 			command = `"${executePath}" "${lc}" `;
 		return '';
-	})
-
-	// Spawn the process
-	let process: ChildProcess & { path?: string };
-	if (selectedText !== '') {
+	});
+	const opt = {
+		env: Object.fromEntries(Object.entries(process.env)
+			.filter(it => !/^(CHROME|ELECTRON_RUN|FPS_BROWSER|VSCODE)_/.test(it[0]))),
+		shell: true
+	};
+	let cp: ChildProcess & { path?: string };
+	if (selecttext !== '') {
 		if (ahkStatusBarItem.text.endsWith('[UIAccess]')) {
 			path = resolve(__dirname, 'temp.ahk');
-			writeFileSync(path, selectedText);
+			writeFileSync(path, selecttext);
 			command += `"${path}"`, startTime = new Date();
-			process = spawn(command, { cwd: `${resolve(textEditor.document.fileName, '..')}`, shell: true });
+			cp = spawn(command, { cwd: `${resolve(textEditor.document.fileName, '..')}`, ...opt });
 			unlinkSync(path);
 		} else {
 			command += path, startTime = new Date();
-			process = spawn(command, { cwd: `${resolve(textEditor.document.fileName, '..')}`, shell: true });
-			process.stdin?.write(selectedText), process.stdin?.end();
+			cp = spawn(command, { cwd: `${resolve(textEditor.document.fileName, '..')}`, ...opt });
+			cp.stdin?.write(selecttext), cp.stdin?.end();
 		}
 	} else {
 		if (textEditor.document.isUntitled)
 			return;
 		await commands.executeCommand('workbench.action.files.save');
 		path = textEditor.document.fileName, command += `"${path}"`, startTime = new Date();
-		process = spawn(command, { cwd: resolve(path, '..'), shell: true });
+		cp = spawn(command, { cwd: resolve(path, '..'), ...opt });
 	}
-
-	if (process.pid) {
-		outputchannel.appendLine(`[Running] [pid:${process.pid}] ${command}`);
-		ahkprocesses.set(process.pid, process);
-		process.path = path;
+	if (cp.pid) {
+		outputchannel.appendLine(`[Running] [pid:${cp.pid}] ${command}`);
+		ahkprocesses.set(cp.pid, cp);
+		cp.path = path;
 		commands.executeCommand('setContext', ahkIsRunningContext, true);
-		process.stderr?.on('data', (data) => {
+		cp.stderr?.on('data', (data) => {
 			outputchannel.appendLine(decode(data));
 		});
-		process.on('error', (error) => {
+		cp.on('error', (error) => {
 			outputchannel.appendLine(JSON.stringify(error));
-			ahkprocesses.delete(process.pid!);
+			ahkprocesses.delete(cp.pid!);
 		});
-		process.stdout?.on('data', (data) => {
+		cp.stdout?.on('data', (data) => {
 			outputchannel.appendLine(decode(data));
 		});
-		process.on('exit', (code) => {
-			outputchannel.appendLine(`[Done] [pid:${process.pid}] exited with code=${code} in ${((new Date()).getTime() - startTime.getTime()) / 1000} seconds`);
-			ahkprocesses.delete(process.pid!);
+		cp.on('exit', (code) => {
+			outputchannel.appendLine(`[Done] [pid:${cp.pid}] exited with code=${code} in ${((new Date()).getTime() - startTime.getTime()) / 1000} seconds`);
+			ahkprocesses.delete(cp.pid!);
 			if (!ahkprocesses.size)
 				commands.executeCommand('setContext', ahkIsRunningContext, false);
 		});

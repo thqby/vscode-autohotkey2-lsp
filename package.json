@@ -1,8 +1,11 @@
 {
 	"name": "vscode-autohotkey2-lsp",
 	"displayName": "AutoHotkey v2 Language Support",
-	"version": "2.5.3",
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
+	"author": "thqby",
+	"publisher": "thqby",
+	"version": "2.5.4",
+	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
 		"Programming Languages",
@@ -22,9 +25,6 @@
 		"type": "git",
 		"url": "https://github.com/thqby/vscode-autohotkey2-lsp"
 	},
-	"license": "LGPLv3.0",
-	"author": "thqby",
-	"publisher": "thqby",
 	"main": "./client/dist/extension",
 	"browser": "./client/dist/browserClientMain",
 	"scripts": {
@@ -801,7 +801,7 @@
 					".ah2",
 					".ahk2"
 				],
-				"configuration": "./ahk2.configuration.json",
+				"configuration": "./language-configuration.json",
 				"icon": {
 					"dark": "icon_filetype.png",
 					"light": "icon_filetype.png"

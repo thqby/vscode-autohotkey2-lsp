@@ -13,6 +13,9 @@
 AutoHotkey v2 Language support for VS Code, features realization based on v2 syntax analysis.
 Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https://github.dev/github/dev
 
+If you wish to donate, donations can be sent here: [alipay](https://qr.alipay.com/fkx19566u7ctegoppmu5i13) or [alipay qrcode](./pic/alipay.jpg) or [paypal](https://paypal.me/thqby)
+
+
 - [AutoHotkey v2 Language Support](#autohotkey-v2-language-support)
   - [Language Features](#language-features)
     - [Rename Symbol](#rename-symbol)
@@ -41,6 +44,7 @@ Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https:
     - [Vim and Neovim](#vim-and-neovim)
     - [Emacs](#Emacs)
   - [Use in Web Browser](#use-in-web-browser)
+  - [Sponsor](#sponsor)
 
 ## Language Features
 
@@ -162,7 +166,7 @@ code
 
 ### Declaration document
 
-The declaration file is a file with the suffix of `.d.ahk` as the file name, which is used to describe the implemented functions or classes, etc., does not contain the implementation part of the code, and is referenced by the ahk file with the same name by default, and the syntax refers to `ahk2.d.ahk` provided by the extension. The declaration file can extend or rewrite the declaration of ahk built-in functions or classes, and the annotation document can be separated from the source code to provide a multilingual version of intellisense.
+The declaration file is a file with the suffix of `.d.ahk` as the file name, which is used to describe the implemented functions or classes, etc., does not contain the implementation part of the code, and is referenced by the ahk file with the same name by default, and the syntax refers to `ahk2.d.ahk` provided by the extension. The declaration file can extend or rewrite the declaration of ahk built-in functions or classes, and the annotation document can be separated from the source code to provide a multilingual version of intellisense. In addition, you can modify `AutoHotkey2.Syntaxes` setting of extension to replace the built-in declaration file with a third-party declaration file, such as [GroggyOtter's ahkv2_defintion_rewrite](https://github.com/GroggyOtter/ahkv2_definition_rewrite).
 
 ```
 ; array.d.ahk

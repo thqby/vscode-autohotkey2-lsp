@@ -54,7 +54,10 @@ switch (process.argv[2]) {
 async function build_cli() {
 	server_opt.bundle = true;
 	server_opt.minify = true;
+	server_opt.entryPoints = ['server/cli/*.ts'];
+	server_opt.outbase = 'server/cli';
 	server_opt.outdir = 'server/cli';
+	server_opt.sourcemap = false;
 	const start = new Date();
 	await build(server_opt);
 	console.log(`build finished in ${new Date() - start} ms`);

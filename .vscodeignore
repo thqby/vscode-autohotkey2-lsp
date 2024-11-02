@@ -6,7 +6,7 @@
 !server/dist/*.js
 !server/dist/*.ahk
 !syntaxes/**
-!ahk2.configuration.json
+!language-configuration.json
 !icon.png
 !icon_filetype.png
 !package.json

@@ -813,9 +813,8 @@ Cos(Number) => Float
 
 /**
  * 防止当前线程被其他线程中断, 或使其能够被中断.
- * @param OnOffNumeric
  */
-Critical(OnOffNumeric := 'On') => Integer
+Critical(OnOffNumeric: Integer | 'On' | 'Off' := 'On') => Integer
 
 /**
  * 从日期-时间值中添加或减去时间.

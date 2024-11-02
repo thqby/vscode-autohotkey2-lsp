@@ -1717,6 +1717,7 @@ export class Lexer {
 								const last_case = case_pos.pop();
 								if (case_pos.push(tk.offset), last_case)
 									_this.addFoldingRange(last_case, lk.offset, 'case');
+								tk.hover_word = 'default';
 								nexttoken(), next = false;
 								tk.topofline ||= -1;
 								break;
@@ -4162,7 +4163,7 @@ export class Lexer {
 						else {
 							if (!m.match(/\.\w+$/))
 								m = m + '.dll';
-							m = find_include_path(m, [], dlldir, true)?.path ?? m;
+							m = find_include_path(m, [], dlldir || _this.scriptpath, true)?.path ?? m;
 							if (m.includes(':'))
 								_this.dllpaths.push(m.replace(/\\/g, '/'));
 							else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/'));
@@ -6128,7 +6129,7 @@ export class Lexer {
 		}
 		let t: AhkSymbol | undefined, parent: AhkSymbol | undefined, is_global: boolean | 1 = true;
 		if (name.startsWith('$'))
-			return (node = from_d(this.d ? uri : this.d_uri)) && { node, uri, is_global: true };
+			return (node = from_d(this.d ? uri : this.d_uri) ?? this.typedef[name]) && { node, uri, is_global: true };
 		if ((scope = position && this.searchScopedNode(position) as FuncNode)) {
 			if (scope.kind === SymbolKind.Class)
 				scope = undefined;
@@ -6281,7 +6282,7 @@ export class Lexer {
 						case SemanticTokenTypes.parameter: kind = SymbolKind.Variable; break;
 					}
 				} else kind = SymbolKind.Variable;
-			} else if (token.type === 'TK_LABEL')
+			} else if (token.type === 'TK_LABEL' && !token.hover_word)
 				kind = SymbolKind.Field;
 		} else if (pt?.content.startsWith('#'))
 			token = pt, text = pt.content;
@@ -6942,7 +6943,9 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 				syms = new Set;
 				const node = r.node;
 				if (node.kind === SymbolKind.Variable) {
-					for (const n of decltype_var(node, lex, pos, r.scope, _this))
+					if (r.uri !== lex.uri)
+						pos.line = NaN;
+					for (const n of decltype_var(node, lexers[r.uri] ?? lex, pos, r.scope, _this))
 						syms.add(n);
 				} else if (syms.add(node), r.is_this !== undefined) {
 					that = _this ?? node as ClassNode;
@@ -7505,7 +7508,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 	}
 
 	let tps: AhkSymbol[];
-	if (sym.returns) {
+	if (sym.returns && sym.uri === lex.uri) {
 		sym.cached_types = [ANY], tps = [];
 		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
 			tps.push(...decltype_expr(lex, lex.find_token(r[i], true), r[i + 1], _this));

@@ -279,6 +279,11 @@
 			"syntax": "static [Var]\nstatic Method()\nstatic Property"
 		},
 		{
+			"body": "switch",
+			"description": "将一个值与多个case进行比较, 并执行第一个匹配的语句.",
+			"syntax": "switch [SwitchValue, CaseSense] {\n\tcase Value, Expression: \n\n\tdefault: \n\n}"
+		},
+		{
 			"body": "throw",
 			"description": "表示发生错误.可以通过try-catch语句捕获该信号.",
 			"syntax": "throw Expression"

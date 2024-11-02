@@ -1239,7 +1239,7 @@ function get_latest_ahk2lsp() {
 										if (name.includes('/client/') || name.includes('/browser'))
 											return false;
 										if (
-											name.endsWith('/ahk2.configuration.json') ||
+											name.endsWith('/language-configuration.json') ||
 											name.endsWith('.png') ||
 											name.endsWith('.tmlanguage.json')
 										)

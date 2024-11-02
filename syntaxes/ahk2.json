@@ -362,7 +362,12 @@
 			"prefix": "static"
 		},
 		{
-			"body": "throw ${1|Error,MemoryError,OSError,TargetError,TimeoutError,TypeError,UnsetError,MemberError,PropertyError,MethodError,UnsetItemError,ValueError,IndexError,ZeroDivisionError|}('${2:Message}', ${3:A_ThisFunc}, ${4:ExtraInfo})",
+			"body": "switch",
+			"description": "Compares a value with multiple cases and executes the statements of the first match.",
+			"syntax": "switch [SwitchValue, CaseSense] {\n\tcase Value, Expression: \n\n\tdefault: \n\n}"
+		},
+		{
+			"body": "throw",
 			"description": "Indicates that an error has occurred. The signal can be caught by a try-catch statement.",
 			"prefix": "throw"
 		},
