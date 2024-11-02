@@ -233,49 +233,49 @@ node install.js
 
 ```json
 {
-  "clients": {
-    "lsp-ahk2": {
-      "enabled": true,
-      "command": [
-        "node",
-        "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-        "--stdio"
-      ], // 更新node.exe的路径(可能已经在环境变量中，所以你不需要设置)和vscode-autohotkey2-lsp的文件夹
-      "selector": "source.ahk2", // 与AutoHotkey2.sublime-syntax中的scope相同
-      "schemes": ["file", "buffer", "res"],
-      "initializationOptions": {
-        "locale": "en-us", // or "zh-cn"
-        "AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
-        "CommentTags": "^;;\\s*(?<tag>.+)",
-        "CompleteFunctionParens": false,
-        "Diagnostics": {
-          "ClassStaticMemberCheck": true,
-          "ParamsCheck": true
-        },
-        "ActionWhenV1IsDetected": "Continue",
-        "FormatOptions": {
-          "array_style": "none", // or "collapse" or "expand"
-          "break_chained_methods": false,
-          "ignore_comment": false,
-          "indent_string": "\t",
-          "max_preserve_newlines": 2,
-          "brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
-          "object_style": "none", // or "collapse" or "expand"
-          "preserve_newlines": true,
-          "space_after_double_colon": true,
-          "space_before_conditional": true,
-          "space_in_empty_paren": false,
-          "space_in_other": true,
-          "space_in_paren": false,
-          "wrap_line_length": 0
-        },
-        "InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
-        "WorkingDirs": [],
-        "SymbolFoldingFromOpenBrace": false
-      }
-    }
-  },
-  "semantic_highlighting": true
+	"clients": {
+		"lsp-ahk2": {
+			"enabled": true,
+			"command": [
+				"node",
+				"<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+				"--stdio"
+			], // 更新node.exe的路径(可能已经在环境变量中，所以你不需要设置)和vscode-autohotkey2-lsp的文件夹
+			"selector": "source.ahk2", // 与AutoHotkey2.sublime-syntax中的scope相同
+			"schemes": ["file", "buffer", "res"],
+			"initializationOptions": {
+				"locale": "en-us", // or "zh-cn"
+				"AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
+				"CommentTags": "^;;\\s*(?<tag>.+)",
+				"CompleteFunctionParens": false,
+				"Diagnostics": {
+					"ClassStaticMemberCheck": true,
+					"ParamsCheck": true
+				},
+				"ActionWhenV1IsDetected": "Continue",
+				"FormatOptions": {
+					"array_style": "none", // or "collapse" or "expand"
+					"break_chained_methods": false,
+					"ignore_comment": false,
+					"indent_string": "\t",
+					"max_preserve_newlines": 2,
+					"brace_style": "One True Brace", // or "Allman" or "One True Brace Variant"
+					"object_style": "none", // or "collapse" or "expand"
+					"preserve_newlines": true,
+					"space_after_double_colon": true,
+					"space_before_conditional": true,
+					"space_in_empty_paren": false,
+					"space_in_other": true,
+					"space_in_paren": false,
+					"wrap_line_length": 0
+				},
+				"InterpreterPath": "C:/Program Files/AutoHotkey/v2/AutoHotkey.exe",
+				"WorkingDirs": [],
+				"SymbolFoldingFromOpenBrace": false
+			}
+		}
+	},
+	"semantic_highlighting": true
 }
 ```
 
@@ -294,16 +294,16 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 
 ```json
 {
-  "languageserver": {
-    "lsp-ahk2": {
-      "module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
-      "filetypes": ["autohotkey"],
-      "args": ["--node-ipc"],
-      "initializationOptions": {
-        // Same as initializationOptions for Sublime Text4
-      }
-    }
-  }
+	"languageserver": {
+		"lsp-ahk2": {
+			"module": "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
+			"filetypes": ["autohotkey"],
+			"args": ["--node-ipc"],
+			"initializationOptions": {
+				// Same as initializationOptions for Sublime Text4
+			}
+		}
+	}
 }
 ```
 

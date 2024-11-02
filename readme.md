@@ -15,7 +15,6 @@ Supports running on the Web, such as `Chrome/Edge`. https://vscode.dev or https:
 
 If you wish to donate, donations can be sent here: [alipay](https://qr.alipay.com/fkx19566u7ctegoppmu5i13) or [alipay qrcode](./pic/alipay.jpg) or [paypal](https://paypal.me/thqby)
 
-
 - [AutoHotkey v2 Language Support](#autohotkey-v2-language-support)
   - [Language Features](#language-features)
     - [Rename Symbol](#rename-symbol)
