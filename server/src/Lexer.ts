@@ -7481,7 +7481,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 	}
 
 	let tps: AhkSymbol[];
-	if (sym.returns && sym.uri === lex.uri) {
+	if (sym.returns) {
 		sym.cached_types = [ANY], tps = [];
 		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
 			tps.push(...decltype_expr(lex, lex.find_token(r[i], true), r[i + 1], _this));
