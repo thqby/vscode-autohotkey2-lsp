@@ -1,4 +1,6 @@
 import { resolve } from 'path';
+import { createServer } from 'net';
+import { spawn } from 'child_process';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, DidChangeConfigurationNotification, InitializeResult,
@@ -7,37 +9,32 @@ import {
 import { URI } from 'vscode-uri';
 import { get_ahkProvider } from './ahkProvider';
 import {
-	a_vars, AHKLSSettings, ahkpath_cur, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
-	colorPresentation, colorProvider, commands, completionProvider, defintionProvider,
-	documentFormatting, enum_ahkfiles, executeCommandProvider, exportSymbols, extsettings, getVersionInfo, hoverProvider,
+	a_vars, AHKLSSettings, ahkpath_cur, ahkpath_resolved, builtin_variable, builtin_variable_h, chinese_punctuations, clearLibfuns, codeActionProvider,
+	colorPresentation, colorProvider, completionProvider, defintionProvider, documentFormatting,
+	enum_ahkfiles, executeCommandProvider, exportSymbols, extsettings, getServerCommands, getVersionInfo, hoverProvider,
 	initahk2cache, isahk2_h, Lexer, lexers, libdirs, libfuncs, loadahk2, loadlocalize, openFile,
-	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, SemanticTokenModifiers,
-	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, set_Connection,
-	set_dirname, set_locale, set_version, set_WorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
-	traverse_include, typeFormatting, update_settings, utils, winapis, workspaceSymbolProvider
+	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, resolvePath, SemanticTokenModifiers,
+	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, setConnection,
+	setRootDir, setLocale, setVersion, setWorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
+	traverse_include, typeFormatting, updateConfigs, utils, winapis, workspaceSymbolProvider
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
-import { resolvePath, runscript } from './scriptrunner';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);
-const connection = set_Connection(createConnection(ProposedFeatures.all));
+const connection = setConnection(createConnection(ProposedFeatures.all));
 const workspaceFolders = new Set<string>();
 let hasConfigurationCapability = false, hasWorkspaceFolderCapability = false;
+let isInitialized = false;
 let uri_switch_to_ahk2 = '';
 
-commands['ahk2.resetinterpreterpath'] = (args: string[]) =>
-	setInterpreter((args[0]).replace(/^[A-Z]:/, m => m.toLowerCase()));
+utils.get_RCDATA = getRCDATA;
+utils.get_DllExport = getDllExport;
+utils.get_ahkProvider = get_ahkProvider;
 
 connection.onInitialize(async params => {
 	const capabilities = params.capabilities;
-	hasConfigurationCapability = !!(
-		capabilities.workspace && !!capabilities.workspace.configuration
-	);
-	hasWorkspaceFolderCapability = !!(
-		capabilities.workspace && !!capabilities.workspace.workspaceFolders
-	);
-
+	const configs: AHKLSSettings | undefined = params.initializationOptions;
 	const result: InitializeResult = {
 		serverInfo: {
 			name: languageServer,
@@ -59,7 +56,7 @@ connection.onInitialize(async params => {
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
 			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinese_punctuations)] },
-			executeCommandProvider: { commands: Object.keys(commands) },
+			executeCommandProvider: { commands: getServerCommands(configs?.commands) },
 			hoverProvider: true,
 			foldingRangeProvider: true,
 			colorProvider: true,
@@ -77,45 +74,43 @@ connection.onInitialize(async params => {
 			workspaceSymbolProvider: true
 		}
 	};
+
+	hasConfigurationCapability = !!(
+		capabilities.workspace && !!capabilities.workspace.configuration
+	);
+	hasWorkspaceFolderCapability = !!(
+		capabilities.workspace && !!capabilities.workspace.workspaceFolders
+	);
+
 	if (hasWorkspaceFolderCapability) {
 		params.workspaceFolders?.forEach(it => workspaceFolders.add(it.uri.toLowerCase() + '/'));
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	let configs: AHKLSSettings | undefined;
-	const env = process.env;
-	if (env.AHK2_LS_CONFIG)
-		try { configs = JSON.parse(env.AHK2_LS_CONFIG); } catch { }
-	if (params.initializationOptions)
-		configs = Object.assign(configs ?? {}, params.initializationOptions);
-	set_dirname(resolve(__dirname, '../..'));
-	set_locale(configs?.locale ?? params.locale);
-	utils.get_RCDATA = getRCDATA;
-	utils.get_DllExport = getDllExport;
-	utils.get_ahkProvider = get_ahkProvider;
+	setRootDir(resolve(__dirname, '../..'));
+	setLocale(configs?.locale ?? params.locale);
 	loadlocalize();
 	initahk2cache();
 	if (configs)
-		update_settings(configs);
-	if (!(await setInterpreter(resolvePath(extsettings.InterpreterPath ??= ''))))
-		patherr(setting.ahkpatherr());
-	set_WorkspaceFolders(workspaceFolders);
+		updateConfigs(configs);
+	setWorkspaceFolders(workspaceFolders);
+	await setInterpreter(resolvePath(extsettings.InterpreterPath ??= ''));
 	loadahk2();
 	return result;
 });
 
 connection.onInitialized(() => {
-	if (hasConfigurationCapability) {
-		// Register for all configuration changes.
+	if (hasConfigurationCapability)
 		connection.client.register(DidChangeConfigurationNotification.type);
-	}
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders(event => {
 			event.removed.forEach(it => workspaceFolders.delete(it.uri.toLowerCase() + '/'));
 			event.added.forEach(it => workspaceFolders.add(it.uri.toLowerCase() + '/'));
-			set_WorkspaceFolders(workspaceFolders);
+			setWorkspaceFolders(workspaceFolders);
 		});
 	}
+	isInitialized = true;
+	updateStatusBar();
 	getDllExport(['user32', 'kernel32', 'comctl32', 'gdi32'].map(name => `C:\\Windows\\System32\\${name}.dll`))
 		.then(val => winapis.push(...val));
 });
@@ -129,12 +124,10 @@ connection.onDidChangeConfiguration(async change => {
 		return;
 	}
 	const { AutoLibInclude, InterpreterPath, Syntaxes } = extsettings;
-	update_settings(newset);
-	set_WorkspaceFolders(workspaceFolders);
-	if (InterpreterPath !== extsettings.InterpreterPath) {
-		if (await setInterpreter(resolvePath(extsettings.InterpreterPath ??= '')))
-			connection.sendRequest('ahk2.updateStatusBar', [extsettings.InterpreterPath]);
-	}
+	updateConfigs(newset);
+	setWorkspaceFolders(workspaceFolders);
+	if (InterpreterPath !== extsettings.InterpreterPath)
+		await setInterpreter(resolvePath(extsettings.InterpreterPath ??= ''));
 	if (AutoLibInclude !== extsettings.AutoLibInclude) {
 		if ((extsettings.AutoLibInclude > 1) && (AutoLibInclude <= 1))
 			parseuserlibs();
@@ -200,10 +193,11 @@ connection.onExecuteCommand(executeCommandProvider);
 connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
-connection.onRequest('ahk2.exportSymbols', (uri: string) => exportSymbols(uri));
-connection.onRequest('ahk2.getAHKversion', getAHKversion);
-connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
-connection.onRequest('ahk2.getVersionInfo', getVersionInfo);
+connection.onRequest('exportSymbols', (uri: string) => exportSymbols(uri));
+connection.onRequest('getAHKversion', getAHKversion);
+connection.onRequest('getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
+connection.onRequest('getVersionInfo', getVersionInfo);
+connection.onNotification('resetInterpreterPath', path => setInterpreter(extsettings.InterpreterPath = path));
 connection.onNotification('onDidCloseTextDocument', (params: { uri: string, id: string }) => {
 	if (params.id === 'ahk2')
 		lexers[params.uri.toLowerCase()]?.close(true);
@@ -212,59 +206,26 @@ connection.onNotification('onDidCloseTextDocument', (params: { uri: string, id: 
 documents.listen(connection);
 connection.listen();
 
-async function patherr(msg: string) {
-	if (!extsettings.commands?.includes('ahk2.executeCommand'))
+async function showPathError(msg: string) {
+	clear_rcdata();
+	if (!extsettings.commands?.includes('executeCommand'))
 		return connection.window.showErrorMessage(msg);
 	if (await connection.window.showErrorMessage(msg, { title: 'Select Interpreter' }))
-		connection.sendRequest('ahk2.executeCommand', ['ahk2.set.interpreter']);
+		connection.sendRequest('executeCommand', ['ahk2.set.interpreter']);
 }
 
-async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
-	const script = `
-	#NoTrayIcon
-	#Warn All, Off
-	s := "", Append := SubStr(A_AhkVersion, 1, 1) = "1" ? "FileAppend2" : "FileAppend"
-	for _, k in ${JSON.stringify([...builtin_variable, ...builtin_variable_h])}
-		try if SubStr(k, 1, 2) = "a_" && !IsObject(v := %k%)
-			s .= SubStr(k, 3) "|" v "\`n"
-	%Append%(s, "*", "utf-8")
-	FileAppend2(text, file, encode) {
-		FileAppend %text%, %file%, %encode%
-	}`;
-	let fail = 0, data = runscript(script);
-	if (data === undefined) {
-		if (retry)
-			return initpathenv(samefolder, false);
-		patherr(setting.ahkpatherr());
-		return false;
-	}
-	if (!(data = data.trim())) {
-		const path = ahkpath_cur;
-		if ((await getAHKversion([path]))[0].endsWith('[UIAccess]')) {
-			let ret = false, n = path.replace(/_uia\.exe$/i, '.exe');
-			fail = 2;
-			if (path !== n && (n = resolvePath(n, true)) && !(await getAHKversion([n]))[0].endsWith('[UIAccess]')) {
-				set_ahkpath(n);
-				if ((ret = await initpathenv(samefolder)))
-					fail = 0;
-				set_ahkpath(path);
-			}
-			fail && connection.window.showWarningMessage(setting.uialimit());
-			await update_rcdata();
-			if (ret)
-				return true;
-		} else fail = 1;
-		if (fail !== 2 && retry)
-			return initpathenv(samefolder, false);
-		if (!a_vars.mydocuments)
-			connection.window.showErrorMessage(setting.getenverr());
-		return false;
-	}
-	Object.assign(a_vars, Object.fromEntries(data.replace(/|[A-Z]:\\/g, m => m.toLowerCase()).split('\n').map(l => l.split('|'))));
-	a_vars.ahkpath ??= ahkpath_cur;
-	set_version(a_vars.ahkversion ??= '2.0.0');
+async function initpathenv(samefolder: boolean): Promise<boolean> {
+	if (!ahkpath_resolved)
+		return showPathError(setting.ahkpatherr()), false;
+	let vars;
+	for (let i = 0; i < 3 && !vars; i++)
+		vars = await getScriptVars();
+	if (!vars)
+		return showPathError(setting.getenverr()), false;
+	Object.assign(a_vars, vars).ahkpath ??= ahkpath_cur;
+	setVersion(a_vars.ahkversion ??= '2.0.0');
 	if (a_vars.ahkversion.startsWith('1.'))
-		patherr(setting.versionerr());
+		showPathError(setting.versionerr());
 	if (!samefolder || !libdirs.length) {
 		libdirs.length = 0;
 		libdirs.push(a_vars.mydocuments + '\\AutoHotkey\\Lib\\',
@@ -285,11 +246,11 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 	if (samefolder)
 		return true;
 	for (const uri in lexers) {
-		const doc = lexers[uri];
-		if (!doc.d) {
-			doc.initLibDirs();
-			if (Object.keys(doc.include).length || doc.diagnostics.length)
-				doc.update();
+		const lex = lexers[uri];
+		if (!lex.d) {
+			lex.initLibDirs();
+			if (Object.keys(lex.include).length || lex.diagnostics.length)
+				lex.update();
 		}
 	}
 	clearLibfuns();
@@ -297,13 +258,20 @@ async function initpathenv(samefolder = false, retry = true): Promise<boolean> {
 		parseuserlibs();
 	return true;
 	async function update_rcdata() {
-		const pe = new PEFile(ahkpath_cur);
+		let pe;
 		try {
-			const rc = await pe.getResource(RESOURCE_TYPE.RCDATA);
-			curPERCDATA = rc;
-		} catch (e) { }
-		finally { pe.close(); }
+			clear_rcdata();
+			pe = new PEFile(resolvePath(ahkpath_cur, true));
+			curPERCDATA = await pe.getResource(RESOURCE_TYPE.RCDATA);
+		} catch { }
+		finally { pe?.close(); }
 	}
+}
+
+function clear_rcdata() {
+	loaded_rcdata.forEach(lex => lex.close(true));
+	loaded_rcdata.length = 0;
+	curPERCDATA = undefined;
 }
 
 function get_lib_symbols(lex: Lexer) {
@@ -353,13 +321,22 @@ async function changeInterpreter(oldpath: string, newpath: string) {
 }
 
 async function setInterpreter(path: string) {
-	const old = ahkpath_cur;
-	if (!path || path.toLowerCase() === old.toLowerCase())
-		return false;
-	set_ahkpath(path);
-	if (!(await changeInterpreter(old, path)))
-		set_ahkpath(old);
-	return true;
+	const prev_path = ahkpath_cur;
+	if (path) {
+		if (path.toLowerCase() === prev_path.toLowerCase())
+			return;
+		set_ahkpath(path);
+		updateStatusBar();
+		await changeInterpreter(prev_path, path);
+	}
+	if (!ahkpath_cur)
+		showPathError(setting.ahkpatherr());
+}
+
+async function updateStatusBar() {
+	if (!isInitialized) return;
+	connection.sendRequest('updateStatusBar', ahkpath_resolved ?
+		[ahkpath_cur].concat(await getAHKversion([ahkpath_resolved])) : ['']);
 }
 
 async function parseproject(uri: string) {
@@ -404,7 +381,7 @@ async function getAHKversion(params: string[]) {
 			}
 		} catch (e) { }
 		finally { pe?.close(); }
-		return 'unknown version';
+		return '';
 	}));
 }
 
@@ -423,22 +400,56 @@ async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 }
 
 let curPERCDATA: Record<string, Buffer> | undefined = undefined;
+const loaded_rcdata: Lexer[] = [];
 function getRCDATA(name?: string) {
-	const exe = resolvePath(ahkpath_cur, true);
-	if (!exe) return;
+	if (!curPERCDATA)
+		return;
 	if (!name) return { uri: '', path: '', paths: Object.keys(curPERCDATA ?? {}) };
-	const path = `${exe.toLowerCase()}:${name}`;
+	const path = `${ahkpath_cur}:${name}`;
 	const uri = URI.from({ scheme: 'ahkres', path }).toString().toLowerCase();
 	if (lexers[uri])
 		return { uri, path };
-	if (!name || !curPERCDATA)
-		return;
 	const data = curPERCDATA[name];
 	if (!data)
 		return;
 	try {
-		const doc = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
-		doc.parseScript();
+		const lex = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
+		lex.parseScript();
+		loaded_rcdata.push(lex);
 		return { uri, path };
 	} catch { delete curPERCDATA[name]; }
+}
+
+function getScriptVars(): Promise<Record<string, string> | undefined> {
+	const path = `\\\\.\\pipe\\ahk-script-${Buffer.from(Uint16Array.from([process.pid, Date.now()]).buffer).toString('hex')}`;
+	const script = `
+#NoTrayIcon
+s := ""
+for _, k in ${JSON.stringify([...builtin_variable, ...builtin_variable_h])}
+	try if SubStr(k, 1, 2) = "a_" && !IsObject(v := %k%)
+		s .= SubStr(k, 3) "|" v "\`n"
+FileOpen(A_ScriptFullPath, "w", "utf-8").Write(s)`;
+	return new Promise(r => {
+		let has_written = false, output = '';
+		const server = createServer(socket => {
+			const destroy = () => socket.destroy();
+			socket.on('error', destroy);
+			if (has_written) {
+				socket.setEncoding('utf8');
+				socket.on('data', data => output += data);
+				socket.on('end', destroy);
+				return;
+			}
+			has_written = socket.write(script);
+			socket.destroySoon();
+		}).listen(path);
+		const r2 = (data = '') => {
+			r(data ? Object.fromEntries(data.split('\n').map(l => l.split('|'))) : undefined);
+			server.close();
+		};
+		const cp = spawn(`"${ahkpath_cur}" /CP65001 /ErrorStdOut ${path}`, [], { cwd: resolve(ahkpath_cur, '..'), shell: true });
+		cp.on('exit', code => r2(code === 0 ? output.trim() : ''));
+		cp.on('error', () => r2());
+		setTimeout(() => cp.kill(), 2000);
+	});
 }

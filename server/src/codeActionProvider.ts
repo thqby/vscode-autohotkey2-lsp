@@ -1,4 +1,4 @@
-import { readdirSync } from 'fs';
+import { opendir } from 'fs/promises';
 import { CancellationToken, CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
 import { codeaction, diagnostic } from './localize';
 import { Maybe, lexers, restorePath, warn } from './common';
@@ -28,17 +28,15 @@ export async function codeActionProvider(params: CodeActionParams, token: Cancel
 		} else if ((t = repl_re.exec(it.message))) {
 			(replaces[`${document.getText(it.range)} ${r = t[1] || t[2]}`] ??= []).push({ range: it.range, newText: r });
 		} else if ((t = include_re.exec(it.message))) {
-			r = document.getText(it.range).replace(/\//g, '\\').replace(/[^\\]+$/, '');
 			const path = restorePath(t[1]), reg = new RegExp(`\\.${t[2]}$`, 'i'), includes = [];
 			const rg = Object.assign({}, it.range);
 			rg.start = Object.assign({}, rg.start), rg.start.character = 0;
-			for (const it of readdirSync(path)) {
-				try {
-					if (reg.test(it)) includes.push(`#Include '${r}${it}'`);
-				} catch { };
-			}
+			try {
+				for await (const ent of await opendir(path))
+					if (reg.test(ent.name)) includes.push(`#Include ${path}\\${ent.name}`);
+			} catch { continue; }
 			const textEdit: TextEdit = { range: rg, newText: includes.join('\n') };
-			const act: CodeAction = { title: codeaction.include(path + '*.' + t[2]), kind: CodeActionKind.QuickFix };
+			const act: CodeAction = { title: codeaction.include(`${path}\\*.${t[2]}`), kind: CodeActionKind.QuickFix };
 			act.edit = { changes: { [uri]: [textEdit] } };
 			acts.push(act);
 		}

@@ -8,13 +8,13 @@ export function activate(context: ExtensionContext) {
 	const serverMain = Uri.joinPath(context.extensionUri, 'server/dist/browserServerMain.js');
 	/* eslint-disable-next-line */
 	const request_handlers: Record<string, (...params: any[]) => any> = {
-		'ahk2.getActiveTextEditorUriAndPosition': () => {
+		'getEditorLocation': () => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			const uri = editor.document.uri.toString(), position = editor.selection.end;
 			return { uri, position: { line: position.line, character: position.character } };
 		},
-		'ahk2.insertSnippet': async (params: [string, Range?]) => {
+		'insertSnippet': async (params: [string, Range?]) => {
 			const editor = window.activeTextEditor;
 			if (!editor) return;
 			if (params[1]) {
@@ -23,7 +23,7 @@ export function activate(context: ExtensionContext) {
 			} else
 				editor.insertSnippet(new SnippetString(params[0]));
 		},
-		'ahk2.setTextDocumentLanguage': async (params: [string, string?]) => {
+		'setTextDocumentLanguage': async (params: [string, string?]) => {
 			const lang = params[1] || 'ahk';
 			if (!(await languages.getLanguages()).includes(lang)) {
 				window.showErrorMessage(`Unknown language id: ${lang}`);
@@ -32,7 +32,7 @@ export function activate(context: ExtensionContext) {
 			const uri = params[0], it = workspace.textDocuments.find(it => it.uri.toString() === uri);
 			it && languages.setTextDocumentLanguage(it, lang);
 		},
-		'ahk2.getWorkspaceFiles': async (params: string[]) => {
+		'getWorkspaceFiles': async (params: string[]) => {
 			const all = !params.length;
 			if (workspace.workspaceFolders) {
 				if (all)
@@ -46,7 +46,7 @@ export function activate(context: ExtensionContext) {
 				}
 			}
 		},
-		'ahk2.getWorkspaceFileContent': async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText()
+		'getWorkspaceFileContent': async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText()
 	};
 
 	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', {
@@ -61,7 +61,7 @@ export function activate(context: ExtensionContext) {
 
 	context.subscriptions.push(
 		commands.registerTextEditorCommand('ahk2.update.versioninfo', async textEditor => {
-			const infos: { content: string, uri: string, range: Range, single: boolean }[] | null = await client.sendRequest('ahk2.getVersionInfo', textEditor.document.uri.toString());
+			const infos: { content: string, uri: string, range: Range, single: boolean }[] | null = await client.sendRequest('getVersionInfo', textEditor.document.uri.toString());
 			if (!infos?.length) {
 				await textEditor.insertSnippet(new SnippetString([
 					"/************************************************************************",

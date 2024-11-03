@@ -291,8 +291,6 @@ export async function searchAndOpenPEFile(path: string, isBit64?: boolean): Prom
 	const exts: string[] = [''];
 	while (true) {
 		try {
-			if (!existsSync(path))
-				throw Error();
 			pe = new PEFile(path);
 			const is_bit64 = await pe.is_bit64;
 			if (file && isBit64 !== undefined && is_bit64 !== isBit64) {

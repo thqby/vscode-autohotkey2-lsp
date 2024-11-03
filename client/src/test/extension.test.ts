@@ -34,7 +34,7 @@ suite('Start ahk language server', () => {
 				await vscode.window.showTextDocument(document);
 				if (document.languageId !== 'ahk2')
 					document = await vscode.languages.setTextDocumentLanguage(document, 'ahk2');
-				const content = await client.sendRequest('ahk2.getContent', uri) as string;
+				const content = await client.sendRequest('getContent', uri) as string;
 				assert.equal(document.getText() === content, true);
 
 				suite('Test language server features', () => {

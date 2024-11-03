@@ -1,14 +1,12 @@
 import { createClientSocketTransport, createMessageConnection, createServerSocketTransport, MessageConnection } from 'vscode-languageserver/node';
 import { spawn } from 'child_process';
-import { resolvePath } from './scriptrunner';
-import { ahkpath_cur, rootdir } from './common';
+import { ahkpath_resolved, rootdir } from './common';
 let ahk_server: MessageConnection | undefined | null;
 
 async function get_ahkProvider_port(): Promise<number> {
 	// eslint-disable-next-line no-async-promise-executor
 	return new Promise(async resolve => {
-		const executePath = resolvePath(ahkpath_cur);
-		if (!executePath)
+		if (!ahkpath_resolved)
 			return resolve(0);
 		let server, port = 1200;
 		while (true) {
@@ -19,8 +17,8 @@ async function get_ahkProvider_port(): Promise<number> {
 				port++;
 			}
 		}
-		const process = spawn(executePath, [`${rootdir}/server/dist/ahkProvider.ahk`, port.toString()]);
-		if (!process || !process.pid)
+		const process = spawn(ahkpath_resolved, [`${rootdir}/server/dist/ahkProvider.ahk`, port.toString()]);
+		if (!process.pid)
 			return resolve(0);
 		let resolve2: ((_?: MessageConnection) => void) | undefined = (r?: MessageConnection) => {
 			resolve2 = undefined;

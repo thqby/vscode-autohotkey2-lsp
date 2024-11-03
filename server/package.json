@@ -2,6 +2,7 @@
 	"browser": {
 		"child_process": false,
 		"fs": false,
+		"fs/promises": false,
 		"path": "path-browserify"
 	}
 }

@@ -6,11 +6,18 @@ import {
 	traverse_include, update_include_cache
 } from './common';
 
-function checkCommand(cmd: string) {
-	if (extsettings.commands?.includes(cmd))
-		return true;
-	connection?.console.warn(`Command '${cmd}' is not implemented!`);
-	return false;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const commands: Record<string, (...args: any[]) => any> = {};
+
+function sendClientRequest(method: string, params: unknown, optional = false) {
+	if (extsettings.commands?.includes(method))
+		return connection?.sendRequest(method, params);
+	if (!optional)
+		connection?.window.showWarningMessage(`Command '${method}' is not implemented!`);
+}
+
+function getEditorLocation() {
+	return connection!.sendRequest('getEditorLocation') as Promise<{ uri: string, position: Position }>
 }
 
 function trim_jsdoc(detail?: string) {
@@ -18,16 +25,8 @@ function trim_jsdoc(detail?: string) {
 		.replace(/^\/\*+\s*|\s*\**\/$/g, '') ?? '';
 }
 
-function insertSnippet(value: string, range?: Range) {
-	if (!checkCommand('ahk2.insertSnippet'))
-		return;
-	connection?.sendRequest('ahk2.insertSnippet', [value, range]);
-}
-
 export function setTextDocumentLanguage(uri: string, lang?: string) {
-	if (!checkCommand('ahk2.setTextDocumentLanguage'))
-		return;
-	return connection?.sendRequest('ahk2.setTextDocumentLanguage', [uri, lang]);
+	return sendClientRequest('setTextDocumentLanguage', [uri, lang]);
 }
 
 export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
@@ -75,9 +74,7 @@ export function generate_fn_comment(doc: Lexer, fn: FuncNode, detail?: string) {
 }
 
 async function generateComment() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition') || !checkCommand('ahk2.insertSnippet'))
-		return;
-	const { uri, position } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string, position: Position };
+	const { uri, position } = await getEditorLocation();
 	const doc = lexers[uri.toLowerCase()];
 	let scope = doc.searchScopedNode(position);
 	const ts = scope?.children || doc.children;
@@ -111,7 +108,7 @@ async function generateComment() {
 			end: doc.document.positionAt(tk.offset + tk.length)
 		};
 	}
-	insertSnippet(text, range);
+	connection!.sendRequest('insertSnippet', [text, range]);
 }
 
 export function exportSymbols(uri: string) {
@@ -206,9 +203,7 @@ export function exportSymbols(uri: string) {
 }
 
 async function diagnoseAll() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
-		return;
-	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+	const { uri } = await getEditorLocation();
 	const doc = lexers[uri.toLowerCase()];
 	if (!doc) return;
 	update_include_cache();
@@ -217,10 +212,8 @@ async function diagnoseAll() {
 	semanticTokensOnFull({ textDocument: { uri } });
 }
 
-async function setscriptdir() {
-	if (!checkCommand('ahk2.getActiveTextEditorUriAndPosition'))
-		return;
-	const { uri } = await connection?.sendRequest('ahk2.getActiveTextEditorUriAndPosition') as { uri: string };
+async function setScriptDir() {
+	const { uri } = await getEditorLocation();
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex) return;
 	if (lex.scriptdir !== lex.scriptpath)
@@ -263,14 +256,20 @@ export function getVersionInfo(uri: string) {
 	return info;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const commands: Record<string, (args: any[]) => any> = {
-	'ahk2.diagnose.all': () => diagnoseAll(),
-	'ahk2.generate.comment': () => generateComment(),
-	'ahk2.set.scriptdir': process.env.BROWSER ? () => 0 : setscriptdir
-};
+export function getServerCommands(clientCommands?: string[]) {
+	if (!clientCommands?.length)
+		return [];
+	if (clientCommands.includes('getEditorLocation')) {
+		commands['ahk2.diagnose.all'] = diagnoseAll;
+		if (clientCommands.includes('insertSnippet'))
+			commands['ahk2.generate.comment'] = generateComment;
+		if (!process.env.BROWSER)
+			commands['ahk2.set.scriptdir'] = setScriptDir;
+	}
+	return Object.keys(commands);
+}
 
 export function executeCommandProvider(params: ExecuteCommandParams, token?: CancellationToken) {
 	if (!token?.isCancellationRequested)
-		return commands[params.command](params.arguments ?? []);
+		return commands[params.command](...(params.arguments ?? []));
 }

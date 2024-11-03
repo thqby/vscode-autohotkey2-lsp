@@ -1,4 +1,5 @@
-import { existsSync, readdirSync, statSync } from 'fs';
+import { existsSync, statSync } from 'fs';
+import { opendir } from 'fs/promises';
 import { basename, relative, resolve } from 'path';
 import {
 	CancellationToken, CompletionItem, CompletionItemKind,
@@ -186,30 +187,29 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							(item: CompletionItem, newText: string) => item.insertText = newText;
 						const set_file_text = range || c ? set_folder_text : () => undefined;
 						for (let path of paths) {
-							if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory() || vars[path = path.toUpperCase()])
-								continue;
 							try {
+								if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory() || vars[path = path.toUpperCase()])
+									continue;
 								vars[path] = 1;
-								for (let label of readdirSync(path)) {
-									try {
-										if (statSync(path + label).isDirectory()) {
-											if (!ep.test(label))
-												continue;
-											vars[`${label.toUpperCase()}/`] ??= (
-												label = label.replace(/(`|(?<= );)/g, '`$1'),
-												set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + xg),
-												1
-											);
-										} else {
-											if (!extreg.test(label) || !ep.test(inlib ? label = label.replace(extreg, '') : label))
-												continue;
-											vars[label.toUpperCase()] ??= (label = label.replace(/(`|(?<= );)/g, '`$1'),
-												set_file_text(cpitem = { label, kind: CompletionItemKind.File }, label + c),
-												1
-											);
-										}
-										items.push(cpitem);
-									} catch { }
+								for await (const ent of await opendir(path)) {
+									let label = ent.name;
+									if (ent.isDirectory()) {
+										if (!ep.test(label))
+											continue;
+										vars[`${label.toUpperCase()}/`] ??= (
+											label = label.replace(/(`|(?<= );)/g, '`$1'),
+											set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + xg),
+											1
+										);
+									} else {
+										if (!extreg.test(label) || !ep.test(inlib ? label = label.replace(extreg, '') : label))
+											continue;
+										vars[label.toUpperCase()] ??= (label = label.replace(/(`|(?<= );)/g, '`$1'),
+											set_file_text(cpitem = { label, kind: CompletionItemKind.File }, label + c),
+											1
+										);
+									}
+									items.push(cpitem);
 								}
 							} catch { }
 							if (pre.includes(':'))
@@ -281,7 +281,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							let tk = token;
 							const off = doc.document.offsetAt(range.end);
 							for (text = token.content; (tk = tokens[tk.next_token_offset!]) && tk.offset < off; text += tk.content);
-							if (allIdentifierChar.test(text.replace(/\./g, ''))) {
+							if (allIdentifierChar.test(text.replaceAll('.', ''))) {
 								for (const it of Object.values(find_class(doc, text)?.property ?? {})) {
 									if (it.kind === SymbolKind.Class && expg.test(it.name))
 										items.push(convertNodeCompletion(it));
@@ -466,13 +466,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						cache.add(s);
 						switch (s) {
 							case $DIRPATH:
-								add_paths(true);
+								await add_paths(true);
 								break;
 							case $DLLFUNC:
 								await add_dllexports();
 								break;
 							case $FILEPATH:
-								add_paths();
+								await add_paths();
 								break;
 							case STRING:
 								kind = CompletionItemKind.Text, command = undefined;
@@ -488,7 +488,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								if (s.data === $FILEPATH) {
 									s = (s as ClassNode).generic_types?.[0]?.[0] ?? '';
 									if (typeof s === 'string' && /^(['"])\w+(\|\w+)*\1$/.test(s))
-										add_paths(false, new RegExp(`[^.\\/]+$(?<!\\.(${s.slice(1, -1)}))`, 'i'));
+										await add_paths(false, new RegExp(`[^.\\/]+$(?<!\\.(${s.slice(1, -1)}))`, 'i'));
 								}
 								break;
 						}
@@ -779,7 +779,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				if ((t = decl[cl]).kind === SymbolKind.Class && expg.test(cl))
 					vars[cl] ??= items.push(convertNodeCompletion(t));
 	}
-	function add_paths(only_folder = false, ext_re?: RegExp) {
+	async function add_paths(only_folder = false, ext_re?: RegExp) {
 		if (process.env.BROWSER)
 			return;
 		offset ??= doc.document.offsetAt(position);
@@ -806,23 +806,22 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		const set_folder_text = range ? (item: CompletionItem, newText: string) => (item.textEdit = { newText, range }) :
 			(item: CompletionItem, newText: string) => item.insertText = newText;
 		try {
-			for (let label of readdirSync(path)) {
+			for await (const ent of await opendir(path)) {
+				let label = ent.name;
 				if (!re.test(label))
 					continue;
-				try {
-					if (statSync(path + label).isDirectory()) {
-						label = label.replace(/(`|(?<= );)/g, '`$1');
-						set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + slash);
-					} else if (only_folder || ext_re?.test(label))
-						continue;
-					else {
-						label = label.replace(/(`|(?<= );)/g, '`$1');
-						cpitem = { label, kind: CompletionItemKind.File };
-						if (range)
-							cpitem.textEdit = { range, newText: label };
-					}
-					items.push(cpitem);
-				} catch { }
+				if (ent.isDirectory()) {
+					label = label.replace(/(`|(?<= );)/g, '`$1');
+					set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + slash);
+				} else if (only_folder || ext_re?.test(label))
+					continue;
+				else {
+					label = label.replace(/(`|(?<= );)/g, '`$1');
+					cpitem = { label, kind: CompletionItemKind.File };
+					if (range)
+						cpitem.textEdit = { range, newText: label };
+				}
+				items.push(cpitem);
 			}
 		} catch { }
 	}
@@ -855,18 +854,19 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				expg.test(file = file.replace(/^.*[\\/]/, '')) &&
 				(ls[file.toUpperCase()] ??= items.push(file2item(file.replace(/\.dll$/i, ''))))));
 			try {
-				for (const file of readdirSync('C:\\Windows\\System32'))
-					/\.(dll|ocx|cpl)$/i.test(file) && expg.test(file) &&
+				let file;
+				for await (const ent of await opendir('C:\\Windows\\System32'))
+					/\.(dll|ocx|cpl)$/i.test(file = ent.name) && expg.test(file) &&
 						(ls[file.toUpperCase()] ??= items.push(file2item(file.replace(/\.dll$/i, ''))));
 			} catch { }
 			for (const label of winapis)
 				expg.test(label) && items.push({ label, kind });
 		} else {
-			add_paths(false, /[^.\\/]+$(?<!\.(dll|ocx|cpl))/i);
+			await add_paths(false, /[^.\\/]+$(?<!\.(dll|ocx|cpl))/i);
 			if (pre.endsWith('/') || pre.endsWith(':\\'))
 				return;
 			const dlls = new Set<string>;
-			let l = pre.slice(0, -1).replace(/\\/g, '/').toLowerCase(), onlyfile = true;
+			let l = pre.slice(0, -1).replaceAll('\\', '/').toLowerCase(), onlyfile = true;
 			if (!/\.\w+$/.test(l))
 				l += '.dll';
 			if (l.includes(':'))
@@ -931,7 +931,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					else if (fn.params.length) {
 						ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
 						if (fn.params[0].name.includes('|')) {
-							ci.insertText = ci.label + '(${1|' + fn.params[0].name.replace(/\|/g, ',') + '|})';
+							ci.insertText = ci.label + '(${1|' + fn.params[0].name.replaceAll('|', ',') + '|})';
 							ci.insertTextFormat = InsertTextFormat.Snippet;
 						} else ci.insertText = ci.label + '($0)', ci.insertTextFormat = InsertTextFormat.Snippet;
 					} else ci.insertText = ci.label + '()';

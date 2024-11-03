@@ -19,7 +19,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 				character += d.offset - tk.offset;
 				const rg = Range.create(0, 0, lexers[p[1]]?.document.lineCount ?? 0, 0);
 				const end = character + d.content.length;
-				const uri = p[0] ? URI.file(restorePath(p[0].replace(/`;/g, ';'))).toString() : p[1];
+				const uri = p[0] ? URI.file(restorePath(p[0].replaceAll('`;', ';'))).toString() : p[1];
 				return [LocationLink.create(uri, rg, rg, Range.create(line, character, line, end))];
 			}
 		}

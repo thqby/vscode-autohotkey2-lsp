@@ -1,11 +1,13 @@
-import { resolve, sep } from 'path';
-import { URI } from 'vscode-uri';
-import { readdirSync, readFileSync, existsSync, statSync, promises as fs } from 'fs';
+import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
+import { URI } from 'vscode-uri';
+import { readFileSync, realpathSync, existsSync, lstatSync, readlinkSync } from 'fs';
+import { opendir, readFile } from 'fs/promises';
+import { execSync } from 'child_process';
+import { resolve } from 'path';
 import { AhkSymbol, ActionType, FormatOptions, Lexer, check_formatopts, update_comment_tags } from './Lexer';
-import { diagnostic } from './localize';
+import { diagnostic, setting } from './localize';
 import { jsDocTagNames } from './constants';
 export * from './codeActionProvider';
 export * from './colorProvider';
@@ -63,6 +65,7 @@ export interface AHKLSSettings {
 	WorkingDirs: string[]
 }
 
+const realpath = realpathSync.native;
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
 export const alpha_3 = encode_version('2.1-alpha.3');
@@ -101,7 +104,8 @@ export const utils = {
 
 export type Maybe<T> = T | undefined;
 export let connection: Connection | undefined;
-export let ahkpath_cur = '', locale = 'en-us', rootdir = '', isahk2_h = false;
+export let locale = 'en-us', rootdir = '', isahk2_h = false;
+export let ahkpath_cur = '', ahkpath_resolved = '';
 export let ahk_version = encode_version('3.0.0.0');
 export let ahkuris: Record<string, string> = {};
 export let ahkvars: Record<string, AhkSymbol> = {};
@@ -144,7 +148,7 @@ export function read_ahk_file(path: string, showError = true) {
 		if (showError) {
 			delete e.stack;
 			e.path = path;
-			console.log(e);
+			connection?.console.log(e);
 		}
 	}
 }
@@ -172,21 +176,13 @@ export function openAndParse(path: string, showError = true, cache = true) {
 }
 
 export function restorePath(path: string): string {
-	if (process.env.BROWSER || !existsSync(path))
+	if (process.env.BROWSER)
 		return path;
-	if (path.includes('..'))
-		path = resolve(path);
-	const dirs = path.split(/[/\\]/);
-	let s = dirs.shift()!.toLowerCase(), l;
-	for (let dir of dirs) {
-		if ((l = dir.toLowerCase()))
-			try {
-				for (const d of readdirSync(s))
-					if (d === l) { dir = d; break; }
-			} catch { }
-		s += sep + dir;
+	try {
+		return realpath(path);
+	} catch {
+		return path;
 	}
-	return s;
 }
 
 export function getlocalefilepath(filepath: string): string | undefined {
@@ -269,7 +265,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		if ((data = getwebfile(file + '.json')))
 			build_item_cache(JSON.parse(data.text));
 	} else {
-		const syntaxes = extsettings.Syntaxes && existsSync(extsettings.Syntaxes) ? extsettings.Syntaxes : '';
+		const syntaxes = extsettings.Syntaxes;
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
 		let td: TextDocument | undefined;
 		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
@@ -282,10 +278,11 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 			completionItemCache.static = completionItemCache.keyword.find(it => it.label === 'static') ?? completionItemCache.static;
 			build_item_cache(JSON.parse(readFileSync(`${rootdir}/syntaxes/ahk2_common.json`, { encoding: 'utf8' })));
 			if (syntaxes)
-				for (let file of readdirSync(syntaxes)) {
-					if (file.toLowerCase().endsWith('.snippet.json') && !statSync(file = `${path}/${file}`).isDirectory())
-						build_item_cache(JSON.parse(readFileSync(file, { encoding: 'utf8' })));
-				}
+				opendir(syntaxes).then(async (dir) => {
+					for await (const file of dir)
+						if (!file.isDirectory() && file.name.toLowerCase().endsWith('.snippet.json'))
+							build_item_cache(JSON.parse(await readFile(`${syntaxes}/${file}`, { encoding: 'utf8' })));
+				});
 		}
 		function getfilepath(ext: string) {
 			return getlocalefilepath(file2 + ext) || (file2 !== file ? getlocalefilepath(file + ext) : undefined);
@@ -398,7 +395,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		}
 		function bodytostring(body: string[] | string) { return (typeof body === 'object' ? body.join('\n') : body) };
 		function trim(str: string) {
-			return str.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => m[2] ? m[3].replace(/,/g, '|') : m[3] || '');
+			return str.replace(/\$\{\d+((\|)|:)([^}]*)\2\}|\$\d/g, (...m) => m[2] ? m[3].replaceAll(',', '|') : m[3] || '');
 		}
 	}
 }
@@ -411,8 +408,7 @@ export function enum_ahkfiles(dirpath: string) {
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
 		try {
-			const dir = await fs.opendir(dirpath);
-			for await (const t of dir) {
+			for await (const t of await opendir(dirpath)) {
 				if (t.isDirectory() && depth < maxdepth) {
 					const path = resolve(dirpath, t.name);
 					if (!folder_exclude?.some(re => re.test(path)))
@@ -423,11 +419,11 @@ export function enum_ahkfiles(dirpath: string) {
 						yield path;
 				}
 			}
-		} catch (e) { }
+		} catch { }
 	}
 }
 
-export function update_settings(configs: AHKLSSettings) {
+export function updateConfigs(configs: AHKLSSettings) {
 	if (typeof configs.AutoLibInclude === 'string')
 		configs.AutoLibInclude = LibIncludeType[configs.AutoLibInclude] as unknown as LibIncludeType;
 	else if (typeof configs.AutoLibInclude === 'boolean')
@@ -438,9 +434,9 @@ export function update_settings(configs: AHKLSSettings) {
 	try {
 		update_comment_tags(configs.CommentTags!);
 	} catch (e) {
-		delete (e as { stack?: string }).stack;
 		delete configs.CommentTags;
-		console.log(e);
+		connection?.window.showWarningMessage(setting.valueerr('CommentTags', 'RegExp',
+			(e as { message: string }).message));
 	}
 	if (configs.WorkingDirs instanceof Array)
 		configs.WorkingDirs = configs.WorkingDirs.map(dir =>
@@ -453,8 +449,9 @@ export function update_settings(configs: AHKLSSettings) {
 		for (const s of configs.Files.Exclude ?? [])
 			try {
 				(/[\\/]$/.test(s) ? folder : file).push(glob2regexp(s));
-			} catch (e) {
-				console.log(`[Error] Invalid glob pattern: ${s}`);
+			} catch {
+				connection?.window.showWarningMessage(
+					setting.valueerr('Files.Exclude', 'glob pattern', s));
 			}
 		if (file.length)
 			scanExclude.file = file;
@@ -463,8 +460,16 @@ export function update_settings(configs: AHKLSSettings) {
 		if ((configs.Files.MaxDepth ??= 2) < 0)
 			configs.Files.MaxDepth = Infinity;
 	}
-	if (configs.Syntaxes)
-		configs.Syntaxes = resolve(configs.Syntaxes).toLowerCase();
+	if (configs.Syntaxes && !process.env.BROWSER) {
+		const path = resolvePath(configs.Syntaxes, true);
+		if (path && lstatSync(path).isDirectory())
+			configs.Syntaxes = restorePath(path);
+		else {
+			connection?.window.showWarningMessage(
+				setting.valueerr('Syntaxes', 'folder path', configs.Syntaxes));
+			delete configs.Syntaxes;
+		}
+	}
 	Object.assign(extsettings, configs);
 }
 
@@ -503,12 +508,16 @@ export function arrayEqual(a: string[], b: string[]) {
 
 export function clearLibfuns() { libfuncs = {}; }
 export function set_ahk_h(v: boolean) { isahk2_h = v; }
-export function set_ahkpath(path: string) { ahkpath_cur = path.replace(/^.:/, s => s.toLowerCase()); }
-export function set_Connection(conn: Connection) { return connection = conn; }
-export function set_dirname(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
-export function set_locale(str?: string) { if (str) locale = str.toLowerCase(); }
-export function set_version(version: string) { ahk_version = encode_version(version); }
-export function set_WorkspaceFolders(folders: Set<string>) {
+export function set_ahkpath(path: string) {
+	const resolved = resolvePath(path, true);
+	if (resolved)
+		ahkpath_cur = path, ahkpath_resolved = resolved;
+}
+export function setConnection(conn: Connection) { return connection = conn; }
+export function setRootDir(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
+export function setLocale(str?: string) { if (str) locale = str.toLowerCase(); }
+export function setVersion(version: string) { ahk_version = encode_version(version); }
+export function setWorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
 	extsettings.WorkingDirs.forEach(it => !folders.has(it) && workspaceFolders.push(it));
@@ -522,6 +531,26 @@ export function set_WorkspaceFolders(folders: Set<string>) {
 
 export async function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export function resolvePath(path: string, resolveSymbolicLink = false): string {
+	if (process.env.BROWSER || !path)
+		return path;
+	const paths: string[] = [];
+	if (!path.includes(':'))
+		paths.push(resolve(path));
+	if (process.platform === 'win32' && !/[\\/]/.test(path))
+		paths.push(execSync(`where ${path}`, { encoding: 'utf-8' }).trim());
+	paths.push(path);
+	for (let path of paths) {
+		if (!path) continue;
+		try {
+			if (lstatSync(path).isSymbolicLink() && resolveSymbolicLink)
+				lstatSync(path = resolve(path, '..', readlinkSync(path)));
+			return path;
+		} catch { }
+	}
+	return '';
 }
 
 function glob2regexp(glob: string) {

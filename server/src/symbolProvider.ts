@@ -385,12 +385,12 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 			}
 		}
 	} else {
-		const uris = (await connection?.sendRequest('ahk2.getWorkspaceFiles', []) || []) as string[];
+		const uris = (await connection?.sendRequest('getWorkspaceFiles', []) || []) as string[];
 		for (const uri_ of uris) {
 			const uri = uri_.toLowerCase();
 			let d: Lexer;
 			if (!lexers[uri]) {
-				const content = (await connection?.sendRequest('ahk2.getWorkspaceFileContent', [uri_])) as string;
+				const content = (await connection?.sendRequest('getWorkspaceFileContent', [uri_])) as string;
 				d = new Lexer(TextDocument.create(uri_, 'ahk2', -10, content));
 				d.parseScript(), lexers[uri] = d;
 				if (filterSymbols(uri)) return symbols;

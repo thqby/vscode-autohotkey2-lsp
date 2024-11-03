@@ -4,12 +4,12 @@ import {
 	InitializeResult, TextDocuments, TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import {
-	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, commands, completionProvider,
-	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols, getVersionInfo,
+	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, completionProvider,
+	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols, getServerCommands, getVersionInfo,
 	hoverProvider, initahk2cache, Lexer, lexers, loadahk2, loadlocalize, prepareRename, rangeFormatting,
 	referenceProvider, renameProvider, SemanticTokenModifiers, semanticTokensOnFull, semanticTokensOnRange,
-	SemanticTokenTypes, set_ahk_h, set_Connection, set_dirname, set_locale, set_version, set_WorkspaceFolders,
-	signatureProvider, symbolProvider, typeFormatting, update_settings, workspaceSymbolProvider
+	SemanticTokenTypes, set_ahk_h, setConnection, setRootDir, setLocale, setVersion, setWorkspaceFolders,
+	signatureProvider, symbolProvider, typeFormatting, updateConfigs, workspaceSymbolProvider
 } from './common';
 
 const languageServer = 'ahk2-language-server';
@@ -17,13 +17,14 @@ const messageReader = new BrowserMessageReader(self);
 const messageWriter = new BrowserMessageWriter(self);
 const documents = new TextDocuments(TextDocument);
 const workspaceFolders = new Set<string>();
-const connection = set_Connection(createConnection(messageReader, messageWriter));
+const connection = setConnection(createConnection(messageReader, messageWriter));
 
 let hasConfigurationCapability = false, hasWorkspaceFolderCapability = false;
 let uri_switch_to_ahk2 = '';
 
 connection.onInitialize(params => {
 	const capabilities = params.capabilities;
+	const configs: AHKLSSettings = params.initializationOptions;
 	hasConfigurationCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.configuration
 	);
@@ -52,7 +53,7 @@ connection.onInitialize(params => {
 			documentFormattingProvider: true,
 			documentRangeFormattingProvider: true,
 			documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinese_punctuations)] },
-			executeCommandProvider: { commands: Object.keys(commands) },
+			executeCommandProvider: { commands: getServerCommands(configs.commands) },
 			hoverProvider: true,
 			foldingRangeProvider: true,
 			colorProvider: true,
@@ -74,14 +75,13 @@ connection.onInitialize(params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
-	const configs: AHKLSSettings = params.initializationOptions;
 	set_ahk_h(true);
-	set_locale(params.locale);
-	set_dirname(configs.extensionUri!);
+	setLocale(params.locale);
+	setRootDir(configs.extensionUri!);
 	loadlocalize();
-	update_settings(configs);
-	set_WorkspaceFolders(workspaceFolders);
-	set_version('3.0.0');
+	updateConfigs(configs);
+	setWorkspaceFolders(workspaceFolders);
+	setVersion('3.0.0');
 	initahk2cache();
 	loadahk2();
 	loadahk2('ahk2_h');
@@ -98,7 +98,7 @@ connection.onInitialized(() => {
 		connection.workspace.onDidChangeWorkspaceFolders(event => {
 			event.removed.forEach(it => workspaceFolders.delete(it.uri.toLowerCase() + '/'));
 			event.added.forEach(it => workspaceFolders.add(it.uri.toLowerCase() + '/'));
-			set_WorkspaceFolders(workspaceFolders);
+			setWorkspaceFolders(workspaceFolders);
 		});
 	}
 });
@@ -111,8 +111,8 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	update_settings(newset);
-	set_WorkspaceFolders(workspaceFolders);
+	updateConfigs(newset);
+	setWorkspaceFolders(workspaceFolders);
 });
 
 documents.onDidOpen(e => {
@@ -147,9 +147,9 @@ connection.onExecuteCommand(executeCommandProvider);
 connection.onWorkspaceSymbol(workspaceSymbolProvider);
 connection.languages.semanticTokens.on(semanticTokensOnFull);
 connection.languages.semanticTokens.onRange(semanticTokensOnRange);
-connection.onRequest('ahk2.exportSymbols', exportSymbols);
-connection.onRequest('ahk2.getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
-connection.onRequest('ahk2.getVersionInfo', getVersionInfo);
+connection.onRequest('exportSymbols', exportSymbols);
+connection.onRequest('getContent', (uri: string) => lexers[uri.toLowerCase()]?.document.getText());
+connection.onRequest('getVersionInfo', getVersionInfo);
 connection.onNotification('onDidCloseTextDocument',
 	(params: { uri: string, id: string }) => {
 		if (params.id === 'ahk2')

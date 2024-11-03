@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-namespace */
 /* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
 import { existsSync, statSync } from 'fs';
-import { resolve } from 'path';
+import { basename, resolve } from 'path';
 import {
 	ColorInformation,
 	Diagnostic,
@@ -2503,7 +2503,7 @@ export class Lexer {
 					// fall through
 					case '#include':
 					case '#includeagain':
-						add_include_dllload(data.content.replace(/`;/g, ';'), data, mode, isdll);
+						add_include_dllload(data.content.replaceAll('`;', ';'), data, mode, isdll);
 						break;
 					case '#dllimport':
 						if ((m = data.content.match(/^((\w|[^\x00-\x7f])+)/i))) {
@@ -2512,7 +2512,7 @@ export class Lexer {
 							const n = m[0], args: Variable[] = [];
 							let arg: Variable | undefined, u = '', i = 0, rt = 'i';
 							h = true, m = data.content.substring(m[0].length).match(/^[ \t]*,[^,]+,([^,]*)/);
-							m = m?.[1].replace(/[ \t]/g, '').toLowerCase().replace(/i6/g, 'I') ?? '';
+							m = m?.[1].replace(/[ \t]/g, '').toLowerCase().replaceAll('i6', 'I') ?? '';
 							for (const c of m.replace(/^(\w*)[=@]?=/, (s, m0) => (rt = m0 || rt, ''))) {
 								if (c === 'u')
 									u = 'u';
@@ -4069,7 +4069,7 @@ export class Lexer {
 			tn.extends = (str = str.trim()).replace(/^(.+[\\/])?/, m => {
 				if ((m = m.slice(0, -1))) {
 					let u: URI;
-					m = m.replace(/\\/g, '/').toLowerCase();
+					m = m.replaceAll('\\', '/').toLowerCase();
 					if (!m.endsWith('.ahk'))
 						m += '.d.ahk';
 					if (m.startsWith('~/'))
@@ -4096,8 +4096,16 @@ export class Lexer {
 		}
 
 		function resolve_scriptdir(path: string) {
-			return path.replace(/%(a_scriptdir|a_workingdir)%/i, () => (_this.need_scriptdir = true, _this.scriptdir))
-				.replace(/%a_linefile%/i, _this.fsPath);
+			return path.replace(/%a_(\w+)%/gi, (s, s1: string) => {
+				s1 = s1.toLowerCase();
+				if (s1 === 'linefile')
+					return _this.fsPath;
+				if ('scriptdir,initialworkingdir'.includes(s1))
+					return _this.need_scriptdir = true, _this.scriptdir;
+				if ('scriptname,icontip'.includes(s1))
+					return basename(_this.fsPath);
+				return s;
+			});
 		}
 
 		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
@@ -4125,7 +4133,7 @@ export class Lexer {
 								m = m + '.dll';
 							m = find_include_path(m, [], dlldir || _this.scriptpath, true)?.path ?? m;
 							if (m.includes(':'))
-								_this.dllpaths.push(m.replace(/\\/g, '/'));
+								_this.dllpaths.push(m.replaceAll('\\', '/'));
 							else _this.dllpaths.push((dlldir && existsSync(dlldir + m) ? dlldir + m : m).replace(/\\/g, '/'));
 						}
 					} else {
