@@ -316,7 +316,7 @@ export const THIS: Variable = {
 export const SUPER: Variable = { ...THIS, name: 'super', detail: completionitem.super() };
 
 export const allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+$');
-let commentTags = new RegExp('^;;\\s*(?<tag>.+)');
+let commentTags: RegExp | undefined;
 const S2O: Record<string, AhkSymbol> = {
 	$DIRPATH,
 	$DLLFUNC,
@@ -5241,7 +5241,7 @@ export class Lexer {
 											rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
 								} else if ((t = customblocks.region.pop()) !== undefined)
 									_this.addFoldingRange(t, parser_pos + 1, 'region');
-							} else if ((t = line.match(commentTags))) {
+							} else if (commentTags && (t = line.match(commentTags))) {
 								const g = t.groups;
 								for (const tag in g)
 									if (tag.startsWith('tag') && (t = g[tag]?.trim()))
@@ -7901,8 +7901,7 @@ export function is_line_continue(lk: Token, tk: Token, parent?: AhkSymbol): bool
 export function update_comment_tags(regexp: string) {
 	const old = commentTags;
 	try {
-		if (!regexp) return;
-		commentTags = new RegExp(regexp, 'i');
+		commentTags = regexp ? new RegExp(regexp, 'i') : undefined;
 	} catch (e) {
 		commentTags = old;
 		throw e;
