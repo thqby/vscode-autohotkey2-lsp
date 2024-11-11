@@ -184,41 +184,50 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			outer_is_global = oig;
 		}
 	}
-	function checksamename(doc: Lexer) {
-		if (doc.d)
+	function checksamename(lex: Lexer) {
+		if (lex.d)
 			return;
-		const dec = { ...ahkvars }, lbs: Record<string, boolean> = {};
+		const dec = { ...ahkvars }, lbs: Record<string, string> = {};
+		const severity = DiagnosticSeverity.Error;
+		const { relevance, uri } = lex;
 		let dd: Lexer, sym: AhkSymbol;
-		Object.keys(doc.labels).forEach(lb => lbs[lb] = true);
-		for (const uri in doc.relevance) {
+		Object.entries(lex.labels).forEach(e => e[1][0].def && (lbs[e[0]] = uri));
+		for (const uri in relevance) {
 			if ((dd = lexers[uri])) {
 				if (dd.d) continue;
-				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd.diagnostics);
-				for (const lb in dd.labels)
-					if ((sym = dd.labels[lb][0]).def)
-						if (lbs[lb]) {
-							sym.has_warned ??=
-								dd.diagnostics.push({ message: diagnostic.duplabel(), range: sym.selectionRange, severity: DiagnosticSeverity.Error });
-						} else lbs[lb] = true;
+				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd);
+				const labels = dd.labels;
+				if (!Object.keys(labels).length) continue;
+				const r = dd.relevance;
+				for (const l in labels) {
+					if (!(sym = labels[l][0]).def)
+						continue;
+					const u = lbs[l];
+					if (!u)
+						lbs[l] = uri;
+					else if (r[u])
+						sym.has_warned ??=
+							dd.diagnostics.push({ message: diagnostic.duplabel(), range: sym.selectionRange, severity });
+				}
 			}
 		}
-		const t = Object.values(doc.declaration);
-		check_same_name_error(dec, t, doc.diagnostics);
-		for (const uri in doc.relevance) {
+		const t = Object.values(lex.declaration);
+		check_same_name_error(dec, t, lex);
+		for (const uri in relevance) {
 			if ((dd = lexers[uri]))
-				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd.diagnostics);
+				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd);
 		}
 		let cls: ClassNode;
 		t.forEach(it => {
 			if (it.kind === SymbolKind.Class && (cls = it as ClassNode).extendsuri === undefined) {
 				const l = cls.extends?.toUpperCase();
 				if (l === it.name.toUpperCase())
-					err_extends(doc, cls, false);
-				else if (l && !find_class(doc, l)?.prototype)
-					err_extends(doc, cls);
+					err_extends(lex, cls, false);
+				else if (l && !find_class(lex, l)?.prototype)
+					err_extends(lex, cls);
 			}
 		});
-		for (const uri in doc.relevance) {
+		for (const uri in relevance) {
 			if ((dd = lexers[uri]))
 				for (const it of Object.values(dd.declaration))
 					if (it.kind === SymbolKind.Class && (cls = it as ClassNode).extendsuri === undefined) {
@@ -229,14 +238,14 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							err_extends(dd, cls);
 					}
 		}
-		function err_extends(doc: Lexer, it: ClassNode, not_exist = true) {
-			let o = doc.document.offsetAt(it.selectionRange.start), tk: Token;
-			const tks = doc.tokens;
+		function err_extends(lex: Lexer, it: ClassNode, not_exist = true) {
+			let o = lex.document.offsetAt(it.selectionRange.start), tk: Token;
+			const tks = lex.tokens;
 			if (!(tk = tks[tks[o].next_token_offset]) || !(tk = tks[tk.next_token_offset]) || tk.has_warned)
 				return;
 			o = tk.offset, tk.has_warned = true;
-			const rg: Range = { start: doc.document.positionAt(o), end: doc.document.positionAt(o + it.extends.length) };
-			doc.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Warning });
+			const rg: Range = { start: lex.document.positionAt(o), end: lex.document.positionAt(o + it.extends.length) };
+			lex.diagnostics.push({ message: not_exist ? diagnostic.unknown("class '" + it.extends) + "'" : diagnostic.unexpected(it.extends), range: rg, severity: DiagnosticSeverity.Warning });
 		}
 	}
 	function converttype(it: AhkSymbol, source: Variable, islib = false): Token {

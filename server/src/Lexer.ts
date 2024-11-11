@@ -916,7 +916,7 @@ export class Lexer {
 					}
 				}
 				parse_unresolved_typedef();
-				check_same_name_error({}, this.children, this.diagnostics);
+				check_same_name_error({}, this.children, this);
 				this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 
@@ -1197,7 +1197,7 @@ export class Lexer {
 					else _this.d_uri = '';
 				}
 				parse_unresolved_typedef();
-				check_same_name_error(this.declaration, this.children, this.diagnostics);
+				check_same_name_error(this.declaration, this.children, this);
 				this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 				if (this.actived)
@@ -6501,9 +6501,8 @@ export class Lexer {
 			// if (lexers[uri.slice(0, -5) + 'ahk']?.keepAlive())
 			// 	return true;
 		}
-		let it;
 		for (const u in this.relevance)
-			if ((it = lexers[u])?.actived && it.relevance[uri])
+			if (lexers[u]?.actived)
 				return true;
 		return false;
 	}
@@ -6513,7 +6512,6 @@ export class Lexer {
 		if (!force && this.keepAlive())
 			return;
 		this.clearDiagnostics();
-		const relevance = this.relevance;
 		if (force || !this.workspaceFolder) {
 			delete lexers[this.uri];
 			delete includecache[this.uri];
@@ -6522,7 +6520,7 @@ export class Lexer {
 		if (!other)
 			return;
 		let o = true;
-		for (const u in relevance)
+		for (const u in this.relevance)
 			o = false, lexers[u]?.close(false, false);
 		if (o) {
 			if (!lexers[this.uri])
@@ -7809,55 +7807,63 @@ export function make_same_name_error(a: AhkSymbol, b: AhkSymbol): string {
 	}
 }
 
-export function check_same_name_error(decs: Record<string, AhkSymbol>, arr: AhkSymbol[], diags: Diagnostic[]) {
-	let _low = '', v1: Variable, v2: Variable;
+export function check_same_name_error(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer) {
+	const { children, diagnostics, uri, relevance } = lex;
 	const severity = DiagnosticSeverity.Error;
-	for (const it of arr) {
+	let l = '', v1: Variable, v2: Variable;
+	for (const it of syms) {
 		if (!it.name || !it.selectionRange.end.character)
 			continue;
 		switch ((v1 = it as Variable).kind) {
 			case SymbolKind.Variable:
-				v1.assigned ||= Boolean(v1.returns);
+				v1.assigned ||= !!v1.returns;
 			// fall through
 			case SymbolKind.Class:
 			case SymbolKind.Function:
-				if (!(v2 = decs[_low = it.name.toUpperCase()])) {
-					decs[_low] = it;
-				} else if (v2.is_global) {
+				v2 = decs[l = it.name.toUpperCase()];
+				if (syms === children)
+					it.uri = uri;
+				else if (v2 && !relevance[v2.uri!]) {
+					decs[l] = it;
+					continue;
+				}
+				if (!v2)
+					decs[l] = it;
+				else if (v2.is_global) {
 					if (v1.kind === SymbolKind.Variable) {
 						if (v1.def && v2.kind !== SymbolKind.Variable) {
 							if (v1.assigned !== 1)
-								it.has_warned ??= diags.push({ message: diagnostic.assignerr(v2.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange, severity });
+								it.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(v2.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange, severity });
 							continue;
 						}
 					} else if (v2.kind === SymbolKind.Function) {
-						it.has_warned ??= diags.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity });
+						it.has_warned ??= diagnostics.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity });
 						continue;
 					} else if (v2.def && v2.assigned !== 1)
-						v2.has_warned ??= diags.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange, severity });
-					decs[_low] = it;
+						v2.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange, severity });
+					decs[l] = it;
 				} else if (v1.kind === SymbolKind.Variable) {
 					if (v2.kind === SymbolKind.Variable) {
 						if (v1.def && !v2.def)
-							decs[_low] = it;
+							decs[l] = it;
 						else v2.assigned ||= v1.assigned;
 					} else if (v1.def) {
 						delete v1.def;
 						if (v1.assigned !== 1)
-							it.has_warned ??= diags.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity });
+							it.has_warned ??= diagnostics.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity });
 					}
 				} else {
 					if (v2.kind === SymbolKind.Variable) {
 						if (v2.def) {
 							delete v2.def;
 							if (v2.assigned !== 1)
-								v2.has_warned ??= diags.push({ message: make_same_name_error(it, v2), range: v2.selectionRange, severity });
+								v2.has_warned ??= diagnostics.push({ message: make_same_name_error(it, v2), range: v2.selectionRange, severity });
 						}
-						decs[_low] = it;
+						decs[l] = it;
 					} else if (v2.def !== false)
-						it.has_warned ??= diags.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity });
+						it.has_warned ??= diagnostics.push({ message: make_same_name_error(v2, it), range: it.selectionRange, severity });
 					else if (v1.def !== false)
-						decs[_low] = it;
+						decs[l] = it;
 				}
 				break;
 		}
