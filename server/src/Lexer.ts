@@ -7046,7 +7046,10 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 				if (!tk) break;
 				lk = tk, tk = tokens[tk.next_token_offset];
 			}
-		} while (tk?.type === 'TK_DOT' && tk.offset < end);
+			if (tk?.type === 'TK_DOT' && tk.offset < end)
+				lk = tk, tk = tokens[tk.next_token_offset];
+			else break;
+		} while (tk);
 		pre = tk = lk;
 	}
 	function precedence(tk: Token, in_stack = true) {
