@@ -1,35 +1,35 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import {
-	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
+	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
 	checkParams, diagnostic, extsettings, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
 } from './common';
 
 let curclass: ClassNode | undefined;
 const memscache = new Map<ClassNode, Record<string, AhkSymbol>>();
 
-function resolve_sem(tk: Token, doc: Lexer) {
+function resolve_sem(tk: Token, lex: Lexer) {
 	const sem = tk.semantic;
 	let l: string;
 	if (sem) {
-		const pos = tk.pos ?? (tk.pos = doc.document.positionAt(tk.offset));
+		const pos = tk.pos ?? (tk.pos = lex.document.positionAt(tk.offset));
 		let type = sem.type;
 		if (type === SemanticTokenTypes.string) {
 			if (tk.ignore) {
 				let l = pos.line + 1;
 				const data = tk.data as number[];
 				for (let i = 0; i < data.length; i++)
-					doc.STB.push(l++, 0, data[i], type, 0);
-			} else doc.STB.push(pos.line, pos.character, tk.length, type, 0);
+					lex.STB.push(l++, 0, data[i], type, 0);
+			} else lex.STB.push(pos.line, pos.character, tk.length, type, 0);
 		} else {
 			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) && tk.previous_token?.type === 'TK_DOT'
 				|| (curclass = undefined, type === SemanticTokenTypes.class))
-				type = resolveSemanticType(tk.content.toUpperCase(), tk, doc);
-			doc.STB.push(pos.line, pos.character, tk.length, type, (sem.modifier ?? 0) | ((tk.definition as Variable)?.static === true) as unknown as number);
+				type = resolveSemanticType(tk, lex);
+			lex.STB.push(pos.line, pos.character, tk.length, type, (sem.modifier ?? 0) | ((tk.definition as Variable)?.static === true) as unknown as number);
 		}
 	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 		curclass = undefined;
 	else if (tk.type === 'TK_WORD' && ['THIS', 'SUPER'].includes(l = tk.content.toUpperCase()) && tk.previous_token?.type !== 'TK_DOT') {
-		const r = doc.findSymbol(l, SymbolKind.Variable, doc.document.positionAt(tk.offset));
+		const r = lex.findSymbol(l, SymbolKind.Variable, lex.document.positionAt(tk.offset));
 		if (r?.is_this !== undefined)
 			curclass = r.node as ClassNode;
 	}
@@ -67,8 +67,9 @@ interface _Flag {
 	'#checkmember'?: boolean
 }
 
-function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
-	const sem = tk.semantic as SemanticToken;
+function resolveSemanticType(tk: Token, doc: Lexer) {
+	const name = tk.content.toUpperCase();
+	const sem = tk.semantic!;
 	switch (sem.type) {
 		case SemanticTokenTypes.class:
 			curclass = globalsymbolcache[name] as ClassNode;
@@ -127,9 +128,9 @@ function resolveSemanticType(name: string, tk: Token, doc: Lexer) {
 							const tt = doc.tokens[tk.next_token_offset];
 							if (ASSIGN_TYPE.includes(tt?.content)) {
 								cls_add_prop(curclass, tk.content, tk.offset);
-							} else if ((memscache.get(curclass) as _Flag)?.['#checkmember'] !== false)
-								(curclass.undefined ??= {})[tk.content.toUpperCase()] ??= tk;
-							// doc.addDiagnostic(diagnostic.maybehavenotmember(curclass.name, tk.content), tk.offset, tk.length, 2);
+							} else if ((tk.__ref || tt?.content[0] !== '?' || !tt.ignore && tt.content === '?') &&
+								(memscache.get(curclass) as _Flag)?.['#checkmember'] !== false)
+								((curclass.undefined ??= {})[name] ??= tk).has_warned ||= tk.__ref;
 						}
 				}
 			}

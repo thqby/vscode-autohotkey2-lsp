@@ -7,8 +7,8 @@ import { URI } from 'vscode-uri';
 import {
 	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable,
-	ahkuris, ahkvars, check_same_name_error, connection, decltype_expr,
-	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor,
+	ahk_version, ahkuris, ahkvars, alpha_3, check_same_name_error, connection, decltype_expr,
+	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor, get_class_member,
 	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
 
@@ -299,7 +299,7 @@ function get_func_param_count(fn: FuncNode) {
 	return { min, max, has_this_param: fn.has_this_param };
 }
 
-export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
+export function checkParams(lex: Lexer, node: FuncNode, info: CallSite) {
 	const paraminfo = info.paraminfo;
 	let is_cls: boolean, params;
 	if (!paraminfo || !extsettings.Diagnostics.ParamsCheck) return;
@@ -317,7 +317,7 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 		}
 	}
 	if ((count < min && !paraminfo.unknown) || count > max)
-		doc.diagnostics.push({
+		lex.diagnostics.push({
 			message: diagnostic.paramcounterr(min === max ? min : max === Infinity ? `${min}+` : `${min}-${max}`, count),
 			range: info.range, severity: DiagnosticSeverity.Error
 		});
@@ -325,8 +325,8 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 		if (index >= l)
 			break;
 		if (_miss[index] = true, param_is_miss(params, index))
-			doc.addDiagnostic(diagnostic.missingparam(),
-				paraminfo.comma[index] ?? doc.document.offsetAt(info.range.end), 1);
+			lex.addDiagnostic(diagnostic.missingparam(),
+				paraminfo.comma[index] ?? lex.document.offsetAt(info.range.end), 1);
 	}
 	if (node.hasref) {
 		params.forEach((param, index) => {
@@ -335,27 +335,30 @@ export function checkParams(doc: Lexer, node: FuncNode, info: CallSite) {
 				if (index === 0)
 					o = info.offset! + info.name.length + 1;
 				else o = paraminfo.comma[index - 1] + 1;
-				if ((t = doc.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && doc.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
+				if ((t = lex.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && lex.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
 					let end = 0;
-					const ts = decltype_expr(doc, t, paraminfo.comma[index] ??
-						(end = doc.document.offsetAt(info.range.end) - (doc.tokens[info.offset! + info.name.length] ? 1 : 0)));
+					const ts = decltype_expr(lex, t, paraminfo.comma[index] ??
+						(end = lex.document.offsetAt(info.range.end) - (lex.tokens[info.offset! + info.name.length] ? 1 : 0)));
 					if (ts.some(it => it === VARREF || it === ANY || it.data === VARREF))
 						return;
-					const lk = doc.tokens[paraminfo.comma[index]]?.previous_token;
+					if (ahk_version >= alpha_3 + 7 && ts.some(it =>
+						get_class_member(lex, it, '__value', false)))
+						return;
+					const lk = lex.tokens[paraminfo.comma[index]]?.previous_token;
 					if (lk)
 						end = lk.offset + lk.length;
-					doc.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
+					lex.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
 						Math.max(0, end - t.offset), 2);
 				}
 			}
 		});
 	}
 	if ((!node.returns?.length && !(node.type_annotations || null)?.length) && !(is_cls && node.name.toLowerCase() === '__new')) {
-		const tk = doc.tokens[info.offset!];
+		const tk = lex.tokens[info.offset!];
 		if (tk?.previous_token?.type === 'TK_EQUALS') {
-			const nt = doc.get_token(doc.document.offsetAt(info.range.end), true);
+			const nt = lex.get_token(lex.document.offsetAt(info.range.end), true);
 			if (!nt || !is_line_continue(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
-				doc.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, 2);
+				lex.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, 2);
 		}
 	}
 	function param_is_miss(params: Variable[], i: number) {

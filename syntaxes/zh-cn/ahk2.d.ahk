@@ -3359,6 +3359,13 @@ class Error extends Object {
 	 * 构造 Error 对象.
 	 */
 	__New([Message, What, Extra]) => void
+
+	/**
+	 * 显示标准脚本对话框.
+	 * @param {'Return'|'Exit'|'ExitApp'|'Warn'} Mode
+	 * @since v2.1-alpha.10
+	 */
+	Show(Mode := 'Return') => Integer
 }
 
 class File extends Object {
@@ -4716,6 +4723,12 @@ class Object extends Any {
 	 * 枚举对象自有的属性.
 	 */
 	OwnProps() => Enumerator<String, Any>
+	
+	/** @since v2.1-alpha.10 */
+	Props() => Enumerator<String, Any>
+
+	/** @since v2.1-alpha.10 */
+	__Ref(Name) => PropRef
 }
 
 class OSError extends Error {
@@ -4726,6 +4739,14 @@ class Primitive extends Any {
 }
 
 class PropertyError extends MemberError {
+}
+
+/** @since 2.1-alpha.10 */
+class PropRef extends Any {
+	__Value {
+		get => Any
+		set => void
+	}
 }
 
 class RegExMatchInfo extends Object {

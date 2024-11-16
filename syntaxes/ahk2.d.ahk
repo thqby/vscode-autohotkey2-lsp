@@ -3314,6 +3314,13 @@ class Error extends Object {
 	 * Create an Error object.
 	 */
 	__New([Message, What, Extra]) => void
+
+	/**
+	 * Shows a standard script error dialog.
+	 * @param {'Return'|'Exit'|'ExitApp'|'Warn'} Mode
+	 * @since v2.1-alpha.10
+	 */
+	Show(Mode := 'Return') => Integer
 }
 
 class File extends Object {
@@ -4737,6 +4744,12 @@ class Object extends Any {
 	 * Enumerate the properties of the object.
 	 */
 	OwnProps() => Enumerator<String, Any>
+	
+	/** @since v2.1-alpha.10 */
+	Props() => Enumerator<String, Any>
+
+	/** @since v2.1-alpha.10 */
+	__Ref(Name) => PropRef
 }
 
 class OSError extends Error {
@@ -4747,6 +4760,14 @@ class Primitive extends Any {
 }
 
 class PropertyError extends MemberError {
+}
+
+/** @since 2.1-alpha.10 */
+class PropRef extends Any {
+	__Value {
+		get => Any
+		set => void
+	}
 }
 
 class RegExMatchInfo extends Object {

@@ -1,4 +1,4 @@
-import { rootdir, getlocalefile, getwebfile } from './common';
+import { rootdir, getlocalefile, getwebfile, version_decode } from './common';
 
 let loadedCollection: Record<string, string> = {};
 
@@ -60,6 +60,7 @@ export const diagnostic = {
 	propemptyparams: localize('diagnostic.propemptyparams', 'Empty [] not permitted'),
 	propnotinit: localize('diagnostic.propnotinit', 'Property declaration is not initialized'),
 	requirev1: localize('diagnostic.requirev1', 'This script requires AutoHotkey v1, continue parsing?'),
+	requireVerN: (n: number) => diagnostic.requireversion(version_decode(n)),
 	requireversion: localize('diagnostic.requireversion', 'This feature requires the AutoHotkey version >= v{0}'),
 	requirevariable: localize('diagnostic.requirevariable', "'&' requires a variable"),
 	reservedworderr: localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name'),

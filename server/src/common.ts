@@ -66,9 +66,10 @@ export interface AHKLSSettings {
 }
 
 const realpath = realpathSync.native;
+const STAGE: Record<string, number | string> = { ALPHA: 3, BETA: 2, RC: 1, 3: 'alpha', 2: 'beta', 1: 'rc' };
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
-export const alpha_3 = encode_version('2.1-alpha.3');
+export const alpha_3 = version_encode('2.1-alpha.3');
 export const extsettings: AHKLSSettings = {
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
@@ -106,7 +107,7 @@ export type Maybe<T> = T | undefined;
 export let connection: Connection | undefined;
 export let locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahkpath_cur = '', ahkpath_resolved = '';
-export let ahk_version = encode_version('3.0.0.0');
+export let ahk_version = version_encode('3.0.0.0');
 export let ahkuris: Record<string, string> = {};
 export let ahkvars: Record<string, AhkSymbol> = {};
 export let libfuncs: Record<string, LibSymbol> = {};
@@ -473,13 +474,21 @@ export function updateConfigs(configs: AHKLSSettings) {
 	Object.assign(extsettings, configs);
 }
 
-function encode_version(version: string) {
-	const STAGE: Record<string, number> = { ALPHA: -3, BETA: -2, RC: -1 };
-	const v = (version.replace(/-\w+/, s => `.${STAGE[s.substring(1).toUpperCase()]}`) + '.0').split('.');
+function version_encode(version: string) {
+	const v = version.replace(/-\w+/, s => `.-${STAGE[s.substring(1).toUpperCase()]}`).split('.');
 	let n = 0;
 	for (let i = 0; i < 4; i++)
-		n += parseInt(v[i]) * 2 ** ((3 - i) * 10);
+		n += parseInt(v[i] ?? '0') * 1000 ** (3 - i);
 	return n;
+}
+
+export function version_decode(n: number) {
+	const v: number[] = [];
+	n += 3000;
+	for (let i = 0; i < 4; i++)
+		v[3 - i] = n % 1000, n = Math.floor(n / 1000);
+	(v[2] -= 3) >= 0 && (n = v.pop()!) && v.push(n);
+	return v.join('.').replace(/\.-\d+/, s => `-${STAGE[s.substring(2)]}`);
 }
 
 export async function sendAhkRequest(method: string, params: unknown[]) {
@@ -516,7 +525,7 @@ export function set_ahkpath(path: string) {
 export function setConnection(conn: Connection) { return connection = conn; }
 export function setRootDir(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
 export function setLocale(str?: string) { if (str) locale = str.toLowerCase(); }
-export function setVersion(version: string) { ahk_version = encode_version(version); }
+export function setVersion(version: string) { ahk_version = version_encode(version); }
 export function setWorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
