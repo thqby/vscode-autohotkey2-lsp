@@ -94,8 +94,18 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 					const name = c.slice(0, ++i).join('.');
 					const r = find_symbol(doc, name);
 					if (r?.node.kind === SymbolKind.Class) {
-						for (const it of Object.values((r.node as ClassNode).property ?? {}))
-							it.children?.length && findAllVar(it as FuncNode, 'THIS', refs[lexers[r.uri].document.uri] ??= [], false, false);
+						for (const it of Object.values((r.node as ClassNode).property ?? {})) {
+							const fns = [];
+							it.children?.length && fns.push(it);
+							if (it.kind === SymbolKind.Property) {
+								const prop = it as Property;
+								fns.push(...[prop.get, prop.set, prop.call].filter(Boolean));
+							}
+							if (!fns.length) continue;
+							const ref = refs[lexers[r.uri].document.uri] ??= [];
+							for (const it of fns)
+								findAllVar(it as FuncNode, 'THIS', ref, false, false);
+						}
 					}
 					// TODO: search subclass's `super`
 					for (const uri in refs) {

@@ -2803,9 +2803,11 @@ export class Lexer {
 								if (input.charAt(lk.offset - 1) !== '%' && input.charAt(lk.offset + lk.length) !== '%') {
 									if (predot) {
 										addprop(lk);
-										if (tk.ignore && _this.get_token(parser_pos, true).type === 'TK_DOT')
-											continue;
-										byref && (lk.__ref = true);
+										if (byref) {
+											if (tk.ignore && _this.get_token(parser_pos, true).type === 'TK_DOT')
+												continue;
+											lk.__ref = true;
+										}
 									} else {
 										const vr = addvariable(lk);
 										if (vr) {
@@ -2877,11 +2879,12 @@ export class Lexer {
 										result.push(...parse_expression(inpair, mustexp, end ?? (ternarys.length ? ':' : undefined)));
 										return [beg, lk.offset + lk.length];
 									});
-								} else if (tk.type as string === 'TK_DOT' ||
-									tk.ignore && tk.content === '?' && _this.get_token(parser_pos, true).type === 'TK_DOT')
-									continue;
-								else if (byref)
-									lk.__ref = true;
+								} else if (byref) {
+									if (tk.type as string === 'TK_DOT' ||
+										tk.ignore && tk.content === '?' && _this.get_token(parser_pos, true).type === 'TK_DOT')
+										continue;
+									else lk.__ref = true;
+								}
 							}
 							break;
 						}
@@ -3601,11 +3604,12 @@ export class Lexer {
 										result.push(...parse_expression(e, 2, ternarys.length ? ':' : undefined));
 										return [beg, lk.offset + lk.length];
 									});
-								} else if (tk.type as string === 'TK_DOT' ||
-									tk.ignore && tk.content === '?' && _this.get_token(parser_pos, true).type === 'TK_DOT')
-									continue;
-								else if (byref)
-									lk.__ref = true;
+								} else if (byref) {
+									if (tk.type as string === 'TK_DOT' ||
+										tk.ignore && tk.content === '?' && _this.get_token(parser_pos, true).type === 'TK_DOT')
+										continue;
+									else lk.__ref = true;
+								}
 							}
 							break;
 						case 'TK_START_BLOCK':
