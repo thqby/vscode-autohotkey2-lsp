@@ -105,8 +105,16 @@ A_FileEncoding: String
 ; 定义在按下热键后多长时间假定(Alt/Ctrl/Win/Shift)仍处于按下状态.
 A_HotkeyModifierTimeout: Integer
 
-; A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框.
+; A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率, 超过此速率将显示警告对话框.
 A_HotkeyInterval: Integer
+
+/**
+ * 代表Hotkey和Hotstring函数的当前HotIf条件的callback(function对象), 如果没有, 则为空.
+ * 可以保存这个值, 以便稍后通过将它传递给HotIf来恢复上下文.
+ * 由HotIfWin或优化的#HotIf设置的回调可能不会被程序调用, 但可以被脚本调用. 
+ * @since 2.1-alpha.14
+ */
+A_HotIf: Func
 
 ; 在 24 小时制(例如, 17 表示 5pm) 中 2 位数表示的当前小时数(00-23). 要获取带 AM/PM 提示的 12 小时制的时间, 请参照此例: FormatTime(, 'h:mm:ss tt')
 A_Hour: String
@@ -147,6 +155,16 @@ A_IsPaused: Integer
 
 ; 如果脚本挂起时值为 1, 否则为 0.
 A_IsSuspended: Integer
+
+/**
+ * 根据键盘/鼠标挂钩的当前状态，包含下列数字之一:
+ * - 0: 未安装挂钩.
+ * - 1: 该脚本安装了一个挂钩.
+ * - 2: 另一个脚本安装了挂钩.
+ * - 3: 这个脚本和另一个脚本都安装了挂钩.
+ * @since 2.1-alpha.7
+ */
+A_KeybdHookInstalled: Integer
 
 ; 可以用来获取或设置按键的延迟时间, 单位为毫秒.
 A_KeyDelay: Integer
@@ -236,7 +254,7 @@ A_LoopRegTimeModified: String
 ; 当前检索到的项目的类型.
 A_LoopRegType: String
 
-; A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率，超过此速率将显示警告对话框.
+; A_MaxHotkeysPerInterval和A_HotkeyInterval变量控制热键激活的速率, 超过此速率将显示警告对话框.
 A_MaxHotkeysPerInterval: Integer
 
 ; 2 位数表示的当前月份的日期(01-31).
@@ -268,6 +286,16 @@ A_MouseDelay: Integer
 
 ; 可以用来获取或设置SendPlay的鼠标延迟, 单位为毫秒.
 A_MouseDelayPlay: Integer
+
+/**
+ * 根据键盘/鼠标挂钩的当前状态，包含下列数字之一:
+ * - 0: 未安装挂钩.
+ * - 1: 该脚本安装了一个挂钩.
+ * - 2: 另一个脚本安装了挂钩.
+ * - 3: 这个脚本和另一个脚本都安装了挂钩.
+ * @since 2.1-alpha.7
+ */
+A_MouseHookInstalled: Integer
 
 ; 当前用户 '我的文档' 文件夹的完整路径和名称.
 A_MyDocuments: String
@@ -456,7 +484,7 @@ ATan(Number) => Float
 
 /**
  * 返回以弧度表示的y/x的反正切值.
- * @since v2.1-alpha.1
+ * @since 2.1-alpha.1
  */
 ATan2(Y, X) => Float
 
@@ -1023,7 +1051,7 @@ DriveUnlock(Drive) => void
 
 /**
  * 在关联编辑器中打开当前脚本进行编辑.
- * @param FileName [@since v2.1-alpha.1] 要打开以进行编辑的文件的路径和名称. 如果省略, 则默认为当前脚本的主文件(A_ScriptFullPath). 相对路径是相对于脚本目录(A_ScriptDir)的.
+ * @param FileName {@since 2.1-alpha.1} 要打开以进行编辑的文件的路径和名称. 如果省略, 则默认为当前脚本的主文件(A_ScriptFullPath). 相对路径是相对于脚本目录(A_ScriptDir)的.
  */
 Edit(FileName?: $FilePath) => void
 
@@ -1629,8 +1657,8 @@ IL_Destroy(ImageListID) => Integer
 
 /**
  * 在屏幕区域中搜索图像.
- * @param OutputVarX [@since v2.1-alpha.3] 可以省略
- * @param OutputVarY [@since v2.1-alpha.3] 可以省略
+ * @param OutputVarX {@since 2.1-alpha.3} 可以省略
+ * @param OutputVarY {@since 2.1-alpha.3} 可以省略
  * @param ImageFile 图像文件名, 如果未指定绝对路径, 则假定在 A_WorkingDir 中. 支持的图片格式包括 ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF 和 WMF(BMP 图像必须为 16 位或更高). 图标的其他来源包括以下类型的文件: EXE, DLL, CPL, SCR 和其他包含图标资源的类型.
  * 
  * 选项: 在文件名前面可以直接添加零个或多个下列字符串. 在选项间使用单个空格或 tab 分隔. 例如: "*2 *w100 *h-1 C:\Main Logo.bmp".
@@ -2086,13 +2114,13 @@ ObjGetCapacity(Obj) => Integer
 
 /**
  * 获取对象的结构化数据(类型化属性)的地址.
- * @since v2.1-alpha.3
+ * @since 2.1-alpha.3
  */
 ObjGetDataPtr(Obj) => Integer
 
 /**
  * 获取对象结构(类型化属性)的大小, 以字节为单位.
- * @since v2.1-alpha.3
+ * @since 2.1-alpha.3
  */
 ObjGetDataSize(Obj) => Integer
 
@@ -2140,7 +2168,7 @@ ObjSetCapacity(Obj, MaxProps) => Integer
 /**
  * 设置对象的结构化数据(类型化属性)的地址.
  * ObjSetDataPtr不影响嵌套对象, 因为它们每个都有自己的数据指针(指向外部对象的原始数据).
- * @since v2.1-alpha.3
+ * @since 2.1-alpha.3
  */
 ObjSetDataPtr(Obj, Ptr) => void
 
@@ -2215,8 +2243,8 @@ PixelGetColor(X, Y, Mode?: 'Alt' | 'Slow' | 'Alt Slow') => String
 
 /**
  * 在屏幕区域中搜索指定颜色的像素.
- * @param OutputVarX [@since v2.1-alpha.3] 可以省略
- * @param OutputVarY [@since v2.1-alpha.3] 可以省略
+ * @param OutputVarX {@since 2.1-alpha.3} 可以省略
+ * @param OutputVarY {@since 2.1-alpha.3} 可以省略
  * @param ColorID 要搜索的颜色 ID. 通常用红绿蓝(RGB) 格式的十六进制数表示. 例如: 0x9d6346. 颜色 ID 可以通过 Window Spy(可从托盘菜单访问) 或 PixelGetColor 来确定.
  * @param Variation 介于 0 和 255(包含) 之间的数字, 用于表示每个像素颜色红/绿/蓝通道强度在任一方向上允许的渐变值. 如果所查找的颜色并不总是完全相同的色度, 这个参数很有用. 如果指定 255 为渐变值, 则匹配所有颜色. 默认渐变值为 0.
  */
@@ -2312,7 +2340,7 @@ RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingP
 /**
  * 替换字符串中匹配模式(正则表达式) 出现的地方.
  * @param {String} Replacement
- * @param {(m: RegExMatchInfo) => String} Replacement [@since v2.1 or ahk_h v2.0]
+ * @param {(m: RegExMatchInfo) => String} Replacement {@since 2.1-alpha.1 || ahk_h 2.0}
  */
 RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?: VarRef<Integer>, Limit := -1, StartingPosition := 1) => String
 
@@ -2653,7 +2681,7 @@ StrPtr(Value) => Integer
 
 /**
  * 将字符串复制到内存地址,可以选择将其转换为给定的代码页.
- * 如果省略了Target、Length和Encoding, 此函数将返回所需的缓冲区大小(以字节为单位)，包括空结束符的空间.
+ * 如果省略了Target、Length和Encoding, 此函数将返回所需的缓冲区大小(以字节为单位), 包括空结束符的空间.
  * @overload StrPut(String, Encoding := 'UTF-16') => Integer
  * @param Target 类缓冲对象或内存地址, 字符串将写入其中.
  * @param Length 要写入的最大字符数, 需要时包含空终止符.
@@ -2689,7 +2717,7 @@ StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCou
 StrSplit(String, Delimiters?, OmitChars?, MaxParts := -1) => Array
 
 /**
- * @since v2.1-alpha.9
+ * @since 2.1-alpha.9
  */
 StructFromPtr(StructClass, Address) => Object
 
@@ -2743,7 +2771,7 @@ Tan(Number) => Float
 Thread(SubFunction [, Value1, Value2]) => void
 
 /**
- * @since v2.1-alpha.3
+ * @since 2.1-alpha.3
  */
 Throw(Value*) => void
 
@@ -2827,7 +2855,7 @@ WinExist([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 如果指定的窗口始终位于顶部, 则返回true, 否则返回false.
- * @since v2.1-alpha.1
+ * @since 2.1-alpha.1
  */
 WinGetAlwaysOnTop([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
@@ -2858,7 +2886,7 @@ WinGetCount([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * 如果指定的窗口已启用, 则返回true, 否则返回false.
- * @since v2.1-alpha.1
+ * @since 2.1-alpha.1
  */
 WinGetEnabled([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
@@ -3201,7 +3229,7 @@ class Class extends Object {
 	 * @param Name 如果指定, 则分配类名给`ClassObj.Prototype.__Class`.
 	 * @param BaseClass `ClassObj.Base`设置为`BaseClass`, 而`ClassObj.Prototype.Base`设置为`BaseClass.Prototype`.
 	 * @param Args 如果指定, 任何其他参数都传递给`static __New`, 如`ClassObk.__New(Args*)`.
-	 * @since v2.1-alpha.3
+	 * @since 2.1-alpha.3
 	 */
 	static Call([Name,] BaseClass?, Args*) => this
 
@@ -3363,7 +3391,7 @@ class Error extends Object {
 	/**
 	 * 显示标准脚本对话框.
 	 * @param {'Return'|'Exit'|'ExitApp'|'Warn'} Mode
-	 * @since v2.1-alpha.10
+	 * @since 2.1-alpha.10
 	 */
 	Show(Mode := 'Return') => Integer
 }
@@ -3860,13 +3888,13 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * @param {Integer} Msg 需要监听的消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间.
 	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback 事件发生时要调用的函数, 方法或对象.
 	 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
-	 * 否则, 这个参数必须是一个函数对象. (**ahk_h 2.0**)该函数还可以查询内置变量 A_EventInfo, 如果消息是通过 SendMessage 发送的, 则其为 0.
+	 * 否则, 这个参数必须是一个函数对象. 该函数还可以查询内置变量 A_EventInfo, 如果消息是通过 SendMessage 发送的, 则其为 0.
 	 * 如果是通过 PostMessage 发送的, 则其为消息发出时的 tick-count 时间.
 	 * @param {Integer} AddRemove 如果省略, 则默认为 1(在任何先前注册的回调之后调用回调). 否则, 指定下列数字之一:
 	 * - 1 = 在任何先前注册的回调之后调用回调.
 	 * - -1 = 在任何先前注册的回调之前调用回调.
 	 * - 0 = 不调用该回调.
-	 * @since 2.1-alpha.1 or ahk_h 2.0
+	 * @since 2.1-alpha.1 || ahk_h 2.0
 	 */
 	OnMessage(Msg, Callback [, AddRemove]) => void
 
@@ -3905,6 +3933,11 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	}
 
 	class ComboBox extends Gui.List {
+		/**
+		 * 设置提示横幅文本.
+		 * @since 2.1-alpha.7
+		 */
+		SetCue(NewText) => void
 	}
 
 	class Control extends Object {
@@ -4031,7 +4064,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 		 * - 1 = 在任何先前注册的回调之后调用回调.
 		 * - -1 = 在任何先前注册的回调之前调用回调.
 		 * - 0 = 不调用该回调.
-		 * @since 2.1-alpha.7 or ahk_h 2.0
+		 * @since 2.1-alpha.7 || ahk_h 2.0
 		 */
 		OnMessage(Msg, Callback [, AddRemove]) => void
 
@@ -4075,6 +4108,12 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	}
 
 	class Edit extends Gui.Control {
+		/**
+		 * 设置提示横幅文本.
+		 * @param ShowWhenFocused 如果省略或为false, 则当控件具有键盘焦点时, 不显示提示横幅. 指定true以在控件获得焦点时显示提示横幅.
+		 * @since 2.1-alpha.7
+		 */
+		SetCue(NewText, ShowWhenFocused := false) => void
 	}
 
 	class GroupBox extends Gui.Control {
@@ -4644,7 +4683,7 @@ class Menu extends Object {
 
 	/**
 	 * 显示菜单.
-	 * @param Wait [@since v2.1-alpha.1] 如果该参数为1 (true), 则该方法在关闭菜单之前不会返回. 指定0 (false)立即返回, 允许脚本在显示菜单时继续执行.
+	 * @param Wait {@since 2.1-alpha.1} 如果该参数为1 (true), 则该方法在关闭菜单之前不会返回. 指定0 (false)立即返回, 允许脚本在显示菜单时继续执行.
 	 * 
 	 * 该参数的默认值取决于菜单样式. 如果脚本应用了MNS_MODELESS样式(通常通过DllCall), 则默认值为0(不等待); 否则, 默认值为1(等待).
 	 */
@@ -4710,7 +4749,7 @@ class Object extends Any {
 	 */
 	GetOwnPropDesc(Name) => {
 		Get?: Func, Set?: Func, Call?: Func, Value?: Any,
-		/** @since v2.1-alpha.3 */
+		/** @since 2.1-alpha.3 */
 		Type?: String | Integer | Class
 	}
 
@@ -4723,11 +4762,11 @@ class Object extends Any {
 	 * 枚举对象自有的属性.
 	 */
 	OwnProps() => Enumerator<String, Any>
-	
-	/** @since v2.1-alpha.10 */
+
+	/** @since 2.1-alpha.10 */
 	Props() => Enumerator<String, Any>
 
-	/** @since v2.1-alpha.10 */
+	/** @since 2.1-alpha.10 */
 	__Ref(Name) => PropRef
 }
 

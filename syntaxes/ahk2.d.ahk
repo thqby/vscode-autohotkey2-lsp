@@ -108,6 +108,14 @@ A_HotkeyModifierTimeout: Integer
 ; The A_MaxHotkeysPerInterval and A_HotkeyInterval variables control the rate of hotkey activation, beyond which a warning dialog will be displayed.
 A_HotkeyInterval: Integer
 
+/**
+ * The callback (function object) which represents the current HotIf criteria for the Hotkey and Hotstring functions, or blank if none.
+ * This value can be saved to later restore the context by passing it to HotIf. Callbacks which are set by HotIfWin or an optimized
+ * #HotIf may not be called by the program, but can be called by the script.
+ * @since 2.1-alpha.14
+ */
+A_HotIf: Func
+
 ; The current hour (00-23) represented by 2 digits in the 24-hour clock (for example, 17 for 5pm).
 ; To get the time in the 12-hour clock with AM/PM prompts, please refer to this example: FormatTime(,'h:mm:ss tt')
 A_Hour: String
@@ -152,6 +160,16 @@ A_IsPaused: Integer
 
 ; If the script is suspended, the value is 1, otherwise it is 0.
 A_IsSuspended: Integer
+
+/**
+ * Contains one of the following numbers, depending on the current state of the keyboard/mouse hook:
+ * - 0: No hooks installed.
+ * - 1: This script has a hook installed.
+ * - 2: Another script has a hook installed.
+ * - 3: Both this script and another script have hooks installed
+ * @since 2.1-alpha.7
+ */
+A_KeybdHookInstalled: Integer
 
 ; It can be used to get or set the delay time of the button, in milliseconds.
 A_KeyDelay: Integer
@@ -274,6 +292,16 @@ A_MouseDelay: Integer
 
 ; It can be used to get or set the mouse delay of SendPlay, in milliseconds.
 A_MouseDelayPlay: Integer
+
+/**
+ * Contains one of the following numbers, depending on the current state of the keyboard/mouse hook:
+ * - 0: No hooks installed.
+ * - 1: This script has a hook installed.
+ * - 2: Another script has a hook installed.
+ * - 3: Both this script and another script have hooks installed
+ * @since 2.1-alpha.7
+ */
+A_MouseHookInstalled: Integer
 
 ; The full path and name of the current user's'My Documents' folder.
 A_MyDocuments: String
@@ -462,7 +490,7 @@ ATan(Number) => Float
 
 /**
  * Returns the inverse tangent of y/x in radians.
- * @since v2.1-alpha.1
+ * @since 2.1-alpha.1
  */
 ATan2(Y, X) => Float
 
@@ -536,7 +564,7 @@ ClipWait([Timeout, WaitForAnyData]) => Integer
  * @param ComObject The target COM object; that is, a COM interface pointer.
  * The pointer value can be passed directly or encapsulated in an object with Ptr attribute, such as ComObj with VT_UNKNOWN variable type.
  */
-ComCall(Index, ComObject [, Type1, arg1, *, ReturnType]) => Float | Integer | String
+ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Float | Integer | String
 
 /**
  * Retrieve running objects that have been registered using OLE (Object Connection and Embedding).
@@ -1029,7 +1057,7 @@ DriveUnlock(Drive) => void
 
 /**
  * Opens the current script for editing in the associated editor.
- * @param FileName [@since v2.1-alpha.1] The path and name of the file to open for editing. If omitted, it defaults to the main file of the current script (A_ScriptFullPath). Relative paths are relative to the script directory (A_ScriptDir).
+ * @param FileName {@since 2.1-alpha.1} The path and name of the file to open for editing. If omitted, it defaults to the main file of the current script (A_ScriptFullPath). Relative paths are relative to the script directory (A_ScriptDir).
  */
 Edit(FileName?: $FilePath) => void
 
@@ -1635,8 +1663,8 @@ IL_Destroy(ImageListID) => Integer
 
 /**
  * Search for images in the screen area.
- * @param OutputVarX [@since v2.1-alpha.3] Can be omitted.
- * @param OutputVarY [@since v2.1-alpha.3] Can be omitted.
+ * @param OutputVarX {@since 2.1-alpha.3} Can be omitted.
+ * @param OutputVarY {@since 2.1-alpha.3} Can be omitted.
  * @param ImageFile image file name, if the absolute path is not specified, it is assumed to be in A_WorkingDir. Supported image formats include ANI, BMP, CUR, EMF, Exif, GIF, ICO, JPG, PNG, TIF and WMF (BMP images must 16-bit or higher). Other sources of icons include the following types of files: EXE, DLL, CPL, SCR and other types that contain icon resources.
  * 
  * Option: You can directly add zero or more of the following strings in front of the file name. Use a single space or tab to separate the options. For example: "*2 *w100 *h-1 C:\Main Logo.bmp".
@@ -2092,13 +2120,13 @@ ObjGetCapacity(Obj) => Integer
 
 /**
  * Returns the address of the object's structured data (typed properties).
- * @since v2.1-alpha.3
+ * @since 2.1-alpha.3
  */
 ObjGetDataPtr(Obj) => Integer
 
 /**
  * Returns the size of the object's structure (typed properties), in bytes.
- * @since v2.1-alpha.3
+ * @since 2.1-alpha.3
  */
 ObjGetDataSize(Obj) => Integer
 
@@ -2146,7 +2174,7 @@ ObjSetCapacity(Obj, MaxProps) => Integer
 /**
  * Sets the address of the object's structured data (typed properties).
  * ObjSetDataPtr does not affect nested objects, as they each have their own data pointer (which points into the outer object's original data).
- * @since v2.1-alpha.3
+ * @since 2.1-alpha.3
  */
 ObjSetDataPtr(Obj, Ptr) => void
 
@@ -2221,8 +2249,8 @@ PixelGetColor(X, Y, Mode?: 'Alt' | 'Slow' | 'Alt Slow') => String
 
 /**
  * Search for pixels of the specified color in the screen area.
- * @param OutputVarX [@since v2.1-alpha.3] Can be omitted.
- * @param OutputVarY [@since v2.1-alpha.3] Can be omitted.
+ * @param OutputVarX {@since 2.1-alpha.3} Can be omitted.
+ * @param OutputVarY {@since 2.1-alpha.3} Can be omitted.
  * @param ColorID The color ID to be searched. It is usually represented by a hexadecimal number in red, green and blue (RGB) format. For example: 0x9d6346. The color ID can be determined by Window Spy (accessible from the tray menu) or PixelGetColor.
  * @param Variation is a number between 0 and 255 (inclusive), used to indicate the permissible gradient value of the red/green/blue channel intensity of each pixel color in any direction. If the color you are looking for is not always exactly the same This parameter is very useful. If you specify 255 as the gradient value, all colors will be matched. The default gradient value is 0.
  */
@@ -2318,7 +2346,7 @@ RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingP
 /**
  * Replace the place where the matching pattern (regular expression) appears in the string.
  * @param {String} Replacement
- * @param {(m: RegExMatchInfo) => String} Replacement [@since v2.1 or ahk_h v2.0]
+ * @param {(m: RegExMatchInfo) => String} Replacement {@since 2.1 || ahk_h 2.0}
  */
 RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?: VarRef<Integer>, Limit := -1, StartingPosition := 1) => String
 
@@ -2695,7 +2723,7 @@ StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCou
 StrSplit(String, Delimiters?, OmitChars?, MaxParts := -1) => Array
 
 /**
- * @since v2.1-alpha.9
+ * @since 2.1-alpha.9
  */
 StructFromPtr(StructClass, Address) => Object
 
@@ -2749,7 +2777,7 @@ Tan(Number) => Float
 Thread(SubFunction [, Value1, Value2]) => void
 
 /**
- * @since v2.1-alpha.3
+ * @since 2.1-alpha.3
  */
 Throw(Value*) => void
 
@@ -2833,7 +2861,7 @@ WinExist([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns true if the specified window is always-on-top, otherwise false.
- * @since v2.1-alpha.1
+ * @since 2.1-alpha.1
  */
 WinGetAlwaysOnTop([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
@@ -2864,7 +2892,7 @@ WinGetCount([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
 /**
  * Returns true if the specified window is enabled, otherwise false.
- * @since v2.1-alpha.1
+ * @since 2.1-alpha.1
  */
 WinGetEnabled([WinTitle, WinText, ExcludeTitle, ExcludeText]) => Integer
 
@@ -3207,7 +3235,7 @@ class Class extends Object {
 	 * @param Name If specified, assign the class name to `ClassObj.Prototype.__Class`.
 	 * @param BaseClass `ClassObj.Base` is set to this, while `ClassObj.Prototype.Base` is set to `BaseClass.Prototype`.
 	 * @param Args If specified, any other parameters are passed to `static __New`, as in `ClassObj.__New(Args*)`.
-	 * @since v2.1-alpha.3
+	 * @since 2.1-alpha.3
 	 */
 	static Call([Name,] BaseClass?, Args*) => this
 
@@ -3318,7 +3346,7 @@ class Error extends Object {
 	/**
 	 * Shows a standard script error dialog.
 	 * @param {'Return'|'Exit'|'ExitApp'|'Warn'} Mode
-	 * @since v2.1-alpha.10
+	 * @since 2.1-alpha.10
 	 */
 	Show(Mode := 'Return') => Integer
 }
@@ -3865,13 +3893,13 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * @param {Integer} Msg The number of the message to monitor, which should be between 0 and 4294967295 (0xFFFFFFFF).
 	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback The function, method or object to call when the event is raised.
 	 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
-	 * Otherwise, this parameter must be a function object. (**ahk_h 2.0**)The function may also consult the built-in variable `A_EventInfo`, which contains 0 if the message was sent via SendMessage.
+	 * Otherwise, this parameter must be a function object. The function may also consult the built-in variable `A_EventInfo`, which contains 0 if the message was sent via SendMessage.
 	 * If sent via PostMessage, it contains the tick-count time the message was posted.
 	 * @param {Integer} AddRemove If omitted, it defaults to 1 (call the callback after any previously registered callbacks). Otherwise, specify one of the following numbers:
 	 * - 1 = Call the callback after any previously registered callbacks.
 	 * - -1 = Call the callback before any previously registered callbacks.
 	 * - 0 = Do not call the callback.
-	 * @since 2.1-alpha.1 or ahk_h 2.0
+	 * @since 2.1-alpha.1 || ahk_h 2.0
 	 */
 	OnMessage(Msg, Callback [, AddRemove]) => void
 
@@ -3926,6 +3954,11 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	}
 
 	class ComboBox extends Gui.List {
+		/**
+		 * Sets the cue banner text.
+		 * @since 2.1-alpha.7
+		 */
+		SetCue(NewText) => void
 	}
 
 	class Control extends Object {
@@ -4052,7 +4085,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 		 * - 1 = Call the callback after any previously registered callbacks.
 		 * - -1 = Call the callback before any previously registered callbacks.
 		 * - 0 = Do not call the callback.
-		 * @since 2.1-alpha.7 or ahk_h 2.0
+		 * @since 2.1-alpha.7 || ahk_h 2.0
 		 */
 		OnMessage(Msg, Callback [, AddRemove]) => void
 
@@ -4096,6 +4129,13 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	}
 
 	class Edit extends Gui.Control {
+		/**
+		 * Sets the cue banner text.
+		 * @param ShowWhenFocused If omitted or false, the cue banner is not displayed while the control has the keyboard focus.
+		 * Specify true to display the cue banner even while the control is focused.
+		 * @since 2.1-alpha.7
+		 */
+		SetCue(NewText, ShowWhenFocused := false) => void
 	}
 
 	class GroupBox extends Gui.Control {
@@ -4665,7 +4705,7 @@ class Menu extends Object {
 
 	/**
 	 * Display the menu.
-	 * @param Wait [@since v2.1-alpha.1] If this parameter is 1 (true), the method will not return until after the menu is closed. Specify 0 (false) to return immediately, allowing the script to continue execution while the menu is being displayed.
+	 * @param Wait {@since 2.1-alpha.1} If this parameter is 1 (true), the method will not return until after the menu is closed. Specify 0 (false) to return immediately, allowing the script to continue execution while the menu is being displayed.
 	 * 
 	 * The default value of this parameter depends on the menu style. If the script has applied the MNS_MODELESS style (typically via DllCall), the default is 0 (no wait); otherwise, the default is 1 (wait).
 	 */
@@ -4731,7 +4771,7 @@ class Object extends Any {
 	 */
 	GetOwnPropDesc(Name) => {
 		Get?: Func, Set?: Func, Call?: Func, Value?: Any,
-		/** @since v2.1-alpha.3 */
+		/** @since 2.1-alpha.3 */
 		Type?: String | Integer | Class
 	}
 
@@ -4744,11 +4784,11 @@ class Object extends Any {
 	 * Enumerate the properties of the object.
 	 */
 	OwnProps() => Enumerator<String, Any>
-	
-	/** @since v2.1-alpha.10 */
+
+	/** @since 2.1-alpha.10 */
 	Props() => Enumerator<String, Any>
 
-	/** @since v2.1-alpha.10 */
+	/** @since 2.1-alpha.10 */
 	__Ref(Name) => PropRef
 }
 

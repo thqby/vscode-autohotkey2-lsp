@@ -107,9 +107,10 @@ export type Maybe<T> = T | undefined;
 export let connection: Connection | undefined;
 export let locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahkpath_cur = '', ahkpath_resolved = '';
-export let ahk_version = version_encode('3.0.0.0');
+export let ahk_version = Infinity;
 export let ahkuris: Record<string, string> = {};
 export let ahkvars: Record<string, AhkSymbol> = {};
+export let inactivevars: Record<string, string> = {};
 export let libfuncs: Record<string, LibSymbol> = {};
 export const hoverCache: Record<string, [string, Hover | undefined]> = {};
 export const libdirs: string[] = [];
@@ -234,7 +235,7 @@ export function getwebfile(filepath: string) {
 
 export function initahk2cache() {
 	const kind = CompletionItemKind.Keyword, data = '*';
-	ahkvars = {}, ahkuris = {};
+	ahkvars = {}, ahkuris = {}, inactivevars = {};
 	completionItemCache = {
 		constant: [],
 		directive: {
@@ -489,6 +490,27 @@ export function version_decode(n: number) {
 		v[3 - i] = n % 1000, n = Math.floor(n / 1000);
 	(v[2] -= 3) >= 0 && (n = v.pop()!) && v.push(n);
 	return v.join('.').replace(/\.-\d+/, s => `-${STAGE[s.substring(2)]}`);
+}
+
+export function version_match(requires: string) {
+	next:
+	for (const req of requires.split('||')) {
+		for (const m of req.matchAll(/(ahk_h\s*)?([<>]=?|=)?([^<>=]+)/g)) {
+			if (m[1] && !isahk2_h) continue next;
+			const v = version_encode(m[3]);
+			let result = false;
+			switch (m[2] ?? '>=') {
+				case '>=': result = ahk_version >= v; break;
+				case '<=': result = ahk_version <= v; break;
+				case '=': result = ahk_version === v; break;
+				case '>': result = ahk_version > v; break;
+				case '<': result = ahk_version < v; break;
+			}
+			if (!result) continue next;
+		}
+		return true;
+	}
+	return false;
 }
 
 export async function sendAhkRequest(method: string, params: unknown[]) {

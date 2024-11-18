@@ -102,7 +102,7 @@
 	"diagnostic.propnotinit": "属性声明未初始化",
 	"diagnostic.requirev1": "此脚本需要AutoHotkey v1, lexer停止解析.",
 	"diagnostic.requirevariable": "'&'需要一个变量",
-	"diagnostic.requireversion": "该特性需要AutoHotkey版本 >= v{0}",
+	"diagnostic.requireversion": "该特性需要AutoHotkey版本: {0}",
 	"diagnostic.reservedworderr": "保留字'{0}'不得用作变量名",
 	"diagnostic.resourcenotfound": "未找到或无法解析资源",
 	"diagnostic.skipline": "该行被跳过且未解析",

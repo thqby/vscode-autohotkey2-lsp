@@ -61,7 +61,7 @@ export const diagnostic = {
 	propnotinit: localize('diagnostic.propnotinit', 'Property declaration is not initialized'),
 	requirev1: localize('diagnostic.requirev1', 'This script requires AutoHotkey v1, continue parsing?'),
 	requireVerN: (n: number) => diagnostic.requireversion(version_decode(n)),
-	requireversion: localize('diagnostic.requireversion', 'This feature requires the AutoHotkey version >= v{0}'),
+	requireversion: localize('diagnostic.requireversion', 'This feature requires the AutoHotkey version: {0}'),
 	requirevariable: localize('diagnostic.requirevariable', "'&' requires a variable"),
 	reservedworderr: localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name'),
 	resourcenotfound: localize('diagnostic.resourcenotfound', 'No resource found or could not be resolved'),

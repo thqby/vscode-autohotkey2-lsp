@@ -22,8 +22,8 @@ import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
 	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings,
-	hoverCache, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
-	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, workspaceFolders
+	hoverCache, inactivevars, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
+	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, version_match, workspaceFolders
 } from './common';
 
 export interface ParamInfo {
@@ -47,9 +47,7 @@ export interface AhkDoc {
 	children: AhkSymbol[]
 }
 
-export enum FuncScope {
-	DEFAULT = 0, STATIC = 1, GLOBAL = 2
-}
+export enum FuncScope { DEFAULT, STATIC, GLOBAL }
 
 export enum SemanticTokenTypes {
 	class,
@@ -72,6 +70,17 @@ export enum SemanticTokenModifiers {
 	deprecated = 16,
 }
 
+export enum DiagnosticCode {
+	call = 'call statement',
+	expect = 'expect',
+	func_expr = 'function definition expressions',
+	include = 'include',
+	maybe_assign = 'maybe-assign',
+	opt_chain = 'optional chaining',
+	typed_prop = 'typed properties',
+	v_ref = 'virtual references',
+}
+
 export interface AhkSymbol extends DocumentSymbol {
 	cached_types?: Array<string | AhkSymbol>
 	children?: AhkSymbol[]
@@ -84,6 +93,7 @@ export interface AhkSymbol extends DocumentSymbol {
 	overwrite?: number
 	parent?: AhkSymbol
 	returns?: number[] | null
+	since?: string
 	static?: boolean | null
 	type_annotations?: Array<string | AhkSymbol> | false
 	uri?: string
@@ -720,11 +730,14 @@ export class Lexer {
 									let params: ParamList = [];
 									if (!META_FUNCNAME.includes(_low = tn.name.toUpperCase()))
 										tk.semantic = sem;
-									_parent.children?.push(tn), tn.static = isstatic, tn.full = `(${cls.join('.')}) ${isstatic ? 'static ' : ''}` + tn.name;
-									(isstatic ? _parent.property : _parent.$property!)[_low] ??= tn;
+									tn.static = isstatic, tn.full = `(${cls.join('.')}) ${isstatic ? 'static ' : ''}` + tn.name;
 									if ((_cm = comments[tn.selectionRange.start.line]))
 										set_detail(_cm.symbol = tn, _cm);
-									(this.object.property[_low] ??= []).push(tn);
+									_parent.children?.push(tn);
+									if (!_parent.since) {
+										(isstatic ? _parent.property : _parent.$property!)[_low] ??= tn;
+										(this.object.property[_low] ??= []).push(tn);
+									}
 									if (lk.content === '[') {
 										params = parse_params(']');
 										if (params.length) {
@@ -779,18 +792,21 @@ export class Lexer {
 											modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly
 												| (isstatic as unknown as number)
 										};
-									if (blocks) {
-										fn.has_this_param = true, fn.kind = SymbolKind.Method;
-										fn.full = `(${cls.join('.')}) ${fn.full}`, fn.parent = _parent;
-										(this.object.method[_low] ??= []).push(fn);
-									}
 									if ((_cm = comments[fn.selectionRange.start.line]))
 										set_detail(_cm.symbol = fn, _cm);
 									_parent.children?.push(fn);
-									const decl = isstatic ? _parent.property : _parent.$property!;
-									if (decl[_low])
-										(decl[_low] as Property).call = fn;
-									else decl[_low] = fn;
+									if (!(_parent.since ?? fn.since)) {
+										if (blocks) {
+											fn.has_this_param = true, fn.kind = SymbolKind.Method;
+											fn.full = `(${cls.join('.')}) ${fn.full}`, fn.parent = _parent;
+											(this.object.method[_low] ??= []).push(fn);
+										}
+										const decl = isstatic ? _parent.property : _parent.$property!;
+										if (decl[_low])
+											(decl[_low] as Property).call = fn;
+										else decl[_low] = fn;
+									} else if (!blocks)
+										inactivevars[_low] = fn.since!;
 								} else if (!blocks && (['=>', ':', ','].includes(lk.content) || lk.topofline)) {
 									const tn = Variable.create(tk.content, SymbolKind.Variable, rg = make_range(tk.offset, tk.length));
 									tk.symbol = tk.definition = tn, tn.assigned = tn.def = true;
@@ -805,8 +821,11 @@ export class Lexer {
 										parse_types(tn);
 									else if (lk.content !== ',')
 										--j;
+									_low = tn.name.toUpperCase();
 									_parent.children!.push(tn);
-									_parent.property[tn.name.toUpperCase()] ??= tn;
+									if (!tn.since) {
+										_parent.property[_low] ??= tn;
+									} else inactivevars[_low] = tn.since;
 								}
 							}
 							i = j + 1, isstatic = false;
@@ -857,8 +876,13 @@ export class Lexer {
 									set_detail(_cm.symbol = cl, _cm);
 								cl.full = cls.join('.'), cl.property = {}, cl.prototype =
 									{ ...cl, detail: undefined, property: cl.$property = {} };
-								(!blocks && cl.name.startsWith('$') ? _this.typedef : _parent.property)[cl.name.toUpperCase()] ??= cl;
-								_parent.children!.push(cl), blocks++, p.push(_parent), _parent = cl, cl.type_annotations = [cl.full];
+								_low = cl.name.toUpperCase();
+								_parent.children!.push(cl);
+								if (!cl.since) {
+									(!blocks && cl.name.startsWith('$') ? _this.typedef : _parent.property)[_low] ??= cl;
+								} else if (!blocks)
+									inactivevars[_low] = cl.since;
+								blocks++, p.push(_parent), _parent = cl, cl.type_annotations = [cl.full];
 								i = j + 1;
 							} else if (_low === 'global' && tokens[i + 1].type === 'TK_WORD')
 								i++;
@@ -907,13 +931,6 @@ export class Lexer {
 									ahkvars[k] = it, it.uri = uri;
 								break;
 						}
-					}
-					let s;
-					if (overwrite) {
-						if (ahk_version > alpha_3) {
-							['STRUCT', 'SIZEOF', 'OBJDUMP', 'OBJLOAD', 'A_ZIPCOMPRESSIONLEVEL'].forEach(p => delete ahkvars[p]);
-						} else if ((s = this.declaration.STRUCT)?.kind === SymbolKind.Class)
-							s.def = false;
 					}
 				}
 				parse_unresolved_typedef();
@@ -1187,7 +1204,8 @@ export class Lexer {
 				} catch (e) {
 					in_loop = requirev2 = string_mode = false;
 					if (e instanceof ParseStopError) {
-						e.message && this.addDiagnostic(e.message, e.token.offset, e.token.length, DiagnosticSeverity.Warning);
+						if (e.message)
+							this.addDiagnostic(e.message, e.token.offset, e.token.length, { severity: DiagnosticSeverity.Warning });
 					} else
 						console.error(e);
 				}
@@ -1222,7 +1240,7 @@ export class Lexer {
 				case 'SkipLine': {
 					if (!allow_skip)
 						return true;
-					_this.addDiagnostic(diagnostic.skipline(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+					_this.addDiagnostic(diagnostic.skipline(), tk.offset, tk.length, { severity: DiagnosticSeverity.Warning });
 					let s: string, next_LF: number, tp = 'TK_UNKNOWN';
 					if (tk.type === 'TK_WORD' || tk.content === '=' && (tp = 'TK_STRING')) {
 						lst = tk, parser_pos = tk.offset + tk.length;
@@ -2385,7 +2403,7 @@ export class Lexer {
 				if (type === SymbolKind.Method)
 					maybeclassprop(fc, true);
 				if (callWithoutParentheses && (callWithoutParentheses === true || tp === 'TK_START_EXPR'))
-					_this.diagnostics.push({ message: warn.callwithoutparentheses(), range: tn.selectionRange, severity: DiagnosticSeverity.Warning });
+					_this.diagnostics.push({ message: warn.callwithoutparentheses(), range: tn.selectionRange, code: DiagnosticCode.call, severity: DiagnosticSeverity.Warning });
 			}
 
 			function parse_body(else_body: boolean | null, previous_pos: number, loop_body = false) {
@@ -2485,7 +2503,8 @@ export class Lexer {
 							if (act === '=' && stop_parse(tokens[nk!.next_token_offset], true) &&
 								(next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
 								return [];
-							_this.addDiagnostic(`${diagnostic.unexpected(act)}, ${diagnostic.didyoumean(':=').toLowerCase()}`, min, act.length);
+							_this.addDiagnostic(`${diagnostic.unexpected(act)}, ${diagnostic.didyoumean(':=')}`, min, act.length,
+								{ code: DiagnosticCode.expect, data: ':=' });
 						}
 					}
 				} else if (act && (hascomma >= max || (info.count - (tk === nk ? 1 : 0) < min)))
@@ -2642,8 +2661,6 @@ export class Lexer {
 										const _prop = lk, scl = static_init.children!.length;
 										delete v.def;
 										v.typed = true;
-										if (ahk_version < alpha_3)
-											_this.addDiagnostic(diagnostic.requireVerN(alpha_3), lk.offset, lk.length, DiagnosticSeverity.Warning);
 										lk = tk, tk = get_next_token(), err = '';
 										if (allIdentifierChar.test(tk.content)) {
 											_tp = tk, tpexp += tk.content, nexttoken();
@@ -2656,6 +2673,8 @@ export class Lexer {
 										} else if (tk.content as string === ':=' || tk.type === 'TK_COMMA' || tk.topofline && allIdentifierChar.test(tk.content))
 											_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length), next = false;
 										else err = diagnostic.propdeclaraerr();
+										if (ahk_version < alpha_3)
+											_this.addDiagnostic(diagnostic.requireVerN(alpha_3), _prop.offset, lk.offset + lk.length - _prop.offset, { code: DiagnosticCode.typed_prop });
 										if (!err) {
 											while (true) {
 												if (tk.content === '.' && tk.type !== 'TK_OPERATOR') {
@@ -2681,9 +2700,10 @@ export class Lexer {
 												} else break;
 											}
 											if (_tp) {
-												if (tk.previous_token === _tp && /^([iu](8|16|32|64)|f(32|64)|[iu]ptr)$/i.test(_tp.content))
+												if (tk.previous_token === _tp && /^([iu](8|16|32|64)|f(32|64)|[iu]ptr)$/i.test(_tp.content)) {
 													v.type_annotations = [/^f/i.test(_tp.content) ? 'Float' : 'Integer'];
-												else if (_tp.type === 'TK_WORD')
+													_tp.semantic = { type: SemanticTokenTypes.class };
+												} else if (_tp.type === 'TK_WORD')
 													addvariable(_tp, 3, static_init.children);
 											}
 											v.type_annotations ??= is_expr || !tpexp ? ['Any'] : [tpexp];
@@ -2853,7 +2873,7 @@ export class Lexer {
 										if (tk.type as string !== 'TK_DOT')
 											vr.assigned = vr.def = vr.pass_by_ref = true;
 										else if (ahk_version < alpha_3 + 7)
-											_this.addDiagnostic(diagnostic.requireVerN(alpha_3 + 7), lk.previous_token!.offset, 1, DiagnosticSeverity.Warning);
+											_this.addDiagnostic(diagnostic.requireVerN(alpha_3 + 7), lk.previous_token!.offset, 1, { code: DiagnosticCode.v_ref });
 										else { tk.topofline &&= -1; continue; }
 									} else if (byref === false && tk.type as string !== 'TK_DOT')
 										vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
@@ -2939,7 +2959,7 @@ export class Lexer {
 										tk.fat_arrow_end = true;
 									} else {
 										if (ahk_version < alpha_3)
-											_this.addDiagnostic(diagnostic.requireVerN(alpha_3), fc.offset, parser_pos - fc.offset, DiagnosticSeverity.Warning);
+											_this.addDiagnostic(diagnostic.requireVerN(alpha_3), fc.offset, parser_pos - fc.offset, { code: DiagnosticCode.func_expr });
 										tk.in_expr = bbb;
 										tn.children = rs, rs.push(...parse_block(1, tn));
 										tn.range.end = document.positionAt(parser_pos);
@@ -3132,7 +3152,8 @@ export class Lexer {
 							} else if (tk.content === ':=' || must && tk.content === '=') {
 								if (tk.content === '=') {
 									stop_parse(lk);
-									_this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=').toLowerCase()}`, tk.offset, tk.length);
+									_this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=')}`, tk.offset, tk.length,
+										{ code: DiagnosticCode.expect, data: ':=' });
 								}
 								const ek = tk;
 								if (lk.content.match(/^\d/))
@@ -3195,7 +3216,8 @@ export class Lexer {
 							} else {
 								if (must && lk.type === 'TK_WORD' && lk.content.toLowerCase() === 'byref' && tk.type === 'TK_WORD') {
 									stop_parse(lk);
-									_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), lk.offset, tk.topofline ? lk.length : tk.offset - lk.offset);
+									_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), lk.offset, tk.topofline ? lk.length : tk.offset - lk.offset,
+										{ code: DiagnosticCode.expect, data: '&' });
 									next = false, lk = EMPTY_TOKEN;
 									continue;
 								}
@@ -3354,8 +3376,8 @@ export class Lexer {
 									k = { ...lk }, k.content = k.content.slice(1, -1), k.offset++, k.length -= 2;
 									if (!h && (!lk.content.startsWith('"') || !stop_parse(lk)))
 										_this.addDiagnostic(
-											[diagnostic.invalidpropname(), diagnostic.didyoumean(k.content)].join(', '),
-											lk.offset, lk.length);
+											`${diagnostic.invalidpropname()}, ${diagnostic.didyoumean(k.content)}`,
+											lk.offset, lk.length, { code: DiagnosticCode.expect, data: k.content });
 									return true;
 								}
 								return isobj = false;
@@ -3482,7 +3504,7 @@ export class Lexer {
 							tk.fat_arrow_end = true;
 						} else {
 							if (ahk_version < alpha_3)
-								_this.addDiagnostic(diagnostic.requireVerN(alpha_3), tp - 1, parser_pos - tp, DiagnosticSeverity.Warning);
+								_this.addDiagnostic(diagnostic.requireVerN(alpha_3), tp - 1, parser_pos - tp, { code: DiagnosticCode.func_expr });
 							nk.in_expr = b;
 							rs.push(...parse_block(1, tn));
 							tn.range.end = document.positionAt(parser_pos);
@@ -3523,7 +3545,7 @@ export class Lexer {
 												if (tk.type as string !== 'TK_DOT') {
 													vr.assigned = vr.def = vr.pass_by_ref = true;
 												} else if (ahk_version < alpha_3 + 7)
-													_this.addDiagnostic(diagnostic.requireVerN(alpha_3 + 7), lk.previous_token!.offset, 1, DiagnosticSeverity.Warning);
+													_this.addDiagnostic(diagnostic.requireVerN(alpha_3 + 7), lk.previous_token!.offset, 1, { code: DiagnosticCode.v_ref });
 												else { tk.topofline &&= -1; continue; }
 											} else if (byref === false)
 												vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
@@ -3553,7 +3575,7 @@ export class Lexer {
 											tk.fat_arrow_end = true;
 										} else {
 											if (ahk_version < alpha_3)
-												_this.addDiagnostic(diagnostic.requireVerN(alpha_3), fc.offset, parser_pos - fc.offset, DiagnosticSeverity.Warning);
+												_this.addDiagnostic(diagnostic.requireVerN(alpha_3), fc.offset, parser_pos - fc.offset, { code: DiagnosticCode.func_expr });
 											tk.in_expr = fc.offset;
 											(tn.children = result.splice(rl)).push(...parse_block(1, tn));
 											tn.range.end = document.positionAt(parser_pos);
@@ -3754,7 +3776,7 @@ export class Lexer {
 					// a?.123
 					if (input[t.offset] === '.') {
 						if (ahk_version < alpha_3 - 1)
-							_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), o, 1, DiagnosticSeverity.Warning);
+							_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), o, 1, { code: DiagnosticCode.opt_chain });
 						else q.ignore = true;
 					} else _this.addDiagnostic(diagnostic.missing(':'), o, 1);
 				}
@@ -4160,7 +4182,7 @@ export class Lexer {
 					if (isdll)
 						dlldir = '';
 					else if (tk)
-						_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
+						_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length, { code: DiagnosticCode.include });
 				} else if (!process.env.BROWSER) {
 					if (isdll) {
 						if (existsSync(m) && statSync(m).isDirectory())
@@ -4181,23 +4203,26 @@ export class Lexer {
 								if (rs)
 									includetable[rs.uri] = rs.path, tk.data = [undefined, rs.uri];
 								else
-									_this.addDiagnostic(diagnostic.resourcenotfound(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+									_this.addDiagnostic(diagnostic.resourcenotfound(), tk.offset, tk.length,
+										{ code: DiagnosticCode.include, severity: DiagnosticSeverity.Warning });
 								return;
 							} else if (!(m = find_include_path(m, _this.libdirs, includedir)) || !existsSync(m.path)) {
 								if (!ignore)
-									_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length);
+									_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length,
+										{ code: 'include', data: m?.path });
 							} else if (statSync(m.path).isDirectory())
 								_this.includedir.set(tk.pos!.line, includedir = m.path);
 							else
 								includetable[m.uri] = m.path, tk.data = [m.path, m.uri];
-							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length, DiagnosticSeverity.Warning);
+							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length,
+								{ code: DiagnosticCode.include, severity: DiagnosticSeverity.Warning });
 						} else if ((m = find_d_ahk(m)))
 							includetable[m.uri] = m.path;
 						_this.need_scriptdir ||= islib && (!m || m.path.toLowerCase().startsWith(_this.libdirs[0].toLowerCase()));
 					}
 				}
 			} else if (text && tk)
-				_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length);
+				_this.addDiagnostic(diagnostic.pathinvalid(), tk.offset, tk.length, { code: DiagnosticCode.include });
 		}
 
 		function find_d_ahk(path: string) {
@@ -4399,6 +4424,10 @@ export class Lexer {
 						continue;
 					case 'ignore': sym.ignore = true; break;
 					case 'deprecated': sym.tags ??= [1]; break;
+					case 'since':
+						if (!process.env.BROWSER && (_this.d & 2) && !version_match(line = line.trim()))
+							sym.since = line || 'unknown';
+						break;
 					case 'alias':
 						if (sym.kind === SymbolKind.Class && (tp = line.trim()).endsWith('>') && tp.startsWith(sym.name + '<')) {
 							const lex = new Lexer(TextDocument.create('', 'ahk2', 0, `class ${tp}{\n}`), undefined, 1);
@@ -5068,13 +5097,12 @@ export class Lexer {
 				let nosep = false, _lst: Token | undefined, pt: Token | undefined;
 				resulting_string = '';
 				if (!/^[ \t\r\n+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1))) {
-					let msg = diagnostic.missingspace(), eo = offset;
 					if (sep === c) {
 						if (c === "'" || !stop_parse(lst))
-							msg = diagnostic.didyoumean(`\`${c}`), eo--;
-						else msg = '', offset = lst.offset, lst = lst.previous_token!, _this.tokenranges.pop();
-					}
-					msg && _this.addDiagnostic(msg, eo, 1);
+							_this.addDiagnostic(diagnostic.didyoumean(c = `\`${c}`), offset - 1, input[offset + 1] === sep ? 2 : 1,
+								{ code: DiagnosticCode.expect, data: c });
+						else offset = lst.offset, lst = lst.previous_token!, _this.tokenranges.pop();
+					} else _this.addDiagnostic(diagnostic.missingspace(), offset, 1);
 				}
 				while ((c = input.charAt(parser_pos++))) {
 					if (c === '`')
@@ -5363,12 +5391,12 @@ export class Lexer {
 					parser_pos = bak;
 					if (')]},:??'.includes(t.content) || t.content === '.' && t.type !== 'TK_OPERATOR') {
 						tk.ignore = true;
-						if (t.content.startsWith('.') && ahk_version < alpha_3 - 1)
-							_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), tk.offset, tk.length, DiagnosticSeverity.Warning);
+						if (t.content === '.' && ahk_version < alpha_3 - 1)
+							_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), tk.offset, tk.length, { code: DiagnosticCode.opt_chain });
 					}
 					return lst = tk;
 				} else if (c === '??=' && ahk_version < alpha_3 - 1)
-					_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), offset, c.length, DiagnosticSeverity.Warning);
+					_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), offset, c.length, { code: DiagnosticCode.maybe_assign });
 				return lst = createToken(c, /([:.+\-*/|&^]|\/\/|>>|<<|\?\?)=/.test(c) ? 'TK_EQUALS' : 'TK_OPERATOR', offset, c.length, bg);
 			}
 
@@ -6424,10 +6452,10 @@ export class Lexer {
 		return colors;
 	}
 
-	public addDiagnostic(message: string, offset: number, length = 0, severity: DiagnosticSeverity = DiagnosticSeverity.Error) {
+	public addDiagnostic(message: string, offset: number, length = 0, extra?: Partial<Diagnostic>) {
 		const beg = this.document.positionAt(offset);
 		const end = length ? this.document.positionAt(offset + length) : beg;
-		this.diagnostics.push({ range: Range.create(beg, end), message, severity });
+		this.diagnostics.push({ message, range: Range.create(beg, end), ...extra });
 	}
 
 	private addFoldingRange(start: number, end: number, kind: string = 'block') {

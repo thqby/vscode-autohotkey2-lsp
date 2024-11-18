@@ -1,44 +1,46 @@
 import { opendir } from 'fs/promises';
 import { CancellationToken, CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
-import { codeaction, diagnostic } from './localize';
-import { Maybe, lexers, restorePath, warn } from './common';
+import { codeaction } from './localize';
+import { DiagnosticCode, Maybe, lexers, restorePath } from './common';
 
 export async function codeActionProvider(params: CodeActionParams, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
 	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()], document = lex?.document;
 	if (!lex || token.isCancellationRequested) return;
 	const acts: CodeAction[] = [], replaces: Record<string, TextEdit[]> = {}, parens: TextEdit[] = [];
-	let r: string, t: RegExpExecArray | null;
-	const cwp = warn.callwithoutparentheses();
-	const include_re = new RegExp('^' + diagnostic.filenotexist('(.+?)\\*\\.(\\w+)'));
-	const repl_re = new RegExp(diagnostic.didyoumean('(.+?)')
-		.replace(/\?$/, '\\?').replace(/^\w/, s => `[${s.toUpperCase() + s.toLowerCase()}]`) +
-		'$|^' + diagnostic.deprecated('.+?', '(.+?)'));
+	let m: RegExpExecArray | null;
 
 	for (const it of params.context.diagnostics) {
-		if (cwp === it.message) {
-			const tk = lex.tokens[document.offsetAt(it.range.start)], cs = tk.callsite!;
-			let end = cs.range.end, start = tk.next_token_offset === -1 ?
-				end = it.range.end : document.positionAt(tk.next_token_offset);
-			if (start.line > end.line || start.line === end.line && start.character > end.character)
-				start = end;
-			parens.push(
-				{ newText: '(', range: { start: it.range.end, end: start } },
-				{ newText: ')', range: { start: end, end } }
-			);
-		} else if ((t = repl_re.exec(it.message))) {
-			(replaces[`${document.getText(it.range)} ${r = t[1] || t[2]}`] ??= []).push({ range: it.range, newText: r });
-		} else if ((t = include_re.exec(it.message))) {
-			const path = restorePath(t[1]), reg = new RegExp(`\\.${t[2]}$`, 'i'), includes = [];
-			const rg = Object.assign({}, it.range);
-			rg.start = Object.assign({}, rg.start), rg.start.character = 0;
-			try {
-				for await (const ent of await opendir(path))
-					if (reg.test(ent.name)) includes.push(`#Include ${path}\\${ent.name}`);
-			} catch { continue; }
-			const textEdit: TextEdit = { range: rg, newText: includes.join('\n') };
-			const act: CodeAction = { title: codeaction.include(`${path}\\*.${t[2]}`), kind: CodeActionKind.QuickFix };
-			act.edit = { changes: { [uri]: [textEdit] } };
-			acts.push(act);
+		switch (it.code) {
+			case DiagnosticCode.call: {
+				const tk = lex.tokens[document.offsetAt(it.range.start)], cs = tk.callsite!;
+				let end = cs.range.end, start = tk.next_token_offset === -1 ?
+					end = it.range.end : document.positionAt(tk.next_token_offset);
+				if (start.line > end.line || start.line === end.line && start.character > end.character)
+					start = end;
+				parens.push(
+					{ newText: '(', range: { start: it.range.end, end: start } },
+					{ newText: ')', range: { start: end, end } }
+				);
+				break;
+			}
+			case DiagnosticCode.expect:
+				(replaces[`${document.getText(it.range)} ${it.data}`] ??= []).push({ range: it.range, newText: it.data });
+				break;
+			case DiagnosticCode.include:
+				if ((m = it.data?.match(/(.+?)\*\.(\w+)$/))) {
+					const path = restorePath(m[1]).replace(/\\?$/, '\\'), reg = new RegExp(`\\.${m[2]}$`, 'i'), includes = [];
+					const rg = Object.assign({}, it.range);
+					rg.start = Object.assign({}, rg.start), rg.start.character = 0;
+					try {
+						for await (const ent of await opendir(path))
+							if (reg.test(ent.name)) includes.push(`#Include ${path}${ent.name}`);
+					} catch { continue; }
+					const textEdit: TextEdit = { range: rg, newText: includes.join('\n') };
+					const act: CodeAction = { title: codeaction.include(`${path}*.${m[2]}`), kind: CodeActionKind.QuickFix };
+					act.edit = { changes: { [uri]: [textEdit] } };
+					acts.push(act);
+				}
+				break;
 		}
 	}
 	for (const [k, v] of Object.entries(replaces))

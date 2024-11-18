@@ -24,7 +24,7 @@ A_ScriptStruct: Integer
 
 A_ThreadID: Integer
 
-/** @deprecated {@since v2.1-alpha.3} */
+/** @since <=2.1-alpha.3 */
 A_ZipCompressionLevel: Integer
 ;@endregion
 
@@ -98,13 +98,13 @@ MemorySizeOfResource(hModule, hReslnfo) => Integer
 
 /**
  * Dump objects to memory or save to file for later use.
- * @deprecated Removed from v2.1
+ * @since <=2.1-alpha.3
  */
 ObjDump(Obj [, Compress, Password]) => Buffer
 
 /**
  * Load dumped objects from memory or files.
- * @deprecated Removed from v2.1
+ * @since <=2.1-alpha.3
  */
 ObjLoad(AddOrPath [, Password]) => Array | Map | Object
 
@@ -120,9 +120,15 @@ Swap(Var1, Var2) => void
 
 /**
  * Built-in functions can calculate the size of structures or types, such as TCHAR or PTR or VOID..., for usage and examples, see also Struct.
- * @deprecated Removed from v2.1
+ * @since <=2.1-alpha.3
  */
 Sizeof(Definition [, Offset]) => Integer
+
+/**
+ * Struct is a built-in function used to create and return structure objects. The object can be used to access defined structures using object syntax. The SetCapacity method can be used to allocate memory to structures and pointers.
+ * @since <=2.1-alpha.3
+ */
+Struct(Definition [, StructMemory, InitObject]) => $Struct
 
 /**
  * Create an unsorted Array (for attributes).
@@ -181,13 +187,13 @@ ZipCloseFile(ZipHandle) => void
 
 /**
  * This function is used to create a new empty zip file in memory, use ZipAddBuffer or ZipAddFile to add the file to the zip archive
- * @param CompressionLevel [@since v2.1-alpha.7]
+ * @param CompressionLevel {@since 2.1-alpha.7}
  */
 ZipCreateBuffer(MaxSize, Password?, CompressionLevel := 5) => Integer
 
 /**
  * This function is used to create a new empty zip file, use ZipAddFile or ZipAddBuffer to add the file to the zip archive.
- * @param CompressionLevel [@since v2.1-alpha.7]
+ * @param CompressionLevel {@since 2.1-alpha.7}
  */
 ZipCreateFile(FileName: $FilePath, Password?, CompressionLevel := 5) => Integer
 
@@ -204,7 +210,7 @@ ZipOptions(ZipHandle, Options) => void
 
 /**
  * This function is used to compress and decrypt raw memory, for example for resources.
- * @param CompressionLevel [@since v2.1-alpha.7]
+ * @param CompressionLevel {@since 2.1-alpha.7}
  */
 ZipRawMemory(AddOrBuf [, Size], Password?, CompressionLevel := 5) => Buffer
 ;@endregion
@@ -318,61 +324,6 @@ class JSON {
 	static stringify(Obj, Options := 0) => String
 }
 
-/**
- * @deprecated Removed from v2.1
- */
-class Struct {
-	/**
-	 * Struct is a built-in function used to create and return structure objects. The object can be used to access defined structures using object syntax. The SetCapacity method can be used to allocate memory to structures and pointers.
-	 */
-	static Call(Definition [, StructMemory, InitObject]) => Struct
-
-	/**
-	 * Returns the size defined by the array; if the structure or field is not an array, it returns 0.
-	 */
-	CountOf([Field]) => Integer
-
-	/**
-	 * Return the code of the field.
-	 */
-	Encoding([Field]) => Integer
-
-	/**
-	 * Return the address of the field or structure.
-	 */
-	GetAddress([Field]) => Integer
-
-	/**
-	 * Returns the previously allocated capacity using .SetCapacity() or allocation string.
-	 */
-	GetCapacity([Field]) => Integer
-
-	/**
-	 * Returns a pointer to the allocated memory stored in a structure or field.
-	 */
-	GetPointer([Field]) => Integer
-
-	/**
-	 * If the field or structure is a pointer, return true.
-	 */
-	IsPointer([Field]) => Integer
-
-	/**
-	 * Returns the offset of the field.
-	 */
-	Offset(field) => Integer
-
-	/**
-	 * Allocate memory for a field, if new memory is allocated, return the allocated size.
-	 */
-	SetCapacity([Field,] newsize) => Integer
-
-	/**
-	 * Returns the size of the structure or field (in bytes).
-	 */
-	Size([Field]) => Integer
-}
-
 class Worker {
 	/**
 	 * Enumerates ahk threads.
@@ -462,4 +413,52 @@ class $DynaToken {
 	}
 
 	Call(Params*) => Buffer | Float | Integer | String
+}
+
+/** @since <=2.1-alpha.3 */
+class $Struct {
+	/**
+	 * Returns the size defined by the array; if the structure or field is not an array, it returns 0.
+	 */
+	CountOf([Field]) => Integer
+
+	/**
+	 * Return the code of the field.
+	 */
+	Encoding([Field]) => Integer
+
+	/**
+	 * Return the address of the field or structure.
+	 */
+	GetAddress([Field]) => Integer
+
+	/**
+	 * Returns the previously allocated capacity using .SetCapacity() or allocation string.
+	 */
+	GetCapacity([Field]) => Integer
+
+	/**
+	 * Returns a pointer to the allocated memory stored in a structure or field.
+	 */
+	GetPointer([Field]) => Integer
+
+	/**
+	 * If the field or structure is a pointer, return true.
+	 */
+	IsPointer([Field]) => Integer
+
+	/**
+	 * Returns the offset of the field.
+	 */
+	Offset(field) => Integer
+
+	/**
+	 * Allocate memory for a field, if new memory is allocated, return the allocated size.
+	 */
+	SetCapacity([Field,] newsize) => Integer
+
+	/**
+	 * Returns the size of the structure or field (in bytes).
+	 */
+	Size([Field]) => Integer
 }

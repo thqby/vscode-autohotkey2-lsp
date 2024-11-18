@@ -9,20 +9,20 @@ import {
 	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable,
 	ahk_version, ahkuris, ahkvars, alpha_3, check_same_name_error, connection, decltype_expr,
 	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor, get_class_member,
-	is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
+	inactivevars, is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
 
 export let globalsymbolcache: Record<string, AhkSymbol> = {};
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase();
-	const doc = lexers[uri];
-	if (!doc || token?.isCancellationRequested)
+	const lex = lexers[uri];
+	if (!lex || token?.isCancellationRequested)
 		return [];
-	if (token !== null && doc.symbolInformation)
-		return doc.symbolInformation;
+	if (token !== null && lex.symbolInformation)
+		return lex.symbolInformation;
 	const gvar: Record<string, Variable> = globalsymbolcache = { ...ahkvars };
-	let list = [uri, ...Object.keys(doc.relevance)], winapis: Record<string, AhkSymbol> = {};
+	let list = [uri, ...Object.keys(lex.relevance)], winapis: Record<string, AhkSymbol> = {};
 	list = list.map(u => lexers[u]?.d_uri).concat(list);
 	for (const uri of list) {
 		const lex = lexers[uri];
@@ -36,14 +36,14 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				t.def ??= false;
 		}
 	}
-	if (doc.symbolInformation)
-		return doc.symbolInformation;
+	if (lex.symbolInformation)
+		return lex.symbolInformation;
 	if (ahkuris.winapi && !list.includes(ahkuris.winapi))
 		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
 	const warnLocalSameAsGlobal = extsettings.Warn?.LocalSameAsGlobal;
 	const result: AhkSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class];
-	for (const [k, v] of Object.entries(doc.declaration)) {
+	for (const [k, v] of Object.entries(lex.declaration)) {
 		let t = gvar[k], islib = false;
 		if (t.kind === SymbolKind.Variable && !t.assigned)
 			if (winapis[k])
@@ -53,19 +53,22 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		if (t === v || v.kind !== SymbolKind.Variable)
 			result.push(v), converttype(v, v, islib || v === ahkvars[k]).definition = v;
 	}
-	flatTree(doc);
+	flatTree(lex);
 	if (extsettings.Warn?.VarUnset)
 		for (const [k, v] of unset_vars) {
 			if (k.assigned)
 				continue;
-			doc.diagnostics.push({ message: warn.varisunset(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+			const since = inactivevars[k.name.toUpperCase()];
+			let code, message = warn.varisunset(v.name);
+			if (since) message += `, ${diagnostic.requireversion(since)}`, code = 'built-in library';
+			lex.diagnostics.push({ code, message, range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 		}
-	if (doc.actived) {
-		checksamename(doc);
-		doc.sendDiagnostics(false, true);
+	if (lex.actived) {
+		checksamename(lex);
+		lex.sendDiagnostics(false, true);
 	}
-	uri = doc.document.uri;
-	return doc.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
+	uri = lex.document.uri;
+	return lex.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
 	function maybe_unset(k: Variable, v: Variable) {
 		if (!(k.assigned ||= v.assigned) && v.returns === undefined)
@@ -92,7 +95,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				else if (sym.kind === SymbolKind.Variable)
 					maybe_unset(sym, info);
 				else if (tk.callsite)
-					checkParams(doc, sym as FuncNode, tk.callsite);
+					checkParams(lex, sym as FuncNode, tk.callsite);
 			} else if (!filter_types.includes(kind))
 				result.push(info);
 		});
@@ -146,7 +149,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							if (!v.assigned && v.returns === undefined)
 								unset_vars.set(v, v);
 							else if (warnLocalSameAsGlobal && !v.decl && gvar[k])
-								doc.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
 						result.push(v);
 					}
@@ -155,7 +158,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							s !== v && (converttype(v, s, s === ahkvars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable));
 						else if (outer_is_global)
-							s = gvar[k] ??= (result.push(v), (v as Variable).is_global = true, doc.declaration[k] = v),
+							s = gvar[k] ??= (result.push(v), (v as Variable).is_global = true, lex.declaration[k] = v),
 								converttype(v, s, s === ahkvars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
 						else if (!v.def && (s = gvar[k]))
@@ -164,7 +167,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							converttype(inherit[k] = fn.local[k] = v, v).definition = v, result.push(v);
 							v.static === null && (v.static = true);
 							if (warnLocalSameAsGlobal && v.kind === SymbolKind.Variable && gvar[k])
-								doc.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
 					for (const [k, v] of Object.entries(fn.unresolved_vars ?? {}))
 						if ((s = inherit[k] ?? gvar[k] ?? winapis[k]))
@@ -264,15 +267,15 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			case SymbolKind.Function:
 				st = SemanticTokenTypes.function; break;
 		}
-		if ((tk = doc.tokens[offset = doc.document.offsetAt(it.selectionRange.start)]) && st !== undefined && !tk.ignore) {
+		if ((tk = lex.tokens[offset = lex.document.offsetAt(it.selectionRange.start)]) && st !== undefined && !tk.ignore) {
 			if ((stk = tk.semantic) === undefined) {
 				tk.semantic = stk = { type: st };
 				if (it.kind === SymbolKind.Variable && it.def && (kind === SymbolKind.Class || kind === SymbolKind.Function))
-					doc.addDiagnostic(make_same_name_error(it, { kind } as AhkSymbol), offset, it.name.length), delete it.def;
+					lex.addDiagnostic(make_same_name_error(it, { kind } as AhkSymbol), offset, it.name.length), delete it.def;
 				if (!tk.callsite && st === SemanticTokenTypes.function) {
-					const nk = doc.tokens[tk.next_token_offset];
+					const nk = lex.tokens[tk.next_token_offset];
 					if (nk && nk.topofline < 1 && !(nk.op_type! >= 0 || ':?.+-*/=%<>,)]}'.includes(nk.content.charAt(0)) || !nk.data && nk.content === '{'))
-						doc.addDiagnostic(diagnostic.funccallerr2(), tk.offset, tk.length, 2);
+						lex.addDiagnostic(diagnostic.funccallerr2(), tk.offset, tk.length, { severity: 2 });
 				}
 			} else if (kind !== undefined)
 				stk.type = st;
@@ -348,7 +351,7 @@ export function checkParams(lex: Lexer, node: FuncNode, info: CallSite) {
 					if (lk)
 						end = lk.offset + lk.length;
 					lex.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
-						Math.max(0, end - t.offset), 2);
+						Math.max(0, end - t.offset), { severity: 2 });
 				}
 			}
 		});
@@ -358,7 +361,7 @@ export function checkParams(lex: Lexer, node: FuncNode, info: CallSite) {
 		if (tk?.previous_token?.type === 'TK_EQUALS') {
 			const nt = lex.get_token(lex.document.offsetAt(info.range.end), true);
 			if (!nt || !is_line_continue(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
-				lex.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, 2);
+				lex.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, { severity: 2 });
 		}
 	}
 	function param_is_miss(params: Variable[], i: number) {
