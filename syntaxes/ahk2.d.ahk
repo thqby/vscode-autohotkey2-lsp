@@ -564,7 +564,7 @@ ClipWait([Timeout, WaitForAnyData]) => Integer
  * @param ComObject The target COM object; that is, a COM interface pointer.
  * The pointer value can be passed directly or encapsulated in an object with Ptr attribute, such as ComObj with VT_UNKNOWN variable type.
  */
-ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Float | Integer | String
+ComCall(Index, ComObject [, Type1, Arg1, *, *, ReturnType]) => Float | Integer | String
 
 /**
  * Retrieve running objects that have been registered using OLE (Object Connection and Embedding).
@@ -962,7 +962,7 @@ DirSelect(StartingFolder?: $DirPath, Options := 1, Prompt?) => String
 /**
  * Call functions in DLL files, such as standard Windows API functions.
  */
-DllCall(DllFile_Function: $DllFunc | $FilePath<'dll|ocx|cpl'> [, Type1, Arg1, *, Cdecl_ReturnType]) => Float | Integer | String
+DllCall(DllFile_Function: $DllFunc | $FilePath<'dll|ocx|cpl'> [, Type1, Arg1, *, *, Cdecl_ReturnType]) => Float | Integer | String
 
 /**
  * Download files from the Internet.
@@ -2086,7 +2086,7 @@ NumGet(Source [, Offset], Type) => Float | Integer
 /**
  * Store one or more numbers in binary format to the specified address + offset location.
  */
-NumPut(Type1, Number1, *, Target [, Offset]) => Integer
+NumPut(Type1, Number1, *, *, Target [, Offset]) => Integer
 
 /**
  * Increase the reference count of the object.

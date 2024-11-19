@@ -138,7 +138,7 @@ export interface ClassNode extends AhkSymbol {
 }
 
 export interface Variable extends AhkSymbol {
-	arr?: boolean
+	arr?: boolean | 2			// *, *,  ...
 	assigned?: boolean | 1		// 1, ??=
 	decl?: boolean
 	defaultVal?: string | false | null
@@ -1059,9 +1059,9 @@ export class Lexer {
 					}
 				}
 				function parse_params(endc = ')') {
-					const params: ParamList = [], offset = params.offset ??= [];
+					const params: ParamList = [], offset = params.offset ??= [], star_offset = [];
 					let vr: Variable, star: Variable | undefined, next_is_param: boolean | 1 = true;
-					let defVal = 0, full = '', star_offset = 0;
+					let defVal = 0, full = '';
 					loop: while ((lk = tokens[++j]) && lk.content !== endc) {
 						switch (lk.type) {
 							case 'TK_STRING':
@@ -1128,7 +1128,10 @@ export class Lexer {
 									vr = Variable.create('', SymbolKind.Variable, make_range(lk.offset, 0));
 									params.variadic = vr.arr = vr.assigned = vr.def = vr.is_param = true;
 									defVal && (vr.defaultVal = false), next_is_param = false;
-									star ??= (star_offset = full.length, vr), full += '*';
+									star_offset.push(full.length), full += '*';
+									if (star)
+										star.data = params.length % (star.arr = 2);
+									else star = vr;
 								} else if (lk.content === '[')
 									defVal++, lk.ignore = true, full += '[';
 								else if (defVal && lk.content === ']')
@@ -1142,7 +1145,7 @@ export class Lexer {
 								break;
 						}
 					}
-					params.full = full, star && (params.push(star), offset.push(star_offset));
+					params.full = full, star && (params.push(star), offset.push(...star_offset));
 					return params;
 				}
 				function create_fn(name: string, params: ParamList, range: Range, isstatic = false) {

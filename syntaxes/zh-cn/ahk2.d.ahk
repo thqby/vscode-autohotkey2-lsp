@@ -558,7 +558,7 @@ ClipWait([Timeout, WaitForAnyData]) => Integer
  * @param ComObject 目标 COM 对象; 也就是说, 一个 COM 接口指针.
  * 指针值可以直接传递, 也可以封装在带有 Ptr 属性的对象中, 如带有 VT_UNKNOWN 变量类型的 ComObj.
  */
-ComCall(Index, ComObject [, Type1, Arg1, *, ReturnType]) => Float | Integer | String
+ComCall(Index, ComObject [, Type1, Arg1, *, *, ReturnType]) => Float | Integer | String
 
 /**
  * 检索已使用 OLE(对象连接与嵌入) 注册的运行中的对象.
@@ -956,7 +956,7 @@ DirSelect(StartingFolder?: $DirPath, Options := 1, Prompt?) => String
 /**
  * 调用 DLL 文件中的函数, 例如标准的 Windows API 函数.
  */
-DllCall(DllFile_Function: $DllFunc | $FilePath<'dll|ocx|cpl'> [, Type1, Arg1, *, Cdecl_ReturnType]) => Float | Integer | String
+DllCall(DllFile_Function: $DllFunc | $FilePath<'dll|ocx|cpl'> [, Type1, Arg1, *, *, Cdecl_ReturnType]) => Float | Integer | String
 
 /**
  * 从互联网下载文件.
@@ -2080,7 +2080,7 @@ NumGet(Source [, Offset], Type) => Float | Integer
 /**
  * 将一个或多个数字以二进制格式存储到指定地址+偏移的位置.
  */
-NumPut(Type1, Number1, *, Target [, Offset]) => Integer
+NumPut(Type1, Number1, *, *, Target [, Offset]) => Integer
 
 /**
  * 增加对象的引用计数.

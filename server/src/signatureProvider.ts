@@ -167,14 +167,16 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			activeParameter = f.variadic && params[(pc = params.length) - 1].arr ? Math.min(pi, pc - 1) : pi;
 			name = params[activeParameter]?.name.toUpperCase() ?? (needthis && activeParameter === -1 ? 'this' : '\0');
 			param = fn.params.find(p => p.name.toUpperCase() === name) ?? fn.overload_params?.[name];
-			parameters = f.param_offsets.map((p, i) => ({ label: [p += q, p + (params![i].name.length || 1)] }));
+			parameters = f.param_offsets.map((p, i) => ({ label: [p += q, p + (params![i]?.name.length || 1)] }));
 			if (needthis > 0) {
 				parameters.unshift({ label: 'this' }), activeParameter++;
 				label = label.replace(/(?<=.)\(/, '(this' + (params.length ? ', ' : ''));
 			}
-			const detail = param && get_detail(param, lex);
-			if (detail)
-				parameters[activeParameter].documentation = detail;
+			if (param) {
+				if (param.arr === 2 && pi % 2 !== param.data)
+					activeParameter++;
+				parameters[activeParameter].documentation = get_detail(param, lex);
+			}
 			signinfo.signatures.push({ label, parameters, documentation, activeParameter });
 		}
 	}
