@@ -334,8 +334,9 @@ async function setInterpreter(path: string) {
 }
 
 async function updateStatusBar() {
-	if (!isInitialized) return;
-	connection.sendRequest('updateStatusBar', ahkpath_resolved ?
+	const cmd = 'updateStatusBar';
+	if (!isInitialized || !extsettings.commands?.includes(cmd)) return;
+	connection.sendRequest(cmd, ahkpath_resolved ?
 		[ahkpath_cur].concat(await getAHKversion([ahkpath_resolved])) : ['']);
 }
 
