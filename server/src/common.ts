@@ -568,10 +568,11 @@ export function resolvePath(path: string, resolveSymbolicLink = false): string {
 	if (process.env.BROWSER || !path)
 		return path;
 	const paths: string[] = [];
+	path = path.replace(/%(\w+)%/g, (s0, s1) => process.env[s1] ?? s0);
 	if (!path.includes(':'))
 		paths.push(resolve(path));
 	if (process.platform === 'win32' && !/[\\/]/.test(path))
-		paths.push(execSync(`where ${path}`, { encoding: 'utf-8' }).trim());
+		try { paths.push(execSync(`chcp 65001 > nul && where ${path}`, { encoding: 'utf-8' }).trim()); } catch { }
 	paths.push(path);
 	for (let path of paths) {
 		if (!path) continue;

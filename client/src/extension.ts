@@ -579,13 +579,14 @@ async function setInterpreter() {
 	let index = -1, { path: ahkpath, from } = getInterpreterPath();
 	const list: QuickPickItem[] = [], _ = (ahkpath = resolvePath(ahkpath_cur || ahkpath, undefined, false)).toLowerCase();
 	const pick = window.createQuickPick();
+	const root = 'C:\\Program Files\\AutoHotkey\\';
 	let it: QuickPickItem, active: QuickPickItem | undefined, sel: QuickPickItem = { label: '' };
 	list.push({ alwaysShow: true, label: localize('ahk2.enterahkpath') + '...', detail: localize('ahk2.enterorfind') });
 	it = { label: localize('ahk2.find'), detail: localize('ahk2.browse') };
 	if (ahkpath)
 		await addpath(resolve(ahkpath, '..'), _.includes('autohotkey') ? 20 : 5);
-	if (!_.includes('c:\\program files\\autohotkey\\'))
-		await addpath('C:\\Program Files\\AutoHotkey\\', 20);
+	if (!_.includes(root.toLowerCase()))
+		await addpath(root, 20);
 	index = list.map(it => it.detail?.toLowerCase()).indexOf((ahkpath_cur || ahkpath).toLowerCase());
 	if (index !== -1)
 		active = list[index];
@@ -629,7 +630,8 @@ async function setInterpreter() {
 		const paths: string[] = [];
 		try {
 			const dirs = [await opendir(dirpath)];
-			for (const dir of dirs)
+			for (const dir of dirs) {
+				dirpath = dir.path;
 				for await (const ent of dir) {
 					const path = resolve(dirpath, ent.name);
 					if (ent.isDirectory()) {
@@ -639,6 +641,7 @@ async function setInterpreter() {
 						(/(ahk|autohotkey)/i.test(path) || paths.length < max))
 						paths.push(path);
 				}
+			}
 		} catch { }
 		if (!paths.length) return;
 		(await getAHKversion(paths)).forEach((label, i) =>
@@ -709,12 +712,11 @@ function resolvePath(path: string, workspace?: string, resolveSymbolicLink = tru
 	if (!path)
 		return '';
 	const paths: string[] = [];
-	// If the path does not contain a colon, resolve it relative to the workspace
+	path = path.replace(/%(\w+)%/g, (s0, s1) => process.env[s1] ?? s0);
 	if (!path.includes(':'))
 		paths.push(resolve(workspace ?? '', path));
-	// If there are no slashes or backslashes in the path and the platform is Windows
 	if (!/[\\/]/.test(path) && isWindows)
-		paths.push(execSync(`where ${path}`, { encoding: 'utf-8' }).trim());
+		try { paths.push(execSync(`chcp 65001 > nul && where ${path}`, { encoding: 'utf-8' }).trim()); } catch { }
 	paths.push(path);
 	for (let path of paths) {
 		if (!path) continue;

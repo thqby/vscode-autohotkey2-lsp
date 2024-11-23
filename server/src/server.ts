@@ -422,7 +422,10 @@ function getRCDATA(name?: string) {
 }
 
 function getScriptVars(): Promise<Record<string, string> | undefined> {
-	const path = `\\\\.\\pipe\\ahk-script-${Buffer.from(Uint16Array.from([process.pid, Date.now()]).buffer).toString('hex')}`;
+	const path = `\\\\.\\pipe\\ahk-script-${Buffer.from(Uint16Array.from(
+		[process.pid, Date.now()]).buffer).toString('hex')}`;
+	let has_written = false, output: string | undefined;
+	const server = createServer().listen(path);
 	const script = `
 #NoTrayIcon
 s := ""
@@ -430,27 +433,27 @@ for _, k in ${JSON.stringify([...builtin_variable, ...builtin_variable_h])}
 	try if SubStr(k, 1, 2) = "a_" && !IsObject(v := %k%)
 		s .= SubStr(k, 3) "|" v "\`n"
 FileOpen(A_ScriptFullPath, "w", "utf-8").Write(s)`;
-	return new Promise(r => {
-		let has_written = false, output = '';
-		const server = createServer(socket => {
+	return new Promise<void>(r => {
+		server.on('connection', socket => {
 			const destroy = () => socket.destroy();
 			socket.on('error', destroy);
 			if (has_written) {
-				socket.setEncoding('utf8');
-				socket.on('data', data => output += data);
-				socket.on('end', destroy);
+				output = '';
+				socket.setEncoding('utf8')
+					.on('data', data => output! += data)
+					.on('end', () => (r(), destroy()));
 				return;
 			}
 			has_written = socket.write(script);
 			socket.destroySoon();
-		}).listen(path);
-		const r2 = (data = '') => {
-			r(data ? Object.fromEntries(data.split('\n').map(l => l.split('|'))) : undefined);
-			server.close();
-		};
+		});
 		const cp = spawn(`"${ahkpath_cur}" /CP65001 /ErrorStdOut ${path}`, [], { cwd: resolve(ahkpath_cur, '..'), shell: true });
-		cp.on('exit', code => r2(code === 0 ? output.trim() : ''));
-		cp.on('error', () => r2());
+		cp.on('exit', code => code !== 0 ? r() : output === undefined && setTimeout(r, 1000));
+		cp.on('error', r);
 		setTimeout(() => cp.kill(), 2000);
-	});
+	}).then(() => {
+		const data = output?.trim();
+		if (data)
+			return Object.fromEntries(data.split('\n').map(l => l.split('|')));
+	}).finally(() => server.close());
 }
