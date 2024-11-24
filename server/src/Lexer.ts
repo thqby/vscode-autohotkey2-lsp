@@ -28,6 +28,7 @@ import {
 
 export interface ParamInfo {
 	offset: number
+	end?: number
 	count: number
 	comma: number[]
 	miss: number[]
@@ -2397,11 +2398,11 @@ export class Lexer {
 							(pi.method = true, SemanticTokenTypes.method)
 					};
 				const tn: CallSite = DocumentSymbol.create(fc.content, undefined, type,
-					make_range(fc.offset, lk.offset + lk.length - fc.offset), make_range(fc.offset, fc.length));
+					make_range(fc.offset, (pi.end = lk.offset + lk.length) - fc.offset), make_range(fc.offset, fc.length));
 				tn.paraminfo = pi, tn.offset = fc.offset, fc.callsite = tn;
 				if (lk === fc) {
 					const lf = input.indexOf('\n', fc.offset);
-					tn.range.end = document.positionAt(lf < 0 ? input_length : lf);
+					tn.range.end = document.positionAt(pi.end = lf < 0 ? input_length : lf);
 				}
 				if (type === SymbolKind.Method)
 					maybeclassprop(fc, true);
@@ -3736,6 +3737,7 @@ export class Lexer {
 						if (lk.content === '*')
 							info.unknown = true, info.count--;
 					}
+					info.end = tk.offset;
 				}
 				ternaryMiss(ternarys);
 
@@ -7215,8 +7217,15 @@ export function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], 
 			// fall through
 			case SymbolKind.Function:
 			case SymbolKind.Method:
-				if (call && name === 'call')
-					break;
+				if (call && name === 'call') {
+					if (!(n as FuncNode).has_this_param || (that = undefined, !paraminfo))
+						break;
+					for (const that of decltype_expr(lex, lex.find_token(paraminfo.offset + 1),
+						paraminfo.comma[0] ?? paraminfo.end, _this))
+						for (const t of decltype_returns(n, lexers[n.uri!] ?? lex, that as ClassNode))
+							tps.add(t);
+					continue;
+				}
 			// fall through
 			default:
 				if (!(n = get_class_member(lex, cls, name, call)!))
