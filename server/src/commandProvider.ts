@@ -204,11 +204,11 @@ export function exportSymbols(uri: string) {
 
 async function diagnoseAll() {
 	const { uri } = await getEditorLocation();
-	const doc = lexers[uri.toLowerCase()];
-	if (!doc) return;
+	const lex = lexers[uri.toLowerCase()];
+	if (!lex) return;
 	update_include_cache();
-	for (let u in doc.relevance)
-		(u = lexers[u]?.document.uri) && semanticTokensOnFull({ textDocument: { uri: u } });
+	for (let uri in lex.relevance)
+		(uri = lexers[uri]?.document.uri) && semanticTokensOnFull({ textDocument: { uri } });
 	semanticTokensOnFull({ textDocument: { uri } });
 }
 
@@ -216,10 +216,11 @@ async function setScriptDir() {
 	const { uri } = await getEditorLocation();
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex) return;
-	if (lex.scriptdir !== lex.scriptpath)
-		lex.initLibDirs(lex.scriptpath), lex.need_scriptdir && lex.parseScript();
+	if (lex.scriptdir !== lex.scriptpath && (lex.initLibDirs(lex.scriptpath), lex.need_scriptdir) || lex.last_diags)
+		lex.parseScript();
 	parse_include(lex, lex.scriptpath);
-	traverse_include(lex);
+	for (let uri in traverse_include(lex))
+		(uri = lexers[uri]?.document.uri) && semanticTokensOnFull({ textDocument: { uri } });
 	lex.sendDiagnostics(false, true);
 }
 

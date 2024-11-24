@@ -6669,8 +6669,8 @@ export function parse_include(lex: Lexer, dir: string, _set = new Set()) {
 			if (!existsSync(path) || !(t = openFile(restorePath(path))))
 				continue;
 			(lexers[uri] = lex = new Lexer(t, dir)).parseScript();
-		} else if (lex.scriptdir.toLowerCase() !== l)
-			lex.initLibDirs(dir), lex.need_scriptdir && lex.parseScript();
+		} else if (lex.scriptdir.toLowerCase() !== l && (lex.initLibDirs(dir), lex.need_scriptdir) || lex.last_diags)
+			lex.parseScript();
 		_set.has(lex) || parse_include(lex, dir, _set);
 	}
 }
