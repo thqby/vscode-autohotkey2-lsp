@@ -56,11 +56,12 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	flatTree(lex);
 	if (extsettings.Warn?.VarUnset)
 		for (const [k, v] of unset_vars) {
-			if (k.assigned)
+			if (k.assigned || k.has_warned)
 				continue;
-			const since = inactivevars[k.name.toUpperCase()];
-			let code, message = warn.varisunset(v.name);
-			if (since) message += `, ${diagnostic.requireversion(since)}`, code = 'built-in library';
+			k.has_warned = true;
+			let code, since, message = warn.varisunset(v.name);
+			if (!k.decl && (since = inactivevars[k.name.toUpperCase()]))
+				message += `, ${diagnostic.requireversion(since)}`, code = 'built-in library';
 			lex.diagnostics.push({ code, message, range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 		}
 	if (lex.actived) {
@@ -152,6 +153,13 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
 						result.push(v);
+					}
+					if (fn.static === null) {
+						const vars = { ...fn.global, ...fn.local };
+						for (const [k, v] of Object.entries(fn.declaration ??= {}))
+							if (!vars[k])
+								converttype(inherit[k] = v, v).definition = v;
+						break;
 					}
 					for (const [k, v] of Object.entries(fn.declaration ??= {}))
 						if ((s = inherit[k]))
