@@ -365,6 +365,7 @@ export class Lexer {
 	public d_uri = '';
 	public declaration: Record<string, AhkSymbol> = {};
 	public diagnostics: Diagnostic[] = [];
+	public diag_timer?: unknown;
 	public last_diags = 0;
 	public dlldir = new Map<number, string>();
 	public dllpaths: string[] = [];
@@ -6535,15 +6536,19 @@ export class Lexer {
 	public clearDiagnostics() {
 		if (!this.last_diags)
 			return;
-		this.include = {}, this.last_diags = 0;
+		this.include = {}, this.diagnostics = [], this.last_diags = 0;
 		connection?.sendDiagnostics({ uri: this.document.uri, diagnostics: [] });
 	}
 
 	public sendDiagnostics(update = false, all = false) {
 		const last_diags = this.last_diags;
 		if (last_diags !== this.diagnostics.length || update && last_diags) {
-			connection?.sendDiagnostics({ uri: this.document.uri, diagnostics: this.diagnostics });
 			this.last_diags = this.diagnostics.length;
+			if (connection) {
+				if (!(process.env.BROWSER ? clearTimeout(this.diag_timer as number) : (this.diag_timer as NodeJS.Timeout)?.refresh()))
+					this.diag_timer = setTimeout(() => connection!.sendDiagnostics(
+						{ uri: this.document.uri, diagnostics: this.diagnostics }), 500);
+			}
 		}
 		if (!all) return;
 		for (const u in this.relevance)
@@ -6580,6 +6585,7 @@ export class Lexer {
 		this.actived = false;
 		if (!force && this.keepAlive())
 			return;
+		delete this.diag_timer;
 		this.clearDiagnostics();
 		if (force || !this.workspaceFolder) {
 			delete lexers[this.uri];
