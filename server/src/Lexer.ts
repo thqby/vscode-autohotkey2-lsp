@@ -6618,6 +6618,7 @@ export class Lexer {
 		this.actived = false;
 		if (!force && this.keepAlive())
 			return;
+		const relevance = other ? this.relevance : undefined;
 		delete this.diag_timer;
 		this.clearDiagnostics();
 		if (force || !this.workspaceFolder) {
@@ -6628,7 +6629,7 @@ export class Lexer {
 		if (!other)
 			return;
 		let o = true;
-		for (const u in this.relevance)
+		for (const u in relevance)
 			o = false, lexers[u]?.close(false, false);
 		if (o) {
 			if (!lexers[this.uri])

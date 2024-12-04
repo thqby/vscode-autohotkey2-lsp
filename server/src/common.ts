@@ -2,10 +2,10 @@ import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, Sym
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
-import { readFileSync, realpathSync, existsSync, lstatSync, readlinkSync } from 'fs';
+import { readFileSync, realpathSync, existsSync, lstatSync, readlinkSync, opendirSync } from 'fs';
 import { opendir, readFile } from 'fs/promises';
 import { execSync } from 'child_process';
-import { resolve } from 'path';
+import { resolve, sep } from 'path';
 import { AhkSymbol, ActionType, FormatOptions, Lexer, check_formatopts, update_comment_tags } from './Lexer';
 import { diagnostic, setting } from './localize';
 import { jsDocTagNames } from './constants';
@@ -180,11 +180,35 @@ export function openAndParse(path: string, showError = true, cache = true) {
 export function restorePath(path: string): string {
 	if (process.env.BROWSER)
 		return path;
+	let path2;
 	try {
-		return realpath(path);
-	} catch {
-		return path;
-	}
+		path2 = realpath(path);
+	} catch { return path; }
+	const s1 = path.toUpperCase(), s2 = path2.toUpperCase();
+	if (s1 === s2)
+		return path2;
+	const [p2, a2, a1] = [path2, s2, s1].map(s => s.split(/[/\\]/));
+	const l = a1.length;
+	let i = 1;
+	path2 = a1[0];
+	if (a1[0] === a2[0])
+		for (; i < l && a1[i] === a2[i]; path2 += `${sep}${p2[i++]}`);
+	let dir, ent;
+	try {
+		for (; i < l; i++) {
+			dir = opendirSync(path2);
+			while ((ent = dir.readSync())) {
+				if (ent.name.toUpperCase() === a1[i]) {
+					path2 += `${sep}${ent.name}`;
+					break;
+				}
+			}
+			dir.close(), dir = undefined;
+			if (!ent) break;
+		}
+		return path2;
+	} catch { dir?.close(); }
+	return path2 + path.substring(path2.length);
 }
 
 export function getlocalefilepath(filepath: string): string | undefined {
