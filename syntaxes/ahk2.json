@@ -73,6 +73,11 @@
 			"prefix": "#MaxThreadsPerHotkey"
 		},
 		{
+			"body": "#Module ${0:Name}",
+			"description": "Starts a new module.",
+			"prefix": "#Module"
+		},
+		{
 			"body": "#NoTrayIcon",
 			"description": "Disables the showing of a tray icon."
 		},
@@ -285,6 +290,12 @@
 			"description": "Specifies one or more statements to execute if the associated statement's body did not execute.\nThe condition for an Else statement executing depends on the associated statement:\n- If expression: The expression evaluated to false.\n- For, Loop (any kind), While: The loop had zero iterations.\n- Loop Read: As above, but the presence of Else also prevents an error from being thrown if the file or path is not found. Therefore, Else executes if the file is empty or does not exist.\n- Try...Catch: No exception was thrown within the Try block."
 		},
 		{
+			"body": "export ${1:default} $2",
+			"description": "Allows other modules to import a function, class or variable defined by the current module.",
+			"prefix": "export",
+			"syntax": "export [default] Definition\nexport Variables"
+		},
+		{
 			"body": "finally",
 			"description": "Code block to run after a try/catch has completed."
 		},
@@ -308,6 +319,12 @@
 			"body": "if ",
 			"description": "Specify one or more statements to be executed when the expression evaluates to true.",
 			"syntax": "if Expression"
+		},
+		{
+			"body": "import ${0:*} from ${1:ModuleName}",
+			"description": "Imports a module, or imports names from a module.",
+			"prefix": "import",
+			"syntax": "import ModuleName [as ModuleAlias]\nimport { ExportName [as Alias], ... } from ModuleName\nimport * from ModuleName"
 		},
 		{
 			"body": "loop files ${0:FilePattern [, Mode]}",

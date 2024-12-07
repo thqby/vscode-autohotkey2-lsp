@@ -3832,7 +3832,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	/**
 	 * 闪烁窗口及其任务栏按钮.
 	 */
-	Flash(false) => void
+	Flash(Blink := true) => void
 
 	/**
 	 * 检索窗口工作区的位置和大小.

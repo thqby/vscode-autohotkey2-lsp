@@ -34,8 +34,11 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			break;
 	}
 	const res = get_callinfo(lex, position, pi);
-	if (!res || res.index < 0)
+	if (!res || res.index < 0) {
+		if (res === null)
+			cache.loc = '';
 		return;
+	}
 	const { name, pos, index, kind } = res;
 	const loc = `${lex.uri}?${name},${pos.line},${pos.character}`;
 	if (loc === cache.loc) {
@@ -105,9 +108,9 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 						n = get_class_constructor(n as ClassNode);
 					else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
 						n = get_class_member(lex, cls.prototype!, '__new', true) ?? n;
-					else if (n.kind === SymbolKind.Property || (n as FuncNode).alias) {
+					else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
 						let tps: AhkSymbol[] | Set<AhkSymbol> = decltype_returns(n, lexers[n.uri!] ?? lex, cls);
-						if (n.kind === SymbolKind.Property && (n as FuncNode).alias)
+						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
 							tps = decltype_invoke(lex, tps, 'call', true);
 						return tps.forEach(it => add(it, 'call', -1));
 					} else if (fn && prop === 'bind') {

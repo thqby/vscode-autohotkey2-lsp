@@ -627,6 +627,9 @@
 				"scopes": {
 					"operator": [
 						"keyword.operator.wordlike.ahk2"
+					],
+					"text": [
+						"keyword.name.ahk2"
 					]
 				}
 			}

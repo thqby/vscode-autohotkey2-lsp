@@ -70,6 +70,7 @@ const STAGE: Record<string, number | string> = { ALPHA: 3, BETA: 2, RC: 1, 3: 'a
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
 export const alpha_3 = version_encode('2.1-alpha.3');
+export const alpha_11 = alpha_3 + 8;
 export const extsettings: AHKLSSettings = {
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,

@@ -1869,7 +1869,7 @@
     "pre_definition": {
       "patterns": [
         {
-          "begin": "^[ \t]*((#)(?i:dllload|hotstring|include(again)?|mapcasesense|requires|errorstdout|definedefault(array|map|object)value|windowclass(gui|main)|singleinstance|targetcontrolerror|targetwindowerror))\\b",
+          "begin": "^[ \t]*((#)(?i:dllload|hotstring|include(again)?|mapcasesense|module|requires|errorstdout|definedefault(array|map|object)value|windowclass(gui|main)|singleinstance|targetcontrolerror|targetwindowerror))\\b",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
@@ -1963,7 +1963,7 @@
     "reserved": {
       "patterns": [
         {
-          "match": "(?<!\\.)((?i:break|continue|goto))[ \t]+([^ \t;][^ \t]*)",
+          "match": "(?<![.%])((?i:break|continue|goto))[ \t]+([^ \t;][^ \t]*)",
           "captures": {
             "1": {
               "name": "keyword.control.ahk2"
@@ -1974,7 +1974,7 @@
           }
         },
         {
-          "match": "(?<!\\.)((?i:catch))([ \t]+\\(?[ \t]*([\\w.]+([ \t]*,[ \t]*[\\w.]+)*)?([ \t]+((?i:as))[ \t]+(\\w+))?)?[ \t]*\\)?",
+          "match": "(?<![.%])((?i:catch))([ \t]+\\(?[ \t]*([\\w.]+([ \t]*,[ \t]*[\\w.]+)*)?([ \t]+((?i:as))[ \t]+(\\w+))?)?[ \t]*\\)?",
           "captures": {
             "1": {
               "name": "keyword.control.ahk2"
@@ -2007,20 +2007,16 @@
           }
         },
         {
-          "match": "(?<!\\.)\\b(?i:break|continue|until|else|for|goto|if|throw|try|finally|return|while)\\b(?![ \t]*:)",
+          "match": "(?<![.%])\\b(?i:break|continue|until|else|for|goto|if|throw|try|finally|return|while)\\b(?!%)",
           "name": "keyword.control.ahk2"
         },
         {
-          "match": "(?<!\\.)\\b(?i:loop)([ \t]+(?i:files|parse|read|reg))?\\b",
+          "match": "(?<![.%])\\b(?i:loop)([ \t]+(?i:files|parse|read|reg))?\\b(?!%)",
           "name": "keyword.control.ahk2"
         },
         {
-          "match": "(?<!\\.)\\b(?i:global|local|static)\\b",
+          "match": "(?<![.%])\\b(?i:global|local|static)\\b(?!%)",
           "name": "storage.modifier.ahk2"
-        },
-        {
-          "match": "(?<!\\.)\\b(?i:isset)\\b",
-          "name": "keyword.operator.wordlike.ahk2"
         },
         {
           "match": "(?<=^[ \t]*)(?i:macro)(?=[ \t]+\\w+\\()",
@@ -2325,7 +2321,7 @@
           "name": "variable.language.thishotkey.ahk2"
         },
         {
-          "match": "\\b(?i:A_AhkPath|A_AhkVersion|A_AllowMainWindow|A_AppData|A_AppDataCommon|A_Args|A_Clipboard|A_ComputerName|A_ComSpec|A_ControlDelay|A_CoordModeCaret|A_CoordModeMenu|A_CoordModeMouse|A_CoordModePixel|A_CoordModeToolTip|A_Cursor|A_DD|A_DDD|A_DDDD|A_DefaultMouseSpeed|A_Desktop|A_DesktopCommon|A_DetectHiddenText|A_DetectHiddenWindows|A_EndChar|A_EventInfo|A_FileEncoding|A_HotkeyInterval|A_HotkeyModifierTimeout|A_Hour|A_IconFile|A_IconHidden|A_IconNumber|A_IconTip|A_Index|A_InitialWorkingDir|A_Is64bitOS|A_IsAdmin|A_IsCompiled|A_IsCritical|A_IsPaused|A_IsSuspended|A_KeyDelay|A_KeyDelayPlay|A_KeyDuration|A_KeyDurationPlay|A_Language|A_LastError|A_LineFile|A_LineNumber|A_ListLines|A_LoopField|A_LoopFileAttrib|A_LoopFileDir|A_LoopFileExt|A_LoopFileFullPath|A_LoopFileName|A_LoopFilePath|A_LoopFileShortName|A_LoopFileShortPath|A_LoopFileSize|A_LoopFileSizeKB|A_LoopFileSizeMB|A_LoopFileTimeAccessed|A_LoopFileTimeCreated|A_LoopFileTimeModified|A_LoopReadLine|A_LoopRegKey|A_LoopRegName|A_LoopRegTimeModified|A_LoopRegType|A_MaxHotkeysPerInterval|A_MDay|A_MenuMaskKey|A_Min|A_MM|A_MMM|A_MMMM|A_Mon|A_MouseDelay|A_MouseDelayPlay|A_MSec|A_MyDocuments|A_Now|A_NowUTC|A_OSVersion|A_PriorHotkey|A_PriorKey|A_ProgramFiles|A_Programs|A_ProgramsCommon|A_PtrSize|A_RegView|A_ScreenDPI|A_ScreenHeight|A_ScreenWidth|A_ScriptDir|A_ScriptFullPath|A_ScriptHwnd|A_ScriptName|A_Sec|A_SendLevel|A_SendMode|A_Space|A_StartMenu|A_StartMenuCommon|A_Startup|A_StartupCommon|A_StoreCapsLockMode|A_Tab|A_Temp|A_ThisFunc|A_ThisHotkey|A_TickCount|A_TimeIdle|A_TimeIdleKeyboard|A_TimeIdleMouse|A_TimeIdlePhysical|A_TimeSincePriorHotkey|A_TimeSinceThisHotkey|A_TitleMatchMode|A_TitleMatchModeSpeed|A_TrayMenu|A_UserName|A_WDay|A_WinDelay|A_WinDir|A_WorkingDir|A_YDay|A_Year|A_YWeek|A_YYYY)\\b",
+          "match": "\\b(?i:A_AhkPath|A_AhkVersion|A_AllowMainWindow|A_AppData|A_AppDataCommon|A_Args|A_Clipboard|A_ComSpec|A_ComputerName|A_ControlDelay|A_CoordModeCaret|A_CoordModeMenu|A_CoordModeMouse|A_CoordModePixel|A_CoordModeToolTip|A_Cursor|A_DD|A_DDD|A_DDDD|A_DefaultMouseSpeed|A_Desktop|A_DesktopCommon|A_DetectHiddenText|A_DetectHiddenWindows|A_EndChar|A_EventInfo|A_FileEncoding|A_HotkeyModifierTimeout|A_HotkeyInterval|A_HotIf|A_Hour|A_IconFile|A_IconHidden|A_IconNumber|A_IconTip|A_Index|A_InitialWorkingDir|A_Is64bitOS|A_IsAdmin|A_IsCompiled|A_IsCritical|A_IsPaused|A_IsSuspended|A_KeybdHookInstalled|A_KeyDelay|A_KeyDelayPlay|A_KeyDuration|A_KeyDurationPlay|A_Language|A_LastError|A_LineFile|A_LineNumber|A_ListLines|A_LoopField|A_LoopFileAttrib|A_LoopFileDir|A_LoopFileExt|A_LoopFileFullPath|A_LoopFileName|A_LoopFilePath|A_LoopFileShortName|A_LoopFileShortPath|A_LoopFileSize|A_LoopFileSizeKB|A_LoopFileSizeMB|A_LoopFileTimeAccessed|A_LoopFileTimeCreated|A_LoopFileTimeModified|A_LoopReadLine|A_LoopRegKey|A_LoopRegName|A_LoopRegTimeModified|A_LoopRegType|A_MaxHotkeysPerInterval|A_MDay|A_MenuMaskKey|A_MM|A_MMM|A_MMMM|A_MSec|A_Min|A_Mon|A_MouseDelay|A_MouseDelayPlay|A_MouseHookInstalled|A_MyDocuments|A_Now|A_NowUTC|A_OSVersion|A_PriorHotkey|A_PriorKey|A_ProgramFiles|A_Programs|A_ProgramsCommon|A_PtrSize|A_RegView|A_ScreenDPI|A_ScreenHeight|A_ScreenWidth|A_ScriptDir|A_ScriptFullPath|A_ScriptHwnd|A_ScriptName|A_Sec|A_SendLevel|A_SendMode|A_Space|A_StartMenu|A_StartMenuCommon|A_Startup|A_StartupCommon|A_StoreCapsLockMode|A_Tab|A_Temp|A_ThisFunc|A_ThisHotkey|A_TickCount|A_TimeIdle|A_TimeIdleKeyboard|A_TimeIdleMouse|A_TimeIdlePhysical|A_TimeSincePriorHotkey|A_TimeSinceThisHotkey|A_TitleMatchMode|A_TitleMatchModeSpeed|A_TrayMenu|A_UserName|A_WDay|A_WinDelay|A_WinDir|A_WorkingDir|A_YDay|A_YWeek|A_YYYY|A_Year)\\b",
           "name": "variable.language.ahk2"
         },
         {

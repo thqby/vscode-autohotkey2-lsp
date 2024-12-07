@@ -78,9 +78,10 @@ export const diagnostic = {
 }
 
 export const warn = {
-	varisunset: localize('warn.varisunset', 'Variable \'{0}\' appears to never be assigned a value'),
-	localsameasglobal: localize('warn.localsameasglobal', 'This local variable \'{0}\' has the same name as a global variable'),
 	callwithoutparentheses: localize('warn.callwithoutparentheses', 'This function or method call has no parentheses'),
+	localsameasglobal: localize('warn.localsameasglobal', 'This local variable \'{0}\' has the same name as a global variable'),
+	notimplemented: localize('warn.notimplemented', 'This feature has not been implemented'),
+	varisunset: localize('warn.varisunset', 'Variable \'{0}\' appears to never be assigned a value'),
 }
 
 export const setting = {

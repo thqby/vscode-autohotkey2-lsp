@@ -21,6 +21,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		return [];
 	if (token !== null && lex.symbolInformation)
 		return lex.symbolInformation;
+	const { document, tokens } = lex;
 	const gvar: Record<string, Variable> = globalsymbolcache = { ...ahkvars };
 	let list = [uri, ...Object.keys(lex.relevance)], winapis: Record<string, AhkSymbol> = {};
 	list = list.map(u => lexers[u]?.d_uri).concat(list);
@@ -50,7 +51,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				t = gvar[k] = winapis[k], islib = true;
 			else if (v.returns === undefined)
 				unset_vars.set(t, v);
-		if (t === v || v.kind !== SymbolKind.Variable)
+		if (t === v || v.kind !== SymbolKind.Variable && (gvar[k] = v))
 			result.push(v), converttype(v, v, islib || v === ahkvars[k]).definition = v;
 	}
 	flatTree(lex);
@@ -260,37 +261,51 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		}
 	}
 	function converttype(it: AhkSymbol, source: Variable, islib = false): Token {
-		let tk: Token, stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined, offset: number;
+		let stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined;
 		const kind = source.kind;
 		switch (kind) {
 			case SymbolKind.Variable:
 				if (source.is_param) {
 					if (!it.selectionRange.end.character)
 						return {} as Token;
-					st = SemanticTokenTypes.parameter; break;
-				}
-				st = SemanticTokenTypes.variable; break;
+					st = SemanticTokenTypes.parameter;
+				} else if (!islib)
+					st = SemanticTokenTypes.variable;
+				break;
 			case SymbolKind.Class:
 				st = SemanticTokenTypes.class; break;
 			case SymbolKind.Function:
 				st = SemanticTokenTypes.function; break;
+			case SymbolKind.Module:
+				st = SemanticTokenTypes.module; break;
 		}
-		if ((tk = lex.tokens[offset = lex.document.offsetAt(it.selectionRange.start)]) && st !== undefined && !tk.ignore) {
-			if ((stk = tk.semantic) === undefined) {
+		const tk = tokens[document.offsetAt(it.selectionRange.start)];
+		if (!tk) return {} as Token;
+		if (st === undefined)
+			delete tk.semantic;
+		else if (!tk.ignore) {
+			if (!(stk = tk.semantic)) {
 				tk.semantic = stk = { type: st };
 				if (it.kind === SymbolKind.Variable && it.def && (kind === SymbolKind.Class || kind === SymbolKind.Function))
-					lex.addDiagnostic(make_same_name_error(it, { kind } as AhkSymbol), offset, it.name.length), delete it.def;
+					lex.diagnostics.push({
+						message: make_same_name_error(it, { kind } as AhkSymbol),
+						range: it.selectionRange
+					}), delete it.def;
 				if (!tk.callsite && st === SemanticTokenTypes.function) {
 					const nk = lex.tokens[tk.next_token_offset];
 					if (nk && nk.topofline < 1 && !(nk.op_type! >= 0 || ':?.+-*/=%<>,)]}'.includes(nk.content.charAt(0)) || !nk.data && nk.content === '{'))
-						lex.addDiagnostic(diagnostic.funccallerr2(), tk.offset, tk.length, { severity: 2 });
+						lex.diagnostics.push({
+							message: diagnostic.funccallerr2(),
+							range: it.selectionRange, severity: 2
+						});
 				}
 			} else if (kind !== undefined)
 				stk.type = st;
-			if (st < 3)
-				stk.modifier = (stk.modifier ?? 0) | (SemanticTokenModifiers.readonly) | (islib ? SemanticTokenModifiers.defaultLibrary : 0);
+			if (st < 4)
+				stk.modifier = (stk.modifier ?? 0) | (SemanticTokenModifiers.readonly) |
+					(islib ? SemanticTokenModifiers.defaultLibrary : 0);
 		}
-		return tk ?? {};
+		return tk;
 	}
 }
 
@@ -348,8 +363,7 @@ export function checkParams(lex: Lexer, node: FuncNode, info: CallSite) {
 				else o = paraminfo.comma[index - 1] + 1;
 				if ((t = lex.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && lex.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
 					let end = 0;
-					const ts = decltype_expr(lex, t, paraminfo.comma[index] ??
-						(end = lex.document.offsetAt(info.range.end) - (lex.tokens[info.offset! + info.name.length] ? 1 : 0)));
+					const ts = decltype_expr(lex, t, paraminfo.comma[index] ?? (end = paraminfo.end!));
 					if (ts.some(it => it === VARREF || it === ANY || it.data === VARREF))
 						return;
 					if (ahk_version >= alpha_3 + 7 && ts.some(it =>

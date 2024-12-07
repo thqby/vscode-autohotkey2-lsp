@@ -21,7 +21,7 @@ import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
-	a_vars, ahk_version, ahkuris, ahkvars, alpha_3, connection, extsettings,
+	a_vars, ahk_version, ahkuris, ahkvars, alpha_11, alpha_3, connection, extsettings,
 	hoverCache, inactivevars, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, version_match, workspaceFolders
 } from './common';
@@ -48,6 +48,8 @@ export interface AhkDoc {
 	children: AhkSymbol[]
 }
 
+enum BlockType { Script, Func, Class, Method, Mask = Method, Body, Pair = 8 }
+
 export enum FuncScope { DEFAULT, STATIC, GLOBAL }
 
 export enum SemanticTokenTypes {
@@ -60,8 +62,15 @@ export enum SemanticTokenTypes {
 	keyword,
 	string,
 	number,
-	operator
+	operator,
 }
+const SE_CLASS = { type: SemanticTokenTypes.class };
+const SE_KEYWORD = { type: SemanticTokenTypes.keyword };
+const SE_NUMBER = { type: SemanticTokenTypes.number };
+const SE_OPERATOR = { type: SemanticTokenTypes.operator };
+const SE_PARAM = { type: SemanticTokenTypes.parameter };
+const SE_PROPERTY = { type: SemanticTokenTypes.property };
+const SE_STRING = { type: SemanticTokenTypes.string };
 
 export enum SemanticTokenModifiers {
 	static = 1,		// true
@@ -77,12 +86,16 @@ export enum DiagnosticCode {
 	func_expr = 'function definition expressions',
 	include = 'include',
 	maybe_assign = 'maybe-assign',
+	module = 'module',
 	opt_chain = 'optional chaining',
 	typed_prop = 'typed properties',
 	v_ref = 'virtual references',
 }
 
 export interface AhkSymbol extends DocumentSymbol {
+	alias?: string
+	alias_range?: Range
+	module?: string
 	cached_types?: Array<string | AhkSymbol>
 	children?: AhkSymbol[]
 	data?: unknown
@@ -101,7 +114,6 @@ export interface AhkSymbol extends DocumentSymbol {
 }
 
 export interface FuncNode extends AhkSymbol {
-	alias?: boolean
 	assume: FuncScope
 	closure?: boolean
 	params: Variable[]
@@ -109,6 +121,7 @@ export interface FuncNode extends AhkSymbol {
 	param_def_len: number
 	global: Record<string, Variable>
 	local: Record<string, Variable>
+	eval?: boolean
 	full: string
 	hasref: boolean
 	variadic: boolean
@@ -294,13 +307,17 @@ String.prototype.trimEnd = function () {
 
 const colorregexp = new RegExp(/['" \t](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const colortable = JSON.parse('{ "black": "000000", "silver": "c0c0c0", "gray": "808080", "white": "ffffff", "maroon": "800000", "red": "ff0000", "purple": "800080", "fuchsia": "ff00ff", "green": "008000", "lime": "00ff00", "olive": "808000", "yellow": "ffff00", "navy": "000080", "blue": "0000ff", "teal": "008080", "aqua": "00ffff" }');
-const whitespace = " \t\r\n", punct = '+ - * / % & ++ -- ** // = += -= *= /= //= .= == := != !== ~= > < >= <= >>> >> << >>>= >>= <<= && &= | || ! ~ , ?? ??= : ? ^ ^= |= =>'.split(' ');
-const line_starters = 'try,throw,return,global,local,static,if,switch,case,for,while,loop,continue,break,goto'.split(',');
-const reserved_words = line_starters.concat(['class', 'in', 'is', 'isset', 'contains', 'else', 'until', 'catch', 'finally', 'and', 'or', 'not', 'as', 'super']);
+const whitespace = " \t\r\n", punct = '% : + ++ - -- * ** / // & && | || ^ < << <= = == => > >> >>> >= ? ?? ! != !== ~ ~= := += -= *= /= //= &= |= ^= ??= <<= >>= >>>='.split(' ');
+const line_starters = 'break case continue for global goto if local loop return static switch throw try while'.split(' ');
+const reserved_words = line_starters.concat('as catch else false finally isset super true until and contains in is not or'.split(' '));
 const MODE = { BlockStatement: 'BlockStatement', Statement: 'Statement', ObjectLiteral: 'ObjectLiteral', ArrayLiteral: 'ArrayLiteral', Conditional: 'Conditional', Expression: 'Expression' };
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[012])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|help|sleep|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
 const EMPTY_TOKEN: Token = { type: '', content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 export const ASSIGN_TYPE = [':=', '??='];
+const ASSIGN_INDEX = punct.indexOf(':=');
+const OP_INDEX = reserved_words.indexOf('and');
+const PROP_NEXT_TOKEN = ['[', '{', '=>'];
+const RESERVED_OP = 'isset throw super false true'.split(' ');
 const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 };
 const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 const META_FUNCNAME = ['__NEW', '__INIT', '__ITEM', '__ENUM', '__GET', '__CALL', '__SET', '__DELETE'];
@@ -424,6 +441,7 @@ export class Lexer {
 			in_expression: boolean,
 			in_fat_arrow?: boolean,
 			indentation_level: number,
+			indent_after?: boolean,
 			last_text: string,
 			last_word: string,
 			loop_block: number,
@@ -484,13 +502,13 @@ export class Lexer {
 		}
 
 		this.find_token = function (offset: number, ignore = false): Token {
-			let i = offset, c = input.charAt(offset), tk: Token | undefined;
+			let i = offset, c = input[offset], tk: Token | undefined;
 			const tks = _this.tokens;
 			const eof = { ...(tks[-1] ?? EMPTY_TOKEN), type: '' };
 			if (!c)
 				return eof;
 			if (whitespace.includes(c)) {
-				while (whitespace.includes((c = input.charAt(++i)) || '\0'))
+				while (whitespace.includes(c = input[++i]))
 					continue;
 				if ((tk = tks[i]))
 					return tk;
@@ -507,7 +525,7 @@ export class Lexer {
 						if (isIdentifierChar(c.charCodeAt(0)))
 							break;
 				}
-				if (!(tk = tks[++i] ?? tks[i - 1]) && input.charAt(i) === '.') {
+				if (!(tk = tks[++i] ?? tks[i - 1]) && input[i] === '.') {
 					while (isIdentifierChar(input.charCodeAt(--i)))
 						continue;
 					tk = tks[i + 1];
@@ -584,7 +602,7 @@ export class Lexer {
 						if (pt?.type) {
 							while ((ck = _this.find_token(pt.skip_pos ?? pt.offset + pt.length)).offset < end_pos)
 								pt = ck;
-							for (end = pt.offset + pt.length; ' \t'.includes(input.charAt(end) || '\0'); end++);
+							for (end = pt.offset + pt.length; ' \t'.includes(input[end]); end++);
 							if (!whitespace.includes(input.charAt(end)))
 								end = pt.offset + pt.length;
 							while (just_added_newline())
@@ -715,7 +733,12 @@ export class Lexer {
 				while (i < l) {
 					switch ((tk = tokens[i]).type) {
 						case 'TK_WORD':
-							if (!tk.topofline && !isstatic) {
+							if (tk.topofline > 0) {
+								if (i < l - 4 && tk.content === 'class') {
+									tk.type = 'TK_RESERVED';
+									break;
+								}
+							} else if (!isstatic) {
 								i++;
 								break;
 							}
@@ -772,6 +795,7 @@ export class Lexer {
 										tt.parent = tn, (tn as Property).get = tt, readonly = true, tt.has_this_param = true;
 										parse_types(tt), tn.type_annotations = tt.type_annotations, tn.range.end = tt.range.end;
 									} else {
+										delete fn.has_this_param;
 										if (lk.content === '?')
 											lk.ignore = true, lk = tokens[++j], tn.defaultVal = null;
 										if (lk?.content === ':')
@@ -812,11 +836,6 @@ export class Lexer {
 								} else if (!blocks && (['=>', ':', ','].includes(lk.content) || lk.topofline)) {
 									const tn = Variable.create(tk.content, SymbolKind.Variable, rg = make_range(tk.offset, tk.length));
 									tk.symbol = tk.definition = tn, tn.assigned = tn.def = true;
-									tk.semantic = {
-										type: SemanticTokenTypes.variable,
-										modifier: SemanticTokenModifiers.definition |
-											(lk.content === '=>' ? SemanticTokenModifiers.readonly : 0)
-									};
 									if ((_cm = comments[tn.selectionRange.start.line]))
 										set_detail(_cm.symbol = tn, _cm);
 									if (['=>', ':'].includes(lk.content))
@@ -838,7 +857,7 @@ export class Lexer {
 								tk.type = 'TK_WORD';
 							else if ((_low = tk.content.toLowerCase()) === 'static')
 								isstatic = true, i++;
-							else if (i < l - 4 && _low === 'class') {
+							else if (_low === 'class') {
 								let extends_ = '';
 								const cl = DocumentSymbol.create((tk = tokens[++i]).content, undefined, SymbolKind.Class,
 									make_range(tokens[i - 1].offset, 0), make_range(tk.offset, tk.length), []) as ClassNode;
@@ -959,11 +978,11 @@ export class Lexer {
 								case 'TK_WORD':
 									r = lk.content, tp = 'TK_WORD';
 									if ((has_typeof = r === 'typeof') && tokens[j + 1]?.type === tp && !tokens[j + 1].topofline)
-										lk.semantic = { type: SemanticTokenTypes.operator }, lk = tokens[++j], r = lk.content;
+										lk.semantic = SE_OPERATOR, lk = tokens[++j], r = lk.content;
 									if (r.toLowerCase() !== 'this' || sym.kind === SymbolKind.Function && (sym as FuncNode).parent?.kind !== SymbolKind.Property)
-										lk.semantic = { type: SemanticTokenTypes.class };
+										lk.semantic = SE_CLASS;
 									while ((lk = tokens[++j]) && !lk.topofline && lk.type !== tp &&
-										(/^[.#~]$/.test(lk.content) || lk.type === 'TK_WORD' && (lk.semantic = { type: SemanticTokenTypes.class })))
+										(/^[.#~]$/.test(lk.content) || lk.type === 'TK_WORD' && (lk.semantic = SE_CLASS)))
 										r += lk.content, tp = lk.type;
 									if (lk?.content === '<' && !lk.topofline) {
 										const generic_types: (string | AhkSymbol)[][] = [];
@@ -1000,7 +1019,7 @@ export class Lexer {
 									const prop_types = ['TK_NUMBER', 'TK_RESERVED', 'TK_WORD'];
 									while (prop_types.includes((lk = skip_comment())?.type)) {
 										const p = Variable.create(lk.content, SymbolKind.Property, make_range(lk.offset, lk.length));
-										props[lk.content.toUpperCase()] ??= p, lk.semantic = { type: SemanticTokenTypes.property };
+										props[lk.content.toUpperCase()] ??= p, lk.semantic = SE_PROPERTY;
 										full += ', ' + lk.content;
 										if (_cm && _cm === comments[p.selectionRange.start.line])
 											set_detail(p, _cm);
@@ -1087,7 +1106,7 @@ export class Lexer {
 								if (next_is_param === 1)
 									params.hasref = vr.pass_by_ref = true, full += '&', next_is_param = true;
 								vr.assigned = vr.def = vr.is_param = true, params.push(vr);
-								lk.semantic = { type: SemanticTokenTypes.parameter, modifier: SemanticTokenModifiers.definition };
+								lk.semantic = SE_PARAM;
 								offset.push(full.length), full += lk.content, lk = tokens[++j];
 								if (defVal && (vr.defaultVal = false), lk?.content === '*')
 									params.variadic = vr.arr = true, lk = tokens[++j], full += '*';
@@ -1214,10 +1233,10 @@ export class Lexer {
 						console.error(e);
 				}
 				if (!process.env.BROWSER) {
-					const m = _this.d_uri && find_d_ahk(resolve_scriptdir(_this.d_uri)) || find_d_ahk(d_path);
+					const m = this.d_uri && find_d_ahk(resolve_scriptdir(this.d_uri)) || find_d_ahk(d_path);
 					if (m)
-						includetable[_this.d_uri = m.uri] = m.path;
-					else _this.d_uri = '';
+						includetable[this.d_uri = m.uri] = m.path;
+					else this.d_uri = '';
 				}
 				parse_unresolved_typedef();
 				check_same_name_error(this.declaration, this.children, this);
@@ -1230,6 +1249,10 @@ export class Lexer {
 
 		function unexpected(tk: Token) {
 			tk.has_warned ??= (_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length), true);
+		}
+
+		function unexpected_lf(tk: Token) {
+			_this.addDiagnostic(diagnostic.unexpected('`n'), input.lastIndexOf('\n', tk.offset), 1);
 		}
 
 		function parse_unresolved_typedef() {
@@ -1310,28 +1333,28 @@ export class Lexer {
 			throw new ParseStopError(message, tk);
 		}
 
-		function parse_block(mode = 0, _parent = _this as unknown as AhkSymbol, classfullname: string = ''): AhkSymbol[] {
+		function parse_block(mode = BlockType.Script, _parent = _this as unknown as AhkSymbol, classfullname: string = ''): AhkSymbol[] {
 			const result: AhkSymbol[] = [], document = _this.document, tokens = _this.tokens;
 			let tk = _this.tokens[parser_pos - 1] ?? EMPTY_TOKEN, lk = tk.previous_token ?? EMPTY_TOKEN;
 			let blocks = 0, next = true, _low = '';
 			let _cm: Token | undefined, line_begin_pos: number | undefined, tn: AhkSymbol | undefined;
 			let m: RegExpMatchArray | string | null, last_hotif: number | undefined;
 			const baksym = currsymbol, oil = in_loop, blockpos: number[] = [], case_pos: number[] = [];
-			if ((block_mode = true, mode !== 0))
+			if (block_mode = true, mode & BlockType.Mask)
 				blockpos.push(parser_pos - 1), delete tk.data;
 			currsymbol = _parent, in_loop = false;
 			parse_brace();
 			currsymbol = baksym, in_loop = oil;
-			if (tk.type === 'TK_EOF' && blocks > (mode === 0 ? 0 : -1))
-				_this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (mode === 0 ? 1 : 0)], 1);
+			if (tk.type === 'TK_EOF' && blocks > (!(mode & BlockType.Mask) ? 0 : -1))
+				_this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (!(mode & BlockType.Mask) ? 1 : 0)], 1);
 			else if (last_hotif !== undefined)
 				_this.addFoldingRange(last_hotif, lk.offset, 'region');
 			return result;
 
 			function is_func_def() {
-				if (input.charAt(tk.offset + tk.length) !== '(')
+				if (input[tk.offset + tk.length] !== '(')
 					return false;
-				if (mode === 2)
+				if (mode === BlockType.Class)
 					return true;
 				const _lk = lk, _tk = tk, _lst = lst, _ppos = parser_pos;
 				const o: Record<string, number> = { '(': -1, '[': 0, '{': 0 };
@@ -1352,6 +1375,25 @@ export class Lexer {
 				}
 				lk = _lk, tk = _tk, lst = _lst, parser_pos = _ppos, next = true;
 				return e === '=>' || e === '{';
+			}
+
+			function check_name(sym: AhkSymbol) {
+				const name = sym.name;
+				let message;
+				if (name[0] <= '9')
+					message = diagnostic.invalidsymbolname(name);
+				else if ((sym as FuncNode).has_this_param)
+					return;
+				else if (reserved_words.includes(name.toLowerCase()))
+					message = diagnostic.reservedworderr(sym.name);
+				else if (!(sym as FuncNode).params && !(sym as Variable).is_param) {
+					return;
+				} else if (ahkvars[name.toUpperCase()]?.kind === SymbolKind.Variable)
+					message = diagnostic.conflictserr(
+						(sym as Variable).is_param ? 'parameter' : 'Func',
+						'built-in variable', name);
+				else return;
+				_this.diagnostics.push({ message, range: sym.selectionRange });
 			}
 
 			function check_operator(op: Token) {
@@ -1403,7 +1445,7 @@ export class Lexer {
 								return false;
 							return true;
 						case 'TK_RESERVED':
-							return /^(class|isset|throw|super)$/.test(tk.content.toLowerCase());
+							return RESERVED_OP.includes(tk.content.toLowerCase());
 						case 'TK_OPERATOR':
 							return (tk.op_type ??= op_type(tk)) === -1;
 						case 'TK_END_EXPR':
@@ -1429,9 +1471,11 @@ export class Lexer {
 					if (tk.topofline === 1) {
 						let p: number;
 						line_begin_pos = tk.offset;
-						if (mode === 2) {
-							if (tk.type !== 'TK_RESERVED' && allIdentifierChar.test(tk.content))
-								tk.type = 'TK_WORD', delete tk.semantic;
+						if (mode === BlockType.Class) {
+							if (allIdentifierChar.test(tk.content) &&
+								(tk.content.toLowerCase() !== 'static' || '.[('.includes(input[parser_pos]) ||
+									(_nk = _this.get_token(parser_pos, true)).topofline || !allIdentifierChar.test(_nk.content)))
+								tk.type = 'TK_WORD';
 						} else if ((p = is_next_char(':'))) {
 							if ((case_pos.length && tk.content.toLowerCase() === 'default' && _this.get_token(p).content === ':') ||
 								(p === parser_pos && whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content)
@@ -1452,42 +1496,39 @@ export class Lexer {
 						case 'TK_EOF': return;
 
 						case 'TK_WORD':
-							if (tk.topofline > 0 && !tk.ignore) {
-								let isfuncdef = is_func_def();
-								nexttoken();
-
-								if (isfuncdef) {
-									parse_func(lk, lk.topofline === 2);
-									break;
+							if (tk.topofline > 0 && input[parser_pos] !== '%') {
+								switch (nexttoken(), lk.content.toLowerCase()) {
+									case 'class':
+										if (!tk.topofline && parse_class())
+											continue;
+										break;
+									case 'macro':
+										if (h && mode !== BlockType.Class && !tk.topofline && lk.topofline === 1 &&
+											allIdentifierChar.test(tk.content) && is_func_def()) {
+											lk.type = 'TK_RESERVED', tk.topofline = 2, nexttoken();
+											const tn = parse_func(lk, null);
+											if (tn)
+												tn.full = `macro ${tn.full}`;
+											continue;
+										}
+										break;
 								}
 
-								if (!tk.topofline) {
-									_low = lk.content.toLowerCase();
-									if (_low === 'class') {
-										if (parse_class())
-											break;
-									} else if (h && mode !== 2 && _low === 'macro' && lk.topofline === 1 &&
-										allIdentifierChar.test(tk.content) && (isfuncdef = is_func_def())) {
-										lk.type = 'TK_RESERVED', tk.topofline = 2;
-										nexttoken();
-										const tn = parse_func(lk, null);
-										if (tn)
-											tn.full = `macro ${tn.full}`;
+								if (mode === BlockType.Class) {
+									if (input[lk.offset + lk.length] === '(') {
+										parse_func(lk);
 										break;
 									}
-								}
-
-								if (mode === 2) {
-									if (input.charAt(lk.offset + lk.length) === '[' || tk.content.match(/^(=>|\{)$/)) {
+									if (PROP_NEXT_TOKEN.includes(tk.content, tk.topofline)) {
 										const fc = lk, rl = result.length;
 										let par: Variable[] = [], rg: Range;
 										line_begin_pos = undefined;
 										if (tk.content === '[') {
-											par = parse_params(true, ']') ?? [];
+											par = parse_params(']') ?? [];
 											nexttoken();
 											if (par.length === 0)
 												_this.addDiagnostic(diagnostic.propemptyparams(), fc.offset, lk.offset - fc.offset + 1);
-											if (!tk.content.match(/^(=>|\{)$/)) {
+											if (!PROP_NEXT_TOKEN.includes(tk.content, 1)) {
 												_this.addDiagnostic(diagnostic.propdeclaraerr(), fc.offset, fc.length);
 												next = false;
 												break;
@@ -1515,9 +1556,9 @@ export class Lexer {
 										fc.semantic = { type: SemanticTokenTypes.property, modifier: SemanticTokenModifiers.definition | (isstatic as unknown as number) };
 										if (tk.content === '{') {
 											let nk: Token, sk: Token, tn: FuncNode | undefined, _low: string;
-											const mmm = mode, brace = tk.offset;
+											const brace = tk.offset;
 											tk.previous_pair_pos = oo;
-											nexttoken(), next = false, mode = 1;
+											nexttoken(), next = false, mode = BlockType.Func;
 											if (tk.type as string === 'TK_END_BLOCK' && !lk.topofline && !tk.topofline)
 												unexpected(tk);
 											while (nexttoken() && tk.type as string !== 'TK_END_BLOCK') {
@@ -1527,10 +1568,10 @@ export class Lexer {
 													if (tk.content as string === '=>') {
 														tn = FuncNode.create(_low, SymbolKind.Function,
 															make_range(lk.offset, parser_pos - lk.offset), make_range(lk.offset, lk.length), [...par]);
-														mode = 3, tn.returns = [parser_pos, 0];
-														tn.parent = prop, tn.children = parse_line(undefined, 'return', 1), mode = 2;
+														mode = BlockType.Method, tn.returns = [parser_pos, 0];
+														tn.parent = prop, tn.children = parse_line(undefined, 'return', 1), mode = BlockType.Class;
 														tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
-														prop.range.end = tn.range.end, prop.returns = tn.returns, tk.fat_arrow_end = true;
+														tk.fat_arrow_end = true;
 														_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 														if (lk.content === '=>')
 															_this.addDiagnostic(diagnostic.invaliddefinition('function'), nk.offset, nk.length);
@@ -1583,17 +1624,17 @@ export class Lexer {
 													next = false;
 												}
 											}
-											prop.range.end = document.positionAt(parser_pos - 1), mode = mmm;
+											prop.range.end = document.positionAt(parser_pos - 1), mode = BlockType.Class;
 											_this.addSymbolFolding(prop, brace);
 											if (prop.get && !prop.set)
 												fc.semantic.modifier! |= SemanticTokenModifiers.readonly;
 										} else if (tk.content === '=>') {
 											const off = parser_pos;
 											let tn: FuncNode;
-											mode = 3, tn = FuncNode.create('get', SymbolKind.Function,
+											mode = BlockType.Method, tn = FuncNode.create('get', SymbolKind.Function,
 												rg = make_range(off, parser_pos - off), ZERO_RANGE, par);
 											tn.parent = prop, prop.get = tn, prop.returns = tn.returns = [parser_pos, 0];
-											tn.children = parse_line(undefined, 'return', 1), mode = 2;
+											tn.children = parse_line(undefined, 'return', 1), mode = BlockType.Class;
 											prop.range.end = tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
 											_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 											tn.has_this_param = true, adddeclaration(tn), tk.fat_arrow_end = true;
@@ -1611,9 +1652,11 @@ export class Lexer {
 									result.push(...sta), sta.forEach(it => it.parent = _);
 									if (line_begin_pos !== undefined)
 										_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
-								} else {
+								} else if (input[lk.offset + lk.length] === '(')
+									parse_call(lk, '(');
+								else {
 									reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN;
-									parser_pos = tk.offset + tk.length;
+									parser_pos = tk.offset + tk.length, next = true;
 									parse_top_word();
 									if (line_begin_pos !== undefined)
 										_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
@@ -1621,7 +1664,7 @@ export class Lexer {
 								break;
 							}
 
-							if (mode === 2) {
+							if (mode === BlockType.Class) {
 								const rl = result.length, _ = _parent;
 								_parent = (_parent as ClassNode).$property!.__INIT;
 								const sta = parse_statement('');
@@ -1629,7 +1672,7 @@ export class Lexer {
 								result.push(...sta), sta.forEach(it => it.parent = _);
 							} else {
 								if (tk.topofline)
-									parse_top_word();
+									next = true, parse_top_word();
 								else next = false, result.push(...parse_line());
 								if (line_begin_pos !== undefined)
 									_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
@@ -1641,7 +1684,7 @@ export class Lexer {
 						case 'TK_RESERVED': parse_reserved(); break;
 
 						case 'TK_START_BLOCK':
-							if (mode === 2)
+							if (mode === BlockType.Class)
 								unexpected(tk);
 							else blocks++, blockpos.push(parser_pos - 1);
 							break;
@@ -1655,7 +1698,7 @@ export class Lexer {
 									last_LF = tk.offset, begin_line = true;
 							}
 							if (blocks < level) {
-								if (mode === 0 && level === 0)
+								if (!(mode & BlockType.Mask) && level === 0)
 									unexpected(tk), blocks = blockpos.length = 0;
 								else {
 									if (blockpos.length && tk.previous_pair_pos === undefined)
@@ -1681,7 +1724,7 @@ export class Lexer {
 								tk.topofline ||= -1;
 								break;
 							}
-							if (mode === 2) {
+							if (mode === BlockType.Class) {
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
 								break;
 							}
@@ -1713,7 +1756,7 @@ export class Lexer {
 							tn.range.end = document.positionAt(parser_pos - 1), result.push(tn);
 							if ((_cm = comments[tn.selectionRange.start.line]))
 								set_detail(tn, _cm);
-							if (mode !== 0)
+							if (mode & BlockType.Mask)
 								_this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
 							if (tk.ignore) {
 								while (nexttoken()) {
@@ -1729,7 +1772,7 @@ export class Lexer {
 							break;
 						}
 						case 'TK_HOT': {
-							if (mode !== 0)
+							if (mode & BlockType.Mask)
 								_this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
 							else if (!tk.ignore && !is_valid_hotkey(tk.content))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
@@ -1766,7 +1809,7 @@ export class Lexer {
 								v.detail = completionitem.thishotkey();
 								const tparent = _parent, tmode = mode, l = tk.content.toLowerCase();
 								const rl = result.length;
-								_parent = tn, mode = 1;
+								_parent = tn, mode = BlockType.Func;
 								if (l === 'return')
 									tn.children = parse_line(undefined, 'return');
 								else if (['global', 'local', 'static'].includes(l)) {
@@ -1778,7 +1821,7 @@ export class Lexer {
 								}
 								_parent = tparent, mode = tmode, adddeclaration(tn);
 								let o = lk.offset + lk.length;
-								while (' \t'.includes(input.charAt(o) || '\0')) o++;
+								for (; ' \t'.includes(input[o]); o++);
 								tn.range = make_range(ht.offset, o - ht.offset);
 								_this.linepos[tn.range.end.line] = ht.offset;
 							}
@@ -1790,11 +1833,20 @@ export class Lexer {
 
 						default:
 							if (tk.topofline === 1) {
-								if (lk !== EMPTY_TOKEN && is_line_continue(lk, tk, _parent))
+								if (tk.type === 'TK_COMMA')
+									unexpected(tk);
+								else if (lk !== EMPTY_TOKEN && is_line_continue(lk, tk, _parent))
 									tk.topofline = -1;
-								else lk = EMPTY_TOKEN;
+								else {
+									lk = EMPTY_TOKEN;
+									if (input[tk.offset + tk.length] === '(' && allIdentifierChar.test(tk.content)) {
+										nexttoken();
+										parse_call(lk, '(');
+										break;
+									}
+								}
 							}
-							if ((next = false, mode === 2))
+							if (next = false, mode === BlockType.Class)
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length), parse_line();
 							else {
 								result.push(...parse_line());
@@ -1806,54 +1858,63 @@ export class Lexer {
 				}
 			}
 
-			function parse_func(fc: Token, is_static: boolean | null = false, rpair?: string, end?: string) {
-				const range = make_range(fc.offset, fc.length);
+			function parse_func(fc: Token, is_static: boolean | null = false, params?: Variable[], rpair?: string, end?: string) {
+				const in_cls = mode === BlockType.Class, prev_mode = mode, prev_parent = _parent;
+				const range = make_range(fc.offset, fc.length), tn = _parent = {} as FuncNode;
 				const se: SemanticToken = fc.semantic = {
 					type: SemanticTokenTypes.function,
 					modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly |
 						(is_static as unknown as number)
 				};
 				const rl = result.length, oo = is_static ? fc.previous_token!.offset : fc.offset;
-				const tn = FuncNode.create(fc.content, SymbolKind.Function,
+				mode = in_cls ? BlockType.Method : BlockType.Func;
+				Object.assign(tn, FuncNode.create(fc.content, SymbolKind.Function,
 					{ start: fc.pos = range.start, end: { character: 0, line: 0 } }, range,
-					parse_params(true) ?? (_this.addDiagnostic(diagnostic.invalidparam(),
-						fc.offset, tk.offset + 1 - fc.offset), []), undefined, is_static);
-				let md;
-				if (mode === BlockType.Class) {
-					tn.has_this_param = true, md = BlockType.Method;
-					tn.kind = SymbolKind.Method;
-					se.type = SemanticTokenTypes.method;
-					tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
-					tn.parent = is_static ? _parent : (_parent as ClassNode).prototype;
-					(_this.object.method[fc.content.toUpperCase()] ??= []).push(tn);
-				} else md = BlockType.Func, mode && (tn.parent = _parent);
+					params ??= parse_params() ?? (_this.addDiagnostic(diagnostic.invalidparam(),
+						fc.offset, tk.offset + 1 - fc.offset), []), undefined, is_static));
 				fc.symbol = fc.definition = tn, line_begin_pos = undefined;
 				(_cm = comments[tn.selectionRange.start.line]) && set_detail(_cm.symbol = tn, _cm);
 
 				if (nexttoken() && tk.content === '=>') {
-					const rs = result.splice(rl), _mode = mode, pp = _parent;
-					mode = md, _parent = tn, tn.returns = [parser_pos, 0];
+					const rs = result.splice(rl);
+					tn.returns = [parser_pos, 0];
 					const sub = rpair ? parse_expression(rpair, 2, end) : parse_line(undefined, 'return', 1);
-					_parent = pp, mode = _mode, tk.fat_arrow_end = true;
+					tk.fat_arrow_end = true;
 					result.push(tn), (tn.children = rs).push(...sub);
 					tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
 					_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 					_this.linepos[tn.range.end.line] = oo;
 				} else if (tk.content === '{') {
 					const rs = result.splice(rl), lb = tk;
-					result.push(tn), (tn.children = rs).push(...parse_block(md, tn, classfullname));
+					result.push(tn), (tn.children = rs).push(...parse_block(mode, tn, classfullname));
 					tn.range.end = document.positionAt(parser_pos);
 					_this.addSymbolFolding(tn, lb.offset);
 					lb.previous_pair_pos = oo;
 					tk = _this.tokens[tk.next_pair_pos!] ?? _this.find_token(parser_pos - 1);
 					if (rpair) {
+						if (ahk_version < alpha_3)
+							_this.addDiagnostic(diagnostic.requireVerN(alpha_3), fc.offset, lb.offset - fc.offset, { code: DiagnosticCode.func_expr });
 						lb.in_expr = tk.in_expr = fc.offset;
 						begin_line = false;
 					}
 				} else {
-					unexpected(tk);
+					_this.diagnostics.push({ message: diagnostic.declarationerr(), range: tn.selectionRange });
+					_parent = prev_parent, mode = prev_mode;
 					return next = false, undefined;
 				}
+				_parent = prev_parent, mode = prev_mode;
+				if (in_cls) {
+					tn.has_this_param = true;
+					tn.kind = SymbolKind.Method;
+					se.type = SemanticTokenTypes.method;
+					tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
+					tn.parent = is_static ? _parent : (_parent as ClassNode).prototype;
+					(_this.object.method[fc.content.toUpperCase()] ??= []).push(tn);
+				} else {
+					(mode & BlockType.Mask) && (tn.parent = _parent);
+					fc.length || (tokens[fc.offset].symbol = tn);
+				}
+
 				adddeclaration(tn);
 				return tn;
 			}
@@ -1862,165 +1923,83 @@ export class Lexer {
 				let _low = tk.content.toLowerCase(), bak = lk;
 				const beginpos = tk.offset, tpos = parser_pos;
 				let nk: Token | undefined;
-				if ((block_mode = false, mode === 2)) {
-					nk = get_next_token();
-					next = false, parser_pos = tpos, tk.type = 'TK_WORD';
-					if ('.[('.includes(input.charAt(tk.offset + tk.length)) || nk.content.match(/^(:=|=>|\{)$/))
-						return;
-					if (nk.type !== 'TK_EQUALS' && (_low === 'class' || _low === 'static')) {
-						nk = undefined, next = true, tk.type = 'TK_RESERVED';
-					} else
-						return;
-				} else {
-					if (input.charAt(tk.offset - 1) === '%' || input.charAt(tk.offset + tk.length) === '%') {
-						tk.type = 'TK_WORD', next = false, tk.semantic = { type: SemanticTokenTypes.variable };
-						return;
-					}
+				block_mode = false;
+				if (input[tk.offset - 1] === '%' || input[tpos] === '%') {
+					tk.type = 'TK_WORD', next = false;
+					return;
 				}
 				switch (_low) {
-					case 'class': {
-						if (tk.topofline !== 1) {
-							next = false, tk.type = 'TK_WORD';
-							break;
-						}
-						let cl: Token, ex: string = '';
+					case 'global': case 'static': case 'local':
 						nexttoken();
-						if (!tk.topofline && tk.type === 'TK_RESERVED') {
-							tk.type = 'TK_WORD';
-							if (mode !== 2)
-								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
-						}
-						if (!tk.topofline && tk.type === 'TK_WORD') {
-							if (mode & 1) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset, tk.length);
-							cl = tk, nexttoken();
-							if (tk.content.toLowerCase() === 'extends') {
-								tk = get_next_token();
-								if (tk.type === 'TK_WORD') {
-									ex = tk.content;
-									addvariable(tk, 0, _this.children);
-									while (parser_pos < input_length && input.charAt(parser_pos) === '.') {
-										get_next_token();
-										tk = get_next_token();
-										if (tk.type === 'TK_WORD')
-											ex += '.' + tk.content, addprop(tk);
-										else
-											break;
-									}
-									if (tk.type === 'TK_WORD')
-										nexttoken();
-								} else
-									_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
-							}
-							if (tk.type !== 'TK_START_BLOCK') { next = false; break; }
-							tk.previous_pair_pos = beginpos;
-							if (cl.content.match(/^\d/))
-								_this.addDiagnostic(diagnostic.invalidsymbolname(cl.content), cl.offset, cl.length);
-							const tn = DocumentSymbol.create(cl.content, undefined, SymbolKind.Class,
-								ZERO_RANGE, make_range(cl.offset, cl.length)) as ClassNode;
-							cl.symbol = cl.definition = tn, tn.full = classfullname + cl.content;
-							tn.extends = ex, tn.uri = _this.uri;
-							if ((_cm = comments[tn.selectionRange.start.line]))
-								set_detail(tn, _cm);
-							tn.prototype = { ...tn, cache: [], detail: undefined, property: tn.$property = {} };
-							tn.children = [], tn.cache = [], tn.property = {};
-							tn.type_annotations = [tn.full];
-							let t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
-							(tn.property.__INIT = t).ranges = [], t.parent = tn;
-							t.full = `(${tn.full}) static __Init()`, t.has_this_param = true;
-							t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
-							(tn.$property!.__INIT = t).ranges = [], t.parent = tn.prototype!;
-							t.full = `(${tn.full}) __Init()`, t.has_this_param = true;
-							tn.children = parse_block(2, tn as unknown as FuncNode, classfullname + cl.content + '.');
-							tn.range = tn.prototype!.range = make_range(beginpos, parser_pos - beginpos);
-							cl.semantic = {
-								type: SemanticTokenTypes.class,
-								modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly
-							};
-							adddeclaration(tn), _this.addSymbolFolding(tn, tk.offset);
-							result.push(tn);
-							return true;
-						} else {
-							next = false, lk.type = 'TK_WORD', parser_pos = lk.offset + lk.length, tk = lk, lk = bak;
-						}
-						break;
-					}
-					case 'global':
-					case 'static':
-					case 'local':
-						nexttoken();
-						if (mode === 2 && !tk.topofline && allIdentifierChar.test(tk.content))
-							tk.type = 'TK_WORD';
-						if (tk.topofline) {
-							if (mode === 2)
+						if (tk.topofline && !is_line_continue(lk, tk, _parent)) {
+							if (mode === BlockType.Class)
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
 							else if (_low === 'local' || _parent.static === null || result.some(it => it.kind === SymbolKind.Variable))
 								_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
-							else
-								(_parent as FuncNode).assume = _low === 'static' ? FuncScope.STATIC : FuncScope.GLOBAL;
-						} else if (tk.type === 'TK_WORD' || tk.type === 'TK_RESERVED') {
-							if (mode === 0) {
-								next = false;
-								if (_low !== 'global')
+							else (_parent as FuncNode).assume = _low === 'static' ? FuncScope.STATIC : FuncScope.GLOBAL;
+						} else if (allIdentifierChar.test(tk.content)) {
+							if (input[parser_pos] === '(') {
+								let isstatic = false;
+								if (!(mode & BlockType.Mask) || _low !== 'static')
 									_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
-								break;
-							} else if (mode === 2 && _low !== 'static') {
-								_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
-								next = false;
+								else isstatic = true, tk.topofline = 2;
+								tk.type = 'TK_WORD';
+								nexttoken(), parse_func(lk, isstatic);
 								break;
 							}
-							if ('(['.includes(input.charAt(parser_pos)) || _this.get_token(parser_pos, true).content.match(/^(\{|=>)$/)) {
-								tk.topofline = 2;
-							} else {
+								next = false;
+							if (!(mode & BlockType.Mask)) {
+								if (_low !== 'global')
+									_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
+								else result.push(...parse_statement(''));
+								break;
+							}
+							if ((mode === BlockType.Class) && PROP_NEXT_TOKEN.includes(
+								(nk = _this.get_token(parser_pos, true)).content, nk.topofline)) {
+								tk.topofline = 2, tk.type = 'TK_WORD';
+								break;
+							}
 								const rl = result.length, _ = _parent;
-								if (mode === 2)
+								if (mode === BlockType.Class)
 									tk.topofline = 2, _parent = (_parent as ClassNode).property.__INIT;
 								const fn = _parent as FuncNode;
-								next = false;
 								const sta = parse_statement(_low === 'global' ? '' : _low);
 								if (_low === 'global') {
-									sta.forEach(it => fn.global[it.name.toUpperCase()] ??= it);
+								for (const it of sta)
+									fn.global[it.name.toUpperCase()] ??= it;
 								} else {
-									if (mode === 2) {
+									if (mode === BlockType.Class) {
 										fn.children!.push(...result.splice(rl)), _parent = _;
-										for (const it of sta)
-											it.static = true, it.full = it.full!.replace(') ', ') static '), (it as FuncNode).parent = _;
+									for (const it of sta) {
+										it.static = true;
+										(it as FuncNode).parent = _;
+										it.full = it.full!.replace(') ', ') static ');
+									}
 									} else {
 										const isstatic = _low === 'static';
-										sta.forEach(it => {
-											fn.local[it.name.toUpperCase()] ??= it;
+									for (const it of sta) {
 											it.static = isstatic;
-											it.decl = true;
-										});
+										fn.local[it.name.toUpperCase()] ??= it;
+									}
 									}
 								}
 								result.push(...sta);
-							}
-						} else if (tk.type === 'TK_EQUALS') {
-							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak;
-							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
+						} else {
+							parser_pos = tpos, lk.type = 'TK_WORD', tk = lk, lk = bak;
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						}
 						next = false;
 						break;
 					case 'loop': {
-						if (mode === 2) {
-							nk = _this.get_token(parser_pos);
-							next = false, tk.type = 'TK_WORD';
-							if (nk.content !== ':=')
-								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
-							break;
-						}
 						nexttoken();
 						if (tk.type === 'TK_COMMA')
 							stop_parse(lk), maybev1 && nexttoken();
 						let min = 0, max = 1, act = 'loop', sub;
 						if (tk.type === 'TK_EQUALS') {
 							parser_pos = lk.offset + lk.length, lk.type = 'TK_WORD', tk = lk, lk = bak, next = false;
-							if (mode !== 2) _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 							break;
-						} else if (mode === 2) {
-							_this.addDiagnostic(diagnostic.propdeclaraerr(), lk.offset, lk.length);
-							break;
-						} else if ((bak = lk, next = ' \t,'.includes(input.charAt(parser_pos) || '\0') && (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(sub = tk.content.toLowerCase())))) {
+						} else if ((bak = lk, next = ' \t,'.includes(input[parser_pos]) && (tk.type === 'TK_WORD' && ['parse', 'files', 'read', 'reg'].includes(sub = tk.content.toLowerCase())))) {
 							min = 1, max = sub === 'parse' ? 3 : 2;
 							tk.type = 'TK_RESERVED', act += ' ' + sub, lk.hover_word = tk.hover_word = act;
 							nexttoken();
@@ -2046,12 +2025,8 @@ export class Lexer {
 							switch (tk.type) {
 								case 'TK_COMMA': for_index++; break;
 								case 'TK_RESERVED':
-									if (tk.content.toLowerCase() !== 'class' || !(mode & 1)) {
-										_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
-										break;
-									} else
-										tk.type = 'TK_WORD';
-								// fall through
+									_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
+									break;
 								case 'TK_WORD': {
 									const vr = addvariable(tk, 0);
 									if (vr)
@@ -2090,15 +2065,7 @@ export class Lexer {
 						}
 						break;
 					}
-					case 'continue':
-					case 'break':
-					case 'goto':
-						if (mode === 2) {
-							next = false, tk.type = 'TK_WORD';
-							if (_this.get_token(parser_pos, true).content !== ':=')
-								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
-							break;
-						}
+					case 'break': case 'continue': case 'goto':
 						nexttoken();
 						if (!in_loop && _low !== 'goto')
 							_this.addDiagnostic(diagnostic.outofloop(), lk.offset);
@@ -2109,12 +2076,12 @@ export class Lexer {
 						if (!tk.topofline) {
 							if (allIdentifierChar.test(tk.content)) {
 								if (tk.type === 'TK_NUMBER' && _low !== 'goto') {
-									if (tk.content.match(/[^\d]/))
+									if (/[^\d]/.test(tk.content))
 										unexpected(tk);
 								} else
 									tk.ignore = true, tk.type = 'TK_WORD', addlabel(tk), delete tk.semantic;
 								nexttoken(), next = false;
-							} else if (input.charAt(lk.offset + lk.length) === '(') {
+							} else if (input[lk.offset + lk.length] === '(') {
 								const s: Token[] = [];
 								parse_pair('(', ')', undefined, undefined, s);
 								s.forEach(i => {
@@ -2135,24 +2102,10 @@ export class Lexer {
 						} else if ((next = false, _low === 'goto'))
 							_this.addDiagnostic(diagnostic.acceptparams(_low, 1), lk.offset, lk.length);
 						break;
-					case 'as':
-					case 'catch':
-					case 'else':
-					case 'finally':
-					case 'until':
+					case 'as': case 'catch': case 'else': case 'finally': case 'until':
 						unexpected(tk);
 						break;
-					case 'super':
-						if (mode === 3) {
-							if (input[parser_pos] !== '(') {
-								const t = _this.get_token(parser_pos, true);
-								if (t.type !== 'TK_DOT' && t.content !== '[' && !(t.topofline && tk.topofline))
-									_this.addDiagnostic(diagnostic.syntaxerror(tk.content), tk.offset, tk.length);
-							}
-						} else
-							_this.addDiagnostic(diagnostic.invalidsuper(), tk.offset, tk.length);
-						tk.type = 'TK_WORD', next = false;
-						break;
+					case 'super': parse_super(); break;
 					case 'case':
 						if (case_pos.length && tk.topofline) {
 							const last_case = case_pos.pop();
@@ -2188,7 +2141,13 @@ export class Lexer {
 						}
 						break;
 					case 'isset':
-						parse_isset(input.charAt(tk.offset + 5));
+						parse_isset(input[tk.offset + 5]);
+						break;
+					case 'false': case 'true':
+						if (_this.get_token(parser_pos, true).type === 'TK_EQUALS')
+							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
+						else next = false;
+						tk.type = 'TK_WORD';
 						break;
 					case 'throw':
 						if (ahk_version >= alpha_3) {
@@ -2198,7 +2157,7 @@ export class Lexer {
 					// fall through
 					default:
 						nk = get_token_ignore_comment();
-						if (nk.type === 'TK_EQUALS' || nk.content.match(/^([<>]=?|~=|&&|\|\||[.|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/))
+						if (nk.type === 'TK_EQUALS' || /^([<>]=?|~=|&&|\|\||[.|?:^]|\*\*?|\/\/?|<<|>>|!?==?)$/.test(nk.content))
 							tk.type = 'TK_WORD', parser_pos = tpos, _this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						else {
 							lk = tk, tk = nk, next = false;
@@ -2207,7 +2166,7 @@ export class Lexer {
 									stop_parse(lk);
 								const b = tk.offset;
 								result.push(...parse_line(undefined, _low));
-								if ((mode & 1) && _low === 'return' && b <= lk.offset)
+								if ((mode & BlockType.Func) && _low === 'return' && b <= lk.offset)
 									(_parent.returns ??= []).push(b, lk.offset + lk.length);
 							} else if (_low === 'switch') {
 								result.push(...parse_line('{', _low, 0, 2));
@@ -2233,13 +2192,76 @@ export class Lexer {
 
 				function addlabel(tk: Token) {
 					const labels = (_parent as FuncNode).labels;
-					if (labels) {
-						labels[_low = tk.content.toUpperCase()] ??= [];
-						const rg = make_range(tk.offset, tk.length);
-						labels[_low].push(tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field, rg, rg));
-						tn.data = blockpos.at(-1);
+					if (!labels) return;
+					labels[_low = tk.content.toUpperCase()] ??= [];
+					const rg = make_range(tk.offset, tk.length);
+					labels[_low].push(tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field, rg, rg));
+					tn.data = blockpos.at(-1);
+				}
+			}
+
+			function parse_class() {
+				if (!allIdentifierChar.test(tk.content))
+					return false;
+				const cl = tk, bp = lk.offset;
+				let ex = '';
+				lk.type = 'TK_RESERVED';
+				tk.type = 'TK_WORD';
+				if (mode & BlockType.Func) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset, tk.length);
+				tk = get_next_token();
+				if (!tk.topofline && tk.content.toLowerCase() === 'extends') {
+					tk = get_next_token();
+					if (!tk.topofline && tk.type === 'TK_WORD') {
+						ex = tk.content;
+						addvariable(tk, 0, _this.children);
+						while (parser_pos < input_length && input[parser_pos] === '.') {
+							get_next_token();
+							tk = get_next_token();
+							if (!tk.prefix_is_whitespace && tk.type === 'TK_WORD')
+								ex += '.' + tk.content, addprop(tk);
+							else break;
+						}
+						if (tk.type === 'TK_WORD')
+							tk = get_token_ignore_comment();
+					} else if (tk.content === '{')
+						unexpected(tk);
+				}
+				if (tk.content !== '{') {
+					unexpected(tk);
+					if (tk.topofline)
+						return lk = tk.previous_token!, !(next = false);
+					lk = tk, tk = get_token_ignore_comment();
+					if (tk.content !== '{') {
+						lk = (tk = lk).previous_token!;
+						parser_pos = tk.offset + tk.length;
+						return !(next = false);
 					}
 				}
+				tk.previous_pair_pos = bp;
+				const tn = DocumentSymbol.create(cl.content, undefined, SymbolKind.Class,
+					ZERO_RANGE, make_range(cl.offset, cl.length)) as ClassNode;
+				cl.symbol = cl.definition = tn, tn.full = classfullname + cl.content;
+				tn.extends = ex, tn.uri = _this.uri;
+				if ((_cm = comments[tn.selectionRange.start.line]))
+					set_detail(tn, _cm);
+				tn.prototype = { ...tn, cache: [], detail: undefined, property: tn.$property = {} };
+				tn.children = [], tn.cache = [], tn.property = {};
+				tn.type_annotations = [tn.full];
+				let t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
+				(tn.property.__INIT = t).ranges = [], t.parent = tn;
+				t.full = `(${tn.full}) static __Init()`, t.has_this_param = true;
+				t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
+				(tn.$property!.__INIT = t).ranges = [], t.parent = tn.prototype!;
+				t.full = `(${tn.full}) __Init()`, t.has_this_param = true;
+				tn.children = parse_block(2, tn as unknown as FuncNode, classfullname + cl.content + '.');
+				tn.range = tn.prototype!.range = make_range(bp, parser_pos - bp);
+				cl.semantic = {
+					type: SemanticTokenTypes.class,
+					modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly
+				};
+				adddeclaration(tn), _this.addSymbolFolding(tn, tk.offset);
+				result.push(tn);
+				return true;
 			}
 
 			function parse_catch() {
@@ -2357,7 +2379,7 @@ export class Lexer {
 
 			function parse_top_word() {
 				let c = '', maybe;
-				next = true, nexttoken(), next = false;
+				nexttoken(), next = false;
 				if ((maybe = tk.ignore && tk.content === '?'))
 					tk = get_next_token();
 				if (tk.type !== 'TK_EQUALS' && !/^(=[=>]?|\?\??|:)$/.test(tk.content) &&
@@ -2369,7 +2391,7 @@ export class Lexer {
 						while (nexttoken()) {
 							if (tk.type as string === 'TK_WORD') {
 								let maybecaller = true;
-								if (input.charAt(parser_pos) === '%') {
+								if (input[parser_pos] === '%') {
 									maybecaller = false;
 								} else if (addprop(tk), nexttoken(), ASSIGN_TYPE.includes(tk.content))
 									maybecaller = false, maybeclassprop(lk, undefined, () => {
@@ -2382,7 +2404,7 @@ export class Lexer {
 								next = false;
 								if (maybecaller && tk.type as string !== 'TK_EQUALS' && !'=??'.includes(tk.content || ' ') &&
 									', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))
-									parse_funccall(SymbolKind.Method, c);
+									parse_call(lk, c, SymbolKind.Method);
 								else
 									result.push(...parse_line());
 							} else
@@ -2390,7 +2412,7 @@ export class Lexer {
 							break;
 						}
 					} else
-						addvariable(lk), parse_funccall(SymbolKind.Function, c);
+						addvariable(lk), parse_call(lk, c);
 				} else {
 					let act, offset;
 					/^=>?$/.test(tk.content) && (act = tk.content, offset = tk.offset);
@@ -2403,69 +2425,104 @@ export class Lexer {
 				}
 			}
 
-			function parse_funccall(type: SymbolKind, nextc: string) {
-				let tp;
-				const fc = lk;
+			function parse_call(fc: Token, nextc: string, kind?: SymbolKind, rpair?: string, end?: string) {
 				const pi: ParamInfo = { offset: fc.offset, miss: [], comma: [], count: 0, unknown: false, name: fc.content };
-				if (nextc === ',' || maybev1) {
-					if (type === SymbolKind.Function && builtin_ahkv1_commands.includes(fc.content.toLowerCase()) &&
-						stop_parse(fc, true) && (next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
-						return;
-					nextc === ',' && _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
+				let range, tp, nk;
+				if ('(['.includes(nextc ||= '\0')) {
+					const pk = tk, rl = result.length, dl = _this.diagnostics.length;
+					parse_pair(nextc, nextc === '(' ? ')' : ']', tk.offset, pi);
+					if (kind === undefined) {
+						nk = _this.get_token(parser_pos, true);
+						tp = nk.content;
+						if (tp === '=>' || tp === '{' && end !== '{' && (fc.topofline > 0 ||
+							!nk.topofline || (mode & BlockType.Pair))) {
+							result.splice(rl), _this.diagnostics.splice(dl);
+							if (fc.ignore && input[fc.offset - 1] === '%') {
+								delete fc.ignore;
+								_this.addDiagnostic(diagnostic.missingspace(), fc.offset);
+							}
+							lk = fc, tk = pk, parser_pos = tk.offset + tk.length, next = true;
+							parse_func(fc, fc.topofline === 2, undefined, rpair, end);
+							return;
+						}
+					}
+					pi.offset = pk.offset;
+					range = make_range(fc.offset, fc.length);
+				} else {
+					if (nextc === ',' || maybev1) {
+						if (!kind && builtin_ahkv1_commands.includes(fc.content.toLowerCase()) &&
+							stop_parse(fc, true) && (next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
+							return;
+						nextc === ',' && _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1);
+					}
+					if ((tp = tk.type) === 'TK_OPERATOR' && !/^(not|\+\+?|--?|!|~|%|&)$/i.test(tk.content))
+						unexpected(tk);
+					result.push(...parse_line(undefined, undefined, undefined, undefined, pi));
+					range = make_range(fc.offset, fc.length);
+					fc.paraminfo = pi;
+					if (callWithoutParentheses === true || callWithoutParentheses && tp === 'TK_START_EXPR')
+						_this.diagnostics.push({
+							code: DiagnosticCode.call, range,
+							message: warn.callwithoutparentheses(),
+							severity: DiagnosticSeverity.Warning,
+						});
 				}
-				if ((tp = tk.type) === 'TK_OPERATOR' && !tk.content.match(/^(not|\+\+?|--?|!|~|%|&)$/i))
-					unexpected(tk);
-				fc.paraminfo = pi;
-				result.push(...parse_line(undefined, undefined, undefined, undefined, pi));
-				if (type === SymbolKind.Method)
-					fc.semantic = undefined;
-				if (!fc.ignore)
-					fc.semantic ??= {
-						type: type === SymbolKind.Function ? SemanticTokenTypes.function :
-							(pi.method = true, SemanticTokenTypes.method)
-					};
-				const tn: CallSite = DocumentSymbol.create(fc.content, undefined, type,
-					make_range(fc.offset, (pi.end = lk.offset + lk.length) - fc.offset), make_range(fc.offset, fc.length));
+				if (fc.ignore)
+					return delete fc.semantic;
+				const tn: CallSite = DocumentSymbol.create(fc.content, undefined,
+					kind ??= SymbolKind.Function, { ...range }, range);
 				tn.paraminfo = pi, tn.offset = fc.offset, fc.callsite = tn;
 				if (lk === fc) {
 					const lf = input.indexOf('\n', fc.offset);
-					tn.range.end = document.positionAt(pi.end = lf < 0 ? input_length : lf);
+					pi.end = lf < 0 ? input_length : lf;
+				} else pi.end = lk.offset + lk.length;
+				tn.range.end = document.positionAt(pi.end);
+				switch (kind) {
+					case SymbolKind.Method:
+						maybeclassprop(fc, pi.method = true)
+						fc.semantic = { type: SemanticTokenTypes.method };
+						break;
+					case SymbolKind.Function:
+						fc.semantic = { type: SemanticTokenTypes.function };
+					// fall through
+					case SymbolKind.Variable:
+						addvariable(fc);
+						break;
 				}
-				if (type === SymbolKind.Method)
-					maybeclassprop(fc, true);
-				if (callWithoutParentheses && (callWithoutParentheses === true || tp === 'TK_START_EXPR'))
-					_this.diagnostics.push({ message: warn.callwithoutparentheses(), range: tn.selectionRange, code: DiagnosticCode.call, severity: DiagnosticSeverity.Warning });
 			}
 
 			function parse_body(else_body: boolean | null, previous_pos: number, loop_body = false) {
-				const oil = in_loop;
-				in_loop ||= loop_body;
+				const oil = in_loop, prev = mode;
+				in_loop ||= loop_body, next = true, mode |= BlockType.Body;
 				if ((block_mode = false, tk.type === 'TK_START_BLOCK')) {
 					tk.previous_pair_pos = previous_pos;
-					next = true, blockpos.push(parser_pos - 1), parse_brace(++blocks);
+					blockpos.push(parser_pos - 1), parse_brace(++blocks);
 					nexttoken();
 					next = tk.type as string === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
 				} else {
 					if (tk.type === 'TK_RESERVED' && line_starters.includes(tk.content.toLowerCase())) {
 						const t = tk;
-						next = true;
-						if (parse_reserved())
-							return else_body;
+						parse_reserved();
 						if (t === tk || (t === lk && !next && !tk.topofline))
 							if (t === tk && t.type === 'TK_WORD')
-								parse_top_word();
+								next = true, parse_top_word();
 							else result.push(...parse_line());
 					} else {
-						if (tk.type === 'TK_WORD')
+						if (tk.type === 'TK_WORD') {
+							if (tk.topofline > 0 && tk.content.toLowerCase() === 'class') {
+								if (nexttoken() && parse_class())
+									return mode = prev, else_body;
+								next = false;
+							}
 							parse_top_word();
-						else if (tk.type !== 'TK_EOF')
+						} else if (tk.type !== 'TK_EOF')
 							lk = EMPTY_TOKEN, next = false, result.push(...parse_line());
 					}
 					if (line_begin_pos !== undefined)
 						_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
 					next = tk.type === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
 				}
-				in_loop = oil;
+				in_loop = oil, mode = prev;
 				if (typeof else_body === 'boolean') {
 					if (else_body)
 						next = false;
@@ -2503,7 +2560,7 @@ export class Lexer {
 						next = true, ++hascomma, ++info.count;
 						if (lk.type === 'TK_COMMA' || lk.type === 'TK_START_EXPR')
 							info.miss.push(info.comma.length);
-						else if (lk.type === 'TK_OPERATOR' && !lk.ignore && !lk.content.match(/(--|\+\+|%)/))
+						else if (lk.type === 'TK_OPERATOR' && !lk.ignore && !/(--|\+\+|%)/.test(lk.content))
 							unexpected(tk);
 						info.comma.push(tk.offset), pi && (tk.paraminfo = pi);
 					} else if (tk.topofline) {
@@ -2594,7 +2651,7 @@ export class Lexer {
 						}
 						break;
 					case '#hotif':
-						if (mode !== 0)
+						if (mode & BlockType.Mask)
 							_this.addDiagnostic(diagnostic.invalidscope(tk.content), tk.offset, tk.length);
 						else {
 							if (last_hotif !== undefined)
@@ -2608,8 +2665,14 @@ export class Lexer {
 						if (l !== 'nomouse' && l !== 'endchars')
 							_this.hotstringExecuteAction = /x(?!0)/.test(l);
 						break;
+					case '#module':
+						if (ahk_version < alpha_11)
+							_this.addDiagnostic(diagnostic.requireVerN(alpha_11), tk.offset, tk.length, { code: DiagnosticCode.module });
+						else
+							_this.addDiagnostic(warn.notimplemented(), tk.offset, tk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning });
+						break;
 					default:
-						if (l.match(/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i) &&
+						if (/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i.test(l) &&
 							!stop_parse(tk))
 							unexpected(tk);
 						break;
@@ -2617,12 +2680,16 @@ export class Lexer {
 			}
 
 			function parse_statement(local: string) {
-				const sta: Variable[] = [];
+				const sta: Variable[] = [], md = mode, incls = md === BlockType.Class;
 				let bak: Token, pc: Token | undefined;
-				block_mode = false;
+				block_mode = false, incls && (mode = BlockType.Method);
 				loop:
 				while (nexttoken()) {
-					if (tk.topofline === 1 && !is_line_continue(lk, tk, _parent)) { next = false; break; }
+					if (tk.topofline === 1) {
+						if (is_line_continue(lk, tk, _parent))
+							tk.topofline = -1;
+						else { next = false; break; }
+					}
 					switch (tk.type) {
 						case 'TK_WORD':
 							bak = lk, nexttoken();
@@ -2630,10 +2697,15 @@ export class Lexer {
 								let vr: Variable | undefined;
 								const equ = tk.content, pp = parser_pos;
 								if (bak.type === 'TK_DOT') {
-									addprop(lk);
-								} else if ((vr = addvariable(lk, mode, sta))) {
-									if (mode === 2 && local)
+									addprop(lk), !incls && unexpected(bak);
+								} else if ((vr = addvariable(lk, md, sta))) {
+									if (incls) {
+										if (local)
 										lk.semantic!.modifier = SemanticTokenModifiers.static;
+										if (equ !== ':=')
+											_this.addDiagnostic(`${diagnostic.unexpected(equ)}, ${diagnostic.didyoumean(':=')}`,
+												tk.offset, tk.length, { code: DiagnosticCode.expect });
+									}
 									if ((pc = comments[vr.selectionRange.start.line]))
 										set_detail(vr, pc);
 								} else if (local)
@@ -2645,11 +2717,11 @@ export class Lexer {
 									if (equ === ':=' || equ === '??=' && (vr.assigned ??= 1))
 										vr.returns = t;
 									else vr.cached_types = [equ === '.=' ? STRING : NUMBER];
-									vr.assigned ??= true, vr.def = true;
-									vr.range.end = document.positionAt(lk.offset + lk.length), vr.def = true;
+									vr.assigned ??= true, vr.decl = vr.def = true;
+									vr.range.end = document.positionAt(lk.offset + lk.length)
 								}
 							} else {
-								if (mode === 2) {
+								if (incls) {
 									let llk = lk, ttk = tk, err = diagnostic.propnotinit(), dots = 0;
 									const v = addvariable(lk, 2, sta)!;
 									if (v.def = false, local)
@@ -2714,26 +2786,19 @@ export class Lexer {
 													if (nexttoken() && tk.type as string === 'TK_WORD')
 														tpexp += '.' + tk.content, addprop(tk), nexttoken();
 												} else if (tk.type === 'TK_START_EXPR' && !tk.prefix_is_whitespace && allIdentifierChar.test(lk.content)) {
-													const l = result.length, fc = lk, ttk = tk, predot = lk.previous_token?.type === 'TK_DOT';
-													let item;
+													const l = result.length, predot = lk.previous_token?.type === 'TK_DOT';
 													_parent = static_init, is_expr = true;
-													parse_pair(tk.content, tk.content as string === '(' ? ')' : item = ']');
+													parse_call(lk, tk.content, tk.content === '[' ?
+														predot ? SymbolKind.Property : SymbolKind.Variable :
+														predot ? SymbolKind.Method : SymbolKind.Function);
 													static_init.children!.push(...result.splice(l));
-													if (!item) {
-														const tn: CallSite = DocumentSymbol.create(fc.content, undefined,
-															predot ? SymbolKind.Method : SymbolKind.Function,
-															make_range(fc.offset, parser_pos - fc.offset), make_range(fc.offset, fc.length));
-														Object.assign(ttk.paraminfo ?? {}, { name: fc.content });
-														tn.paraminfo = ttk.paraminfo, tn.offset = fc.offset, fc.callsite = tn;
-														fc.semantic ??= { type: predot ? SemanticTokenTypes.method : SemanticTokenTypes.function };
-													}
 													_parent = _p, nexttoken();
 												} else break;
 											}
 											if (_tp) {
 												if (tk.previous_token === _tp && /^([iu](8|16|32|64)|f(32|64)|[iu]ptr)$/i.test(_tp.content)) {
 													v.type_annotations = [/^f/i.test(_tp.content) ? 'Float' : 'Integer'];
-													_tp.semantic = { type: SemanticTokenTypes.class };
+													_tp.semantic = SE_CLASS;
 												} else if (_tp.type === 'TK_WORD')
 													addvariable(_tp, 3, static_init.children);
 											}
@@ -2766,59 +2831,62 @@ export class Lexer {
 									next = false;
 									break;
 								}
-								if (tk.type as string === 'TK_COMMA' || (tk.topofline && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i)))) {
-									const vr = addvariable(lk, mode, sta);
+								if (tk.type as string === 'TK_COMMA' || (tk.topofline && !is_line_continue(lk, tk, _parent))) {
+									const vr = addvariable(lk, md, sta);
 									if (vr) {
+										vr.decl = vr.def = true;
 										if ((pc = comments[vr.selectionRange.start.line]))
 											set_detail(vr, pc);
-									} else if (local)
-										_this.addDiagnostic(diagnostic.conflictserr(local, 'built-in variable', lk.content), lk.offset, lk.length);
-									if (tk.type as string !== 'TK_COMMA')
+									}
+									if (tk.type as string !== 'TK_COMMA') {
+										next = false;
 										break loop;
 								}
+								} else next = false, tk.topofline &&= -1;
 							}
 							break;
 						case 'TK_COMMA':
 							continue;
 						case 'TK_UNKNOWN': _this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length); break;
 						case 'TK_RESERVED':
-							if (mode !== 2)
+							if (!incls)
 								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 							next = false, tk.type = 'TK_WORD'; break;
 						case 'TK_END_BLOCK':
 							next = false;
 							break loop;
-						case 'TK_END_EXPR': unexpected(tk);
+						case 'TK_DOT':
+							if (incls) continue;
 						// fall through
-						default: break loop;
+						default: unexpected(tk); break loop;
 					}
 				}
-				return sta;
+				return mode = md, sta;
 			}
 
-			function parse_expression(inpair?: string, mustexp = 1, end?: string): AhkSymbol[] {
+			function parse_expression(rpair = ',', mustexp = 1, end?: string): AhkSymbol[] {
 				const pres = result.length, ternarys: number[] = [];
 				const bg = (next && (nexttoken(), next = false), tk.offset);
 				let byref;
 				block_mode = false;
 				while (nexttoken()) {
 					if (tk.topofline === 1)
-						if ((!inpair || inpair === ',') && !is_line_continue(lk, tk, _parent)) {
-							if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) === '.')
+						if (rpair === ',' && !is_line_continue(lk, tk, _parent)) {
+							if (lk.type === 'TK_WORD' && input[lk.offset - 1] === '.')
 								addprop(lk);
 							next = false; break;
 						} else if (lk !== EMPTY_TOKEN)
 							tk.topofline = -1;
 					switch (tk.type) {
 						case 'TK_WORD': {
-							const predot = (input.charAt(tk.offset - 1) === '.');
-							if (input.charAt(parser_pos) === '(')
+							if (input[parser_pos] === '(')
 								continue;
+							const predot = input[tk.offset - 1] === '.';
 							nexttoken();
 							if (tk.type as string === 'TK_COMMA') {
 								if (predot)
 									addprop(lk), byref && (lk.__ref = true);
-								else if (input.charAt(lk.offset - 1) !== '%') {
+								else if (input[lk.offset - 1] !== '%') {
 									const vr = addvariable(lk);
 									if (vr && byref !== undefined) {
 										vr.def = vr.assigned = true;
@@ -2829,29 +2897,9 @@ export class Lexer {
 								} else lk.ignore = true;
 								next = false;
 								return result.splice(pres);
-							} else if (tk.content === '=>') {
-								const rl = result.length, p = lk, _mode = mode, b = parser_pos;
-								mode = 1;
-								const rg = make_range(p.offset, p.length);
-								const sub = parse_expression(inpair, mustexp || 1, end ?? (ternarys.length ? ':' : undefined));
-								mode = _mode;
-								if (byref) {
-									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2);
-									result.splice(rl);
-									break;
-								}
-								const tn = FuncNode.create('', SymbolKind.Function, make_range(p.offset, lk.offset + lk.length - p.offset),
-									make_range(p.offset, 0), [Variable.create(p.content, SymbolKind.Variable, rg)],
-									result.splice(rl));
-								tn.children!.push(...sub), tk.fat_arrow_end = true;
-								tn.returns = [b, lk.offset + lk.length];
-								if (mode !== 0)
-									tn.parent = _parent;
-								adddeclaration(tn), result.push(tn);
-								break;
-							} else if (tk.type as string === 'TK_OPERATOR' && (!tk.topofline || !tk.content.match(/^(!|~|not|\+\+|--)$/i))) {
+							} else if (tk.type as string === 'TK_OPERATOR' && (!tk.topofline || !/^(!|~|not|\+\+|--)$/i.test(tk.content))) {
 								let suf = !tk.topofline && ['++', '--'].includes(tk.content);
-								if (input.charAt(lk.offset - 1) !== '%' && input.charAt(lk.offset + lk.length) !== '%') {
+								if (input[lk.offset - 1] !== '%' && input[lk.offset + lk.length] !== '%') {
 									if (predot) {
 										addprop(lk);
 										if (byref) {
@@ -2868,12 +2916,15 @@ export class Lexer {
 												vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
 											else if (tk.content === '??' || tk.ignore)
 												vr.returns = null;
+											else if (byref === undefined && tk.content === '=>')
+												parse_func({ ...EMPTY_TOKEN, offset: lk.offset }, next = false,
+													result.splice(-1), rpair, end ?? (ternarys.length ? ':' : undefined));
 										}
 									}
 								} else if (predot) {
 									maybeclassprop(lk, null);
 									tk = lk, lk = tk.previous_token ?? EMPTY_TOKEN;
-									parse_prop(inpair), nexttoken(), suf ||= !tk.topofline && ['++', '--'].includes(tk.content);
+									parse_prop(rpair), nexttoken(), suf ||= !tk.topofline && ['++', '--'].includes(tk.content);
 								} else
 									lk.ignore = true;
 								next = false;
@@ -2881,7 +2932,7 @@ export class Lexer {
 							} else if (tk.topofline && (tk.type as string !== 'TK_EQUALS' && tk.type as string !== 'TK_DOT')) {
 								next = false;
 								if (!predot) {
-									if (input.charAt(lk.offset - 1) !== '%') {
+									if (input[lk.offset - 1] !== '%') {
 										const vr = addvariable(lk);
 										if (vr && byref !== undefined) {
 											vr.def = vr.assigned = true;
@@ -2890,7 +2941,7 @@ export class Lexer {
 											else vr.cached_types = [NUMBER];
 										}
 									} else lk.ignore = true;
-								} else if (input.charAt(lk.offset - 1) !== '%') {
+								} else if (input[lk.offset - 1] !== '%') {
 									addprop(lk), byref && (lk.__ref = true);
 								} else
 									lk.ignore = true;
@@ -2899,7 +2950,7 @@ export class Lexer {
 							}
 							if (!predot) {
 								let vr: Variable | undefined;
-								if (input.charAt(lk.offset - 1) !== '%' && (vr = addvariable(lk))) {
+								if (input[lk.offset - 1] !== '%' && (vr = addvariable(lk))) {
 									if (byref) {
 										if (tk.type as string !== 'TK_DOT')
 											vr.assigned = vr.def = vr.pass_by_ref = true;
@@ -2913,7 +2964,7 @@ export class Lexer {
 											set_detail(vr, _cm);
 										const equ = tk.content, b = parser_pos;
 										next = true;
-										result.push(...parse_expression(inpair, mustexp || 1, end ?? (ternarys.length ? ':' : undefined)));
+										result.push(...parse_expression(rpair, mustexp || 1, end ?? (ternarys.length ? ':' : undefined)));
 										vr.range.end = document.positionAt(lk.offset + lk.length);
 										if (equ === ':=' || equ === '??=' && (vr.assigned ??= 1))
 											vr.returns = [b, lk.offset + lk.length];
@@ -2927,7 +2978,7 @@ export class Lexer {
 								if ((next = tk.type as string === 'TK_EQUALS')) {
 									ASSIGN_TYPE.includes(tk.content) && maybeclassprop(lk, undefined, () => {
 										const beg = parser_pos;
-										result.push(...parse_expression(inpair, mustexp, end ?? (ternarys.length ? ':' : undefined)));
+										result.push(...parse_expression(rpair, mustexp, end ?? (ternarys.length ? ':' : undefined)));
 										return [beg, lk.offset + lk.length];
 									});
 								} else if (byref) {
@@ -2943,75 +2994,14 @@ export class Lexer {
 							if (tk.content === '[') {
 								parse_pair('[', ']');
 							} else {
-								let fc: Token | undefined, quoteend: number, nk: Token;
-								const nospace = !lk.type || input.charAt(lk.offset + lk.length) === '(';
-								const rl = result.length, ttk = tk, b = tk.offset;
-								const info: ParamInfo = { offset: tk.offset, count: 0, comma: [], miss: [], unknown: false };
-								if (lk.type === 'TK_WORD' && nospace)
-									if (input.charAt(lk.offset - 1) === '.') {
-										const ptk = lk;
-										parse_pair('(', ')', undefined, info);
-										ptk.semantic = { type: SemanticTokenTypes.method };
-										const tn: CallSite = DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method,
-											make_range(ptk.offset, parser_pos - ptk.offset), make_range(ptk.offset, ptk.length));
-										Object.assign(ttk.paraminfo ?? {}, { name: ptk.content, method: true });
-										tn.paraminfo = info, tn.offset = ptk.offset, ptk.callsite = tn;
-										maybeclassprop(ptk, true);
-										continue;
-									} else fc = lk;
-								const _t = !fc || (input.charAt(fc.offset - 1) !== '%' || fc.previous_token?.previous_pair_pos === undefined);
-								parse_pair('(', ')', undefined, info), quoteend = parser_pos;
-								if (_t && ((nk = _this.get_token(parser_pos, true)).content === '=>' ||
-									!nk.topofline && end !== '{' && nk.content === '{')) {
-									result.splice(rl), lk = (tk = ttk).previous_token ?? EMPTY_TOKEN;
-									parser_pos = tk.offset + 1;
-									const fat_arrow = nk.content === '=>';
-									let par = parse_params(true);
-									const bbb = fc ? fc.offset : b, rs = result.splice(rl);
-									quoteend = parser_pos, nexttoken();
-									if (fc) {
-										if (fc.content.match(/^\d/))
-											_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-										fc.semantic = { type: SemanticTokenTypes.function, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
-									};
-									if (!par)
-										par = [], _this.addDiagnostic(diagnostic.invalidparam(), bbb, quoteend - bbb);
-									const tn = FuncNode.create(fc?.content ?? '', SymbolKind.Function,
-										make_range(bbb, 0),
-										make_range(bbb, fc?.length ?? 0), par);
-									const _p = _parent, _m = mode;
-									_parent = tn, mode = 1, fc ??= ttk;
-									result.push(fc.symbol = fc.definition = tn);
-									if (fat_arrow) {
-										tn.children = rs, rs.push(...parse_expression(inpair, fc?.topofline ? 2 : mustexp || 1,
-											end ?? (ternarys.length ? ':' : undefined)));
-										tn.range.end = _this.document.positionAt(lk.offset + lk.length);
-										tn.returns = [nk.offset + nk.length, lk.offset + lk.length];
-										tk.fat_arrow_end = true;
-									} else {
-										if (ahk_version < alpha_3)
-											_this.addDiagnostic(diagnostic.requireVerN(alpha_3), fc.offset, parser_pos - fc.offset, { code: DiagnosticCode.func_expr });
-										tk.in_expr = bbb;
-										tn.children = rs, rs.push(...parse_block(1, tn));
-										tn.range.end = document.positionAt(parser_pos);
-										tk = _this.tokens[tk.next_pair_pos!] ?? _this.find_token(parser_pos - 1);
-										tk.in_expr = bbb, begin_line = false;
-									}
-									_parent = _p, mode = _m, byref = undefined;
-									_this.addFoldingRangePos(tn.range.start, tn.range.end, fat_arrow ? 'line' : undefined);
-									if (mode !== 0)
-										tn.parent = _parent;
-									adddeclaration(tn);
-								} else if (fc) {
-									if (input.charAt(fc.offset - 1) !== '%' || fc.previous_token?.previous_pair_pos === undefined) {
-										addvariable(fc);
-										fc.semantic ??= { type: SemanticTokenTypes.function };
-										const tn: CallSite = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function,
-											make_range(fc.offset, quoteend - fc.offset), make_range(fc.offset, fc.length));
-										Object.assign(ttk.paraminfo ?? {}, { name: fc.content });
-										tn.paraminfo = info, tn.offset = fc.offset, fc.callsite = tn;
-									} else fc.ignore = true, delete fc.semantic;
-								}
+								let fc: Token, kind;
+								if (lk.type === 'TK_WORD' && lk.offset + lk.length === tk.offset) {
+									if ((fc = lk).previous_token?.type === 'TK_DOT')
+										kind = SymbolKind.Method;
+									else if (input[lk.offset - 1] === '%' && fc.previous_token?.op_type === 1)
+										fc.ignore = delete fc.semantic;
+								} else fc = { ...EMPTY_TOKEN, offset: tk.offset, ignore: true };
+								parse_call(fc, '(', kind, rpair, end ?? (ternarys.length ? ':' : undefined));
 							}
 							continue;
 						case 'TK_START_BLOCK':
@@ -3030,7 +3020,6 @@ export class Lexer {
 									}
 									next = isobj = true;
 								} else if (lk.type === 'TK_EQUALS') {
-									if (!':=??='.includes(lk.content)) _this.addDiagnostic(diagnostic.unknownoperatoruse(lk.content), lk.offset, lk.length);
 								} else if (mustexp === 1) {
 									if (lk.type === 'TK_WORD' || lk.type === 'TK_OPERATOR' && lk.content !== '=>' || lk.type.startsWith('TK_END'))
 										mustexp = 0;
@@ -3054,54 +3043,49 @@ export class Lexer {
 						case 'TK_LABEL': unexpected(tk); break;
 						case 'TK_UNKNOWN': _this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length); break;
 						case 'TK_RESERVED': {
-							const c = input.charAt(tk.offset + tk.length);
-							if (c === '%' || input.charAt(tk.offset - 1) === '%') {
-								next = false, tk.type = 'TK_WORD', tk.semantic = { type: SemanticTokenTypes.variable };
+							const c = input[tk.offset + tk.length];
+							if (c === '%' || input[tk.offset - 1] === '%') {
+								tk.ignore = true, tk.type = 'TK_WORD';
 								continue;
 							}
-							if (/^(class|super|isset)$/i.test(tk.content)) {
-								if (tk.content.toLowerCase() === 'isset' && parse_isset(c))
+							switch (_low = tk.content.toLowerCase()) {
+								case 'false': case 'true':
+									tk.type = 'TK_WORD';
+									if (byref !== undefined || _this.get_token(parser_pos, true).type === 'TK_EQUALS')
+										_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+									else next = false;
 									continue;
+								case 'isset': parse_isset(c); continue;
+								case 'super': parse_super(); continue;
+							}
+							if (ahk_version >= alpha_3 && _low === 'throw') {
 								next = false, tk.type = 'TK_WORD';
 								continue;
-							} else if (ahk_version >= alpha_3) {
-								if (tk.content.toLowerCase() === 'throw') {
-									next = false, tk.type = 'TK_WORD';
-									continue;
-								}
+							}
+							if (tk.topofline && !')]'.includes(rpair) && line_starters.includes(_low)) {
+								tk.topofline = 1;
+								next = false;
+								unexpected_lf(tk);
+								ternaryMiss(ternarys);
+								return result.splice(pres);
 							}
 							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 							break;
 						}
 						case 'TK_OPERATOR':
 							if (tk.content === '%') {
-								const prec = input.charAt(tk.offset - 1);
-								if (inpair === '%') {
+								if (rpair === '%') {
 									next = false;
 									ternaryMiss(ternarys);
 									return result.splice(pres);
 								}
-								prec === '.' ? (maybeclassprop(tk, null), parse_prop()) : parse_pair('%', '%');
+								input[tk.offset - 1] === '.' ? (maybeclassprop(tk, null), parse_prop()) : parse_pair('%', '%');
 								continue;
-							} else if (tk.content === '=>' && lk.type === 'TK_WORD') {
-								if (result.length && result.at(-1)!.name === lk.content)
-									result.pop();
-								const tn = FuncNode.create('', SymbolKind.Function, make_range(lk.offset, lk.length),
-									make_range(lk.offset, 0), [Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length))]);
-								tn.returns = [parser_pos, 0];
-								tn.children = parse_expression(inpair, 1, end ?? (ternarys.length ? ':' : undefined));
-								if (byref) {
-									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2);
-									break;
-								}
-								tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
-								tk.fat_arrow_end = true;
-								if (mode !== 0)
-									tn.parent = _parent;
-								result.push(tn), adddeclaration(tn);
-							} else {
-								if (allIdentifierChar.test(tk.content) && (input[tk.offset - 1] === '%' || input[tk.offset + tk.length] === '%')) {
-									next = false, tk.type = 'TK_WORD', tk.semantic = { type: SemanticTokenTypes.variable };
+							} else if (tk.content === '=>')
+								unexpected(tk);
+							else {
+								if (allIdentifierChar.test(tk.content) && (input[tk.offset - 1] === '%' || input[parser_pos] === '%')) {
+									tk.ignore = true, tk.type = 'TK_WORD';
 									continue;
 								}
 								if (tk.content === ':') {
@@ -3138,28 +3122,20 @@ export class Lexer {
 				return result.splice(pres);
 			}
 
-			function parse_params(must = false, endc = ')') {
-				const beg = parser_pos - 1, cache: ParamList = [], la = [',', endc === ')' ? '(' : '['];
-				let byref = false, paramsdef = true, bb = parser_pos, bak = tk, hasexpr = false, lineno: number | undefined;
+			function parse_params(endc = ')') {
+				const beg = parser_pos - 1, cache: ParamList = [];
+				const la = [',', endc === ')' ? '(' : '['], pk = tk;
+				let byref = false, paramsdef = true, bb = parser_pos, bak = tk;
+				let must = false, hasexpr = false, lineno: number | undefined;
 				const info: ParamInfo = { offset: beg, count: 0, comma: [], miss: [], unknown: false };
 				block_mode = false, bak.paraminfo = info;
 				if (lk.type === 'TK_WORD' && bak.prefix_is_whitespace === undefined)
-					info.name = lk.content;
+					info.name = lk.content, must = lk.topofline > 0;
 				while (nexttoken()) {
 					if (tk.topofline === 1)
 						tk.topofline = -1;
 					if (tk.content === endc) {
-						if (lk.type === 'TK_COMMA') {
-							if (must) {
-								unexpected(tk);
-								break;
-							}
-							tk.previous_pair_pos = beg;
-							lk.paraminfo = info;
-							info.miss.push(info.count++);
-							result.push(...cache);
-							return;
-						}
+						lk.type === 'TK_COMMA' && unexpected(tk);
 						break;
 					} else if (tk.type === 'TK_WORD') {
 						if (is_builtinvar(tk.content.toLowerCase())) {
@@ -3169,8 +3145,6 @@ export class Lexer {
 						if (la.includes(lk.content) || lk === EMPTY_TOKEN) {
 							nexttoken();
 							if (tk.content === ',' || tk.content === endc) {
-								if (lk.content.match(/^\d/))
-									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
 								const tn = Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length));
 								if ((_cm = comments[tn.selectionRange.start.line]) && tn.selectionRange.start.line > (lineno ??= _this.document.positionAt(beg).line))
 									set_detail(tn, _cm);
@@ -3180,15 +3154,13 @@ export class Lexer {
 								if (tk.content === ',')
 									info.comma.push(tk.offset), tk.paraminfo = info;
 								else break;
-							} else if (tk.content === ':=' || must && tk.content === '=') {
+							} else if (tk.content === ':=' || tk.content === '=') {
 								if (tk.content === '=') {
-									stop_parse(lk);
+									must && stop_parse(lk);
 									_this.addDiagnostic(`${diagnostic.unexpected('=')}, ${diagnostic.didyoumean(':=')}`, tk.offset, tk.length,
 										{ code: DiagnosticCode.expect, data: ':=' });
 								}
 								const ek = tk;
-								if (lk.content.match(/^\d/))
-									_this.addDiagnostic(diagnostic.invalidsymbolname(lk.content), lk.offset, lk.length);
 								const tn = Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length));
 								if ((_cm = comments[tn.selectionRange.start.line]) && tn.selectionRange.start.line > (lineno ??= _this.document.positionAt(beg).line))
 									set_detail(tn, _cm);
@@ -3228,14 +3200,12 @@ export class Lexer {
 										break;
 									} else { paramsdef = false, info.count--; break; }
 								} else if (tk.content === '?' && tk.ignore) {
-									const t = lk;
 									const tn = Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length));
 									tn.def = true, tn.defaultVal = null, cache.push(tn);
 									if (byref)
 										byref = false, tn.pass_by_ref = tn.assigned = true;
 									nexttoken();
 									if (tk.type as string === 'TK_COMMA') {
-										if (t.content.match(/^\d/)) _this.addDiagnostic(diagnostic.invalidsymbolname(t.content), t.offset, t.length);
 										info.comma.push(tk.offset), bb = parser_pos, bak = tk;
 										continue;
 									} else {
@@ -3245,8 +3215,8 @@ export class Lexer {
 									}
 								} else { paramsdef = false, info.count--; break; }
 							} else {
-								if (must && lk.type === 'TK_WORD' && lk.content.toLowerCase() === 'byref' && tk.type === 'TK_WORD') {
-									stop_parse(lk);
+								if (lk.type === 'TK_WORD' && lk.content.toLowerCase() === 'byref' && tk.type === 'TK_WORD') {
+									must && stop_parse(lk);
 									_this.addDiagnostic(diagnostic.deprecated('&', 'ByRef'), lk.offset, tk.topofline ? lk.length : tk.offset - lk.offset,
 										{ code: DiagnosticCode.expect, data: '&' });
 									next = false, lk = EMPTY_TOKEN;
@@ -3277,17 +3247,18 @@ export class Lexer {
 						paramsdef = false; break;
 					}
 				}
-				info.comma.forEach(o => _this.tokens[o].paraminfo = info);
+				info.comma.forEach(o => tokens[o].paraminfo = info);
 				if (paramsdef) {
 					if (hasexpr)
 						cache.format = format_params_default_val.bind(undefined, _this.tokens);
-					tk.previous_pair_pos = beg, _this.tokens[beg].next_pair_pos = tk.offset;
+					tk.previous_pair_pos = beg, pk.next_pair_pos = tk.offset;
 					_this.addFoldingRange(beg, parser_pos, 'block');
 					return cache;
 				} else {
-					result.push(...cache);
+					const l = result.length;
 					parser_pos = bb, tk = bak;
 					parse_pair(endc === ')' ? '(' : '[', endc, beg, info);
+					result.splice(l);
 					return;
 				}
 			}
@@ -3314,7 +3285,7 @@ export class Lexer {
 						case 'TK_WORD':
 							tk.type = 'TK_WORD';
 							tk.semantic = { type: SemanticTokenTypes.property };
-							if (input.charAt(parser_pos) === '%' && (tk.ignore = true))
+							if (input[parser_pos] === '%' && (tk.ignore = true))
 								break;
 							if (lk.content === '%')
 								tk.ignore = true;
@@ -3326,9 +3297,10 @@ export class Lexer {
 			}
 
 			function parse_obj(must = false): boolean {
-				const l = lk, b = tk, rl = result.length, mark: number[] = [], props: Record<string, AhkSymbol> = {};
+				const l = lk, b = tk, rl = result.length, prev_mode = mode;
+				const mark: number[] = [], props: Record<string, AhkSymbol> = {};
 				let isobj = true, k: Token | undefined, e: Token | undefined;
-				block_mode = false, next = true, tk.data = OBJECT;
+				block_mode = false, next = true, tk.data = OBJECT, mode |= BlockType.Pair;
 				while (isobj) {
 					if (!objkey() || objval()) {
 						if (must && !isobj) {
@@ -3345,9 +3317,9 @@ export class Lexer {
 				}
 				if (isobj || must)
 					for (const o of mark)
-						(k = tokens[o]).type = 'TK_WORD', k.semantic = { type: SemanticTokenTypes.property };
+						(k = tokens[o]).type = 'TK_WORD', k.semantic = SE_PROPERTY;
 				if (!isobj) {
-					lk = l, tk = b, result.splice(rl);
+					lk = l, tk = b, result.splice(rl), mode = prev_mode;
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
 					return next = false;
 				} else if (lk.content === ':' || lk.type === 'TK_LABEL')
@@ -3362,6 +3334,7 @@ export class Lexer {
 					tk.data = b.data;
 				} else
 					_this.addDiagnostic(diagnostic.missing('}'), b.offset, 1);
+				mode = prev_mode;
 				return true;
 
 				function objkey(): boolean {
@@ -3389,7 +3362,7 @@ export class Lexer {
 							case 'TK_RESERVED':
 							case 'TK_WORD': {
 								mark.push(tk.offset);
-								if (input.charAt(parser_pos) === '%')
+								if (input[parser_pos] === '%')
 									break;
 								const t = lk;
 								nexttoken();
@@ -3412,7 +3385,7 @@ export class Lexer {
 								}
 								return isobj = false;
 							case 'TK_LABEL':
-								if (tk.content.match(/^(\w|[^\x00-\x7f])+:$/)) {
+								if (/^(\w|[^\x00-\x7f])+:$/.test(tk.content)) {
 									k = { ...tk }, k.content = k.content.slice(0, -1), k.length--;
 									return true;
 								}
@@ -3454,104 +3427,56 @@ export class Lexer {
 			}
 
 			function parse_pair(b: string, e: string, pairbeg?: number, paraminfo?: ParamInfo, strs?: Token[]) {
-				let pairnum = 0, apos = result.length, tp = parser_pos, llk = lk;
-				const pairpos = [pairbeg ??= tk.offset], _pk = _this.tokens[pairbeg], ternarys: number[] = [];
-				const info: ParamInfo = paraminfo ?? { offset: pairbeg, count: 0, comma: [], miss: [], unknown: false };
-				let iscall = false, rpair = 0, byref;
+				let pairnum = 0, iscall = false, rl, byref;
+				const pairpos = [pairbeg ??= tk.offset], rls = [result.length], _pk = _this.tokens[pairbeg];
+				const prev_mode = mode, ternarys: number[] = [];
+				paraminfo ??= { offset: pairbeg, count: 0, comma: [], miss: [], unknown: false };
 				if (b !== '%') {
+					mode |= BlockType.Pair;
 					const t = _pk.previous_token;
-					_pk.paraminfo = info;
-					if (info.name || !_pk.topofline && t && _pk.prefix_is_whitespace === undefined
+					_pk.paraminfo = paraminfo;
+					if (paraminfo.name || !_pk.topofline && t && _pk.prefix_is_whitespace === undefined
 						&& ((t.previous_pair_pos ?? t.in_expr) !== undefined || t.type === 'TK_WORD' || t.type === 'TK_DOT'))
 						iscall = true;
 				} else _pk.op_type = -1;
 				while (nexttoken()) {
 					if (tk.topofline) {
-						if (b === '%' && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !tk.content.match(/^(!|~|not)$/i))) {
+						if (b === '%' && !(['TK_COMMA', 'TK_OPERATOR', 'TK_EQUALS'].includes(tk.type) && !/^(!|~|not)$/i.test(tk.content))) {
 							stop_parse(_pk);
 							_pk.next_pair_pos = -1;
 							_this.addDiagnostic(diagnostic.missing('%'), pairbeg, 1);
-							next = false;
+							next = false, mode = prev_mode;
 							ternaryMiss(ternarys);
 							return;
 						}
 						if (tk.topofline === 1)
 							tk.topofline = -1;
 					}
-					if (b !== '(' && tk.content === '(') {
-						apos = result.length, tp = parser_pos, rpair = 1, llk = lk;
-						parse_pair('(', ')');
-					} else if (tk.content === e) {
+					if (tk.content === e) {
 						tokens[tk.previous_pair_pos = pairpos.pop() as number].next_pair_pos = tk.offset;
 						if (e !== '%')
 							_this.addFoldingRange(tk.previous_pair_pos as number, tk.offset + 1, 'block');
 						else tk.op_type = 1;
 						if ((--pairnum) < 0)
 							break;
-						if (e === ')')
-							rpair++;
+						rl = rls.pop();
 					} else if (tk.content === b) {
 						if (b === '(') {
-							if (input.charAt(tk.offset - 1) === ')') {
+							if (input[tk.offset - 1] === ')') {
 								parse_pair('(', ')');
 								continue;
 							}
-							apos = result.length, tp = parser_pos, rpair = 0;
+							rls.push(result.length);
 						}
-						pairnum++, pairpos.push(parser_pos - 1), llk = lk;
-					} else if (tk.content === '=>' || rpair === 1 && lk.content === ')' && tk.content === '{') {
-						let rs = result.splice(apos), par: AhkSymbol[] | undefined, nk: Token, b = -1;
-						const end = tk.content, bb = tk;
-						if (lk.content === ')') {
-							if (rpair !== 1) {
-								_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2), next = true;
-								continue;
-							}
-							lk = llk, parser_pos = tp - 1, tk = get_next_token(), b = tk.offset;
-							rs = [], par = parse_params(true);
-							if (!par) { par = [], _this.addDiagnostic(diagnostic.invalidparam(), b, tk.offset - b + 1); }
-							nk = get_token_ignore_comment();
-						} else if (lk.type === 'TK_WORD' && input.charAt(lk.offset - 1) !== '.') {
-							nk = tk, b = lk.offset;
-							par = [Variable.create(lk.content, SymbolKind.Variable, make_range(lk.offset, lk.length))];
-						} else {
-							_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, 2), next = true;
-							continue;
-						}
-						if (nk.content !== end) {
-							tk = bb, parser_pos = bb.offset + bb.length, next = true, result.push(...rs);
-							unexpected(tk);
-							continue;
-						}
-						rs.push(...result.splice(apos));
-						const tn = FuncNode.create('', SymbolKind.Function, make_range(b, 0), make_range(b, 0), par, rs);
-						_this.tokens[b].symbol = tn;
-						if (nk.content === '=>') {
-							lk = tk, tk = nk;
-							rs.push(...parse_expression(e, 2, ternarys.length ? ':' : undefined));
-							tn.range.end = _this.document.positionAt(lk.offset + lk.length);
-							tn.returns = [nk.offset + 2, lk.offset + lk.length];
-							tk.fat_arrow_end = true;
-						} else {
-							if (ahk_version < alpha_3)
-								_this.addDiagnostic(diagnostic.requireVerN(alpha_3), tp - 1, parser_pos - tp, { code: DiagnosticCode.func_expr });
-							nk.in_expr = b;
-							rs.push(...parse_block(1, tn));
-							tn.range.end = document.positionAt(parser_pos);
-							tk = _this.tokens[tk.next_pair_pos!] ?? _this.find_token(parser_pos - 1);
-							tk.in_expr = b, begin_line = false;
-						}
-						if (mode !== 0)
-							tn.parent = _parent;
-						apos = result.length;
-						result.push(tn), adddeclaration(tn);
-						if (end === '=>' && ',:)]}'.includes(tk.content))
-							tk.fat_arrow_end = true;
+						pairnum++, pairpos.push(parser_pos - 1);
+					} else if (tk.content === '(') {
+						parse_call({ ...EMPTY_TOKEN, offset: tk.offset, ignore: true },
+							'(', undefined, e, ternarys.length ? ':' : undefined);
 					} else switch (tk.type) {
 						case 'TK_WORD':
-							if (input.charAt(tk.offset - 1) !== '.') {
-								if (input.charAt(parser_pos) !== '(') {
-									if (b === '%' || (input.charAt(tk.offset - 1) !== '%' && input.charAt(tk.offset + tk.length) !== '%')) {
+							if (input[tk.offset - 1] !== '.') {
+								if (input[parser_pos] !== '(') {
+									if (b === '%' || (input[tk.offset - 1] !== '%' && input[tk.offset + tk.length] !== '%')) {
 										const vr = addvariable(tk);
 										if (vr) {
 											nexttoken(), next = false;
@@ -3581,71 +3506,21 @@ export class Lexer {
 												vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
 											else if (tk.content === '??' || tk.ignore && tk.content === '?')
 												vr.returns = null;
+											else if (tk.content === '=>')
+												parse_func({ ...EMPTY_TOKEN, offset: lk.offset }, false,
+													result.splice(-1), e, ternarys.length ? ':' : undefined);
 										}
 									} else tk.ignore = true;
 								} else {
+									if (input[tk.offset - 1] === '%' && lk.op_type === 1)
+										tk.ignore = true;
 									lk = tk, tk = get_next_token();
-									const fc = lk, ttk = tk, rl = result.length, par = parse_params(), quoteend = parser_pos;
-									const _t = input.charAt(fc.offset - 1) !== '%' || fc.previous_token?.previous_pair_pos === undefined;
-									let fat_arrow: boolean;
-									nexttoken();
-									if (_t && ((fat_arrow = tk.content === '=>') || tk.content === '{')) {
-										const pp = _parent, b = parser_pos;
-										if (!par) { _this.addDiagnostic(diagnostic.invalidparam(), fc.offset, tk.offset - fc.offset + 1); }
-										const tn = FuncNode.create(fc.content, SymbolKind.Function, make_range(fc.offset, parser_pos - fc.offset),
-											make_range(fc.offset, fc.length), <Variable[]>par || []);
-										if (fc.content.match(/^\d/))
-											_this.addDiagnostic(diagnostic.invalidsymbolname(fc.content), fc.offset, fc.length);
-										fc.symbol = fc.definition = _parent = tn;
-										if (fat_arrow) {
-											(tn.children = result.splice(rl)).push(
-												...parse_expression(e, 2, ternarys.length ? ':' : undefined));
-											tn.range.end = document.positionAt(lk.offset + lk.length);
-											tn.returns = [b, lk.offset + lk.length];
-											tk.fat_arrow_end = true;
-										} else {
-											if (ahk_version < alpha_3)
-												_this.addDiagnostic(diagnostic.requireVerN(alpha_3), fc.offset, parser_pos - fc.offset, { code: DiagnosticCode.func_expr });
-											tk.in_expr = fc.offset;
-											(tn.children = result.splice(rl)).push(...parse_block(1, tn));
-											tn.range.end = document.positionAt(parser_pos);
-											tk = _this.tokens[tk.next_pair_pos!] ?? _this.find_token(parser_pos - 1);
-											tk.in_expr = fc.offset, begin_line = false;
-										}
-										fc.semantic = { type: SemanticTokenTypes.function, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
-										_parent = pp;
-										if (mode !== 0)
-											tn.parent = _parent;
-										adddeclaration(tn);
-										result.push(tn), _this.addFoldingRangePos(tn.range.start, tn.range.end, fat_arrow ? 'line' : undefined);
-									} else {
-										if (_t) {
-											let tn: CallSite;
-											addvariable(fc), tn = DocumentSymbol.create(fc.content, undefined, SymbolKind.Function,
-												make_range(fc.offset, quoteend - fc.offset), make_range(fc.offset, fc.length));
-											Object.assign(ttk.paraminfo ?? {}, { name: fc.content });
-											tn.paraminfo = ttk.paraminfo, tn.offset = fc.offset, fc.callsite = tn;
-											fc.semantic ??= { type: SemanticTokenTypes.function };
-										} else
-											fc.ignore = true, delete fc.semantic;
-										next = false;
-										if (par) for (const it of par) if (!is_builtinvar(it.name.toLowerCase())) {
-											result.push(it);
-											if (it.pass_by_ref || it.returns)
-												it.def = true;
-										}
-									}
+									parse_call(lk, '(', undefined, e, ternarys.length ? ':' : undefined);
 								}
-							} else if (input.charAt(parser_pos) === '(') {
-								const ptk = tk, ttk = tk = get_next_token();
-								parse_pair('(', ')');
-								ptk.semantic = { type: SemanticTokenTypes.method };
-								const tn: CallSite = DocumentSymbol.create(ptk.content, undefined, SymbolKind.Method,
-									make_range(ptk.offset, parser_pos - ptk.offset), make_range(ptk.offset, ptk.length));
-								Object.assign(ttk.paraminfo ?? {}, { name: ptk.content, method: true });
-								tn.paraminfo = ttk.paraminfo, tn.offset = ptk.offset, ptk.callsite = tn;
-								maybeclassprop(ptk, true);
-							} else if (b !== '%' && input.charAt(parser_pos) === '%') {
+							} else if (input[parser_pos] === '(') {
+								lk = tk, tk = get_next_token();
+								parse_call(lk, '(', SymbolKind.Method);
+							} else if (b !== '%' && input[parser_pos] === '%') {
 								maybeclassprop(tk, null), parse_prop();
 								nexttoken(), next = false;
 							} else {
@@ -3667,6 +3542,12 @@ export class Lexer {
 						case 'TK_START_BLOCK':
 							if (['TK_WORD', 'TK_STRING', 'TK_NUMBER'].includes(lk.type))
 								unexpected(tk);
+							else if (lk.content === ')' && lk.previous_pair_pos !== undefined) {
+								tk = tokens[lk.previous_pair_pos], parser_pos = tk.offset + 1;
+								lk = tk.previous_token ?? EMPTY_TOKEN, result.splice(rl!);
+								parse_func({ ...EMPTY_TOKEN, offset: tk.offset }, false, undefined, e, ternarys.length ? ':' : undefined);
+								continue;
+							}
 							parse_obj(true);
 							break;
 						case 'TK_STRING':
@@ -3677,56 +3558,69 @@ export class Lexer {
 						case 'TK_END_BLOCK':
 						case 'TK_END_EXPR':
 							unexpected(tk);
-							pairMiss(), next = false;
+							pairMiss(), next = false, mode = prev_mode;
 							ternaryMiss(ternarys);
 							return;
 						case 'TK_RESERVED': {
-							const c = input.charAt(tk.offset + tk.length);
-							if (b !== '%' && (c === '%' || input.charAt(tk.offset - 1) === '%')) {
-								next = false, tk.type = 'TK_WORD', tk.semantic = { type: SemanticTokenTypes.variable };
+							const c = input[parser_pos];
+							if (b !== '%' && (c === '%' || input[tk.offset - 1] === '%')) {
+								tk.ignore = true, tk.type = 'TK_WORD';
 								continue;
 							}
-							if (/^(class|super|isset)$/i.test(tk.content)) {
-								if (tk.content.toLowerCase() === 'isset' && parse_isset(c))
+							switch (_low = tk.content.toLowerCase()) {
+								case 'false': case 'true':
+									tk.type = 'TK_WORD';
+									if (byref !== undefined || _this.get_token(parser_pos, true).type === 'TK_EQUALS')
+										_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+									else next = false;
 									continue;
+								case 'isset': parse_isset(c); continue;
+								case 'super': parse_super(); continue;
+							}
+							if (ahk_version >= alpha_3 && _low === 'throw') {
 								next = false, tk.type = 'TK_WORD';
 								continue;
-							} else if (ahk_version >= alpha_3) {
-								if (tk.content.toLowerCase() === 'throw') {
-									next = false, tk.type = 'TK_WORD';
-									continue;
-								}
 							}
 							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 							break;
 						}
 						case 'TK_COMMA':
 							if (pairnum === 0 && b !== '%') {
-								++info.count;
+								++paraminfo.count;
 								if (lk.type === 'TK_COMMA' || lk.type === 'TK_START_EXPR')
-									info.miss.push(info.comma.length);
-								else if (!lk.ignore && lk.type === 'TK_OPERATOR' && !lk.content.match(/(--|\+\+|%)/))
+									paraminfo.miss.push(paraminfo.comma.length);
+								else if (!lk.ignore && lk.type === 'TK_OPERATOR' && !/(--|\+\+|%)/.test(lk.content))
 									unexpected(tk);
-								info.comma.push(tk.offset), iscall && (tk.paraminfo = info);
+								paraminfo.comma.push(tk.offset), iscall && (tk.paraminfo = paraminfo);
 							}
 							break;
 						case 'TK_OPERATOR':
-							if (tk.content === '%') {
-								const prec = input.charAt(tk.offset - 1);
-								prec === '.' ? (maybeclassprop(tk, null), parse_prop(e)) : parse_pair('%', '%');
-								continue;
-							}
-							if (allIdentifierChar.test(tk.content) && (input[tk.offset - 1] === '%' || input[tk.offset + tk.length] === '%')) {
-								next = false, tk.type = 'TK_WORD', tk.semantic = { type: SemanticTokenTypes.variable };
-								continue;
-							}
-							if (tk.content === ':') {
-								if (ternarys.pop() === undefined)
-									unexpected(tk);
-							} else if (tk.content === '?')
-								if (!tk.ignore)
+							switch (tk.content) {
+								case '%':
+									lk.type === 'TK_DOT' ? (maybeclassprop(tk, null), parse_prop(e)) : parse_pair('%', '%');
+									continue;
+								case ':':
+									ternarys.pop() ?? unexpected(tk);
+									break;
+								case '?':
+									if (tk.ignore) continue;
 									ternarys.push(tk.offset);
-								else continue;
+									break;
+								case '=>':
+									if (byref !== undefined || lk.content !== ')' || lk.previous_pair_pos === undefined)
+										byref = undefined, unexpected(tk);
+									else {
+										tk = tokens[lk.previous_pair_pos], parser_pos = tk.offset + 1;
+										lk = tk.previous_token ?? EMPTY_TOKEN, result.splice(rl!);
+										parse_func({ ...EMPTY_TOKEN, offset: tk.offset }, false, undefined, e, ternarys.length ? ':' : undefined);
+									}
+									continue;
+								default:
+									if (allIdentifierChar.test(tk.content) && (input[tk.offset - 1] === '%' || input[parser_pos] === '%')) {
+										tk.ignore = true, tk.type = 'TK_WORD';
+										continue;
+									}
+							}
 							if (check_operator(tk) === -1) {
 								if (tk.content === '&') {
 									byref = true;
@@ -3757,14 +3651,15 @@ export class Lexer {
 					tokens[tk.previous_pair_pos!].next_pair_pos = tk.offset;
 				if (b !== '%') {
 					if (lk.content === ',')
-						info.miss.push(info.count++);
+						paraminfo.miss.push(paraminfo.count++);
 					else if (lk.type !== 'TK_START_EXPR') {
-						info.count++;
+						paraminfo.count++;
 						if (lk.content === '*')
-							info.unknown = true, info.count--;
+							paraminfo.unknown = true, paraminfo.count--;
 					}
-					info.end = tk.offset;
+					paraminfo.end = tk.offset;
 				}
+				mode = prev_mode;
 				ternaryMiss(ternarys);
 
 				function pairMiss() {
@@ -3778,7 +3673,7 @@ export class Lexer {
 				const l = result.length;
 				tk.definition = ahkvars.ISSET;
 				tk.ignore = true, tk.type = 'TK_WORD';
-				tk.semantic = { type: SemanticTokenTypes.operator };
+				tk.semantic = SE_OPERATOR;
 				if (c === '(') {
 					const fc = tk;
 					addvariable(tk);
@@ -3794,6 +3689,18 @@ export class Lexer {
 					return true;
 				}
 				_this.addDiagnostic(diagnostic.missing('('), tk.offset, 5);
+			}
+
+			function parse_super() {
+				if ((mode & BlockType.Mask) === BlockType.Method) {
+					if (input[parser_pos] !== '(') {
+						const t = _this.get_token(parser_pos, true);
+						if (t.type !== 'TK_DOT' && t.content !== '[' && !(t.topofline && tk.topofline))
+							return _this.addDiagnostic(diagnostic.syntaxerror(tk.content), tk.offset, tk.length);
+					}
+					tk.type = 'TK_WORD', next = false;
+				} else
+					_this.addDiagnostic(diagnostic.invalidsuper(), tk.offset, tk.length);
 			}
 
 			function ternaryMiss(ternarys: number[]) {
@@ -3819,10 +3726,10 @@ export class Lexer {
 				let rg: Range, cls: ClassNode | undefined;
 				let proto = false, ts = tk.previous_token?.previous_token;
 				if (!ts) return;
-				if (input.charAt(ts.offset - 1) === '.' &&
+				if (input[ts.offset - 1] === '.' &&
 					(ts.content.toLowerCase() !== 'prototype' ||
 						(proto = true, !(ts = ts.previous_token?.previous_token) ||
-							input.charAt(ts.offset - 1) === '.')))
+							input[ts.offset - 1] === '.')))
 					return;
 				_low = ts!.content.toLowerCase();
 				if (_low !== 'this' && _low !== 'super' || !(cls = get_class()) || proto && !(cls = cls.prototype) || !cls.cache)
@@ -3832,7 +3739,7 @@ export class Lexer {
 					if (pi && tk.content.toLowerCase() === 'defineprop' && pi.count > 1 && pi.miss[0] !== 0) {
 						const end = pi.comma[0], s = !!cls.prototype;
 						let nk = tokens[tk.next_token_offset];
-						if (input.charAt(tk.offset + tk.length) === '(')
+						if (input[tk.offset + tk.length] === '(')
 							nk = tokens[nk.next_token_offset];
 						if (nk.type !== 'TK_STRING' || nk.next_token_offset !== end)
 							cls.checkmember = false;
@@ -3846,19 +3753,19 @@ export class Lexer {
 								t.full = `(${classfullname.slice(0, -1)}) ${((t.static = s)) ? 'static ' : ''}${prop}`;
 								t.parent = cls, sym = t;
 								if ((t.returns = pp?.GET?.returns))
-									(t as FuncNode).alias = true;
+									(t as FuncNode).eval = true;
 								else t.returns = pp?.VALUE?.returns;
 							}
 							if ((pp = pp?.CALL)) {
 								t = Variable.create('', SymbolKind.Variable, make_range(0, 0)), t.arr = true;
 								t = FuncNode.create(prop, SymbolKind.Method, rg, rg, [t], undefined, s);
 								t.full = `(${classfullname.slice(0, -1)}) ${t.full}`;
-								t.returns = pp.returns, (t as FuncNode).alias = true;
+								t.returns = pp.returns, (t as FuncNode).eval = true;
 								t.parent = cls;
 								if (!sym)
 									sym = t;
 								else {
-									sym = { ...sym, [(sym as FuncNode).alias ? 'get' : sym.returns ? 'val' : 'set']: sym };
+									sym = { ...sym, [(sym as FuncNode).eval ? 'get' : sym.returns ? 'val' : 'set']: sym };
 									if (!sym.val)
 										sym.call = t as FuncNode;
 									else sym = t;
@@ -3879,21 +3786,15 @@ export class Lexer {
 				return;
 
 				function get_class() {
-					const kinds: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property];
-					let p = _parent, s = true;
-					while (p && p.kind !== SymbolKind.Class) {
-						if (kinds.includes(p.kind))
-							s = !!p.static;
+					let p = _parent;
+					while (p && p.kind !== SymbolKind.Class)
 						p = p.parent!;
-					}
-					if (s)
-						return p as ClassNode;
-					return (p as ClassNode)?.prototype;
+					return p as ClassNode;
 				}
 			}
 
 			function is_builtinvar(name: string, mode = 0): boolean {
-				if (mode === 2)
+				if (mode === BlockType.Class)
 					return false;
 				if (builtin_variable.includes(name) || (h && builtin_variable_h.includes(name)))
 					return true;
@@ -3901,12 +3802,6 @@ export class Lexer {
 			}
 
 			function addvariable(token: Token, md: number = 0, p?: AhkSymbol[]) {
-				const _low = token.content.toLowerCase();
-				if (token.ignore || is_builtinvar(_low, md) && (token.ignore = true)) {
-					if ((token.definition = ahkvars[_low.toUpperCase()])?.uri)
-						(p ?? result).push(Variable.create(token.content, SymbolKind.Variable, make_range(token.offset, token.length)));
-					return;
-				}
 				if (!token.length)
 					return;
 				const rg = make_range(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg);
@@ -3915,8 +3810,7 @@ export class Lexer {
 					addprop(token, tn);
 					if (classfullname)
 						tn.full = `(${classfullname.slice(0, -1)}) ${tn.name}`, token.symbol = tn;
-				} else if (_low.match(/^\d/))
-					_this.addDiagnostic(diagnostic.invalidsymbolname(token.content), token.offset, token.length);
+				}
 				(p ?? result).push(tn);
 				return tn;
 			}
@@ -3934,13 +3828,14 @@ export class Lexer {
 			}
 
 			function adddeclaration(node: FuncNode | ClassNode) {
-				const _diags = _this.diagnostics, severity = DiagnosticSeverity.Error;
+				const _diags = _this.diagnostics;
 				let t: Variable, lpv = false, pars: Record<string, Variable> = {};
+				node.def = true;
 				if (node.kind === SymbolKind.Class) {
 					const cls = node as ClassNode, dec = cls.$property!, sdec = cls.property ??= {}, children = cls.children ??= [];
 					const __init = [sdec.__INIT], prototype = cls.prototype!;
 					prototype.checkmember ??= cls.checkmember;
-					adddeclaration(sdec.__INIT as FuncNode);
+					check_name(cls), adddeclaration(sdec.__INIT as FuncNode);
 					if ((dec.__INIT as FuncNode)?.ranges?.length)
 						adddeclaration(dec.__INIT as FuncNode), __init.push(dec.__INIT);
 					else delete dec.__INIT;
@@ -3970,7 +3865,7 @@ export class Lexer {
 									if (!prop.call)
 										return (prop.call = method as FuncNode, tc[_low] = prop);
 								}
-								_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange, severity });
+								_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange });
 							}
 						}
 					});
@@ -3986,7 +3881,7 @@ export class Lexer {
 							if (!_.val) return _.val = it;
 						}
 						if (it.def !== false)
-							_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange, severity });
+							_diags.push({ message: diagnostic.dupdeclaration(), range: it.selectionRange });
 					});
 					children.push(...__init, ...cls.cache ?? [], ...cls.prototype!.cache ?? []);
 					cls.cache?.forEach(it => sdec[it.name.toUpperCase()] ??= it);
@@ -4002,8 +3897,9 @@ export class Lexer {
 						pars.SUPER = dec.SUPER = SUPER;
 						if (fn.kind === SymbolKind.Function)
 							named_params = undefined;
-					} else if (reserved_words.includes(fn.name.toLowerCase()))
-						_this.diagnostics.push({ message: diagnostic.reservedworderr(fn.name), range: fn.selectionRange, severity });
+						else if (fn.name[0] <= '9')
+							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fn.name), range: fn.selectionRange });
+					} else fn.name && check_name(fn);
 					for (const it of fn.params ?? []) {
 						it.def = it.assigned = it.is_param = true;
 						if (!it.name)
@@ -4014,12 +3910,12 @@ export class Lexer {
 						else if (lpv)
 							_diags.push({
 								message: diagnostic.defaultvalmissing(it.name),
-								range: it.selectionRange, severity
+								range: it.selectionRange
 							});
 						if ((t = pars[_low = it.name.toUpperCase()]))
 							_diags.push({
 								message: diagnostic.conflictserr('parameter', 'parameter', t.name),
-								range: it.selectionRange, severity
+								range: it.selectionRange
 							});
 						else pars[_low] = dec[_low] = vars[_low] = it;
 					}
@@ -4027,7 +3923,7 @@ export class Lexer {
 						if ((t = pars[k]))
 							_diags.push({
 								message: diagnostic.conflictserr(v.static ? 'static' : 'local', 'parameter', t.name),
-								range: v.selectionRange, severity
+								range: v.selectionRange
 							});
 						else dec[k] = v, v.assigned ||= Boolean(v.returns);
 					}
@@ -4036,7 +3932,7 @@ export class Lexer {
 							if (pars[k]) {
 								_diags.push({
 									message: diagnostic.conflictserr('global', 'parameter', t.name),
-									range: v.selectionRange, severity
+									range: v.selectionRange
 								});
 								continue;
 							}
@@ -4046,7 +3942,7 @@ export class Lexer {
 									t.selectionRange.start.line < v.selectionRange.start.line ?
 										(t = v, ['global', varsp]) : [varsp, 'global']
 								), t.name),
-								range: t.selectionRange, severity
+								range: t.selectionRange
 							});
 							if (v !== t) continue;
 							delete fn.local[k];
@@ -4068,7 +3964,7 @@ export class Lexer {
 								if ((t = pars[_low])) {
 									_diags.push({
 										message: diagnostic.conflictserr('function', 'parameter', t.name),
-										range: it.selectionRange, severity
+										range: it.selectionRange
 									});
 									continue;
 								} else if ((t = fn.global[_low])) {
@@ -4079,7 +3975,7 @@ export class Lexer {
 												t.selectionRange.start.character < it.selectionRange.start.character ?
 												(t = it, ['function', 'global']) : ['global', 'function']
 										), t.name),
-										range: t.selectionRange, severity
+										range: t.selectionRange
 									});
 									if (it === t) continue;
 									delete fn.global[_low];
@@ -4093,14 +3989,14 @@ export class Lexer {
 										_diags.push({
 											message: diagnostic.conflictserr('function',
 												t.kind === SymbolKind.Function ? 'Func' : t.static ? 'static' : 'local', it.name),
-											range: it.selectionRange, severity
+											range: it.selectionRange
 										});
 										continue;
 									} else if (t.static)
 										_diags.push({
 											message: diagnostic.conflictserr(t.kind === SymbolKind.Function ? 'function' : 'static',
 												it.kind === SymbolKind.Function ? 'Func' : 'static', t.name),
-											range: t.selectionRange, severity
+											range: t.selectionRange
 										});
 								}
 							}
@@ -4116,7 +4012,7 @@ export class Lexer {
 							if (!(t = dec[k]))
 								_this.declaration[k] ??= fn.global[k] = v, v.is_global = true;
 							else if (t.kind === SymbolKind.Function && v.def)
-								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
+								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
 								t.def = true, t.assigned ||= Boolean(v.returns);
 						}
@@ -4132,7 +4028,7 @@ export class Lexer {
 								else if (assme_static)
 									v.static = null;
 							} else if (t.kind === SymbolKind.Function)
-								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
+								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
 								t.def = true, t.assigned ||= Boolean(v.returns);
 						}
@@ -4141,7 +4037,7 @@ export class Lexer {
 							if (!(t = dec[k])) {
 								(dec[k] = v).has_warned = true;
 							} else if (v.def && v.assigned !== 1 && t.kind === SymbolKind.Function)
-								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange, severity });
+								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
 						}
 						unresolved_vars = {};
 					}
@@ -4227,7 +4123,7 @@ export class Lexer {
 						if (existsSync(m) && statSync(m).isDirectory())
 							dlldir = m.endsWith('/') || m.endsWith('\\') ? m : m + '\\';
 						else {
-							if (!m.match(/\.\w+$/))
+							if (!/\.\w+$/.test(m))
 								m = m + '.dll';
 							m = find_include_path(m, [], dlldir || _this.scriptpath, true)?.path ?? m;
 							if (m.includes(':'))
@@ -4253,7 +4149,7 @@ export class Lexer {
 								_this.includedir.set(tk.pos!.line, includedir = m.path);
 							else
 								includetable[m.uri] = m.path, tk.data = [m.path, m.uri];
-							if (mode !== 0) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length,
+							if (mode & BlockType.Mask) _this.addDiagnostic(diagnostic.unsupportinclude(), tk.offset, tk.length,
 								{ code: DiagnosticCode.include, severity: DiagnosticSeverity.Warning });
 						} else if ((m = find_d_ahk(m)))
 							includetable[m.uri] = m.path;
@@ -4804,9 +4700,9 @@ export class Lexer {
 		}
 
 		function is_next_char(find_char: string) {
-			let local_pos = parser_pos, c = input.charAt(local_pos);
+			let local_pos = parser_pos, c = input[local_pos];
 			while (c !== find_char && whitespace.includes(c) && ++local_pos < input_length)
-				c = input.charAt(local_pos);
+				c = input[local_pos];
 			return c === find_char ? local_pos : 0;
 		}
 
@@ -4817,23 +4713,22 @@ export class Lexer {
 		}
 
 		function get_next_token(depth = 0): Token {
-			let resulting_string: string, c: string, m: RegExpMatchArray | null;
+			let resulting_string: string, c: string, m, i;
 			let bg = 0;
 			const _ppos = parser_pos;
 			n_newlines = 0;
 
-			while (whitespace.includes(c = input.charAt(parser_pos++))) {
-				if (c === '\n') {
-					last_LF = parser_pos - 1;
-					n_newlines += 1, begin_line = true;
-				} else if (parser_pos >= input_length) {
-					add_comment_foldingrange(), add_sharp_foldingrange();
-					return _this.tokens[-1] ??= {
-						content: '', type: 'TK_EOF', offset: input_length, length: 0,
-						topofline: is_line_continue(lst, EMPTY_TOKEN) ? -1 : 1,
-						next_token_offset: -1, previous_token: lst
-					};
-				}
+			while (whitespace.includes(c = input[parser_pos++])) {
+				if (c === '\n')
+					last_LF = parser_pos - 1, n_newlines += 1, begin_line = true;
+			}
+			if (!c) {
+				add_comment_foldingrange(), add_sharp_foldingrange();
+				return _this.tokens[-1] ??= {
+					content: '', type: 'TK_EOF', offset: input_length, length: 0,
+					topofline: is_line_continue(lst, EMPTY_TOKEN) ? -1 : 1,
+					next_token_offset: -1, previous_token: lst
+				};
 			}
 
 			let offset = parser_pos - 1, _tk = _this.tokens[offset];
@@ -4939,60 +4834,57 @@ export class Lexer {
 			}
 
 			if (isIdentifierChar(c.charCodeAt(0)) || c === '$' && allow_$) {
+				let tp = 'TK_WORD';
 				while (parser_pos < input_length && isIdentifierChar(input.charCodeAt(parser_pos)))
-					c += input.charAt(parser_pos), parser_pos += 1;
+					c += input[parser_pos], parser_pos += 1;
 
 				// small and surprisingly unugly hack for 1E-10 representation
-				if (input.charAt(offset - 1) !== '.') {
+				if (input[offset - 1] !== '.') {
 					if ((m = c.match(/^(\d+[Ee](\d+)?|(0[Xx][\da-fA-F]+)|(\d+))$/))) {
 						if (m[2] || m[3]) {
 							lst = createToken(c, 'TK_NUMBER', offset, c.length, bg);
-							lst.data = !!m[2], lst.semantic = { type: SemanticTokenTypes.number };
+							lst.data = !!m[2], lst.semantic = SE_NUMBER;
 							return lst;
 						}
 						if (m[4]) {
 							let data;
-							if (parser_pos < input_length && input.charAt(parser_pos) === '.') {
+							if (parser_pos < input_length && input[parser_pos] === '.') {
 								let cc = '', t = '', p = parser_pos + 1;
 								while (p < input_length && isIdentifierChar(input.charCodeAt(p)))
-									cc += input.charAt(p), p += 1;
-								if (cc.match(/^\d*([Ee]\d+)?$/)) {
+									cc += input[p], p += 1;
+								if (/^\d*([Ee]\d+)?$/.test(cc)) {
 									c += '.' + cc, parser_pos = p;
 									lst = createToken(c, 'TK_NUMBER', offset, c.length, bg);
 									lst.data = true;
-									return lst.semantic = { type: SemanticTokenTypes.number }, lst;
-								} else if (cc.match(/^\d*[Ee]$/) && p < input_length && '-+'.includes(input.charAt(p))) {
-									cc += input.charAt(p), p += 1;
+									return lst.semantic = SE_NUMBER, lst;
+								} else if (/^\d*[Ee]$/.test(cc) && p < input_length && '-+'.includes(input[p])) {
+									cc += input[p], p += 1;
 									while (p < input_length && isIdentifierChar(input.charCodeAt(p)))
-										t += input.charAt(p), p += 1;
-									if (t.match(/^\d+$/))
+										t += input[p], p += 1;
+									if (/^\d+$/.test(t))
 										c += '.' + cc + t, parser_pos = p;
 								}
 								data = true;
 							}
 							lst = createToken(c, 'TK_NUMBER', offset, c.length, bg), lst.data = data;
-							return lst.semantic = { type: SemanticTokenTypes.number }, lst;
-						} else if (parser_pos < input_length && '-+'.includes(input.charAt(parser_pos))) {
-							const sign = input.charAt(parser_pos), p = parser_pos;
+							return lst.semantic = SE_NUMBER, lst;
+						} else if (parser_pos < input_length && '-+'.includes(input[parser_pos])) {
+							const sign = input[parser_pos], p = parser_pos;
 							let t: Token;
 							parser_pos += 1, t = get_next_token(depth + 1);
 							delete _this.tokens[t.offset];
-							if (t.type === 'TK_NUMBER' && t.content.match(/^\d+$/)) {
+							if (t.type === 'TK_NUMBER' && /^\d+$/.test(t.content)) {
 								c += sign + t.content;
 								lst = createToken(c, 'TK_NUMBER', offset, c.length, bg), lst.data = true;
-								return lst.semantic = { type: SemanticTokenTypes.number }, lst;
+								return lst.semantic = SE_NUMBER, lst;
 							} else
 								parser_pos = p;
 						}
 					}
-					if (reserved_words.includes(resulting_string = c.toLowerCase())) {
-						if (/^(and|or|not|in|is|contains)$/.test(resulting_string)) // hack for 'in' operator
-							return lst = createToken(c, 'TK_OPERATOR', offset, c.length, bg);
-						if (bg || resulting_string !== 'class')
-							return lst = createToken(c, 'TK_RESERVED', offset, c.length, bg);
-					}
+					if (-1 < (i = reserved_words.indexOf(c.toLowerCase())))
+						tp = i < OP_INDEX ? 'TK_RESERVED' : 'TK_OPERATOR';
 				}
-				return lst = createToken(c, 'TK_WORD', offset, c.length, bg);
+				return lst = createToken(c, tp, offset, c.length, bg);
 			}
 
 			if (c === '(' || c === '[') {
@@ -5000,7 +4892,7 @@ export class Lexer {
 					if (bg && !continuation_sections_mode) {
 						let i = parser_pos, b = i, t: string;
 						while (i < input_length) {
-							if ((t = input.charAt(i++)) === '\n') {
+							if ((t = input[i++]) === '\n') {
 								if (string_mode) {
 									// raw string
 									// ::hotstring::string
@@ -5032,7 +4924,7 @@ export class Lexer {
 									const top = !lst.type || (lst.type === 'TK_START_BLOCK' && lst.topofline > 0);
 									lst = createToken(c, 'TK_START_EXPR', offset, 1, 1);
 									lst.ignore = true, parser_pos = i - 1, continuation_sections_mode = true;
-									while (' \t'.includes(input.charAt(++offset) || '\0')) continue;
+									while (' \t'.includes(input[++offset])) continue;
 									const content = input.substring(offset, parser_pos).trimEnd();
 									lst.data = { content, offset, length: parser_pos - offset };
 									lst.skip_pos = parser_pos;
@@ -5050,7 +4942,7 @@ export class Lexer {
 										const tks = Object.values(tl.tokens);
 										offset += 4 + js[1].length + js.index!;
 										if (tks.length) {
-											suffix_is_whitespace = whitespace.includes(s.charAt(s.length - 1));
+											suffix_is_whitespace = whitespace.includes(s.slice(-1));
 											tks.forEach(tk => {
 												tk.offset += offset, tk.length = 0;
 												tk.next_token_offset = -1;
@@ -5131,8 +5023,11 @@ export class Lexer {
 				return lst = createToken(c, resulting_string, offset, 1, bg);
 			}
 
+			if (c === ',')
+				return lst = createToken(c, 'TK_COMMA', offset, 1, bg);
+
 			if (c === '"' || c === "'") {
-				const sep = c, o = offset, se = { type: SemanticTokenTypes.string };
+				const sep = c, o = offset;
 				let nosep = false, _lst: Token | undefined, pt: Token | undefined;
 				resulting_string = '';
 				if (!/^[ \t\r\n+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1))) {
@@ -5143,14 +5038,14 @@ export class Lexer {
 						else offset = lst.offset, lst = lst.previous_token!, _this.tokenranges.pop();
 					} else _this.addDiagnostic(diagnostic.missingspace(), offset, 1);
 				}
-				while ((c = input.charAt(parser_pos++))) {
+				while ((c = input[parser_pos++])) {
 					if (c === '`')
 						parser_pos++;
 					else if (c === sep) {
 						resulting_string += input.substring(offset, parser_pos);
 						lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
 						_this.tokenranges.push({ start: offset, end: parser_pos, type: 2 });
-						if (nosep) lst.data = null, lst.semantic = se;
+						if (nosep) lst.data = null, lst.semantic = SE_STRING;
 						if (_lst)
 							lst = _lst, parser_pos = lst.offset + lst.length;
 						if (isIdentifierChar(input.charCodeAt(parser_pos)))
@@ -5159,7 +5054,7 @@ export class Lexer {
 					} else if (continuation_sections_mode) {
 						if (c === '\n') {
 							const p = parser_pos - 1;
-							while (' \t'.includes(c = input.charAt(parser_pos) || '\0'))
+							while (' \t'.includes(c = input[parser_pos]))
 								parser_pos++;
 							if (c === ')') {
 								resulting_string = input.substring(offset, p).trimEnd();
@@ -5175,17 +5070,17 @@ export class Lexer {
 								if (pt)
 									pt.next_pair_pos = parser_pos, lst.previous_pair_pos = pt.offset;
 								continuation_sections_mode = false, nosep = true, offset = ++parser_pos;
-								while (' \t'.includes(c = input.charAt(parser_pos) || '\0'))
+								while (' \t'.includes(c = input[parser_pos]))
 									parser_pos++;
 								resulting_string = input.substring(offset, parser_pos), offset = parser_pos;
 							}
 						}
-					} else if (c === '\n' || c === ';' && ' \t'.includes(input.charAt(parser_pos - 2))) {
+					} else if (c === '\n' || c === ';' && ' \t'.includes(input[parser_pos - 2])) {
 						resulting_string = (resulting_string + input.substring(offset, parser_pos - (c === ';' ? 2 : 1))).trimEnd();
 						if (--parser_pos, resulting_string) {
 							lst = createToken(resulting_string, 'TK_STRING', offset, resulting_string.trimStart().length, bg);
 							_this.tokenranges.push({ start: offset, end: offset + lst.length, type: 3 });
-							if (nosep) lst.data = null, lst.semantic = se;
+							if (nosep) lst.data = null, lst.semantic = SE_STRING;
 							_lst ??= lst, resulting_string = '';
 						}
 						break;
@@ -5203,8 +5098,8 @@ export class Lexer {
 					while (tk.ignore && tk.type === 'TK_STRING') {
 						const p = parser_pos, data = tk.data as number[];
 						if (nosep)
-							tk.semantic = se;
-						while ((c = input.charAt(parser_pos++))) {
+							tk.semantic = SE_STRING;
+						while ((c = input[parser_pos++])) {
 							if (c === '`')
 								parser_pos++;
 							else if (c === sep) {
@@ -5214,7 +5109,7 @@ export class Lexer {
 								if (isIdentifierChar(input.charCodeAt(parser_pos)))
 									_this.addDiagnostic(diagnostic.missingspace(), parser_pos);
 								break stringend;
-							} else if (c === '\n' || c === ';' && ' \t'.includes(input.charAt(parser_pos - 2))) {
+							} else if (c === '\n' || c === ';' && ' \t'.includes(input[parser_pos - 2])) {
 								const s = input.substring(p, parser_pos - (c === ';' ? 2 : 1)).trimEnd();
 								if (s)
 									tk.content += s, tk.length += s.length, data[data.length - 1] += s.length;
@@ -5242,7 +5137,7 @@ export class Lexer {
 					resulting_string += input.substring(offset, input_length);
 					lst = createToken(resulting_string, 'TK_STRING', offset, input_length - offset, bg);
 					_this.tokenranges.push({ start: offset, end: input_length, type: 3 });
-					if (nosep) lst.data = null, lst.semantic = se;
+					if (nosep) lst.data = null, lst.semantic = SE_STRING;
 					if (continuation_sections_mode)
 						_this.addFoldingRange(offset, input_length, 'string'), continuation_sections_mode = false;
 					return lst;
@@ -5250,30 +5145,30 @@ export class Lexer {
 			}
 
 			if (c === '.') {
-				let nextc = input.charAt(parser_pos);
+				let nextc = input[parser_pos];
 				if (nextc === '=') {
 					parser_pos++;
 					return lst = createToken('.=', 'TK_EQUALS', offset, 2, bg);
-				} else if (whitespace.includes(input.charAt(parser_pos - 2)) && whitespace.includes(nextc)) {
+				} else if (whitespace.includes(nextc) && whitespace.includes(input[parser_pos - 2])) {
 					return lst = createToken(c, 'TK_OPERATOR', offset, 1, bg);
-				} else if (nextc.match(/\d/) && ['TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA', 'TK_START_EXPR'].includes(lst.type)) {
+				} else if (/\d/.test(nextc) && ['TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA', 'TK_START_EXPR'].includes(lst.type)) {
 					let p = parser_pos + 1, t = '';
 					while (p < input_length && isIdentifierChar(input.charCodeAt(p)))
-						nextc += input.charAt(p), p += 1;
-					if (nextc.match(/^\d+([Ee]\d+)?$/)) {
+						nextc += input[p], p += 1;
+					if (/^\d+([Ee]\d+)?$/.test(nextc)) {
 						parser_pos = p, c += nextc;
 						lst = createToken('0' + c, 'TK_NUMBER', offset, c.length, bg);
 						lst.data = true;
-						return lst.semantic = { type: SemanticTokenTypes.number }, lst;
-					} else if (p < input_length && nextc.match(/^\d+[Ee]$/) && '-+'.includes(input.charAt(p))) {
-						nextc += input.charAt(p), p += 1;
+						return lst.semantic = SE_NUMBER, lst;
+					} else if (p < input_length && /^\d+[Ee]$/.test(nextc) && '-+'.includes(input[p])) {
+						nextc += input[p], p += 1;
 						while (p < input_length && isIdentifierChar(input.charCodeAt(p)))
-							t += input.charAt(p), p += 1;
-						if (t.match(/^\d+$/)) {
+							t += input[p], p += 1;
+						if (/^\d+$/.test(t)) {
 							parser_pos = p, c += nextc + t;
 							lst = createToken('0' + c, 'TK_NUMBER', offset, c.length, bg);
 							lst.data = true;
-							return lst.semantic = { type: SemanticTokenTypes.number }, lst;
+							return lst.semantic = SE_NUMBER, lst;
 						}
 					}
 				}
@@ -5331,7 +5226,7 @@ export class Lexer {
 						}
 						if ((t = line.match(/^;\s*(~?\s*|@)(todo|fixme)(:?\s*)(.*)/i))) {
 							_this.children.push(DocumentSymbol.create(`${t[2].toUpperCase()}: ${t[4].trim()}`, undefined,
-								SymbolKind.Module, rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
+								SymbolKind.Null, rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
 							if (bg)
 								continue;
 						}
@@ -5341,7 +5236,7 @@ export class Lexer {
 								if (!t[1]) {
 									customblocks.region.push(parser_pos + 1);
 									if ((line = line.substring(t[0].length).trim()))
-										_this.children.push(DocumentSymbol.create(line, undefined, SymbolKind.Module,
+										_this.children.push(DocumentSymbol.create(line, undefined, SymbolKind.Null,
 											rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
 								} else if ((t = customblocks.region.pop()) !== undefined)
 									_this.addFoldingRange(t, parser_pos + 1, 'region');
@@ -5353,7 +5248,7 @@ export class Lexer {
 								if (typeof t !== 'string')
 									t = t[1]?.trim();
 								if (t) {
-									_this.children.push(DocumentSymbol.create(t, undefined, SymbolKind.Module,
+									_this.children.push(DocumentSymbol.create(t, undefined, SymbolKind.Null,
 										rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
 									ignore = true;
 								}
@@ -5371,7 +5266,7 @@ export class Lexer {
 					next_token_offset: -1, topofline: bg, ignore, skip_pos: parser_pos, previous_token: lst
 				};
 				if (!bg) {
-					if (!whitespace.includes(input.charAt(offset - 1)))
+					if (!whitespace.includes(input[offset - 1]))
 						unexpected(cmm);
 				} else {
 					const l = _this.document.positionAt(parser_pos).line;
@@ -5387,7 +5282,7 @@ export class Lexer {
 				return cmm;
 			}
 
-			if (c === '/' && bg && input.charAt(parser_pos) === '*') {
+			if (c === '/' && bg && input[parser_pos] === '*') {
 				let LF = input.indexOf('\n', --parser_pos), ln = 0, e = '';
 				while (!(m = input.substring(parser_pos, LF > 0 ? LF : input_length).match(/(^[ \t]*\*\/)|\*\/([ \t]*\r?)$/)) && LF > 0)
 					last_LF = LF, LF = input.indexOf('\n', parser_pos = LF + 1), ln++;
@@ -5412,19 +5307,13 @@ export class Lexer {
 				return cmm;
 			}
 
-			if (punct.includes(c)) {
+			if (-1 < (i = punct.indexOf(c))) {
 				if (allow_$ && '<>'.includes(c))
 					return lst = createToken(c, c === '<' ? 'TK_START_EXPR' : 'TK_END_EXPR', offset, c.length, bg);
-				while (parser_pos < input_length && punct.includes(c + input.charAt(parser_pos))) {
-					c += input.charAt(parser_pos);
-					parser_pos += 1;
-					if (parser_pos >= input_length)
-						break;
-				}
+				while (parser_pos < input_length && -1 < (m = punct.indexOf(c + input[parser_pos], i)))
+					c += input[parser_pos++], i = m;
 
-				if (c === ',')
-					return lst = createToken(c, 'TK_COMMA', offset, 1, bg);
-				else if (c === '?') {
+				if (c === '?') {
 					lst = createToken(c, 'TK_OPERATOR', offset, 1, bg);
 					const bak = parser_pos, tk = lst, t = get_token_ignore_comment(depth + 1);
 					parser_pos = bak;
@@ -5436,23 +5325,23 @@ export class Lexer {
 					return lst = tk;
 				} else if (c === '??=' && ahk_version < alpha_3 - 1)
 					_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), offset, c.length, { code: DiagnosticCode.maybe_assign });
-				return lst = createToken(c, /([:.+\-*/|&^]|\/\/|>>|<<|\?\?)=/.test(c) ? 'TK_EQUALS' : 'TK_OPERATOR', offset, c.length, bg);
+				return lst = createToken(c, i >= ASSIGN_INDEX ? 'TK_EQUALS' : 'TK_OPERATOR', offset, c.length, bg);
 			}
 
 			if (c === '#') {
 				let sharp = '#';
-				while (isIdentifierChar((c = input.charAt(parser_pos)).charCodeAt(0)))
-					sharp += c, parser_pos++;
+				while (isIdentifierChar(input.charCodeAt(parser_pos)))
+					sharp += input[parser_pos++];
 				sharp_offsets.push(offset);
 				lst = createToken(sharp, 'TK_SHARP', offset, sharp.length, bg);
 				token_text_low = sharp.toLowerCase();
-				if (bg && whitespace.includes(c) && (token_text_low === '#hotif' || h && token_text_low === '#initexec'))
+				if (bg && whitespace.includes(c = input.charAt(parser_pos)) && (token_text_low === '#hotif' || h && token_text_low === '#initexec'))
 					return lst;
 				last_LF = input.indexOf('\n', offset = parser_pos);
 				parser_pos = last_LF < 0 ? input_length : last_LF;
 				if (bg && whitespace.includes(c)) {
 					if (c === ' ' || c === '\t') {
-						while (' \t'.includes(input.charAt(offset) || '\0'))
+						while (' \t'.includes(input[offset]))
 							offset++;
 						const content = input.substring(offset, parser_pos).trimEnd().replace(/(^|[ \t]+);.*$/, '');
 						lst.data = { content, offset, length: content.length };
@@ -5534,7 +5423,7 @@ export class Lexer {
 				else if (last_type === 'TK_STRING')
 					output_space_before_token = true;
 				else if (last_type === 'TK_RESERVED')
-					if (last_text.match(/^(break|continue|goto)$/i))
+					if (/^(break|continue|goto)$/i.test(last_text))
 						output_space_before_token = false;
 					else if (['if', 'for', 'while', 'loop', 'case', 'catch', 'switch'].includes(last_text))
 						output_space_before_token = Boolean(opt.space_before_conditional);
@@ -5550,9 +5439,9 @@ export class Lexer {
 
 			set_mode(next_mode);
 			flags.last_word = '';
-			previous_flags.indentation_level = Math.min(
-				previous_flags.indentation_level,
-				flags.indentation_level = real_indentation_level())
+			flags.indentation_level = real_indentation_level();
+			if (flags.indentation_level < previous_flags.indentation_level)
+				previous_flags.indentation_level = flags.indentation_level, flags.indent_after = true;
 			print_token();
 
 			// (options\n...\n)
@@ -5590,7 +5479,7 @@ export class Lexer {
 				allow_wrap_or_preserved_newline();
 
 			output_space_before_token = Boolean(opt.space_in_paren && !(last_type === 'TK_START_EXPR' && !opt.space_in_empty_paren));
-			print_token();
+			print_token(), previous_flags.indent_after && indent();
 			continuation_sections_mode ??= false;
 		}
 
@@ -5903,13 +5792,13 @@ export class Lexer {
 		}
 
 		function handle_operator() {
-			let space_before = Boolean(space_in_other || token_text.match(/^\w/));
+			let space_before = Boolean(space_in_other || /^\w/.test(token_text));
 			let space_after = space_before;
 			if (ck.previous_token?.callsite)
 				output_space_before_token = true;
 			if (start_of_statement()) {
 				// The conditional starts the statement if appropriate.
-				if (flags.declaration_statement && token_text_low.match(/^(\+\+|--|%|!|~|not)$/)) {
+				if (flags.declaration_statement && /^(\+\+|--|%|!|~|not)$/.test(token_text_low)) {
 					output_space_before_token = true, flags.last_word = '_';
 					print_token();
 					if (token_text_low === 'not')
@@ -5922,7 +5811,7 @@ export class Lexer {
 					is_conditional = false;
 				set_mode(MODE.Statement);
 				indent(), flags.in_fat_arrow = true;
-			} else if (token_text_low.match(/^(\+\+|--|%|!|~|not)$/) && need_newline()) {
+			} else if (/^(\+\+|--|%|!|~|not)$/.test(token_text_low) && need_newline()) {
 				print_newline(), print_token();
 				if (token_text_low === 'not')
 					output_space_before_token = true;
@@ -5934,7 +5823,7 @@ export class Lexer {
 
 			// %...%
 			if (token_text === '%') {
-				space_after = Boolean(ck.previous_pair_pos !== undefined && ' \t'.includes(input.charAt(ck.offset + 1) || '\0'));
+				space_after = Boolean(ck.previous_pair_pos !== undefined && ' \t'.includes(input[ck.offset + 1]));
 				output_space_before_token ||= Boolean(ck.next_pair_pos && ' \t'.includes(ck.prefix_is_whitespace || '\0'));
 				if (input_wanted_newline && opt.preserve_newlines)
 					if (flags.mode === MODE.Statement && is_line_continue(ck.previous_token ?? EMPTY_TOKEN, ck))
@@ -5963,7 +5852,7 @@ export class Lexer {
 
 			if (input_wanted_newline && opt.preserve_newlines)
 				print_newline(true);
-			else if (last_type === 'TK_OPERATOR' && !last_text.match(/^(--|\+\+|%|!|~|not)$/))
+			else if (last_type === 'TK_OPERATOR' && !/^(--|\+\+|%|!|~|not)$/.test(last_text))
 				allow_wrap_or_preserved_newline();
 
 			if (['--', '++', '!', '~'].includes(token_text) || ('-+'.includes(token_text) && (['TK_START_BLOCK', 'TK_START_EXPR', 'TK_EQUALS', 'TK_OPERATOR', 'TK_COMMA', 'TK_RESERVED'].includes(last_type) || ck.previous_token?.callsite))) {
@@ -6359,7 +6248,14 @@ export class Lexer {
 						// fall through
 						case SemanticTokenTypes.parameter: kind = SymbolKind.Variable; break;
 					}
-				} else kind = SymbolKind.Variable;
+				} else {
+					let t: Token;
+					if (!token.ignore || !(
+						(t = tokens[off - 1])?.op_type === 1 && t.content === '%' ||
+						(t = tokens[off + token.length])?.op_type === -1 && t.content === '%'
+					))
+						kind = SymbolKind.Variable;
+				}
 			} else if (token.type === 'TK_LABEL' && !token.hover_word)
 				kind = SymbolKind.Field;
 		} else if (pt?.content.startsWith('#'))
@@ -6555,7 +6451,7 @@ export class Lexer {
 			this.initLibDirs(main);
 		for (const u in relevance) {
 			delete initial[u];
-			if ((lex = lexers[u]).scriptdir.toLowerCase() === m)
+			if (!(lex = lexers[u]) || lex.scriptdir.toLowerCase() === m)
 				continue;
 			lex.initLibDirs(main), lex.need_scriptdir && lex.parseScript();
 		}
@@ -6841,6 +6737,8 @@ function yields_an_operand(tk: Token): boolean {
 			return true;
 		case 'TK_WORD':
 			return !tk.paraminfo;
+		case 'TK_RESERVED':
+			return RESERVED_OP.includes(tk.content.toLowerCase(), 3);
 		case 'TK_OPERATOR':
 			if (tk.op_type === 1)
 				return true;
@@ -7229,7 +7127,7 @@ export function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], 
 			case SymbolKind.Class:
 				if (call && name === 'call') {
 					if (!(n = get_class_member(lex, cls, name, call)!))
-						if (invoke_meta_func(cls))
+						if ((n = invoke_meta_func(cls)!))
 							break;
 						else continue;
 					const full = (n as Variable).full ?? '';
@@ -7273,7 +7171,7 @@ export function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], 
 						break;
 					else continue;
 				if (n.kind !== SymbolKind.Property) {
-					if ((n as FuncNode).alias) {
+					if ((n as FuncNode).eval) {
 						// if (paraminfo) continue;
 						const tt = decltype_returns(n, lexers[n.uri!] ?? lex, that);
 						for (const t of call ? decltype_invoke(lex, tt, 'call', true) : tt)
@@ -7285,7 +7183,7 @@ export function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], 
 					else for (const t of decltype_invoke(lex, [n], '__item', false, paraminfo, that))
 						tps.add(t);
 					continue;
-				} else if ((n as FuncNode).alias) {
+				} else if ((n as FuncNode).eval) {
 					const tt = decltype_invoke(lex, decltype_returns(n, lexers[n.uri!] ?? lex, that), 'call', true);
 					for (const t of call ? decltype_invoke(lex, tt, 'call', true) : tt)
 						tps.add(t);
@@ -7305,7 +7203,7 @@ export function decltype_invoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], 
 	function invoke_meta_func(_this: ClassNode) {
 		const n = get_class_member(lex, _this, call ? '__call' : '__get', call);
 		if (!n) return;
-		if (n.kind === SymbolKind.Method && !(n as FuncNode).alias)
+		if (n.kind === SymbolKind.Method && !(n as FuncNode).eval)
 			return n;
 		const syms = n.kind === SymbolKind.Class ? [n] : !n.children ?
 			decltype_returns(n, lexers[n.uri!] ?? lex, that) : undefined;
@@ -7371,9 +7269,9 @@ function decltype_byref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: C
 						n = get_class_constructor(n as ClassNode);
 					else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
 						n = get_class_member(lex, cls.prototype!, '__new', true) ?? n;
-					else if (n.kind === SymbolKind.Property || (n as FuncNode).alias) {
+					else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
 						let tps: AhkSymbol[] | Set<AhkSymbol> = decltype_returns(n, lexers[n.uri!] ?? lex, cls);
-						if (n.kind === SymbolKind.Property && (n as FuncNode).alias)
+						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
 							tps = decltype_invoke(lex, tps, 'call', true);
 						tps.forEach(it => resolve(it, 'call', types, -1));
 						return;
@@ -7791,13 +7689,14 @@ export function get_callinfo(doc: Lexer, position: Position, pi?: ParamInfo) {
 				return;
 			index = offset > pi.offset + tk.content.length ? 0 : -1;
 		} else {
-			if (tk.previous_token?.symbol)
-				return;
+			const prev = tk.previous_token ?? EMPTY_TOKEN;
+			if (prev.symbol || prev.ignore)
+				return null;
 			if ((index = 0, tk.content === '[')) {
 				if (tk.topofline === 1 || !yields_an_operand(tk.previous_token!))
 					return;
 				kind = SymbolKind.Property;
-			} else if (tk.prefix_is_whitespace || !yields_an_operand(tk.previous_token!))
+			} else if (tk.prefix_is_whitespace || !yields_an_operand(prev))
 				return;
 		}
 		if (index !== -1)
@@ -7946,6 +7845,7 @@ export function check_same_name_error(decs: Record<string, AhkSymbol>, syms: Ahk
 			// fall through
 			case SymbolKind.Class:
 			case SymbolKind.Function:
+			case SymbolKind.Module:
 				v2 = decs[l = it.name.toUpperCase()];
 				if (syms === children)
 					it.uri = uri;

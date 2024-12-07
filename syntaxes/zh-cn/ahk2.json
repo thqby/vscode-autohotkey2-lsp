@@ -63,6 +63,11 @@
 			"prefix": "#MaxThreadsPerHotkey"
 		},
 		{
+			"body": "#Module ${0:Name}",
+			"description": "开始一个新模块.",
+			"prefix": "#Module"
+		},
+		{
 			"body": "#NoTrayIcon",
 			"description": "禁止显示托盘图标."
 		},
@@ -205,6 +210,12 @@
 			"description": "如果if语句的结果为false,则指定要执行的一个或多个语句."
 		},
 		{
+			"body": "export ${1:default} $2",
+			"description": "允许其他模块导入由当前模块定义的函数,类或变量.",
+			"prefix": "export",
+			"syntax": "export [default] Definition\nexport Variables"
+		},
+		{
 			"body": "finally",
 			"description": "确保在执行try语句之后始终执行一个或多个语句（函数或表达式）."
 		},
@@ -228,6 +239,12 @@
 			"body": "if ",
 			"description": "指定在表达式计算为true时要执行的一个或多个语句.",
 			"syntax": "if Expression"
+		},
+		{
+			"body": "import ${0:*} from ${1:ModuleName}",
+			"description": "导入模块, 或从模块中导入名称.",
+			"prefix": "import",
+			"syntax": "import ModuleName [as ModuleAlias]\nimport { ExportName [as Alias], ... } from ModuleName\nimport * from ModuleName"
 		},
 		{
 			"body": "loop files ${0:FilePattern [, Mode]}",

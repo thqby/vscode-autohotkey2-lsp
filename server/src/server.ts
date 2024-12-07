@@ -16,7 +16,8 @@ import {
 	parse_include, prepareRename, rangeFormatting, read_ahk_file, referenceProvider, renameProvider, resolvePath, SemanticTokenModifiers,
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, setConnection,
 	setRootDir, setLocale, setVersion, setWorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
-	traverse_include, typeFormatting, updateConfigs, utils, winapis, workspaceSymbolProvider
+	traverse_include, typeFormatting, updateConfigs, utils, winapis, workspaceSymbolProvider,
+	ahk_version, ahkvars
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
@@ -91,11 +92,12 @@ connection.onInitialize(async params => {
 	setLocale(configs?.locale ?? params.locale);
 	loadlocalize();
 	initahk2cache();
+	const prev = ahkvars;
 	if (configs)
 		updateConfigs(configs);
 	setWorkspaceFolders(workspaceFolders);
 	await setInterpreter(resolvePath(extsettings.InterpreterPath ??= ''));
-	loadahk2();
+	prev === ahkvars && loadahk2();
 	return result;
 });
 
@@ -123,7 +125,7 @@ connection.onDidChangeConfiguration(async change => {
 		connection.window.showWarningMessage('Failed to obtain the configuration');
 		return;
 	}
-	const { AutoLibInclude, InterpreterPath, Syntaxes } = extsettings;
+	const { AutoLibInclude, InterpreterPath, Syntaxes } = extsettings, prev = ahkvars;
 	updateConfigs(newset);
 	setWorkspaceFolders(workspaceFolders);
 	if (InterpreterPath !== extsettings.InterpreterPath)
@@ -134,7 +136,7 @@ connection.onDidChangeConfiguration(async change => {
 		if ((extsettings.AutoLibInclude & 1) && !(AutoLibInclude & 1))
 			documents.all().forEach(e => parseproject(e.uri.toLowerCase()));
 	}
-	if (Syntaxes !== extsettings.Syntaxes) {
+	if (prev === ahkvars && Syntaxes !== extsettings.Syntaxes) {
 		initahk2cache(), loadahk2();
 		if (isahk2_h)
 			loadahk2('ahk_h'), loadahk2('winapi', 4);
@@ -218,6 +220,7 @@ async function initpathenv(samefolder: boolean): Promise<boolean> {
 	if (!ahkpath_resolved)
 		return showPathError(setting.ahkpatherr()), false;
 	let vars;
+	const ver = ahk_version;
 	for (let i = 0; i < 3 && !vars; i++)
 		vars = await getScriptVars();
 	if (!vars)
@@ -234,7 +237,14 @@ async function initpathenv(samefolder: boolean): Promise<boolean> {
 		for (lb of Object.values(libfuncs))
 			lb.islib = inlibdirs(lb.fsPath);
 	}
-	if (a_vars.threadid) {
+	if (ahk_version !== ver) {
+		const h = !!a_vars.threadid;
+		initahk2cache();
+		set_ahk_h(h);
+		loadahk2();
+		if (h) loadahk2('ahk2_h'), loadahk2('winapi', 4);
+		samefolder = false;
+	} else if (a_vars.threadid) {
 		if (!isahk2_h)
 			set_ahk_h(true), samefolder = false, loadahk2('ahk2_h'), loadahk2('winapi', 4);
 	} else {

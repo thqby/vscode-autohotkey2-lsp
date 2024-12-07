@@ -3837,7 +3837,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	/**
 	 * Flashing windows and their taskbar buttons.
 	 */
-	Flash(false) => void
+	Flash(Blink := true) => void
 
 	/**
 	 * Retrieve the position and size of the working area of the window.

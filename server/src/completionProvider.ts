@@ -549,7 +549,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		const is_any = tps.includes(ANY), bases: ClassNode[] = [];
 		const clsindex: Record<string, string> = {};
 		if (linetext[range.end.character] === '.')
-			right_is_paren = '(['.includes(linetext.charAt(range.end.character + word.length + 1) || '\0');
+			right_is_paren = '(['.includes(linetext[range.end.character + word.length + 1]);
 		if (is_any)
 			tps = [];
 		else
@@ -731,7 +731,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					l = k;
 			});
 			l === -1 && (l = line);
-			if (curdir.charAt(0) === lp.charAt(0))
+			if (curdir[0] === lp[0])
 				texts.push(`#Include ${relative(curdir, path)}`);
 			let pos = { line: doc.document.lineCount, character: 0 }, text = `#Include ${path}`, t;
 			texts.forEach(t => t.length < text.length && (text = t)), text = '\n' + text;
@@ -963,6 +963,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					ci.insertTextFormat = InsertTextFormat.Snippet, ci.insertText = ci.label + '[$0]';
 				break;
 			}
+			case SymbolKind.Module:
+				ci.kind = CompletionItemKind.Module;
+				break;
 			default:
 				ci.kind = CompletionItemKind.Text;
 				return ci;

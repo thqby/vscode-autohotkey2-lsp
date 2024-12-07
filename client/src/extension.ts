@@ -666,28 +666,23 @@ function getAHKversion(paths: string[]): Thenable<string[]> {
 }
 
 function getInterpreterPath() {
-	const t = ahkconfig.inspect('InterpreterPath');
-	let path = '';
-	if (t)
-		if ((path = t.workspaceFolderValue as string))
-			return { path, from: ConfigurationTarget.WorkspaceFolder };
-		else if ((path = t.workspaceValue as string))
-			return { path, from: ConfigurationTarget.Workspace };
-		else if ((path = t.globalValue as string))
-			return { path, from: ConfigurationTarget.Global };
-		else path = t.defaultValue as string ?? '';
-	return { path };
+	const t = ahkconfig.inspect<string>('InterpreterPath') ?? { key: '' };
+	let from = ConfigurationTarget.WorkspaceFolder;
+	const path = t.workspaceFolderValue ??
+		(from = ConfigurationTarget.Workspace, t.workspaceValue) ??
+		(from = ConfigurationTarget.Global, t.globalValue ?? t.defaultValue ?? '');
+	return { from, path };
 }
 
 function findFile(files: string[], workspace: string) {
 	let s: string;
 	const paths: string[] = [];
-	const t = ahkconfig.inspect('InterpreterPath');
+	const t = ahkconfig.inspect<string>('InterpreterPath');
 	if (add(ahkpath_cur), t) {
-		add(t.workspaceFolderValue as string);
-		add(t.workspaceValue as string);
-		add(t.globalValue as string);
-		add(t.defaultValue as string);
+		add(t.workspaceFolderValue);
+		add(t.workspaceValue);
+		add(t.globalValue);
+		add(t.defaultValue);
 	}
 	for (const path of paths)
 		for (const file of files)
@@ -695,7 +690,7 @@ function findFile(files: string[], workspace: string) {
 				return s;
 	return '';
 
-	function add(path: string) {
+	function add(path?: string) {
 		path = resolvePath(path, workspace);
 		if (!path) return;
 		path = path.toLowerCase();
@@ -708,7 +703,7 @@ function findFile(files: string[], workspace: string) {
  * Resolves a given path to an absolute path.
  * Returns empty string if the file does not exist or has no access rights.
  */
-function resolvePath(path: string, workspace?: string, resolveSymbolicLink = true): string {
+function resolvePath(path?: string, workspace?: string, resolveSymbolicLink = true): string {
 	if (!path)
 		return '';
 	const paths: string[] = [];
