@@ -191,12 +191,12 @@
     },
     "class_block": {
       "name": "meta.block.class.ahk2",
-      "begin": "(^|(?<=^[ \t]*\\*/))[ \t]*((?i:class))[ \t]+(\\$?\\w+(\\.\\w+)*)",
+      "begin": "(?<=^([ \t]*\\*\/)?[ \t]*(?i:export[ \t]+(default[ \t]+)?)?)(?i:(class))[ \t]+(\\$?\\w+(\\.\\w+)*)",
       "beginCaptures": {
-        "2": {
+        "3": {
           "name": "storage.type.class.ahk2"
         },
-        "3": {
+        "4": {
           "name": "entity.name.type.class.ahk2"
         }
       },
@@ -2003,6 +2003,17 @@
             },
             "7": {
               "name": "variable.other.ahk2"
+            }
+          }
+        },
+        {
+          "match": "^[ \t]*(?i:(export)[ \t]+((default)[ \t]+)?)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.ahk2"
+            },
+            "3": {
+              "name": "keyword.control.ahk2"
             }
           }
         },

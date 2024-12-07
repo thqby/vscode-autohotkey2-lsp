@@ -108,7 +108,7 @@ export type Maybe<T> = T | undefined;
 export let connection: Connection | undefined;
 export let locale = 'en-us', rootdir = '', isahk2_h = false;
 export let ahkpath_cur = '', ahkpath_resolved = '';
-export let ahk_version = Infinity;
+export let ahk_version = Infinity, reserved_index = 0;
 export let ahkuris: Record<string, string> = {};
 export let ahkvars: Record<string, AhkSymbol> = {};
 export let inactivevars: Record<string, string> = {};
@@ -572,7 +572,12 @@ export function set_ahkpath(path: string) {
 export function setConnection(conn: Connection) { return connection = conn; }
 export function setRootDir(dir: string) { rootdir = dir.replace(/[/\\]$/, ''); }
 export function setLocale(str?: string) { if (str) locale = str.toLowerCase(); }
-export function setVersion(version: string) { ahk_version = version_encode(version); }
+export function setVersion(version: string) {
+	ahk_version = version_encode(version);
+	if (ahk_version < alpha_11)
+		reserved_index = 1;
+	else reserved_index = 0;
+}
 export function setWorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
