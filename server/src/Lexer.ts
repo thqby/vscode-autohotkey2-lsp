@@ -1379,25 +1379,6 @@ export class Lexer {
 				return e === '=>' || e === '{';
 			}
 
-			function check_name(sym: AhkSymbol) {
-				const name = sym.name;
-				let message;
-				if (name[0] <= '9')
-					message = diagnostic.invalidsymbolname(name);
-				else if ((sym as FuncNode).has_this_param)
-					return;
-				else if (reserved_words.includes(name.toLowerCase()))
-					message = diagnostic.reservedworderr(sym.name);
-				else if (!(sym as FuncNode).params && !(sym as Variable).is_param) {
-					return;
-				} else if (ahkvars[name.toUpperCase()]?.kind === SymbolKind.Variable)
-					message = diagnostic.conflictserr(
-						(sym as Variable).is_param ? 'parameter' : 'Func',
-						'built-in variable', name);
-				else return;
-				_this.diagnostics.push({ message, range: sym.selectionRange });
-			}
-
 			function check_operator(op: Token) {
 				const tp = op.op_type ??= op_type(op);
 				if ((tp >= 0 && (op.topofline === 1 || !yields_an_operand(op.previous_token!))) ||
@@ -1916,9 +1897,16 @@ export class Lexer {
 					tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
 					tn.parent = is_static ? _parent : (_parent as ClassNode).prototype;
 					(_this.object.method[fc.content.toUpperCase()] ??= []).push(tn);
+					if (tn.name[0] <= '9')
+						_this.diagnostics.push({ message: diagnostic.invalidsymbolname(tn.name), range: tn.selectionRange });
 				} else {
 					(mode & BlockType.Mask) && (tn.parent = _parent);
-					fc.length || (tokens[fc.offset].symbol = tn);
+					if (fc.length) {
+						if (tn.name[0] <= '9')
+							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(tn.name), range: tn.selectionRange });
+						else if (reserved_words.includes(tn.name.toLowerCase()))
+							_this.diagnostics.push({ message: diagnostic.reservedworderr(tn.name), range: tn.selectionRange });
+					} else tokens[fc.offset].symbol = tn;
 				}
 
 				adddeclaration(tn);
@@ -2250,7 +2238,11 @@ export class Lexer {
 				const cl = tk, bp = lk.offset;
 				let ex = '';
 				lk.type = 'TK_RESERVED';
-				tk.type = 'TK_WORD';
+				if (tk.type !== 'TK_WORD') {
+					tk.type = 'TK_WORD';
+					_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
+				} else if (tk.content[0] <= '9')
+					_this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.length);
 				if (mode & BlockType.Func) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset, tk.length);
 				tk = get_next_token();
 				if (!tk.topofline && tk.content.toLowerCase() === 'extends') {
@@ -3969,7 +3961,7 @@ export class Lexer {
 					const cls = node as ClassNode, dec = cls.$property!, sdec = cls.property ??= {}, children = cls.children ??= [];
 					const __init = [sdec.__INIT], prototype = cls.prototype!;
 					prototype.checkmember ??= cls.checkmember;
-					check_name(cls), adddeclaration(sdec.__INIT as FuncNode);
+					adddeclaration(sdec.__INIT as FuncNode);
 					if ((dec.__INIT as FuncNode)?.ranges?.length)
 						adddeclaration(dec.__INIT as FuncNode), __init.push(dec.__INIT);
 					else delete dec.__INIT;
@@ -4031,9 +4023,7 @@ export class Lexer {
 						pars.SUPER = dec.SUPER = SUPER;
 						if (fn.kind === SymbolKind.Function)
 							named_params = undefined;
-						else if (fn.name[0] <= '9')
-							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fn.name), range: fn.selectionRange });
-					} else fn.name && check_name(fn);
+					}
 					for (const it of fn.params ?? []) {
 						it.def = it.assigned = it.is_param = true;
 						if (!it.name)
