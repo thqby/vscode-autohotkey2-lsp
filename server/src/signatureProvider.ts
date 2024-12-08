@@ -39,7 +39,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			cache.loc = '';
 		return;
 	}
-	const { name, pos, index, kind } = res;
+	const { name, pos, index, kind, count } = res;
 	const loc = `${lex.uri}?${name},${pos.line},${pos.character}`;
 	if (loc === cache.loc) {
 		if (index === cache.index)
@@ -166,8 +166,8 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		}
 		q += needthis > 0 ? 7 : 1, set.add(fn);
 		for (const f of fns) {
-			label = f.full, params = f.params;
-			activeParameter = f.variadic && params[(pc = params.length) - 1].arr ? Math.min(pi, pc - 1) : pi;
+			label = f.full, params = f.params, pc = params.length;
+			activeParameter = f.variadic && params[pc - 1].arr ? Math.min(pi, pc - 1) : pi;
 			name = params[activeParameter]?.name.toUpperCase() ?? (needthis && activeParameter === -1 ? 'this' : '\0');
 			param = fn.params.find(p => p.name.toUpperCase() === name) ?? fn.overload_params?.[name];
 			parameters = f.param_offsets.map((p, i) => ({ label: [p += q, p + (params![i]?.name.length || 1)] }));
@@ -176,8 +176,17 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				label = label.replace(/(?<=.)\(/, '(this' + (params.length ? ', ' : ''));
 			}
 			if (param) {
-				if (param.arr === 2 && pi % 2 !== param.data)
-					activeParameter++;
+				if (param.arr === 2) {
+					const fi = pi % 2 !== param.data, fc = pc % 2 !== param.data, n = fc ? 2 : 1;
+					if ((!fi || ++activeParameter && fc) && index >= count - n)
+						if (index === count - 1 || activeParameter - n !== pc - 2)
+							activeParameter -= n;
+					param = params[activeParameter] ?? param;
+				} else if (index <= count - 2 && params.at(-1)?.arr === 2) {
+					const p = params.at(-1)!, fc = pc % 2 !== p.data, n = fc ? 2 : 1;
+					if (!params[activeParameter + n]?.name.length)
+						param = params[activeParameter += n] ?? p;
+				}
 				parameters[activeParameter].documentation = get_detail(param, lex);
 			}
 			signinfo.signatures.push({ label, parameters, documentation, activeParameter });

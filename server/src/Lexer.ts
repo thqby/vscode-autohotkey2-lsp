@@ -1640,7 +1640,7 @@ export class Lexer {
 									if (line_begin_pos !== undefined)
 										_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
 								} else if (input[lk.offset + lk.length] === '(')
-									parse_call(lk, '(');
+									parse_call(lk, '('), result.push(...parse_line());
 								else {
 									reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN;
 									parser_pos = tk.offset + tk.length, next = true;
@@ -2811,10 +2811,8 @@ export class Lexer {
 				block_mode = false, incls && (mode = BlockType.Method);
 				loop:
 				while (nexttoken()) {
-					if (tk.topofline === 1) {
-						if (is_line_continue(lk, tk, _parent))
-							tk.topofline = -1;
-						else { next = false; break; }
+					if (tk.topofline === 1 && !is_line_continue(lk, tk, _parent)) {
+						next = false; break;
 					}
 					switch (tk.type) {
 						case 'TK_WORD':
@@ -2845,6 +2843,10 @@ export class Lexer {
 									else vr.cached_types = [equ === '.=' ? STRING : NUMBER];
 									vr.assigned ??= true, vr.decl = vr.def = true;
 									vr.range.end = document.positionAt(lk.offset + lk.length)
+								}
+								if (tk.content === ',') {
+									tk.topofline &&= -1;
+									continue;
 								}
 							} else {
 								if (incls) {
@@ -2957,7 +2959,7 @@ export class Lexer {
 									next = false;
 									break;
 								}
-								if (tk.type as string === 'TK_COMMA' || (tk.topofline && !is_line_continue(lk, tk, _parent))) {
+								if (tk.type as string === 'TK_COMMA' || tk.topofline && !is_line_continue(lk, tk, _parent)) {
 									const vr = addvariable(lk, md, sta);
 									if (vr) {
 										vr.decl = vr.def = true;
@@ -2967,8 +2969,8 @@ export class Lexer {
 									if (tk.type as string !== 'TK_COMMA') {
 										next = false;
 										break loop;
-									}
-								} else next = false, tk.topofline &&= -1;
+									} else tk.topofline &&= -1;
+								} else parse_expression(',', 0);
 							}
 							break;
 						case 'TK_COMMA':
@@ -7827,7 +7829,7 @@ export function get_callinfo(doc: Lexer, position: Position, pi?: ParamInfo) {
 			for (const c of pi.comma)
 				if (offset > c) ++index; else break;
 		kind ??= pi.method ? SymbolKind.Method : SymbolKind.Function;
-		return { name: pi.name ?? '', pos, index, kind };
+		return { name: pi.name ?? '', pos, index, kind, count: pi.count };
 	}
 	if (pi)
 		return get(pi);
