@@ -2,7 +2,7 @@ import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, Sym
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
-import { readFileSync, realpathSync, existsSync, lstatSync, readlinkSync, opendirSync } from 'fs';
+import { readFileSync, realpathSync, existsSync, lstatSync, readlinkSync, readdirSync } from 'fs';
 import { opendir, readFile } from 'fs/promises';
 import { execSync } from 'child_process';
 import { resolve, sep } from 'path';
@@ -190,25 +190,20 @@ export function restorePath(path: string): string {
 		return path2;
 	const [p2, a2, a1] = [path2, s2, s1].map(s => s.split(/[/\\]/));
 	const l = a1.length;
-	let i = 1;
-	path2 = a1[0];
-	if (a1[0] === a2[0])
-		for (; i < l && a1[i] === a2[i]; path2 += `${sep}${p2[i++]}`);
-	let dir, ent;
 	try {
-		for (; i < l; i++) {
-			dir = opendirSync(path2);
-			while ((ent = dir.readSync())) {
-				if (ent.name.toUpperCase() === a1[i]) {
-					path2 += `${sep}${ent.name}`;
-					break;
+		let i, s;
+		for (i = 0; i < l && a1[i] === a2[i]; i++);
+		next: for (path2 = p2.slice(0, i ||= (p2[0] = a1[0], 1)).join(sep); i < l;) {
+			s = a1[i++];
+			for (const ent of readdirSync(path2 += sep)) {
+				if (ent.toUpperCase() === s) {
+					path2 += ent;
+					continue next;
 				}
 			}
-			dir.close(), dir = undefined;
-			if (!ent) break;
+			break;
 		}
-		return path2;
-	} catch { dir?.close(); }
+	} catch { }
 	return path2 + path.substring(path2.length);
 }
 
