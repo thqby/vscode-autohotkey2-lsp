@@ -1846,6 +1846,7 @@ export class Lexer {
 						_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range: tn.selectionRange });
 				} else {
 					mode = BlockType.Func;
+					tn.kind = SymbolKind.Function;
 					(prev_mode & BlockType.Mask) && (tn.parent = prev_parent);
 					if (fc.length) {
 						if (fc.content[0] <= '9')
@@ -1854,7 +1855,7 @@ export class Lexer {
 							_this.diagnostics.push({ message: diagnostic.reservedworderr(fc.content), range: tn.selectionRange });
 					} else tokens[fc.offset].symbol = tn;
 				}
-				Object.assign(tn, FuncNode.create(fc.content, SymbolKind.Function,
+				Object.assign(tn, FuncNode.create(fc.content, tn.kind,
 					{ start: fc.pos = range.start, end: { character: 0, line: 0 } }, range,
 					params ??= parse_params() ?? (_this.addDiagnostic(diagnostic.invalidparam(),
 						fc.offset, tk.offset + 1 - fc.offset), []), undefined, is_static));
