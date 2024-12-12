@@ -182,9 +182,9 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 						if (index === count - 1 || activeParameter - n !== pc - 2)
 							activeParameter -= n;
 					param = params[activeParameter] ?? param;
-				} else if (index <= count - 2 && params.at(-1)?.arr === 2) {
+				} else if (index < count - 1 && params.at(-1)?.arr === 2) {
 					const p = params.at(-1)!, fc = pc % 2 !== p.data, n = fc ? 2 : 1;
-					if (!params[activeParameter + n]?.name.length)
+					if (index < count - n && !params[activeParameter + n]?.name.length)
 						param = params[activeParameter += n] ?? p;
 				}
 				parameters[activeParameter].documentation = get_detail(param, lex);
