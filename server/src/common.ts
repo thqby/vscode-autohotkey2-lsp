@@ -151,7 +151,7 @@ export function read_ahk_file(path: string, showError = true) {
 		if (showError) {
 			delete e.stack;
 			e.path = path;
-			connection?.console.log(e);
+			console.error(e);
 		}
 	}
 }

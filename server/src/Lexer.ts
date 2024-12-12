@@ -1309,7 +1309,7 @@ export class Lexer {
 				case 'SwitchToV1':
 					if (!_this.actived)
 						break;
-					connection?.console.info([_this.document.uri, message, diagnostic.tryswitchtov1()].join(' '));
+					console.info([_this.document.uri, message, diagnostic.tryswitchtov1()].join(' '));
 					message = '', setTextDocumentLanguage(_this.document.uri);
 					break;
 				case 'Continue':
@@ -1450,27 +1450,49 @@ export class Lexer {
 						unexpected(tk);
 				}
 				while (block_mode = true, nexttoken()) {
-					let _nk: Token | undefined;
 					if (tk.topofline === 1) {
-						let p: number;
+						let nk: Token | undefined;
 						line_begin_pos = tk.offset;
 						if (mode === BlockType.Class) {
 							if (allIdentifierChar.test(tk.content) &&
 								(tk.content.toLowerCase() !== 'static' || '.[('.includes(input[parser_pos]) ||
-									(_nk = _this.get_token(parser_pos, true)).topofline || !allIdentifierChar.test(_nk.content)))
+									(nk = _this.get_token(parser_pos, true)).topofline || !allIdentifierChar.test(nk.content)))
 								tk.type = 'TK_WORD';
-						} else if ((p = is_next_char(':'))) {
-							if ((case_pos.length && tk.content.toLowerCase() === 'default' && _this.get_token(p).content === ':') ||
-								(p === parser_pos && whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content)
-									&& (!case_pos.length || tk.content.toLowerCase() !== 'case'))) {
-								if ((_nk = tokens[p])) {
-									if ((tk.next_token_offset = _nk.next_token_offset) > 0)
-										tokens[_nk.next_token_offset].previous_token = tk;
-									delete tokens[p];
-								}
-								tk.content += ':', tk.length = (parser_pos = p + 1) - tk.offset, tk.type = 'TK_LABEL';
-								delete tk.semantic;
+						} else {
+							const is_default = case_pos.length && tk.content.toLowerCase() === 'default' &&
+								(nk = _this.get_token(parser_pos, true)).content === ':';
+							if (is_default || input[parser_pos] === ':' &&
+								whitespace.includes(input.charAt(parser_pos + 1)) && allIdentifierChar.test(tk.content)) {
+								if (nk) {
+									if ((tk.next_token_offset = nk.next_token_offset) > 0)
+										tokens[nk.next_token_offset].previous_token = tk;
+									delete tokens[nk.offset];
+									tk.skip_pos = parser_pos = nk.offset + 1;
+								} else parser_pos++;
+								tk.content += ':', tk.length++, tk.type = 'TK_LABEL';
 								line_begin_pos = undefined;
+								delete tk.semantic;
+								if (is_default) {
+									const last_case = case_pos.pop();
+									if (case_pos.push(tk.offset), last_case)
+										_this.addFoldingRange(last_case, lk.offset, 'case');
+									tk.hover_word = 'default';
+									nexttoken(), next = false;
+									tk.topofline ||= -1;
+									continue;
+								}
+								tk.symbol = tn = SymbolNode.create(tk.content, SymbolKind.Field,
+									make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1));
+								tn.data = blockpos.at(-1), tn.def = true, result.push(tn);
+								(_cm = comments[tn.selectionRange.start.line]) && set_detail(tn, _cm);
+								const labels = (_parent as FuncNode).labels[tn.name.slice(0, -1).toUpperCase()] ??= [];
+								if (labels[0]?.def)
+									_this.addDiagnostic(diagnostic.duplabel(), tk.offset, tk.length - 1),
+										labels.splice(1, 0, tn);
+								else labels.unshift(tn);
+								nexttoken(), next = false;
+								tk.topofline || unexpected(tk);
+								continue;
 							}
 						}
 					}
@@ -1640,7 +1662,7 @@ export class Lexer {
 									if (line_begin_pos !== undefined)
 										_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
 								} else if (input[lk.offset + lk.length] === '(')
-									parse_call(lk, '('), result.push(...parse_line());
+									parse_call(lk, '(') || result.push(...parse_line());
 								else {
 									reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN;
 									parser_pos = tk.offset + tk.length, next = true;
@@ -1688,6 +1710,7 @@ export class Lexer {
 								if (!(mode & BlockType.Mask) && level === 0)
 									unexpected(tk), blocks = blockpos.length = 0;
 								else {
+									!tk.topofline && unexpected(tk);
 									if (blockpos.length && tk.previous_pair_pos === undefined)
 										tokens[tk.previous_pair_pos = blockpos.at(-1)!].next_pair_pos = tk.offset;
 									return;
@@ -1700,42 +1723,6 @@ export class Lexer {
 							unexpected(tk);
 							line_begin_pos = undefined;
 							break;
-
-						case 'TK_LABEL': {
-							if (case_pos.length && tk.content.toLowerCase() === 'default:') {
-								const last_case = case_pos.pop();
-								if (case_pos.push(tk.offset), last_case)
-									_this.addFoldingRange(last_case, lk.offset, 'case');
-								tk.hover_word = 'default';
-								nexttoken(), next = false;
-								tk.topofline ||= -1;
-								break;
-							}
-							if (mode === BlockType.Class) {
-								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length);
-								break;
-							}
-							tk.symbol = tn = SymbolNode.create(tk.content, SymbolKind.Field,
-								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1));
-							tn.data = blockpos.at(-1);
-							result.push(tn);
-							const labels = (_parent as FuncNode).labels;
-							if (labels) {
-								_low = tk.content.toUpperCase().slice(0, -1), tn.def = true;
-								if (!labels[_low])
-									labels[_low] = [tn];
-								else if (labels[_low][0].def)
-									_this.addDiagnostic(diagnostic.duplabel(), tk.offset, tk.length - 1),
-										labels[_low].splice(1, 0, tn);
-								else
-									labels[_low].unshift(tn);
-							}
-							if ((_cm = comments[tn.selectionRange.start.line]))
-								set_detail(tn, _cm);
-							if (!(_nk = _this.get_token(parser_pos, true)).topofline)
-								unexpected(_nk);
-							break;
-						}
 
 						case 'TK_HOTLINE': {
 							tk.symbol = tn = SymbolNode.create(tk.content, SymbolKind.Event,
@@ -1824,14 +1811,7 @@ export class Lexer {
 									unexpected(tk);
 								else if (lk !== EMPTY_TOKEN && is_line_continue(lk, tk, _parent))
 									tk.topofline = -1;
-								else {
-									lk = EMPTY_TOKEN;
-									if (input[tk.offset + tk.length] === '(' && allIdentifierChar.test(tk.content)) {
-										nexttoken();
-										parse_call(lk, '(');
-										break;
-									}
-								}
+								else lk = EMPTY_TOKEN;
 							}
 							if (next = false, mode === BlockType.Class)
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length), parse_line();
@@ -1854,7 +1834,26 @@ export class Lexer {
 						(is_static as unknown as number)
 				};
 				const rl = result.length, oo = is_static ? fc.previous_token!.offset : fc.offset;
-				mode = in_cls ? BlockType.Method : BlockType.Func;
+				if (in_cls) {
+					mode = BlockType.Method;
+					tn.has_this_param = true;
+					tn.kind = SymbolKind.Method;
+					se.type = SemanticTokenTypes.method;
+					tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
+					tn.parent = is_static ? prev_parent : (prev_parent as ClassNode).prototype;
+					(_this.object.method[fc.content.toUpperCase()] ??= []).push(tn);
+					if (fc.content[0] <= '9')
+						_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range: tn.selectionRange });
+				} else {
+					mode = BlockType.Func;
+					(prev_mode & BlockType.Mask) && (tn.parent = prev_parent);
+					if (fc.length) {
+						if (fc.content[0] <= '9')
+							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range: tn.selectionRange });
+						else if (reserved_words.includes(fc.content.toLowerCase()))
+							_this.diagnostics.push({ message: diagnostic.reservedworderr(fc.content), range: tn.selectionRange });
+					} else tokens[fc.offset].symbol = tn;
+				}
 				Object.assign(tn, FuncNode.create(fc.content, SymbolKind.Function,
 					{ start: fc.pos = range.start, end: { character: 0, line: 0 } }, range,
 					params ??= parse_params() ?? (_this.addDiagnostic(diagnostic.invalidparam(),
@@ -1890,24 +1889,6 @@ export class Lexer {
 					return next = false, undefined;
 				}
 				_parent = prev_parent, mode = prev_mode;
-				if (in_cls) {
-					tn.has_this_param = true;
-					tn.kind = SymbolKind.Method;
-					se.type = SemanticTokenTypes.method;
-					tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
-					tn.parent = is_static ? _parent : (_parent as ClassNode).prototype;
-					(_this.object.method[fc.content.toUpperCase()] ??= []).push(tn);
-					if (tn.name[0] <= '9')
-						_this.diagnostics.push({ message: diagnostic.invalidsymbolname(tn.name), range: tn.selectionRange });
-				} else {
-					(mode & BlockType.Mask) && (tn.parent = _parent);
-					if (fc.length) {
-						if (tn.name[0] <= '9')
-							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(tn.name), range: tn.selectionRange });
-						else if (reserved_words.includes(tn.name.toLowerCase()))
-							_this.diagnostics.push({ message: diagnostic.reservedworderr(tn.name), range: tn.selectionRange });
-					} else tokens[fc.offset].symbol = tn;
-				}
 
 				adddeclaration(tn);
 				return tn;
@@ -2568,8 +2549,7 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.missingspace(), fc.offset);
 							}
 							lk = fc, tk = pk, parser_pos = tk.offset + tk.length, next = true;
-							parse_func(fc, fc.topofline === 2, undefined, rpair, end);
-							return;
+							return parse_func(fc, fc.topofline === 2, undefined, rpair, end);
 						}
 					}
 					pi.offset = pk.offset;
@@ -2594,7 +2574,7 @@ export class Lexer {
 						});
 				}
 				if (fc.ignore)
-					return delete fc.semantic;
+					return delete fc.semantic, undefined;
 				const tn: CallSite = DocumentSymbol.create(fc.content, undefined,
 					kind ??= SymbolKind.Function, { ...range }, range);
 				tn.paraminfo = pi, tn.offset = fc.offset, fc.callsite = tn;
@@ -2807,186 +2787,164 @@ export class Lexer {
 
 			function parse_statement(local: string) {
 				const sta: Variable[] = [], md = mode, incls = md === BlockType.Class;
-				let bak: Token, pc: Token | undefined;
+				let pc: Token | undefined;
 				block_mode = false, incls && (mode = BlockType.Method);
-				loop:
-				while (nexttoken()) {
+				loop: while (nexttoken()) {
 					if (tk.topofline === 1 && !is_line_continue(lk, tk, _parent)) {
 						next = false; break;
 					}
 					switch (tk.type) {
-						case 'TK_WORD':
-							bak = lk, nexttoken();
-							if (tk.type as string === 'TK_EQUALS') {
-								let vr: Variable | undefined;
-								const equ = tk.content, pp = parser_pos;
-								if (bak.type === 'TK_DOT') {
-									addprop(lk), !incls && unexpected(bak);
-								} else if ((vr = addvariable(lk, md, sta))) {
-									if (incls) {
-										if (local)
-											lk.semantic!.modifier = SemanticTokenModifiers.static;
-										if (equ !== ':=')
-											_this.addDiagnostic(`${diagnostic.unexpected(equ)}, ${diagnostic.didyoumean(':=')}`,
-												tk.offset, tk.length, { code: DiagnosticCode.expect });
-									}
-									if ((pc = comments[vr.selectionRange.start.line]))
-										set_detail(vr, pc);
-								} else if (local)
-									_this.addDiagnostic(diagnostic.conflictserr(local, 'built-in variable', lk.content), lk.offset, lk.length);
-								result.push(...parse_expression());
-								const t: [number, number] = [pp, lk.offset + lk.length];
-								(_parent as FuncNode).ranges?.push(t);
-								if (vr) {
-									if (equ === ':=' || equ === '??=' && (vr.assigned ??= 1))
-										vr.returns = t;
-									else vr.cached_types = [equ === '.=' ? STRING : NUMBER];
-									vr.assigned ??= true, vr.decl = vr.def = true;
-									vr.range.end = document.positionAt(lk.offset + lk.length)
-								}
-								if (tk.content === ',') {
-									tk.topofline &&= -1;
-									continue;
-								}
-							} else {
-								if (incls) {
-									let llk = lk, ttk = tk, err = diagnostic.propnotinit(), dots = 0;
-									const v = addvariable(lk, 2, sta)!;
-									if (v.def = false, local)
-										lk.semantic!.modifier = SemanticTokenModifiers.static;
-									if (tk.type as string === 'TK_DOT') {
-										while (nexttoken() && tk.type === 'TK_WORD') {
-											if (!nexttoken())
-												break;
-											if (tk.type as string === 'TK_EQUALS') {
-												const pp = parser_pos, p = lk, assign = ASSIGN_TYPE.includes(tk.content);
-												addprop(lk);
-												result.push(...parse_expression());
-												const t: [number, number] = [pp, lk.offset + lk.length];
-												(_parent as FuncNode).ranges?.push(t);
-												if (!dots && assign && _parent.static && llk.content.toLowerCase() === 'prototype') {
-													const prop = Variable.create(p.content, SymbolKind.Property, make_range(p.offset, p.length));
-													const cls = (_parent.parent as ClassNode).prototype!;
-													if ((_cm = comments[prop.selectionRange.start.line]))
-														set_detail(prop, _cm);
-													prop.parent = cls, prop.returns = t;
-													cls.cache!.push(prop);
-												}
-												continue loop;
-											}
-											if (tk.type as string === 'TK_DOT')
-												addprop(lk), dots++;
-											else if (tk.topofline && (allIdentifierChar.test(tk.content) || tk.content === '}')) {
-												lk = EMPTY_TOKEN, next = false;
-												break loop;
-											} else {
-												if (tk.content !== ',')
-													err = diagnostic.propdeclaraerr();
-												else err = '';
-												break;
-											}
-										}
-									} else if (!local && tk.content === ':') {	// Typed properties
-										let pp = tk.offset + 1, tpexp = '', is_expr = false, _tp: Token | undefined;
-										const _p = _parent, static_init = (currsymbol as ClassNode).property.__INIT as FuncNode;
-										const _prop = lk, scl = static_init.children!.length;
-										delete v.def;
-										v.typed = true;
-										lk = tk, tk = get_next_token(), err = '';
-										if (allIdentifierChar.test(tk.content)) {
-											_tp = tk, tpexp += tk.content, nexttoken();
-										} else if (tk.type === 'TK_START_EXPR') {
-											const l = result.length;
-											_parent = static_init, is_expr = true;
-											parse_pair(tk.content, tk.content as string === '(' ? ')' : ']');
-											static_init.children!.push(...result.splice(l));
-											_parent = _p, nexttoken();
-										} else if (tk.content as string === ':=' || tk.type === 'TK_COMMA' || tk.topofline && allIdentifierChar.test(tk.content))
-											unexpected(tk), next = false;
-										else err = diagnostic.propdeclaraerr();
-										if (ahk_version < alpha_3)
-											_this.addDiagnostic(diagnostic.requireVerN(alpha_3), _prop.offset, lk.offset + lk.length - _prop.offset, { code: DiagnosticCode.typed_prop });
-										if (!err) {
-											while (true) {
-												if (tk.content === '.' && tk.type !== 'TK_OPERATOR') {
-													if (tk.type !== 'TK_DOT')
-														unexpected(tk);
-													if (nexttoken() && tk.type as string === 'TK_WORD')
-														tpexp += '.' + tk.content, addprop(tk), nexttoken();
-												} else if (tk.type === 'TK_START_EXPR' && !tk.prefix_is_whitespace && allIdentifierChar.test(lk.content)) {
-													const l = result.length, predot = lk.previous_token?.type === 'TK_DOT';
-													_parent = static_init, is_expr = true;
-													parse_call(lk, tk.content, tk.content === '[' ?
-														predot ? SymbolKind.Property : SymbolKind.Variable :
-														predot ? SymbolKind.Method : SymbolKind.Function);
-													static_init.children!.push(...result.splice(l));
-													_parent = _p, nexttoken();
-												} else break;
-											}
-											if (_tp) {
-												if (tk.previous_token === _tp && /^([iu](8|16|32|64)|f(32|64)|[iu]ptr)$/i.test(_tp.content)) {
-													v.type_annotations = [/^f/i.test(_tp.content) ? 'Float' : 'Integer'];
-													_tp.semantic = SE_CLASS;
-												} else if (_tp.type === 'TK_WORD')
-													addvariable(_tp, 3, static_init.children);
-											}
-											v.type_annotations ??= is_expr || !tpexp ? ['Any'] : [tpexp];
-											if (tk.content === ':=') {
-												static_init.ranges?.push([pp, tk.offset - 1]);
-												pp = tk.offset + 2;
-												result.push(...parse_expression());
-												(_parent as FuncNode).ranges?.push([pp, lk.offset + lk.length]);
-												continue loop;
-											}
-											if (tk.type === 'TK_COMMA' || tk.topofline && (allIdentifierChar.test(tk.content) || tk.content === '}') && !(next = false)) {
-												static_init.ranges?.push([pp, tk.offset - 1]);
-												continue loop;
-											}
-											_this.addDiagnostic(diagnostic.propdeclaraerr(), _prop.offset, _prop.length);
-											static_init.children?.splice(scl);
-											llk = tk.previous_token ?? EMPTY_TOKEN, ttk = tk, v.def = false;
-										}
-									}
-									err && _this.addDiagnostic(err, lk.offset, lk.length);
-									if (tk.topofline && allIdentifierChar.test(tk.content)) {
-										lk = EMPTY_TOKEN, next = false;
-										break loop;
-									}
-									if (!tk.topofline && tk.type as string !== 'TK_COMMA') {
-										next = false, lk = llk, tk = ttk, parser_pos = tk.offset + tk.length;
-										parse_expression(',');
-									}
-									next = false;
-									break;
-								}
-								if (tk.type as string === 'TK_COMMA' || tk.topofline && !is_line_continue(lk, tk, _parent)) {
-									const vr = addvariable(lk, md, sta);
-									if (vr) {
-										vr.decl = vr.def = true;
-										if ((pc = comments[vr.selectionRange.start.line]))
-											set_detail(vr, pc);
-									}
-									if (tk.type as string !== 'TK_COMMA') {
-										next = false;
-										break loop;
-									} else tk.topofline &&= -1;
-								} else parse_expression(',', 0);
+						case 'TK_OPERATOR':
+							if (!allIdentifierChar.test(tk.content)) {
+								unexpected(tk); parse_expression(',', 0);
+								break;
 							}
-							break;
-						case 'TK_COMMA':
-							continue;
-						case 'TK_UNKNOWN': _this.addDiagnostic(diagnostic.unknowntoken(tk.content), tk.offset, tk.length); break;
+						// fall through
 						case 'TK_RESERVED':
 							if (!incls)
 								_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
-							next = false, tk.type = 'TK_WORD'; break;
+							tk.type = 'TK_WORD';
+						// fall through
+						case 'TK_WORD':
+							if (nexttoken() && tk.type as string === 'TK_EQUALS') {
+								const equ = tk.content, pp = parser_pos;
+								const vr = addvariable(lk, md, sta);
+								if (incls) {
+									if (local)
+										lk.semantic!.modifier = SemanticTokenModifiers.static;
+									if (equ !== ':=')
+										_this.addDiagnostic(`${diagnostic.unexpected(equ)}, ${diagnostic.didyoumean(':=')}`,
+											tk.offset, tk.length, { code: DiagnosticCode.expect });
+								}
+								if ((pc = comments[vr.selectionRange.start.line]))
+									set_detail(vr, pc);
+								result.push(...parse_expression());
+								const t: [number, number] = [pp, lk.offset + lk.length];
+								(_parent as FuncNode).ranges?.push(t);
+								if (equ === ':=' || equ === '??=' && (vr.assigned ??= 1))
+									vr.returns = t;
+								else vr.cached_types = [equ === '.=' ? STRING : NUMBER];
+								vr.assigned ??= true, vr.decl = vr.def = true;
+								vr.range.end = document.positionAt(lk.offset + lk.length);
+							} else if (incls) {
+								let err = diagnostic.propnotinit(), dots = 0;
+								const llk = lk, v = addvariable(lk, 2, sta)!;
+								if (v.def = false, local)
+									lk.semantic!.modifier = SemanticTokenModifiers.static;
+								if (tk.type as string === 'TK_DOT') {
+									err = diagnostic.propdeclaraerr();
+									while (!tk.prefix_is_whitespace && nexttoken() && tk.type === 'TK_WORD') {
+										if (!nexttoken())
+											break;
+										if (tk.type as string === 'TK_EQUALS') {
+											const pp = parser_pos, p = lk, assign = ASSIGN_TYPE.includes(tk.content);
+											if (assign && tk.content !== ':=')
+												_this.addDiagnostic(`${diagnostic.unexpected(tk.content)}, ${diagnostic.didyoumean(':=')}`,
+													tk.offset, tk.length, { code: DiagnosticCode.expect });
+											addprop(lk);
+											result.push(...parse_expression());
+											const t: [number, number] = [pp, lk.offset + lk.length];
+											(_parent as FuncNode).ranges?.push(t);
+											if (!dots && assign && _parent.static && llk.content.toLowerCase() === 'prototype') {
+												const prop = Variable.create(p.content, SymbolKind.Property, make_range(p.offset, p.length));
+												const cls = (_parent.parent as ClassNode).prototype!;
+												if ((_cm = comments[prop.selectionRange.start.line]))
+													set_detail(prop, _cm);
+												prop.parent = cls, prop.returns = t;
+												cls.cache!.push(prop);
+											}
+											continue loop;
+										}
+										if (tk.type as string === 'TK_DOT')
+											addprop(lk), dots++;
+										else break;
+									}
+								} else if (!local && tk.content === ':') {	// Typed properties
+									let pp = tk.offset + 1, tpexp = '', is_expr = false, _tp: Token | undefined;
+									const _p = _parent, static_init = (currsymbol as ClassNode).property.__INIT as FuncNode;
+									const scl = static_init.children!.length;
+									delete v.def;
+									v.typed = true;
+									lk = tk, tk = get_next_token(), err = '';
+									if (allIdentifierChar.test(tk.content)) {
+										_tp = tk, tpexp += tk.content, nexttoken();
+									} else if (tk.type === 'TK_START_EXPR') {
+										const l = result.length;
+										_parent = static_init, is_expr = true;
+										parse_pair(tk.content, tk.content as string === '(' ? ')' : ']');
+										static_init.children!.push(...result.splice(l));
+										_parent = _p, nexttoken();
+									} else if (tk.content as string === ':=' || tk.type === 'TK_COMMA' || tk.topofline && allIdentifierChar.test(tk.content))
+										unexpected(tk), next = false;
+									else err = diagnostic.propdeclaraerr();
+									if (ahk_version < alpha_3)
+										_this.addDiagnostic(diagnostic.requireVerN(alpha_3), llk.offset, lk.offset + lk.length - llk.offset, { code: DiagnosticCode.typed_prop });
+									if (!err) {
+										while (true) {
+											if (tk.content === '.' && tk.type !== 'TK_OPERATOR') {
+												if (tk.type !== 'TK_DOT')
+													unexpected(tk);
+												if (nexttoken() && tk.type as string === 'TK_WORD')
+													tpexp += '.' + tk.content, addprop(tk), nexttoken();
+											} else if (tk.type === 'TK_START_EXPR' && !tk.prefix_is_whitespace && allIdentifierChar.test(lk.content)) {
+												const l = result.length, predot = lk.previous_token?.type === 'TK_DOT';
+												_parent = static_init, is_expr = true;
+												parse_call(lk, tk.content, tk.content === '[' ?
+													predot ? SymbolKind.Property : SymbolKind.Variable :
+													predot ? SymbolKind.Method : SymbolKind.Function);
+												static_init.children!.push(...result.splice(l));
+												_parent = _p, nexttoken();
+											} else break;
+										}
+										if (_tp) {
+											if (tk.previous_token === _tp && /^([iu](8|16|32|64)|f(32|64)|[iu]ptr)$/i.test(_tp.content)) {
+												v.type_annotations = [/^f/i.test(_tp.content) ? 'Float' : 'Integer'];
+												_tp.semantic = SE_CLASS;
+											} else if (_tp.type === 'TK_WORD')
+												addvariable(_tp, 3, static_init.children);
+										}
+										v.type_annotations ??= is_expr || !tpexp ? ['Any'] : [tpexp];
+										if (tk.content === ':=') {
+											static_init.ranges?.push([pp, tk.offset - 1]);
+											pp = tk.offset + 2;
+											result.push(...parse_expression());
+											(_parent as FuncNode).ranges?.push([pp, lk.offset + lk.length]);
+											continue loop;
+										}
+										if (tk.content === ',' || (tk.content === '}' || tk.topofline && allIdentifierChar.test(tk.content)) && !(next = false)) {
+											static_init.ranges?.push([pp, tk.offset - 1]);
+											continue loop;
+										}
+										err = diagnostic.propdeclaraerr();
+										static_init.children?.splice(scl);
+										v.def = false;
+									}
+								}
+								err && _this.addDiagnostic(err, llk.offset);
+								if (tk.content === '}' || tk.topofline && allIdentifierChar.test(tk.content)) {
+									lk = EMPTY_TOKEN, next = false;
+									break loop;
+								}
+								if (tk.content !== ',')
+									unexpected(tk), parse_expression();
+							} else if (tk.content === ',' || tk.topofline && !is_line_continue(lk, tk, _parent)) {
+								const vr = addvariable(lk, md, sta);
+								vr.decl = vr.def = true;
+								if ((pc = comments[vr.selectionRange.start.line]))
+									set_detail(vr, pc);
+								if (tk.content !== ',') {
+									next = false;
+									break loop;
+								}
+							} else unexpected(tk), parse_expression(',', 0);
+							break;
+						case 'TK_COMMA':
+							lk.content === ',' && unexpected(tk);
+							continue;
 						case 'TK_END_BLOCK':
 							next = false;
 							break loop;
-						case 'TK_DOT':
-							if (incls) continue;
-						// fall through
-						default: unexpected(tk); break loop;
+						default: unexpected(tk); parse_expression(',', 0);
 					}
 				}
 				return mode = md, sta;
@@ -3930,8 +3888,6 @@ export class Lexer {
 			}
 
 			function addvariable(token: Token, md: number = 0, p?: AhkSymbol[]) {
-				if (!token.length)
-					return;
 				const rg = make_range(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg);
 				if (md === 2) {
 					tn.kind = SymbolKind.Property;
@@ -5156,7 +5112,7 @@ export class Lexer {
 				const sep = c, o = offset;
 				let nosep = false, _lst: Token | undefined, pt: Token | undefined;
 				resulting_string = '';
-				if (!/^[ \t\r\n+\-*/%:?~!&|^=<>[({,.]$/.test(c = input.charAt(offset - 1))) {
+				if (!' \t\r\n+-*/%:?~!&|^=<>[({,.]'.includes(c = input.charAt(offset - 1))) {
 					if (sep === c) {
 						if (c === "'" || !stop_parse(lst))
 							_this.addDiagnostic(diagnostic.didyoumean(c = `\`${c}`), offset - 1, input[offset + 1] === sep ? 2 : 1,
@@ -5989,7 +5945,7 @@ export class Lexer {
 					space_after = true;
 			} else if (token_text === ':') {
 				if (flags.ternary_depth)
-					restore_mode(), flags.ternary_depth--;
+					restore_mode(), deindent(), flags.ternary_depth--;
 				else if ((space_before = false, get_style()))
 					trim_newlines();
 			} else if (token_text === '?') {
