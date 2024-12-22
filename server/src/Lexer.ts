@@ -1839,9 +1839,7 @@ export class Lexer {
 					tn.has_this_param = true;
 					tn.kind = SymbolKind.Method;
 					se.type = SemanticTokenTypes.method;
-					tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
 					tn.parent = is_static ? prev_parent : (prev_parent as ClassNode).prototype;
-					(_this.object.method[fc.content.toUpperCase()] ??= []).push(tn);
 					if (fc.content[0] <= '9')
 						_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range: tn.selectionRange });
 				} else {
@@ -1890,6 +1888,10 @@ export class Lexer {
 					return next = false, undefined;
 				}
 				_parent = prev_parent, mode = prev_mode;
+				if (in_cls) {
+					tn.full = `(${classfullname.slice(0, -1)}) ` + tn.full;
+					(_this.object.method[fc.content.toUpperCase()] ??= []).push(tn);
+				}
 
 				adddeclaration(tn);
 				return tn;
@@ -2564,9 +2566,9 @@ export class Lexer {
 					}
 					if ((tp = tk.type) === 'TK_OPERATOR' && !/^(not|\+\+?|--?|!|~|%|&)$/i.test(tk.content))
 						unexpected(tk);
+					fc.paraminfo = pi;
 					result.push(...parse_line(undefined, undefined, undefined, undefined, pi));
 					range = make_range(fc.offset, fc.length);
-					fc.paraminfo = pi;
 					if (callWithoutParentheses === true || callWithoutParentheses && tp === 'TK_START_EXPR')
 						_this.diagnostics.push({
 							code: DiagnosticCode.call, range,
