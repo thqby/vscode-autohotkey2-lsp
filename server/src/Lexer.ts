@@ -8001,7 +8001,9 @@ export function is_line_continue(lk: Token, tk: Token, parent?: AhkSymbol): bool
 				case 'TK_EQUALS':
 					return true;
 				case 'TK_OPERATOR':
-					return !/^(!|~|not|%|\+\+|--)$/i.test(tk.content) && (!(parent as FuncNode)?.ranges || !allIdentifierChar.test(tk.content));
+					return !/^(!|~|not|%|\+\+|--)$/i.test(tk.content) && (
+						!(parent as FuncNode)?.has_this_param || !allIdentifierChar.test(tk.content) ||
+						parent!.returns?.[1] !== 0 || parent!.kind === SymbolKind.Function);
 				// case 'TK_END_BLOCK':
 				// case 'TK_END_EXPR':
 				// 	return false;
