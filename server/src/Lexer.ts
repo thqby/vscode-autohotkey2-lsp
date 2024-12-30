@@ -3571,7 +3571,7 @@ export class Lexer {
 										if (vr) {
 											nexttoken(), next = false;
 											if (tk.type as string === 'TK_EQUALS') {
-												if ((_cm = comments[vr.selectionRange.start.line]))
+												if ((_cm = comments[vr.selectionRange.start.line])?.offset > pairpos.at(-1)!)
 													set_detail(vr, _cm);
 												const equ = tk.content, bb = parser_pos;
 												next = true;
