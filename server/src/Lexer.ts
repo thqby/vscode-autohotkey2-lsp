@@ -384,6 +384,7 @@ export class Lexer {
 	public d_uri = '';
 	public declaration: Record<string, AhkSymbol> = {};
 	public diagnostics: Diagnostic[] = [];
+	public diag_pending?: boolean;
 	public diag_timer?: unknown;
 	public last_diags = 0;
 	public dlldir = new Map<number, string>();
@@ -6559,9 +6560,13 @@ export class Lexer {
 		if (last_diags !== this.diagnostics.length || update && last_diags) {
 			this.last_diags = this.diagnostics.length;
 			if (connection) {
+				this.diag_pending = true;
 				if (!(process.env.BROWSER ? clearTimeout(this.diag_timer as number) : (this.diag_timer as NodeJS.Timeout)?.refresh()))
-					this.diag_timer = setTimeout(() => connection!.sendDiagnostics(
-						{ uri: this.document.uri, diagnostics: this.diagnostics }), 500);
+					this.diag_timer = setTimeout(async () => {
+						this.diag_pending = false;
+						await connection!.sendDiagnostics({ uri: this.document.uri, diagnostics: this.diagnostics });
+						this.diag_pending ||= undefined;
+					}, 500);
 			}
 		}
 		if (!all) return;
