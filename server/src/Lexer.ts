@@ -453,7 +453,6 @@ export class Lexer {
 			parent: Flag,
 			start_line_index: number,
 			ternary_depth?: number,
-			ternary_indent?: number,
 			try_block: boolean
 		};
 		let output_lines: { text: string[], indent: number }[], flags: Flag, previous_flags: Flag, flag_store: Flag[];
@@ -5850,11 +5849,7 @@ export class Lexer {
 		}
 
 		function handle_comma() {
-			if (flags.ternary_depth !== undefined) {
-				for (let i = flags.ternary_indent!; i > 0; i--, deindent());
-				flags.ternary_indent = 0;
-				delete flags.ternary_depth;
-			}
+			delete flags.ternary_depth;
 			if (flags.mode === MODE.BlockStatement || flags.declaration_statement)
 				set_mode(MODE.Statement), indent();
 			if (last_type === 'TK_WORD' && whitespace.includes(ck.prefix_is_whitespace || '\0') &&
@@ -5961,7 +5956,7 @@ export class Lexer {
 					if (flags.ternary_depth === undefined)
 						flags.ternary_depth = 1;
 					else flags.ternary_depth++;
-					indent(), flags.ternary_indent = (flags.ternary_indent ?? 0) + 1;
+					indent();
 					set_mode(MODE.Expression);
 					flags.ternary_depth = flags.parent.ternary_depth;
 				}
