@@ -23,7 +23,7 @@ export const diagnostic = {
 	assignerr: localize('diagnostic.assignerr', 'This {0} \'{1}\' cannot be used as an output variable'),
 	classinfuncerr: localize('diagnostic.classinfuncerr', 'Functions cannot contain classes'),
 	classuseerr: localize('diagnostic.classuseerr', 'This class cannot be used as an output variable'),
-	conflictserr: localize('diagnostic.conflictserr', 'This {0} \'{2}\' declaration conflicts with an existing {1}'),
+	conflictserr: localize('diagnostic.conflictserr', 'This {0} declaration \'{2}\' conflicts with an existing {1}'),
 	declarationerr: localize('diagnostic.declarationerr', 'Unexpected declaration'),
 	defaultvalmissing: localize('diagnostic.defaultvalmissing', 'Parameter default required. Specifically: \'{0}\''),
 	deprecated: localize('diagnostic.deprecated', 'Using \'{0}\' instead of \'{1}\''),

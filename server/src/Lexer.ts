@@ -18,7 +18,7 @@ import {
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
-import { builtin_ahkv1_commands, builtin_variable, builtin_variable_h } from './constants';
+import { builtin_ahkv1_commands } from './constants';
 import { action, completionitem, diagnostic, warn } from './localize';
 import {
 	a_vars, ahk_version, ahkuris, ahkvars, alpha_11, alpha_3, connection, extsettings,
@@ -100,6 +100,7 @@ export interface AhkSymbol extends DocumentSymbol {
 	cached_types?: Array<string | AhkSymbol>
 	children?: AhkSymbol[]
 	data?: unknown
+	decl?: boolean
 	def?: boolean
 	export?: boolean
 	full?: string
@@ -156,7 +157,6 @@ export interface ClassNode extends AhkSymbol {
 export interface Variable extends AhkSymbol {
 	arr?: boolean | 2			// *, *,  ...
 	assigned?: boolean | 1		// 1, ??=
-	decl?: boolean
 	defaultVal?: string | false | null
 	for_index?: number			// for v1, ... in
 	full?: string
@@ -3228,9 +3228,6 @@ export class Lexer {
 						lk.type === 'TK_COMMA' && unexpected(tk);
 						break;
 					} else if (tk.type === 'TK_WORD') {
-						if (is_builtinvar(tk.content.toLowerCase())) {
-							paramsdef = false; break;
-						}
 						info.count++;
 						if (la.includes(lk.content) || lk === EMPTY_TOKEN) {
 							nexttoken();
@@ -3883,14 +3880,6 @@ export class Lexer {
 				}
 			}
 
-			function is_builtinvar(name: string, mode = 0): boolean {
-				if (mode === BlockType.Class)
-					return false;
-				if (builtin_variable.includes(name) || (h && builtin_variable_h.includes(name)))
-					return true;
-				return false;
-			}
-
 			function addvariable(token: Token, md: number = 0, p?: AhkSymbol[]) {
 				const rg = make_range(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg);
 				if (md === 2) {
@@ -3918,7 +3907,7 @@ export class Lexer {
 			function adddeclaration(node: FuncNode | ClassNode) {
 				const _diags = _this.diagnostics;
 				let t: Variable, lpv = false, pars: Record<string, Variable> = {};
-				node.def = true;
+				node.decl = node.def = true;
 				if (node.kind === SymbolKind.Class) {
 					const cls = node as ClassNode, dec = cls.$property!, sdec = cls.property ??= {}, children = cls.children ??= [];
 					const __init = [sdec.__INIT], prototype = cls.prototype!;
@@ -3977,7 +3966,8 @@ export class Lexer {
 					delete cls.cache;
 					delete cls.prototype!.cache;
 				} else {
-					const fn = node as FuncNode, dec = fn.declaration, has_this_param = fn.has_this_param;
+					const fn = node as FuncNode, has_this_param = fn.has_this_param;
+					const dec = fn.declaration, local = fn.local ?? {}, global = fn.global ?? {};
 					let vars: Record<string, Variable> = {}, unresolved_vars: Record<string, Variable> = {}, vr: Variable;
 					let named_params: Variable[] | undefined = [];
 					if (has_this_param) {
@@ -3987,7 +3977,7 @@ export class Lexer {
 							named_params = undefined;
 					}
 					for (const it of fn.params ?? []) {
-						it.def = it.assigned = it.is_param = true;
+						it.decl = it.def = it.assigned = it.is_param = true;
 						if (!it.name)
 							continue;
 						named_params?.push(it);
@@ -4005,7 +3995,7 @@ export class Lexer {
 							});
 						else pars[_low] = dec[_low] = vars[_low] = it;
 					}
-					for (const [k, v] of Object.entries(fn.local ?? {})) {
+					for (const [k, v] of Object.entries(local)) {
 						if ((t = pars[k]))
 							_diags.push({
 								message: diagnostic.conflictserr(v.static ? 'static' : 'local', 'parameter', t.name),
@@ -4013,7 +4003,7 @@ export class Lexer {
 							});
 						else dec[k] = v, v.assigned ||= Boolean(v.returns);
 					}
-					for (const [k, v] of Object.entries(fn.global ?? {})) {
+					for (const [k, v] of Object.entries(global)) {
 						if ((t = dec[k])) {
 							if (pars[k]) {
 								_diags.push({
@@ -4031,7 +4021,7 @@ export class Lexer {
 								range: t.selectionRange
 							});
 							if (v !== t) continue;
-							delete fn.local[k];
+							delete local[k];
 						}
 						dec[k] ??= v;
 						_this.declaration[k] ??= v;
@@ -4053,7 +4043,7 @@ export class Lexer {
 										range: it.selectionRange
 									});
 									continue;
-								} else if ((t = fn.global[_low])) {
+								} else if ((t = global[_low])) {
 									_diags.push({
 										message: diagnostic.conflictserr(...(
 											t.selectionRange.start.line < it.selectionRange.start.line ||
@@ -4064,11 +4054,11 @@ export class Lexer {
 										range: t.selectionRange
 									});
 									if (it === t) continue;
-									delete fn.global[_low];
+									delete global[_low];
 									delete t.is_global;
 									if (_this.declaration[_low] === t)
 										delete _this.declaration[_low];
-								} else if ((t = fn.local[_low])) {
+								} else if ((t = local[_low])) {
 									if (t.selectionRange.start.line < it.selectionRange.start.line ||
 										t.selectionRange.start.line === it.selectionRange.start.line &&
 										t.selectionRange.start.character < it.selectionRange.start.character) {
@@ -4086,7 +4076,7 @@ export class Lexer {
 										});
 								}
 							}
-							dec[_low] = fn.local[_low] = it;
+							dec[_low] = local[_low] = it;
 						} else if (it.kind === SymbolKind.Variable)
 							((vr = it as Variable).def ? vars : unresolved_vars)[_low] ??= (vr.assigned ||= Boolean(vr.returns), it);
 					}
@@ -4096,7 +4086,7 @@ export class Lexer {
 					if (fn.assume === FuncScope.GLOBAL) {
 						for (const [k, v] of Object.entries(Object.assign(unresolved_vars, vars))) {
 							if (!(t = dec[k]))
-								_this.declaration[k] ??= fn.global[k] = v, v.is_global = true;
+								_this.declaration[k] ??= global[k] = v, v.is_global = true;
 							else if (t.kind === SymbolKind.Function && v.def)
 								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
@@ -4110,7 +4100,7 @@ export class Lexer {
 							delete unresolved_vars[k];
 							if (!(t = dec[k])) {
 								if (dec[k] = v, is_outer)
-									fn.local[k] = v, v.static = assme_static;
+									local[k] = v, v.static = assme_static;
 								else if (assme_static)
 									v.static = null;
 							} else if (t.kind === SymbolKind.Function)
@@ -4131,11 +4121,22 @@ export class Lexer {
 					for (const k in vars)
 						if (!dec[k]) (unresolved_vars[k] = vars[k]).def = false;
 					fn.unresolved_vars = unresolved_vars;
-					for (const k in vars = fn.local)
-						vars[k].def = true;
-					pars = Object.assign(fn.local, pars);
+					for (const v of Object.values(local))
+						v.def = true;
+					pars = Object.assign(local, pars);
 					if (has_this_param)
 						delete pars.THIS, delete pars.SUPER, delete dec.THIS, delete dec.SUPER;
+					for (const k of Object.keys(dec))
+						if (k.substring(0, 2) === 'A_' && ahkvars[k]) {
+							if (!(vr = dec[k]).decl)
+								delete dec[k], delete local[k];
+							else _diags.push({
+								message: diagnostic.conflictserr(
+									(vr as FuncNode).params ? 'function' : vr.is_param ? 'parameter' : 'variable',
+									'built-in variable', vr.name),
+								range: vr.selectionRange
+							});
+						}
 				}
 			}
 
@@ -7929,14 +7930,23 @@ export function check_same_name_error(decs: Record<string, AhkSymbol>, syms: Ahk
 	for (const it of syms) {
 		if (!it.name || !it.selectionRange.end.character)
 			continue;
+		let is_var;
 		switch ((v1 = it as Variable).kind) {
 			case SymbolKind.Variable:
-				v1.assigned ||= !!v1.returns;
+				v1.assigned ||= !!v1.returns, is_var = true;
 			// fall through
 			case SymbolKind.Class:
 			case SymbolKind.Function:
 			case SymbolKind.Module:
 				v2 = decs[l = it.name.toUpperCase()];
+				if (l.substring(0, 2) === 'A_' && ahkvars[l]) {
+					if (is_var) continue;
+					if ((it as FuncNode).params)
+						it.has_warned ??= diagnostics.push({
+							message: diagnostic.conflictserr('function', 'built-in variable', it.name),
+							range: it.selectionRange
+						});
+				}
 				if (syms === children)
 					it.uri = uri;
 				else if (v2 && !relevance[v2.uri!]) {
@@ -7946,7 +7956,7 @@ export function check_same_name_error(decs: Record<string, AhkSymbol>, syms: Ahk
 				if (!v2)
 					decs[l] = it;
 				else if (v2.is_global) {
-					if (v1.kind === SymbolKind.Variable) {
+					if (is_var) {
 						if (v1.def && v2.kind !== SymbolKind.Variable) {
 							if (v1.assigned !== 1)
 								it.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(v2.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange, severity });
@@ -7958,7 +7968,7 @@ export function check_same_name_error(decs: Record<string, AhkSymbol>, syms: Ahk
 					} else if (v2.def && v2.assigned !== 1)
 						v2.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange, severity });
 					decs[l] = it;
-				} else if (v1.kind === SymbolKind.Variable) {
+				} else if (is_var) {
 					if (v2.kind === SymbolKind.Variable) {
 						if (v1.def && !v2.def)
 							decs[l] = it;

@@ -204,7 +204,7 @@ function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boole
 	} else if (global && !assume_glo)
 		if (fn_is_static && (!(t = node.declaration?.[name]) || t.kind === SymbolKind.Variable && !t.def))
 			assume = true;
-		else if (node.unresolved_vars?.[name])
+		else if (node.unresolved_vars?.[name] || name.substring(0, 2) === 'A_')
 			assume = true;
 
 	if (not_static)
