@@ -253,12 +253,6 @@ interface ParamList extends Array<Variable> {
 	variadic?: boolean
 }
 
-namespace SymbolNode {
-	export function create(name: string, kind: SymbolKind, range: Range, selectionRange: Range, children?: AhkSymbol[]): AhkSymbol {
-		return { name, kind, range, selectionRange, children };
-	}
-}
-
 namespace FuncNode {
 	export function create(name: string, kind: SymbolKind, range: Range, selectionRange: Range, params: ParamList, children?: AhkSymbol[], isstatic?: boolean | null): FuncNode {
 		let full = '', hasref = false, variadic = false;
@@ -1481,7 +1475,7 @@ export class Lexer {
 									tk.topofline ||= -1;
 									continue;
 								}
-								tk.symbol = tn = SymbolNode.create(tk.content, SymbolKind.Field,
+								tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field,
 									make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1));
 								tn.data = blockpos.at(-1), tn.def = true, result.push(tn);
 								(_cm = comments[tn.selectionRange.start.line]) && set_detail(tn, _cm);
@@ -1725,7 +1719,7 @@ export class Lexer {
 							break;
 
 						case 'TK_HOTLINE': {
-							tk.symbol = tn = SymbolNode.create(tk.content, SymbolKind.Event,
+							tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Event,
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2));
 							tn.range.end = document.positionAt(parser_pos - 1), result.push(tn);
 							if ((_cm = comments[tn.selectionRange.start.line]))
@@ -1750,14 +1744,14 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
 							else if (!tk.ignore && !is_valid_hotkey(tk.content))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
-							const ht = tk, tn = SymbolNode.create(tk.content, SymbolKind.Event,
+							const ht = tk, tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Event,
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2)) as FuncNode;
 							if ((_cm = comments[tn.selectionRange.start.line]))
 								set_detail(tn, _cm);
 							tk.symbol = tn, nexttoken();
 							let v: Variable;
 							tn.declaration = {}, result.push(tn);
-							tn.global = {}, tn.local = {};
+							tn.global = {}, tn.local = {}, tn.labels = {};
 							while (tk.type as string === 'TK_SHARP')
 								parse_sharp(), nexttoken();
 							if (tk.content === '{') {
