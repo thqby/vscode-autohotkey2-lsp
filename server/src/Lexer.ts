@@ -2222,7 +2222,7 @@ export class Lexer {
 				} else if (tk.content[0] <= '9')
 					_this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.length);
 				if (mode & BlockType.Func) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset, tk.length);
-				tk = get_next_token();
+				tk = get_token_ignore_comment();
 				if (!tk.topofline && tk.content.toLowerCase() === 'extends') {
 					tk = get_next_token();
 					if (!tk.topofline && tk.type === 'TK_WORD') {
