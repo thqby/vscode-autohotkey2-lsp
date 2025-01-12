@@ -87,6 +87,12 @@
 		"configuration": {
 			"title": "AutoHotkey2",
 			"properties": {
+				"AutoHotkey2.AutomaticallyOpenOutputView": {
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "%ahk2.automaticallyopenoutputview%"
+				},
 				"AutoHotkey2.AutoLibInclude": {
 					"scope": "window",
 					"type": "string",

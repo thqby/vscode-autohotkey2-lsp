@@ -1,6 +1,7 @@
 {
 	"ahk2.actionwhenv1isdetected": "检测到v1脚本时的行为",
 	"ahk2.autolibinclude": "对用户库和标准库, 本地库提供补全和自动include",
+	"ahk2.automaticallyopenoutputview": "运行脚本时自动打开输出视图",
 	"ahk2.browse": "浏览文件系统来选择一个 AutoHotkey2 解释器",
 	"ahk2.commenttags": "用来从注释中提取命名标记的正则表达式, 并生成模块符号",
 	"ahk2.compile": "编译脚本",

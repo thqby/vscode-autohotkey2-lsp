@@ -255,7 +255,7 @@ export async function activate(context: ExtensionContext) {
 							const match_config = getDebugConfigs()?.filter(it =>
 								Object.entries(it).every(([k, v]) => equal(v, config[k]))
 							)?.sort((a, b) => Object.keys(a).length - Object.keys(b).length).pop();
-							const def = { ...ahkconfig.get('DebugConfiguration') as Partial<DebugConfiguration> };
+							const def = { ...getConfig('DebugConfiguration') as Partial<DebugConfiguration> };
 							delete def.request, delete def.type;
 							Object.assign(config, def, match_config);
 							if (match_config?.type === 'autohotkey')
@@ -315,7 +315,8 @@ async function runScript(textEditor: TextEditor, selection = false) {
 		return;
 	}
 	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
-	outputchannel.show(true);
+	if (getConfig('AutomaticallyOpenOutputView'))
+		outputchannel.show(true);
 	if (!ahkprocesses.size)
 		outputchannel.clear();
 	if (selection)
@@ -440,7 +441,8 @@ async function compileScript(textEditor: TextEditor) {
 	if (cp.pid) {
 		if ((cmd.toLowerCase() + ' ').includes(' /gui '))
 			return;
-		outputchannel.show(true);
+		if (getConfig('AutomaticallyOpenOutputView'))
+			outputchannel.show(true);
 		outputchannel.clear();
 		cp.on('exit', () => {
 			if (prev_mtime !== (getFileMtime(exePath) ?? prev_mtime))
@@ -514,6 +516,10 @@ if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint
 		cp.stdin.write(script), cp.stdin.end();
 }
 
+function getConfig<T>(section: string) {
+	return workspace.getConfiguration('AutoHotkey2').get(section) as T;
+}
+
 function getDebugConfigs() {
 	const allconfigs = workspace.getConfiguration('launch').inspect<DebugConfiguration[]>('configurations');
 	return allconfigs && [
@@ -525,7 +531,7 @@ function getDebugConfigs() {
 async function beginDebug(type: string) {
 	let extname: string | undefined;
 	const editor = window.activeTextEditor;
-	let config = { ...ahkconfig.get('DebugConfiguration'), request: 'launch', __ahk2debug: true } as DebugConfiguration;
+	let config = { ...getConfig('DebugConfiguration'), request: 'launch', __ahk2debug: true } as DebugConfiguration;
 	if (!extlist.length) {
 		window.showErrorMessage(localize('ahk2.debugextnotexist'));
 		extname = await window.showQuickPick(['zero-plusplus.vscode-autohotkey-debug', 'helsmy.autohotkey-debug', 'mark-wiemer.vscode-autohotkey-plus-plus', 'cweijan.vscode-autohotkey-plus']);
