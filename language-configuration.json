@@ -95,15 +95,6 @@
 			"end": "^\\s*;\\s*@endregion\\b"
 		}
 	},
-	"indentationRules": {
-		"increaseIndentPattern": "^((?!;).)*(\\{[^}\"'`]*|\\([^)\"'`]*|\\[[^\\]\"'`]*)$",
-		"decreaseIndentPattern": "^((?!.*?/\\*).*\\*/)?\\s*[\\])}].*$",
-		"indentNextLinePattern": "^\\s*(((\\}\\s*)?([Ee]lse|[Ff]inally)\\b|[Tt]ry\\b)(?=\\s*([;{].*)?$)|(((\\}\\s*)?([Ee]lse|[Ff]inally)|[Tt]ry)\\s+)?([Ii]f|[Ff]or|[Ww]hile|[Ll]oop)\\b|(\\}\\s*)?[Cc]atch\\b)",
-		// e.g.  * ...| or */| or *-----*/|
-		"unIndentedLinePattern": {
-			"pattern": "^(\\t|[ ])*[ ]\\*[^/]*\\*/\\s*$|^(\\t|[ ])*[ ]\\*/\\s*$|^(\\t|[ ])*[ ]\\*([ ]([^\\*]|\\*(?!/))*)?$"
-		}
-	},
 	"onEnterRules": [
 		{
 			// e.g. /** | */
