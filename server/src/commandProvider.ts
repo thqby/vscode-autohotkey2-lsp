@@ -245,8 +245,8 @@ export function getVersionInfo(uri: string) {
 	}
 	for (const it of lex.tokenranges) {
 		if (it.type === 1 && (tk = tks[it.start])?.topofline &&
-			/^;\s*@ahk2exe-setversion\b/i.test(tk.content))
-			return info.concat({
+			/^;\s*@ahk2exe-set(file|product)?version\b/i.test(tk.content))
+			info.push({
 				uri, content: tk.content, single: true,
 				range: {
 					start: doc.positionAt(it.start),

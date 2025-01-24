@@ -78,7 +78,7 @@ export function activate(context: ExtensionContext) {
 				for (const info of infos) {
 					if (info.single)
 						contents.push(info.content.replace(
-							/(?<=^;\s*@ahk2exe-setversion\s+)(\S+|(?=[\r\n]))/i,
+							/(?<=^;\s*@ahk2exe-set\w+\s+)(\S+|(?=[\r\n]))/i,
 							s => (value ||= s, '\0')));
 					else contents.push(info.content.replace(
 						/(?<=^\s*[;*]?\s*@date[:\s]\s*)(\S+|(?=[\r\n]))/im,
