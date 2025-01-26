@@ -61,9 +61,6 @@
 				"aliases": [
 					"AutoHotkey"
 				]
-			},
-			{
-				"id": "~ahk2-output"
 			}
 		],
 		"grammars": [
@@ -77,11 +74,6 @@
 				"unbalancedBracketScopes": [
 					"keyword.keys.ahk2"
 				]
-			},
-			{
-				"language": "~ahk2-output",
-				"scopeName": "ahk2.output",
-				"path": "./syntaxes/ahk2-output.tmLanguage.json"
 			}
 		],
 		"configuration": {

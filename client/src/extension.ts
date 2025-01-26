@@ -118,7 +118,7 @@ export async function activate(context: ExtensionContext) {
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{ language: 'ahk2' }],
 		markdown: { isTrusted: true, supportHtml: true },
-		outputChannel: outputchannel = window.createOutputChannel('AutoHotkey2', '~ahk2-output'),
+		outputChannel: outputchannel = window.createOutputChannel('AutoHotkey2', 'log'),
 		outputChannelName: 'AutoHotkey2',
 		synchronize: { fileEvents: fsw },
 		initializationOptions: {
@@ -354,27 +354,27 @@ async function runScript(textEditor: TextEditor, selection = false) {
 	}
 	const startTime = Date.now();
 	const cp: ChildProcess & { path?: string } = spawn(command, opt);
-	if (cp.pid) {
-		if (path === '*')
-			cp.stdin?.write(selecttext), cp.stdin?.end();
-		outputchannel.appendLine(`[Running] [pid:${cp.pid}] ${command}`);
-		ahkprocesses.set(cp.pid, cp);
-		cp.path = path;
-		commands.executeCommand('setContext', 'ahk2:isRunning', true);
-		if (!uiAccess)
-			cp.stderr?.on('data', output_append), cp.stdout?.on('data', output_append);
-		cp.on('error', (error) => {
-			outputchannel.appendLine(JSON.stringify(error));
-			ahkprocesses.delete(cp.pid!);
-		});
-		cp.on('exit', (code) => {
-			outputchannel.appendLine(`[Done] [pid:${cp.pid}] exited with code=${code} in ${(Date.now() - startTime) / 1000} seconds`);
-			ahkprocesses.delete(cp.pid!);
-			if (!ahkprocesses.size)
-				commands.executeCommand('setContext', 'ahk2:isRunning', false);
-		});
-	} else
-		outputchannel.appendLine(`[Fail] ${command}`);
+	const spid = cp.pid ? `[pid: ${cp.pid}] ` : '';
+	outputchannel.appendLine(`[info] ${spid + command}`);
+	cp.on('error', err => {
+		outputchannel.appendLine(`[error] ${spid + err.message}`);
+		ahkprocesses.delete(cp.pid!);
+	});
+	if (!cp.pid)
+		return;
+	if (path === '*')
+		cp.stdin?.write(selecttext), cp.stdin?.end();
+	ahkprocesses.set(cp.pid, cp);
+	cp.path = path;
+	commands.executeCommand('setContext', 'ahk2:isRunning', true);
+	if (!uiAccess)
+		cp.stderr?.on('data', output_append), cp.stdout?.on('data', output_append);
+	cp.on('exit', (code) => {
+		outputchannel.appendLine(`[info] ${spid}exited with code=${code} in ${(Date.now() - startTime) / 1000} seconds`);
+		ahkprocesses.delete(cp.pid!);
+		if (!ahkprocesses.size)
+			commands.executeCommand('setContext', 'ahk2:isRunning', false);
+	});
 }
 
 async function stopRunningScript() {
