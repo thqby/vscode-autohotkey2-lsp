@@ -510,7 +510,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				'__Item[$1]', '__New($1)', '__Set(${1:Key}, ${2:Params}, ${3:Value})'];
 			items.push(...completionItemCache.snippet);
 			if (token.topofline === 1)
-				items.push(completionItemCache.static, {
+				items.push(completionItemCache.keyword.static ?? { label: 'static', kind: CompletionItemKind.Keyword }, {
 					label: 'class', insertText: ['class $1', '{\n\t$0\n}'].join(join_c),
 					kind: CompletionItemKind.Snippet, insertTextFormat: InsertTextFormat.Snippet
 				});
@@ -628,7 +628,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		it.insertText = (it.insertText ?? it.label).replace(/(?<=^(loop\s)?)[a-z]/g, m => m.toUpperCase());
 	} : (it: CompletionItem) => items.push(it);
 	if (isexpr) {
-		for (const it of completionItemCache.keyword) {
+		for (const it of Object.values(completionItemCache.keyword)) {
 			if (it.label === 'break') break;
 			expg.test(it.label) && addkeyword(it);
 		}
@@ -646,8 +646,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			['class', ['class $1', '{\n\t$0\n}']]
 		] as [string, string[]][])
 			items.push({ label, kind, insertTextFormat, insertText: uppercase(arr.join(join_c)) });
-		for (const it of completionItemCache.keyword)
-			expg.test(it.label) && addkeyword(it);
+		items.at(-3)!.detail = completionItemCache.keyword.switch?.detail;
+		const t = { ...completionItemCache.keyword };
+		delete t.switch;
+		for (const k in t)
+			expg.test(k) && addkeyword(t[k]);
 	}
 
 	// hotkey
@@ -931,10 +934,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						ci.command = { title: 'cursorRight', command: 'cursorRight' };
 					else if (fn.params.length) {
 						ci.command = { title: 'Trigger Parameter Hints', command: 'editor.action.triggerParameterHints' };
-						if (fn.params[0].name.includes('|')) {
-							ci.insertText = ci.label + '(${1|' + fn.params[0].name.replaceAll('|', ',') + '|})';
-							ci.insertTextFormat = InsertTextFormat.Snippet;
-						} else ci.insertText = ci.label + '($0)', ci.insertTextFormat = InsertTextFormat.Snippet;
+						ci.insertText = ci.label + '($0)', ci.insertTextFormat = InsertTextFormat.Snippet;
 					} else ci.insertText = ci.label + '()';
 				} else
 					ci.commitCharacters = commitCharacters.Function;

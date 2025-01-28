@@ -157,9 +157,9 @@ usage:
 Fold the part between `;@region tag` and `;@endregion`, `;{` and `;}`
 
 ```ini
-;#region tag
+;@region tag
 code
-;#endregion
+;@endregion
 ```
 
 ### Declaration document

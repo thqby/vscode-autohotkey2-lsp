@@ -120,10 +120,9 @@ export let completionItemCache: {
 	constant: CompletionItem[];
 	directive: Record<string, CompletionItem[]>;
 	key: CompletionItem[];
-	keyword: CompletionItem[];
+	keyword: Record<string, CompletionItem>;
 	option: Record<string, CompletionItem[]>;
 	snippet: CompletionItem[];
-	static: CompletionItem
 	text: CompletionItem[];
 };
 
@@ -263,11 +262,10 @@ export function initahk2cache() {
 			'@': jsDocTagNames.map(label => ({ label, kind, data }))
 		},
 		key: [],
-		keyword: [],
+		keyword: {},
 		snippet: [],
 		text: [],
-		option: { ahk_criteria: [], hotstring: [] },
-		static: { label: 'static', insertText: 'static', kind: CompletionItemKind.Keyword }
+		option: { ahk_criteria: [], hotstring: [] }
 	};
 }
 
@@ -297,7 +295,6 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		if ((path = getfilepath('.json')))
 			build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
 		if (filename === 'ahk2') {
-			completionItemCache.static = completionItemCache.keyword.find(it => it.label === 'static') ?? completionItemCache.static;
 			build_item_cache(JSON.parse(readFileSync(`${rootdir}/syntaxes/ahk2_common.json`, { encoding: 'utf8' })));
 			if (syntaxes)
 				opendir(syntaxes).then(async (dir) => {
@@ -365,12 +362,12 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 					insertTextFormat = InsertTextFormat.Snippet;
 					for (snip of arr) {
 						snip.prefix ??= snip.body.trim();
-						completionItemCache.keyword.push({
+						completionItemCache.keyword[snip.prefix] = {
 							label: snip.prefix, kind, insertTextFormat,
 							insertText: snip.body,
 							detail: snip.description,
 							preselect: true
-						});
+						};
 						hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, { contents: { kind: 'markdown', value: '```ahk2\n' + (snip.syntax ?? trim(snip.body)) + '\n```\n\n' + (snip.description ?? '') } }];
 					}
 					break;

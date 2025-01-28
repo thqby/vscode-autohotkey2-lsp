@@ -1048,7 +1048,7 @@ export class Lexer {
 											const fn = create_fn('', params, make_range(b, 0));
 											if (j >= l) break loop;
 											if (tokens[j + 1]?.content === '=>')
-												++j, parse_types(fn);
+												++j, parse_types(fn), lk = tokens[++j];
 											else fn.range.end = _this.document.positionAt(lk.offset + lk.length);
 											fn.full += ` => ${join_types(fn.type_annotations) || 'void'}`;
 											tps.push(fn), fn.uri = _this.uri;
@@ -1851,8 +1851,9 @@ export class Lexer {
 					{ start: fc.pos = range.start, end: { character: 0, line: 0 } }, range,
 					params ??= parse_params() ?? (_this.addDiagnostic(diagnostic.invalidparam(),
 						fc.offset, tk.offset + 1 - fc.offset), []), undefined, is_static));
-				fc.symbol = fc.definition = tn, line_begin_pos = undefined;
-				(_cm = comments[tn.selectionRange.start.line]) && set_detail(_cm.symbol = tn, _cm);
+				fc.symbol = fc.definition = tn;
+				if (fc.topofline && (_cm = comments[tn.selectionRange.start.line]))
+					set_detail(_cm.symbol = tn, _cm);
 
 				if (nexttoken() && tk.content === '=>') {
 					const rs = result.splice(rl);
@@ -1862,7 +1863,8 @@ export class Lexer {
 					result.push(tn), (tn.children = rs).push(...sub);
 					tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
 					_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-					_this.linepos[tn.range.end.line] = oo;
+					if (tk.topofline)
+						_this.linepos[tn.range.end.line] = oo;
 				} else if (tk.content === '{') {
 					const rs = result.splice(rl), lb = tk;
 					result.push(tn), (tn.children = rs).push(...parse_block(mode, tn, classfullname));
@@ -5542,6 +5544,7 @@ export class Lexer {
 
 			const is_array = token_text === ']' && flags.mode === MODE.ArrayLiteral;
 			restore_mode();
+			flags.had_comment = previous_flags.had_comment;
 			if (is_array) {
 				const style = flags.array_style ?? opt.array_style;
 				if (style === OBJECT_STYLE.collapse || last_text === '[' || flags.indentation_level >= previous_flags.indentation_level)
@@ -5562,8 +5565,10 @@ export class Lexer {
 			if (ck.data) {
 				set_mode(MODE.ObjectLiteral);
 				flags.indentation_level = real_indentation_level();
-				if (previous_flags.mode !== MODE.Conditional)
+				if (previous_flags.mode !== MODE.Conditional) {
+					flags.indent_after = flags.indentation_level < previous_flags.indentation_level;
 					previous_flags.indentation_level = flags.indentation_level;
+				}
 
 				output_space_before_token ||= space_in_other && last_type !== 'TK_START_EXPR';
 				print_token(), indent();
@@ -5593,7 +5598,8 @@ export class Lexer {
 
 				const need_newline = !just_added_newline();
 				print_token();
-				previous_flags.indentation_level = Math.min(previous_flags.indentation_level, flags.indentation_level);
+				if (flags.indentation_level < previous_flags.indentation_level)
+					previous_flags.indentation_level = flags.indentation_level, flags.indent_after = true;
 				if (!(opt.switch_case_alignment && flags.last_word === 'switch'))
 					indent();
 				if (need_newline || opt.brace_style !== undefined)
@@ -5620,7 +5626,7 @@ export class Lexer {
 				print_newline(true);
 
 			restore_mode();
-			print_token();
+			print_token(), previous_flags.indent_after && indent();
 			if (!is_exp) {
 				if (previous_flags.case_body === null)
 					indent();
@@ -6342,7 +6348,7 @@ export class Lexer {
 					if ((s = m[4], m[1].startsWith('@param'))) {
 						s = s.replace(/^\[[ \t]*/, '');
 						const sym = token.symbol as FuncNode;
-						if (sym?.params)
+						if (sym?.params && allIdentifierChar.test(s))
 							s = `${type_naming(sym)}~${s}`;
 					} else if (linetext[character] === ':' && /^[a-zA-Z]+$/.test(s))
 						s = '';
@@ -7578,7 +7584,7 @@ export function decltype_returns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode):
 	}
 
 	let tps: AhkSymbol[];
-	if (sym.returns) {
+	if (lex && sym.returns) {
 		sym.cached_types = [ANY], tps = [];
 		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
 			tps.push(...decltype_expr(lex, lex.find_token(r[i], true), r[i + 1], _this));
