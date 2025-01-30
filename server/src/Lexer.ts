@@ -3089,7 +3089,7 @@ export class Lexer {
 							}
 							continue;
 						case 'TK_START_BLOCK':
-							if (!tk.data) {
+							if (!end || !tk.data) {
 								const l = _this.diagnostics.length, bo = tk.offset;
 								let must;
 								if (end === '{') {
