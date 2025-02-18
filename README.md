@@ -310,7 +310,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 ```
 
 #### nvim-lspconfig
-- Download [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig).
+- Download [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) and install the plugin [ray-x/lsp_signature.nvim](https://github.com/ray-x/lsp_signature.nvim).
 - Add the following to your NVIM configuration (init.lua e.g.). Ensure that `cmd` points to the path of your vscode-autohotkey2-lsp installation and `InterpreterPath` points to your AHK exe.
 
 ```lua
