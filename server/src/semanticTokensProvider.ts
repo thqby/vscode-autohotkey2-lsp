@@ -30,8 +30,10 @@ function resolve_sem(tk: Token, lex: Lexer) {
 		curclass = undefined;
 	else if (tk.type === 'TK_WORD' && ['THIS', 'SUPER'].includes(l = tk.content.toUpperCase()) && tk.previous_token?.type !== 'TK_DOT') {
 		const r = lex.findSymbol(l, SymbolKind.Variable, lex.document.positionAt(tk.offset));
-		if (r?.is_this !== undefined)
+		if (r?.is_this !== undefined) {
 			curclass = r.node as ClassNode;
+			tk.callsite && checkParams(lex, r.node as FuncNode, tk.callsite);
+		}
 	}
 }
 

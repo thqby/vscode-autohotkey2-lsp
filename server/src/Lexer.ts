@@ -6199,8 +6199,11 @@ export class Lexer {
 						return null;
 				if (name === 'THIS')
 					return { node, uri, scope, is_this: true };
-				if ((node = get_class_base(node, this)))
-					return { node, uri, scope, is_this: false };
+				if ((parent = get_class_base(node, this)))
+					return {
+						node: { ...parent, prototype: (node as ClassNode).prototype } as ClassNode,
+						uri, scope, is_this: false
+					};
 				return null;
 			}
 			if (((t = fn.global?.[name]) && (node = t) ||
@@ -7008,6 +7011,8 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 						syms.add(n);
 				} else if (syms.add(node), r.is_this !== undefined) {
 					that = _this ?? node as ClassNode;
+					if (_this && r.is_this === false)
+						(node as ClassNode).prototype = _this.prototype;
 					continue;
 				}
 				break;
