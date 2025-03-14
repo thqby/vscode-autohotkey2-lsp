@@ -1749,7 +1749,7 @@ export class Lexer {
 							if ((_cm = comments[tn.selectionRange.start.line]))
 								set_detail(tn, _cm);
 							tk.symbol = tn, nexttoken();
-							let v: Variable;
+							let v: Variable, is_hot_func;
 							tn.declaration = {}, result.push(tn);
 							tn.global = {}, tn.local = {}, tn.labels = {};
 							while (tk.type as string === 'TK_SHARP')
@@ -1762,14 +1762,14 @@ export class Lexer {
 								tn.children = parse_block(1, tn);
 								tn.range = make_range(ht.offset, parser_pos - ht.offset);
 								_this.addSymbolFolding(tn, tk.offset), adddeclaration(tn);
-							} else if (tk.topofline) {
-								adddeclaration(tn), next = false;
-								if (tk.type.startsWith('TK_HOT'))
+							} else if (tk.topofline || (is_hot_func = is_func_def())) {
+								tn.decl = tn.def = true, next = false;
+								if (!is_hot_func && tk.type.startsWith('TK_HOT'))
 									break;
-								if (tk.type as string !== 'TK_WORD' || !is_func_def()) {
+								if (tk.type as string !== 'TK_WORD' || !(is_hot_func ??= is_func_def())) {
 									stop_parse(ht);
 									!maybev1 && _this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
-								}
+								} else tk.topofline = 1;
 								next = false;
 							} else {
 								tn.params = [v = Variable.create('ThisHotkey', SymbolKind.Variable,
