@@ -305,7 +305,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 ```
 
 #### nvim-lspconfig
-- 下载[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)。
+- 下载并安装[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)和[ray-x/lsp_signature.nvim](https://github.com/ray-x/lsp_signature.nvim).
 - 将以下内容添加到您的NVIM配置中(init.lua 等). 确定`cmd`指向vscode-autohotkey2-lsp的安装路径，`InterpreterPath`指向AHK exe.
 
 ```lua
