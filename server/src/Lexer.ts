@@ -1749,32 +1749,37 @@ export class Lexer {
 							if ((_cm = comments[tn.selectionRange.start.line]))
 								set_detail(tn, _cm);
 							tk.symbol = tn, nexttoken();
-							let v: Variable, is_hot_func;
+							let v: Variable;
 							tn.declaration = {}, result.push(tn);
 							tn.global = {}, tn.local = {}, tn.labels = {};
 							while (tk.type as string === 'TK_SHARP')
 								parse_sharp(), nexttoken();
+							if (tk.type.startsWith('TK_HOT')) {
+								next = false;
+								break;
+							}
+							if (tk.type as string === 'TK_WORD' && is_func_def()) {
+								const fc = tk, fn = nexttoken() && parse_func(fc), r = fn && get_func_param_count(fn);
+								if (!fc.topofline && ahk_version < alpha_3)
+									_this.addDiagnostic(diagnostic.unexpected(fc.content), fc.offset);
+								if (!r || r.max < 1 || r.min > 1)
+									_this.addDiagnostic(diagnostic.hotparamerr(), fc.offset);
+								break;
+							}
+							if (tk.topofline && tk.content !== '{') {
+								stop_parse(ht), next = false;
+								!maybev1 && _this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
+								break;
+							}
+							tn.params = [v = Variable.create('ThisHotkey', SymbolKind.Variable,
+								make_range(0, 0))];
+							v.detail = completionitem.thishotkey();
 							if (tk.content === '{') {
 								tk.previous_pair_pos = ht.offset;
-								tn.params = [v = Variable.create('ThisHotkey', SymbolKind.Variable,
-									make_range(0, 0))];
-								v.detail = completionitem.thishotkey();
 								tn.children = parse_block(1, tn);
 								tn.range = make_range(ht.offset, parser_pos - ht.offset);
-								_this.addSymbolFolding(tn, tk.offset), adddeclaration(tn);
-							} else if (tk.topofline || (is_hot_func = is_func_def())) {
-								tn.decl = tn.def = true, next = false;
-								if (!is_hot_func && tk.type.startsWith('TK_HOT'))
-									break;
-								if (tk.type as string !== 'TK_WORD' || !(is_hot_func ??= is_func_def())) {
-									stop_parse(ht);
-									!maybev1 && _this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
-								} else tk.topofline = 1;
-								next = false;
+								_this.addSymbolFolding(tn, tk.offset);
 							} else {
-								tn.params = [v = Variable.create('ThisHotkey', SymbolKind.Variable,
-									make_range(0, 0))];
-								v.detail = completionitem.thishotkey();
 								const tparent = _parent, tmode = mode, l = tk.content.toLowerCase();
 								const rl = result.length;
 								_parent = tn, mode = BlockType.Func;
@@ -1787,12 +1792,13 @@ export class Lexer {
 									next = false, parse_body(null, ht.offset);
 									tn.children = result.splice(rl);
 								}
-								_parent = tparent, mode = tmode, adddeclaration(tn);
+								_parent = tparent, mode = tmode;
 								let o = lk.offset + lk.length;
 								for (; ' \t'.includes(input[o]); o++);
 								tn.range = make_range(ht.offset, o - ht.offset);
 								_this.linepos[tn.range.end.line] = ht.offset;
 							}
+							adddeclaration(tn);
 							break;
 						}
 						case 'TK_UNKNOWN':
@@ -7887,6 +7893,22 @@ export function get_detail(sym: AhkSymbol, lex: Lexer, remove_re?: RegExp): stri
 	if (detail)
 		return { kind: 'markdown', value: detail };
 	return '';
+}
+
+export function get_func_param_count(fn: FuncNode) {
+	const params = fn.params;
+	let min = params.length, max = min;
+	if (fn.variadic) {
+		max = Infinity;
+		if (min > 0 && params[min - 1].arr)
+			min--;
+	}
+	while (min > 0 && params[min - 1].defaultVal !== undefined)
+		--min;
+	for (let i = 0; i < min; ++i)
+		if (params[i].defaultVal === false)
+			--min;
+	return { min, max, has_this_param: fn.has_this_param };
 }
 
 export function make_same_name_error(a: AhkSymbol, b: AhkSymbol): string {

@@ -8,7 +8,7 @@ import {
 	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable,
 	ahk_version, ahkuris, ahkvars, alpha_3, check_same_name_error, connection, decltype_expr,
-	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor, get_class_member,
+	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor, get_class_member, get_func_param_count,
 	inactivevars, is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
 
@@ -307,22 +307,6 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		}
 		return tk;
 	}
-}
-
-function get_func_param_count(fn: FuncNode) {
-	const params = fn.params;
-	let min = params.length, max = min;
-	if (fn.variadic) {
-		max = Infinity;
-		if (min > 0 && params[min - 1].arr)
-			min--;
-	}
-	while (min > 0 && params[min - 1].defaultVal !== undefined)
-		--min;
-	for (let i = 0; i < min; ++i)
-		if (params[i].defaultVal === false)
-			--min;
-	return { min, max, has_this_param: fn.has_this_param };
 }
 
 export function checkParams(lex: Lexer, node: FuncNode, info: CallSite) {

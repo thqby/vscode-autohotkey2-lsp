@@ -35,6 +35,7 @@ export const diagnostic = {
 	funccallerr2: localize('diagnostic.funccallerr2', 'In the expression, the function call requires parentheses'),
 	globalconflicts: localize('diagnostic.globalconflicts', 'This global declaration conflicts with an existing {0}'),
 	hotdeferr: localize('diagnostic.hotdeferr', 'Hotkeys/hotstrings cannot be defined in functions/classes'),
+	hotparamerr: localize('diagnostic.hotparamerr', 'Hotkey or hotstring function must not require more or less than 1 parameter'),
 	hotmissbrace: localize('diagnostic.hotmissbrace', 'Hotkey or hotstring is missing its opening brace'),
 	invaliddefinition: localize('diagnostic.invaliddefinition', 'Invalid {0} definition'),
 	invalidencoding: localize('diagnostic.invalidencoding', '\'{0}\' invalid file encoding'),

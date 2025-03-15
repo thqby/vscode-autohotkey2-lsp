@@ -77,6 +77,7 @@
 	"diagnostic.funccallerr": "函数调用需要空格或'(', 仅在参数之间使用逗号",
 	"diagnostic.funccallerr2": "在表达式中, 函数调用需要括号",
 	"diagnostic.hotdeferr": "热键/热字串不能在函数/类中定义",
+	"diagnostic.hotparamerr": "热键/热字串函数不得需要多于或少于1个参数",
 	"diagnostic.hotmissbrace": "热键或热字符串缺少左括号",
 	"diagnostic.invaliddefinition": "无效的{0}定义",
 	"diagnostic.invalidencoding": "'{0}' 无效的文件编码",
