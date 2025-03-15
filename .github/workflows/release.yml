@@ -2,22 +2,14 @@ name: Create Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: [v*]
 jobs:
   build:
-    name: Create Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: false
-          prerelease: false
+      - uses: actions/checkout@v3
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: gh release create $TAG_NAME --generate-notes --notes "[Download VSIX package](https://marketplace.visualstudio.com/_apis/public/gallery/publishers/thqby/vsextensions/vscode-autohotkey2-lsp/${TAG_NAME/v}/vspackage)"
+        shell: bash
