@@ -4220,7 +4220,7 @@ export class Lexer {
 								const rs = utils.get_RCDATA(tk.content.substring(1));
 								if (rs)
 									includetable[rs.uri] = rs.path, tk.data = [undefined, rs.uri];
-								else
+								else if (!ignore)
 									_this.addDiagnostic(diagnostic.resourcenotfound(), tk.offset, tk.length,
 										{ code: DiagnosticCode.include, severity: DiagnosticSeverity.Warning });
 								return;
