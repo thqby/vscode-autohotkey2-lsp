@@ -1933,7 +1933,7 @@ MenuFromHandle(Handle) => Menu
  * 
  * 指定 0& 使用窗口的系统菜单.
  */
-MenuSelect(WinTitle, WinText?, Menu [, SubMenu1, SubMenu2, SubMenu3, SubMenu4, SubMenu5, SubMenu6, ExcludeTitle, ExcludeText]) => void
+MenuSelect(WinTitle?, WinText?, Menu [, SubMenu1, SubMenu2, SubMenu3, SubMenu4, SubMenu5, SubMenu6, ExcludeTitle, ExcludeText]) => void
 
 /**
  * 返回一个或多个数字的最小值.
