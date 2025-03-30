@@ -1450,7 +1450,7 @@ export class Lexer {
 						if (mode === BlockType.Class) {
 							if (allIdentifierChar.test(tk.content) &&
 								(tk.content.toLowerCase() !== 'static' || '.[('.includes(input[parser_pos]) ||
-									(nk = _this.get_token(parser_pos, true)).topofline || !allIdentifierChar.test(nk.content)))
+									(nk = _this.get_token(parser_pos, true)).topofline || !isIdentifierChar(nk.content.charCodeAt(0))))
 								tk.type = 'TK_WORD';
 						} else {
 							const is_default = case_pos.length && tk.content.toLowerCase() === 'default' &&
@@ -1917,7 +1917,7 @@ export class Lexer {
 							else if (_low === 'local' || _parent.static === null || result.some(it => it.kind === SymbolKind.Variable))
 								_this.addDiagnostic(diagnostic.declarationerr(), lk.offset, lk.length);
 							else (_parent as FuncNode).assume = _low === 'static' ? FuncScope.STATIC : FuncScope.GLOBAL;
-						} else if (allIdentifierChar.test(tk.content)) {
+						} else if (isIdentifierChar(tk.content.charCodeAt(0))) {
 							if (input[parser_pos] === '(') {
 								let isstatic = false;
 								if (!(mode & BlockType.Mask) || _low !== 'static')
@@ -2949,6 +2949,18 @@ export class Lexer {
 						case 'TK_END_BLOCK':
 							next = false;
 							break loop;
+						case 'TK_NUMBER':
+							if (incls && allIdentifierChar.test(tk.content.replace(/(?<!^)\./g, ''))) {
+								const i = tk.content.indexOf('.');
+								if (i > -1)
+									parser_pos = tk.offset + (tk.length = i), tk.content = tk.content.substring(0, i);
+								tk.type = 'TK_WORD';
+								delete tk.semantic;
+								delete tk.data;
+								next = false;
+								break;
+							}
+						// fall through
 						default: unexpected(tk); parse_expression(',');
 					}
 				}
