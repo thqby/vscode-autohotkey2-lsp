@@ -63,7 +63,9 @@ export enum SemanticTokenTypes {
 	keyword,
 	string,
 	number,
+	comment,
 	operator,
+	'keyword.control.directive',
 }
 const SE_CLASS = { type: SemanticTokenTypes.class };
 const SE_KEYWORD = { type: SemanticTokenTypes.keyword };
@@ -72,6 +74,17 @@ const SE_OPERATOR = { type: SemanticTokenTypes.operator };
 const SE_PARAM = { type: SemanticTokenTypes.parameter };
 const SE_PROPERTY = { type: SemanticTokenTypes.property };
 const SE_STRING = { type: SemanticTokenTypes.string };
+const SE_COMMENT = { type: SemanticTokenTypes.comment };
+export const TT2STT: Record<string, SemanticToken> = {
+	TK_NUMBER: SE_NUMBER,
+	TK_RESERVED: SE_KEYWORD,
+	TK_STRING: SE_STRING,
+	TK_COMMENT: SE_COMMENT,
+	TK_BLOCK_COMMENT: SE_COMMENT,
+	TK_INLINE_COMMENT: SE_COMMENT,
+	TK_SHARP: { type: SemanticTokenTypes['keyword.control.directive'] },
+	undefined: SE_STRING,
+};
 
 export enum SemanticTokenModifiers {
 	static = 1,		// true
@@ -188,6 +201,7 @@ export interface Token {
 	callsite?: CallSite
 	content: string
 	data?: unknown
+	has_LF?: boolean
 	definition?: AhkSymbol
 	fat_arrow_end?: boolean
 	has_warned?: boolean | number
@@ -4873,7 +4887,9 @@ export class Lexer {
 							last_LF = next_LF, parser_pos = offset + m[0].length;
 							lst = createToken(m[1], 'TK_HOTLINE', offset, m[1].length, 1), offset += m[1].length;
 							lst.skip_pos = parser_pos;
-							lst.data = { content: input.substring(offset, parser_pos), offset, length: parser_pos - offset };
+							_this.tokens[offset] = lst.data = {
+								content: input.substring(offset, parser_pos), offset, length: parser_pos - offset
+							} as Token;
 							_this.tokenranges.push({ start: offset, end: parser_pos, type: 3, previous: lst.offset });
 						}
 						lst.ignore = true, add_sharp_foldingrange();
@@ -4985,9 +5001,17 @@ export class Lexer {
 			if (c === '(' || c === '[') {
 				if (c === '(') {
 					if (bg && !continuation_sections_mode) {
-						let i = parser_pos, b = i, t: string;
-						while (i < input_length) {
-							if ((t = input[i++]) === '\n') {
+						let i = parser_pos, b = i, lc = 0, t: string, join: [number, string] = [0, ''], comments = false;
+						function check_option() {
+							if ((t = input.slice(b, i - 1).toLowerCase()))
+								if (t.startsWith('join'))
+									join = [b + 4, input.substring(b + 4, i - 1)];
+								else if (/^c(com(ments)?)?$/.test(t))
+									comments = true;
+						}
+						while (true) {
+							if (i >= input_length || (t = input[i++]) === '\n') {
+								check_option();
 								if (string_mode) {
 									// raw string
 									// ::hotstring::string
@@ -4996,15 +5020,17 @@ export class Lexer {
 									//   string
 									// )
 									let next_LF = input.indexOf('\n', i), m: RegExpMatchArray | null = null;
-									const o = last_LF + 1, data: number[] = [];
-									while (next_LF > 0 && !(m = input.substring(i, next_LF).match(/^[ \t]*\)/)))
-										data.push(next_LF - i), next_LF = input.indexOf('\n', i = next_LF + 1);
-									if (next_LF < 0)
-										data.push(input_length - i), m = input.substring(i, input_length).match(/^[ \t]*\)/);
+									const o = last_LF + 1, data = [lc, i - 1 - o - lc];
+									while ((t = input.substring(i, next_LF < 0 ? next_LF = input_length : next_LF)) &&
+										!(m = t.match(/^[ \t]*\)/))) {
+										if (comments && (b = t.search(/(?<=^|[ \t]);/)) > -1)
+											data.push(t.length - b, b);
+										else data.push(0, t.length);
+										next_LF = input.indexOf('\n', i = next_LF + 1);
+									}
 									parser_pos = m ? i + m[0].length : input_length;
-									data.push(parser_pos - i);
-									resulting_string = input.substring(offset, parser_pos).trimEnd();
-									lst = createToken(input.substring(o, offset) + resulting_string, 'TK_STRING', offset, resulting_string.length, 1);
+									data.push(0, parser_pos - i);
+									lst = createToken(input.substring(o, parser_pos), 'TK_STRING', offset, parser_pos - offset, 1);
 									_this.addFoldingRange(o, parser_pos, 'block');
 									lst.data = data;
 									return lst.ignore = true, lst;
@@ -5020,24 +5046,21 @@ export class Lexer {
 									lst = createToken(c, 'TK_START_EXPR', offset, 1, 1);
 									lst.ignore = true, parser_pos = i - 1, continuation_sections_mode = true;
 									while (' \t'.includes(input[++offset])) continue;
-									const content = input.substring(offset, parser_pos).trimEnd();
-									lst.data = { content, offset, length: parser_pos - offset };
-									lst.skip_pos = parser_pos;
+									const content = input.substring(offset, parser_pos).trimEnd().replace(/[ \t]+;.*$/, '');
+									lst.data = { content, offset, length: content.length };
+									lst.skip_pos = parser_pos = offset + content.length;
 									_this.tokenranges.push({ start: offset, end: parser_pos, type: 3, previous: lst.offset });
-									const js = content.match(/(^|[ \t])join([^ \t]*)/i), ignore_comment = /(^|[ \t])[Cc]/.test(content);
-									const _lst = lst, _mode = format_mode;
+									const _lst = lst, _mode = format_mode, join_str = join[1].replace(/`[tsrn]/g, '  ');
 									let lk = lst, optionend = false, llf = parser_pos, sum = 0, tk: Token;
 									let create_tokens: (n: number, LF: number) => typeof lk.previous_extra_tokens = () => undefined;
-									if (js) {
-										const s = js[2].replace(/`[srn]/g, '  ');
-										const tl = new Lexer(TextDocument.create('', 'ahk2', -10, s));
-										let suffix_is_whitespace = false
+									if (join_str.trim()) {
+										const tl = new Lexer(TextDocument.create('', 'ahk2', -10, join_str));
+										const suffix_is_whitespace = whitespace.includes(join_str.slice(-1));
 										tl.parseScript();
 										delete tl.tokens[-1];
 										const tks = Object.values(tl.tokens);
-										offset += 4 + js[1].length + js.index!;
+										offset = join[0];
 										if (tks.length) {
-											suffix_is_whitespace = whitespace.includes(s.slice(-1));
 											tks.forEach(tk => {
 												tk.offset += offset, tk.length = 0;
 												tk.next_token_offset = -1;
@@ -5057,7 +5080,7 @@ export class Lexer {
 									}
 									format_mode = true, tk = get_next_token();
 									if (continuation_sections_mode && tk.type !== 'TK_EOF') {
-										if (ignore_comment && tk.topofline && tk.type.endsWith('COMMENT')) {
+										if (comments && tk.topofline && tk.type.endsWith('COMMENT')) {
 											sum = n_newlines - 2;
 										} else {
 											if (n_newlines > 1)
@@ -5068,7 +5091,7 @@ export class Lexer {
 									}
 									while (continuation_sections_mode && tk.type !== 'TK_EOF') {
 										if (tk.topofline) {
-											if (ignore_comment && tk.type.endsWith('COMMENT')) {
+											if (comments && tk.type.endsWith('COMMENT')) {
 												sum += n_newlines - 1;
 											} else {
 												if ((sum += n_newlines))
@@ -5090,11 +5113,17 @@ export class Lexer {
 									parser_pos = _lst.skip_pos as number;
 									return lst = ((format_mode = _mode)) ? _lst : get_next_token();
 								}
-							} else if (t === ')' || t === '(') {
+							} else if (t === ' ' || t === '\t')
+								check_option(), b = i;
+							else if (t === ';') {
+								if (b === i - 1 && input[b - 1] !== '(') {
+									if (0 > (i = input.indexOf('\n', i)))
+										i = input_length;
+									lc = i - b, b = i;
+								}
+							} else if (t === ')' || t === '(')
 								if (i - b < 5 || input.substring(b, b + 4).toLowerCase() !== 'join')
 									break;
-							} else if (t === ' ' || t === '\t')
-								b = i;
 						}
 					}
 				}
@@ -5123,7 +5152,7 @@ export class Lexer {
 
 			if (c === '"' || c === "'") {
 				const sep = c, o = offset;
-				let nosep = false, _lst: Token | undefined, pt: Token | undefined;
+				let nosep = false, _lst: Token | undefined, pt: Token | undefined, lf;
 				resulting_string = '';
 				if (!' \t\r\n+-*/%:?~!&|^=<>[({,.]'.includes(c = input.charAt(offset - 1))) {
 					if (sep === c) {
@@ -5141,6 +5170,7 @@ export class Lexer {
 						lst = createToken(resulting_string, 'TK_STRING', offset, parser_pos - offset, bg);
 						_this.tokenranges.push({ start: offset, end: parser_pos, type: 2 });
 						if (nosep) lst.data = null, lst.semantic = SE_STRING;
+						else lst.has_LF = lf;
 						if (_lst)
 							lst = _lst, parser_pos = lst.offset + lst.length;
 						if (isIdentifierChar(input.charCodeAt(parser_pos)))
@@ -5152,8 +5182,9 @@ export class Lexer {
 							while (' \t'.includes(c = input[parser_pos]))
 								parser_pos++;
 							if (c === ')') {
-								resulting_string = input.substring(offset, p).trimEnd();
+								resulting_string = input.substring(offset, p);
 								lst = createToken(resulting_string, 'TK_STRING', offset, resulting_string.length, bg = 0);
+								lst.has_LF = lf, lf = false;
 								_lst ??= lst, resulting_string = '';
 								_this.tokenranges.push({ start: offset, end: offset + lst.length, type: 3 });
 								let pt = lst.previous_token;
@@ -5168,7 +5199,7 @@ export class Lexer {
 								while (' \t'.includes(c = input[parser_pos]))
 									parser_pos++;
 								resulting_string = input.substring(offset, parser_pos), offset = parser_pos;
-							}
+							} else lf = true;
 						}
 					} else if (c === '\n' || c === ';' && ' \t'.includes(input[parser_pos - 2])) {
 						resulting_string = (resulting_string + input.substring(offset, parser_pos - (c === ';' ? 2 : 1))).trimEnd();
@@ -5357,7 +5388,7 @@ export class Lexer {
 				comment = input.substring(offset, parser_pos).trimEnd();
 				_this.tokenranges.push({ start: offset, end: parser_pos, type: 1 });
 				const cmm: Token = _this.tokens[offset] = {
-					type: comment_type, content: comment, offset, length: comment.length,
+					type: comment_type, content: comment, offset, length: parser_pos - offset, has_LF: ln > 1,
 					next_token_offset: -1, topofline: bg, ignore, skip_pos: parser_pos, previous_token: lst
 				};
 				if (!bg) {
@@ -5387,7 +5418,7 @@ export class Lexer {
 				_this.tokenranges.push({ start: offset, end: parser_pos, type: 1 });
 				const cmm: Token = {
 					type: 'TK_BLOCK_COMMENT', content: input.substring(offset, parser_pos) + e, offset, length: parser_pos - offset,
-					next_token_offset: -1, previous_token: lst, topofline: bg, skip_pos: parser_pos
+					next_token_offset: -1, previous_token: lst, topofline: bg, skip_pos: parser_pos, has_LF: ln > 1
 				};
 				if (!string_mode) {
 					let i = parser_pos, n = 0;
@@ -5439,10 +5470,9 @@ export class Lexer {
 						while (' \t'.includes(input[offset]))
 							offset++;
 						const content = input.substring(offset, parser_pos).trimEnd().replace(/(^|[ \t]+);.*$/, '');
-						lst.data = { content, offset, length: content.length };
-						parser_pos = offset + content.length;
 						if (content) {
-							lst.skip_pos = parser_pos;
+							lst.skip_pos = parser_pos = offset + content.length;
+							_this.tokens[offset] = lst.data = { content, offset, length: content.length } as Token;
 							_this.tokenranges.push({ start: offset, end: offset + content.length, type: 3, previous: lst.offset });
 						}
 					}
@@ -5541,7 +5571,9 @@ export class Lexer {
 
 			// (options\n...\n)
 			if (ck.ignore) {
-				const c = (ck.data as Token).content;
+				let c = (ck.data as Token).content;
+				if (opt.ignore_comment)
+					c = c.replace(/[ \t]+;.*$/, '');
 				if (c)
 					print_token(c);
 			} else if (opt.space_in_paren)
@@ -5831,7 +5863,14 @@ export class Lexer {
 				// print_newline();
 				if (input_wanted_newline)
 					print_newline();
-				if (ck.ignore || ck.data !== undefined)
+				// ck.ignore -> '
+				// (
+				// str
+				// )'
+				// (
+				// 'str
+				// ) str' <- ck.data === null
+				if (ck.ignore || ck.data === null)
 					output_space_before_token = false;
 				else output_space_before_token = true;
 			}
@@ -5839,9 +5878,9 @@ export class Lexer {
 				let p: number;
 				print_newline(true);
 				if (opt.ignore_comment && token_text.trimStart().startsWith('(') && (p = token_text.indexOf('\n')) > 0) {
-					const t = token_text.slice(0, p).trimEnd().replace(/[ \t]+;.*$/, '');
-					if (/(^[ \t]*\(|[ \t])c(om(ments?)?)?/i.test(t))
-						token_text = `${t}\n${token_text.slice(p + 1).replace(/^[ \t]*;.*\r?\n/gm, '').replace(/[ \t]+;.*/gm, '')}`;
+					const t = token_text.slice(0, p).replace(/[ \t]+;.*$/, '');
+					if (/(^[ \t]*\(|[ \t])c(om(ments?)?)?([ \t]|$)/i.test(t))
+						token_text = `${t}\n${token_text.slice(p + 1).replace(/^[ \t]*;.*\r?\n|[ \t]+;.*/gm, '')}`;
 					else token_text = `${t}\n${token_text.slice(p + 1)}`;
 				}
 				print_token();

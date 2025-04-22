@@ -1371,7 +1371,7 @@
                 }
               },
               "name": "hotstring.ahk2",
-              "end": "(?=(^[ \t]*([^ \t\r\n;/(]|\/(?!\\*)|\\((?!(((?i:join)[^ \t]*|[^ \t();]+)(?=[ \t]|$)|[ \t]+)*((?<=[ \t]);.*)?$))))",
+              "end": "(?=(^[ \t]*([^ \t\r\n;/(]|\/(?!\\*)|\\((?!(((?i:join)[^ \t]*|[^ \t()]+)(?=[ \t]|$)|[ \t]+(;.*$)?)*$))))",
               "patterns": [
                 {
                   "include": "#comments"
@@ -1447,7 +1447,7 @@
             }
           },
           "name": "hotstring.ahk2",
-          "end": "(?=(^[ \t]*([^ \t\r\n;/(]|\/(?!\\*)|\\((?!(((?i:join)[^ \t]*|[^ \t();]+)(?=[ \t]|$)|[ \t]+)*((?<=[ \t]);.*)?$))))",
+          "end": "(?=(^[ \t]*([^ \t\r\n;/(]|\/(?!\\*)|\\((?!(((?i:join)[^ \t]*|[^ \t()]+)(?=[ \t]|$)|[ \t]+(;.*$)?)*$))))",
           "patterns": [
             {
               "include": "#comments"
@@ -2056,7 +2056,7 @@
               "name": "punctuation.definition.string.begin.ahk2"
             }
           },
-          "end": "(\\1)|(?=(^[ \t]*([^ \t\r\n;/(]|\/(?!\\*)|\\((?!(((?i:join)[^ \t]*|[^ \t();]+)(?=[ \t]|$)|[ \t]+)*((?<=[ \t]);.*)?$))))",
+          "end": "(\\1)|(?=(^[ \t]*([^ \t\r\n;/(]|\/(?!\\*)|\\((?!(((?i:join)[^ \t]*|[^ \t()]+)(?=[ \t]|$)|[ \t]+(;.*$)?)*$))))",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.string.end.ahk2"
@@ -2080,7 +2080,7 @@
     "continuation_string": {
       "patterns": [
         {
-          "begin": "(?<=^[ \t]*)(\\()((((?i:join)[^ \t]*|[^ \t();]+)(?=[ \t]|$)|[ \t]+)*)(?<=([ \t]|^[ \t]*\\()(?i:c(om(ments?)?)?)([ \t].*|$))((?<=[ \t]);.*)?$",
+          "begin": "(?<=^[ \t]*)(\\()((((?i:join)[^ \t]*|[^ \t()]+(?<![ \t];.*))(?=[ \t]|$)|[ \t]+)*)(?<=([ \t]|^[ \t]*\\()(?i:c(om(ments?)?)?)([ \t].*|$))((?<=[ \t]);.*)?$",
           "beginCaptures": {
             "1": {
               "name": "punctuation.section.parens.begin.bracket.round.ahk2"
@@ -2097,7 +2097,7 @@
                 }
               ]
             },
-            "5": {
+            "9": {
               "name": "comment.line.ahk2"
             }
           },
@@ -2123,7 +2123,7 @@
           ]
         },
         {
-          "begin": "(?<=^[ \t]*)(\\()((((?i:join)[^ \t]*|[^ \t();]+)(?=[ \t]|$)|[ \t]+)*)((?<=[ \t]);.*)?$",
+          "begin": "(?<=^[ \t]*)(\\()((((?i:join)[^ \t]*|[^ \t()]+)(?=[ \t]|$)|[ \t]+(;.*$)?)*)$",
           "beginCaptures": {
             "1": {
               "name": "punctuation.section.parens.begin.bracket.round.ahk2"
@@ -2135,13 +2135,14 @@
                   "name": "string.options.ahk2 markup.italic"
                 },
                 {
+                  "match": "(?<=[ \t]+);.*",
+                  "name": "comment.line.ahk2"
+                },
+                {
                   "match": "[^ \t]+",
                   "name": "invalid.options.ahk2 markup.strikethrough"
                 }
               ]
-            },
-            "5": {
-              "name": "comment.line.ahk2"
             }
           },
           "end": "(?<=^[ \t]*)(\\))",

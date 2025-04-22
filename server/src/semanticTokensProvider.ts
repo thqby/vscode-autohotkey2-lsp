@@ -1,40 +1,73 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
 import {
-	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticTokenModifiers, SemanticTokenTypes, Token, Variable,
-	checkParams, diagnostic, extsettings, get_class_member, get_class_members, globalsymbolcache, lexers, symbolProvider
+	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticTokenModifiers, SemanticTokenTypes, TT2STT, Token, Variable,
+	checkParams, diagnostic, extsettings, get_class_member, get_class_members, lexers, symbolProvider
 } from './common';
 
+let resolve = resolve_sem;
 let curclass: ClassNode | undefined;
 const memscache = new Map<ClassNode, Record<string, AhkSymbol>>();
 
-function resolve_sem(tk: Token, lex: Lexer) {
+function resolve_sem(tk: Token, lex: Lexer, fully?: boolean) {
 	const sem = tk.semantic;
-	let l: string;
+	let t, m, n;
 	if (sem) {
-		const pos = tk.pos ?? (tk.pos = lex.document.positionAt(tk.offset));
-		let type = sem.type;
-		if (type === SemanticTokenTypes.string) {
-			if (tk.ignore) {
-				let l = pos.line + 1;
-				const data = tk.data as number[];
-				for (let i = 0; i < data.length; i++)
-					lex.STB.push(l++, 0, data[i], type, 0);
-			} else lex.STB.push(pos.line, pos.character, tk.length, type, 0);
-		} else {
-			if (curclass && (type === SemanticTokenTypes.method || type === SemanticTokenTypes.property) && tk.previous_token?.type === 'TK_DOT'
-				|| (curclass = undefined, type === SemanticTokenTypes.class))
-				type = resolveSemanticType(tk, lex);
-			lex.STB.push(pos.line, pos.character, tk.length, type, (sem.modifier ?? 0) | ((tk.definition as Variable)?.static === true) as unknown as number);
+		const stb = lex.STB;
+		const pos = tk.pos ??= lex.document.positionAt(tk.offset);
+		const { type, modifier } = sem;
+		switch (type) {
+			case SemanticTokenTypes.string:
+				curclass = undefined;
+				if (tk.ignore) {
+					t = pos.line;
+					const data = tk.data as number[];
+					for (let i = 1; i < data.length; i += 2, t++) {
+						(m = data[i]) && stb.push(t, 0, m, SemanticTokenTypes.string, 0);
+						fully && (n = data[i - 1]) && stb.push(t, m, n, SemanticTokenTypes.comment, 0);
+					}
+					break;
+				}
+			// fall through
+			case SemanticTokenTypes.comment:
+				if (tk.has_LF) {
+					let o;
+					n = (m = tk.content).indexOf('\n'), t = pos.line;
+					stb.push(t++, pos.character, n, type, 0);
+					for (; n > 0; t++) {
+						n = m.indexOf('\n', o = n + 1);
+						(o = (n > 0 ? n : m.length) - o) && stb.push(t, 0, o, type, 0);
+					}
+				} else stb.push(pos.line, pos.character, tk.length, type, 0);
+				break;
+			case SemanticTokenTypes.class:
+				curclass = tk.definition as ClassNode;
+				stb.push(pos.line, pos.character, tk.length, type, modifier ?? 0);
+				break;
+			case SemanticTokenTypes.method:
+			case SemanticTokenTypes.property:
+				stb.push(pos.line, pos.character, tk.length, resolve_prop_semantic_type(tk, lex), sem.modifier ?? 0);
+				break;
+			default:
+				curclass = undefined;
+				stb.push(pos.line, pos.character, tk.length, type, modifier ?? 0);
 		}
+	} else if (tk.type === 'TK_WORD') {
+		if (tk.previous_token?.type !== 'TK_DOT' && ['THIS', 'SUPER'].includes(t = tk.content.toUpperCase()) &&
+			(t = lex.findSymbol(t, SymbolKind.Variable, lex.document.positionAt(tk.offset)))?.is_this !== undefined) {
+			curclass = t!.node as ClassNode;
+			tk.callsite && checkParams(lex, t!.node as FuncNode, tk.callsite);
+		} else curclass = undefined;
 	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
 		curclass = undefined;
-	else if (tk.type === 'TK_WORD' && ['THIS', 'SUPER'].includes(l = tk.content.toUpperCase()) && tk.previous_token?.type !== 'TK_DOT') {
-		const r = lex.findSymbol(l, SymbolKind.Variable, lex.document.positionAt(tk.offset));
-		if (r?.is_this !== undefined) {
-			curclass = r.node as ClassNode;
-			tk.callsite && checkParams(lex, r.node as FuncNode, tk.callsite);
-		}
-	}
+}
+
+function resolve_sem_fully(tk: Token, lex: Lexer) {
+	tk.semantic ??= TT2STT[tk.type];
+	resolve_sem(tk, lex, true);
+}
+
+export function fullySemanticToken() {
+	resolve = resolve_sem_fully;
 }
 
 export function semanticTokensOnFull(params: SemanticTokensParams, token?: CancellationToken): SemanticTokens {
@@ -42,7 +75,7 @@ export function semanticTokensOnFull(params: SemanticTokensParams, token?: Cance
 	if (!doc || token?.isCancellationRequested) return { data: [] };
 	doc.STB.previousResult(''), curclass = undefined, memscache.clear();
 	symbolProvider({ textDocument: params.textDocument }, null);
-	Object.values(doc.tokens).forEach(tk => resolve_sem(tk, doc));
+	Object.values(doc.tokens).forEach(tk => resolve(tk, doc));
 	resolve_class_undefined_member(doc), memscache.clear();
 	doc.sendDiagnostics();
 	return doc.STB.build();
@@ -59,7 +92,7 @@ export function semanticTokensOnRange(params: SemanticTokensRangeParams, token?:
 			continue;
 		if (tk.offset > end)
 			break;
-		resolve_sem(tk, doc);
+		resolve(tk, doc);
 	}
 	resolve_class_undefined_member(doc), memscache.clear();
 	return doc.STB.build();
@@ -69,78 +102,65 @@ interface _Flag {
 	'#checkmember'?: boolean
 }
 
-function resolveSemanticType(tk: Token, doc: Lexer) {
-	const name = tk.content.toUpperCase();
+function resolve_prop_semantic_type(tk: Token, doc: Lexer) {
 	const sem = tk.semantic!;
-	switch (sem.type) {
-		case SemanticTokenTypes.class:
-			curclass = globalsymbolcache[name] as ClassNode;
-			if (curclass?.kind !== SymbolKind.Class)
-				curclass = undefined;
-			return SemanticTokenTypes.class;
-		case SemanticTokenTypes.method:
-		case SemanticTokenTypes.property:
-			if (curclass && !tk.ignore) {
-				let n = curclass.property[name], kind = n?.kind, temp: Record<string, AhkSymbol>;
-				if (!n || n.def === false) {
-					const t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = get_class_members(doc, curclass)), temp))[name];
-					if (t)
-						n = t, kind = t.kind;
-					else if (sem.type === SemanticTokenTypes.method) {
-						if (temp['__CALL'])
-							kind = SymbolKind.Null;
-					} else if (temp['__GET'])
-						kind = SymbolKind.Null;
-				}
-				switch (kind) {
-					case SymbolKind.Method:
-						sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | SemanticTokenModifiers.static;
-						if (tk.callsite) {
-							if (curclass) {
-								if (n.full?.startsWith('(Object) static Call('))
-									n = get_class_member(doc, curclass.prototype!, '__new', true) ?? n;
-								else if (n.full?.startsWith('(Object) DefineProp(')) {
-									let tt = doc.tokens[tk.next_token_offset];
-									if (tt?.content === '(')
-										tt = doc.tokens[tt.next_token_offset];
-									if (tt) {
-										if (tt.type === 'TK_STRING') {
-											cls_add_prop(curclass, tt.content.slice(1, -1), tt.offset + 1);
-										} else cls_add_prop(curclass, '');
-									}
-								}
-							}
-							checkParams(doc, n as FuncNode, tk.callsite);
+	if (curclass && !tk.ignore) {
+		const name = tk.content.toUpperCase();
+		let n = curclass.property[name], kind = n?.kind, temp: Record<string, AhkSymbol>;
+		if (!n || n.def === false) {
+			const t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = get_class_members(doc, curclass)), temp))[name];
+			if (t)
+				n = t, kind = t.kind;
+			else if (sem.type === SemanticTokenTypes.method) {
+				if (temp['__CALL'])
+					kind = SymbolKind.Null;
+			} else if (temp['__GET'])
+				kind = SymbolKind.Null;
+		}
+		switch (kind) {
+			case SymbolKind.Method:
+				sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | (n.static ? SemanticTokenModifiers.static : 0);
+				if (tk.callsite) {
+					if (n.full?.startsWith('(Object) static Call('))
+						n = get_class_member(doc, curclass.prototype!, '__new', true) ?? n;
+					else if (n.full?.startsWith('(Object) DefineProp(')) {
+						let tt = doc.tokens[tk.next_token_offset];
+						if (tt?.content === '(')
+							tt = doc.tokens[tt.next_token_offset];
+						if (tt) {
+							if (tt.type === 'TK_STRING') {
+								cls_add_prop(curclass, tt.content.slice(1, -1), tt.offset + 1);
+							} else cls_add_prop(curclass, '');
 						}
-						curclass = undefined;
-						return sem.type = SemanticTokenTypes.method;
-					case SymbolKind.Class:
-						sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;
-						curclass = curclass.property[name] as ClassNode;
-						if (tk.callsite) checkParams(doc, curclass as unknown as FuncNode, tk.callsite);
-						return sem.type = SemanticTokenTypes.class;
-					case SymbolKind.Property: {
-						const t = n as Property;
-						sem.modifier = (sem.modifier ?? 0) | (n.static ? SemanticTokenModifiers.static : 0) | (!t.set && t.children ? SemanticTokenModifiers.readonly : 0);
-						curclass = curclass.range === n.range ? curclass.prototype : undefined;
-						return sem.type = SemanticTokenTypes.property;
 					}
-					case undefined:
-						if ((curclass.checkmember ?? doc.checkmember) !== false && extsettings.Diagnostics.ClassNonDynamicMemberCheck) {
-							const tt = doc.tokens[tk.next_token_offset];
-							if (ASSIGN_TYPE.includes(tt?.content)) {
-								cls_add_prop(curclass, tk.content, tk.offset);
-							} else if ((tk.__ref || tt?.content[0] !== '?' || !tt.ignore && tt.content === '?') &&
-								(memscache.get(curclass) as _Flag)?.['#checkmember'] !== false)
-								((curclass.undefined ??= {})[name] ??= tk).has_warned ||= tk.__ref;
-						}
+					checkParams(doc, n as FuncNode, tk.callsite);
 				}
+				curclass = undefined;
+				return sem.type = SemanticTokenTypes.method;
+			case SymbolKind.Class:
+				sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;
+				curclass = n as ClassNode;
+				if (tk.callsite) checkParams(doc, n as FuncNode, tk.callsite);
+				return sem.type = SemanticTokenTypes.class;
+			case SymbolKind.Property: {
+				const t = n as Property;
+				sem.modifier = (sem.modifier ?? 0) | (n.static ? SemanticTokenModifiers.static : 0) | (!t.set && t.children ? SemanticTokenModifiers.readonly : 0);
+				curclass = curclass.range === n.range ? curclass.prototype : undefined;
+				return sem.type = SemanticTokenTypes.property;
 			}
-		// fallthrough
-		default:
-			curclass = undefined;
-			return sem.type;
+			case undefined:
+				if ((curclass.checkmember ?? doc.checkmember) !== false && extsettings.Diagnostics.ClassNonDynamicMemberCheck) {
+					const tt = doc.tokens[tk.next_token_offset];
+					if (ASSIGN_TYPE.includes(tt?.content)) {
+						cls_add_prop(curclass, tk.content, tk.offset);
+					} else if ((tk.__ref || tt?.content[0] !== '?' || !tt.ignore && tt.content === '?') &&
+						(memscache.get(curclass) as _Flag)?.['#checkmember'] !== false)
+						((curclass.undefined ??= {})[name] ??= tk).has_warned ||= tk.__ref;
+				}
+		}
 	}
+	curclass = undefined;
+	return sem.type;
 
 	function cls_add_prop(cls: ClassNode, name: string, offset?: number) {
 		const d = lexers[cls.uri!];

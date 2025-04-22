@@ -12,7 +12,6 @@ import {
 	inactivevars, is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
 
-export let globalsymbolcache: Record<string, AhkSymbol> = {};
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase();
@@ -22,7 +21,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	if (token !== null && lex.symbolInformation)
 		return lex.symbolInformation;
 	const { document, tokens } = lex;
-	const gvar: Record<string, Variable> = globalsymbolcache = { ...ahkvars };
+	const gvar: Record<string, Variable> = { ...ahkvars };
 	let list = [uri, ...Object.keys(lex.relevance)], winapis: Record<string, AhkSymbol> = {};
 	list = list.map(u => lexers[u]?.d_uri).concat(list);
 	for (const uri of list) {
@@ -301,9 +300,14 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				}
 			} else if (kind !== undefined)
 				stk.type = st;
-			if (st < 4)
-				stk.modifier = (stk.modifier ?? 0) | (SemanticTokenModifiers.readonly) |
-					(islib ? SemanticTokenModifiers.defaultLibrary : 0);
+			let modifier = stk.modifier ?? 0;
+			if (st <= SemanticTokenTypes.module)
+				modifier |= SemanticTokenModifiers.readonly;
+			if (islib)
+				modifier |= SemanticTokenModifiers.defaultLibrary;
+			if (source.static)
+				modifier |= SemanticTokenModifiers.static;
+			if (modifier) stk.modifier = modifier;
 		}
 		return tk;
 	}

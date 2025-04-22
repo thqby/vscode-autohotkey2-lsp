@@ -243,6 +243,7 @@ node install.js
       "schemes": ["file", "buffer", "res"],
       "initializationOptions": {
         "locale": "en-us", // or "zh-cn"
+        "fullySemanticToken": true, // 提供更多的语义令牌
         "AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
         "CommentTags": "^;;\\s*(?<tag>.+)",
         "CompleteFunctionParens": false,

@@ -33,9 +33,12 @@ enum LibIncludeType {
 }
 
 export interface AHKLSSettings {
+	// only in initialization options
 	locale?: string
 	commands?: string[]
 	extensionUri?: string
+	fullySemanticToken?: boolean
+	// settings
 	ActionWhenV1IsDetected: ActionType
 	AutoLibInclude: LibIncludeType
 	CommentTags?: string

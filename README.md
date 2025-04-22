@@ -248,6 +248,7 @@ node install.js
       "schemes": ["file", "buffer", "res"],
       "initializationOptions": {
         "locale": "en-us", // or "zh-cn"
+        "fullySemanticToken": true, // Provide more semantic tokens
         "AutoLibInclude": "Disabled", // or "Local" or "User and Standard" or "All"
         "CommentTags": "^;;\\s*(?<tag>.+)",
         "CompleteFunctionParens": false,

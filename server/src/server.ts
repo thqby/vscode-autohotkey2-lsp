@@ -17,7 +17,7 @@ import {
 	semanticTokensOnFull, semanticTokensOnRange, SemanticTokenTypes, set_ahk_h, set_ahkpath, setConnection,
 	setRootDir, setLocale, setVersion, setWorkspaceFolders, setting, signatureProvider, sleep, symbolProvider,
 	traverse_include, typeFormatting, updateConfigs, utils, winapis, workspaceSymbolProvider,
-	ahk_version, ahkvars
+	ahk_version, ahkvars, enumNames, fullySemanticToken
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
@@ -66,8 +66,8 @@ connection.onInitialize(async params => {
 			referencesProvider: { workDoneProgress: true },
 			semanticTokensProvider: {
 				legend: {
-					tokenTypes: Object.values(SemanticTokenTypes).filter(t => typeof t === 'string') as string[],
-					tokenModifiers: Object.values(SemanticTokenModifiers).filter(t => typeof t === 'string') as string[]
+					tokenTypes: enumNames(SemanticTokenTypes),
+					tokenModifiers: enumNames(SemanticTokenModifiers)
 				},
 				full: true,
 				range: true
@@ -88,6 +88,7 @@ connection.onInitialize(async params => {
 		result.capabilities.workspace = { workspaceFolders: { supported: true } };
 	}
 
+	configs?.fullySemanticToken && fullySemanticToken();
 	setRootDir(resolve(__dirname, '../..'));
 	setLocale(configs?.locale ?? params.locale);
 	loadlocalize();
