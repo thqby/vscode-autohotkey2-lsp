@@ -48,7 +48,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		if (t.kind === SymbolKind.Variable && !t.assigned)
 			if (winapis[k])
 				t = gvar[k] = winapis[k], islib = true;
-			else if (v.returns === undefined)
+			else if (v.returns === undefined && !v.decl)
 				unset_vars.set(t, v);
 		if (t === v || v.kind !== SymbolKind.Variable && (gvar[k] = v))
 			result.push(v), converttype(v, v, islib || v === ahkvars[k]).definition = v;
@@ -141,15 +141,14 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				case SymbolKind.Event:
 					outer_is_global ||= fn.assume === FuncScope.GLOBAL;
 					for (const [k, v] of Object.entries(fn.global ?? {}))
-						s = inherit[k] = gvar[k] ??= v, converttype(v, s, s === ahkvars[k]).definition = s,
-							s.kind === SymbolKind.Variable && maybe_unset(s, v);
+						s = inherit[k] = gvar[k] ??= v, converttype(v, s, s === ahkvars[k]).definition = s;
 					for (const [k, v] of Object.entries(fn.local ?? {})) {
 						converttype(inherit[k] = v, v).definition = v;
 						if (v.kind === SymbolKind.Variable) {
-							if (v.is_param) continue;
+							if (v.is_param || v.decl) continue;
 							if (!v.assigned && v.returns === undefined)
 								unset_vars.set(v, v);
-							else if (warnLocalSameAsGlobal && !v.decl && gvar[k])
+							else if (warnLocalSameAsGlobal && gvar[k])
 								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
 						result.push(v);
