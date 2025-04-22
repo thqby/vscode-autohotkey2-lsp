@@ -497,7 +497,7 @@ export class Lexer {
 			this.setWorkspaceFolder();
 			this.scriptpath = (this.fsPath = uri.fsPath).replace(/[\\/][^\\/]+$/, '');
 			this.initLibDirs(scriptdir);
-			if (uri.scheme !== 'file' && uri.fsPath.substring(1, 3) === ':\\')
+			if (!/^(ahkres|file)$/.test(uri.scheme) && uri.fsPath.substring(1, 3) === ':\\')
 				this.is_virtual = true;
 		}
 
@@ -2160,7 +2160,9 @@ export class Lexer {
 									is_default = true, tk.semantic = SE_KEYWORD, tk.type = 'TK_RESERVED';
 									nexttoken(), _low = tk.content.toLowerCase();
 								}
-							}
+							} else if (_low === 'import' && input[parser_pos] !== '(' &&
+								is_line_continue(EMPTY_TOKEN, _this.get_token(parser_pos, true)))
+								return nexttoken() && parse_import();
 							if (_low === 'class' && ' \t'.includes(input[parser_pos]) &&
 								!(nk = _this.get_token(parser_pos, true)).topofline && allIdentifierChar.test(nk.content)) {
 								tk.topofline = 2, nexttoken(), parse_class(is_default ? 'd' : 'e');
@@ -2411,7 +2413,7 @@ export class Lexer {
 			function parse_import() {
 				const kw = SE_KEYWORD;
 				const mod = { type: SemanticTokenTypes.module };
-				let has_from = true, next_is_id = true, sk, vk, vr;
+				let has_from = true, next_is_id = true, has_suffix_imps, sk, vk, vr;
 				lk.type = 'TK_RESERVED';
 				lk.semantic = kw;
 				_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning });
@@ -2420,6 +2422,53 @@ export class Lexer {
 				else if (tk.topofline)
 					return next = false, unexpected_lf(tk);
 				else if (tk.content === '{') {
+					parse_imps();
+				} else if ((has_from = !(allIdentifierChar.test(tk.content) || tk.type === 'TK_STRING')))
+					unexpected(tk);
+				if (has_from) {
+					if (tk.content.toLowerCase() === 'from') {
+						if (tk.topofline && lk.content !== '*')
+							unexpected_lf(tk);
+						tk.type = 'TK_RESERVED';
+						tk.semantic = kw, nexttoken();
+						if (tk.topofline)
+							return next = false, unexpected_lf(tk);
+						if (allIdentifierChar.test(tk.content))
+							tk.semantic = mod, tk.type = 'TK_WORD';
+						else next = tk.type === 'TK_STRING';
+						if (allIdentifierChar.test(tk.content) || tk.type === 'TK_STRING')
+							has_from = false, has_suffix_imps = 0;
+						else next = false;
+					} else if (next = false, tk.topofline)
+						return unexpected_lf(tk);
+				}
+				nexttoken();
+				if (!has_from) {
+					if ((sk = lk).type !== 'TK_STRING')
+						(vk = lk).semantic = mod, lk.type = 'TK_WORD';
+					if (tk.content.toLowerCase() === 'as') {
+						tk.semantic = kw, nexttoken();
+						if (tk.topofline && lk.topofline)
+							return next = false, unexpected_lf(tk);
+						if (allIdentifierChar.test(tk.content)) {
+							(vk = tk).semantic = mod, tk.type = 'TK_WORD';
+							nexttoken();
+						} else vk = undefined, next = false;
+					}
+					has_suffix_imps ??= next && !tk.topofline && tk.content === '{';
+					if (vk && (has_suffix_imps === false || sk !== vk)) {
+						vr = Variable.create(vk.content, SymbolKind.Module,
+							make_range(vk.offset, vk.length));
+						if (sk !== vk)
+							vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
+						vr.decl = vr.def = vr.assigned = true;
+						result.push(vr);
+					}
+					has_suffix_imps && parse_imps();
+				}
+				if ((next = !tk.topofline || is_line_continue(lk, tk)))
+					unexpected(tk), parse_line();
+				function parse_imps() {
 					const bk = tk, obj: Record<string, Variable> = {};
 					bk.data = obj;
 					while (nexttoken()) {
@@ -2439,13 +2488,14 @@ export class Lexer {
 										make_range(vk.offset, vk.length));
 									if (sk !== vk)
 										vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
-									vr.decl = vr.def = vr.assigned = true;
+									vr.decl = vr.def = vr.has_warned = true;
 									result.push(vr);
 								}
 							}
 							if ((next_is_id = tk.content as string === ','))
 								continue;
-						}
+						} else if (next_is_id && tk.content === '*')
+							nexttoken();
 						if (tk.content as string === '}') {
 							begin_line = false;
 							bk.next_pair_pos = tk.offset;
@@ -2457,45 +2507,7 @@ export class Lexer {
 						next_is_id = tk.content as string === ',';
 						unexpected(tk);
 					}
-				} else if ((has_from = !allIdentifierChar.test(tk.content)))
-					unexpected(tk);
-				if (has_from) {
-					if (tk.content.toLowerCase() === 'from') {
-						if (tk.topofline && lk.content !== '*')
-							unexpected_lf(tk);
-						tk.type = 'TK_RESERVED';
-						tk.semantic = kw, nexttoken();
-						if (tk.topofline)
-							return next = false, unexpected_lf(tk);
-						if (allIdentifierChar.test(tk.content))
-							tk.semantic = mod, tk.type = 'TK_WORD';
-						else next = false;
-					} else if (next = false, tk.topofline)
-						return unexpected_lf(tk);
 				}
-				nexttoken();
-				if (!has_from) {
-					(sk = lk).semantic = mod, lk.type = 'TK_WORD';
-					if (tk.content.toLowerCase() === 'as') {
-						tk.semantic = kw, nexttoken();
-						if (tk.topofline)
-							return next = false, unexpected_lf(tk);
-						if (allIdentifierChar.test(tk.content)) {
-							(vk = tk).semantic = mod, tk.type = 'TK_WORD';
-							nexttoken();
-						} else vk = undefined, next = false;
-					} else vk = lk;
-					if (vk) {
-						vr = Variable.create(vk.content, SymbolKind.Variable,
-							make_range(vk.offset, vk.length));
-						if (sk !== vk)
-							vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
-						vr.decl = vr.def = vr.assigned = true;
-						result.push(vr);
-					}
-				}
-				if ((next = !tk.topofline || is_line_continue(lk, tk)))
-					unexpected(tk), parse_line();
 			}
 
 			function reset_extra_index(tk: Token) {

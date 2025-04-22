@@ -1110,7 +1110,7 @@ function get_latest_ahk2lsp() {
 					}
 				} catch (e) { update = true; }
 			}
-			if (update)
+			if (update || !fs.existsSync('./server/dist/server.js'))
 				download_ahk2lsp();
 			else
 				console.log(`thqby.vscode-autohotkey2-lsp v${version} is the latest version.`);

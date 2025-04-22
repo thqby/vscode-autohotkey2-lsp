@@ -2312,6 +2312,12 @@ ProcessWait(PIDOrName [, Timeout]) => Integer
  */
 ProcessWaitClose(PIDOrName [, Timeout]) => Integer
 
+/** 
+ * Enumerates the properties of a value.
+ * @since 2.1-alpha.18
+ */
+Props(Value) => Enumerator<String, Any>
+
 /**
  * Generate a pseudo-random number.
  * 
@@ -3108,6 +3114,12 @@ class Any {
 	 * If the value has an attribute with this name, it returns true, otherwise it returns false.
 	 */
 	HasProp(Name) => Integer
+
+	/** 
+	 * Enumerates the properties of a value.
+	 * @since 2.1-alpha.18
+	 */
+	Props() => Enumerator<String, Any>
 
 	__Class: String
 
@@ -4784,9 +4796,6 @@ class Object extends Any {
 	 * Enumerate the properties of the object.
 	 */
 	OwnProps() => Enumerator<String, Any>
-
-	/** @since 2.1-alpha.10 */
-	Props() => Enumerator<String, Any>
 
 	/** @since 2.1-alpha.10 */
 	__Ref(Name) => PropRef

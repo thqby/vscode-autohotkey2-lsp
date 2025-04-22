@@ -2306,6 +2306,12 @@ ProcessWait(PIDOrName [, Timeout]) => Integer
  */
 ProcessWaitClose(PIDOrName [, Timeout]) => Integer
 
+/** 
+ * 枚举值的属性.
+ * @since 2.1-alpha.18
+ */
+Props(Value) => Enumerator<String, Any>
+
 /**
  * 生成一个伪随机数字.
  * 
@@ -3102,6 +3108,12 @@ class Any {
 	 * 如果值具有使用此名称的属性, 则返回 true, 否则返回 false.
 	 */
 	HasProp(Name) => Integer
+
+	/** 
+	 * 枚举值的属性.
+	 * @since 2.1-alpha.18
+	 */
+	Props() => Enumerator<String, Any>
 
 	__Class: String
 
@@ -4762,9 +4774,6 @@ class Object extends Any {
 	 * 枚举对象自有的属性.
 	 */
 	OwnProps() => Enumerator<String, Any>
-
-	/** @since 2.1-alpha.10 */
-	Props() => Enumerator<String, Any>
 
 	/** @since 2.1-alpha.10 */
 	__Ref(Name) => PropRef
