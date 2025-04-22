@@ -960,8 +960,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label;
 				set_ci_classinfo(ci, info.parent);
 				const prop = info as Property;
-				if (!prop.call && prop.get?.params.length)
-					ci.insertTextFormat = InsertTextFormat.Snippet, ci.insertText = ci.label + '[$0]';
+				if (extsettings.CompleteFunctionParens)
+					if (right_is_paren)
+						ci.command = { title: 'cursorRight', command: 'cursorRight' };
+					else if (!prop.call && prop.get?.params.length)
+						ci.insertTextFormat = InsertTextFormat.Snippet, ci.insertText = ci.label + '[$0]';
 				break;
 			}
 			case SymbolKind.Module:
