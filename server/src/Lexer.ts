@@ -83,7 +83,7 @@ export const TT2STT: Record<string, SemanticToken> = {
 	TK_BLOCK_COMMENT: SE_COMMENT,
 	TK_INLINE_COMMENT: SE_COMMENT,
 	TK_SHARP: { type: SemanticTokenTypes['keyword.control.directive'] },
-	undefined: SE_STRING,
+	'': SE_STRING,
 };
 
 export enum SemanticTokenModifiers {
@@ -4899,9 +4899,10 @@ export class Lexer {
 							last_LF = next_LF, parser_pos = offset + m[0].length;
 							lst = createToken(m[1], 'TK_HOTLINE', offset, m[1].length, 1), offset += m[1].length;
 							lst.skip_pos = parser_pos;
-							_this.tokens[offset] = lst.data = {
-								content: input.substring(offset, parser_pos), offset, length: parser_pos - offset
-							} as Token;
+							_this.tokens[offset] = {
+								...lst.data = { content: input.substring(offset, parser_pos), offset, length: parser_pos - offset },
+								type: '', previous_token: lst, next_token_offset: -1, topofline: 0
+							};
 							_this.tokenranges.push({ start: offset, end: parser_pos, type: 3, previous: lst.offset });
 						}
 						lst.ignore = true, add_sharp_foldingrange();
@@ -5466,29 +5467,30 @@ export class Lexer {
 				return lst = createToken(c, i >= ASSIGN_INDEX ? 'TK_EQUALS' : 'TK_OPERATOR', offset, c.length, bg);
 			}
 
-			if (c === '#') {
+			if (bg && c === '#') {
 				let sharp = '#';
 				while (isIdentifierChar(input.charCodeAt(parser_pos)))
 					sharp += input[parser_pos++];
 				sharp_offsets.push(offset);
 				lst = createToken(sharp, 'TK_SHARP', offset, sharp.length, bg);
 				token_text_low = sharp.toLowerCase();
-				if (bg && whitespace.includes(c = input.charAt(parser_pos)) && (token_text_low === '#hotif' || h && token_text_low === '#initexec'))
+				if (whitespace.includes(c = input.charAt(parser_pos)) && (token_text_low === '#hotif' || h && token_text_low === '#initexec'))
 					return lst;
 				last_LF = input.indexOf('\n', offset = parser_pos);
 				parser_pos = last_LF < 0 ? input_length : last_LF;
-				if (bg && whitespace.includes(c)) {
-					if (c === ' ' || c === '\t') {
-						while (' \t'.includes(input[offset]))
-							offset++;
-						const content = input.substring(offset, parser_pos).trimEnd().replace(/(^|[ \t]+);.*$/, '');
-						if (content) {
-							lst.skip_pos = parser_pos = offset + content.length;
-							_this.tokens[offset] = lst.data = { content, offset, length: content.length } as Token;
-							_this.tokenranges.push({ start: offset, end: offset + content.length, type: 3, previous: lst.offset });
-						}
+				if (c === ' ' || c === '\t') {
+					while (' \t'.includes(input[offset]))
+						offset++;
+					const content = input.substring(offset, parser_pos).trimEnd().replace(/(^|[ \t]+);.*$/, '');
+					if (content) {
+						lst.skip_pos = parser_pos = offset + content.length;
+						_this.tokens[offset] = {
+							...lst.data = { content, offset, length: content.length },
+							type: '', previous_token: lst, next_token_offset: -1, topofline: 0
+						};
+						_this.tokenranges.push({ start: offset, end: offset + content.length, type: 3, previous: lst.offset });
 					}
-				} else
+				} else if (!whitespace.includes(c))
 					lst.type = 'TK_UNKNOWN', lst.content += input.substring(offset, parser_pos).trimEnd(), lst.length += parser_pos - offset;
 				return lst;
 			}
