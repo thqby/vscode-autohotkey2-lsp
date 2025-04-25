@@ -5098,7 +5098,7 @@ export class Lexer {
 										} else {
 											if (n_newlines > 1)
 												tk.previous_extra_tokens = create_tokens(n_newlines - 1, llf);
-											tk.topofline = top ? 1 : 0;
+											tk.topofline = top ? 1 : -1;
 										}
 										llf = last_LF, lk = tk, tk = get_next_token();
 									}
@@ -5109,7 +5109,7 @@ export class Lexer {
 											} else {
 												if ((sum += n_newlines))
 													tk.previous_extra_tokens = create_tokens(sum, llf);
-												tk.topofline = sum = 0;
+												tk.topofline = -1, sum = 0;
 												if (optionend && lk.content === '?')
 													lk.ignore = true;
 											}

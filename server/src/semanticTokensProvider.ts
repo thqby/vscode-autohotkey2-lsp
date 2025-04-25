@@ -45,7 +45,9 @@ function resolve_sem(tk: Token, lex: Lexer, fully?: boolean) {
 				break;
 			case SemanticTokenTypes.method:
 			case SemanticTokenTypes.property:
-				stb.push(pos.line, pos.character, tk.length, resolve_prop_semantic_type(tk, lex), sem.modifier ?? 0);
+				stb.push(pos.line, pos.character, tk.length,
+					tk.topofline ? type : resolve_prop_semantic_type(tk, lex),
+					sem.modifier ?? 0);
 				break;
 			default:
 				curclass = undefined;
@@ -202,5 +204,6 @@ function resolve_class_undefined_member(doc: Lexer) {
 				tk.has_warned = true;
 				doc.addDiagnostic(diagnostic.maybehavenotmember(name, tk.content), tk.offset, tk.length, { severity: 2 });
 			}
+		delete cls.undefined;
 	}
 }
