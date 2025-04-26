@@ -1,8 +1,9 @@
-import { CancellationToken, Hover, HoverParams, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, Hover, HoverParams } from 'vscode-languageserver';
 import {
 	AhkSymbol, FuncNode, Maybe, SemanticTokenTypes, Variable,
 	get_detail, hoverCache, join_types, lexers, find_symbols
 } from './common';
+import { SymbolKind } from './lsp-enums';
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return;

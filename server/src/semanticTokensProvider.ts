@@ -1,8 +1,9 @@
-import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams } from 'vscode-languageserver';
 import {
 	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticTokenModifiers, SemanticTokenTypes, TT2STT, Token, Variable,
 	checkParams, diagnostic, extsettings, get_class_member, get_class_members, lexers, symbolProvider
 } from './common';
+import { SymbolKind } from './lsp-enums';
 
 let resolve = resolve_sem;
 let curclass: ClassNode | undefined;

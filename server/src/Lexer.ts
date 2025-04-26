@@ -5,7 +5,6 @@ import { basename, resolve } from 'path';
 import {
 	ColorInformation,
 	Diagnostic,
-	DiagnosticSeverity,
 	DocumentSymbol,
 	FoldingRange,
 	MarkupContent,
@@ -13,7 +12,6 @@ import {
 	Range,
 	SemanticTokensBuilder,
 	SymbolInformation,
-	SymbolKind
 } from 'vscode-languageserver';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -25,6 +23,7 @@ import {
 	hoverCache, inactivevars, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile, reserved_index,
 	restorePath, rootdir, setTextDocumentLanguage, symbolProvider, utils, version_match, workspaceFolders
 } from './common';
+import { DiagnosticSeverity, SymbolKind } from './lsp-enums';
 
 export interface ParamInfo {
 	offset: number
@@ -65,6 +64,7 @@ export enum SemanticTokenTypes {
 	number,
 	comment,
 	operator,
+	event,
 	'keyword.control.directive',
 }
 const SE_CLASS = { type: SemanticTokenTypes.class };
@@ -75,6 +75,7 @@ const SE_PARAM = { type: SemanticTokenTypes.parameter };
 const SE_PROPERTY = { type: SemanticTokenTypes.property };
 const SE_STRING = { type: SemanticTokenTypes.string };
 const SE_COMMENT = { type: SemanticTokenTypes.comment };
+const SE_EVENT = { type: SemanticTokenTypes.event };
 export const TT2STT: Record<string, SemanticToken> = {
 	TK_NUMBER: SE_NUMBER,
 	TK_RESERVED: SE_KEYWORD,
@@ -82,6 +83,8 @@ export const TT2STT: Record<string, SemanticToken> = {
 	TK_COMMENT: SE_COMMENT,
 	TK_BLOCK_COMMENT: SE_COMMENT,
 	TK_INLINE_COMMENT: SE_COMMENT,
+	TK_HOT: SE_EVENT,
+	TK_HOTLINE: SE_EVENT,
 	TK_SHARP: { type: SemanticTokenTypes['keyword.control.directive'] },
 	'': SE_STRING,
 };

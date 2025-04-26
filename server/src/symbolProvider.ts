@@ -1,6 +1,5 @@
 import {
-	CancellationToken, DiagnosticSeverity, DocumentSymbolParams,
-	Range, SymbolInformation, SymbolKind, WorkspaceSymbolParams
+	CancellationToken, DocumentSymbolParams, Range, SymbolInformation, WorkspaceSymbolParams
 } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
@@ -11,6 +10,7 @@ import {
 	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor, get_class_member, get_func_param_count,
 	inactivevars, is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
 } from './common';
+import { DiagnosticSeverity, SymbolKind } from './lsp-enums';
 
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {

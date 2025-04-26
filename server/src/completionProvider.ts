@@ -2,8 +2,7 @@ import { existsSync, statSync } from 'fs';
 import { opendir } from 'fs/promises';
 import { basename, relative, resolve } from 'path';
 import {
-	CancellationToken, CompletionItem, CompletionItemKind,
-	CompletionParams, InsertTextFormat, SymbolKind, TextEdit
+	CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit
 } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 import {
@@ -13,6 +12,7 @@ import {
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
 	lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
 } from './common';
+import { CompletionItemKind, SymbolKind } from './lsp-enums';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;

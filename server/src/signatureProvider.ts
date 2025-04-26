@@ -1,10 +1,11 @@
-import { CancellationToken, ParameterInformation, SignatureHelp, SignatureHelpParams, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, ParameterInformation, SignatureHelp, SignatureHelpParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, Variable,
 	ahkuris, decltype_expr, decltype_invoke, decltype_returns, get_detail,
 	get_callinfo, get_class_constructor, get_class_member, lexers
 } from './common';
+import { SymbolKind } from './lsp-enums';
 
 let cache: {
 	index?: number,

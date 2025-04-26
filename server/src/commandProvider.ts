@@ -1,10 +1,11 @@
-import { CancellationToken, ExecuteCommandParams, Position, Range, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, ExecuteCommandParams, Position, Range } from 'vscode-languageserver';
 import {
 	AhkSymbol, ClassNode, FuncNode, Lexer, Property, Token, Variable,
 	connection, extsettings, find_class, generate_type_annotation,
 	join_types, lexers, parse_include, restorePath, semanticTokensOnFull,
 	traverse_include, update_include_cache
 } from './common';
+import { SymbolKind } from './lsp-enums';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const commands: Record<string, (...args: any[]) => any> = {};

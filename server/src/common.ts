@@ -1,4 +1,4 @@
-import { CompletionItem, CompletionItemKind, Hover, InsertTextFormat, Range, SymbolKind } from 'vscode-languageserver-types';
+import { CompletionItem, Hover, InsertTextFormat, Range } from 'vscode-languageserver-types';
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
@@ -9,6 +9,7 @@ import { resolve, sep } from 'path';
 import { AhkSymbol, ActionType, FormatOptions, Lexer, check_formatopts, update_comment_tags } from './Lexer';
 import { diagnostic, setting } from './localize';
 import { jsDocTagNames } from './constants';
+import { CompletionItemKind, SymbolKind } from './lsp-enums';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';

@@ -4,7 +4,7 @@ import { spawn } from 'child_process';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	createConnection, DidChangeConfigurationNotification, InitializeResult,
-	ProposedFeatures, SymbolKind, TextDocuments, TextDocumentSyncKind
+	ProposedFeatures, TextDocuments, TextDocumentSyncKind
 } from 'vscode-languageserver/node';
 import { URI } from 'vscode-uri';
 import { get_ahkProvider } from './ahkProvider';
@@ -20,6 +20,7 @@ import {
 	ahk_version, ahkvars, enumNames, fullySemanticToken
 } from './common';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
+import { SymbolKind } from './lsp-enums';
 
 const languageServer = 'ahk2-language-server';
 const documents = new TextDocuments(TextDocument);

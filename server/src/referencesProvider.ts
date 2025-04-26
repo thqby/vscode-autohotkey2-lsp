@@ -1,8 +1,9 @@
-import { CancellationToken, Location, Range, ReferenceParams, SymbolKind } from 'vscode-languageserver';
+import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
 	AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, Variable,
 	ahkuris, ahkvars, find_symbol, find_symbols, lexers
 } from './common';
+import { SymbolKind } from './lsp-enums';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
 	const result: Location[] = [], doc = lexers[params.textDocument.uri.toLowerCase()];

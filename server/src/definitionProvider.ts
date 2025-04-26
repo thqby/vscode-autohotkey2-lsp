@@ -1,6 +1,7 @@
-import { DefinitionParams, LocationLink, SymbolKind, Range, CancellationToken } from 'vscode-languageserver';
+import { DefinitionParams, LocationLink, Range, CancellationToken } from 'vscode-languageserver';
 import { AhkSymbol, lexers, restorePath, find_symbols, Token } from './common';
 import { URI } from 'vscode-uri';
+import { SymbolKind } from './lsp-enums';
 
 export async function defintionProvider(params: DefinitionParams, token: CancellationToken): Promise<LocationLink[] | undefined> {
 	if (token.isCancellationRequested) return;
