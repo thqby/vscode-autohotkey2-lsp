@@ -2004,7 +2004,7 @@ export class Lexer {
 								tk.topofline = 0;
 							next = false;
 						}
-						if ((!tk.topofline || tk.type === 'TK_COMMA') && tk.type !== 'TK_START_BLOCK')
+						if (!tk.topofline || tk.type === 'TK_COMMA')
 							result.push(...parse_line('{', act, min, max));
 						else if (min)
 							_this.addDiagnostic(diagnostic.acceptparams(act, `${min}~${max}`), bak.offset, bak.length);
@@ -3141,10 +3141,8 @@ export class Lexer {
 								let must;
 								if (end === '{') {
 									if (lk.topofline && lk.type === 'TK_RESERVED') {
-										if (lk.content.toLowerCase() === 'switch') {
-											if (!tk.topofline && !_this.get_token(parser_pos, true).topofline)
-												must = true;
-										} else _this.addDiagnostic(diagnostic.unexpected('{'), bo, 1);
+										if (!tk.topofline && !_this.get_token(parser_pos, true).topofline)
+											must = true;
 									} else if (!(lk.op_type === 1 || yields_an_operand(lk)))
 										must = false;
 								} else must = true, yields_an_operand(lk) && _this.addDiagnostic(diagnostic.unexpected('{'), bo, 1);
