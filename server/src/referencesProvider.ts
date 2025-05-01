@@ -179,18 +179,18 @@ function findAllFromScope(scope: AhkSymbol, name: string, kind: SymbolKind, rang
 		}
 		if (node.kind === SymbolKind.Property) {
 			const prop = node as Property;
-			for (const it of [prop.get, prop.set, prop.call])
-				if (it?.children?.length)
-					findAllFromScope(it, name, kind, ranges);
+			for (const it of [prop.get, prop.set])
+				it?.parent === prop && it.children?.length && findAllVar(it, name, ranges, false, false, not_static);
 		}
 	}
 	return ranges;
 }
 
 function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boolean, assume_glo?: boolean, not_static = true) {
-	const fn_is_static = node.kind === SymbolKind.Function && node.static, f = fn_is_static || node.closure;
+	const fn_is_static = node.kind === SymbolKind.Function && node.static;
+	const can_inherit = fn_is_static || node.closure || node.parent?.kind === SymbolKind.Property;
 	let t: Variable, assume = assume_glo;
-	if (fn_is_static && not_static && !global)
+	if (!global && (node.kind !== SymbolKind.Function || fn_is_static && not_static))
 		return;
 	if (global && node.has_this_param && ['THIS', 'SUPER'].includes(name))
 		assume_glo = assume = false;
@@ -198,7 +198,7 @@ function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boole
 		if (!global)
 			return;
 		assume_glo = assume = true;
-	} else if (node.local?.[name] || ((!f || global && !assume_glo) && node.declaration?.[name])) {
+	} else if (node.local?.[name] || ((!can_inherit || global && !assume_glo) && node.declaration?.[name])) {
 		if (!global)
 			return;
 		assume_glo = assume = false;
@@ -216,20 +216,16 @@ function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boole
 				ranges.push(it.selectionRange);
 			if (it.children?.length)
 				findAllVar(it as FuncNode, name, ranges, global, it.kind === SymbolKind.Function ? assume_glo : global || undefined, not_static);
-			if (it.kind === SymbolKind.Property)
-				find2(it as Property);
 		});
 	} else {
 		node.children?.forEach(it => {
 			if (it.children?.length)
 				findAllVar(it as FuncNode, name, ranges, global, global ? false : undefined, not_static);
-			if (it.kind === SymbolKind.Property)
-				find2(it as Property);
+			if (global && it.kind === SymbolKind.Property) {
+				const prop = it as Property;
+				for (const it of [prop.get, prop.set, prop.call])
+					it?.children?.length && findAllVar(it, name, ranges, true, false, not_static);
+			}
 		});
-	}
-	function find2(prop: Property) {
-		for (const it of [prop.get, prop.set, prop.call])
-			if (it?.children?.length)
-				findAllFromScope(it, name, SymbolKind.Variable, ranges);
 	}
 }

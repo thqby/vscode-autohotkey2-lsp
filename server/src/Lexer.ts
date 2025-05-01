@@ -186,6 +186,7 @@ export interface Variable extends AhkSymbol {
 export interface Property extends Variable {
 	local?: Record<string, AhkSymbol>
 	declaration?: Record<string, AhkSymbol>
+	unresolved_vars?: Record<string, Variable>
 	has_this_param?: boolean
 	params?: Variable[]
 	param_offsets?: number[]
@@ -1660,6 +1661,22 @@ export class Lexer {
 											tn.has_this_param = true, adddeclaration(tn), tk.fat_arrow_end = true;
 											_this.linepos[prop.range.end.line] = oo;
 											fc.semantic.modifier! |= SemanticTokenModifiers.readonly;
+										}
+										if (prop.children.length) {
+											const ps = [prop.get, prop.set].filter(Boolean) as FuncNode[];
+											for (const k in prop.local)
+												for (const f of ps)
+													if (k in f.unresolved_vars!)
+														f.declaration[k] = f.unresolved_vars![k], delete f.unresolved_vars![k];
+											for (const k in prop.unresolved_vars) {
+												let unset = true;
+												for (const f of ps)
+													if ((k in f.declaration) && !(k in f.global))
+														delete f.local[k], unset = false;
+												if (unset) continue;
+												prop.local![k] = prop.declaration![k] = prop.unresolved_vars[k];
+												delete prop.unresolved_vars[k];
+											}
 										}
 										break;
 									}

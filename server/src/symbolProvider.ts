@@ -101,12 +101,12 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				result.push(info);
 		});
 		for (const info of t) {
-			let inherit: Record<string, AhkSymbol> = {}, s: Variable;
-			const oig = outer_is_global, fn = info as FuncNode;
+			let inherit: Record<string, AhkSymbol> = {}, oig = outer_is_global, s: Variable;
+			const fn = info as FuncNode;
 			switch (info.kind) {
 				case SymbolKind.Class: {
 					const cls = info as ClassNode;
-					inherit = { THIS, SUPER }, outer_is_global = false;
+					inherit = { THIS, SUPER }, oig = false;
 					for (const dec of [cls.property, cls.prototype?.property ?? {}])
 						Object.values(dec).forEach(it => it.selectionRange.end.character && result.push(it));
 					break;
@@ -115,31 +115,33 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					if (fn.has_this_param) {
 						const prop = info as Property;
 						for (const s of [prop.get, prop.set, prop.call]) {
-							if (!s) continue;
-							t.push(s), s.selectionRange.end.character && result.push(s);
+							if (s?.parent === prop || s?.kind === SymbolKind.Method)
+								t.push(s), s.selectionRange.end.character && result.push(s);
 						}
 					} else break;
 				// fall through
 				case SymbolKind.Method:
 				case SymbolKind.Function:
-					if (fn.has_this_param)
+					if (fn.has_this_param) {
 						inherit = { THIS, SUPER };
-					else {
+						if (fn.parent?.kind === SymbolKind.Property)
+							Object.assign(inherit, (fn.parent as Property).local);
+					} else {
 						if (vars.SUPER?.range.end.character === 0)
 							delete vars.SUPER;
 						if (fn.assume !== FuncScope.GLOBAL) {
 							if (fn.assume === FuncScope.STATIC)
-								outer_is_global = false;
+								oig = false;
 							if (fn.static) {
 								for (const [k, v] of Object.entries(vars))
 									if (v.static || v === gvar[k])
 										inherit[k] = v;
 							} else inherit = { ...vars };
-						} else outer_is_global = true;
+						} else oig = true;
 					}
 				// fall through
 				case SymbolKind.Event:
-					outer_is_global ||= fn.assume === FuncScope.GLOBAL;
+					oig ||= fn.assume === FuncScope.GLOBAL;
 					for (const [k, v] of Object.entries(fn.global ?? {}))
 						s = inherit[k] = gvar[k] ??= v, converttype(v, s, s === ahkvars[k]).definition = s;
 					for (const [k, v] of Object.entries(fn.local ?? {})) {
@@ -164,7 +166,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						if ((s = inherit[k]))
 							s !== v && (converttype(v, s, s === ahkvars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable));
-						else if (outer_is_global)
+						else if (oig)
 							s = gvar[k] ??= (result.push(v), (v as Variable).is_global = true, lex.declaration[k] = v),
 								converttype(v, s, s === ahkvars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
@@ -190,8 +192,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					break;
 				default: inherit = { ...vars }; break;
 			}
-			flatTree(info, inherit, outer_is_global);
-			outer_is_global = oig;
+			flatTree(info, inherit, oig);
 		}
 	}
 	function checksamename(lex: Lexer) {
