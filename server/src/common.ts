@@ -69,7 +69,6 @@ export interface AHKLSSettings {
 	WorkingDirs: string[]
 }
 
-const realpath = realpathSync.native;
 const STAGE: Record<string, number | string> = { ALPHA: 3, BETA: 2, RC: 1, 3: 'alpha', 2: 'beta', 1: 'rc' };
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
@@ -184,30 +183,32 @@ export function openAndParse(path: string, showError = true, cache = true) {
 export function restorePath(path: string): string {
 	if (process.env.BROWSER)
 		return path;
-	let path2;
-	try {
-		path2 = realpath(path);
-	} catch { return path; }
-	const s1 = path.toUpperCase(), s2 = path2.toUpperCase();
-	if (s1 === s2)
-		return path2;
-	const [p2, a2, a1] = [path2, s2, s1].map(s => s.split(/[/\\]/));
-	const l = a1.length;
-	try {
-		let i, s;
-		for (i = 0; i < l && a1[i] === a2[i]; i++);
-		next: for (path2 = p2.slice(0, i ||= (p2[0] = a1[0], 1)).join(sep); i < l;) {
-			s = a1[i++];
-			for (const ent of readdirSync(path2 += sep)) {
-				if (ent.toUpperCase() === s) {
-					path2 += ent;
-					continue next;
+	else {
+		let path2;
+		try {
+			path2 = realpathSync.native(path);
+		} catch { return path; }
+		const s1 = path.toUpperCase(), s2 = path2.toUpperCase();
+		if (s1 === s2)
+			return path2;
+		const [p2, a2, a1] = [path2, s2, s1].map(s => s.split(/[/\\]/));
+		const l = a1.length;
+		try {
+			let i, s;
+			for (i = 0; i < l && a1[i] === a2[i]; i++);
+			next: for (path2 = p2.slice(0, i ||= (p2[0] = a1[0], 1)).join(sep); i < l;) {
+				s = a1[i++];
+				for (const ent of readdirSync(path2 += sep)) {
+					if (ent.toUpperCase() === s) {
+						path2 += ent;
+						continue next;
+					}
 				}
+				break;
 			}
-			break;
-		}
-	} catch { }
-	return path2 + path.substring(path2.length);
+		} catch { }
+		return path2 + path.substring(path2.length);
+	}
 }
 
 export function getlocalefilepath(filepath: string): string | undefined {
