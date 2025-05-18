@@ -1,5 +1,5 @@
 import { commands, ExtensionContext, languages, Range, RelativePattern, SnippetString, Uri, window, workspace, WorkspaceEdit } from 'vscode';
-import { LanguageClient } from 'vscode-languageclient/browser';
+import { LanguageClient, ProtocolConnection } from 'vscode-languageclient/browser';
 
 let client: LanguageClient;
 
@@ -46,18 +46,25 @@ export function activate(context: ExtensionContext) {
 				}
 			}
 		},
-		'getWorkspaceFileContent': async (params: string[]) => (await workspace.openTextDocument(Uri.parse(params[0]))).getText()
+		'getWorkspaceFileContent': async (params: string[]) => workspace.fs.readFile(Uri.parse(params[0]))
 	};
-
 	client = new LanguageClient('AutoHotkey2', 'AutoHotkey2', {
 		documentSelector: [{ language: 'ahk2' }],
 		markdown: { isTrusted: true, supportHtml: true },
-		initializationOptions: {
-			extensionUri: !process.env.DEBUG ? context.extensionUri.toString() : unpkg_url(context),
-			commands: Object.keys(request_handlers),
-			...JSON.parse(JSON.stringify(workspace.getConfiguration('AutoHotkey2')))
+		initializationOptions: () => {
+			const connection = (client as unknown as { _connection: ProtocolConnection })._connection;
+			return {
+				extensionUri: context.extensionUri.toString(),
+				commands: Object.entries(request_handlers).map(([method, handler]) => {
+					// add request handlers before initialize
+					connection.onRequest(method, handler);
+					return method;
+				}),
+				...JSON.parse(JSON.stringify(workspace.getConfiguration('AutoHotkey2')))
+			};
 		}
 	}, new Worker(serverMain.toString()));
+	client.start();
 
 	context.subscriptions.push(
 		commands.registerTextEditorCommand('ahk2.update.versioninfo', async textEditor => {
@@ -109,17 +116,8 @@ export function activate(context: ExtensionContext) {
 				{ uri: '', id: '' } : { uri: e.uri.toString(), id: e.languageId });
 		})
 	);
-
-	client.start().then(() => {
-		Object.entries(request_handlers).forEach(handler => client.onRequest(...handler));
-	});
 }
 
 export function deactivate() {
 	return client?.stop();
-}
-
-function unpkg_url(context: ExtensionContext) {
-	const pk = context.extension.packageJSON;
-	return `https://${pk.publisher}.vscode-unpkg.net/${pk.publisher}/${pk.name}/${pk.version}/extension/`;
 }

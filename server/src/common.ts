@@ -134,19 +134,20 @@ interface LibSymbol extends Array<AhkSymbol> {
 	islib: boolean
 }
 
+function buffer_decode(buf: Buffer | Uint8Array) {
+	let encoding = 'utf-8', fatal;
+	if (buf[0] === 0xff && buf[1] === 0xfe)
+		encoding = 'utf-16le';
+	else if (!(buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf))
+		fatal = true;
+	try { return new TextDecoder(encoding, { fatal }).decode(buf); } catch { }
+}
+
 export function read_ahk_file(path: string, showError = true) {
-	let buf: Buffer;
 	try {
-		buf = readFileSync(path);
-		if (buf[0] === 0xff && buf[1] === 0xfe)
-			return buf.toString('utf16le');
-		if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
-			return buf.toString('utf8').substring(1);
-		try {
-			return new TextDecoder('utf8', { fatal: true }).decode(buf);
-		} catch {
-			showError && connection?.window.showErrorMessage(diagnostic.invalidencoding(path));
-		}
+		const s = buffer_decode(readFileSync(path));
+		showError && s === undefined && connection?.window.showErrorMessage(diagnostic.invalidencoding(path));
+		return s;
 	}
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	catch (e: any) {
@@ -159,15 +160,11 @@ export function read_ahk_file(path: string, showError = true) {
 }
 
 export function openFile(path: string, showError = true): TextDocument | undefined {
-	if (process.env.BROWSER) {
-		const data = getwebfile(path);
-		if (data)
-			return TextDocument.create(data.url, 'ahk2', -10, data.text);
-	} else {
-		const text = read_ahk_file(path, showError);
-		if (text !== undefined)
-			return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, text);
-	}
+	if (process.env.BROWSER)
+		return;
+	const text = read_ahk_file(path, showError);
+	if (text !== undefined)
+		return TextDocument.create(URI.file(path).toString(), 'ahk2', -10, text);
 }
 
 export function openAndParse(path: string, showError = true, cache = true) {
@@ -211,50 +208,40 @@ export function restorePath(path: string): string {
 	}
 }
 
-export function getlocalefilepath(filepath: string): string | undefined {
+function get_locale_path(filepath: string) {
 	const t = filepath.match(/<>./);
-	let s: string;
 	if (t) {
-		if (existsSync(s = filepath.replace('<>', locale)))
+		let s = filepath.replace('<>', locale);
+		if (existsSync(s))
 			return s;
-		else if (locale.toLowerCase() === 'zh-tw' && existsSync(s = filepath.replace('<>', 'zh-cn')))
+		if (locale === 'zh-tw' && existsSync(s = filepath.replace('<>', 'zh-cn')))
 			return s;
-		else if (existsSync(s = filepath.replace(t[0], '')))
+		if (existsSync(s = filepath.replace(t[0], '')))
 			return s;
 	} else if (existsSync(filepath))
 		return filepath;
-	return undefined;
 }
 
-export function getlocalefile(filepath: string, encoding?: BufferEncoding) {
-	const path = getlocalefilepath(filepath);
-	if (path)
-		return readFileSync(path, encoding && { encoding });
-	return undefined;
+export function readLocaleFile(filepath: string) {
+	const path = get_locale_path(filepath);
+	return path && buffer_decode(readFileSync(path));
 }
 
-export function getwebfile(filepath: string) {
-	let s: string | undefined;
-	const t = filepath.match(/<>./), ff: string[] = [];
-	const req = new XMLHttpRequest();
-	if (t) {
-		ff.push(filepath.replace('<>', locale));
-		if (locale.toLowerCase() === 'zh-tw')
-			ff.unshift(filepath.replace('<>', 'zh-cn'));
-		ff.unshift(filepath.replace(t[0], ''));
-	} else ff.push(filepath);
-	if ((s = ff.pop()))
-		return get(s);
-
-	function get(url: string): { url: string, text: string } | undefined {
-		req.open('GET', url, false);
-		req.send();
-		if (req.status === 200) {
-			return { url, text: req.responseText };
-		} else if ((s = ff.pop()))
-			return get(s);
-		return undefined;
-	}
+export function getWorkspaceFile(uri: string) {
+	const m = uri.match(/<>./), uris: string[] = [];
+	if (m) {
+		uris.push(uri.replace('<>', locale));
+		locale === 'zh-tw' && uris.push(uri.replace('<>', 'zh-cn'));
+		uris.push(uri.replace(m[0], ''));
+	} else uris.push(uri);
+	let p = Promise.reject();
+	for (const u of uris)
+		p = p.catch((e) => connection!.sendRequest('getWorkspaceFileContent', [uri = u]));
+	return p.then(buf => {
+		const text = buffer_decode(buf);
+		if (text !== undefined)
+			return { uri, text };
+	}, () => { });
 }
 
 export function initahk2cache() {
@@ -276,50 +263,42 @@ export function initahk2cache() {
 
 export function loadahk2(filename = 'ahk2', d = 3) {
 	let path: string | undefined;
-	const file = `${rootdir}/syntaxes/<>/${filename}`;
+	const file = `${rootdir}/syntaxes/<>/${filename}`, files: string[] = [];
 	if (process.env.BROWSER) {
-		const td = openFile(file + '.d.ahk');
-		if (td) {
-			const doc = new Lexer(td, undefined, d);
-			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
-		}
-		let data;
-		if (filename === 'ahk2')
-			if ((data = getwebfile(`${rootdir}/syntaxes/ahk2_common.json`)))
-				build_item_cache(JSON.parse(data.text));
-		if ((data = getwebfile(file + '.json')))
-			build_item_cache(JSON.parse(data.text));
+		getWorkspaceFile(`${file}.d.ahk`).then(v => v && load_td(TextDocument.create(v.uri, 'ahk2', -10, v.text)));
+		filename === 'ahk2' && files.push(`${rootdir}/syntaxes/ahk2_common.json`);
+		files.push(`${file}.json`);
+		files.forEach(file => getWorkspaceFile(file).then(r => build_item_cache(r?.text)));
 	} else {
 		const syntaxes = extsettings.Syntaxes;
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
-		let td: TextDocument | undefined;
-		if ((path = getfilepath('.d.ahk')) && (td = openFile(restorePath(path)))) {
-			const doc = new Lexer(td, undefined, d);
-			doc.parseScript(), lexers[doc.uri] = doc, ahkuris[filename] = doc.uri;
-		}
-		if ((path = getfilepath('.json')))
-			build_item_cache(JSON.parse(readFileSync(path, { encoding: 'utf8' })));
+		const td = (path = getfilepath('.d.ahk')) && openFile(restorePath(path));
+		td && load_td(td);
 		if (filename === 'ahk2') {
-			build_item_cache(JSON.parse(readFileSync(`${rootdir}/syntaxes/ahk2_common.json`, { encoding: 'utf8' })));
-			if (syntaxes)
-				opendir(syntaxes).then(async (dir) => {
-					for await (const file of dir)
-						if (!file.isDirectory() && file.name.toLowerCase().endsWith('.snippet.json'))
-							build_item_cache(JSON.parse(await readFile(`${syntaxes}/${file}`, { encoding: 'utf8' })));
-				});
+			existsSync(path = `${rootdir}/syntaxes/ahk2_common.json`) && files.push(path);
+			syntaxes && opendir(syntaxes).then(async dir => {
+				for await (const file of dir)
+					!file.isDirectory() && file.name.toLowerCase().endsWith('.snippet.json') &&
+						readFile(`${syntaxes}/${file}`).then(buf => build_item_cache(buffer_decode(buf)));
+			});
 		}
+		(path = getfilepath('.json')) && files.push(path);
+		files.forEach(file => readFile(file).then(buf => build_item_cache(buffer_decode(buf))));
 		function getfilepath(ext: string) {
-			return getlocalefilepath(file2 + ext) || (file2 !== file ? getlocalefilepath(file + ext) : undefined);
+			return get_locale_path(file2 + ext) || (file2 !== file ? get_locale_path(file + ext) : undefined);
 		}
 	}
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	function build_item_cache(ahk2: any) {
+	function load_td(td: TextDocument) {
+		const lex = new Lexer(td, undefined, d);
+		lex.parseScript(), lexers[lex.uri] = lex, ahkuris[filename] = lex.uri;
+	}
+	function build_item_cache(str?: string) {
+		const obj = JSON.parse(str || '{}');
 		let insertTextFormat: InsertTextFormat, kind: CompletionItemKind, c;
 		let snip: { prefix?: string, body: string, description?: string, syntax?: string };
 		const rg = Range.create(0, 0, 0, 0);
-		for (const key in ahk2) {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const arr: any[] = ahk2[key];
+		for (const key in obj) {
+			const arr = obj[key];
 			switch (key) {
 				case 'constants':
 					kind = CompletionItemKind.Constant;

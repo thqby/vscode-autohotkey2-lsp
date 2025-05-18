@@ -1,4 +1,4 @@
-import { rootdir, getlocalefile, getwebfile, version_decode } from './common';
+import { rootdir, version_decode, getWorkspaceFile, readLocaleFile, HIDDEN_PARAMS } from './common';
 
 let loadedCollection: Record<string, string> = {};
 
@@ -104,13 +104,15 @@ export const response = {
 }
 
 export function loadlocalize() {
-	if (process.env.BROWSER) {
-		const data = getwebfile(`${rootdir}/package.nls.<>.json`);
-		if (data)
-			loadedCollection = JSON.parse(data.text);
-	} else {
-		const s = getlocalefile(`${rootdir}/package.nls.<>.json`, 'utf8') as string;
-		loadedCollection = s ? JSON.parse(s) : {};
+	const path = `${rootdir}/package.nls.<>.json`;
+	return process.env.BROWSER ? getWorkspaceFile(path).then(v => load(v?.text))
+		: load(readLocaleFile(path));
+	function load(str?: string) {
+		if (!str) return;
+		loadedCollection = JSON.parse(str);
+		let k: keyof typeof HIDDEN_PARAMS;
+		for (k in HIDDEN_PARAMS)
+			HIDDEN_PARAMS[k].detail = completionitem[k]();
 	}
 }
 

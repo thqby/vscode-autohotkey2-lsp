@@ -22,7 +22,7 @@ const connection = setConnection(createConnection(messageReader, messageWriter))
 let hasConfigurationCapability = false, hasWorkspaceFolderCapability = false;
 let uri_switch_to_ahk2 = '';
 
-connection.onInitialize(params => {
+connection.onInitialize(async params => {
 	const capabilities = params.capabilities;
 	const configs: AHKLSSettings = params.initializationOptions;
 	hasConfigurationCapability = !!(
@@ -78,7 +78,7 @@ connection.onInitialize(params => {
 	set_ahk_h(true);
 	setLocale(params.locale);
 	setRootDir(configs.extensionUri!);
-	loadlocalize();
+	await loadlocalize();
 	updateConfigs(configs);
 	setWorkspaceFolders(workspaceFolders);
 	setVersion('3.0.0');

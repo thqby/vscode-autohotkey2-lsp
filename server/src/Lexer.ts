@@ -17,7 +17,7 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { builtin_ahkv1_commands } from './constants';
-import { action, completionitem, diagnostic, warn } from './localize';
+import { action, diagnostic, warn } from './localize';
 import {
 	a_vars, ahk_version, ahkuris, ahkvars, alpha_11, alpha_3, connection, extsettings,
 	hoverCache, inactivevars, isahk2_h, lexers, libdirs, libfuncs, locale, openAndParse, openFile, reserved_index,
@@ -348,15 +348,21 @@ export const $DLLFUNC = { ...STRING };
 export const $DIRPATH = { ...STRING };
 export const $FILEPATH = { ...STRING };
 export const THIS: Variable = {
+	assigned: true,
+	decl: true,
 	def: true,
-	detail: completionitem.this(),
 	is_param: true,
 	kind: SymbolKind.Variable,
 	name: 'this',
 	range: ZERO_RANGE,
 	selectionRange: ZERO_RANGE,
 };
-export const SUPER: Variable = { ...THIS, name: 'super', detail: completionitem.super() };
+export const SUPER: Variable = { ...THIS, name: 'super' };
+export const HIDDEN_PARAMS = {
+	this: THIS, super: SUPER,
+	thishotkey: { ...THIS, name: 'ThisHotkey' } as Variable,
+	value: { ...THIS, name: 'Value' } as Variable,
+};
 
 export const allIdentifierChar = new RegExp('^[^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+$');
 let commentTags: RegExp | undefined;
@@ -1586,7 +1592,6 @@ export class Lexer {
 												unexpected(tk);
 											while (nexttoken() && tk.type as string !== 'TK_END_BLOCK') {
 												if (tk.topofline && /^[gs]et$/.test(_low = tk.content.toLowerCase())) {
-													let v: Variable;
 													nexttoken(), nk = lk;
 													if (tk.content as string === '=>') {
 														tn = FuncNode.create(_low, SymbolKind.Function,
@@ -1597,8 +1602,7 @@ export class Lexer {
 														tk.fat_arrow_end = true;
 														_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 														if (_low === 'set')
-															tn.params.unshift(v = Variable.create('Value', SymbolKind.Variable,
-																Range.create(0, 0, 0, 0))), v.is_param = v.assigned = v.def = true, v.detail = completionitem.value();
+															tn.params.unshift(HIDDEN_PARAMS.value);
 														else prop.returns = tn.returns;
 														tn.has_this_param = true, adddeclaration(tn);
 														_this.linepos[tn.range.end.line] = nk.offset;
@@ -1608,8 +1612,7 @@ export class Lexer {
 														sk = tk, tn.parent = prop, tn.children = parse_block(3, tn, classfullname);
 														tn.range.end = document.positionAt(parser_pos);
 														if (_low === 'set')
-															tn.params.unshift(v = Variable.create('Value', SymbolKind.Variable,
-																Range.create(0, 0, 0, 0))), v.is_param = v.assigned = v.def = true, v.detail = completionitem.value();
+															tn.params.unshift(HIDDEN_PARAMS.value);
 														else prop.returns = tn.returns;
 														tn.has_this_param = true, adddeclaration(tn);
 														_this.addSymbolFolding(tn, sk.offset);
@@ -1783,7 +1786,6 @@ export class Lexer {
 							if ((_cm = comments[tn.selectionRange.start.line]))
 								set_detail(tn, _cm);
 							tk.symbol = tn, nexttoken();
-							let v: Variable;
 							tn.declaration = {}, result.push(tn);
 							tn.global = {}, tn.local = {}, tn.labels = {};
 							while (tk.type as string === 'TK_SHARP')
@@ -1805,9 +1807,7 @@ export class Lexer {
 								!maybev1 && _this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
 								break;
 							}
-							tn.params = [v = Variable.create('ThisHotkey', SymbolKind.Variable,
-								make_range(0, 0))];
-							v.detail = completionitem.thishotkey();
+							tn.params = [HIDDEN_PARAMS.thishotkey];
 							if (tk.content === '{') {
 								tk.previous_pair_pos = ht.offset;
 								tn.children = parse_block(1, tn);
@@ -7822,6 +7822,8 @@ export function find_symbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos
 				return t.uri ??= uri, t;
 	}
 	function find_include_symbol(list: Record<string, string>, name: string) {
+		if (process.env.BROWSER)
+			return;
 		let ret, t;
 		for (const uri in list) {
 			if ((t = (lexers[uri] ?? openAndParse(restorePath(list[uri]), false))?.findSymbol(name, kind)))
