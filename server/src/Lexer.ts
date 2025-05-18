@@ -738,7 +738,7 @@ export class Lexer {
 			this.d = d || 1, allow_$ ||= true;
 			this.parseScript = function (): void {
 				const p: ClassNode[] = [], cls: string[] = [], uri = this.uri
-				let _low = '', i = 0, j = 0, l = 0, blocks = 0, isstatic = false, rg = make_range(0, 0);
+				let _low = '', i = 0, j = 0, l = 0, blocks = 0, isstatic = false, rg = ZERO_RANGE;
 				let _parent = DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg, rg, this.children) as ClassNode;
 				let tokens: Token[] = [], tk: Token, lk: Token, _cm: Token | undefined;
 
@@ -754,7 +754,8 @@ export class Lexer {
 					switch ((tk = tokens[i]).type) {
 						case 'TK_WORD':
 							if (tk.topofline > 0) {
-								if (i < l - 4 && tk.content === 'class') {
+								if (i < l - 4 && tk.content === 'class' && (lk = tokens[i + 1]).topofline === 0 &&
+									(lk.type === 'TK_WORD' || allIdentifierChar.test(lk.content))) {
 									tk.type = 'TK_RESERVED';
 									break;
 								}
@@ -871,13 +872,14 @@ export class Lexer {
 							}
 							i = j + 1, isstatic = false;
 							break;
+						case 'TK_OPERATOR':
+							if (!allIdentifierChar.test(tk.content)) {
+								i++, isstatic = false;
+								break;
+							}
+						// fall through
 						case 'TK_RESERVED':
-							isstatic = false;
-							if (tk.topofline !== 1)
-								tk.type = 'TK_WORD';
-							else if ((_low = tk.content.toLowerCase()) === 'static')
-								isstatic = true, i++;
-							else if (_low === 'class') {
+							if ((_low = tk.content.toLowerCase()) === 'class') {
 								let extends_ = '';
 								const cl = DocumentSymbol.create((tk = tokens[++i]).content, undefined, SymbolKind.Class,
 									make_range(tokens[i - 1].offset, 0), make_range(tk.offset, tk.length), []) as ClassNode;
@@ -925,9 +927,11 @@ export class Lexer {
 									inactivevars[_low] = cl.since;
 								blocks++, p.push(_parent), _parent = cl, cl.type_annotations = [cl.full];
 								i = j + 1;
-							} else if (_low === 'global' && tokens[i + 1].type === 'TK_WORD')
-								i++;
-							else tk.type = 'TK_WORD';
+							} else if (tk.topofline && 'global,static'.includes(_low = tk.content.toLowerCase()) &&
+								(!blocks || _low !== 'global') && (lk = tokens[i + 1])?.topofline === 0 &&
+								(lk.type === 'TK_WORD' || allIdentifierChar.test(lk.content)))
+								i++, isstatic = _low === 'static';
+							else tk.type = 'TK_WORD', tk.topofline && (isstatic = false);
 							break;
 						case 'TK_END_BLOCK':
 							if (blocks) {
