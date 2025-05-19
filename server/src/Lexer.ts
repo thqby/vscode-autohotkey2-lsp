@@ -293,7 +293,7 @@ namespace FuncNode {
 
 namespace Variable {
 	export function create(name: string, kind: SymbolKind, range: Range): Variable {
-		return { name, kind, range, selectionRange: { ...range } };
+		return { name, kind, range: { ...range }, selectionRange: range };
 	}
 }
 
@@ -333,7 +333,7 @@ const OP_INDEX = reserved_words.indexOf('and');
 const PROP_NEXT_TOKEN = ['[', '{', '=>'];
 const RESERVED_OP = 'isset throw super false true'.split(' ');
 const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 };
-const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
+export const ZERO_RANGE = Range.create(0, 0, 0, 0);
 const META_FUNCNAME = ['__NEW', '__INIT', '__ITEM', '__ENUM', '__GET', '__CALL', '__SET', '__DELETE'];
 export const ANY = create_prototype('Any');
 const FLOAT = create_prototype('Float', SymbolKind.Number);
@@ -2309,10 +2309,10 @@ export class Lexer {
 				tn.prototype = { ...tn, cache: [], detail: undefined, property: tn.$property = {} };
 				tn.children = [], tn.cache = [], tn.property = {};
 				tn.type_annotations = [tn.full];
-				let t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], [], true);
+				let t = FuncNode.create('__Init', SymbolKind.Method, ZERO_RANGE, ZERO_RANGE, [], [], true);
 				(tn.property.__INIT = t).ranges = [], t.parent = tn;
 				t.full = `(${tn.full}) static __Init()`, t.has_this_param = true;
-				t = FuncNode.create('__Init', SymbolKind.Method, make_range(0, 0), make_range(0, 0), [], []);
+				t = FuncNode.create('__Init', SymbolKind.Method, ZERO_RANGE, ZERO_RANGE, [], []);
 				(tn.$property!.__INIT = t).ranges = [], t.parent = tn.prototype!;
 				t.full = `(${tn.full}) __Init()`, t.has_this_param = true;
 				tn.children = parse_block(2, tn as unknown as FuncNode, classfullname + cl.content + '.');
@@ -2776,7 +2776,7 @@ export class Lexer {
 						break;
 					case '#dllimport':
 						if ((m = data.content.match(/^((\w|[^\x00-\x7f])+)/i))) {
-							const rg = make_range(data.offset, m[0].length), rg2 = Range.create(0, 0, 0, 0);
+							const rg = make_range(data.offset, m[0].length);
 							const tps: Record<string, string> = { t: 'ptr', i: 'int', s: 'str', a: 'astr', w: 'wstr', h: 'short', c: 'char', f: 'float', d: 'double', I: 'int64' };
 							const n = m[0], args: Variable[] = [];
 							let arg: Variable | undefined, u = '', i = 0, rt = 'i';
@@ -2787,7 +2787,7 @@ export class Lexer {
 									u = 'u';
 								else {
 									if (tps[c])
-										args.push(arg = Variable.create(`p${++i}_${u + tps[c]}`, SymbolKind.Variable, rg2)), arg.defaultVal = null, u = '';
+										args.push(arg = Variable.create(`p${++i}_${u + tps[c]}`, SymbolKind.Variable, ZERO_RANGE)), arg.defaultVal = null, u = '';
 									else if (arg && (c === '*' || c === 'p'))
 										arg.name += 'p', arg = undefined;
 									else {
@@ -3900,7 +3900,7 @@ export class Lexer {
 								else t.returns = pp?.VALUE?.returns;
 							}
 							if ((pp = pp?.CALL)) {
-								t = Variable.create('', SymbolKind.Variable, make_range(0, 0)), t.arr = true;
+								t = Variable.create('', SymbolKind.Variable, ZERO_RANGE), t.arr = true;
 								t = FuncNode.create(prop, SymbolKind.Method, rg, rg, [t], undefined, s);
 								t.full = `(${classfullname.slice(0, -1)}) ${t.full}`;
 								t.returns = pp.returns, (t as FuncNode).eval = true;
@@ -8034,7 +8034,7 @@ export function check_same_name_error(decs: Record<string, AhkSymbol>, syms: Ahk
 	const severity = DiagnosticSeverity.Error;
 	let l = '', v1: Variable, v2: Variable;
 	for (const it of syms) {
-		if (!it.name || !it.selectionRange.end.character)
+		if (!it.name || it.selectionRange === ZERO_RANGE)
 			continue;
 		let is_var;
 		switch ((v1 = it as Variable).kind) {

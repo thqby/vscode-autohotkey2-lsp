@@ -1,4 +1,4 @@
-import { CompletionItem, Hover, InsertTextFormat, Range } from 'vscode-languageserver-types';
+import { CompletionItem, Hover, InsertTextFormat } from 'vscode-languageserver-types';
 import { Connection, MessageConnection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
@@ -6,7 +6,7 @@ import { readFileSync, realpathSync, existsSync, lstatSync, readlinkSync, readdi
 import { opendir, readFile } from 'fs/promises';
 import { execSync } from 'child_process';
 import { resolve, sep } from 'path';
-import { AhkSymbol, ActionType, FormatOptions, Lexer, check_formatopts, update_comment_tags } from './Lexer';
+import { AhkSymbol, ActionType, FormatOptions, Lexer, ZERO_RANGE, check_formatopts, update_comment_tags } from './Lexer';
 import { diagnostic, setting } from './localize';
 import { jsDocTagNames } from './constants';
 import { CompletionItemKind, SymbolKind } from './lsp-enums';
@@ -296,7 +296,6 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 		const obj = JSON.parse(str || '{}');
 		let insertTextFormat: InsertTextFormat, kind: CompletionItemKind, c;
 		let snip: { prefix?: string, body: string, description?: string, syntax?: string };
-		const rg = Range.create(0, 0, 0, 0);
 		for (const key in obj) {
 			const arr = obj[key];
 			switch (key) {
@@ -372,7 +371,7 @@ export function loadahk2(filename = 'ahk2', d = 3) {
 						ahkvars[snip.body.toUpperCase()] = {
 							name: snip.body,
 							kind: SymbolKind.Variable,
-							range: rg, selectionRange: rg,
+							range: ZERO_RANGE, selectionRange: ZERO_RANGE,
 							detail: snip.description
 						};
 					}

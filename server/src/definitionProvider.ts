@@ -1,5 +1,5 @@
 import { DefinitionParams, LocationLink, Range, CancellationToken } from 'vscode-languageserver';
-import { AhkSymbol, lexers, restorePath, find_symbols, Token } from './common';
+import { AhkSymbol, lexers, restorePath, find_symbols, Token, ZERO_RANGE } from './common';
 import { URI } from 'vscode-uri';
 import { SymbolKind } from './lsp-enums';
 
@@ -30,7 +30,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 		return;
 	const set: AhkSymbol[] = [];
 	find_symbols(lex, context)?.forEach(it => {
-		if (!set.includes(it.node) && set.push(it.node) && it.node.selectionRange.end.character && (uri = it.node.uri ?? it.uri))
+		if (!set.includes(it.node) && set.push(it.node) && it.node.selectionRange !== ZERO_RANGE && (uri = it.node.uri ?? it.uri))
 			locas.push(LocationLink.create(lexers[uri].document.uri, it.node.range, it.node.selectionRange));
 	});
 	return locas;

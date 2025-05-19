@@ -1,6 +1,6 @@
 import { CancellationToken, ExecuteCommandParams, Position, Range } from 'vscode-languageserver';
 import {
-	AhkSymbol, ClassNode, FuncNode, Lexer, Property, Token, Variable,
+	AhkSymbol, ClassNode, FuncNode, Lexer, Property, Token, Variable, ZERO_RANGE,
 	connection, extsettings, find_class, generate_type_annotation,
 	join_types, lexers, parse_include, restorePath, semanticTokensOnFull,
 	traverse_include, update_include_cache
@@ -132,7 +132,7 @@ export function exportSymbols(uri: string) {
 	function dump(nodes: AhkSymbol[], result: any, lex: Lexer, _this?: ClassNode) {
 		let kind: SymbolKind, fn: FuncNode, cl: ClassNode, t;
 		for (let it of nodes) {
-			if (!it.selectionRange.end.character)
+			if (it.selectionRange === ZERO_RANGE)
 				continue;
 			switch (kind = it.kind) {
 				case SymbolKind.Class:

@@ -5,7 +5,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import {
 	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
-	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable,
+	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable, ZERO_RANGE,
 	ahk_version, ahkuris, ahkvars, alpha_3, check_same_name_error, connection, decltype_expr,
 	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor, get_class_member, get_func_param_count,
 	inactivevars, is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
@@ -89,7 +89,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				if (sym === info || !sym)
 					return;
 				(tk = converttype(info, sym, sym === ahkvars[name])).definition = sym;
-				if (!sym.selectionRange.end.character)
+				if (sym.selectionRange === ZERO_RANGE)
 					delete tk.semantic;
 				else if (info.kind !== SymbolKind.Variable)
 					result.push(info);
@@ -108,7 +108,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					const cls = info as ClassNode;
 					inherit = { THIS, SUPER }, oig = false;
 					for (const dec of [cls.property, cls.prototype?.property ?? {}])
-						Object.values(dec).forEach(it => it.selectionRange.end.character && result.push(it));
+						Object.values(dec).forEach(it => it.selectionRange !== ZERO_RANGE && result.push(it));
 					break;
 				}
 				case SymbolKind.Property:
@@ -116,7 +116,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						const prop = info as Property;
 						for (const s of [prop.get, prop.set, prop.call]) {
 							if (s?.parent === prop || s?.kind === SymbolKind.Method)
-								t.push(s), s.selectionRange.end.character && result.push(s);
+								t.push(s), s.selectionRange !== ZERO_RANGE && result.push(s);
 						}
 					} else break;
 				// fall through
@@ -127,7 +127,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						if (fn.parent?.kind === SymbolKind.Property)
 							Object.assign(inherit, (fn.parent as Property).local);
 					} else {
-						if (vars.SUPER?.range.end.character === 0)
+						if (vars.SUPER?.selectionRange === ZERO_RANGE)
 							delete vars.SUPER;
 						if (fn.assume !== FuncScope.GLOBAL) {
 							if (fn.assume === FuncScope.STATIC)
@@ -265,7 +265,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		switch (kind) {
 			case SymbolKind.Variable:
 				if (source.is_param) {
-					if (!it.selectionRange.end.character)
+					if (it.selectionRange === ZERO_RANGE)
 						return {} as Token;
 					st = SemanticTokenTypes.parameter;
 				} else if (!islib)

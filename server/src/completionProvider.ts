@@ -6,7 +6,7 @@ import {
 } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 import {
-	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AhkSymbol, ClassNode, FuncNode, Maybe, Property, STRING, SemanticTokenTypes, Token, Variable,
+	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AhkSymbol, ClassNode, FuncNode, Maybe, Property, STRING, SemanticTokenTypes, Token, Variable, ZERO_RANGE,
 	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache, completionitem,
 	decltype_expr, dllcalltpe, extsettings, find_class, find_symbol, find_symbols, get_detail,
 	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
@@ -942,7 +942,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				break;
 			case SymbolKind.Variable:
 				ci.kind = CompletionItemKind.Variable;
-				if (!info.range.end.character) {
+				if (info.selectionRange === ZERO_RANGE) {
 					ci.detail = info.detail;
 					return ci;
 				}

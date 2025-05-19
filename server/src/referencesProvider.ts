@@ -1,42 +1,37 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
-	AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, Variable,
+	AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, Variable, ZERO_RANGE,
 	ahkuris, ahkvars, find_symbol, find_symbols, lexers
 } from './common';
 import { SymbolKind } from './lsp-enums';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
-	const result: Location[] = [], doc = lexers[params.textDocument.uri.toLowerCase()];
-	if (!doc || token.isCancellationRequested) return;
-	const refs = getAllReferences(doc, doc.getContext(params.position));
+	const result: Location[] = [], lex = lexers[params.textDocument.uri.toLowerCase()];
+	if (!lex || token.isCancellationRequested) return;
+	const refs = getAllReferences(lex, lex.getContext(params.position));
 	for (const uri in refs)
 		result.push(...refs[uri].map(range => ({ uri, range })));
 	return result;
 }
 
-export function getAllReferences(doc: Lexer, context: Context, allow_builtin = true): Record<string, Range[]> | null | undefined {
+export function getAllReferences(lex: Lexer, context: Context, allow_builtin = true): Record<string, Range[]> | null | undefined {
 	if (context.kind === SymbolKind.Null) return;
-	const nodes = find_symbols(doc, context);
+	const nodes = find_symbols(lex, context);
 	if (nodes?.length !== 1)
 		return;
-	let name = context.text.toUpperCase();
+	let name = context.text.toUpperCase(), i = 0;
 	const references: Record<string, Range[]> = {};
-	const { node, uri, scope, is_this, is_global } = nodes[0];
-	if (!uri || !node.selectionRange.end.character || is_this === false)
+	const { node, parent, uri, scope, is_this, is_global } = nodes[0];
+	if (is_this) {	// this
+		const range = scope?.children && findAllFromScope(scope, name, SymbolKind.Variable);
+		return range?.length ? { [lexers[uri].document.uri]: range } : undefined;
+	}
+
+	if (!uri || /* super */ is_this === false)
 		return;
 
 	if (!allow_builtin && (node === ahkvars[name] || uri === ahkuris.winapi))
 		return null;
-
-	if (is_this) {	// this
-		const cls = node as ClassNode, range: Range[] = [];
-		const decl = cls.property;
-		for (const it of Object.values(decl ?? {}))
-			it.children?.length && findAllVar(it as FuncNode, name, range, false, false);
-		if (range.length)
-			return { [lexers[uri].document.uri]: range };
-		return;
-	}
 
 	switch (node.kind) {
 		case SymbolKind.Field:
@@ -45,10 +40,10 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 				if (lbs && lbs[name])
 					references[lexers[uri].document.uri] = lbs[name].map(it => it.selectionRange);
 			} else {
-				let lbs = doc.labels;
+				let lbs = lex.labels;
 				if (lbs[name])
-					references[doc.document.uri] = lbs[name].map(it => it.selectionRange);
-				for (const uri in doc.relevance) {
+					references[lex.document.uri] = lbs[name].map(it => it.selectionRange);
+				for (const uri in lex.relevance) {
 					lbs = lexers[uri].labels;
 					if (lbs[name])
 						references[lexers[uri].document.uri] = lbs[name].map(it => it.selectionRange);
@@ -59,12 +54,12 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 		case SymbolKind.Variable:
 		case SymbolKind.Class:
 			if (node.kind !== SymbolKind.Class || !(node as FuncNode).full.includes('.')) {
-				const scope = is_global === true ? undefined : nodes[0].parent;
-				const all_uris = { [doc.uri]: scope };
-				if (uri !== doc.uri)
+				const scope = is_global === true ? undefined : parent;
+				const all_uris = { [lex.uri]: scope };
+				if (uri !== lex.uri)
 					all_uris[uri] = undefined;
 				if (!scope)
-					for (const uri in doc.relevance)
+					for (const uri in lex.relevance)
 						all_uris[uri] = undefined;
 				for (const uri in all_uris) {
 					const rgs = findAllFromScope(all_uris[uri] ?? lexers[uri] as unknown as AhkSymbol, name, SymbolKind.Variable);
@@ -84,16 +79,16 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 					if (m)
 						name = `${m[1]}.${m[2]}`.toUpperCase();
 					else if (fn.parent?.kind === SymbolKind.Class)
-						name = `${(fn.parent as FuncNode).full}.${fn.name}`.toUpperCase();
+						name = `${(fn.parent as ClassNode).full}.${fn.name}`.toUpperCase();
 					else return;
 				}
 				const c = name.split('.'), l = c.length;
 				let i = 0, refs: Record<string, Range[]> = {};
-				for (const uri of new Set([doc.uri, ...Object.keys(doc.relevance)]))
+				for (const uri of new Set([lex.uri, ...Object.keys(lex.relevance)]))
 					refs[lexers[uri].document.uri] = findAllFromScope(lexers[uri] as unknown as AhkSymbol, c[0], SymbolKind.Variable);
 				while (i < l) {
 					const name = c.slice(0, ++i).join('.');
-					const r = find_symbol(doc, name);
+					const r = find_symbol(lex, name);
 					if (r?.node.kind === SymbolKind.Class) {
 						for (const it of Object.values((r.node as ClassNode).property ?? {})) {
 							const fns = [];
@@ -105,15 +100,15 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 							if (!fns.length) continue;
 							const ref = refs[lexers[r.uri].document.uri] ??= [];
 							for (const it of fns)
-								findAllVar(it as FuncNode, 'THIS', ref, false, false);
+								findAllFromScope(it!, 'THIS', SymbolKind.Variable, ref);
 						}
 					}
 					// TODO: search subclass's `super`
 					for (const uri in refs) {
-						const rgs = refs[uri], doc = lexers[uri.toLowerCase()], arr: Range[] = references[uri] ??= [];
-						const document = doc.document, tokens = doc.tokens;
+						const rgs = refs[uri], arr = references[uri] ??= [];
+						const { document, tokens } = lexers[uri.toLowerCase()];
 						next_rg:
-						for (const rg of rgs) {
+						for (const rg of new Set(rgs)) {
 							let tk = tokens[document.offsetAt(rg.start)];
 							if (!tk) continue;
 							for (let j = i; j < l; j++) {
@@ -129,14 +124,14 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 					}
 					refs = {};
 				}
-				let cls = (node as FuncNode).parent;
+				let cls = node.parent;
 				const arr = references[lexers[uri].document.uri] ??= [];
 				while (cls && cls.kind !== SymbolKind.Class)
-					cls = (cls as FuncNode).parent;
+					cls = cls.parent;
 				if (cls) {
 					const name = node.name.toLowerCase(), t = [];
 					for (const it of cls.children ?? []) {
-						if ((it as Variable).static && it.name.toLowerCase() === name)
+						if (it.static && it.name.toLowerCase() === name)
 							t.push(it.selectionRange);
 					}
 					arr.unshift(...t);
@@ -146,16 +141,15 @@ export function getAllReferences(doc: Lexer, context: Context, allow_builtin = t
 			}
 			return;
 	}
-	if (Object.keys(references).length) {
-		for (const u in references) {
-			const m: Record<string, Range> = {};
-			for (const range of references[u])
-				m[`${range.start.line},${range.start.character}`] ??= range;
-			references[u] = Object.values(m);
-		}
-		return references;
+	for (const [uri, range] of Object.entries(references)) {
+		const m = new Set(range);
+		m.delete(ZERO_RANGE);
+		if (m.size)
+			references[uri] = Array.from(m), i++;
+		else delete references[uri];
 	}
-	return;
+	if (i)
+		return references;
 }
 
 function findAllFromScope(scope: AhkSymbol, name: string, kind: SymbolKind, ranges: Range[] = []) {
