@@ -635,6 +635,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	} else {
 		const kind = CompletionItemKind.Snippet, insertTextFormat = InsertTextFormat.Snippet;
 		const tab = extsettings.FormatOptions?.switch_case_alignment ? '' : '\t';
+		const sel_text_block = '{\n\t${TM_SELECTED_TEXT/^\\s+//}$0\n}';
 		let uppercase = (s: string) => s, remove_indent = uppercase;
 		if (keyword_start_with_uppercase)
 			uppercase = (s: string) => s.replace(/\b[a-z](?=\w)/g, m => m.toUpperCase());
@@ -642,15 +643,26 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			remove_indent = (s: string) => s.replace(/^\t/gm, '');
 		for (const [label, arr] of [
 			['switch', ['switch ${1:[SwitchValue, CaseSense]}', remove_indent(`{\n${tab}case \${2:}:\n\t${tab}\${3:}\n${tab}default:\n\t${tab}$0\n}`)]],
-			['trycatch', ['try', '{\n\t$1\n}', 'catch ${2:Error} as ${3:e}', '{\n\t$0\n}']],
+			['trycatch', ['try', sel_text_block, 'catch ${2:Error} as ${3:e}', '{\n\t$0\n}']],
 			['class', ['class $1', '{\n\t$0\n}']]
 		] as [string, string[]][])
 			items.push({ label, kind, insertTextFormat, insertText: uppercase(arr.join(join_c)) });
-		items.at(-3)!.detail = completionItemCache.keyword.switch?.detail;
 		const t = { ...completionItemCache.keyword };
+		items.at(-3)!.detail = t.switch?.detail;
 		delete t.switch;
 		for (const k in t)
 			expg.test(k) && addkeyword(t[k]);
+		for (const [k, v] of Object.entries({
+			if: 'if $1',
+			loop: 'loop $1',
+			while: 'while $1',
+			for: 'for $1 in $2',
+			func: '${1:func}($2)',
+		}))
+			items.push({
+				label: `${k}-block`, kind, insertTextFormat,
+				insertText: uppercase(`${v}${join_c}${sel_text_block}`)
+			});	
 	}
 
 	// hotkey

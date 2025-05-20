@@ -4,7 +4,7 @@ import {
 	InitializeResult, TextDocuments, TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import {
-	AHKLSSettings, chinese_punctuations, colorPresentation, colorProvider, completionProvider,
+	AHKLSSettings, chinese_punctuations, codeActionProvider, colorPresentation, colorProvider, completionProvider,
 	defintionProvider, documentFormatting, enumNames, executeCommandProvider, exportSymbols, getServerCommands, getVersionInfo,
 	hoverProvider, initahk2cache, Lexer, lexers, loadahk2, loadlocalize, prepareRename, rangeFormatting,
 	referenceProvider, renameProvider, SemanticTokenModifiers, semanticTokensOnFull, semanticTokensOnRange,
@@ -57,6 +57,7 @@ connection.onInitialize(async params => {
 			hoverProvider: true,
 			foldingRangeProvider: true,
 			colorProvider: true,
+			codeActionProvider: true,
 			renameProvider: { prepareProvider: true },
 			referencesProvider: { workDoneProgress: true },
 			semanticTokensProvider: {
@@ -129,6 +130,7 @@ documents.onDidOpen(e => {
 documents.onDidClose(e => lexers[e.document.uri.toLowerCase()]?.close());
 documents.onDidChangeContent(e => lexers[e.document.uri.toLowerCase()].update());
 
+connection.onCodeAction(codeActionProvider);
 connection.onCompletion(completionProvider);
 connection.onColorPresentation(colorPresentation);
 connection.onDocumentColor(colorProvider);

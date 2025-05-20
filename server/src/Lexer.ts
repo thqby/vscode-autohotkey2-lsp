@@ -202,6 +202,9 @@ export interface SemanticToken {
 }
 
 export interface Token {
+	// if expression
+	//   |statement
+	body_start?: number
 	callsite?: CallSite
 	content: string
 	data?: unknown
@@ -521,7 +524,14 @@ export class Lexer {
 			return t;
 		}
 
-		this.find_token = function (offset: number, ignore = false): Token {
+		this.find_token = function (offset: number, ignore = false) {
+			let tk = find_token(offset);
+			if (ignore)
+				while (tk.type.endsWith('COMMENT'))
+					tk = find_token(tk.offset + tk.length);
+			return tk;
+		};
+		function find_token(offset: number): Token {
 			let i = offset, c = input[offset], tk: Token | undefined;
 			const tks = _this.tokens;
 			const eof = { ...(tks[-1] ?? EMPTY_TOKEN), type: '' };
@@ -530,14 +540,17 @@ export class Lexer {
 			if (whitespace.includes(c)) {
 				while (whitespace.includes(c = input[++i]))
 					continue;
+				if (!c) {
+					const t = _this.tokenranges.at(-1)!;
+					if (t?.start <= offset && offset < t.end)
+						tk = tks[t.start];
+					return tk ?? eof;
+				}
 				if ((tk = tks[i]))
 					return tk;
-				if (!c && (tk = tks[_this.tokenranges[_this.tokenranges.length - 1]?.start]))
-					if (tk.offset <= offset && offset < tk.offset + tk.length)
-						return tk;
-					else tk = undefined;
 			} else {
-				if (isIdentifierChar(c.charCodeAt(0))) {
+				const isid = isIdentifierChar(c.charCodeAt(0));
+				if (isid) {
 					while (isIdentifierChar(input.charCodeAt(--i)))
 						continue;
 				} else {
@@ -545,25 +558,19 @@ export class Lexer {
 						if (isIdentifierChar(c.charCodeAt(0)))
 							break;
 				}
-				if (!(tk = tks[++i] ?? tks[i - 1]) && input[i] === '.') {
-					while (isIdentifierChar(input.charCodeAt(--i)))
-						continue;
-					tk = tks[i + 1];
-				}
-			}
-			if (!tk && input.slice(i = input.lastIndexOf('\n', i) + 1, offset).trim())
-				tk = _this.find_token(i);
-			if (tk) {
-				if (tk.offset <= offset && offset < tk.offset + tk.length)
+				if ((tk = tks[++i] ?? tks[i - 1]))
 					return tk;
-				while ((tk = tks[tk.next_token_offset])) {
-					if (tk.offset > offset)
-						break;
-					if (offset < tk.offset + tk.length)
-						return tk;
+				if (!whitespace.includes(input.charAt(i - 1))) {
+					tk = find_token(input.indexOf('\n', offset) + 1 || input_length);
+					do {
+						if (tk.offset + tk.length <= offset)
+							break;
+						if (tk.offset <= offset)
+							return tk;
+					} while ((tk = tk.previous_token));
 				}
 			}
-			return !ignore && _this.findStrOrComment(offset) || eof;
+			return _this.findStrOrComment(offset) ?? eof;
 		}
 
 		this.beautify = function (options: FormatOptions, range?: Range) {
@@ -1820,7 +1827,7 @@ export class Lexer {
 							} else {
 								const tparent = _parent, tmode = mode, l = tk.content.toLowerCase();
 								const rl = result.length;
-								_parent = tn, mode = BlockType.Func;
+								_parent = tn, mode = BlockType.Func, lk.body_start = tk.offset;
 								if (l === 'return')
 									tn.children = parse_line(undefined, 'return');
 								else if (['global', 'local', 'static'].includes(l)) {
@@ -2661,8 +2668,8 @@ export class Lexer {
 					nexttoken();
 					next = tk.type as string === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
 				} else {
+					const t = tk;
 					if (tk.type === 'TK_RESERVED' && line_starters.includes(tk.content.toLowerCase())) {
-						const t = tk;
 						parse_reserved();
 						if (t === tk || (t === lk && !next && !tk.topofline))
 							if (t === tk && t.type === 'TK_WORD')
@@ -2679,8 +2686,13 @@ export class Lexer {
 						} else if (tk.type !== 'TK_EOF')
 							lk = EMPTY_TOKEN, next = false, result.push(...parse_line());
 					}
-					if (line_begin_pos !== undefined)
+					if (line_begin_pos !== undefined) {
+						const e = _this.tokens[previous_pos];
+						if (t.content.length)
+							e.body_start = t.offset;
+						else delete t.body_start;
 						_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
+					}
 					next = tk.type === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
 				}
 				in_loop = oil, mode = prev;
@@ -6932,10 +6944,10 @@ function yields_an_operand(tk: Token): boolean {
 }
 
 export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position, _this?: ClassNode): AhkSymbol[] {
-	const stack: Token[] = [], op_stack: Token[] = [], tokens = lex.tokens;
+	const stack: Token[] = [], op_stack: Token[] = [], { document, tokens } = lex;
 	let operand = [0], pre = EMPTY_TOKEN, end: number, t, tt;
 	if (typeof end_pos === 'object')
-		end = lex.document.offsetAt(end_pos);
+		end = document.offsetAt(end_pos);
 	else end = end_pos;
 	loop:
 	while (tk && tk.offset < end) {
@@ -6951,7 +6963,7 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 					break loop;
 				stack.push(tk), pre = tk;
 				if (tk.symbol) {
-					tk = lex.find_token(lex.document.offsetAt(tk.symbol!.range.end), true);
+					tk = lex.find_token(document.offsetAt(tk.symbol!.range.end), true);
 					continue;
 				} else if (tk.callsite) {
 					if (tk.next_token_offset >= end || tk.next_token_offset === -1)
@@ -7038,7 +7050,7 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 					stack.push(t);
 					if (t.symbol) {
 						pre = tk;
-						tk = lex.find_token(lex.document.offsetAt(t.symbol!.range.end), true);
+						tk = lex.find_token(document.offsetAt(t.symbol!.range.end), true);
 						continue;
 					}
 				}
@@ -7092,7 +7104,7 @@ export function decltype_expr(lex: Lexer, tk: Token, end_pos: number | Position,
 				break;
 			}
 			case 'TK_WORD': {
-				const pos = lex.document.positionAt(tk.offset);
+				const pos = document.positionAt(tk.offset);
 				const r = find_symbol(lex, tk.content, SymbolKind.Variable, pos);
 				if (!r) break;
 				syms = new Set;

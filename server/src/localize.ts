@@ -15,7 +15,10 @@ export const completionitem = {
 }
 
 export const codeaction = {
+	brace: localize('codeaction.brace', 'Replace with code block with braces'),
 	include: localize('codeaction.include', 'Import \'{0}\''),
+	parenthesized: localize('codeaction.parenthesized', 'Replace with parenthesized function call style'),
+	replace: localize('codeaction.replace', 'Replace \'{0}\' with \'{1}\''),
 }
 
 export const diagnostic = {
