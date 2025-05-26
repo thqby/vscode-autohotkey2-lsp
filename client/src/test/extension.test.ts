@@ -15,10 +15,7 @@ import {
 	SignatureHelpRequest, SignatureHelpParams, SignatureHelp,
 	SemanticTokensRequest, SemanticTokensParams, SemanticTokens,
 	WorkspaceSymbolRequest, WorkspaceSymbolParams,
-	ExecuteCommandRequest, ExecuteCommandParams,
-	DidChangeConfigurationNotification,
 } from 'vscode-languageclient/node';
-import { readdirSync } from 'fs';
 
 suite('Start ahk language server', () => {
 	test('should be running', async () => {
@@ -101,11 +98,6 @@ suite('Start ahk language server', () => {
 						assert.ok(result?.signatures);
 					});
 
-					test(ExecuteCommandRequest.method, async function () {
-						const params: ExecuteCommandParams = { command: 'ahk2.diagnose.all' };
-						await client.sendRequest(this.runnable().title, params);
-					});
-
 					test(WorkspaceSymbolRequest.method, async function () {
 						const params: WorkspaceSymbolParams = { query: 'msg' };
 						const result: SymbolInformation[] | undefined = await client.sendRequest(this.runnable().title, params);
@@ -118,36 +110,7 @@ suite('Start ahk language server', () => {
 						assert.ok(result?.data);
 					});
 				});
-
-				await client.sendNotification(
-					DidChangeConfigurationNotification.method,
-					{ settings: { FormatOptions: {} } });
-				test_fotmatting(client);
 			});
 		});
 	});
 });
-
-function test_fotmatting(client: LanguageClient) {
-	suite('Test formatting', () => {
-		const dir = resolve(__dirname, '../../src/test/formatting');
-		const files = readdirSync(dir);
-		for (const file of files) {
-			if (!file.endsWith('.ahk'))
-				continue;
-			test(file.slice(0, -4), async function () {
-				let document = await vscode.workspace.openTextDocument(resolve(dir, file));
-				if (document.languageId !== 'ahk2')
-					document = await vscode.languages.setTextDocumentLanguage(document, 'ahk2');
-				const uri = document.uri.toString();
-				const params: DocumentFormattingParams = {
-					textDocument: { uri },
-					options: { insertSpaces: false, tabSize: 4 }
-				};
-				const content = document.getText().replaceAll('\r\n', '\n');
-				const result: TextEdit[] | undefined = await client.sendRequest(DocumentFormattingRequest.method, params);
-				assert.ok(result?.[0].newText === content);
-			});
-		}
-	});
-}

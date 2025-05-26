@@ -639,9 +639,9 @@
 		"eslint": "eslint --fix",
 		"package": "vsce package",
 		"publish": "vsce publish",
-		"test": "vscode-test",
+		"test": "mocha -u tdd ./server/out/test/*.test.js",
 		"test-grammar": "vscode-tmgrammar-snap tmgrammar-test/*.ahk",
-		"vscode:prepublish": "node esbuild.mjs && npm run test && npm run test-grammar",
+		"vscode:prepublish": "node esbuild.mjs && vscode-test && npm run test-grammar",
 		"watch": "node esbuild.mjs --dev",
 		"watch-web": "node esbuild.mjs --web"
 	},

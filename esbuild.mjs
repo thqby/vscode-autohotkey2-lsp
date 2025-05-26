@@ -6,7 +6,7 @@ const server_opt = {
 		'process.env.BROWSER': 'false',
 		'process.env.DEBUG': 'false',
 	},
-	entryPoints: ['server/src/server.ts'],
+	entryPoints: ['server/src/server.ts', 'server/src/test/*.ts'],
 	format: 'cjs',
 	logLevel: 'error',
 	outbase: 'server/src',
@@ -43,11 +43,13 @@ async function build_cli() {
 async function build_prod() {
 	const opts = [
 		client_opt, server_opt,
-		{ ...client_opt, entryPoints: [client_opt.entryPoints.pop()] }
+		{ ...client_opt, entryPoints: client_opt.entryPoints.splice(1) },
+		{ ...server_opt, outdir: 'server/out' },
 	];
 	client_opt.external = ['vscode'];
 	client_opt.bundle = server_opt.bundle = true;
 	client_opt.minify = server_opt.minify = true;
+	server_opt.entryPoints = [server_opt.entryPoints[0]];
 	opts.push(...browser_opts(true));
 	const start = new Date;
 	await Promise.all(opts.map(o => build(o)));
@@ -83,7 +85,7 @@ function build_watch(web = false) {
 		opts = browser_opts(false);
 	else {
 		client_opt.entryPoints = ['client/src/**/*.ts'];
-		server_opt.entryPoints = ['server/src/*.ts'];
+		server_opt.entryPoints = ['server/src/**/*.ts'];
 		server_opt.outdir = 'server/out';
 		opts = [client_opt, server_opt];
 	}

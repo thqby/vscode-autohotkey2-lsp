@@ -37,7 +37,8 @@
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
 			"outFiles": [
-				"${workspaceFolder}/client/dist/test/**/*.js"
+				"${workspaceFolder}/client/dist/test/**/*.js",
+				"${workspaceFolder}/server/out/test/**/*.js",
 			],
 			"testConfiguration": "${workspaceFolder}/.vscode-test.mjs"
 		},

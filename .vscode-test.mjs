@@ -14,7 +14,7 @@ else {
 }
 
 export default defineConfig({
-	files: 'client/dist/test/**/*.test.js',
+	files: ['server/out/test/**/*.test.js', 'client/dist/test/**/*.test.js'],
 	mocha: {
 		failZero: true,
 		timeout
