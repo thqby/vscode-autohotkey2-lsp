@@ -1,47 +1,49 @@
 import { opendir } from 'fs/promises';
 import { CancellationToken, CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
-import { codeaction } from './localize';
-import { DiagnosticCode, Maybe, extsettings, lexers, restorePath } from './common';
+import { DiagnosticCode, Maybe, codeaction, configCache, lexers, restorePath } from './common';
 
 const words = ['catch', 'else', 'finally', 'until'];
 
-export async function codeActionProvider(params: CodeActionParams, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
+export async function codeActionProvider(params: CodeActionParams & { indent?: string }, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
 	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()];
 	if (!lex || token.isCancellationRequested || lex.diag_pending !== undefined) return;
 	const acts: CodeAction[] = [], replaces: Record<string, TextEdit[]> = {}, parens: TextEdit[] = [];
-	const { document, linepos, tokens } = lex;
+	const { document, linepos, tokens } = lex, { context: { diagnostics, only }, indent, range } = params;
+	const has_refactor = only?.includes(CodeActionKind.Refactor) !== false;
 	let m;
 
-	for (const it of params.context.diagnostics) {
+	for (const it of diagnostics) {
 		switch (it.code) {
-			case DiagnosticCode.call: {
-				const tk = lex.tokens[document.offsetAt(it.range.start)], cs = tk.callsite!;
-				let end = cs.range.end, start = tk.next_token_offset === -1 ?
-					end = it.range.end : document.positionAt(tk.next_token_offset);
-				if (start.line > end.line || start.line === end.line && start.character > end.character)
-					start = end;
-				parens.push(
-					{ newText: '(', range: { start: it.range.end, end: start } },
-					{ newText: ')', range: { start: end, end } }
-				);
+			case DiagnosticCode.call:
+				if (has_refactor) {
+					const tk = tokens[document.offsetAt(it.range.start)], cs = tk.callsite!;
+					let end = cs.range.end, start = tk.next_token_offset === -1 ?
+						end = it.range.end : document.positionAt(tk.next_token_offset);
+					if (start.line > end.line || start.line === end.line && start.character > end.character)
+						start = end;
+					parens.push(
+						{ newText: '(', range: { start: it.range.end, end: start } },
+						{ newText: ')', range: { start: end, end } }
+					);
+				}
 				break;
-			}
 			case DiagnosticCode.expect:
 				(replaces[`${document.getText(it.range)} ${it.data}`] ??= []).push({ range: it.range, newText: it.data });
 				break;
 			case DiagnosticCode.include:
 				if (!process.env.BROWSER && (m = it.data?.match(/(.+?)\*\.(\w+)$/))) {
-					const path = restorePath(m[1]).replace(/\\?$/, '\\'), reg = new RegExp(`\\.${m[2]}$`, 'i'), includes = [];
-					const rg = Object.assign({}, it.range);
-					rg.start = Object.assign({}, rg.start), rg.start.character = 0;
+					const path = restorePath(m[1]).replace(/\\?$/, '\\'), reg = new RegExp(`\\.${m[2]}$`, 'i');
+					const range = it.range, includes = [];
+					range.start.character = 0;
 					try {
 						for await (const ent of await opendir(path))
 							reg.test(ent.name) && includes.push(`#Include ${path}${ent.name}`);
 					} catch { continue; }
-					const textEdit: TextEdit = { range: rg, newText: includes.join('\n') };
-					const act: CodeAction = { title: codeaction.include(`${path}*.${m[2]}`), kind: CodeActionKind.QuickFix };
-					act.edit = { changes: { [uri]: [textEdit] } };
-					acts.push(act);
+					acts.push({
+						kind: CodeActionKind.QuickFix,
+						title: codeaction.include(`${path}*.${m[2]}`),
+						edit: { changes: { [uri]: [{ range, newText: includes.join('\n') }] } }
+					});
 				}
 				break;
 		}
@@ -57,15 +59,15 @@ export async function codeActionProvider(params: CodeActionParams, token: Cancel
 		edit: { changes: { [uri]: parens.splice(0) } },
 		title: codeaction.parenthesized()
 	});
-	brace_refactor();
+	has_refactor && brace_refactor();
 	return acts.length ? acts : undefined;
 	function brace_refactor() {
-		let { end, start } = params.range;
+		let { end, start } = range;
 		const sl = start.line;
 		const eo = document.offsetAt(end);
 		const so = document.offsetAt(start);
-		const space = extsettings.FormatOptions?.space_in_other === false ? '' : ' ';
-		const tab = extsettings.FormatOptions?.indent_string || '\t';
+		const tab = indent || configCache.FormatOptions?.indent_string || '\t';
+		const space = configCache.FormatOptions?.space_in_other === false ? '' : ' ';
 		for (const line in linepos) {
 			if (line as unknown as number < sl) continue;
 			let bo = linepos[line], tk, bk;
@@ -93,7 +95,7 @@ export async function codeActionProvider(params: CodeActionParams, token: Cancel
 				}
 				end = { line: parseInt(line) + 1, character: 0 };
 				const o = document.offsetAt(end);
-				tk = lex.find_token(o, true);
+				tk = lex.findToken(o, true);
 				if (tk.type === 'TK_RESERVED' && words.includes(tk.content.toLowerCase()))
 					rb.push({ newText: '}' + space, range: { start: end = document.positionAt(tk.offset), end } });
 				else {

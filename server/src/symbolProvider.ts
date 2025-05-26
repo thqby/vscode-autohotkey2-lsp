@@ -1,17 +1,12 @@
-import {
-	CancellationToken, DocumentSymbolParams, Range, SymbolInformation, WorkspaceSymbolParams
-} from 'vscode-languageserver';
+import { CancellationToken, DocumentSymbolParams, Range, SymbolInformation, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { URI } from 'vscode-uri';
 import {
-	ANY, AhkSymbol, CallSite, ClassNode, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
-	SemanticTokenModifiers, SemanticTokenTypes, THIS, Token, VARREF, Variable, ZERO_RANGE,
-	ahk_version, ahkuris, ahkvars, alpha_3, check_same_name_error, connection, decltype_expr,
-	diagnostic, enum_ahkfiles, extsettings, find_class, get_class_constructor, get_class_member, get_func_param_count,
-	inactivevars, is_line_continue, lexers, make_same_name_error, openFile, warn, workspaceFolders
+	ANY, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
+	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, URI, VARREF, Variable, ZERO_RANGE,
+	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, diagnostic, enumFiles,
+	findClass, getClassConstructor, getClassMember, getParamCount, getWorkspaceFile, inactiveVars,
+	isContinuousLine, lexers, makeDupError, openFile, utils, warn, workspaceFolders
 } from './common';
-import { DiagnosticSeverity, SymbolKind } from './lsp-enums';
-
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
 	let uri = params.textDocument.uri.toLowerCase();
@@ -21,7 +16,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	if (token !== null && lex.symbolInformation)
 		return lex.symbolInformation;
 	const { document, tokens } = lex;
-	const gvar: Record<string, Variable> = { ...ahkvars };
+	const gvar: Record<string, Variable> = { ...ahkVars };
 	let list = [uri, ...Object.keys(lex.relevance)], winapis: Record<string, AhkSymbol> = {};
 	list = list.map(u => lexers[u]?.d_uri).concat(list);
 	for (const uri of list) {
@@ -38,9 +33,9 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	}
 	if (lex.symbolInformation)
 		return lex.symbolInformation;
-	if (ahkuris.winapi && !list.includes(ahkuris.winapi))
-		winapis = lexers[ahkuris.winapi]?.declaration ?? winapis;
-	const warnLocalSameAsGlobal = extsettings.Warn?.LocalSameAsGlobal;
+	if (ahkUris.winapi && !list.includes(ahkUris.winapi))
+		winapis = lexers[ahkUris.winapi]?.declaration ?? winapis;
+	const warnLocalSameAsGlobal = configCache.Warn?.LocalSameAsGlobal;
 	const result: AhkSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class];
 	for (const [k, v] of Object.entries(lex.declaration)) {
@@ -51,16 +46,16 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			else if (v.returns === undefined && !v.decl)
 				unset_vars.set(t, v);
 		if (t === v || v.kind !== SymbolKind.Variable && (gvar[k] = v))
-			result.push(v), converttype(v, v, islib || v === ahkvars[k]).definition = v;
+			result.push(v), converttype(v, v, islib || v === ahkVars[k]).definition = v;
 	}
 	flatTree(lex);
-	if (extsettings.Warn?.VarUnset)
+	if (configCache.Warn?.VarUnset)
 		for (const [k, v] of unset_vars) {
 			if (k.assigned || k.has_warned)
 				continue;
 			k.has_warned = true;
 			let code, since, message = warn.varisunset(v.name);
-			if (!k.decl && (since = inactivevars[k.name.toUpperCase()]))
+			if (!k.decl && (since = inactiveVars[k.name.toUpperCase()]))
 				message += `, ${diagnostic.requireversion(since)}`, code = 'built-in library';
 			lex.diagnostics.push({ code, message, range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 		}
@@ -88,7 +83,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				const name = info.name.toUpperCase(), sym = vars[name] ?? gvar[name];
 				if (sym === info || !sym)
 					return;
-				(tk = converttype(info, sym, sym === ahkvars[name])).definition = sym;
+				(tk = converttype(info, sym, sym === ahkVars[name])).definition = sym;
 				if (sym.selectionRange === ZERO_RANGE)
 					delete tk.semantic;
 				else if (info.kind !== SymbolKind.Variable)
@@ -96,7 +91,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				else if (sym.kind === SymbolKind.Variable)
 					maybe_unset(sym, info);
 				else if (tk.callsite)
-					checkParams(lex, sym as FuncNode, tk.callsite);
+					checkParamInfo(lex, sym as FuncNode, tk.callsite);
 			} else if (!filter_types.includes(kind))
 				result.push(info);
 		});
@@ -143,7 +138,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				case SymbolKind.Event:
 					oig ||= fn.assume === FuncScope.GLOBAL;
 					for (const [k, v] of Object.entries(fn.global ?? {}))
-						s = inherit[k] = gvar[k] ??= v, converttype(v, s, s === ahkvars[k]).definition = s;
+						s = inherit[k] = gvar[k] ??= v, converttype(v, s, s === ahkVars[k]).definition = s;
 					for (const [k, v] of Object.entries(fn.local ?? {})) {
 						converttype(inherit[k] = v, v).definition = v;
 						if (v.kind === SymbolKind.Variable) {
@@ -164,14 +159,14 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					}
 					for (const [k, v] of Object.entries(fn.declaration ??= {}))
 						if ((s = inherit[k]))
-							s !== v && (converttype(v, s, s === ahkvars[k]).definition = s,
+							s !== v && (converttype(v, s, s === ahkVars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable));
 						else if (oig)
 							s = gvar[k] ??= (result.push(v), (v as Variable).is_global = true, lex.declaration[k] = v),
-								converttype(v, s, s === ahkvars[k]).definition = s,
+								converttype(v, s, s === ahkVars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
 						else if (!v.def && (s = gvar[k]))
-							converttype(v, s, s === ahkvars[k]).definition = s;
+							converttype(v, s, s === ahkVars[k]).definition = s;
 						else {
 							converttype(inherit[k] = fn.local[k] = v, v).definition = v, result.push(v);
 							v.static === null && (v.static = true);
@@ -180,7 +175,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						}
 					for (const [k, v] of Object.entries(fn.unresolved_vars ?? {}))
 						if ((s = inherit[k] ?? gvar[k] ?? winapis[k]))
-							converttype(v, s, s === ahkvars[k]).definition = s;
+							converttype(v, s, s === ahkVars[k]).definition = s;
 						else {
 							converttype(v, v).definition = v;
 							result.push(inherit[k] = v);
@@ -198,7 +193,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	function checksamename(lex: Lexer) {
 		if (lex.d)
 			return;
-		const dec = { ...ahkvars }, lbs: Record<string, string> = {};
+		const dec = { ...ahkVars }, lbs: Record<string, string> = {};
 		const severity = DiagnosticSeverity.Error;
 		const { relevance, uri } = lex;
 		let dd: Lexer, sym: AhkSymbol;
@@ -206,7 +201,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		for (const uri in relevance) {
 			if ((dd = lexers[uri])) {
 				if (dd.d) continue;
-				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd);
+				checkDupError(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd);
 				const labels = dd.labels;
 				if (!Object.keys(labels).length) continue;
 				const r = dd.relevance;
@@ -223,10 +218,10 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			}
 		}
 		const t = Object.values(lex.declaration);
-		check_same_name_error(dec, t, lex);
+		checkDupError(dec, t, lex);
 		for (const uri in relevance) {
 			if ((dd = lexers[uri]))
-				check_same_name_error(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd);
+				checkDupError(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd);
 		}
 		let cls: ClassNode;
 		t.forEach(it => {
@@ -234,7 +229,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				const l = cls.extends?.toUpperCase();
 				if (l === it.name.toUpperCase())
 					err_extends(lex, cls, false);
-				else if (l && !find_class(lex, l)?.prototype)
+				else if (l && !findClass(lex, l)?.prototype)
 					err_extends(lex, cls);
 			}
 		});
@@ -245,7 +240,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						const l = cls.extends?.toUpperCase();
 						if (l === it.name.toUpperCase())
 							err_extends(dd, cls, false);
-						else if (l && !find_class(dd, l)?.prototype)
+						else if (l && !findClass(dd, l)?.prototype)
 							err_extends(dd, cls);
 					}
 		}
@@ -287,7 +282,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				tk.semantic = stk = { type: st };
 				if (it.kind === SymbolKind.Variable && it.def && (kind === SymbolKind.Class || kind === SymbolKind.Function))
 					lex.diagnostics.push({
-						message: make_same_name_error(it, { kind } as AhkSymbol),
+						message: makeDupError(it, { kind } as AhkSymbol),
 						range: it.selectionRange
 					}), delete it.def;
 				if (!tk.callsite && st === SemanticTokenTypes.function) {
@@ -313,14 +308,14 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	}
 }
 
-export function checkParams(lex: Lexer, node: FuncNode, info: CallSite) {
+export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 	const paraminfo = info.paraminfo;
 	let is_cls: boolean, params;
-	if (!paraminfo || !extsettings.Diagnostics.ParamsCheck) return;
+	if (!paraminfo || !configCache.Diagnostics.ParamsCheck) return;
 	if ((is_cls = node?.kind === SymbolKind.Class))
-		node = get_class_constructor(node as unknown as ClassNode) as FuncNode;
+		node = getClassConstructor(node as unknown as ClassNode) as FuncNode;
 	if (!(params = node?.params)) return;
-	const { max, min } = get_func_param_count(node), l = params.length - (node.variadic ? 1 : 0);
+	const { max, min } = getParamCount(node), l = params.length - (node.variadic ? 1 : 0);
 	const _miss: Record<number, boolean> = {};
 	let { count, miss } = paraminfo, index;
 	miss = [...miss];
@@ -349,13 +344,13 @@ export function checkParams(lex: Lexer, node: FuncNode, info: CallSite) {
 				if (index === 0)
 					o = info.offset! + info.name.length + 1;
 				else o = paraminfo.comma[index - 1] + 1;
-				if ((t = lex.find_token(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && lex.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
+				if ((t = lex.findToken(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && lex.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
 					let end = 0;
-					const ts = decltype_expr(lex, t, paraminfo.comma[index] ?? (end = paraminfo.end!));
+					const ts = decltypeExpr(lex, t, paraminfo.comma[index] ?? (end = paraminfo.end!));
 					if (ts.some(it => it === VARREF || it === ANY || it.data === VARREF))
 						return;
-					if (ahk_version >= alpha_3 + 7 && ts.some(it =>
-						get_class_member(lex, it, '__value', false)))
+					if (ahkVersion >= alpha_3 + 7 && ts.some(it =>
+						getClassMember(lex, it, '__value', false)))
 						return;
 					const lk = lex.tokens[paraminfo.comma[index]]?.previous_token;
 					if (lk)
@@ -369,8 +364,8 @@ export function checkParams(lex: Lexer, node: FuncNode, info: CallSite) {
 	if ((!node.returns?.length && !(node.type_annotations || null)?.length) && !(is_cls && node.name.toLowerCase() === '__new')) {
 		const tk = lex.tokens[info.offset!];
 		if (tk?.previous_token?.type === 'TK_EQUALS') {
-			const nt = lex.get_token(lex.document.offsetAt(info.range.end), true);
-			if (!nt || !is_line_continue(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
+			const nt = lex.getToken(lex.document.offsetAt(info.range.end), true);
+			if (!nt || !isContinuousLine(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
 				lex.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, { severity: 2 });
 		}
 	}
@@ -401,7 +396,7 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 		let uri: string, d: Lexer, t: TextDocument | undefined;
 		for (let dir of workspaceFolders) {
 			dir = URI.parse(dir).fsPath;
-			for await (const path of enum_ahkfiles(dir)) {
+			for await (const path of enumFiles(dir)) {
 				uri = URI.file(path).toString().toLowerCase();
 				if (!lexers[uri] && (t = openFile(path))) {
 					if ((d = new Lexer(t)).parseScript(), d.maybev1) continue;
@@ -410,15 +405,16 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 			}
 		}
 	} else {
-		const uris = (await connection?.sendRequest('getWorkspaceFiles', []) || []) as string[];
-		for (const uri_ of uris) {
-			const uri = uri_.toLowerCase();
+		const uris = await utils.sendRequest!<string[]>('getWorkspaceFiles') ?? [];
+		for (const uri of uris) {
+			const u = uri.toLowerCase();
 			let d: Lexer;
-			if (!lexers[uri]) {
-				const content = (await connection?.sendRequest('getWorkspaceFileContent', [uri_])) as string;
-				d = new Lexer(TextDocument.create(uri_, 'ahk2', -10, content));
-				d.parseScript(), lexers[uri] = d;
-				if (filterSymbols(uri)) return symbols;
+			if (!lexers[u]) {
+				const content = (await getWorkspaceFile(uri))?.text;
+				if (!content) continue;
+				d = new Lexer(TextDocument.create(uri, 'ahk2', -10, content));
+				d.parseScript(), lexers[u] = d;
+				if (filterSymbols(u)) return symbols;
 			}
 		}
 	}

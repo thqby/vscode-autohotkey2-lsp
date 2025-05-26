@@ -1,9 +1,9 @@
 import { CancellationToken, Hover, HoverParams } from 'vscode-languageserver';
 import {
-	AhkSymbol, FuncNode, Maybe, SemanticTokenTypes, Variable,
-	get_detail, hoverCache, join_types, lexers, find_symbols
+	AhkSymbol, FuncNode, Maybe, SemanticTokenTypes, SymbolKind, Variable,
+	findSymbols, getSymbolDetail, hoverCache, joinTypes, lexers
 } from './common';
-import { SymbolKind } from './lsp-enums';
+
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return;
@@ -20,7 +20,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		}
 		return;
 	}
-	let nodes = find_symbols(lex, context);
+	let nodes = findSymbols(lex, context);
 	if (!nodes?.length)
 		return;
 	const set = [] as AhkSymbol[];
@@ -48,18 +48,18 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			}
 		}
 
-		let md = get_detail(node, lexers[uri]);
+		let md = getSymbolDetail(node, lexers[uri]);
 		if (typeof md === 'string')
 			md = md && ('```plaintext\n' + md + '\n```');
 		else md = md.value;
 		if ((node as Variable).is_param) {
 			if (!md.startsWith('*@param* '))
-				md = `*@param* \`${node.name}\`${(t = join_types(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
+				md = `*@param* \`${node.name}\`${(t = joinTypes(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
 			else md = md.replace(/\n|(?<=`\*?) — /, '\n___\n');
 		} else if (node.kind === SymbolKind.Variable) {
 			const kind = is_global === true ? '*@global*' : node.static ? '*@static*' : '*@local*';
-			md = `${kind} \`${node.name}\`${(t = join_types(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
-		} else if (node.kind === SymbolKind.Property && hover.length && (t = join_types(node.type_annotations)))
+			md = `${kind} \`${node.name}\`${(t = joinTypes(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
+		} else if (node.kind === SymbolKind.Property && hover.length && (t = joinTypes(node.type_annotations)))
 			hover[0].value += `: ${t}`;
 		md && hover.push({ value: (hover.length ? '___\n' : '') + md });
 	}

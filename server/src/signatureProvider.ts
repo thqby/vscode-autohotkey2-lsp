@@ -1,11 +1,10 @@
 import { CancellationToken, ParameterInformation, SignatureHelp, SignatureHelpParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, Variable,
-	ahkuris, decltype_expr, decltype_invoke, decltype_returns, get_detail,
-	get_callinfo, get_class_constructor, get_class_member, lexers
+	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, SymbolKind, Variable,
+	ahkUris, decltypeExpr, decltypeInvoke, decltypeReturns,
+	getCallInfo, getClassConstructor, getClassMember, getSymbolDetail, lexers
 } from './common';
-import { SymbolKind } from './lsp-enums';
 
 let cache: {
 	index?: number,
@@ -13,6 +12,7 @@ let cache: {
 	nodes?: { node: AhkSymbol, uri: string, needthis?: number }[],
 	signinfo?: SignatureHelp
 } = {};
+
 export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (token.isCancellationRequested) return;
 	const { textDocument: { uri }, context, position } = params;
@@ -23,7 +23,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			if (!context.isRetrigger) {
 				offset = lex.document.offsetAt(position);
 				if (context.triggerCharacter === ' ') {
-					const tk = lex.find_token(offset);
+					const tk = lex.findToken(offset);
 					if (tk.offset >= offset && (pi = tk.previous_token?.callsite))
 						pi = pi.range.start.line === position.line && pi.paraminfo;
 				} else pi = lex.tokens[offset - 1]?.paraminfo;
@@ -34,7 +34,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				return cached_sh();
 			break;
 	}
-	const res = get_callinfo(lex, position, pi);
+	const res = getCallInfo(lex, position, pi);
 	if (!res || res.index < 0) {
 		if (res === null)
 			cache.loc = '';
@@ -55,12 +55,12 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		cache.nodes = nodes = [];
 		if (context.kind === SymbolKind.Null || context.token.symbol)
 			return;
-		const tps = decltype_expr(lex, context.token, context.range.end);
+		const tps = decltypeExpr(lex, context.token, context.range.end);
 		if (tps.includes(ANY)) {
 			if (kind !== SymbolKind.Method) return;
 			const uname = name.toUpperCase();
 			nodes = [];
-			for (const u of new Set([ahkuris.ahk2, ahkuris.ahk2_h, lex.uri, ...Object.keys(lex.relevance)]))
+			for (const u of new Set([ahkUris.ahk2, ahkUris.ahk2_h, lex.uri, ...Object.keys(lex.relevance)]))
 				for (const node of lexers[u]?.object.method[uname] ?? [])
 					nodes.push({ node, uri: u });
 		} else {
@@ -102,17 +102,17 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			function add_cls() {
 				let n: AhkSymbol | undefined;
 				const cls = it as ClassNode;
-				if (!(n = get_class_member(lex, cls, prop, iscall)))
+				if (!(n = getClassMember(lex, cls, prop, iscall)))
 					return;
 				if (iscall) {
 					if (n.kind === SymbolKind.Class)
-						n = get_class_constructor(n as ClassNode);
+						n = getClassConstructor(n as ClassNode);
 					else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
-						n = get_class_member(lex, cls.prototype!, '__new', true) ?? n;
+						n = getClassMember(lex, cls.prototype!, '__new', true) ?? n;
 					else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
-						let tps: AhkSymbol[] | Set<AhkSymbol> = decltype_returns(n, lexers[n.uri!] ?? lex, cls);
+						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, lexers[n.uri!] ?? lex, cls);
 						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
-							tps = decltype_invoke(lex, tps, 'call', true);
+							tps = decltypeInvoke(lex, tps, 'call', true);
 						return tps.forEach(it => add(it, 'call', -1));
 					} else if (fn && prop === 'bind') {
 						if (set.has(fn)) return; else set.add(fn);
@@ -125,12 +125,12 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 						n = fn;
 					}
 				} else if (n.kind === SymbolKind.Class)
-					n = get_class_member(lex, n, '__item', false);
+					n = getClassMember(lex, n, '__item', false);
 				else if (n.kind !== SymbolKind.Property)
 					return;
 				else if (!(n as FuncNode).params) {
-					for (let t of decltype_returns(n, lexers[n.uri!] ?? lex, cls))
-						(t = get_class_member(lex, t, '__item', false)!) &&
+					for (let t of decltypeReturns(n, lexers[n.uri!] ?? lex, cls))
+						(t = getClassMember(lex, t, '__item', false)!) &&
 							nodes.push({ node: t, needthis, uri: t.uri! });
 					return;
 				}
@@ -146,7 +146,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		let parameters: ParameterInformation[] = [], q = fn.name && fn.full.match(/^(\(.+?\))?[^([]+/)?.[0].length || 0;
 		let params: Variable[] | undefined, param: Variable | undefined;
 		let activeParameter: number, pc: number, label: string, name: string;
-		const documentation = get_detail(fn, lex,
+		const documentation = getSymbolDetail(fn, lex,
 			/(^|\n)\*@param\*(.|\n|\r)*?(?=\n\*@|$)/g);
 		if (fn.overloads) {
 			if (typeof fn.overloads === 'string') {
@@ -188,7 +188,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 					if (index < count - n && !params[activeParameter + n]?.name.length)
 						param = params[activeParameter += n] ?? p;
 				}
-				parameters[activeParameter].documentation = get_detail(param, lex);
+				parameters[activeParameter].documentation = getSymbolDetail(param, lex);
 			}
 			signinfo.signatures.push({ label, parameters, documentation, activeParameter });
 		}

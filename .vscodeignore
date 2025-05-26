@@ -2,7 +2,8 @@
 **
 
 # !pic/**
-!client/dist/*.js
+!client/dist/browserClientMain.js
+!client/dist/extension.js
 !server/dist/*.js
 !server/dist/*.ahk
 !syntaxes/**

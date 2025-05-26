@@ -1,23 +1,20 @@
 import { existsSync, statSync } from 'fs';
 import { opendir } from 'fs/promises';
 import { basename, relative, resolve } from 'path';
+import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit } from 'vscode-languageserver';
 import {
-	CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit
-} from 'vscode-languageserver';
-import { URI } from 'vscode-uri';
-import {
-	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AhkSymbol, ClassNode, FuncNode, Maybe, Property, STRING, SemanticTokenTypes, Token, Variable, ZERO_RANGE,
-	a_vars, ahkuris, ahkvars, allIdentifierChar, completionItemCache, completionitem,
-	decltype_expr, dllcalltpe, extsettings, find_class, find_symbol, find_symbols, get_detail,
-	generate_fn_comment, get_callinfo, get_class_constructor, get_class_member, get_class_members,
-	lexers, libfuncs, make_search_re, sendAhkRequest, utils, winapis
+	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AhkSymbol, ClassNode, CompletionItemKind, FuncNode,
+	Maybe, Property, STRING, SemanticTokenTypes, SymbolKind, Token, URI, Variable, ZERO_RANGE,
+	a_Vars, ahkUris, ahkVars, allIdentifierChar, completionItemCache, completionitem, configCache,
+	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getCallInfo,
+	getClassConstructor, getClassMember, getClassMembers, getSymbolDetail,
+	lexers, libSymbols, makeSearchRegExp, utils, winapis
 } from './common';
-import { CompletionItemKind, SymbolKind } from './lsp-enums';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
-	const doc = lexers[uri = uri.toLowerCase()], vars: Record<string, unknown> = {};
-	if (!doc || _token.isCancellationRequested) return;
+	const lex = lexers[uri = uri.toLowerCase()], vars: Record<string, unknown> = {};
+	if (!lex || _token.isCancellationRequested) return;
 	let items: CompletionItem[] = [], cpitem = items.pop()!;
 	let l: string, path: string, pt: Token | undefined, scope: AhkSymbol | undefined, temp;
 	const { triggerKind, triggerCharacter } = params.context ?? {};
@@ -25,16 +22,16 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 
 	//#region /**|
 	if (triggerCharacter === '*') {
-		const tk = doc.tokens[doc.document.offsetAt(position) - 3];
+		const tk = lex.tokens[lex.document.offsetAt(position) - 3];
 		if (tk?.type === 'TK_BLOCK_COMMENT') {
-			if (!tk.previous_token?.type && tk === doc.get_token(0, false)) {
+			if (!tk.previous_token?.type && tk === lex.getToken(0, false)) {
 				items.push({
 					label: '/** */', detail: 'File Doc',
 					kind: CompletionItemKind.Text,
 					insertTextFormat: InsertTextFormat.Snippet,
 					textEdit: TextEdit.replace({
-						start: doc.document.positionAt(tk.offset),
-						end: doc.document.positionAt(tk.offset + tk.length)
+						start: lex.document.positionAt(tk.offset),
+						end: lex.document.positionAt(tk.offset + tk.length)
 					}, [
 						'/************************************************************************',
 						' * @description ${1:}',
@@ -54,12 +51,12 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					kind: CompletionItemKind.Snippet,
 					insertTextFormat: InsertTextFormat.Snippet,
 					textEdit: TextEdit.replace({
-						start: doc.document.positionAt(tk.offset),
-						end: doc.document.positionAt(tk.offset + tk.length)
+						start: lex.document.positionAt(tk.offset),
+						end: lex.document.positionAt(tk.offset + tk.length)
 					}, '/**\n * $0\n */')
 				}];
 				if (fn.params)
-					items[0].textEdit!.newText = generate_fn_comment(doc, fn);
+					items[0].textEdit!.newText = generateFuncComment(lex, fn);
 			}
 		}
 		return items;
@@ -68,9 +65,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 
 	//#region ;@| /*@|
 	if (triggerCharacter === '@') {
-		const tk = doc.findStrOrComment(doc.document.offsetAt(position) - 1);
+		const tk = lex.findStrOrComment(lex.document.offsetAt(position) - 1);
 		if (tk?.type.endsWith('COMMENT')) {
-			const is_same_line = doc.document.positionAt(tk.offset).line === position.line;
+			const is_same_line = lex.document.positionAt(tk.offset).line === position.line;
 			const comment_prefix = tk.type === 'TK_BLOCK_COMMENT' ? '/*' : ';';
 			return completionItemCache.directive['@'].filter(it => comment_prefix.includes(l = it.data) && (is_same_line || l !== '/'));
 		}
@@ -78,13 +75,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 	//#endregion
 
-	const commitCharacters = Object.fromEntries(Object.entries(extsettings.CompletionCommitCharacters ?? {})
+	const commitCharacters = Object.fromEntries(Object.entries(configCache.CompletionCommitCharacters ?? {})
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 	// eslint-disable-next-line prefer-const
-	let { text, word, token, range, linetext, kind, symbol } = doc.getContext(position, true);
-	const list = doc.relevance, { line, character } = position;
-	let isexpr = false, expg = make_search_re(word), offset;
+	let { text, word, token, range, linetext, kind, symbol } = lex.getContext(position, true);
+	const list = lex.relevance, { line, character } = position;
+	let isexpr = false, expg = makeSearchRegExp(word), offset;
 
 	switch (token.type) {
 		case 'TK_UNKNOWN':
@@ -101,7 +98,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		case 'TK_HOTLINE': {
 			if (!token.ignore)
 				return completionItemCache.key.filter(it => !it.label.toLowerCase().includes('alttab'));
-			const o = doc.document.offsetAt(position) - token.offset;
+			const o = lex.document.offsetAt(position) - token.offset;
 			if (0 < o && o <= text.indexOf(':', 1))
 				return completionItemCache.option.hotstring;
 			return;
@@ -121,7 +118,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					case '#includeagain': {
 						if (process.env.BROWSER)
 							return;
-						const l = doc.document.offsetAt(position) - token.offset;
+						const l = lex.document.offsetAt(position) - token.offset;
 						const text = token!.content;
 						let pre = text.slice(0, l);
 						let paths: string[], c = pre[0], inlib = false, suf = '';
@@ -130,8 +127,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						else c = '';
 						pre = pre.replace(/^\*i[ \t]/i, '');
 						if (pre.startsWith('*')) {
-							expg = make_search_re(pre.slice(1));
-							for (const k of utils.get_RCDATA()?.paths ?? [])
+							expg = makeSearchRegExp(pre.slice(1));
+							for (const k of utils.getRCData?.()?.paths ?? [])
 								expg.test(k) && add_item(k, CompletionItemKind.File);
 							return items;
 						}
@@ -142,10 +139,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 						if (!c.startsWith('>') && text.includes('%')) {
 							if (text.replace(/%[^%]+%/g, m => '\0'.repeat(m.length))[l] === '\0')
-								return Object.values(ahkvars).filter(it =>
+								return Object.values(ahkVars).filter(it =>
 									it.kind === SymbolKind.Variable && expg.test(it.name))
 									.map(convertNodeCompletion);
-							const t: typeof a_vars = { ...a_vars, scriptdir: doc.scriptdir, linefile: doc.fsPath };
+							const t: typeof a_Vars = { ...a_Vars, scriptdir: lex.scriptdir, linefile: lex.fsPath };
 							pre = pre.replace(/%a_(\w+)%/i, (m0, m1) => {
 								const a_ = t[m1.toLowerCase()];
 								return typeof a_ === 'string' ? a_ : '\0';
@@ -154,13 +151,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								return;
 						}
 						if (isdll)
-							paths = [((temp = doc.dlldir.get(position.line))) ? temp : doc.scriptpath, 'C:\\Windows\\System32'];
+							paths = [((temp = lex.dlldir.get(position.line))) ? temp : lex.scriptpath, 'C:\\Windows\\System32'];
 						else if (c.startsWith('>'))
-							paths = doc.libdirs, inlib = true;
+							paths = lex.libdirs, inlib = true;
 						else {
-							let t = doc.scriptpath;
+							let t = lex.scriptpath;
 							const l = position.line;
-							for (const [k, v] of doc.includedir)
+							for (const [k, v] of lex.includedir)
 								if (k < l)
 									t = v;
 								else break;
@@ -173,7 +170,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								c = c[0];
 						}
 
-						const xg = pre.endsWith('/') ? '/' : '\\', ep = make_search_re(suf);
+						const xg = pre.endsWith('/') ? '/' : '\\', ep = makeSearchRegExp(suf);
 						const extreg = isdll ? /\.(dll|ocx|cpl)$/i : inlib ? /\.ahk$/i : /\.(ahk2?|ah2)$/i;
 						const command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
 						const range = !allIdentifierChar.test(suf) ? {
@@ -220,7 +217,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					default: return;
 				}
 			} else if (pt?.type !== 'TK_HOTLINE')
-				return;
+				break;
 			// ::xxx::|
 			if (pt.ignore)
 				return (add_texts(), items);
@@ -231,7 +228,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (!/[<{|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
 				return;
 			if (text.includes('.')) {
-				for (const it of Object.values(find_class(doc, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
+				for (const it of Object.values(findClass(lex, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
 					if (it.kind === SymbolKind.Class && expg.test(it.name))
 						items.push(convertNodeCompletion(it));
 				}
@@ -243,7 +240,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (token.callsite || token.topofline > 0)
 				break;
 			const tp = ['TK_COMMA', 'TK_DOT', 'TK_EQUALS', 'TK_NUMBER', 'TK_OPERATOR', 'TK_RESERVED', 'TK_STRING', 'TK_WORD'];
-			const maxn = token.type === 'TK_STRING' ? 0 : 3, tokens = doc.tokens;
+			const maxn = token.type === 'TK_STRING' ? 0 : 3, tokens = lex.tokens;
 			let i = 0, t;
 			let cs = (pt = token).callsite, pi = cs?.paraminfo;
 			while ((pt = (t = tokens[pt.previous_pair_pos!]) ?? pt.previous_token)) {
@@ -279,10 +276,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						if (i !== 1) return;
 						if (!text) {
 							let tk = token;
-							const off = doc.document.offsetAt(range.end);
+							const off = lex.document.offsetAt(range.end);
 							for (text = token.content; (tk = tokens[tk.next_token_offset!]) && tk.offset < off; text += tk.content);
 							if (allIdentifierChar.test(text.replaceAll('.', ''))) {
-								for (const it of Object.values(find_class(doc, text)?.property ?? {})) {
+								for (const it of Object.values(findClass(lex, text)?.property ?? {})) {
 									if (it.kind === SymbolKind.Class && expg.test(it.name))
 										items.push(convertNodeCompletion(it));
 								}
@@ -294,9 +291,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					case 'goto': {
 						if (i === 1 && token.type !== 'TK_WORD')
 							return;
-						scope = doc.searchScopedNode(position);
-						let labels = ((scope as FuncNode) ?? doc).labels, data;
-						const offset = doc.document.offsetAt(position);
+						scope = lex.searchScopedNode(position);
+						let labels = ((scope as FuncNode) ?? lex).labels, data;
+						const offset = lex.document.offsetAt(position);
 						for (const n in labels) {
 							if (!expg.test(n))
 								continue;
@@ -333,15 +330,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				}
 			} else if (!maxn && !token.ignore) {
 				const cache = new Set<AhkSymbol | string>;
-				const ci = (pi && get_callinfo(doc, position, pi))!;
+				const ci = (pi && getCallInfo(lex, position, pi))!;
 				let kind: CompletionItemKind, command: { title: string, command: string } | undefined;
 				const endchar = text.substring(1).endsWith(text[0]) ? '' : text[0];
 				const text2item: (label: string) => CompletionItem = !endchar ? (label) => ({ label, kind, command }) :
 					(label) => ({ label, kind, insertText: `${label}${endchar}` });
 				if (ci) {
 					let fn: FuncNode, l: string, index: number, is_builtin: boolean, it;
-					const syms = find_symbols(doc, doc.getContext(ci.pos)) ?? [];
-					const uris = Object.values(ahkuris);
+					const syms = findSymbols(lex, lex.getContext(ci.pos)) ?? [];
+					const uris = Object.values(ahkUris);
 					const bases: ClassNode[] = [], set: AhkSymbol[] = [];
 					for (it of syms) {
 						fn = it.node as FuncNode;
@@ -356,7 +353,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 										if (index !== 0 || !it.parent)
 											continue;
 										const filter = l.endsWith('method') ? (kind: SymbolKind) => kind !== SymbolKind.Method : undefined;
-										for (const m of Object.values(get_class_members(doc, it.parent as ClassNode, bases)))
+										for (const m of Object.values(getClassMembers(lex, it.parent as ClassNode, bases)))
 											if (expg.test(m.name) && !filter?.(m.kind))
 												add_item(m.name, m.kind === SymbolKind.Method ?
 													CompletionItemKind.Method : CompletionItemKind.Property);
@@ -389,13 +386,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 									// fall through
 									case 'comcall':
 										if (index > 1 && index % 2 === 0) {
-											for (const name of ['cdecl'].concat(dllcalltpe))
+											for (const name of ['cdecl'].concat(dllcallTypes))
 												add_item(name, CompletionItemKind.TypeParameter) && (cpitem.commitCharacters = ['*']);
 										}
 										continue;
 									case 'comobject':
 										if (index === 0)
-											items.push(...(await sendAhkRequest('GetProgID', []) as string[])
+											items.push(...(await utils.sendAhkRequest?.<string[]>('GetProgID', []) ?? [])
 												?.filter(s => expg.test(s)).map(text2item) ?? []);
 										continue;
 									case 'numget':
@@ -405,7 +402,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 									// fall through
 									case 'numput':
 										if (index % 2 === 0)
-											for (const name of dllcalltpe.filter(v => !/str$/i.test(v)))
+											for (const name of dllcallTypes.filter(v => !/str$/i.test(v)))
 												add_item(name, CompletionItemKind.TypeParameter);
 										continue;
 									case 'hotkey':
@@ -418,8 +415,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 											const comma = pi?.comma[0];
 											if (!comma) continue;
 											const filter = l.endsWith('method') ? (kind: SymbolKind) => kind !== SymbolKind.Method : undefined;
-											for (const cls of decltype_expr(doc, doc.find_token(pi!.offset + 1, true), comma))
-												for (const it of Object.values(get_class_members(doc, cls, bases)))
+											for (const cls of decltypeExpr(lex, lex.findToken(pi!.offset + 1, true), comma))
+												for (const it of Object.values(getClassMembers(lex, cls, bases)))
 													if (expg.test(it.name) && !filter?.(it.kind))
 														add_item(it.name, it.kind === SymbolKind.Method ?
 															CompletionItemKind.Method : CompletionItemKind.Property);
@@ -429,8 +426,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						}
 						if (fn.kind === SymbolKind.Class) {
 							if (ci.kind === SymbolKind.Property)
-								fn = get_class_member(lexers[fn.uri!], fn, '__item', false) as FuncNode;
-							else fn = get_class_constructor(fn as unknown as ClassNode) as FuncNode;
+								fn = getClassMember(lexers[fn.uri!], fn, '__item', false) as FuncNode;
+							else fn = getClassConstructor(fn as unknown as ClassNode) as FuncNode;
 						}
 						const param = fn?.params?.[index];
 						if (!param) continue;
@@ -451,7 +448,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				}
 				if (!items.length && (pt = token.previous_token)?.content === ':=' &&
 					(pt = pt?.previous_token)?.type === 'TK_WORD') {
-					const syms = find_symbols(doc, doc.getContext(doc.document.positionAt(pt!.offset))) ?? [];
+					const syms = findSymbols(lex, lex.getContext(lex.document.positionAt(pt!.offset))) ?? [];
 					kind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
 					for (const sym of syms)
 						await add_annotations(sym.node.type_annotations || []);
@@ -481,7 +478,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								if (typeof s === 'string') {
 									if (/['"]/.test(s[0]))
 										s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)) && items.push(text2item(s));
-									else if ((t = find_symbol(doc, s)?.node)?.type_annotations && !cache.has(t) && t.kind === SymbolKind.TypeParameter)
+									else if ((t = findSymbol(lex, s)?.node)?.type_annotations && !cache.has(t) && t.kind === SymbolKind.TypeParameter)
 										cache.add(t), await add_annotations(t.type_annotations);
 									break;
 								}
@@ -499,11 +496,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	let right_is_paren = '(['.includes(linetext[range.end.character] || '\0');
-	const join_c = extsettings.FormatOptions.brace_style === 0 ? '\n' : ' ';
+	const join_c = configCache.FormatOptions.brace_style === 0 ? '\n' : ' ';
 
 	// fn|()=>...
 	if (symbol) {
-		if (!symbol.children && (scope ??= doc.searchScopedNode(position))?.kind === SymbolKind.Class) {
+		if (!symbol.children && (scope ??= lex.searchScopedNode(position))?.kind === SymbolKind.Class) {
 			let cls = scope as ClassNode;
 			const metafns = ['__Init()', '__Call(${1:Name}, ${2:Params})', '__Delete()',
 				'__Enum(${1:NumberOfVars})', '__Get(${1:Key}, ${2:Params})',
@@ -514,7 +511,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					label: 'class', insertText: ['class $1', '{\n\t$0\n}'].join(join_c),
 					kind: CompletionItemKind.Snippet, insertTextFormat: InsertTextFormat.Snippet
 				});
-			if (doc.tokens[token.next_token_offset]?.topofline === 0)
+			if (lex.tokens[token.next_token_offset]?.topofline === 0)
 				return token.topofline === 1 ? (items.pop(), items) : undefined;
 			const is_static = (symbol as Variable).static ?? false;
 			if (is_static)
@@ -529,7 +526,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						insertText: s + join_c + '{\n\t$0\n}'
 					});
 				});
-			for (const it of Object.values(get_class_members(doc, cls)))
+			for (const it of Object.values(getClassMembers(lex, cls)))
 				add_item(it.name, it.kind === SymbolKind.Method ?
 					CompletionItemKind.Method : CompletionItemKind.Property);
 			return items;
@@ -537,7 +534,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		return;
 	}
 
-	if (kind === SymbolKind.Null)
+	if (kind === SymbolKind.Null && word)
 		return;
 
 	// obj.xxx|
@@ -545,7 +542,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (!token.symbol && token.semantic?.type === SemanticTokenTypes.property)
 			return;
 		const props: Record<string, CompletionItem> = {};
-		let tps = decltype_expr(doc, token, range.end), index = 0;
+		let tps = decltypeExpr(lex, token, range.end), index = 0;
 		const is_any = tps.includes(ANY), bases: ClassNode[] = [];
 		const clsindex: Record<string, string> = {};
 		if (linetext[range.end.character] === '.')
@@ -558,12 +555,12 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (node.kind === SymbolKind.Interface) {
 				const params = ((node as ClassNode).generic_types?.[0] as string[])?.map(s => `'"`.includes(s[0]) ? s.slice(1, -1) : s);
 				if (!params?.length) continue;
-				const result = (await sendAhkRequest('GetDispMember', params) ?? {}) as Record<string, number>;
+				const result = await utils.sendAhkRequest?.<Record<string, number>>('GetDispMember', params) ?? {};
 				Object.entries(result).forEach(it => expg.test(it[0]) &&
 					add_item(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
 				continue;
 			}
-			const omems = get_class_members(doc, node, bases);
+			const omems = getClassMembers(lex, node, bases);
 			for (const l = bases.length; index < l; index++)
 				clsindex[bases[index].full] = `0000${index}`.slice(-4);
 			for (const [k, it] of Object.entries(omems)) {
@@ -580,12 +577,12 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 		if (!is_any && (triggerKind !== 1 || word.length < 3))
 			return items;
-		const objs = new Set([doc.object, lexers[ahkuris.ahk2]?.object, lexers[ahkuris.ahk2_h]?.object]);
+		const objs = new Set([lex.object, lexers[ahkUris.ahk2]?.object, lexers[ahkUris.ahk2_h]?.object]);
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		objs.delete(undefined as any);
 		for (const uri in list)
 			objs.add(lexers[uri].object);
-		for (const k in (temp = doc.object.property)) {
+		for (const k in (temp = lex.object.property)) {
 			const v = temp[k];
 			if (v.length === 1 && !v[0].full && at_edit_pos(v[0]))
 				delete temp[k];
@@ -613,7 +610,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// snippet
 	items.push(...completionItemCache.snippet);
 
-	scope ??= doc.searchScopedNode(position);
+	scope ??= lex.searchScopedNode(position);
 	// class cls {\nprop {\n|\n}\n}
 	if (scope?.children && scope.kind === SymbolKind.Property) {
 		if (token.topofline !== 1)
@@ -622,7 +619,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	// keyword
-	const keyword_start_with_uppercase = extsettings.FormatOptions?.keyword_start_with_uppercase;
+	const keyword_start_with_uppercase = configCache.FormatOptions?.keyword_start_with_uppercase;
 	const addkeyword = keyword_start_with_uppercase ? function (it: CompletionItem) {
 		items.push(it = Object.assign({}, it));
 		it.insertText = (it.insertText ?? it.label).replace(/(?<=^(loop\s)?)[a-z]/g, m => m.toUpperCase());
@@ -634,12 +631,12 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 	} else {
 		const kind = CompletionItemKind.Snippet, insertTextFormat = InsertTextFormat.Snippet;
-		const tab = extsettings.FormatOptions?.switch_case_alignment ? '' : '\t';
+		const tab = configCache.FormatOptions?.switch_case_alignment ? '' : '\t';
 		const sel_text_block = '{\n\t${TM_SELECTED_TEXT/^\\s+//}$0\n}';
 		let uppercase = (s: string) => s, remove_indent = uppercase;
 		if (keyword_start_with_uppercase)
 			uppercase = (s: string) => s.replace(/\b[a-z](?=\w)/g, m => m.toUpperCase());
-		if (extsettings.FormatOptions?.switch_case_alignment)
+		if (configCache.FormatOptions?.switch_case_alignment)
 			remove_indent = (s: string) => s.replace(/^\t/gm, '');
 		for (const [label, arr] of [
 			['switch', ['switch ${1:[SwitchValue, CaseSense]}', remove_indent(`{\n${tab}case \${2:}:\n\t${tab}\${3:}\n${tab}default:\n\t${tab}$0\n}`)]],
@@ -662,7 +659,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			items.push({
 				label: `${k}-block`, kind, insertTextFormat,
 				insertText: uppercase(`${v}${join_c}${sel_text_block}`)
-			});	
+			});
 	}
 
 	// hotkey
@@ -671,17 +668,17 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			completionItemCache.key.filter(it => !it.label.toLowerCase().includes('alttab')));
 
 	// built-in vars
-	for (const n in ahkvars)
+	for (const n in ahkVars)
 		if (expg.test(n))
-			vars[n] = convertNodeCompletion(ahkvars[n]);
+			vars[n] = convertNodeCompletion(ahkVars[n]);
 
 	// global vars
-	for (const it of Object.values(doc.declaration)) {
+	for (const it of Object.values(lex.declaration)) {
 		if (expg.test(l = it.name.toUpperCase()) && !at_edit_pos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
 			vars[l] = convertNodeCompletion(it);
 	}
 	const list_arr = Object.keys(list).reverse();
-	for (const uri of new Set([doc.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr])) {
+	for (const uri of new Set([lex.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr])) {
 		if (!(temp = lexers[uri]))
 			continue;
 		const d = temp.d;
@@ -696,23 +693,23 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// local vars
 	if (scope) {
 		position = range.end;
-		Object.entries(doc.getScopeSymbols(scope)).forEach(([l, it]) => {
+		Object.entries(lex.getScopeSymbols(scope)).forEach(([l, it]) => {
 			if (expg.test(l) && (it.def !== false || !vars[l] && !at_edit_pos(it)))
 				vars[l] = convertNodeCompletion(it);
 		});
 	}
 
 	// auto-include
-	if (extsettings.AutoLibInclude) {
-		const libdirs = doc.libdirs, caches: Record<string, TextEdit[]> = {};
+	if (configCache.AutoLibInclude) {
+		const libdirs = lex.libdirs, caches: Record<string, TextEdit[]> = {};
 		let exportnum = 0, line = -1, first_is_comment: boolean | undefined, cm: Token;
-		let dir = doc.workspaceFolder;
-		dir = (dir ? URI.parse(dir).fsPath : doc.scriptdir).toLowerCase();
-		doc.includedir.forEach((v, k) => line = k);
-		for (const u in libfuncs) {
-			if (!list[u] && (path = libfuncs[u].fsPath) && ((extsettings.AutoLibInclude > 1 && libfuncs[u].islib) ||
-				((extsettings.AutoLibInclude & 1) && path.toLowerCase().startsWith(dir)))) {
-				for (const it of libfuncs[u]) {
+		let dir = lex.workspaceFolder;
+		dir = (dir ? URI.parse(dir).fsPath : lex.scriptdir).toLowerCase();
+		lex.includedir.forEach((v, k) => line = k);
+		for (const u in libSymbols) {
+			if (!list[u] && (path = libSymbols[u].fsPath) && ((configCache.AutoLibInclude > 1 && libSymbols[u].islib) ||
+				((configCache.AutoLibInclude & 1) && path.toLowerCase().startsWith(dir)))) {
+				for (const it of libSymbols[u]) {
 					expg.test(l = it.name) && (vars[l.toUpperCase()] ??= (
 						cpitem = convertNodeCompletion(it), exportnum++,
 						cpitem.additionalTextEdits = caches[path] ??= autoinclude(path),
@@ -726,7 +723,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 		function autoinclude(path: string) {
 			const lp = (path = path.replace(/(\s);/g, '$1`;')).toLowerCase(), texts: string[] = [];
-			let curdir = doc.scriptpath, i = 0, l = -1;
+			let curdir = lex.scriptpath, i = 0, l = -1;
 			for (const p of libdirs) {
 				if (++i, lp.startsWith(p.toLowerCase())) {
 					const n = basename(path);
@@ -739,7 +736,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					else texts.push(`#Include %A_ScriptDir%\\Lib\\${n}`);
 				}
 			}
-			doc.includedir.forEach((v, k) => {
+			lex.includedir.forEach((v, k) => {
 				if (lp.startsWith(v.toLowerCase() + '\\')) {
 					if (v.length >= curdir.length)
 						l = k, curdir = v;
@@ -749,22 +746,22 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			l === -1 && (l = line);
 			if (curdir[0] === lp[0])
 				texts.push(`#Include ${relative(curdir, path)}`);
-			let pos = { line: doc.document.lineCount, character: 0 }, text = `#Include ${path}`, t;
+			let pos = { line: lex.document.lineCount, character: 0 }, text = `#Include ${path}`, t;
 			texts.forEach(t => t.length < text.length && (text = t)), text = '\n' + text;
 			if (l !== -1) {
-				t = doc.document.getText({ start: { line: l, character: 0 }, end: { line: l + 1, character: 0 } });
+				t = lex.document.getText({ start: { line: l, character: 0 }, end: { line: l + 1, character: 0 } });
 				pos = { line: l, character: t.length };
 			} else if (position.line === pos.line - 1) {
-				if ((first_is_comment ??= (cm = doc.find_token(0))?.type.endsWith('COMMENT') && !is_symbol_comment(cm)))
-					pos = doc.document.positionAt(cm.offset + cm.length), text = '\n' + text;
+				if ((first_is_comment ??= (cm = lex.findToken(0))?.type.endsWith('COMMENT') && !is_symbol_comment(cm)))
+					pos = lex.document.positionAt(cm.offset + cm.length), text = '\n' + text;
 				else pos.line = 0, text = text.trimStart() + '\n';
 			}
 			return [TextEdit.insert(pos, text)];
 		}
 	}
 
-	if ((list_arr.unshift(doc.uri), !list_arr.includes(ahkuris.winapi)) && list_arr.some(u => lexers[u]?.include[ahkuris.winapi]))
-		for (const n in temp = lexers[ahkuris.winapi]?.declaration)
+	if ((list_arr.unshift(lex.uri), !list_arr.includes(ahkUris.winapi)) && list_arr.some(u => lexers[u]?.include[ahkUris.winapi]))
+		for (const n in temp = lexers[ahkUris.winapi]?.declaration)
 			expg.test(n) && (vars[n] ??= convertNodeCompletion(temp[n]));
 
 	// constant
@@ -781,13 +778,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (tk.symbol)
 			return tk.symbol;
 		let t;
-		const nk = doc.tokens[tk.next_token_offset];
-		if (nk && (((t = nk.symbol)?.detail ?? (t = doc.tokens[nk.next_token_offset]?.symbol)?.detail) !== undefined))
+		const nk = lex.tokens[tk.next_token_offset];
+		if (nk && (((t = nk.symbol)?.detail ?? (t = lex.tokens[nk.next_token_offset]?.symbol)?.detail) !== undefined))
 			return t;
 	}
 	function add_classes() {
 		let t;
-		const decls = [ahkvars, doc.declaration];
+		const decls = [ahkVars, lex.declaration];
 		for (const uri in list)
 			(t = lexers[uri]) && decls.push(t.declaration);
 		for (const decl of decls)
@@ -798,19 +795,19 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	async function add_paths(only_folder = false, ext_re?: RegExp) {
 		if (process.env.BROWSER)
 			return;
-		offset ??= doc.document.offsetAt(position);
+		offset ??= lex.document.offsetAt(position);
 		let path = token.content.substring(1, offset - token.offset), suf = '';
 		if (/[*?"<>|\t]/.test(path))
 			return;
 		if (!/^\w:[\\/]/.test(path))
-			path = `${doc.scriptdir}/${path}`;
+			path = `${lex.scriptdir}/${path}`;
 		path = path.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 		try {
 			if (!existsSync(path) || !statSync(path).isDirectory())
 				return;
 		} catch { return; };
 
-		const slash = path.endsWith('/') ? '/' : '\\', re = make_search_re(suf);
+		const slash = path.endsWith('/') ? '/' : '\\', re = makeSearchRegExp(suf);
 		const command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
 		const range = !allIdentifierChar.test(suf) ? {
 			start: {
@@ -844,13 +841,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	async function add_dllexports() {
 		if (process.env.BROWSER)
 			return;
-		offset ??= doc.document.offsetAt(position);
+		offset ??= lex.document.offsetAt(position);
 		let pre = token.content.substring(1, offset - token.offset), suf = '', t;
-		const docs = [doc], ls: Record<string, unknown> = {};
+		const docs = [lex], ls: Record<string, unknown> = {};
 		for (const u in list)
 			(t = lexers[u]) && docs.push(t);
 		pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
-		const expg = make_search_re(suf), kind = CompletionItemKind.Function;
+		const expg = makeSearchRegExp(suf), kind = CompletionItemKind.Function;
 		const range = !allIdentifierChar.test(suf) ? {
 			start: {
 				line: position.line,
@@ -888,7 +885,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (l.includes(':'))
 				dlls.add(l);
 			else if (l.includes('/'))
-				dlls.add(doc.scriptpath + (l.startsWith('/') ? l : `/${l}`));
+				dlls.add(lex.scriptpath + (l.startsWith('/') ? l : `/${l}`));
 			else {
 				l = `/${l}`;
 				docs.forEach(d => d.dllpaths.forEach(path => {
@@ -900,7 +897,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					docs.forEach(d => dlls.add(d.scriptpath + l));
 				}
 			}
-			for (const label of await utils.get_DllExport(dlls, true))
+			for (const label of await utils.getDllExport?.(dlls, true) ?? [])
 				expg.test(label) && items.push({ label, kind });
 		}
 	}
@@ -909,7 +906,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (expg.test(it.label))
 				vars[it.label.toUpperCase()] = true, items.push(it);
 		}
-		for (const t in (temp = doc.texts))
+		for (const t in (temp = lex.texts))
 			expg.test(t) && add_item(temp[t], CompletionItemKind.Text);
 		for (const u in list)
 			for (const t in (temp = lexers[u]?.texts))
@@ -940,7 +937,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			// fall through
 			case SymbolKind.Function:
 				ci.kind = info.kind === SymbolKind.Method ? CompletionItemKind.Method : CompletionItemKind.Function;
-				if (extsettings.CompleteFunctionParens) {
+				if (configCache.CompleteFunctionParens) {
 					const fn = info as FuncNode;
 					if (right_is_paren)
 						ci.command = { title: 'cursorRight', command: 'cursorRight' };
@@ -972,7 +969,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label;
 				set_ci_classinfo(ci, info.parent);
 				const prop = info as Property;
-				if (extsettings.CompleteFunctionParens)
+				if (configCache.CompleteFunctionParens)
 					if (right_is_paren)
 						ci.command = { title: 'cursorRight', command: 'cursorRight' };
 					else if (!prop.call && prop.get?.params.length)
@@ -988,7 +985,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 		if (info.tags)
 			ci.tags = info.tags;
-		const value = get_detail(info, doc);
+		const value = getSymbolDetail(info, lex);
 		if (value)
 			ci.documentation = value;
 		return ci;

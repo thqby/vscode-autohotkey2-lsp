@@ -1,9 +1,8 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
-	AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, Variable, ZERO_RANGE,
-	ahkuris, ahkvars, find_symbol, find_symbols, lexers
+	AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, Variable, ZERO_RANGE,
+	ahkUris, ahkVars, findSymbol, findSymbols, lexers
 } from './common';
-import { SymbolKind } from './lsp-enums';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
 	const result: Location[] = [], lex = lexers[params.textDocument.uri.toLowerCase()];
@@ -16,7 +15,7 @@ export async function referenceProvider(params: ReferenceParams, token: Cancella
 
 export function getAllReferences(lex: Lexer, context: Context, allow_builtin = true): Record<string, Range[]> | null | undefined {
 	if (context.kind === SymbolKind.Null) return;
-	const nodes = find_symbols(lex, context);
+	const nodes = findSymbols(lex, context);
 	if (nodes?.length !== 1)
 		return;
 	let name = context.text.toUpperCase(), i = 0;
@@ -30,7 +29,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 	if (!uri || /* super */ is_this === false)
 		return;
 
-	if (!allow_builtin && (node === ahkvars[name] || uri === ahkuris.winapi))
+	if (!allow_builtin && (node === ahkVars[name] || uri === ahkUris.winapi))
 		return null;
 
 	switch (node.kind) {
@@ -88,7 +87,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 					refs[lexers[uri].document.uri] = findAllFromScope(lexers[uri] as unknown as AhkSymbol, c[0], SymbolKind.Variable);
 				while (i < l) {
 					const name = c.slice(0, ++i).join('.');
-					const r = find_symbol(lex, name);
+					const r = findSymbol(lex, name);
 					if (r?.node.kind === SymbolKind.Class) {
 						for (const it of Object.values((r.node as ClassNode).property ?? {})) {
 							const fns = [];

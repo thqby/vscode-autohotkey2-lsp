@@ -63,3 +63,43 @@ export enum DiagnosticSeverity {
 	Information = 3,
 	Hint = 4,
 }
+
+export enum FileChangeType {
+    /**
+     * The file got created.
+     */
+    Created = 1,
+    /**
+     * The file got changed.
+     */
+    Changed = 2,
+    /**
+     * The file got deleted.
+     */
+    Deleted = 3,
+}
+
+export enum MessageType {
+    /**
+     * An error message.
+     */
+    Error = 1,
+    /**
+     * A warning message.
+     */
+    Warning = 2,
+    /**
+     * An information message.
+     */
+    Info = 3,
+    /**
+     * A log message.
+     */
+    Log = 4,
+    /**
+     * A debug message.
+     *
+     * @since 3.18.0
+     */
+    Debug = 5,
+}

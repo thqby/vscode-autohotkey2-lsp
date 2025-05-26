@@ -1,12 +1,12 @@
-import { createClientSocketTransport, createMessageConnection, createServerSocketTransport, MessageConnection } from 'vscode-languageserver/node';
 import { spawn } from 'child_process';
-import { ahkpath_resolved, rootdir } from './common';
+import { createClientSocketTransport, createMessageConnection, createServerSocketTransport, MessageConnection } from 'vscode-languageserver/node';
+import { ahkPath_resolved, rootDir } from './common';
 let ahk_server: MessageConnection | undefined | null;
 
-async function get_ahkProvider_port(): Promise<number> {
+async function getProviderPort(): Promise<number> {
 	// eslint-disable-next-line no-async-promise-executor
 	return new Promise(async resolve => {
-		if (!ahkpath_resolved)
+		if (!ahkPath_resolved)
 			return resolve(0);
 		let server, port = 1200;
 		while (true) {
@@ -17,7 +17,7 @@ async function get_ahkProvider_port(): Promise<number> {
 				port++;
 			}
 		}
-		const process = spawn(ahkpath_resolved, [`${rootdir}/server/dist/ahkProvider.ahk`, port.toString()]);
+		const process = spawn(ahkPath_resolved, [`${rootDir}/server/dist/ahkProvider.ahk`, port.toString()]);
 		if (!process.pid)
 			return resolve(0);
 		let resolve2: ((_?: MessageConnection) => void) | undefined = (r?: MessageConnection) => {
@@ -34,12 +34,10 @@ async function get_ahkProvider_port(): Promise<number> {
 	});
 }
 
-export async function get_ahkProvider(): Promise<MessageConnection | null> {
+async function getProvider(): Promise<MessageConnection | null> {
 	if (ahk_server !== undefined)
 		return ahk_server;
-	let port = 0;
-	if (!process.env.BROWSER && process.platform === 'win32')
-		port = await get_ahkProvider_port();
+	const port = await getProviderPort();
 	if (!port)
 		return ahk_server = null;
 	return new Promise(resolve => {
@@ -56,4 +54,8 @@ export async function get_ahkProvider(): Promise<MessageConnection | null> {
 				ahk_server?.dispose(), resolve(ahk_server = null);
 		}, 500);
 	});
+}
+
+export function sendAhkRequest<T>(method: string, params: unknown[]): Promise<T | undefined> {
+	return getProvider().then(client => client?.sendRequest<T>(method, ...params));
 }

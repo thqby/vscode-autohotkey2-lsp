@@ -1,4 +1,4 @@
-import { rootdir, version_decode, getWorkspaceFile, readLocaleFile, HIDDEN_PARAMS } from './common';
+import { rootDir, versionDecode, getWorkspaceFile, readLocaleFile, HIDDEN_PARAMS } from './common';
 
 let loadedCollection: Record<string, string> = {};
 
@@ -64,7 +64,7 @@ export const diagnostic = {
 	propemptyparams: localize('diagnostic.propemptyparams', 'Empty [] not permitted'),
 	propnotinit: localize('diagnostic.propnotinit', 'Property declaration is not initialized'),
 	requirev1: localize('diagnostic.requirev1', 'This script requires AutoHotkey v1, continue parsing?'),
-	requireVerN: (n: number) => diagnostic.requireversion(version_decode(n)),
+	requireVerN: (n: number) => diagnostic.requireversion(versionDecode(n)),
 	requireversion: localize('diagnostic.requireversion', 'This feature requires the AutoHotkey version: {0}'),
 	requirevariable: localize('diagnostic.requirevariable', "'&' requires a variable"),
 	reservedworderr: localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name'),
@@ -106,8 +106,8 @@ export const response = {
 	cannotrenamestdlib: localize('response.cannotrenamestdlib', 'Elements defined in the standard AutoHotkey library can\'t be renamed.'),
 }
 
-export function loadlocalize() {
-	const path = `${rootdir}/package.nls.<>.json`;
+export function initLocalize() {
+	const path = `${rootDir}/package.nls.<>.json`;
 	return process.env.BROWSER ? getWorkspaceFile(path).then(v => load(v?.text))
 		: load(readLocaleFile(path));
 	function load(str?: string) {
@@ -119,7 +119,7 @@ export function loadlocalize() {
 	}
 }
 
-function localize(key: string, defValue: string) {
+export function localize(key: string, defValue: string) {
 	return (...args: (number | string)[]) => {
 		if (args.length)
 			return format(getString(key, defValue), ...args as string[]);
