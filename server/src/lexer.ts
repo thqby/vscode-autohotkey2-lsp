@@ -536,18 +536,20 @@ export class Lexer {
 				if ((tk = tks[i]))
 					return tk;
 			} else {
-				const isid = isIdentifierChar(c.charCodeAt(0));
-				if (isid) {
+				if (isIdentifierChar(c.charCodeAt(0))) {
 					while (isIdentifierChar(input.charCodeAt(--i)))
 						continue;
-				} else {
-					while (!WHITESPACE.includes(c = input.charAt(--i)))
-						if (isIdentifierChar(c.charCodeAt(0)))
-							break;
-				}
-				if ((tk = tks[++i] ?? tks[i - 1]))
+					if ((tk = tks[i + 1] ?? tks[i]))
+						return tk;
+					c = input.charAt(i);
+				} else if ((tk = tks[i]))
 					return tk;
-				if (!WHITESPACE.includes(input.charAt(i - 1))) {
+				else if (PUNCT.includes(c)) {
+					for (let j = 0; j < 3 && !WHITESPACE.includes(c = input.charAt(--i)) && PUNCT.includes(c); j++)
+						if ((tk = tks[i]))
+							return tk;
+				}
+				if (!WHITESPACE.includes(c)) {
 					tk = find_token(input.indexOf('\n', offset) + 1 || input_length);
 					do {
 						if (tk.offset + tk.length <= offset)

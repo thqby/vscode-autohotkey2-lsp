@@ -66,11 +66,8 @@ class Vscode_JSONRPC_Client extends Socket.Client {
 				msg := StrGet(buf.Ptr + buf.skip, buf.Size - buf.skip, 'utf-8')
 				m := JSON.parse(msg)
 				if '' == id := m.Get('id', '')
-					return SetTimer(() => this.onNotification(m), -1)
-				try cb := this._response.Delete(id)
-				catch
-					return SetTimer(() => this.onRequest(m), -1)
-				try cb(m)
+					SetTimer(() => this.onNotification(m), -1)
+				else SetTimer(() => this.onRequest(m), -1)
 			}
 			return
 		} else
