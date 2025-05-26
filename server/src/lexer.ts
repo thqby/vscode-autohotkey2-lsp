@@ -4858,8 +4858,7 @@ export class Lexer {
 		}
 
 		function get_next_token(depth = 0): Token {
-			let resulting_string: string, c: string, m, i;
-			let bg = 0;
+			let resulting_string: string, line, c, m, i, bg = 0;
 			const _ppos = parser_pos;
 			n_newlines = 0;
 
@@ -4912,7 +4911,7 @@ export class Lexer {
 				let next_LF = input.indexOf('\n', parser_pos);
 				if (next_LF < 0)
 					next_LF = input_length;
-				const line = input.substring(last_LF + 1, next_LF).trim().replace(/(^|[ \t]+);.*$/, '');
+				line = input.substring(offset, next_LF).replace(/(^|[ \t]+)(;.*)?\r?$/, '');
 				if (line.includes('::') && (block_mode || !'"\''.includes(line[0]) ||
 					!['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lst.type))) {
 					if ((m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i))) {
@@ -5446,15 +5445,19 @@ export class Lexer {
 			}
 
 			if (c === '/' && bg && input[parser_pos] === '*') {
-				let LF = input.indexOf('\n', --parser_pos), ln = 0, e = '';
-				while (!(m = input.substring(parser_pos, LF > 0 ? LF : input_length).match(/(^[ \t]*\*\/)|\*\/([ \t]*\r?)$/)) && LF > 0)
+				let LF = input.indexOf('\n', --parser_pos), ln = 0;
+				while (!(m = line!.match(/(^[ \t]*\*\/)|\*\/([ \t]*\r?)$/)) && LF > 0) {
 					last_LF = LF, LF = input.indexOf('\n', parser_pos = LF + 1), ln++;
+					line = input.substring(parser_pos, LF > 0 ? LF : input_length);
+				}
 				if (m?.[1])
 					parser_pos = input.indexOf('*/', last_LF) + 2, begin_line = true, last_LF = parser_pos - 1;
-				else parser_pos = (LF < 0 ? input_length : LF) - (m?.[2].length ?? (e = '*/', 0));
+				else if (!ln && m)
+					parser_pos = offset + line!.length;
+				else parser_pos = (LF < 0 ? input_length : LF) - (m?.[2].length ?? 0);
 				_this.token_ranges.push({ start: offset, end: parser_pos, type: 1 });
 				const cmm: Token = {
-					type: 'TK_BLOCK_COMMENT', content: input.substring(offset, parser_pos) + e, offset, length: parser_pos - offset,
+					type: 'TK_BLOCK_COMMENT', content: input.substring(offset, parser_pos), offset, length: parser_pos - offset,
 					next_token_offset: -1, previous_token: lst, topofline: bg, skip_pos: parser_pos, has_LF: ln > 1
 				};
 				if (!string_mode) {

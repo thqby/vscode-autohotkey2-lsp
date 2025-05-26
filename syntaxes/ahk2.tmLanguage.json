@@ -651,19 +651,23 @@
       "patterns": [
         {
           "name": "comment.block.jsdoc.ahk2",
-          "begin": "^[ \t]*(\\/\\*\\*)(?!\\/)",
+          "begin": "(?<=^[ \t]*)(\\/\\*\\*)(?!\\/)",
           "beginCaptures": {
             "1": {
               "name": "punctuation.definition.comment.begin.ahk2"
             }
           },
-          "end": "(^[ \t]*\\*\\/|(\\*\\/)[ \t]*$)",
+          "end": "(^[ \t]*\\*\\/|\\*\\/(?=[ \t]*$)|(?<=\\G.*)\\*\\/(?=[ \t]+;))",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.comment.end.ahk2"
             }
           },
           "patterns": [
+            {
+              "match": "(?<=\\G.*[ \t]);.*",
+              "name": "comment.line.ahk2"
+            },
             {
               "include": "#docblock"
             }
@@ -677,12 +681,18 @@
               "name": "punctuation.definition.comment.begin.ahk2"
             }
           },
-          "end": "(^[ \t]*\\*\\/|(\\*\\/)[ \t]*$)",
+          "end": "(^[ \t]*\\*\\/|\\*\\/(?=[ \t]*$)|(?<=\\G.*)\\*\\/(?=[ \t]+;))",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.comment.end.ahk2"
             }
-          }
+          },
+          "patterns": [
+            {
+              "match": "(?<=\\G.*[ \t]);.*",
+              "name": "comment.line.ahk2"
+            }
+          ]
         },
         {
           "name": "comment.line.ahk2",
