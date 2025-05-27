@@ -2661,6 +2661,8 @@ export class Lexer {
 					next = tk.type as string === 'TK_RESERVED' && tk.content.toLowerCase() === 'else';
 				} else {
 					const t = tk;
+					if (tk.topofline)
+						_this.linepos[document.positionAt(lk.offset).line] = previous_pos;
 					if (tk.type === 'TK_RESERVED' && LINE_STARTERS.includes(tk.content.toLowerCase())) {
 						parse_reserved();
 						if (t === tk || (t === lk && !next && !tk.topofline))
@@ -4913,7 +4915,7 @@ export class Lexer {
 				let next_LF = input.indexOf('\n', parser_pos);
 				if (next_LF < 0)
 					next_LF = input_length;
-				line = input.substring(offset, next_LF).replace(/(^|[ \t]+)(;.*)?\r?$/, '');
+				line = input.substring(offset, next_LF).replace(/((^|[ \t]+)(;.*)?)?\r?$/, '');
 				if (line.includes('::') && (block_mode || !'"\''.includes(line[0]) ||
 					!['TK_EQUALS', 'TK_COMMA', 'TK_START_EXPR'].includes(lst.type))) {
 					if ((m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i))) {

@@ -44,12 +44,12 @@ async function build_prod() {
 	const opts = [
 		client_opt, server_opt,
 		{ ...client_opt, entryPoints: client_opt.entryPoints.splice(1) },
-		{ ...server_opt, outdir: 'server/out' },
+		{ ...server_opt, entryPoints: ['server/src/**/*.ts'], outdir: 'server/out' },
 	];
 	client_opt.external = ['vscode'];
 	client_opt.bundle = server_opt.bundle = true;
 	client_opt.minify = server_opt.minify = true;
-	server_opt.entryPoints = [server_opt.entryPoints[0]];
+	server_opt.entryPoints.splice(1);
 	opts.push(...browser_opts(true));
 	const start = new Date;
 	await Promise.all(opts.map(o => build(o)));
