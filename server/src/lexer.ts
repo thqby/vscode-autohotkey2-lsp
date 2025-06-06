@@ -5061,8 +5061,7 @@ export class Lexer {
 									// )
 									let next_LF = input.indexOf('\n', i), m: RegExpMatchArray | null = null;
 									const o = last_LF + 1, data = [lc, i - 1 - o - lc];
-									while ((t = input.substring(i, next_LF < 0 ? next_LF = input_length : next_LF)) &&
-										!(m = t.match(/^[ \t]*\)/))) {
+									while (!(m = (t = input.substring(i, next_LF < 0 ? next_LF = input_length : next_LF)).match(/^[ \t]*\)/)) && next_LF > 0) {
 										if (comments && (b = t.search(/(?<=^|[ \t]);/)) > -1)
 											data.push(t.length - b, b);
 										else data.push(0, t.length);
