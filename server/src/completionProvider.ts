@@ -434,7 +434,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						if (is_builtin) {
 							if (param.name === 'Keys') {
 								kind = CompletionItemKind.Text, command = undefined;
-								l.includes('send') && items.push(text2item('Blind'));
+								l.includes('send') && items.push(...['Blind', 'DownR', 'DownTemp'].map(text2item));
 								items.push(...completionItemCache.key.filter(it => expg.test(it.label)));
 								continue;
 							}
