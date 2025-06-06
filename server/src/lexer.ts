@@ -4045,11 +4045,10 @@ export class Lexer {
 						named_params?.push(it);
 						if (it.defaultVal !== undefined || it.arr)
 							lpv = true;
-						else if (lpv)
-							_diags.push({
-								message: diagnostic.defaultvalmissing(it.name),
-								range: it.selectionRange
-							});
+						else lpv && ahkVersion < alpha_11 + 7 && _diags.push({
+							message: diagnostic.defaultvalmissing(it.name),
+							range: it.selectionRange
+						});
 						if ((t = pars[_low = it.name.toUpperCase()]))
 							_diags.push({
 								message: diagnostic.conflictserr('parameter', 'parameter', t.name),
