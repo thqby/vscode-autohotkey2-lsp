@@ -123,6 +123,7 @@ export interface AhkSymbol extends DocumentSymbol {
 	since?: string
 	static?: boolean | null
 	type_annotations?: Array<string | AhkSymbol> | false
+	type_name?: string
 	uri?: string
 }
 
@@ -228,14 +229,17 @@ export interface Token {
 	type: string
 }
 
+export enum USAGE { Read, Write }
+
 export interface Context {
-	text: string;
-	word: string;
-	range: Range;
-	kind: SymbolKind;
-	linetext: string;
-	token: Token;
-	symbol?: AhkSymbol;
+	usage?: USAGE
+	kind: SymbolKind
+	linetext: string
+	range: Range
+	symbol?: AhkSymbol
+	text: string
+	token: Token
+	word: string
 };
 
 export interface FormatOptions {
@@ -1692,7 +1696,7 @@ export class Lexer {
 									_parent = (_parent as ClassNode).$property!.__INIT;
 									const sta = parse_statement('');
 									_parent.children!.push(...result.splice(rl)), _parent = _;
-									result.push(...sta), sta.forEach(it => it.parent = _);
+									result.push(...sta), sta.forEach(it => it.parent = (_ as ClassNode).prototype);
 									if (line_begin_pos !== undefined)
 										_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
 								} else if (input[lk.offset + lk.length] === '(')
@@ -3446,7 +3450,7 @@ export class Lexer {
 
 			function parse_obj(must = false): boolean {
 				const l = lk, b = tk, rl = result.length, prev_mode = mode;
-				const mark: number[] = [], props: Record<string, AhkSymbol> = {};
+				const mark: Token[] = [], props: Record<string, AhkSymbol> = {};
 				let isobj = true, k: Token | undefined, e: Token | undefined;
 				block_mode = false, next = true, tk.data = OBJECT, mode |= BlockType.Pair;
 				while (isobj) {
@@ -3464,8 +3468,8 @@ export class Lexer {
 					}
 				}
 				if (isobj || must)
-					for (const o of mark)
-						(k = tokens[o]).type = 'TK_WORD', k.semantic = SE_PROPERTY;
+					for (k of mark)
+						k.type = 'TK_WORD', k.semantic = SE_PROPERTY;
 				if (!isobj) {
 					lk = l, tk = b, result.splice(rl), mode = prev_mode;
 					parser_pos = tk.skip_pos ?? tk.offset + tk.length;
@@ -3479,6 +3483,8 @@ export class Lexer {
 					if (Object.keys(props).length) {
 						const cls = DocumentSymbol.create('', undefined, SymbolKind.Class, ZERO_RANGE, ZERO_RANGE) as ClassNode;
 						b.data = cls, cls.property = props, cls.name = cls.full = cls.extends = '';
+						for (k of mark)
+							((k.symbol = props[k.content.toUpperCase()]) ?? {}).parent = cls;
 					}
 					tk.data = b.data;
 				} else
@@ -3510,7 +3516,7 @@ export class Lexer {
 							// fall through
 							case 'TK_RESERVED':
 							case 'TK_WORD': {
-								mark.push(tk.offset);
+								mark.push(tk);
 								if (input[parser_pos] === '%')
 									break;
 								const t = lk;
@@ -3561,7 +3567,7 @@ export class Lexer {
 					result.push(...parse_expression(','));
 					if (k) {
 						addprop(k);
-						(props[k.content.toUpperCase()] = Variable.create(k.content, SymbolKind.Property, make_range(k.offset, k.length)))
+						(props[k.content.toUpperCase()] ??= Variable.create(k.content, SymbolKind.Property, make_range(k.offset, k.length)))
 							.returns = [colon + 1, lk.offset + lk.length];
 					}
 					if (tk.type === 'TK_COMMA')
@@ -3908,7 +3914,7 @@ export class Lexer {
 							if ((pp = pp?.CALL)) {
 								t = Variable.create('', SymbolKind.Variable, ZERO_RANGE), t.arr = true;
 								t = FuncNode.create(prop, SymbolKind.Method, rg, rg, [t], undefined, s);
-								t.full = `(${classfullname.slice(0, -1)}) ${t.full}`;
+								t.full = `(${classfullname.slice(0, -1)}) ${((t.static = s)) ? 'static ' : ''}${t.full}`;
 								t.returns = pp.returns, (t as FuncNode).eval = true;
 								t.parent = cls;
 								if (!sym)
@@ -6334,10 +6340,11 @@ export class Lexer {
 	}
 
 	public getContext(position: Position, ignoreright = false): Context {
+		// eslint-disable-next-line prefer-const
+		let { character, line } = position, usage;
 		let kind: SymbolKind, symbol: AhkSymbol | undefined, token: Token | undefined, start: number, is_end_expr, text;
-		const document = this.document, tokens = this.tokens, { line } = position;
+		const { document, tokens } = this;
 		const linetext = document.getText(Range.create(line, 0, line + 1, 0)).trimEnd();
-		let { character } = position;
 		for (start = character; --start >= 0 && isIdentifierChar(linetext.charCodeAt(start)););
 		if (!ignoreright)
 			for (; isIdentifierChar(linetext.charCodeAt(character)); character++);
@@ -6348,8 +6355,10 @@ export class Lexer {
 		if (pt?.content === '.' && !token?.prefix_is_whitespace && pt.type !== 'TK_OPERATOR' ||
 			(is_end_expr = pt && isYieldsOperand(pt) && token?.type === 'TK_START_EXPR' &&
 				token.topofline < 1 && (token.content === '[' || token.prefix_is_whitespace === undefined))) {
-			let tk = pt, lk = is_end_expr ? pt : pt.previous_token;
 			const iscall = Boolean(token?.paraminfo) || linetext[character] === '(';
+			let tk = pt, lk = is_end_expr ? pt : (
+				usage = ASSIGN_TYPE.includes(tokens[token?.next_token_offset]?.content) ? USAGE.Write : USAGE.Read,
+				pt.previous_token);
 			while (lk) {
 				switch (lk.type) {
 					case 'TK_DOT': tk = lk, lk = lk.previous_token; break;
@@ -6406,18 +6415,18 @@ export class Lexer {
 				token = tk;
 				range.start = document.positionAt(tk.offset);
 				range.end = document.positionAt(pt.offset + (is_end_expr ? 1 : 0));
+				kind = is_end_expr ? SymbolKind.Variable : iscall ? SymbolKind.Method : SymbolKind.Property;
 			} else token = EMPTY_TOKEN, kind = SymbolKind.Null;
-			text = '', kind ??= is_end_expr ? SymbolKind.Variable : iscall ? SymbolKind.Method : SymbolKind.Property;
+			text = '';
 		} else if (token) {
 			if (token.type === 'TK_WORD') {
 				const sk = token.semantic, sym = (symbol = token.symbol) ?? token.definition;
-				let fc: FuncNode;
 				if (sym) {
-					kind = sym.kind, fc = sym as FuncNode;
+					kind = sym.kind;
 					if (kind === SymbolKind.Class)
-						text = fc.full;
+						text = sym.full ?? '';
 					else if (kind === SymbolKind.Property || kind === SymbolKind.Method)
-						text = fc.full.replace(/^\(([^ \t]+)\).*$/, (...m) => `${m[1]}${fc.static ? '.' : '#'}${fc.name}`);
+						text = sym.full?.replace(/^\(([^ \t]+)\).*$/, (...m) => `${m[1]}${sym.static ? '.' : '#'}${sym.name}`) ?? '';
 				} else if (sk) {
 					switch (sk.type) {
 						case SemanticTokenTypes.function: kind = SymbolKind.Function; break;
@@ -6465,7 +6474,7 @@ export class Lexer {
 			}
 		}
 		kind ??= SymbolKind.Null;
-		return { text, word, range, kind, linetext, token, symbol };
+		return { text, word, range, kind, linetext, token, symbol, usage };
 	}
 
 	public searchScopedNode(pos: Position, root?: AhkSymbol[]): AhkSymbol | undefined {
@@ -6809,7 +6818,7 @@ export function getClassBase(node: AhkSymbol, lex?: Lexer) {
 	return iscls ? cls : cls?.prototype;
 }
 
-export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismethod: boolean, bases?: (ClassNode | null)[]): AhkSymbol | undefined {
+export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismethod: boolean | null, bases?: (ClassNode | null)[]): AhkSymbol | undefined {
 	let prop, method, sym, t, i = 0, cls = node as ClassNode;
 	const _bases = bases ??= [];
 	name = name.toUpperCase();
@@ -6820,17 +6829,27 @@ export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismeth
 			_bases.push(cls);
 		}
 		if ((sym = cls.property?.[name])) {
-			if (ismethod) {
+			if (ismethod) {	// call
 				if (sym.kind === SymbolKind.Method)
 					return sym.uri ??= cls.uri, sym;
 				if ((t = sym).kind === SymbolKind.Class || (t = (sym as Property).call))
 					return t.uri ??= cls.uri, t;
-				prop ??= (sym.uri ??= cls.uri, sym);
-			} else if (sym.kind === SymbolKind.Method)
+				if (!sym.children)
+					prop = (sym.uri ??= cls.uri, sym);
+				else ((sym as Property).get)
 				method ??= (sym.uri ??= cls.uri, sym);
-			else if (sym.children || (sym as FuncNode).has_this_param)
+			} else if (ismethod === null) {	// set
+				if ((sym as Property).set)
+					return sym.uri ??= cls.uri, sym;
+				if (!sym.children)
+					prop = (sym.uri ??= cls.uri, sym);
+				else method ??= (sym.uri ??= cls.uri, sym);
+			} else if ((sym as Property).get || sym.kind === SymbolKind.Class)
 				return sym.uri ??= cls.uri, sym;
-			else prop ??= (sym.uri ??= cls.uri, sym);
+			else if (!sym.children)
+				prop = (sym.uri ??= cls.uri, sym);
+			else if (sym.kind === SymbolKind.Method || (sym = (sym as Property).call))
+				method ??= (sym.uri ??= cls.uri, sym);
 		}
 
 		if ((t = _bases[++i]) === null)
@@ -6840,8 +6859,9 @@ export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismeth
 			break;
 		}
 	}
-	if ((prop ??= method))
-		return prop;
+	if (ismethod === false)
+		return prop ?? method;
+	return method ?? prop;
 }
 
 export function getClassMembers(lex: Lexer, node: AhkSymbol, bases?: ClassNode[]): Record<string, AhkSymbol> {
@@ -7070,11 +7090,13 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 	for (tk of stack) {
 		if (tk.symbol) {
 			if (tk.symbol.kind === SymbolKind.Property) {
-				let prop = tk.symbol;
+				let prop = tk.symbol as Property;
 				const cls = prop.parent as ClassNode;
-				if ((prop = cls?.property?.[prop.name.toUpperCase()]))
-					syms = decltypeReturns(prop, lexers[cls.uri!] ?? lex, cls);
-				else syms = [];
+				if ((prop = cls?.property?.[prop.name.toUpperCase()])) {
+					if (!prop.get && ((t = prop).kind !== SymbolKind.Property || (t = prop.call)))
+						syms = [t];
+					else syms = decltypeReturns(prop, lexers[cls.uri!] ?? lex, cls);
+				} else syms = [];
 			} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
 		} else switch (tk.type) {
 			case 'TK_FUNC': {
@@ -7687,7 +7709,7 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode): 
 	return tps;
 }
 
-function typeNaming(sym: AhkSymbol) {
+export function typeNaming(sym: AhkSymbol) {
 	let s;
 	switch (sym.kind) {
 		case SymbolKind.Interface:
@@ -7790,7 +7812,7 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 			case '#': if (!(node = (node as ClassNode).prototype)) return;
 			// fall through
 			case '.':
-				if (!(node = getClassOwnProp(lex, node as ClassNode, name)))
+				if (!(node = getClassOwnProp(lex, parent = node as ClassNode, name)))
 					return;
 				break;
 			case '~':
@@ -7832,11 +7854,15 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 }
 
 export function findSymbols(lex: Lexer, context: Context) {
-	const { text, word, range, kind } = context;
+	const { text, word, range, kind, usage } = context;
 	let t;
+	t = context.symbol;
+	if (t?.parent && !t.children)	// kind === SymbolKind.Property
+		if ((t = getClassMember(lex, t.parent, t.name, t.def === false ? false : null)))
+			return [{ node: t, uri: t.uri ?? lex.uri, parent: context.symbol!.parent }];
 	if (text)
 		return (t = findSymbol(lex, text, kind, range.end)) && [t];
-	const syms = [], ismethod = kind === SymbolKind.Method;
+	const syms = [], ismethod = kind === SymbolKind.Method || usage === USAGE.Write && null;
 	const tps = decltypeExpr(lex, context.token, range.end);
 	if (!word && tps.length) {
 		for (const node of tps)

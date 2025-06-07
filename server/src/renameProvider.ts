@@ -9,7 +9,7 @@ export async function prepareRename(params: PrepareRenameParams, token: Cancella
 	if (!lex || token.isCancellationRequested) return;
 	const context = lex.getContext(params.position);
 	if ((ranges = getAllReferences(lex, context, false)))
-		return { range: context.range, placeholder: context.text.split('.').pop() || '' };
+		return { range: context.range, placeholder: context.word };
 	return new ResponseError(0, ranges === null ? response.cannotrenamestdlib() : response.cannotrename());
 }
 

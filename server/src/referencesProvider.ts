@@ -1,7 +1,7 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
-	AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, Variable, ZERO_RANGE,
-	ahkUris, ahkVars, findSymbol, findSymbols, lexers
+	ANY, AhkSymbol, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, USAGE, Variable, ZERO_RANGE,
+	ahkUris, ahkVars, decltypeExpr, findSymbols, getClassMember, lexers, typeNaming
 } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
@@ -16,9 +16,9 @@ export async function referenceProvider(params: ReferenceParams, token: Cancella
 export function getAllReferences(lex: Lexer, context: Context, allow_builtin = true): Record<string, Range[]> | null | undefined {
 	if (context.kind === SymbolKind.Null) return;
 	const nodes = findSymbols(lex, context);
-	if (nodes?.length !== 1)
+	if (!nodes?.length)
 		return;
-	let name = context.text.toUpperCase(), i = 0;
+	let name = context.text.toUpperCase();
 	const references: Record<string, Range[]> = {};
 	const { node, parent, uri, scope, is_this, is_global } = nodes[0];
 	if (is_this) {	// this
@@ -68,87 +68,57 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 				break;
 			}
 		// fall through
-		default:
-			if (node.kind === SymbolKind.Class || node.static) {
-				if (node.kind === SymbolKind.Class)
-					name = (node as ClassNode).full.toUpperCase();
-				else {
-					const fn = node as FuncNode;
-					const m = fn.full?.match(/^\(([^)]+)\)[ \t]static[ \t]([^([]+)($|[([])/);
-					if (m)
-						name = `${m[1]}.${m[2]}`.toUpperCase();
-					else if (fn.parent?.kind === SymbolKind.Class)
-						name = `${(fn.parent as ClassNode).full}.${fn.name}`.toUpperCase();
-					else return;
-				}
-				const c = name.split('.'), l = c.length;
-				let i = 0, refs: Record<string, Range[]> = {};
-				for (const uri of new Set([lex.uri, ...Object.keys(lex.relevance)]))
-					refs[lexers[uri].document.uri] = findAllFromScope(lexers[uri] as unknown as AhkSymbol, c[0], SymbolKind.Variable);
-				while (i < l) {
-					const name = c.slice(0, ++i).join('.');
-					const r = findSymbol(lex, name);
-					if (r?.node.kind === SymbolKind.Class) {
-						for (const it of Object.values((r.node as ClassNode).property ?? {})) {
-							const fns = [];
-							it.children?.length && fns.push(it);
-							if (it.kind === SymbolKind.Property) {
-								const prop = it as Property;
-								fns.push(...[prop.get, prop.set, prop.call].filter(Boolean));
-							}
-							if (!fns.length) continue;
-							const ref = refs[lexers[r.uri].document.uri] ??= [];
-							for (const it of fns)
-								findAllFromScope(it!, 'THIS', SymbolKind.Variable, ref);
+		case SymbolKind.Method:
+		case SymbolKind.Property: {
+			const syms = nodes.map(it => {
+				const s = it.node;
+				if (s.full)
+					s.type_name ??= typeNaming(s);
+				return s;
+			});
+			name = context.word.toUpperCase();
+			for (const uri of [lex.uri, ...Object.keys(lex.relevance)]) {
+				if (!(lex = lexers[uri]))
+					continue;
+				const refs: Range[] = [], { document, tokens } = lex;
+				for (const tk of Object.values(tokens)) {
+					if (tk.ignore || tk.type !== 'TK_WORD' || tk.content.toUpperCase() !== name)
+						continue;
+					let t = tk.symbol;
+					if (t) {
+						if (t.parent && t.kind !== SymbolKind.Function) {
+							if (!t.children)
+								t = getClassMember(lex, t.parent!, name, t.def ? null : false) ?? t;
+							syms.includes(t) && refs.push(tk.symbol!.selectionRange);
 						}
+						continue;
 					}
-					// TODO: search subclass's `super`
-					for (const uri in refs) {
-						const rgs = refs[uri], arr = references[uri] ??= [];
-						const { document, tokens } = lexers[uri.toLowerCase()];
-						next_rg:
-						for (const rg of new Set(rgs)) {
-							let tk = tokens[document.offsetAt(rg.start)];
-							if (!tk) continue;
-							for (let j = i; j < l; j++) {
-								if ((tk = tokens[tk.next_token_offset])?.type !== 'TK_DOT')
-									continue next_rg;
-								if ((tk = tokens[tk.next_token_offset])?.type !== 'TK_WORD' || tk.content.toUpperCase() !== c[j])
-									continue next_rg;
-							}
-							arr.push({ start: document.positionAt(tk.offset), end: document.positionAt(tk.offset + tk.length) });
-						}
-						if (!references[uri].length)
-							delete references[uri];
-					}
-					refs = {};
+					if (tk.previous_token?.type !== 'TK_DOT')
+						continue;
+					const start = document.positionAt(tk.offset), end = { line: start.line, character: start.character + tk.length };
+					const { token, usage } = lex.getContext(start, true), tps = decltypeExpr(lex, token, tk.offset - 1);
+					tps.some(tp => {
+						if (tp === ANY)
+							return true;
+						if (!(tp = getClassMember(lex, tp, name, context.kind === SymbolKind.Method || usage === USAGE.Write && null)!))
+							return false;
+						return syms.some(it => it === tp || it.kind === tp.kind && tp.name === it.name && it.type_name === typeNaming(tp));
+					}) && refs.push({ start, end });
 				}
-				let cls = node.parent;
-				const arr = references[lexers[uri].document.uri] ??= [];
-				while (cls && cls.kind !== SymbolKind.Class)
-					cls = cls.parent;
-				if (cls) {
-					const name = node.name.toLowerCase(), t = [];
-					for (const it of cls.children ?? []) {
-						if (it.static && it.name.toLowerCase() === name)
-							t.push(it.selectionRange);
-					}
-					arr.unshift(...t);
-				} else if (!arr.includes(node.selectionRange))
-					arr.unshift(node.selectionRange);
-				break;
+				if (refs.length)
+					references[lex.document.uri] = refs;
 			}
-			return;
+			break;
+		}
 	}
 	for (const [uri, range] of Object.entries(references)) {
 		const m = new Set(range);
 		m.delete(ZERO_RANGE);
 		if (m.size)
-			references[uri] = Array.from(m), i++;
+			references[uri] = Array.from(m);
 		else delete references[uri];
 	}
-	if (i)
-		return references;
+	return references;
 }
 
 function findAllFromScope(scope: AhkSymbol, name: string, kind: SymbolKind, ranges: Range[] = []) {
