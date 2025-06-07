@@ -215,7 +215,7 @@ function getVersionInfo(uri: string) {
 	if (!lex) return;
 	const { document, tokens } = lex, pos = { line: 0, character: 0 };
 	let tk = lex.getToken(0);
-	while (tk.type === 'TK_SHARP') {
+	while (tk.type === 'TK_SHARP' || tk.ignore && tk.type === 'TK_COMMENT') {
 		pos.line = document.positionAt(tk.offset).line + 1;
 		tk = lex.getToken(document.offsetAt(pos));
 	}
