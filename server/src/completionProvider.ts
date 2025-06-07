@@ -639,7 +639,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (configCache.FormatOptions?.switch_case_alignment)
 			remove_indent = (s: string) => s.replace(/^\t/gm, '');
 		for (const [label, arr] of [
-			['switch', ['switch ${1:[SwitchValue, CaseSense]}', remove_indent(`{\n${tab}case \${2:}:\n\t${tab}\${3:}\n${tab}default:\n\t${tab}$0\n}`)]],
+			['switch', ['switch $1', remove_indent(`{\n${tab}case \${2:}:\n\t${tab}\${3:}\n${tab}default:\n\t${tab}$0\n}`)]],
 			['trycatch', ['try', sel_text_block, 'catch ${2:Error} as ${3:e}', '{\n\t$0\n}']],
 			['class', ['class $1', '{\n\t$0\n}']]
 		] as [string, string[]][])
