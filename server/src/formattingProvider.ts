@@ -1,5 +1,5 @@
 import { DocumentFormattingParams, DocumentOnTypeFormattingParams, DocumentRangeFormattingParams, FormattingOptions, Position, Range, TextEdit } from 'vscode-languageserver';
-import { chinesePunctuations, configCache, lexers, Token } from './common';
+import { chinesePunctuations, configCache, lexers, Token, TokenType } from './common';
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	const lex = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, lex.document.lineCount, 0);
@@ -63,14 +63,14 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 			if (linetexts[0] !== (linetexts[1] = linetexts[1].substring(0, character))) {
 				if (!linetexts[0]) {
 					tk = lex.findToken(lex.document.offsetAt(position));
-					if (tk.type === 'TK_STRING' || tk.type.endsWith('COMMENT'))
+					if (tk.type === TokenType.String || (tk.type & TokenType.Comment))
 						return;
-					const b = ['TK_START_EXPR', 'TK_START_BLOCK', ''];
+					const b = [TokenType.EOF, TokenType.BracketStart, TokenType.BlockStart];
 					while ((tk = tk.previous_token!)) {
 						if (b.includes(tk.type))
 							break;
 					}
-					if (b.pop(), b.includes(tk?.type))
+					if (b.includes(tk?.type, 1))
 						return;
 				}
 				result = [{ newText: linetexts[0], range: { start: { line, character: 0 }, end: { line, character } } }];
@@ -82,7 +82,7 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 	else if ((s = chinesePunctuations[ch])) {
 		let p = { line: position.line, character: position.character - 1 };
 		tk = lex.findToken(lex.document.offsetAt(p));
-		if (tk.type === 'TK_WORD') {
+		if (tk.type === TokenType.Identifier) {
 			if (tk.length > 1) {
 				s = tk.content.replace(/./g, (c) => chinesePunctuations[c] ?? c);
 				p = lex.document.positionAt(tk.offset);

@@ -1,7 +1,8 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams } from 'vscode-languageserver';
 import {
-	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind,
-	TT2STT, Token, Variable, checkParamInfo, diagnostic, configCache, getClassMember, getClassMembers, lexers, symbolProvider
+	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticTokenModifiers,
+	SemanticTokenTypes, SymbolKind, TT2STT, Token, TokenType, Variable,
+	checkParamInfo, configCache, diagnostic, getClassMember, getClassMembers, lexers, symbolProvider
 } from './common';
 
 let resolve = resolveSemantic;
@@ -53,13 +54,13 @@ function resolveSemantic(tk: Token, lex: Lexer, fully?: boolean) {
 				curclass = undefined;
 				stb.push(pos.line, pos.character, tk.length, type, modifier ?? 0);
 		}
-	} else if (tk.type === 'TK_WORD') {
-		if (tk.previous_token?.type !== 'TK_DOT' && ['THIS', 'SUPER'].includes(t = tk.content.toUpperCase()) &&
+	} else if (tk.type === TokenType.Identifier) {
+		if (tk.previous_token?.type !== TokenType.Dot && ['THIS', 'SUPER'].includes(t = tk.content.toUpperCase()) &&
 			(t = lex.findSymbol(t, SymbolKind.Variable, lex.document.positionAt(tk.offset)))?.is_this !== undefined) {
 			curclass = t!.node as ClassNode;
 			tk.callsite && checkParamInfo(lex, t!.node as FuncNode, tk.callsite);
 		} else curclass = undefined;
-	} else if (curclass && tk.type !== 'TK_DOT' && !tk.type.endsWith('COMMENT'))
+	} else if (curclass && tk.type !== TokenType.Dot && !(tk.type & TokenType.Comment))
 		curclass = undefined;
 }
 
@@ -130,7 +131,7 @@ function resolvePropSemanticType(tk: Token, lex: Lexer) {
 						if (tt?.content === '(')
 							tt = lex.tokens[tt.next_token_offset];
 						if (tt) {
-							if (tt.type === 'TK_STRING') {
+							if (tt.type === TokenType.String) {
 								cls_add_prop(curclass, tt.content.slice(1, -1), tt.offset + 1);
 							} else cls_add_prop(curclass, '');
 						}

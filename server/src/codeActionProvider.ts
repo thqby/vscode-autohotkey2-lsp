@@ -1,6 +1,6 @@
 import { opendir } from 'fs/promises';
 import { CancellationToken, CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
-import { DiagnosticCode, Maybe, codeaction, configCache, lexers, restorePath } from './common';
+import { DiagnosticCode, Maybe, TokenType, codeaction, configCache, lexers, restorePath } from './common';
 
 const words = ['catch', 'else', 'finally', 'until'];
 
@@ -96,7 +96,7 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 				end = { line: parseInt(line) + 1, character: 0 };
 				const o = document.offsetAt(end);
 				tk = lex.findToken(o, true);
-				if (tk.type === 'TK_RESERVED' && words.includes(tk.content.toLowerCase()))
+				if (tk.type === TokenType.Reserved && words.includes(tk.content.toLowerCase()))
 					rb.push({ newText: '}' + space, range: { start: end = document.positionAt(tk.offset), end } });
 				else {
 					m ??= get_indent(bo);

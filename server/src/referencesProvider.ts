@@ -1,6 +1,6 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
-	ANY, AhkSymbol, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, USAGE, Variable, ZERO_RANGE,
+	ANY, AhkSymbol, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, TokenType, USAGE, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, decltypeExpr, findSymbols, getClassMember, lexers, typeNaming
 } from './common';
 
@@ -82,7 +82,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 					continue;
 				const refs: Range[] = [], { document, tokens } = lex;
 				for (const tk of Object.values(tokens)) {
-					if (tk.ignore || tk.type !== 'TK_WORD' || tk.content.toUpperCase() !== name)
+					if (tk.ignore || tk.type !== TokenType.Identifier || tk.content.toUpperCase() !== name)
 						continue;
 					let t = tk.symbol;
 					if (t) {
@@ -93,7 +93,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 						}
 						continue;
 					}
-					if (tk.previous_token?.type !== 'TK_DOT')
+					if (tk.previous_token?.type !== TokenType.Dot)
 						continue;
 					const start = document.positionAt(tk.offset), end = { line: start.line, character: start.character + tk.length };
 					const { token, usage } = lex.getContext(start, true), tps = decltypeExpr(lex, token, tk.offset - 1);

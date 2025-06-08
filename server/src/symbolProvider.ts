@@ -2,7 +2,7 @@ import { CancellationToken, DocumentSymbolParams, Range, SymbolInformation, Work
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	ANY, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
-	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, URI, VARREF, Variable, ZERO_RANGE,
+	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, URI, VARREF, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, diagnostic, enumFiles,
 	findClass, getClassConstructor, getClassMember, getParamCount, getWorkspaceFile, inactiveVars,
 	isContinuousLine, lexers, makeDupError, openFile, utils, warn, workspaceFolders
@@ -344,7 +344,7 @@ export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 				if (index === 0)
 					o = info.offset! + info.name.length + 1;
 				else o = paraminfo.comma[index - 1] + 1;
-				if ((t = lex.findToken(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && lex.tokens[t.next_token_offset]?.type !== 'TK_DOT') {
+				if ((t = lex.findToken(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && lex.tokens[t.next_token_offset]?.type !== TokenType.Dot) {
 					let end = 0;
 					const ts = decltypeExpr(lex, t, paraminfo.comma[index] ?? (end = paraminfo.end!));
 					if (ts.some(it => it === VARREF || it === ANY || it.data === VARREF))
@@ -363,7 +363,7 @@ export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 	}
 	if ((!node.returns?.length && !(node.type_annotations || null)?.length) && !(is_cls && node.name.toLowerCase() === '__new')) {
 		const tk = lex.tokens[info.offset!];
-		if (tk?.previous_token?.type === 'TK_EQUALS') {
+		if (tk?.previous_token?.type === TokenType.Assign) {
 			const nt = lex.getToken(lex.document.offsetAt(info.range.end), true);
 			if (!nt || !isContinuousLine(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
 				lex.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, { severity: 2 });

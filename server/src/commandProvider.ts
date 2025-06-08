@@ -1,6 +1,6 @@
 import { Position, Range } from 'vscode-languageserver';
 import {
-	AhkSymbol, ClassNode, FuncNode, Lexer, Property, SymbolKind, Token, Variable, ZERO_RANGE,
+	AhkSymbol, ClassNode, FuncNode, Lexer, Property, SymbolKind, Token, TokenType, Variable, ZERO_RANGE,
 	findClass, generateTypeAnnotation, joinTypes, lexers, parseInclude, restorePath,
 	semanticTokensOnFull, traverseInclude, updateIncludeCache, utils
 } from './common';
@@ -88,7 +88,7 @@ function generateComment(params: { uri: string, position: Position }) {
 		range = { start: pos, end: pos };
 	} else {
 		tk = lex.findToken(lex.document.offsetAt({ line: pos.line - 1, character: 0 }));
-		if (tk.type !== 'TK_BLOCK_COMMENT')
+		if (tk.type !== TokenType.BlockComment)
 			return;
 		text = generateFuncComment(lex, scope as FuncNode, trimJsDoc(scope.detail));
 		range = {
@@ -215,12 +215,12 @@ function getVersionInfo(uri: string) {
 	if (!lex) return;
 	const { document, tokens } = lex, pos = { line: 0, character: 0 };
 	let tk = lex.getToken(0);
-	while (tk.type === 'TK_SHARP' || tk.ignore && tk.type === 'TK_COMMENT') {
+	while (tk.type === TokenType.Directive || tk.ignore && tk.type === TokenType.Comment) {
 		pos.line = document.positionAt(tk.offset).line + 1;
 		tk = lex.getToken(document.offsetAt(pos));
 	}
 	const info = [];
-	if ((!tk.type || tk.type.endsWith('COMMENT')) && /^\s*[;*]?\s*@(date|version)\b/im.test(tk.content)) {
+	if ((tk.type & TokenType.Comment) && /^\s*[;*]?\s*@(date|version)\b/im.test(tk.content)) {
 		info.push({
 			content: tk.content, single: false,
 			range: {

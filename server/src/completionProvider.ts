@@ -4,7 +4,7 @@ import { basename, relative, resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit } from 'vscode-languageserver';
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AhkSymbol, ClassNode, CompletionItemKind, FuncNode,
-	Maybe, Property, STRING, SemanticTokenTypes, SymbolKind, Token, URI, Variable, ZERO_RANGE,
+	Maybe, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
 	a_Vars, ahkUris, ahkVars, allIdentifierChar, completionItemCache, completionitem, configCache,
 	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getCallInfo,
 	getClassConstructor, getClassMember, getClassMembers, getSymbolDetail,
@@ -23,8 +23,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	//#region /**|
 	if (triggerCharacter === '*') {
 		const tk = lex.tokens[lex.document.offsetAt(position) - 3];
-		if (tk?.type === 'TK_BLOCK_COMMENT') {
-			if (!tk.previous_token?.type && tk === lex.getToken(0, false)) {
+		if (tk?.type === TokenType.BlockComment) {
+			if (!tk.previous_token?.type && tk === lex.findToken(0)) {
 				items.push({
 					label: '/** */', detail: 'File Doc',
 					kind: CompletionItemKind.Text,
@@ -66,9 +66,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	//#region ;@| /*@|
 	if (triggerCharacter === '@') {
 		const tk = lex.findStrOrComment(lex.document.offsetAt(position) - 1);
-		if (tk?.type.endsWith('COMMENT')) {
+		if (tk && (tk.type & TokenType.Comment)) {
 			const is_same_line = lex.document.positionAt(tk.offset).line === position.line;
-			const comment_prefix = tk.type === 'TK_BLOCK_COMMENT' ? '/*' : ';';
+			const comment_prefix = tk.type === TokenType.BlockComment ? '/*' : ';';
 			return completionItemCache.directive['@'].filter(it => comment_prefix.includes(l = it.data) && (is_same_line || l !== '/'));
 		}
 		return;
@@ -84,18 +84,18 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	let isexpr = false, expg = makeSearchRegExp(word), offset;
 
 	switch (token.type) {
-		case 'TK_UNKNOWN':
+		case TokenType.Unknown:
 			if (token.content === '.')
 				break;
 			if (token.content !== '#')
 				return;
 		// #|   // fall through
-		case 'TK_SHARP':
+		case TokenType.Directive:
 			return token.topofline === 1 ? completionItemCache.directive['#'] : [];
 		// x|::
 		// :|:xxx::
-		case 'TK_HOT':
-		case 'TK_HOTLINE': {
+		case TokenType.Hotkey:
+		case TokenType.HotkeyLine: {
 			if (!token.ignore)
 				return completionItemCache.key.filter(it => !it.label.toLowerCase().includes('alttab'));
 			const o = lex.document.offsetAt(position) - token.offset;
@@ -106,10 +106,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		// #include |
 		// ::xxx::|
 		// xxx::|
-		case '':
-		case 'TK_EOF':
+		case TokenType.EOF:
 			// #include |
-			if ((pt = token.previous_token)?.type === 'TK_SHARP') {
+			if ((pt = token.previous_token)?.type === TokenType.Directive) {
 				let isdll = false;
 				switch (pt!.content.toLowerCase()) {
 					case '#dllload': isdll = true;
@@ -216,7 +215,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					}
 					default: return;
 				}
-			} else if (pt?.type !== 'TK_HOTLINE')
+			} else if (pt?.type !== TokenType.HotkeyLine)
 				break;
 			// ::xxx::|
 			if (pt.ignore)
@@ -224,7 +223,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			// xxx::|
 			items.push(...completionItemCache.key), kind = SymbolKind.Event;
 			break;
-		case 'TK_BLOCK_COMMENT':
+		case TokenType.BlockComment:
 			if (!/[<{|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
 				return;
 			if (text.includes('.')) {
@@ -234,13 +233,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				}
 			} else add_classes();
 			return items;
-		case 'TK_COMMENT':
-		case 'TK_INLINE_COMMENT': return;
+		case TokenType.Comment:
+		case TokenType.InlineComment: return;
 		default: {
 			if (token.callsite || token.topofline > 0)
 				break;
-			const tp = ['TK_COMMA', 'TK_DOT', 'TK_EQUALS', 'TK_NUMBER', 'TK_OPERATOR', 'TK_RESERVED', 'TK_STRING', 'TK_WORD'];
-			const maxn = token.type === 'TK_STRING' ? 0 : 3, tokens = lex.tokens;
+			const tp = [TokenType.Comma, TokenType.Dot, TokenType.Assign, TokenType.Number, TokenType.Operator, TokenType.Reserved, TokenType.String, TokenType.Identifier];
+			const maxn = token.type === TokenType.String ? 0 : 3, tokens = lex.tokens;
 			let i = 0, t;
 			let cs = (pt = token).callsite, pi = cs?.paraminfo;
 			while ((pt = (t = tokens[pt.previous_pair_pos!]) ?? pt.previous_token)) {
@@ -263,7 +262,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					break;
 			}
 			(cs ?? pi) && (pi ??= cs?.paraminfo, isexpr = true);
-			if (pt?.type === 'TK_RESERVED') {
+			if (pt?.type === TokenType.Reserved) {
 				switch (l = pt.content.toLowerCase()) {
 					case 'class':
 						if (i === 2)
@@ -289,7 +288,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					case 'break':
 					case 'continue':
 					case 'goto': {
-						if (i === 1 && token.type !== 'TK_WORD')
+						if (i === 1 && token.type !== TokenType.Identifier)
 							return;
 						scope = lex.searchScopedNode(position);
 						let labels = ((scope as FuncNode) ?? lex).labels, data;
@@ -447,7 +446,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					}
 				}
 				if (!items.length && (pt = token.previous_token)?.content === ':=' &&
-					(pt = pt?.previous_token)?.type === 'TK_WORD') {
+					(pt = pt?.previous_token)?.type === TokenType.Identifier) {
 					const syms = findSymbols(lex, lex.getContext(lex.document.positionAt(pt!.offset))) ?? [];
 					kind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
 					for (const sym of syms)
@@ -752,7 +751,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				t = lex.document.getText({ start: { line: l, character: 0 }, end: { line: l + 1, character: 0 } });
 				pos = { line: l, character: t.length };
 			} else if (position.line === pos.line - 1) {
-				if ((first_is_comment ??= (cm = lex.findToken(0))?.type.endsWith('COMMENT') && !is_symbol_comment(cm)))
+				if ((first_is_comment ??= !!((cm = lex.findToken(0)).type & TokenType.Comment) && !is_symbol_comment(cm)))
 					pos = lex.document.positionAt(cm.offset + cm.length), text = '\n' + text;
 				else pos.line = 0, text = text.trimStart() + '\n';
 			}
