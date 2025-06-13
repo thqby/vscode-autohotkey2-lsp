@@ -1,5 +1,5 @@
 import { CancellationToken, DefinitionParams, LocationLink, Range } from 'vscode-languageserver';
-import { AhkSymbol, findSymbols, lexers, restorePath, SymbolKind, Token, URI, ZERO_RANGE } from './common';
+import { AhkSymbol, findSymbols, lexers, restorePath, SymbolKind, Token, TokenType, URI, ZERO_RANGE } from './common';
 
 export async function defintionProvider(params: DefinitionParams, token: CancellationToken): Promise<LocationLink[] | undefined> {
 	if (token.isCancellationRequested) return;
@@ -8,7 +8,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 	const locas: LocationLink[] = [];
 	if (!context)
 		return;
-	if (!context.token.type) {
+	if (context.token.type === TokenType.Text) {
 		const tk = context.token.previous_token;
 		if (tk?.content.match(/^#include/i)) {
 			const line = params.position.line;

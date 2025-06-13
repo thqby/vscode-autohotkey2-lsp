@@ -107,6 +107,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		// ::xxx::|
 		// xxx::|
 		case TokenType.EOF:
+		case TokenType.Text:
 			// #include |
 			if ((pt = token.previous_token)?.type === TokenType.Directive) {
 				let isdll = false;

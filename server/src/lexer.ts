@@ -52,6 +52,7 @@ export enum TokenType {
 	Number,
 	Directive,
 	Label,
+	Text,
 	Invoke,
 	Unknown,
 	BracketStart = 16,
@@ -96,6 +97,7 @@ export const TT2STT: Record<number, SemanticToken> = {
 	[TokenType.Number]: SE_NUMBER,
 	[TokenType.Reserved]: SE_KEYWORD,
 	[TokenType.String]: SE_STRING,
+	[TokenType.Text]: SE_STRING,
 	[TokenType.Comment]: SE_COMMENT,
 	[TokenType.BlockComment]: SE_COMMENT,
 	[TokenType.InlineComment]: SE_COMMENT,
@@ -4955,7 +4957,7 @@ export class Lexer {
 							lst.skip_pos = parser_pos;
 							_this.tokens[offset] = {
 								...lst.data = { content: input.substring(offset, parser_pos), offset, length: parser_pos - offset },
-								type: TokenType.String, previous_token: lst, next_token_offset: -1, topofline: 0
+								type: TokenType.Text, previous_token: lst, next_token_offset: -1, topofline: 0
 							};
 							_this.token_ranges.push({ start: offset, end: parser_pos, type: 3, previous: lst.offset });
 						}
@@ -5543,7 +5545,7 @@ export class Lexer {
 						lst.skip_pos = parser_pos = offset + content.length;
 						_this.tokens[offset] = {
 							...lst.data = { content, offset, length: content.length },
-							type: TokenType.String, previous_token: lst, next_token_offset: -1, topofline: 0
+							type: TokenType.Text, previous_token: lst, next_token_offset: -1, topofline: 0
 						};
 						_this.token_ranges.push({ start: offset, end: offset + content.length, type: 3, previous: lst.offset });
 					}
@@ -6374,7 +6376,7 @@ export class Lexer {
 		const word = text = linetext.slice(start, character);
 		const off = document.offsetAt(range.start);
 		const pt = ((token = tokens[off])) ? token.previous_token : tokens[off - 1];
-		if (pt?.content === '.' && !token?.prefix_is_whitespace && pt.type !== TokenType.Operator ||
+		if (pt?.type === TokenType.Dot || pt?.type === TokenType.Unknown && pt.content === '.' ||
 			(is_end_expr = pt && isYieldsOperand(pt) && token?.type === TokenType.BracketStart &&
 				token.topofline < 1 && (token.content === '[' || token.prefix_is_whitespace === undefined))) {
 			const iscall = Boolean(token?.paraminfo) || linetext[character] === '(';
@@ -6761,7 +6763,7 @@ export class Lexer {
 		}
 		if (l <= r && it)
 			return this.tokens[it.start] ?? ((it = this.tokens[it.previous!])?.data
-				&& { ...it.data, previous_token: it, type: '' });
+				&& { type: TokenType.Text, previous_token: it, ...it.data });
 	}
 }
 
