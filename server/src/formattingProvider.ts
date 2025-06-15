@@ -49,31 +49,26 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 						}
 					});
 			}
-		} else if ((pp = lex.linepos[line - 1]) !== undefined) {
-			const range = { start: lex.document.positionAt(pp), end: { line: line - 1, character: s.length } };
-			const newText = lex.beautify(opts, range).trim();
-			result = [{ range, newText }];
-			indent_string = opts.indent_string;
-			if (linetexts[1].substring(0, character) !== indent_string)
-				result.push({
-					newText: indent_string,
-					range: { start: { line, character: 0 }, end: { line, character } }
-				});
-		} else if (!s) {
-			if (linetexts[0] !== (linetexts[1] = linetexts[1].substring(0, character))) {
-				if (!linetexts[0]) {
-					tk = lex.findToken(lex.document.offsetAt(position));
-					if (tk.type === TokenType.String || (tk.type & TokenType.Comment))
-						return;
-					const b = [TokenType.EOF, TokenType.BracketStart, TokenType.BlockStart];
-					while ((tk = tk.previous_token!)) {
-						if (b.includes(tk.type))
-							break;
-					}
-					if (b.includes(tk?.type, 1))
-						return;
+		} else if (s && !/^(;|\/\*)|[ \t];/.test(s.trimStart())) {
+			const start = { line, character: 0 }, offset = lex.document.offsetAt(start);
+			const rgs = lex.line_ranges, ll = line - 1;
+			let l = 0, r = rgs.length - 1, i;
+			while (l <= r) {
+				const [a, b] = rgs[i = (l + r) >> 1];
+				if (ll > a)
+					l = i + 1;
+				else if (ll < a && offset <= b)
+					r = i - 1;
+				else if (lex.findStrOrComment(offset))
+					break;
+				else {
+					const range = { start: lex.document.positionAt(b), end: { line: ll, character: s.length } };
+					const newText = lex.beautify(opts, range).trim();
+					result = [{ range, newText }];
+					if (linetexts[1].substring(0, character) !== (indent_string = opts.indent_string))
+						result.push({ newText: indent_string, range: { start, end: position } });
+					break;
 				}
-				result = [{ newText: linetexts[0], range: { start: { line, character: 0 }, end: { line, character } } }];
 			}
 		}
 		return result;
@@ -93,7 +88,7 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 	}
 
 	function format_end_with_brace(pos: Position): TextEdit[] | undefined {
-		tk = lex.tokens[lex.document.offsetAt({ line: pos.line, character: pos.character - 1 })];
+		tk = lex.tokens[lex.document.offsetAt(pos) - 1];
 		pp = tk?.previous_pair_pos;
 		if (pp !== undefined) {
 			while ((tk = lex.tokens[pp])?.previous_pair_pos !== undefined)

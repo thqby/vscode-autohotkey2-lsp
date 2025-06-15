@@ -8,7 +8,7 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()];
 	if (!lex || token.isCancellationRequested || lex.diag_pending !== undefined) return;
 	const acts: CodeAction[] = [], replaces: Record<string, TextEdit[]> = {}, parens: TextEdit[] = [];
-	const { document, linepos, tokens } = lex, { context: { diagnostics, only }, indent, range } = params;
+	const { document, line_ranges, tokens } = lex, { context: { diagnostics, only }, indent, range } = params;
 	const has_refactor = only?.includes(CodeActionKind.Refactor) !== false;
 	let m;
 
@@ -68,11 +68,19 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 		const so = document.offsetAt(start);
 		const tab = indent || configCache.FormatOptions?.indent_string || '\t';
 		const space = configCache.FormatOptions?.space_in_other === false ? '' : ' ';
-		for (const line in linepos) {
-			if (line as unknown as number < sl) continue;
-			let bo = linepos[line], tk, bk;
+		let l = 0, r = line_ranges.length - 1, rl = l, rr = r, i;
+		while (l <= r) {
+			const [a, b] = line_ranges[i = (l + r) >> 1];
+			if (a < sl)
+				l = rl = i + 1;
+			else if (r = i - 1, b > eo)
+				rr = r;
+		}
+		for (i = rl; i <= rr; i++) {
+			// eslint-disable-next-line prefer-const
+			let [line, bo] = line_ranges[i];
 			if (bo > eo) break;
-			bk = tokens[bo];
+			let tk, bk = tokens[bo];
 			if (!bk.body_start) continue;
 			while ((bk = tokens[bk.body_start!]).body_start && bk.offset <= so)
 				bo = bk.offset;
@@ -93,7 +101,7 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 						}
 					});
 				}
-				end = { line: parseInt(line) + 1, character: 0 };
+				end = { line: line + 1, character: 0 };
 				const o = document.offsetAt(end);
 				tk = lex.findToken(o, true);
 				if (tk.type === TokenType.Reserved && words.includes(tk.content.toLowerCase()))

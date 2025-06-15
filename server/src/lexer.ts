@@ -438,7 +438,7 @@ export class Lexer {
 	public is_virtual = false;		// uris like `vscode-local-history:`
 	public labels: Record<string, AhkSymbol[]> = {};
 	public libdirs: string[] = [];
-	public linepos: Record<number, number> = {};
+	public line_ranges: [number, number][] = [];
 	public maybev1?: number;
 	public object: { method: Record<string, FuncNode[]>, property: Record<string, Variable[]> } = { method: {}, property: {} };
 	public parseScript: () => void;
@@ -456,7 +456,7 @@ export class Lexer {
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let begin_line: boolean, callWithoutParentheses: boolean | 1, comments: Record<number, Token>;
 		let continuation_sections_mode: boolean | null, currsymbol: AhkSymbol | undefined;
-		let customblocks: { region: number[], bracket: number[] };
+		let customblocks: { region: number[], bracket: number[] }, maybev1: number | undefined;
 		let dlldir: string, includedir: string, includetable: Record<string, string>;
 		let input: string, input_length: number, input_wanted_newline: boolean;
 		let last_comment_fr: FoldingRange | undefined, last_LF: number, lst: Token;
@@ -464,7 +464,7 @@ export class Lexer {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const _this = this, uri = URI.parse(document.uri);
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
-		let in_loop = false, maybev1 = 0, requirev2 = false, string_mode = false;
+		let in_loop = false, string_mode = false;
 
 		interface Flag {
 			array_style?: number,
@@ -763,9 +763,9 @@ export class Lexer {
 			this.d = d || 1, allow_$ ||= true;
 			this.parseScript = function (): void {
 				const p: ClassNode[] = [], cls: string[] = [], uri = this.uri
-				let _low = '', i = 0, j = 0, l = 0, blocks = 0, isstatic = false, rg = ZERO_RANGE;
+				let _low = '', i = 0, j = 0, blocks = 0, isstatic = false, rg = ZERO_RANGE;
 				let _parent = DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg, rg, this.children) as ClassNode;
-				let tokens: Token[] = [], tk: Token, lk: Token, _cm: Token | undefined;
+				let tk: Token, lk: Token, _cm: Token | undefined;
 
 				this.clear(), customblocks = { region: [], bracket: [] }, comments = {}, sharp_offsets = [];
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
@@ -773,7 +773,7 @@ export class Lexer {
 				includetable = this.include, _parent.property = _parent.$property = this.declaration;
 
 				for (; get_next_token().length;);
-				tokens = Object.values(this.tokens), l = tokens.length;
+				const tokens = Object.values(this.tokens), l = tokens.length;
 
 				while (i < l) {
 					switch ((tk = tokens[i]).type) {
@@ -1264,7 +1264,7 @@ export class Lexer {
 				delete this.actionwhenv1;
 			this.parseScript = function (): void {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
-				begin_line = true, requirev2 = false, maybev1 = 0, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = undefined;
+				begin_line = true, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = maybev1 = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
 				callWithoutParentheses = configCache.Warn?.CallWithoutParentheses;
@@ -1273,7 +1273,7 @@ export class Lexer {
 					rs && (includetable[rs.uri] = rs.path);
 					this.children.push(...parse_block());
 				} catch (e) {
-					in_loop = requirev2 = string_mode = false;
+					in_loop = string_mode = false;
 					if (e instanceof ParseStopError) {
 						if (e.message)
 							this.addDiagnostic(e.message, e.token.offset, e.token.length, { severity: DiagnosticSeverity.Warning });
@@ -1292,6 +1292,18 @@ export class Lexer {
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 				if (this.actived)
 					this.actionwhenv1 ??= 'Continue';
+				if (process.env.DEBUG) {
+					let l = -1;
+					for (const [line] of this.line_ranges)
+						if (line <= l)
+							throw new Error();
+						else l = line;
+					l = -1;
+					for (const { start } of this.token_ranges)
+						if (start <= l)
+							throw new Error();
+						else l = start;
+				}
 			}
 		}
 
@@ -1312,9 +1324,9 @@ export class Lexer {
 		}
 
 		function stop_parse(tk: Token, allow_skip = false, message = diagnostic.maybev1()) {
-			if (requirev2)
+			if (maybev1 === 0)
 				return false;
-			_this.maybev1 ??= maybev1 = 1;
+			maybev1 ??= _this.maybev1 = 1;
 			switch (_this.actionwhenv1 ??= configCache.ActionWhenV1IsDetected) {
 				case 'SkipLine': {
 					if (!allow_skip)
@@ -1385,20 +1397,22 @@ export class Lexer {
 		}
 
 		function parse_block(mode = BlockType.Script, _parent = _this as unknown as AhkSymbol, classfullname: string = ''): AhkSymbol[] {
-			const result: AhkSymbol[] = [], document = _this.document, tokens = _this.tokens;
-			let tk = _this.tokens[parser_pos - 1] ?? EMPTY_TOKEN, lk = tk.previous_token ?? EMPTY_TOKEN;
+			const result: AhkSymbol[] = [], { document, line_ranges, tokens } = _this;
+			let tk = tokens[parser_pos - 1] ?? EMPTY_TOKEN, lk = tk.previous_token ?? EMPTY_TOKEN;
 			let blocks = 0, next = true, _low = '';
-			let _cm: Token | undefined, line_begin_pos: number | undefined, tn: AhkSymbol | undefined;
+			let _cm: Token | undefined, tn: AhkSymbol | undefined;
 			let m: RegExpMatchArray | string | null, last_hotif: number | undefined;
+			let line_begin_offset: number | undefined, line_end_token: Token | undefined;
 			const baksym = currsymbol, oil = in_loop, blockpos: number[] = [], case_pos: number[] = [];
 			if (block_mode = true, mode & BlockType.Mask)
 				blockpos.push(parser_pos - 1), delete tk.data;
 			currsymbol = _parent, in_loop = false;
 			parse_brace();
 			currsymbol = baksym, in_loop = oil;
-			if (tk.type === TokenType.EOF && blocks > (!(mode & BlockType.Mask) ? 0 : -1))
-				_this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (!(mode & BlockType.Mask) ? 1 : 0)], 1);
-			else if (last_hotif !== undefined)
+			if (tk.type === TokenType.EOF)
+				if (set_line_begin(), blocks > (!(mode & BlockType.Mask) ? 0 : -1))
+					_this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (!(mode & BlockType.Mask) ? 1 : 0)], 1);
+			if (last_hotif !== undefined)
 				_this.addFoldingRange(last_hotif, lk.offset, 'region');
 			return result;
 
@@ -1491,6 +1505,13 @@ export class Lexer {
 				}
 			}
 
+			function set_line_begin(offset?: number) {
+				if (line_end_token && line_begin_offset !== undefined)
+					line_ranges.push([(line_end_token.pos ?? document.positionAt(
+						line_end_token.offset + line_end_token.length)).line, line_begin_offset]);
+				return line_end_token = undefined, line_begin_offset = offset;
+			}
+
 			function parse_brace(level = 0) {
 				if (tk.type === TokenType.BlockStart) {
 					delete tk.data;
@@ -1501,7 +1522,7 @@ export class Lexer {
 				while (block_mode = true, nexttoken()) {
 					if (tk.topofline === 1) {
 						let nk: Token | undefined;
-						line_begin_pos = tk.offset;
+						set_line_begin(tk.offset);
 						if (mode === BlockType.Class) {
 							if (allIdentifierChar.test(tk.content) &&
 								(tk.content.toLowerCase() !== 'static' || '.[('.includes(input[parser_pos]) ||
@@ -1519,7 +1540,7 @@ export class Lexer {
 									tk.skip_pos = parser_pos = nk.offset + 1;
 								} else parser_pos++;
 								tk.content += ':', tk.length++, tk.type = TokenType.Label;
-								line_begin_pos = undefined;
+								line_begin_offset = undefined;
 								delete tk.semantic;
 								if (is_default) {
 									const last_case = case_pos.pop();
@@ -1582,7 +1603,7 @@ export class Lexer {
 									if (PROP_NEXT_TOKEN.includes(tk.content, tk.topofline)) {
 										const fc = lk, rl = result.length;
 										let par: Variable[] = [], rg: Range;
-										line_begin_pos = undefined;
+										line_begin_offset = undefined;
 										if (tk.content === '[') {
 											par = parse_params(']') ?? [];
 											nexttoken();
@@ -1636,7 +1657,7 @@ export class Lexer {
 															tn.params.unshift(HIDDEN_PARAMS.value);
 														else prop.returns = tn.returns;
 														tn.has_this_param = true, adddeclaration(tn);
-														_this.linepos[tn.range.end.line] = nk.offset;
+														line_ranges.push([tn.range.end.line, nk.offset]);
 													} else if (tk.content === '{') {
 														tn = FuncNode.create(_low, SymbolKind.Function,
 															make_range(nk.offset, parser_pos - nk.offset), make_range(nk.offset, 3), [...par]);
@@ -1693,7 +1714,7 @@ export class Lexer {
 											prop.range.end = tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
 											_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 											tn.has_this_param = true, adddeclaration(tn), tk.fat_arrow_end = true;
-											_this.linepos[prop.range.end.line] = oo;
+											line_ranges.push([prop.range.end.line, oo]);
 											fc.semantic.modifier! |= SemanticTokenModifiers.readonly;
 										}
 										if (prop.children.length) {
@@ -1721,17 +1742,16 @@ export class Lexer {
 									const sta = parse_statement('');
 									_parent.children!.push(...result.splice(rl)), _parent = _;
 									result.push(...sta), sta.forEach(it => it.parent = (_ as ClassNode).prototype);
-									if (line_begin_pos !== undefined)
-										_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
-								} else if (input[lk.offset + lk.length] === '(')
-									parse_call(lk, '(') || result.push(...parse_line());
-								else {
+								} else if (input[lk.offset + lk.length] === '(') {
+									if (parse_call(lk, '('))
+										break;
+									result.push(...parse_line());
+								} else {
 									reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN;
 									parser_pos = tk.offset + tk.length, next = true;
 									parse_top_word();
-									if (line_begin_pos !== undefined)
-										_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
 								}
+								line_end_token = lk;
 								break;
 							}
 
@@ -1741,13 +1761,10 @@ export class Lexer {
 								const sta = parse_statement('');
 								_parent.children!.push(...result.splice(rl)), _parent = _;
 								result.push(...sta), sta.forEach(it => it.parent = _);
-							} else {
-								if (tk.topofline)
-									next = true, parse_top_word();
-								else next = false, result.push(...parse_line());
-								if (line_begin_pos !== undefined)
-									_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
-							}
+							} else if (tk.topofline)
+								next = true, parse_top_word();
+							else next = false, result.push(...parse_line());
+							line_end_token = lk;
 							break;
 
 						case TokenType.Directive: parse_sharp(); break;
@@ -1783,7 +1800,7 @@ export class Lexer {
 						// case TokenType.DOT:
 						case TokenType.BracketEnd:
 							unexpected(tk);
-							line_begin_pos = undefined;
+							line_begin_offset = undefined;
 							break;
 
 						case TokenType.HotkeyLine: {
@@ -1834,8 +1851,8 @@ export class Lexer {
 								break;
 							}
 							if (tk.topofline && tk.content !== '{') {
-								stop_parse(ht), next = false;
-								!maybev1 && _this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
+								stop_parse(ht) || _this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
+								next = false;
 								break;
 							}
 							tn.params = [HIDDEN_PARAMS.thishotkey];
@@ -1845,7 +1862,7 @@ export class Lexer {
 								tn.range = make_range(ht.offset, parser_pos - ht.offset);
 								_this.addSymbolFolding(tn, tk.offset);
 							} else {
-								const tparent = _parent, tmode = mode, l = tk.content.toLowerCase();
+								const tparent = _parent, tmode = mode, l = tk.type as TokenType === TokenType.Reserved ? tk.content.toLowerCase() : '';
 								const rl = result.length;
 								_parent = tn, mode = BlockType.Func, lk.body_start = tk.offset;
 								if (l === 'return')
@@ -1861,7 +1878,8 @@ export class Lexer {
 								let o = lk.offset + lk.length;
 								for (; ' \t'.includes(input[o]); o++);
 								tn.range = make_range(ht.offset, o - ht.offset);
-								_this.linepos[tn.range.end.line] = ht.offset;
+								line_begin_offset = undefined;
+								line_ranges.push([tn.range.end.line, ht.offset]);
 							}
 							adddeclaration(tn);
 							break;
@@ -1882,8 +1900,7 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length), parse_line();
 							else {
 								result.push(...parse_line());
-								if (line_begin_pos !== undefined)
-									_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
+								line_end_token = lk;
 							}
 							break;
 					}
@@ -1934,15 +1951,17 @@ export class Lexer {
 					result.push(tn), (tn.children = rs).push(...sub);
 					tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
 					_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-					if (tk.topofline)
-						_this.linepos[tn.range.end.line] = oo;
+					if (fc.topofline > 0 && tk.topofline) {
+						line_begin_offset = undefined;
+						line_ranges.push([tn.range.end.line, oo]);
+					}
 				} else if (tk.content === '{') {
 					const rs = result.splice(rl), lb = tk;
 					result.push(tn), (tn.children = rs).push(...parse_block(mode, tn, classfullname));
 					tn.range.end = document.positionAt(parser_pos);
 					_this.addSymbolFolding(tn, lb.offset);
 					lb.previous_pair_pos = oo;
-					tk = _this.tokens[tk.next_pair_pos!] ?? _this.findToken(parser_pos - 1);
+					tk = tokens[tk.next_pair_pos!] ?? _this.findToken(parser_pos - 1);
 					if (rpair) {
 						if (ahkVersion < alpha_3)
 							_this.addDiagnostic(diagnostic.requireVerN(alpha_3), fc.offset, lb.offset - fc.offset, { code: DiagnosticCode.func_expr });
@@ -2038,7 +2057,7 @@ export class Lexer {
 					case 'loop': {
 						nexttoken();
 						if (tk.type === TokenType.Comma)
-							stop_parse(lk), maybev1 && nexttoken();
+							stop_parse(lk) || _this.addDiagnostic(diagnostic.funccallerr(), tk.offset, 1), nexttoken();
 						let min = 0, max = 1, act = 'loop', sub;
 						if (tk.type === TokenType.Assign) {
 							parser_pos = lk.offset + lk.length, lk.type = TokenType.Identifier, tk = lk, lk = bak, next = false;
@@ -2059,7 +2078,7 @@ export class Lexer {
 						if (parse_body(false, beginpos, true))
 							return;
 						if (tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'until')
-							next = true, line_begin_pos = tk.offset, result.push(...parse_line(undefined, 'until', 1));
+							next = true, set_line_begin(tk.offset), result.push(...parse_line(undefined, 'until', 1));
 						break;
 					}
 					case 'for': {
@@ -2090,7 +2109,7 @@ export class Lexer {
 										}
 										data.push(tk.offset);
 										if (!parse_body(false, beginpos, true) && tk.type as TokenType === TokenType.Reserved && tk.content.toLowerCase() === 'until')
-											next = true, line_begin_pos = tk.offset, result.push(...parse_line(undefined, 'until', 1));
+											next = true, set_line_begin(tk.offset), result.push(...parse_line(undefined, 'until', 1));
 										data.push(tk.offset, for_index + 1);
 										return;
 									}
@@ -2178,11 +2197,11 @@ export class Lexer {
 							stop_parse(lk);
 						parse_body(true, beginpos);
 						if (tk.type === TokenType.Reserved && tk.content.toLowerCase() !== 'else') {
-							while (tk.content.toLowerCase() === 'catch')
-								next = true, line_begin_pos = tk.offset, parse_catch();
+							while (tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'catch')
+								next = true, parse_catch();
 							for (const l of ['else', 'finally'])
-								if (tk.content.toLowerCase() === l)
-									next = true, line_begin_pos = tk.offset, nexttoken(), next = false, parse_body(true, lk.offset);
+								if (tk.type === TokenType.Reserved && tk.content.toLowerCase() === l)
+									next = true, set_line_begin(tk.offset), nexttoken(), next = false, parse_body(true, lk.offset);
 						}
 						break;
 					case 'isset':
@@ -2355,8 +2374,7 @@ export class Lexer {
 
 			function parse_catch() {
 				let p: Token | undefined, nk: Token;
-				const bp = tk.offset;
-				line_begin_pos = bp;
+				const bp = set_line_begin(tk.offset)!;
 				lk = nk = tk, p = get_token_ignore_comment();
 				if (p.topofline || p.content !== '(')
 					tk = p, p = undefined;
@@ -2689,8 +2707,6 @@ export class Lexer {
 					next = tk.type as TokenType === TokenType.Reserved && tk.content.toLowerCase() === 'else';
 				} else {
 					const t = tk;
-					if (tk.topofline)
-						_this.linepos[document.positionAt(lk.offset).line] = previous_pos;
 					if (tk.type === TokenType.Reserved && LINE_STARTERS.includes(tk.content.toLowerCase())) {
 						parse_reserved();
 						if (t === tk || (t === lk && !next && !tk.topofline))
@@ -2708,13 +2724,11 @@ export class Lexer {
 						} else if (tk.type !== TokenType.EOF)
 							lk = EMPTY_TOKEN, next = false, result.push(...parse_line());
 					}
-					if (line_begin_pos !== undefined) {
-						const e = _this.tokens[previous_pos];
-						if (t.content.length)
-							e.body_start = t.offset;
-						else delete t.body_start;
-						_this.linepos[(lk.pos ??= document.positionAt(lk.offset)).line] = line_begin_pos;
-					}
+					const e = tokens[previous_pos];
+					if (t.content.length)
+						e.body_start = t.offset;
+					else delete t.body_start;
+					line_end_token = lk;
 					next = tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'else';
 				}
 				in_loop = oil, mode = prev;
@@ -2722,7 +2736,7 @@ export class Lexer {
 					if (else_body)
 						next = false;
 					else if (next) {
-						line_begin_pos = tk.offset;
+						set_line_begin(tk.offset);
 						nexttoken(), next = false;
 						parse_body(true, lk.offset);
 						return true;
@@ -2771,7 +2785,6 @@ export class Lexer {
 				}
 				if (act === '=' || act === '=>') {
 					let tk = _this.findToken(b), diag = true;
-					const tokens = _this.tokens;
 					if (tk.offset < e) {
 						while (tk && tk.offset < e) {
 							if (!tk.ignore && tk.content === '?') {
@@ -2840,8 +2853,8 @@ export class Lexer {
 						h ||= l.startsWith('autohotkey_h');
 						if ((m = l.match(/^\w+[ \t]+v(1|2)/))) {
 							if (m[1] === '2')
-								requirev2 = true;
-							else if (_this.maybev1 = 3, !stop_parse(data, false, diagnostic.requirev1()))
+								_this.maybev1 = maybev1 = 0;
+							else if (_this.maybev1 = maybev1 = 3, !stop_parse(data, false, diagnostic.requirev1()))
 								unexpected(data);
 						}
 						break;
@@ -3426,7 +3439,7 @@ export class Lexer {
 				info.comma.forEach(o => tokens[o].paraminfo = info);
 				if (paramsdef) {
 					if (hasexpr)
-						cache.format = format_params_default_val.bind(undefined, _this.tokens);
+						cache.format = format_params_default_val.bind(undefined, tokens);
 					tk.previous_pair_pos = beg, pk.next_pair_pos = tk.offset;
 					_this.addFoldingRange(beg, parser_pos, 'block');
 					return cache;
@@ -3607,7 +3620,7 @@ export class Lexer {
 
 			function parse_pair(b: string, e: string, pairbeg?: number, paraminfo?: ParamInfo, strs?: Token[]) {
 				let pairnum = 0, iscall = false, rl, byref;
-				const pairpos = [pairbeg ??= tk.offset], rls = [result.length], _pk = _this.tokens[pairbeg];
+				const pairpos = [pairbeg ??= tk.offset], rls = [result.length], _pk = tokens[pairbeg];
 				const prev_mode = mode, ternarys: number[] = [];
 				paraminfo ??= { offset: pairbeg, count: 0, comma: [], miss: [], unknown: false };
 				if (b !== '%') {
@@ -3885,8 +3898,8 @@ export class Lexer {
 			function ternaryMiss(ternarys: number[]) {
 				let o: number | undefined;
 				while ((o = ternarys.pop()) !== undefined) {
-					const q = _this.tokens[o];
-					const t = _this.tokens[q.next_token_offset] ?? EMPTY_TOKEN;
+					const q = tokens[o];
+					const t = tokens[q.next_token_offset] ?? EMPTY_TOKEN;
 					// %a?%
 					if (t.previous_pair_pos !== undefined && (q.ignore = true))
 						continue;
@@ -3974,6 +3987,7 @@ export class Lexer {
 
 			function addvariable(token: Token, md: number = 0, p?: AhkSymbol[]) {
 				const rg = make_range(token.offset, token.length), tn = Variable.create(token.content, SymbolKind.Variable, rg);
+				token.pos = rg.start;
 				if (md === 2) {
 					tn.kind = SymbolKind.Property;
 					addprop(token, tn);
@@ -6262,11 +6276,11 @@ export class Lexer {
 	}
 
 	private clear() {
-		this.texts = {}, this.declaration = {}, this.include = {}, this.tokens = {}, this.linepos = {};
+		this.texts = {}, this.declaration = {}, this.include = {}, this.tokens = {};
 		this.labels = {}, this.typedef = {}, this.object = { method: {}, property: {} };
 		this.need_scriptdir = this.hotstringExecuteAction = this.isparsed = false;
 		this.children.length = this.dllpaths.length = this.token_ranges.length = 0;
-		this.diagnostics.length = this.folding_ranges.length = 0;
+		this.diagnostics.length = this.folding_ranges.length = this.line_ranges.length = 0;
 		this.includedir.clear(), this.dlldir.clear();
 		this.d_uri = '';
 		delete this.maybev1;
@@ -6477,7 +6491,7 @@ export class Lexer {
 			token = this.findToken(range.start.character === linetext.length ? off - 1 : off);
 			if (token.type === TokenType.String)
 				text = token.content;
-			else if (token.type & TokenType.Comment) {
+			else if (token.type === TokenType.BlockComment && typeof token.data === 'object') {
 				let s = linetext.substring(0, character), m = s.match(
 					/(@see|\{@link(code|plain)?|@param(\s+\{[^}]*\})?)\s+((\[[ \t]*)?[^ \t]+)$/);
 				if (m) {
@@ -6751,19 +6765,17 @@ export class Lexer {
 	}
 
 	public findStrOrComment(offset: number): Token | undefined {
-		const sc = this.token_ranges;
-		let l = 0, r = sc.length - 1, i = 0, it;
+		const rgs = this.token_ranges;
+		let l = 0, r = rgs.length - 1, i, it;
 		while (l <= r) {
-			it = sc[i = (l + r) >> 1];
+			it = rgs[i = (l + r) >> 1];
 			if (offset < it.start)
 				r = i - 1;
 			else if (offset >= it.end)
 				l = i + 1;
-			else break;
-		}
-		if (l <= r && it)
-			return this.tokens[it.start] ?? ((it = this.tokens[it.previous!])?.data
+			else return this.tokens[it.start] ?? ((it = this.tokens[it.previous!])?.data
 				&& { type: TokenType.Text, previous_token: it, ...it.data });
+		}
 	}
 }
 
@@ -8074,6 +8086,8 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 	const { children, diagnostics, uri, relevance } = lex;
 	const severity = DiagnosticSeverity.Error;
 	let l = '', v1: Variable, v2: Variable;
+	if (ahkVersion < alpha_11)
+		Object.assign(relevance, { [ahkUris.ahk2]: 1, [ahkUris.ahk2_h ?? '\0']: 1 });
 	for (const it of syms) {
 		if (!it.name || it.selectionRange === ZERO_RANGE)
 			continue;
