@@ -90,7 +90,8 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 							if (!t.children)
 								t = getClassMember(lex, t.parent!, name, t.def ? null : false) ?? t;
 							syms.includes(t) && refs.push(tk.symbol!.selectionRange);
-						}
+						} else if (t.kind === SymbolKind.Class && syms.includes(t))
+							refs.push(t.selectionRange);
 						continue;
 					}
 					if (tk.previous_token?.type !== TokenType.Dot)
