@@ -2255,7 +2255,7 @@ export class Lexer {
 						break;
 					case 'throw':
 						if (ahkVersion >= alpha_3) {
-							tk.type = TokenType.Identifier, next = false;
+							tk.type = TokenType.Reserved, next = true;
 							break;
 						}
 					// fall through
