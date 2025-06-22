@@ -479,6 +479,7 @@ export class Lexer {
 			if_block: boolean,
 			in_case_statement: boolean,
 			in_case: boolean,
+			in_conditional?: boolean,
 			in_expression: boolean,
 			in_fat_arrow?: boolean,
 			indentation_level: number,
@@ -496,7 +497,7 @@ export class Lexer {
 		let output_lines: { text: string[], indent: number }[], flags: Flag, previous_flags: Flag, flag_store: Flag[];
 		let opt: FormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
 		let token_text: string, token_text_low: string, token_type: TokenType, last_type: TokenType, last_text: string;
-		let output_space_before_token: boolean | undefined, is_conditional: boolean;
+		let output_space_before_token: boolean | undefined;
 		const handlers: Record<number, () => void> = {
 			[TokenType.BracketStart]: handle_start_expr,
 			[TokenType.BracketEnd]: handle_end_expr,
@@ -614,7 +615,7 @@ export class Lexer {
 			last_type = TokenType.EOF, last_text = '', begin_line = true, lst = { ...EMPTY_TOKEN };
 			last_LF = -1, end_pos = input_length, ck = _this.getToken(0);
 			preindent_string = input.substring(input.lastIndexOf('\n', parser_pos = ck.offset) + 1, parser_pos);
-			is_conditional = output_space_before_token = false, format_mode = true;
+			output_space_before_token = false, format_mode = true;
 			indent_string = opt.indent_string ?? '\t', space_in_other = opt.space_in_other ?? true;
 			output_lines = [create_output_line()];
 			flag_store = [], flags = undefined as unknown as Flag;
@@ -660,9 +661,7 @@ export class Lexer {
 					while (flags.mode === Mode.Statement)
 						restore_mode();
 					break;
-				} else if (is_conditional &&
-					!(is_conditional = n_newlines ? !conditional_is_end(ck) :
-						token_type !== TokenType.BlockStart || ck.data as boolean)) {
+				} else if (flags.in_conditional && (ck.topofline > 0 && !(token_type & TokenType.Comment) || token_type === TokenType.BlockStart && !ck.data)) {
 					restore_mode();
 					last_type = TokenType.BracketEnd;
 					flags.last_text = ')';
@@ -672,7 +671,7 @@ export class Lexer {
 						print_newline();
 						for (let i = 1; i < n_newlines; i++)
 							output_lines.push(create_output_line());
-					} else if (!is_conditional && !flags.in_expression) {
+					} else if (!flags.in_expression && !flags.in_conditional) {
 						if (((ck.type & TokenType.Comment) || !isContinuousLine(flags.mode === Mode.Statement ? ck.previous_token ?? EMPTY_TOKEN : {} as Token, ck)) &&
 							!(last_type === TokenType.Reserved && ['catch', 'else', 'finally', 'until'].includes(last_text))) {
 							if (opt.max_preserve_newlines && n_newlines > opt.max_preserve_newlines)
@@ -689,9 +688,9 @@ export class Lexer {
 				handlers[token_type]();
 
 				if (!(token_type & TokenType.Comment)) {
-					if (!is_conditional && token_type === TokenType.Reserved && ['if', 'for', 'while', 'loop', 'catch', 'switch'].includes(token_text_low)) {
-						is_conditional = true;
+					if (token_type === TokenType.Reserved && ['if', 'for', 'while', 'loop', 'catch', 'switch'].includes(token_text_low)) {
 						set_mode(Mode.Conditional);
+						flags.in_conditional = true;
 						if (token_text_low !== 'switch')
 							indent();
 					}
@@ -705,37 +704,6 @@ export class Lexer {
 			const sweet_code = output_lines.map(line => line.text.join('')).join('\n');
 			output_lines = [], format_mode = false;
 			return sweet_code;
-
-			function conditional_is_end(tk: Token) {
-				if (![Mode.Conditional, Mode.Statement].includes(flags.mode) || flags.parent.mode === Mode.ObjectLiteral)
-					return false;
-				switch (tk.type) {
-					case TokenType.Dot:
-					case TokenType.Comma:
-					case TokenType.Assign:
-					case TokenType.Comment:
-					case TokenType.InlineComment:
-					case TokenType.BlockComment:
-						return false;
-					case TokenType.Operator:
-						return /^(!|~|not|%|\+\+|--)$/i.test(tk.content) &&
-							!isContinuousLine(tk.previous_token ?? EMPTY_TOKEN, tk);
-					case TokenType.String:
-						return !tk.ignore &&
-							!isContinuousLine(tk.previous_token ?? EMPTY_TOKEN, tk);
-					default: {
-						const lk = tk.previous_token ?? EMPTY_TOKEN;
-						switch (lk.type) {
-							case TokenType.Comma:
-							case TokenType.Assign:
-								return false;
-							case TokenType.Operator:
-								return /^(\+\+|--|%)$/.test(lk.content);
-						}
-					}
-				}
-				return true;
-			}
 		};
 
 		function format_params_default_val(tokens: Record<number, Token>, params: ParamList) {
@@ -1752,7 +1720,7 @@ export class Lexer {
 									parser_pos = tk.offset + tk.length, next = true;
 									parse_top_word();
 								}
-								line_end_token = lk;
+								line_end_token = tk.previous_token;
 								break;
 							}
 
@@ -1765,7 +1733,7 @@ export class Lexer {
 							} else if (tk.topofline)
 								next = true, parse_top_word();
 							else next = false, result.push(...parse_line());
-							line_end_token = lk;
+							line_end_token = tk.previous_token;
 							break;
 
 						case TokenType.Directive: parse_sharp(); break;
@@ -1901,7 +1869,7 @@ export class Lexer {
 								_this.addDiagnostic(diagnostic.propdeclaraerr(), tk.offset, tk.length), parse_line();
 							else {
 								result.push(...parse_line());
-								line_end_token = lk;
+								line_end_token = tk.previous_token;
 							}
 							break;
 					}
@@ -2729,7 +2697,7 @@ export class Lexer {
 					if (t.content.length)
 						e.body_start = t.offset;
 					else delete t.body_start;
-					line_end_token = lk;
+					line_end_token = tk.previous_token;
 					next = tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'else';
 				}
 				in_loop = oil, mode = prev;
@@ -3886,12 +3854,12 @@ export class Lexer {
 
 			function parse_super() {
 				if ((mode & BlockType.Mask) === BlockType.Method) {
-					if (input[parser_pos] !== '(') {
+					if (!'.(['.includes(input[parser_pos])) {
 						const t = _this.getToken(parser_pos, true);
 						if (t.type !== TokenType.Dot && t.content !== '[' && !(t.topofline && tk.topofline))
 							return _this.addDiagnostic(diagnostic.syntaxerror(tk.content), tk.offset, tk.length);
 					}
-					tk.type = TokenType.Identifier, next = false;
+					tk.type = TokenType.Identifier, tk.ignore = true, next = false;
 				} else
 					_this.addDiagnostic(diagnostic.invalidsuper(), tk.offset, tk.length);
 			}
@@ -4418,7 +4386,7 @@ export class Lexer {
 					type_annotations?: (string | AhkSymbol)[] | false,
 					type_str?: string
 				}
-			} | undefined, tp = '', t;
+			} | undefined, tags: Partial<AhkSymbol> | undefined, tp = '', t;
 			const fn = sym as FuncNode, objs: Record<string, ClassNode> = {}, params: Record<string, Variable> = {};
 			let get_param = (_: string) => undefined as Variable | undefined;
 			let m: RegExpMatchArray | null, vr: Variable | undefined, obj: ClassNode | undefined;
@@ -5865,7 +5833,7 @@ export class Lexer {
 						print_token();
 						flags.last_word = token_text_low;
 						flags.start_line_index = output_lines.length;
-						set_mode(Mode.Statement), is_conditional = true;
+						set_mode(Mode.Statement), flags.in_conditional = true;
 						return;
 					} else if (token_text_low === 'case') {
 						print_newline();
@@ -5917,8 +5885,8 @@ export class Lexer {
 				} else if ([TokenType.Comma, TokenType.BracketStart, TokenType.Assign, TokenType.Operator].includes(last_type))
 					if (!start_of_object_property())
 						allow_wrap_or_preserved_newline();
-				if (!is_conditional && flags.mode === Mode.BlockStatement && ck.symbol?.children)
-					set_mode(Mode.Statement), is_conditional = true;
+				if (flags.mode === Mode.BlockStatement && ck.symbol?.children && !flags.in_conditional)
+					set_mode(Mode.Statement), flags.in_conditional = true;
 				flags.last_word = '_';
 				if (opt.symbol_with_same_case)
 					token_text = ck.definition?.name || token_text;
@@ -6028,8 +5996,8 @@ export class Lexer {
 				}
 			} else if (token_text === '=>') {
 				// ^fn() => xx
-				if (is_conditional && flags.mode === Mode.Statement && flags.parent.mode === Mode.BlockStatement)
-					is_conditional = false;
+				if (flags.in_conditional && flags.mode === Mode.Statement && flags.parent.mode === Mode.BlockStatement)
+					flags.in_conditional = false;
 				set_mode(Mode.Statement);
 				indent(), flags.in_fat_arrow = true;
 			} else if (/^(\+\+|--|%|!|~|not)$/.test(token_text_low) && need_newline()) {
@@ -6549,22 +6517,16 @@ export class Lexer {
 			return {};
 		let fn = scope as FuncNode;
 		const roots = [fn];
-		while ((fn = fn.parent as FuncNode))
-			if (fn.kind === SymbolKind.Class)
-				break;
-			else roots.push(fn);
-		let vars: Record<string, Variable> = fn?.kind === SymbolKind.Class ? { THIS, SUPER } : {};
+		while (!fn.has_this_param && fn.assume !== FuncScope.GLOBAL && (fn = fn.parent as FuncNode))
+			roots.push(fn);
+		let vars: Record<string, Variable> = {};
+		if (fn?.has_this_param)
+			vars = { THIS, SUPER }, fn.kind === SymbolKind.Property && roots.pop();
 		while ((fn = roots.pop() as FuncNode)) {
-			if (fn.kind === SymbolKind.Property)
-				continue;
-			if (fn.assume === FuncScope.GLOBAL)
-				vars = {};
-			else if (fn.assume === FuncScope.STATIC)
+			if (fn.static && fn.kind === SymbolKind.Function)
 				Object.entries(vars).forEach(([k, v]) => !v.static && v.static !== null && delete vars[k]);
-			Object.assign(vars, fn.local ?? {});
-			Object.entries(fn.declaration ?? {}).forEach(([k, v]) => vars[k] ??= v);
-			Object.entries(fn.unresolved_vars ?? {}).forEach(([k, v]) => vars[k] ??= v);
-			Object.keys(fn.global ?? {}).forEach(k => delete vars[k]);
+			vars = { ...fn.unresolved_vars, ...fn.declaration, ...vars, ...fn.local };
+			for (const k in fn.global) delete vars[k];
 		}
 		return vars;
 	}
