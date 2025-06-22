@@ -142,6 +142,7 @@ export interface AhkSymbol extends DocumentSymbol {
 	has_warned?: boolean | number
 	markdown_detail?: string
 	ignore?: boolean
+	override?: boolean
 	overwrite?: number
 	parent?: AhkSymbol
 	returns?: number[] | null
@@ -4383,10 +4384,9 @@ export class Lexer {
 			if (!cm.data)
 				cm.data = parse_jsdoc_detail(_this, comment, sym);
 			else {
-				const { detail, ignore, tags, vars } = cm.data as JsDoc;
+				const { detail, tags, vars } = cm.data as JsDoc;
 				const v = vars && (vars[sym.name.toUpperCase()] ?? vars['']);
-				if (ignore) sym.ignore = ignore;
-				if (tags) sym.tags = tags as typeof sym.tags;
+				Object.assign(sym, tags);
 				sym.markdown_detail = join_markdown(v?.detail ?? '', detail);
 				if (v)
 					sym.type_annotations = v.type_annotations ??= resolveTypeAnnotation(v.type_str);
@@ -4395,8 +4395,7 @@ export class Lexer {
 
 		interface JsDoc {
 			detail: string
-			ignore?: boolean
-			tags?: number[]
+			tags?: Partial<AhkSymbol>
 			vars?: {
 				[name: string]: {
 					detail: string,
@@ -4535,6 +4534,7 @@ export class Lexer {
 							break;
 						ols.push(`${sym.name || '_'}${line.substring(m[0].length).trimEnd()}`);
 						continue;
+					case 'override': (tags ??= {}).override = sym.override = true; break;
 					case 'example':
 						details.push('*@example*');
 						if ((line = line.replace(/^\s*<caption>(.*?)<\/caption>/, (s0, s1) => (details.push(s1), '')).replace(/^[ \t\r\n]+/, '')))
@@ -4549,8 +4549,8 @@ export class Lexer {
 						}
 						details.push(`${t}${join_detail(line)}`);
 						continue;
-					case 'ignore': sym.ignore = true; break;
-					case 'deprecated': sym.tags ??= [1]; break;
+					case 'ignore': (tags ??= {}).ignore = sym.ignore = true; break;
+					case 'deprecated': (tags ??= {}).tags = sym.tags = [1]; break;
 					case 'since':
 						if (!process.env.BROWSER && (_this.d & 2) && !versionMatch(line = line.trim()))
 							sym.since = line || 'unknown';
@@ -4578,7 +4578,7 @@ export class Lexer {
 				(sym as FuncNode).overloads = t;
 			detail = details.join('\n\n');
 			sym.markdown_detail = join_markdown(sym.markdown_detail ?? '', detail);
-			return { detail, ignore: sym.ignore, tags: sym.tags, vars };
+			return { detail, tags, vars };
 			function join_detail(str: string) {
 				str = str.replace(/^[ \t]*[-—]/, '');
 				let n = 0, ln = 0, i = 0;
@@ -6871,19 +6871,19 @@ export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismeth
 				if ((t = sym).kind === SymbolKind.Class || (t = (sym as Property).call))
 					return t.uri ??= cls.uri, t;
 				if (!sym.children)
-					prop = (sym.uri ??= cls.uri, sym);
+					prop?.override || (prop = (sym.uri ??= cls.uri, sym));
 				else ((sym as Property).get)
 				method ??= (sym.uri ??= cls.uri, sym);
 			} else if (ismethod === null) {	// set
 				if ((sym as Property).set)
 					return sym.uri ??= cls.uri, sym;
 				if (!sym.children)
-					prop = (sym.uri ??= cls.uri, sym);
+					prop?.override || (prop = (sym.uri ??= cls.uri, sym));
 				else method ??= (sym.uri ??= cls.uri, sym);
 			} else if ((sym as Property).get || sym.kind === SymbolKind.Class)
 				return sym.uri ??= cls.uri, sym;
 			else if (!sym.children)
-				prop = (sym.uri ??= cls.uri, sym);
+				prop?.override || (prop = (sym.uri ??= cls.uri, sym));
 			else if (sym.kind === SymbolKind.Method || (sym = (sym as Property).call))
 				method ??= (sym.uri ??= cls.uri, sym);
 		}
