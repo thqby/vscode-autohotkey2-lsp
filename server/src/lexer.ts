@@ -2588,7 +2588,7 @@ export class Lexer {
 							break;
 						}
 					} else
-						addvariable(lk), parse_call(lk, c);
+						parse_call(lk, c);
 				} else {
 					let act, offset;
 					/^=>?$/.test(tk.content) && (act = tk.content, offset = tk.offset);
@@ -4155,8 +4155,6 @@ export class Lexer {
 							((vr = it as Variable).def ? vars : unresolved_vars)[_low] ??= (vr.assigned ||= Boolean(vr.returns), it);
 					}
 					fn.children.unshift(...named_params ?? []);
-					if ((fn.parent as FuncNode)?.assume === FuncScope.GLOBAL)
-						fn.assume ??= FuncScope.GLOBAL;
 					if (fn.assume === FuncScope.GLOBAL) {
 						for (const [k, v] of Object.entries(Object.assign(unresolved_vars, vars))) {
 							if (!(t = dec[k]))
@@ -4175,8 +4173,6 @@ export class Lexer {
 							if (!(t = dec[k])) {
 								if (dec[k] = v, is_outer)
 									local[k] = v, v.static = assme_static;
-								else if (assme_static)
-									v.static = null;
 							} else if (t.kind === SymbolKind.Function)
 								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
@@ -6325,9 +6321,18 @@ export class Lexer {
 				node = t, parent = fn, is_global = false;
 			else node ??= (parent = fn, fn.unresolved_vars?.[name]);
 			if (fn.static && fn.kind === SymbolKind.Function) {
-				if ((t = (fn.parent as FuncNode)?.local[name])?.static)
-					node = t, parent = fn.parent;
-				if (node?.def)
+				const f = fn.parent as FuncNode;
+				if ((t = f?.global?.[name])?.decl)
+					node = t, is_global = true;
+				else if ((t = f?.local[name])?.static)
+					node = t, parent = f, is_global = false;
+				else if (!t) {
+					if (node?.def) {
+						while (fn?.assume === FuncScope.DEFAULT)
+							fn = fn.parent as FuncNode;
+						fn?.assume === FuncScope.GLOBAL || (is_global = false);
+					}
+				} else if (node?.def)
 					is_global = false;
 				break;
 			}
@@ -6515,16 +6520,16 @@ export class Lexer {
 	public getScopeSymbols(scope?: AhkSymbol): Record<string, Variable> {
 		if (!scope || scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Property)
 			return {};
-		let fn = scope as FuncNode;
+		let fn = scope as FuncNode, vars: Record<string, Variable> = {};
 		const roots = [fn];
-		while (!fn.has_this_param && fn.assume !== FuncScope.GLOBAL && (fn = fn.parent as FuncNode))
+		while (!fn.has_this_param && !fn.static && fn.assume !== FuncScope.GLOBAL && (fn = fn.parent as FuncNode))
 			roots.push(fn);
-		let vars: Record<string, Variable> = {};
-		if (fn?.has_this_param)
-			vars = { THIS, SUPER }, fn.kind === SymbolKind.Property && roots.pop();
+		if (fn)
+			if (fn.has_this_param)
+				vars = { THIS, SUPER }, fn.kind === SymbolKind.Property && roots.pop();
+			else if (fn.static && (fn = fn.parent as FuncNode))
+				Object.entries(fn.declaration).forEach(([k, v]) => (v.static || v.static === null) && (vars[k] = v));
 		while ((fn = roots.pop() as FuncNode)) {
-			if (fn.static && fn.kind === SymbolKind.Function)
-				Object.entries(vars).forEach(([k, v]) => !v.static && v.static !== null && delete vars[k]);
 			vars = { ...fn.unresolved_vars, ...fn.declaration, ...vars, ...fn.local };
 			for (const k in fn.global) delete vars[k];
 		}

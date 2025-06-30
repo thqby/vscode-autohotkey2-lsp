@@ -96,7 +96,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				result.push(info);
 		});
 		for (const info of t) {
-			let inherit: Record<string, AhkSymbol> = {}, oig = outer_is_global, s: Variable;
+			let inherit: Record<string, AhkSymbol> = {}, oig = outer_is_global, s: Variable, assme_static;
 			const fn = info as FuncNode;
 			switch (info.kind) {
 				case SymbolKind.Class: {
@@ -125,18 +125,19 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						if (vars.SUPER?.selectionRange === ZERO_RANGE)
 							delete vars.SUPER;
 						if (fn.assume !== FuncScope.GLOBAL) {
-							if (fn.assume === FuncScope.STATIC)
-								oig = false;
 							if (fn.static) {
-								for (const [k, v] of Object.entries(vars))
-									if (v.static || v === gvar[k])
-										inherit[k] = v;
+								const p = fn.parent as FuncNode;
+								for (const [k, v] of Object.entries(p?.declaration ?? {}))
+									v.static && (inherit[k] = v);
+								for (const [k, v] of Object.entries(p?.global ?? {}))
+									v.decl && (inherit[k] = gvar[k] ?? v);
 							} else inherit = { ...vars };
 						} else oig = true;
 					}
 				// fall through
 				case SymbolKind.Event:
 					oig ||= fn.assume === FuncScope.GLOBAL;
+					assme_static = fn.assume === FuncScope.STATIC && !(oig = false);
 					for (const [k, v] of Object.entries(fn.global ?? {}))
 						s = inherit[k] = gvar[k] ??= v, converttype(v, s, s === ahkVars[k]).definition = s;
 					for (const [k, v] of Object.entries(fn.local ?? {})) {
@@ -162,14 +163,15 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 							s !== v && (converttype(v, s, s === ahkVars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable));
 						else if (oig)
-							s = gvar[k] ??= (result.push(v), (v as Variable).is_global = true, lex.declaration[k] = v),
+							s = gvar[k] ??= (result.push(v), lex.declaration[k] = v),
+								(v as Variable).is_global = true, (fn.global ??= {})[v.name.toUpperCase()] = v,
 								converttype(v, s, s === ahkVars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
 						else if (!v.def && (s = gvar[k]))
 							converttype(v, s, s === ahkVars[k]).definition = s;
 						else {
 							converttype(inherit[k] = fn.local[k] = v, v).definition = v, result.push(v);
-							v.static === null && (v.static = true);
+							assme_static && (v.static = true);
 							if (warnLocalSameAsGlobal && v.kind === SymbolKind.Variable && gvar[k])
 								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
