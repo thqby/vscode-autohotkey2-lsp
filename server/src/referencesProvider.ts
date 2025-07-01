@@ -1,7 +1,7 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
-	ANY, AhkSymbol, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, TokenType, USAGE, Variable, ZERO_RANGE,
-	ahkUris, ahkVars, decltypeExpr, findSymbols, getClassMember, lexers, typeNaming
+	ANY, AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, TokenType, Variable, ZERO_RANGE,
+	ahkUris, ahkVars, decltypeExpr, findClass, findSymbols, getClassBase, lexers
 } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
@@ -70,13 +70,15 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 		// fall through
 		case SymbolKind.Method:
 		case SymbolKind.Property: {
-			const syms = nodes.map(it => {
-				const s = it.node;
-				if (s.full)
-					s.type_name ??= typeNaming(s);
-				return s;
-			});
+			const cache = new Map<AhkSymbol | string, boolean>();
+			const builtin_uris = new Set(Object.values(ahkUris));
+			builtin_uris.delete(ahkUris.winapi), cache.set(undefined!, false);
 			name = context.word.toUpperCase();
+			for (const it of nodes) {
+				const cls = add_cls(it.parent ?? it.node.parent!);
+				if (!allow_builtin && builtin_uris.has(cls?.uri || it.uri))
+					return null;
+			}
 			for (const uri of [lex.uri, ...Object.keys(lex.relevance)]) {
 				if (!(lex = lexers[uri]))
 					continue;
@@ -84,32 +86,63 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 				for (const tk of Object.values(tokens)) {
 					if (tk.ignore || tk.type !== TokenType.Identifier || tk.content.toUpperCase() !== name)
 						continue;
-					let t = tk.symbol;
+					const t = tk.symbol;
 					if (t) {
-						if (t.parent && t.kind !== SymbolKind.Function) {
-							if (!t.children)
-								t = getClassMember(lex, t.parent!, name, t.def ? null : false) ?? t;
-							syms.includes(t) && refs.push(tk.symbol!.selectionRange);
-						} else if (t.kind === SymbolKind.Class && syms.includes(t))
-							refs.push(t.selectionRange);
+						let p;
+						if (t.kind === SymbolKind.Class) {
+							const n = t.full?.replace(/\.?[^.]+$/, '');
+							p = n && findClass(lex, n);
+							p && match(p) && refs.push(t.selectionRange);
+						} else if (t.kind !== SymbolKind.Function)
+							(p = t.parent) && match(p) && refs.push(t.selectionRange);
 						continue;
 					}
 					if (tk.previous_token?.type !== TokenType.Dot)
 						continue;
 					const start = document.positionAt(tk.offset), end = { line: start.line, character: start.character + tk.length };
-					const { token, usage } = lex.getContext(start, true), tps = decltypeExpr(lex, token, tk.offset - 1);
-					tps.some(tp => {
-						if (tp === ANY)
-							return true;
-						if (!(tp = getClassMember(lex, tp, name, context.kind === SymbolKind.Method || usage === USAGE.Write && null)!))
-							return false;
-						return syms.some(it => it === tp || it.kind === tp.kind && tp.name === it.name && it.type_name === typeNaming(tp));
-					}) && refs.push({ start, end });
+					const { token } = lex.getContext(start, true), tps = decltypeExpr(lex, token, tk.offset - 1);
+					tps.some(tp => tp === ANY || match(tp)) && refs.push({ start, end });
 				}
 				if (refs.length)
 					references[lex.document.uri] = refs;
 			}
 			break;
+			function key(sym: AhkSymbol) {
+				const t = sym.full?.toLowerCase();
+				return !t ? sym : (sym as ClassNode).prototype ? `!${t}` : t;
+			}
+			function match(sym: AhkSymbol) {
+				const syms: AhkSymbol[] = [];
+				let r;
+				do {
+					if ((r = cache.get(key(sym))) !== undefined || syms.includes(sym))
+						break;
+					syms.push(sym);
+				} while ((sym = getClassBase(sym, lex)!));
+				add_cache(syms, r ??= false);
+				return r;
+			}
+			function add_cls(sym: AhkSymbol) {
+				const syms: AhkSymbol[] = [];
+				let t, cls;
+				do {
+					if (cache.has(key(sym)) || syms.includes(sym))
+						break;
+					syms.push(sym);
+					if ((t = (sym as ClassNode).property?.[name])){
+						add_cache(syms, true), cls = sym;
+						const uri = lexers[sym.uri!]?.document.uri;
+						uri && (references[uri] ??= []).push(t.selectionRange);
+					}
+				} while ((sym = getClassBase(sym, lex)!));
+				add_cache(syms, false);
+				return cls;
+			}
+			function add_cache(syms: AhkSymbol[], r: boolean) {
+				for (const s of syms)
+					cache.set(key(s), r);
+				syms.length = 0;
+			}
 		}
 	}
 	for (const [uri, range] of Object.entries(references)) {

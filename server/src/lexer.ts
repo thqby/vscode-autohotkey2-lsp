@@ -142,14 +142,12 @@ export interface AhkSymbol extends DocumentSymbol {
 	has_warned?: boolean | number
 	markdown_detail?: string
 	ignore?: boolean
-	override?: boolean
 	overwrite?: number
 	parent?: AhkSymbol
 	returns?: number[] | null
 	since?: string
 	static?: boolean | null
 	type_annotations?: Array<string | AhkSymbol> | false
-	type_name?: string
 	uri?: string
 }
 
@@ -179,7 +177,6 @@ export interface ClassNode extends AhkSymbol {
 	full: string
 	extends: string
 	extendsuri?: string
-	parent?: AhkSymbol
 	prototype?: ClassNode
 	property: Record<string, FuncNode | ClassNode | Variable>
 	$property?: Record<string, FuncNode | ClassNode | Variable> // aliases for prototype.property
@@ -766,14 +763,14 @@ export class Lexer {
 										modifier: SemanticTokenModifiers.definition | (isstatic as unknown as number)
 									};
 									let readonly = lk.content === '=>';
-									tk.symbol = tk.definition = tn, fn.parent = _parent, fn.has_this_param = true;
+									tk.symbol = tk.definition = tn, fn.parent = _parent, fn.has_this_param = fn.decl = true;
 									let params: ParamList = [];
 									if (!META_FUNCNAME.includes(_low = tn.name.toUpperCase()))
 										tk.semantic = sem;
 									tn.static = isstatic, tn.full = `(${cls.join('.')}) ${isstatic ? 'static ' : ''}` + tn.name;
 									if ((_cm = comments[tn.selectionRange.start.line]))
 										set_detail(_cm.symbol = tn, _cm);
-									_parent.children?.push(tn);
+									_parent.children?.push(tn), tn.children = [];
 									if (!_parent.since) {
 										(isstatic ? _parent.property : _parent.$property!)[_low] ??= tn;
 										(this.object.property[_low] ??= []).push(tn);
@@ -810,6 +807,7 @@ export class Lexer {
 										tt.parent = tn, (tn as Property).get = tt, readonly = true, tt.has_this_param = true;
 										parse_types(tt), tn.type_annotations = tt.type_annotations, tn.range.end = tt.range.end;
 									} else {
+										delete fn.children;
 										delete fn.has_this_param;
 										if (lk.content === '?')
 											lk.ignore = true, lk = tokens[++j], tn.defaultVal = null;
@@ -826,7 +824,7 @@ export class Lexer {
 										++j, parse_types(fn);
 									else fn.range.end = this.document.positionAt(lk.offset + lk.length);
 									fn.full += ` => ${joinTypes(fn.type_annotations) || 'void'}`;
-									tk.symbol = tk.definition = fn;
+									tk.symbol = tk.definition = fn, fn.decl = true;
 									if (!META_FUNCNAME.includes(_low = fn.name.toUpperCase()))
 										tk.semantic = {
 											type: blocks ? SemanticTokenTypes.method : SemanticTokenTypes.function,
@@ -850,7 +848,7 @@ export class Lexer {
 										inactiveVars[_low] = fn.since!;
 								} else if (!blocks && (['=>', ':', ','].includes(lk.content) || lk.topofline)) {
 									const tn = Variable.create(tk.content, SymbolKind.Variable, rg = make_range(tk.offset, tk.length));
-									tk.symbol = tk.definition = tn, tn.assigned = tn.def = true;
+									tk.symbol = tk.definition = tn, tn.assigned = tn.decl = tn.def = true;
 									if ((_cm = comments[tn.selectionRange.start.line]))
 										set_detail(_cm.symbol = tn, _cm);
 									if (['=>', ':'].includes(lk.content))
@@ -932,7 +930,7 @@ export class Lexer {
 								_parent.range.end = _parent.prototype!.range.end =
 									this.document.positionAt(tk.offset + tk.length);
 								_parent.property.PROTOTYPE = {
-									..._parent.prototype!, children: undefined,
+									..._parent.prototype!, children: undefined, decl: true,
 									name: 'Prototype', kind: SymbolKind.Property,
 									full: `(${_parent.full}) Prototype`,
 									selectionRange: ZERO_RANGE,
@@ -1592,7 +1590,7 @@ export class Lexer {
 											set_detail(_cm.symbol = prop, _cm);
 										prop.parent = isstatic ? _parent : (_parent as ClassNode).prototype;
 										prop.has_this_param = true, prop.static = isstatic;
-										prop.children = result.splice(rl);
+										prop.children = result.splice(rl), prop.decl = true;
 										let pd = '';
 										if (par.length) {
 											const f = FuncNode.create('', SymbolKind.Function, rg, rg, par);
@@ -3992,7 +3990,7 @@ export class Lexer {
 						adddeclaration(dec.__INIT as FuncNode), __init.push(dec.__INIT);
 					else delete dec.__INIT;
 					sdec.PROTOTYPE = {
-						...prototype, children: undefined,
+						...prototype, children: undefined, decl: true,
 						name: 'Prototype', kind: SymbolKind.Property,
 						full: `(${cls.full}) Prototype`,
 						selectionRange: ZERO_RANGE,
@@ -4498,7 +4496,6 @@ export class Lexer {
 							break;
 						ols.push(`${sym.name || '_'}${line.substring(m[0].length).trimEnd()}`);
 						continue;
-					case 'override': (tags ??= {}).override = sym.override = true; break;
 					case 'example':
 						details.push('*@example*');
 						if ((line = line.replace(/^\s*<caption>(.*?)<\/caption>/, (s0, s1) => (details.push(s1), '')).replace(/^[ \t\r\n]+/, '')))
@@ -6838,19 +6835,19 @@ export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismeth
 				if ((t = sym).kind === SymbolKind.Class || (t = (sym as Property).call))
 					return t.uri ??= cls.uri, t;
 				if (!sym.children)
-					prop?.override || (prop = (sym.uri ??= cls.uri, sym));
-				else ((sym as Property).get)
-				method ??= (sym.uri ??= cls.uri, sym);
+					prop?.decl || (prop = (sym.uri ??= cls.uri, sym));
+				else if ((sym as Property).get)
+					method ??= (sym.uri ??= cls.uri, sym);
 			} else if (ismethod === null) {	// set
 				if ((sym as Property).set)
 					return sym.uri ??= cls.uri, sym;
 				if (!sym.children)
-					prop?.override || (prop = (sym.uri ??= cls.uri, sym));
+					prop?.decl || (prop = (sym.uri ??= cls.uri, sym));
 				else method ??= (sym.uri ??= cls.uri, sym);
 			} else if ((sym as Property).get || sym.kind === SymbolKind.Class)
 				return sym.uri ??= cls.uri, sym;
 			else if (!sym.children)
-				prop?.override || (prop = (sym.uri ??= cls.uri, sym));
+				prop?.decl || (prop = (sym.uri ??= cls.uri, sym));
 			else if (sym.kind === SymbolKind.Method || (sym = (sym as Property).call))
 				method ??= (sym.uri ??= cls.uri, sym);
 		}
