@@ -195,6 +195,28 @@
 					},
 					"markdownDescription": "%ahk2.completioncommitcharacters%"
 				},
+				"AutoHotkey2.CompletionSortOrder": {
+					"scope": "window",
+					"type": "array",
+					"items": {
+						"type": "string",
+						"enum": [
+							"Text",
+							"Method",
+							"Function",
+							"Field",
+							"Variable",
+							"Class",
+							"Module",
+							"Property",
+							"Keyword",
+							"Snippet",
+							"Constant"
+						]
+					},
+					"uniqueItems": true,
+					"description": "%ahk2.completionsortorder%"
+				},
 				"AutoHotkey2.Files.Exclude": {
 					"scope": "window",
 					"type": "array",

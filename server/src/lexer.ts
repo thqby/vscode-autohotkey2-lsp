@@ -615,7 +615,7 @@ export class Lexer {
 			output_space_before_token = false, format_mode = true;
 			indent_string = opt.indent_string ?? '\t', space_in_other = opt.space_in_other ?? true;
 			output_lines = [create_output_line()];
-			flag_store = [], flags = undefined as unknown as Flag;
+			flag_store = [], flags = undefined!;
 			set_mode(Mode.BlockStatement);
 
 			if (opt.symbol_with_same_case)
@@ -713,7 +713,7 @@ export class Lexer {
 					continue;
 				const [start, end] = param.range_offset;
 				last_type = TokenType.EOF, last_text = '', output_lines = [create_output_line()];
-				output_space_before_token = false, flag_store = [], flags = undefined as unknown as Flag, set_mode(Mode.Expression);
+				output_space_before_token = false, flag_store = [], flags = undefined!, set_mode(Mode.Expression);
 				for (ck = tokens[tokens[start].next_token_offset]; ck && ck.offset < end; ck = tokens[ck.next_token_offset]) {
 					token_type = ck.type, token_text = ck.content, token_text_low = token_text.toLowerCase();
 					handlers[token_type]();

@@ -7,6 +7,7 @@
 	"ahk2.compilercmd": "Compiler command line options. If ahk2exe.exe is not specified, the default path will be used. `${execPath}` is equal to the currently selected AutoHotkey.exe",
 	"ahk2.completefunctionparens": "Parentheses are added to function completion when there is no `(` or `[` on the right; otherwise move the cursor to the right",
 	"ahk2.completioncommitcharacters": "Characters which commit auto completion, such as `.(`",
+	"ahk2.completionsortorder": "Control the sorting order of the completion items based on the kinds",
 	"ahk2.debug.attach": "Attach to ahk process",
 	"ahk2.debug.configs": "Debug ahk File using launch.json",
 	"ahk2.debug.file": "Debug ahk File",

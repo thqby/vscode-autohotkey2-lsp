@@ -10,6 +10,7 @@
 	"ahk2.compilercmd": "编译器命令行选项. 如果未指定ahk2exe.exe, 将使用默认路径. `${execPath}`等价于当前选择的AutoHotkey.exe",
 	"ahk2.completefunctionparens": "当右侧不存在`(`或`[`时, 给函数补全添加括号; 否则向右移动光标",
 	"ahk2.completioncommitcharacters": "提交自动完成的字符, 例如`.(`",
+	"ahk2.completionsortorder": "控制补全项基于类型的排序顺序",
 	"ahk2.current": "当前: {0}",
 	"ahk2.debug.attach": "附加到ahk进程",
 	"ahk2.debug.configs": "使用launch.json调试ahk文件",

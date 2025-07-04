@@ -50,6 +50,7 @@ export interface LSConfig {
 		Class: string
 		Function: string
 	}
+	CompletionKindSortOrder?: string[]
 	Diagnostics: {
 		ClassNonDynamicMemberCheck: boolean
 		ParamsCheck: boolean
@@ -117,7 +118,7 @@ export const configCache: LSConfig = {
 	WorkingDirs: []
 };
 export const hoverCache: Record<string, [string, Hover | undefined]> = {};
-export const libDirs: string[] = [];
+export const libDirs: string[] = [], kindSortChar: string[] = [];
 export const utils: Utils = {
 	showMessage: async (_, message) => (console.log(message), null)
 };
@@ -444,7 +445,14 @@ export function updateConfig(config: LSConfig) {
 		utils.showMessage(MessageType.Warning, setting.valueerr('CommentTags', 'RegExp',
 			(e as { message: string }).message));
 	}
-	if (config.WorkingDirs instanceof Array)
+	kindSortChar.length = 0;
+	config.CompletionKindSortOrder?.forEach((kind, index) => {
+		const k = CompletionItemKind[kind as unknown as keyof typeof CompletionItemKind];
+		kindSortChar[k] = String.fromCharCode(0x20 + index);
+	});
+	delete kindSortChar[undefined!];
+	delete config.CompletionKindSortOrder;
+	if (config.WorkingDirs)
 		config.WorkingDirs = config.WorkingDirs.map(dir =>
 			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
 				.endsWith('/') ? dir : dir + '/');

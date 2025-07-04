@@ -8,7 +8,7 @@ import {
 	a_Vars, ahkUris, ahkVars, allIdentifierChar, completionItemCache, completionitem, configCache,
 	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getCallInfo,
 	getClassConstructor, getClassMember, getClassMembers, getSymbolDetail,
-	lexers, libSymbols, makeSearchRegExp, utils, winapis
+	kindSortChar, lexers, libSymbols, makeSearchRegExp, utils, winapis
 } from './common';
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
@@ -18,7 +18,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	let items: CompletionItem[] = [], cpitem = items.pop()!;
 	let l: string, path: string, pt: Token | undefined, scope: AhkSymbol | undefined, temp;
 	const { triggerKind, triggerCharacter } = params.context ?? {};
-	let cls2index = (name: string) => name;
+	const clsindex: Record<string, string> = {};
 
 	//#region /**|
 	if (triggerCharacter === '*') {
@@ -542,15 +542,12 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (!token.symbol && token.semantic?.type === SemanticTokenTypes.property)
 			return;
 		const props: Record<string, CompletionItem> = {};
-		let tps = decltypeExpr(lex, token, range.end), index = 0;
+		let tps = decltypeExpr(lex, token, range.end), index = 0x20;
 		const is_any = tps.includes(ANY), bases: ClassNode[] = [];
-		const clsindex: Record<string, string> = {};
 		if (linetext[range.end.character] === '.')
 			right_is_paren = '(['.includes(linetext[range.end.character + word.length + 1]);
 		if (is_any)
 			tps = [];
-		else
-			cls2index = (name) => clsindex[name] ?? name;
 		for (const node of tps) {
 			if (node.kind === SymbolKind.Interface) {
 				const params = ((node as ClassNode).generic_types?.[0] as string[])?.map(s => `'"`.includes(s[0]) ? s.slice(1, -1) : s);
@@ -561,8 +558,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				continue;
 			}
 			const omems = getClassMembers(lex, node, bases);
-			for (const l = bases.length; index < l; index++)
-				clsindex[bases[index].full] = `0000${index}`.slice(-4);
+			for (temp of bases)
+				clsindex[temp.full] = String.fromCharCode(++index);
 			for (const [k, it] of Object.entries(omems)) {
 				if (expg.test(k)) {
 					if (!(temp = props[k]))
@@ -578,8 +575,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (!is_any && (triggerKind !== 1 || word.length < 3))
 			return items;
 		const objs = new Set([lex.object, lexers[ahkUris.ahk2]?.object, lexers[ahkUris.ahk2_h]?.object]);
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		objs.delete(undefined as any);
+		objs.delete(undefined!);
 		for (const uri in list)
 			objs.add(lexers[uri].object);
 		for (const k in (temp = lex.object.property)) {
@@ -604,7 +600,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					}
 		}
 		return items;
-	}
+	} else if (triggerCharacter === '.')
+		return;
 
 	//#region completion item in a block
 	// snippet
@@ -770,7 +767,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			for (const it of completionItemCache.constant)
 				expg.test(it.label) && items.push(it);
 	}
-	return items.concat(Object.values(vars) as CompletionItem[]);
+	items = items.concat(Object.values(vars) as CompletionItem[]);
+	if (kindSortChar.length)
+		for (const it of items)
+			it.sortText = kindSortChar[it.kind!];
+	return items;
 	//#endregion
 
 	//#region utils
@@ -923,9 +924,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 	function set_ci_classinfo(ci: CompletionItem, cls?: AhkSymbol) {
 		const name = cls?.full;
-		if (!name)
+		if (!name) {
+			ci.sortText = ` ${kindSortChar[ci.kind!] ?? ''}`;
 			return;
-		ci.sortText = cls2index(name);
+		}
+		ci.sortText = `${clsindex[name] ?? name} ${kindSortChar[ci.kind!] ?? ''}`;
 		ci.labelDetails = { description: name };
 	}
 
@@ -959,9 +962,6 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			case SymbolKind.Class:
 				ci.kind = CompletionItemKind.Class, ci.commitCharacters = commitCharacters.Class;
 				ci.detail = 'class ' + (info.full || ci.label); break;
-			case SymbolKind.Event:
-				ci.kind = CompletionItemKind.Event;
-				return ci;
 			case SymbolKind.Field:
 				ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.slice(0, -1);
 				return ci;
