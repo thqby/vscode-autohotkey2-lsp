@@ -1019,7 +1019,7 @@
           }
         },
         {
-          "name": "meta.embedded.ahk2 meta.example.jsdoc",
+          "name": "meta.example.jsdoc",
           "begin": "((@)example)\\s+",
           "end": "(?=@|\\*+/)",
           "beginCaptures": {

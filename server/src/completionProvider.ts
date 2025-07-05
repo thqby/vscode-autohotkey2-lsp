@@ -103,6 +103,18 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				return completionItemCache.option.hotstring;
 			return;
 		}
+		case TokenType.Comment:
+		case TokenType.InlineComment: return;
+		case TokenType.BlockComment:
+			if (!/[<{|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
+				return;
+			if (text.includes('.')) {
+				for (const it of Object.values(findClass(lex, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
+					if (it.kind === SymbolKind.Class && expg.test(it.name))
+						items.push(convertNodeCompletion(it));
+				}
+			} else add_classes();
+			return items;
 		// #include |
 		// ::xxx::|
 		// xxx::|
@@ -214,28 +226,18 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						}
 						return items;
 					}
-					default: return;
 				}
-			} else if (pt?.type !== TokenType.HotkeyLine)
-				break;
-			// ::xxx::|
-			if (pt.ignore)
-				return (add_texts(), items);
-			// xxx::|
-			items.push(...completionItemCache.key), kind = SymbolKind.Event;
-			break;
-		case TokenType.BlockComment:
-			if (!/[<{|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
 				return;
-			if (text.includes('.')) {
-				for (const it of Object.values(findClass(lex, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
-					if (it.kind === SymbolKind.Class && expg.test(it.name))
-						items.push(convertNodeCompletion(it));
-				}
-			} else add_classes();
-			return items;
-		case TokenType.Comment:
-		case TokenType.InlineComment: return;
+			} else if (pt?.type === TokenType.HotkeyLine) {
+				// ::xxx::|
+				if (pt.ignore)
+					return (add_texts(), items);
+				// xxx::|
+				items.push(...completionItemCache.key), kind = SymbolKind.Event;
+				break;
+			} else if (token.type)
+				break;
+		// fall through
 		default: {
 			if (token.callsite || token.topofline > 0)
 				break;
@@ -289,7 +291,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					case 'break':
 					case 'continue':
 					case 'goto': {
-						if (i === 1 && token.type !== TokenType.Identifier)
+						if (i === 1 && token.type && token.type !== TokenType.Identifier)
 							return;
 						scope = lex.searchScopedNode(position);
 						let labels = ((scope as FuncNode) ?? lex).labels, data;
@@ -299,7 +301,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								continue;
 							for (const it of labels[n]) {
 								if (!it.def) break;
-								if ((data = it.data as number) === -1 || data < offset &&
+								if ((data = it.data as number) === undefined || data < offset &&
 									(!(data = tokens[tokens[data].next_pair_pos!]?.offset) || offset < data)) {
 									items.push(convertNodeCompletion(it));
 									break;

@@ -5393,13 +5393,12 @@ export class Lexer {
 							parser_pos = next_LF;
 							break;
 						}
-						if ((t = line.match(/^;\s*(~?\s*|@)(todo|fixme)(:?\s*)(.*)/i))) {
+						if ((t = line.match(/^;\s*@?(todo|fixme)\b(:?\s*)(.*)/i))) {
 							_this.children.push(DocumentSymbol.create(`${t[2].toUpperCase()}: ${t[4].trim()}`, undefined,
 								SymbolKind.Null, rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
 							if (bg)
 								continue;
-						}
-						if (bg) {
+						} else if (bg) {
 							if ((t = line.match(/^;\s*[@#](end)?region\b/i))) {
 								ignore = true, create_fr = false, add_comment_foldingrange();
 								if (!t[1]) {
@@ -6358,7 +6357,7 @@ export class Lexer {
 			for (; isIdentifierChar(linetext.charCodeAt(character)); character++);
 		const range = Range.create(line, start += (this.d && linetext[start] === '$' ? 0 : 1), line, character);
 		const word = text = linetext.slice(start, character);
-		const off = document.offsetAt(range.start);
+		let off = document.offsetAt(range.start);
 		const pt = ((token = tokens[off])) ? token.previous_token : tokens[off - 1];
 		if (pt?.type === TokenType.Dot || pt?.type === TokenType.Unknown && pt.content === '.' ||
 			(is_end_expr = pt && isYieldsOperand(pt) && token?.type === TokenType.BracketStart &&
@@ -6455,10 +6454,15 @@ export class Lexer {
 				}
 			} else if (token.type === TokenType.Label && !token.hover_word)
 				kind = SymbolKind.Field;
+			if (ignoreright && start === character)
+				token = empty(token);
 		} else if (pt?.content.startsWith('#'))
 			token = pt, text = pt.content;
 		else {
-			token = this.findToken(range.start.character === linetext.length ? off - 1 : off);
+			range.start.character === linetext.length && off--;
+			token = this.findToken(off);
+			if (ignoreright && off < token.offset)
+				token = empty(token, off, linetext.slice(0, character).trim() ? 0 : 1);
 			if (token.type === TokenType.String)
 				text = token.content;
 			else if (token.type === TokenType.BlockComment && typeof token.data === 'object') {
@@ -6483,6 +6487,13 @@ export class Lexer {
 		}
 		kind ??= SymbolKind.Null;
 		return { text, word, range, kind, linetext, token, symbol, usage };
+		function empty(tk: Token, offset?: number, top?: number): Token {
+			offset ??= tk.offset;
+			return {
+				...EMPTY_TOKEN, offset, topofline: top ?? tk.topofline,
+				previous_token: tk.previous_token
+			 };
+		}
 	}
 
 	public searchScopedNode(pos: Position, root?: AhkSymbol[]): AhkSymbol | undefined {
