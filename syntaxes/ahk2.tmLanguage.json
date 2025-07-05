@@ -669,6 +669,9 @@
               "name": "comment.line.ahk2"
             },
             {
+              "include": "#comment_tag"
+            },
+            {
               "include": "#docblock"
             }
           ]
@@ -691,15 +694,38 @@
             {
               "match": "(?<=\\G.*[ \t]);.*",
               "name": "comment.line.ahk2"
+            },
+            {
+              "include": "#comment_tag"
             }
           ]
         },
         {
           "name": "comment.line.ahk2",
-          "match": "(?<=(^[ \t]*|[ \t]))(;.*)"
+          "begin": "(?<=(^[ \t]*|[ \t]));",
+          "end": "\\n",
+          "patterns": [
+            {
+              "include": "#comment_tag"
+            }
+          ]
         }
       ]
     },
+    "comment_tag": {
+			"match": "(?<=(\\G|^\\s*\\*?)\\s*)(?i:(todo\\b:?)|(fixme\\b:?)|(note\\b:?))",
+			"captures": {
+				"2": {
+					"name": "keyword.todo.ahk2"
+				},
+				"3": {
+					"name": "keyword.fixme.ahk2"
+				},
+				"4": {
+					"name": "keyword.note.ahk2"
+				}
+			}
+		},
     "compiler_directive": {
       "patterns": [
         {
