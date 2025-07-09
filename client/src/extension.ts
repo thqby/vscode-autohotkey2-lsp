@@ -333,16 +333,15 @@ async function compileScript(editor: TextEditor) {
 	let cmd = '', cmdop = workspace.getConfiguration('AutoHotkey2').CompilerCMD as string;
 	const { document } = editor;
 	const ws = workspace.getWorkspaceFolder(document.uri)?.uri.fsPath ?? '';
-	const compilePath = findFile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
-	const executePath = resolvePath(ahkpath_cur, ws);
-	if (!compilePath) {
-		window.showErrorMessage(localize('ahk2.filenotexist', 'Ahk2Exe.exe'));
-		return;
-	}
-	if (!executePath) {
-		const s = ahkpath_cur || 'AutoHotkey.exe';
-		window.showErrorMessage(localize('ahk2.filenotexist', s));
-		return;
+	cmdop = cmdop.replace(/(['"]?)\$\{execPath\}\1/gi, '\0');
+	if (cmdop.includes('\0')) {
+		const executePath = resolvePath(ahkpath_cur, ws);
+		if (!executePath) {
+			const s = ahkpath_cur || 'AutoHotkey.exe';
+			window.showErrorMessage(localize('ahk2.filenotexist', s));
+			return;
+		}
+		cmdop = cmdop.replaceAll('\0', `"${executePath}"`);
 	}
 	if (document.isUntitled || document.uri.scheme !== 'file') {
 		window.showErrorMessage(localize('ahk2.savebeforecompilation'));
@@ -352,12 +351,16 @@ async function compileScript(editor: TextEditor) {
 	const currentPath = document.uri.fsPath;
 	const exePath = currentPath.replace(/\.\w+$/, '.exe');
 	const prev_mtime = getFileMtime(exePath);
-	cmdop = cmdop.replace(/(['"]?)\$\{execPath\}\1/gi, `"${executePath}"`);
 	if (cmdop.match(/\bahk2exe\w*\.exe/i)) {
 		cmd = cmdop + ' /in ' + currentPath;
 		if (!cmd.toLowerCase().includes(' /out '))
 			cmd += '/out "' + exePath + '"';
 	} else {
+		const compilePath = findFile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
+		if (!compilePath) {
+			window.showErrorMessage(localize('ahk2.filenotexist', 'Ahk2Exe.exe'));
+			return;
+		}
 		cmd = `"${compilePath}" ${cmdop} /in "${currentPath}" `;
 		if (!cmdop.toLowerCase().includes(' /out '))
 			cmd += '/out "' + exePath + '"';

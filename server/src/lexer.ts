@@ -5394,7 +5394,7 @@ export class Lexer {
 							break;
 						}
 						if ((t = line.match(/^;\s*@?(todo|fixme)\b(:?\s*)(.*)/i))) {
-							_this.children.push(DocumentSymbol.create(`${t[2].toUpperCase()}: ${t[4].trim()}`, undefined,
+							_this.children.push(DocumentSymbol.create(`${t[1].toUpperCase()}: ${t[3].trim()}`, undefined,
 								SymbolKind.Null, rg = make_range(parser_pos + 1, next_LF - parser_pos - 1), rg));
 							if (bg)
 								continue;
