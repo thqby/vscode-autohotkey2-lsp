@@ -348,12 +348,12 @@ const COLOR_RE = new RegExp(/['" \t](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2}
 const COLOR_VALS = JSON.parse('{"black":"000000","silver":"c0c0c0","gray":"808080","white":"ffffff","maroon":"800000","red":"ff0000","purple":"800080","fuchsia":"ff00ff","green":"008000","lime":"00ff00","olive":"808000","yellow":"ffff00","navy":"000080","blue":"0000ff","teal":"008080","aqua":"00ffff"}');
 const EMPTY_TOKEN: Token = { type: TokenType.EOF, content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[012])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|help|sleep|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
-const LINE_STARTERS = 'export break case continue for global goto if local loop return static switch throw try while'.split(' ');
+const LINE_STARTERS = 'export break case catch continue else for finally global goto if local loop return static switch throw try until while'.split(' ');
 const META_FUNCNAME = '__NEW __INIT __ITEM __ENUM __GET __CALL __SET __DELETE'.split(' ');
 const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 }, PROP_NEXT_TOKEN = ['[', '{', '=>'];
 const PUNCT = '% : + ++ - -- * ** / // & && | || ^ < << <= = == => > >> >>> >= ? ?? ! != !== ~ ~= := += -= *= /= //= &= |= ^= ??= <<= >>= >>>='.split(' ');
 const RESERVED_OP = 'isset throw super false true'.split(' '), ASSIGN_INDEX = PUNCT.indexOf(':=');
-const RESERVED_WORDS = LINE_STARTERS.concat('as catch else false finally isset super true until and contains in is not or'.split(' '));
+const RESERVED_WORDS = LINE_STARTERS.concat('as false isset super true and contains in is not or'.split(' '));
 const WHITESPACE = " \t\r\n", OP_INDEX = RESERVED_WORDS.indexOf('and');
 export const ASSIGN_TYPE = [':=', '??='], ZERO_RANGE = Range.create(0, 0, 0, 0);
 export const ANY = createPrototype('Any');
@@ -5489,7 +5489,8 @@ export class Lexer {
 					lst = createToken(c, TokenType.Operator, offset, 1, bg);
 					const bak = parser_pos, tk = lst, t = get_token_ignore_comment(depth + 1);
 					parser_pos = bak;
-					if (')]},:??'.includes(t.content) || t.content === '.' && t.type !== TokenType.Operator) {
+					if (t.type === TokenType.Reserved ? (t.topofline && LINE_STARTERS.includes(t.content.toLowerCase())) :
+						(')]},:??'.includes(t.content) || t.content === '.' && t.type !== TokenType.Operator)) {
 						tk.ignore = true;
 						if (t.content === '.' && ahkVersion < alpha_3 - 1)
 							_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), tk.offset, tk.length, { code: DiagnosticCode.opt_chain });
