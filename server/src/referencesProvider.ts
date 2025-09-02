@@ -177,7 +177,7 @@ function findAllFromScope(scope: AhkSymbol, name: string, kind: SymbolKind, rang
 		if (node.kind === SymbolKind.Property) {
 			const prop = node as Property;
 			for (const it of [prop.get, prop.set])
-				it?.parent === prop && it.children?.length && findAllVar(it, name, ranges, false, false, not_static);
+				it?.parent === prop && it.children?.length && findAllFromScope(it, name, kind, ranges);
 		}
 	}
 	return ranges;
