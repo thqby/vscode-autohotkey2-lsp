@@ -103,7 +103,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					const cls = info as ClassNode;
 					inherit = { THIS, SUPER }, oig = false;
 					for (const dec of [cls.property, cls.prototype?.property ?? {}])
-						Object.values(dec).forEach(it => it.selectionRange !== ZERO_RANGE && result.push(it));
+						Object.values(dec).forEach(it => it.selectionRange !== ZERO_RANGE && it.name && result.push(it));
 					break;
 				}
 				case SymbolKind.Property:
