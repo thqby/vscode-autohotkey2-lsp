@@ -40,10 +40,10 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	const filter_types: SymbolKind[] = [SymbolKind.Method, SymbolKind.Property, SymbolKind.Class];
 	for (const [k, v] of Object.entries(lex.declaration)) {
 		let t = gvar[k], islib = false;
-		if (t.kind === SymbolKind.Variable && !t.assigned)
-			if (winapis[k])
+		if (t.kind === SymbolKind.Variable && !t.assigned && !v.decl)
+			if (k in winapis)
 				t = gvar[k] = winapis[k], islib = true;
-			else if (v.returns === undefined && !v.decl)
+			else if (v.returns === undefined)
 				unset_vars.set(t, v);
 		if (t === v || v.kind !== SymbolKind.Variable && (gvar[k] = v))
 			result.push(v), converttype(v, v, islib || v === ahkVars[k]).definition = v;
@@ -143,7 +143,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 					for (const [k, v] of Object.entries(fn.local ?? {})) {
 						converttype(inherit[k] = v, v).definition = v;
 						if (v.kind === SymbolKind.Variable) {
-							if (v.is_param || v.decl) continue;
+							if (v.is_param || v.decl && result.push(v)) continue;
 							if (!v.assigned && v.returns === undefined)
 								unset_vars.set(v, v);
 							else if (warnLocalSameAsGlobal && gvar[k])
@@ -176,16 +176,20 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
 					for (const [k, v] of Object.entries(fn.unresolved_vars ?? {}))
-						if ((s = inherit[k] ?? gvar[k] ?? winapis[k]))
+						if ((s = inherit[k] ?? (gvar[k] ??= winapis[k]))) {
 							converttype(v, s, s === ahkVars[k]).definition = s;
-						else {
-							converttype(v, v).definition = v;
+							if (s === gvar[k])
+								fn.global[k] = v;
+							else fn.declaration[k] = v;
+						} else {
+							converttype(fn.declaration[k] = fn.local[k] = v, v).definition = v;
 							result.push(inherit[k] = v);
 							if (fn.assume === FuncScope.STATIC)
 								v.static = true;
 							if (v.returns === undefined)
 								unset_vars.set(v, v);
 						}
+					delete fn.unresolved_vars;
 					break;
 				default: inherit = { ...vars }; break;
 			}

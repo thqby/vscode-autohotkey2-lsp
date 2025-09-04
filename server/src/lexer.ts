@@ -4195,7 +4195,7 @@ export class Lexer {
 					if (has_this_param)
 						delete pars.THIS, delete pars.SUPER, delete dec.THIS, delete dec.SUPER;
 					for (const k of Object.keys(dec))
-						if (k.substring(0, 2) === 'A_' && ahkVars[k]) {
+						if (k.substring(0, 2) === 'A_' && (k in ahkVars)) {
 							if (!(vr = dec[k]).decl)
 								delete dec[k], delete local[k];
 							else _diags.push({
@@ -8076,7 +8076,7 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 			case SymbolKind.Function:
 			case SymbolKind.Module:
 				v2 = decs[l = it.name.toUpperCase()];
-				if (l.substring(0, 2) === 'A_' && ahkVars[l]) {
+				if (l.substring(0, 2) === 'A_' && (l in ahkVars)) {
 					if (is_var) continue;
 					if ((it as FuncNode).params)
 						it.has_warned ??= diagnostics.push({

@@ -1,7 +1,7 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
 	ANY, AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, TokenType, Variable, ZERO_RANGE,
-	ahkUris, ahkVars, decltypeExpr, findClass, findSymbols, getClassBase, lexers
+	ahkUris, ahkVars, decltypeExpr, findClass, findSymbols, getClassBase, lexers, symbolProvider
 } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
@@ -61,6 +61,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 					for (const uri in lex.relevance)
 						all_uris[uri] = undefined;
 				for (const uri in all_uris) {
+					symbolProvider({ textDocument: { uri } });
 					const rgs = findAllFromScope(all_uris[uri] ?? lexers[uri] as unknown as AhkSymbol, name, SymbolKind.Variable);
 					if (rgs.length)
 						references[lexers[uri].document.uri] = rgs;
@@ -205,8 +206,6 @@ function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boole
 		else if (node.unresolved_vars?.[name] || name.substring(0, 2) === 'A_')
 			assume = true;
 
-	if (not_static)
-		not_static = !(node?.local?.[name]?.static);
 	if (assume === global) {
 		node.children?.forEach(it => {
 			if (it.name.toUpperCase() === name && (it.kind !== SymbolKind.Property && it.kind !== SymbolKind.Method && it.kind !== SymbolKind.Class))

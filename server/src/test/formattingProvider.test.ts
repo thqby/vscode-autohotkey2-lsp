@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { openAndParse } from '../common';
 
-suite('Test formatting', () => {
+suite('Test formattingProvider', () => {
 	const dir = resolve(__dirname, '../../src/test/formatting');
 	try {
 		for (const file of readdirSync(dir)) {
