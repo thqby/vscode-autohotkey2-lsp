@@ -1890,16 +1890,16 @@ export class Lexer {
 					se.type = SemanticTokenTypes.method;
 					tn.parent = is_static ? prev_parent : (prev_parent as ClassNode).prototype;
 					if (fc.content[0] <= '9')
-						_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range: tn.selectionRange });
+						_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range });
 				} else {
 					mode = BlockType.Func;
 					tn.kind = SymbolKind.Function;
 					(prev_mode & BlockType.Mask) && (tn.parent = prev_parent);
 					if (fc.length) {
 						if (fc.content[0] <= '9')
-							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range: tn.selectionRange });
+							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range });
 						else if (RESERVED_WORDS.includes(fc.content.toLowerCase()))
-							_this.diagnostics.push({ message: diagnostic.reservedworderr(fc.content), range: tn.selectionRange });
+							_this.diagnostics.push({ message: diagnostic.reservedworderr(fc.content), range });
 					} else tokens[fc.offset].symbol = tn;
 				}
 				Object.assign(tn, FuncNode.create(fc.content, tn.kind,
@@ -2281,7 +2281,7 @@ export class Lexer {
 					tk.type = TokenType.Identifier;
 					_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 				} else if (tk.content[0] <= '9')
-					_this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.length);
+					_this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.offset);
 				if (mode & BlockType.Func) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset, tk.length);
 				tk = get_token_ignore_comment();
 				if (!tk.topofline && tk.content.toLowerCase() === 'extends') {
@@ -8102,7 +8102,7 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 					} else if (v2.kind === SymbolKind.Function) {
 						it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange, severity });
 						continue;
-					} else if (v2.def && v2.assigned !== 1)
+					} else if (v2.def && (it.kind === SymbolKind.Class ? v2.assigned === true : v2.assigned !== 1))
 						v2.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange, severity });
 					decs[l] = it;
 				} else if (is_var) {
