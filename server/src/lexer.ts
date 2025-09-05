@@ -463,12 +463,14 @@ export class Lexer {
 		const _this = this, uri = URI.parse(document.uri);
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
 		let in_loop = false, string_mode = false;
+		let warn_once: Record<string, unknown>;
 
 		interface Flag {
 			array_style?: number,
 			case_body: boolean | null,
 			catch_block: boolean,
 			declaration_statement: boolean,
+			disable_linewrap?: boolean,
 			else_block: boolean,
 			finally_block: boolean,
 			had_comment: number,
@@ -1235,6 +1237,7 @@ export class Lexer {
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
 				callWithoutParentheses = configCache.Warn?.CallWithoutParentheses;
+				warn_once = {};
 				try {
 					const rs = utils.getRCData?.('#2');
 					rs && (includetable[rs.uri] = rs.path);
@@ -2190,7 +2193,7 @@ export class Lexer {
 								unexpected(lk);
 								break;
 							}
-							_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning });
+							warn_once.e ??= (_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
 							if ((_low = tk.content.toLowerCase()) === 'default') {
 								nk = _this.getToken(parser_pos, true);
 								if (!nk.topofline && (allIdentifierChar.test(nk.content) || nk.content === '(')) {
@@ -2452,7 +2455,7 @@ export class Lexer {
 				let has_from = true, next_is_id = true, has_suffix_imps, sk, vk, vr;
 				lk.type = TokenType.Reserved;
 				lk.semantic = kw;
-				_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning });
+				warn_once.i ??= (_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
 				if (tk.content === '*')
 					nexttoken();
 				else if (tk.topofline)
@@ -2841,10 +2844,12 @@ export class Lexer {
 							_this.hotstringExecuteAction = /x(?!0)/.test(l);
 						break;
 					case '#module':
-						if (ahkVersion < alpha_11)
+						if (mode !== BlockType.Script)
+							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
+						else if (ahkVersion < alpha_11)
 							_this.addDiagnostic(diagnostic.requireVerN(alpha_11), tk.offset, tk.length, { code: DiagnosticCode.module });
 						else
-							_this.addDiagnostic(warn.notimplemented(), tk.offset, tk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning });
+							warn_once.m ??= (_this.addDiagnostic(warn.notimplemented(), tk.offset, tk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
 						break;
 					default:
 						if (/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i.test(l) &&
@@ -4299,7 +4304,7 @@ export class Lexer {
 							} else if (!(m = findLibrary(m, _this.libdirs, includedir)) || !existsSync(m.path)) {
 								if (!ignore)
 									_this.addDiagnostic(m ? diagnostic.filenotexist(m.path) : diagnostic.pathinvalid(), tk.offset, tk.length,
-										{ code: 'include', data: m?.path });
+										{ code: DiagnosticCode.include, data: m?.path });
 							} else if (statSync(m.path).isDirectory())
 								_this.includedir.set(tk.pos!.line, includedir = m.path);
 							else
@@ -4668,7 +4673,7 @@ export class Lexer {
 		}
 
 		function create_flags(flags_base: Flag | undefined, mode: Mode) {
-			let indentation_level = 0, had_comment = 0, ternary_depth;
+			let indentation_level = 0, had_comment = 0, ternary_depth, disable_linewrap;
 			let last_text = '', last_word = '', array_style, object_style;
 			let in_expression = [Mode.ArrayLiteral, Mode.Expression, Mode.ObjectLiteral].includes(mode);
 			if (flags_base) {
@@ -4679,6 +4684,7 @@ export class Lexer {
 				in_expression ||= flags_base.in_expression;
 				array_style = flags_base.array_style;
 				object_style = flags_base.object_style;
+				disable_linewrap = flags_base.disable_linewrap;
 			}
 
 			const next_flags: Flag = {
@@ -4686,6 +4692,7 @@ export class Lexer {
 				case_body: false,
 				catch_block: false,
 				declaration_statement: false,
+				disable_linewrap,
 				else_block: false,
 				finally_block: false,
 				had_comment,
@@ -4728,7 +4735,7 @@ export class Lexer {
 		}
 
 		function allow_wrap_or_preserved_newline(force_linewrap = false): void {
-			if (opt.wrap_line_length && !force_linewrap) {
+			if (!force_linewrap && opt.wrap_line_length && !flags.disable_linewrap) {
 				const line = output_lines.at(-1)!;
 				let proposed_line_length = 0;
 				// never wrap the first token of a line.
@@ -5620,12 +5627,21 @@ export class Lexer {
 			// (options\n...\n)
 			if (ck.ignore) {
 				let c = (ck.data as Token).content;
+				flags.disable_linewrap = false;
 				if (opt.ignore_comment)
 					c = c.replace(/[ \t]+;.*$/, '');
 				if (c)
 					print_token(c);
-			} else if (opt.space_in_paren)
-				output_space_before_token = true;
+			} else {
+				if (opt.space_in_paren)
+					output_space_before_token = true;
+				if (token_text === '(') {
+					if (flags.disable_linewrap === undefined)
+						ck.topofline && (flags.disable_linewrap = true);
+					else for (let f = flags; f?.disable_linewrap === true; f = f.parent)
+						f.disable_linewrap = false;
+				}
+			}
 
 			// In all cases, if we newline while inside an expression it should be indented.
 			indent();
@@ -5651,7 +5667,7 @@ export class Lexer {
 					print_newline(true);
 			} else if ((last_type === TokenType.BracketEnd || last_type === TokenType.BlockEnd) && flags.indentation_level >= previous_flags.indentation_level)
 				trim_newlines();
-			else if (last_type !== TokenType.BracketStart)
+			else if (last_type !== TokenType.BracketStart && !previous_flags.disable_linewrap)
 				allow_wrap_or_preserved_newline();
 
 			output_space_before_token = Boolean(opt.space_in_paren && !(last_type === TokenType.BracketStart && !opt.space_in_empty_paren));

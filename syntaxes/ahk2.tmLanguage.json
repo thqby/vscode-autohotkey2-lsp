@@ -716,13 +716,13 @@
 			"match": "(?<=(\\G|^\\s*\\*?)\\s*)(?i:(todo\\b:?)|(fixme\\b:?)|(note\\b:?))",
 			"captures": {
 				"2": {
-					"name": "keyword.todo.ahk2"
+					"name": "storage.type.class.todo"
 				},
 				"3": {
-					"name": "keyword.fixme.ahk2"
+					"name": "storage.type.class.fixme"
 				},
 				"4": {
-					"name": "keyword.note.ahk2"
+					"name": "storage.type.class.note"
 				}
 			}
 		},
