@@ -612,9 +612,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	scope ??= lex.searchScopedNode(position);
 	// class cls {\nprop {\n|\n}\n}
 	if (scope?.children && scope.kind === SymbolKind.Property) {
-		if (token.topofline !== 1)
-			return;
-		return [{ label: 'get', kind: CompletionItemKind.Function }, { label: 'set', kind: CompletionItemKind.Function }]
+		if (token.topofline === 1)
+			return [{ label: 'get', kind: CompletionItemKind.Function }, { label: 'set', kind: CompletionItemKind.Function }]
 	}
 
 	// keyword
