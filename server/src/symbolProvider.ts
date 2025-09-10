@@ -180,7 +180,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 						if ((s = inherit[k] ?? (gvar[k] ??= winapis[k]))) {
 							converttype(v, s, s === ahkVars[k]).definition = s;
 							if (s === gvar[k])
-								fn.global[k] = v;
+								(fn.global ??= {})[k] = v;
 							else fn.declaration[k] = v;
 						} else {
 							converttype(fn.declaration[k] = fn.local[k] = v, v).definition = v;
