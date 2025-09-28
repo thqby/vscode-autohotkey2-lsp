@@ -1585,7 +1585,7 @@ export class Lexer {
 												break;
 											}
 										}
-										const isstatic = fc.topofline === 2;
+										const isstatic = fc.topofline === 2, _cls = _parent;
 										const oo = isstatic ? fc.previous_token?.offset as number : fc.offset;
 										const prop = fc.symbol = DocumentSymbol.create(fc.content, undefined, SymbolKind.Property,
 											rg = make_range(fc.offset, fc.length), { ...rg }) as Property;
@@ -1616,12 +1616,12 @@ export class Lexer {
 												if (tk.topofline && /^[gs]et$/.test(_low = tk.content.toLowerCase())) {
 													nexttoken(), nk = lk;
 													if (tk.content as string === '=>') {
-														tn = FuncNode.create(_low, SymbolKind.Function,
+														_parent = tn = FuncNode.create(_low, SymbolKind.Function,
 															make_range(lk.offset, parser_pos - lk.offset), make_range(lk.offset, lk.length), [...par]);
 														mode = BlockType.Method, tn.returns = [parser_pos, 0];
-														tn.parent = prop, tn.children = parse_line(undefined, 'return', 1), mode = BlockType.Class;
+														tn.parent = prop, tn.children = parse_line(undefined, 'return', 1);
 														tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
-														tk.fat_arrow_end = true;
+														mode = BlockType.Class, _parent = _cls, tk.fat_arrow_end = true;
 														_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
 														if (_low === 'set')
 															tn.params.unshift(HIDDEN_PARAMS.value);
@@ -1631,7 +1631,7 @@ export class Lexer {
 													} else if (tk.content === '{') {
 														tn = FuncNode.create(_low, SymbolKind.Function,
 															make_range(nk.offset, parser_pos - nk.offset), make_range(nk.offset, 3), [...par]);
-														sk = tk, tn.parent = prop, tn.children = parse_block(3, tn, classfullname);
+														sk = tk, tn.parent = prop, tn.children = parse_block(BlockType.Method, tn, classfullname);
 														tn.range.end = document.positionAt(parser_pos);
 														if (_low === 'set')
 															tn.params.unshift(HIDDEN_PARAMS.value);
@@ -1677,13 +1677,13 @@ export class Lexer {
 										} else if (tk.content === '=>') {
 											const off = parser_pos;
 											let tn: FuncNode;
-											mode = BlockType.Method, tn = FuncNode.create('get', SymbolKind.Function,
+											mode = BlockType.Method, _parent = tn = FuncNode.create('get', SymbolKind.Function,
 												rg = make_range(off, parser_pos - off), ZERO_RANGE, par);
 											tn.parent = prop, prop.get = tn, prop.returns = tn.returns = [parser_pos, 0];
-											tn.children = parse_line(undefined, 'return', 1), mode = BlockType.Class;
+											tn.children = parse_line(undefined, 'return', 1), mode = BlockType.Class, _parent = _cls;
 											prop.range.end = tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
 											_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-											tn.has_this_param = true, adddeclaration(tn), tk.fat_arrow_end = true;
+											tn.has_this_param = tk.fat_arrow_end = true, adddeclaration(tn);
 											line_ranges.push([prop.range.end.line, oo]);
 											fc.semantic.modifier! |= SemanticTokenModifiers.readonly;
 										}
