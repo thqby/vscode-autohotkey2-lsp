@@ -1718,7 +1718,7 @@ export class Lexer {
 									result.push(...parse_line());
 								} else {
 									reset_extra_index(tk), tk = lk, lk = EMPTY_TOKEN;
-									parser_pos = tk.offset + tk.length, next = true;
+									parser_pos = tk.skip_pos ?? tk.offset + tk.length, next = true;
 									parse_top_word();
 								}
 								line_end_token = tk.previous_token;
@@ -4911,7 +4911,7 @@ export class Lexer {
 					const extra = _tk.previous_extra_tokens, t = _tk;
 					if (extra) {
 						if (_ppos < offset)
-							extra.i = 0;
+							extra.i = extra.tokens.findIndex(it => it.skip_pos === _ppos) + 1;
 						if (extra.i < extra.len) {
 							_tk = extra.tokens[extra.i++], parser_pos = offset;
 						} else extra.i = 0;
@@ -5112,15 +5112,15 @@ export class Lexer {
 										offset = join[0];
 										if (tks.length) {
 											tks.forEach(tk => {
-												tk.offset += offset, tk.length = 0;
+												tk.offset += offset;
 												tk.next_token_offset = -1;
 											});
 											create_tokens = (n, last_LF) => {
 												const tokens: Token[] = [];
 												for (let i = 0; i < n; i++) {
 													last_LF = input.indexOf('\n', last_LF + 1);
-													for (let tk of tks)
-														tk = { ...tk }, tk.offset = last_LF, tokens.push(tk);
+													for (const tk of tks)
+														tokens.push({ ...tk, skip_pos: last_LF });
 												}
 												return { i: 0, len: tokens.length, tokens, suffix_is_whitespace };
 											};

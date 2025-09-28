@@ -81,7 +81,7 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 			let [line, bo] = line_ranges[i];
 			if (bo > eo) break;
 			let tk, bk = tokens[bo];
-			if (!bk.body_start) continue;
+			if (!bk?.body_start) continue;
 			while ((bk = tokens[bk.body_start!]).body_start && bk.offset <= so)
 				bo = bk.offset;
 			const rb = [];
