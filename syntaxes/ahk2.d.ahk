@@ -2007,7 +2007,7 @@ MouseClick([WhichButton, X, Y, ClickCount, Speed, DownOrUp, Relative]) => void
  * 
  * R: The X1 and Y1 coordinates are regarded as the offset from the current mouse position. In other words, the cursor will be moved X1 pixels to the right from the current position (negative value to the left) and down Y1 pixels (negative value is to the left) Up). Similarly, the X2 and Y2 coordinates will be regarded as the offset from the X1 and Y1 coordinates. For example, in the following example, the mouse will first move 5 pixels down and to the right from the starting position, and then from Drag 10 pixels down and to the right from this position: MouseClickDrag "Left", 5, 5, 10, 10,, "R".
  */
-MouseClickDrag(WhichButton, X1?, Y1?, X2, Y2 [, Speed, Relative]) => void
+MouseClickDrag(WhichButton := 'Left', X1?, Y1?, X2, Y2 [, Speed, Relative]) => void
 
 /**
  * Get the current position of the mouse cursor and which window and control it is hovering over.
