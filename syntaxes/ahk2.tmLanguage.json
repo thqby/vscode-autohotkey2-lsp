@@ -703,7 +703,7 @@
         {
           "name": "comment.line.ahk2",
           "begin": "(?<=(^[ \t]*|[ \t]));",
-          "end": "\\n",
+          "end": "(?=\\n)",
           "patterns": [
             {
               "include": "#comment_tag"
