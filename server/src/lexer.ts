@@ -7175,7 +7175,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 				break;
 			case TokenType.BracketStart: {
 				const b = (t = tk.paraminfo?.comma)?.length ? t.at(-1)! : tk.next_token_offset;
-				syms = decltypeExpr(lex, tokens[b], tk.next_pair_pos! - 1, _this);
+				syms = decltypeExpr(lex, tokens[b], tk.next_pair_pos!, _this);
 				break;
 			}
 			default:

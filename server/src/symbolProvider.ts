@@ -379,7 +379,8 @@ export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 	if ((!node.returns?.length && !(node.type_annotations || null)?.length) && !(is_cls && node.name.toLowerCase() === '__new')) {
 		const tk = lex.tokens[info.offset!];
 		if (tk?.previous_token?.type === TokenType.Assign) {
-			const nt = lex.getToken(lex.document.offsetAt(info.range.end), true);
+			let nt = lex.getToken(lex.document.offsetAt(info.range.end), true);
+			nt = lex.tokens[nt?.next_token_offset];
 			if (!nt || !isContinuousLine(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
 				lex.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, { severity: 2 });
 		}
