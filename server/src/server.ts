@@ -207,7 +207,7 @@ FileOpen(A_ScriptFullPath, "w", "utf-8").Write(s)`;
 			has_written = socket.write(script);
 			socket.destroySoon();
 		});
-		const cp = spawn(`"${ahkPath}" /CP65001 /ErrorStdOut ${path}`, [], { cwd: resolve(ahkPath, '..'), shell: true });
+		const cp = spawn(ahkPath, ['/CP65001', '/ErrorStdOut', path]);
 		cp.on('exit', code => code !== 0 ? r() : output === undefined && setTimeout(r, 1000));
 		cp.on('error', r);
 		setTimeout(() => cp.kill(), 2000);

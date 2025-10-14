@@ -238,7 +238,8 @@ async function runScript(textEditor: TextEditor, selection = false) {
 			.then(r => r ? setInterpreter() : undefined);
 		return;
 	}
-	let selecttext = '', path = '*', command = `"${executePath}" /ErrorStdOut=utf-8 `;
+	let selecttext = '', path = '*';
+	const args = ['/ErrorStdOut=utf-8'];
 	if (getConfig('AutomaticallyOpenOutputView'))
 		outputchannel.show(true);
 	if (!ahkprocesses.size)
@@ -250,36 +251,34 @@ async function runScript(textEditor: TextEditor, selection = false) {
 	executePath.replace(/^(.+[\\/])AutoHotkeyUX\.exe$/i, (...m) => {
 		const lc = m[1] + 'launcher.ahk';
 		if (existsSync(lc))
-			command = `"${executePath}" "${lc}" `;
+			args.push(lc);
 		return '';
 	});
 	const opt: SpawnOptionsWithoutStdio = {
 		cwd: resolve(textEditor.document.fileName, '..'),
-		shell: true
 	};
 	const uiAccess = ahkStatusBarItem.text.endsWith('[UIAccess]');
 	if (uiAccess) {
 		const pipe = randomPipeName('ahk-ipc');
 		const redirect = `(()=>(std:=FileOpen('${pipe}','w'),DllCall('SetStdHandle','uint',-11,'ptr',std.Handle),DllCall('SetStdHandle','uint',-12,'ptr',std.Handle),OnExit((*)=>!std)))()`;
 		createPipeReadStream(pipe).then(out => out.on('data', output_append));
-		command += `/include ${createTempFile(redirect, 'ahk-stdout-redirect')} `;
+		args.push('/include', createTempFile(redirect, 'ahk-stdout-redirect'));
 		if (selecttext)
 			path = createTempFile(selecttext);
 	} else opt.env = Object.fromEntries(Object.entries(process.env)
 		.filter(it => !/^(CHROME|ELECTRON_RUN|FPS_BROWSER|VSCODE)_/.test(it[0])));
-	if (selecttext)
-		command += path;
-	else {
+	if (!selecttext) {
 		if (textEditor.document.isUntitled)
 			return;
 		await commands.executeCommand('workbench.action.files.save');
 		path = textEditor.document.fileName;
-		command += `"${path}"`;
 	}
+	args.push(path);
 	const startTime = Date.now();
-	const cp: ChildProcess & { path?: string } = spawn(command, opt);
+	const cp: ChildProcess & { path?: string } = spawn(executePath, args, opt);
 	const spid = cp.pid ? `[pid: ${cp.pid}] ` : '';
-	outputchannel.appendLine(`[info] ${spid + command}`);
+	const quoted = (s: string) => s.includes(' ') ? `"${s}"` : s;
+	outputchannel.appendLine(`[info] ${spid}${args.unshift(executePath), args.map(quoted).join(' ')}`);
 	cp.on('error', err => {
 		outputchannel.appendLine(`[error] ${spid + err.message}`);
 		ahkprocesses.delete(cp.pid!);
@@ -318,7 +317,7 @@ async function stopRunningScript() {
 		pick.show();
 	}
 	function kill(pid: number) {
-		execSync(`taskkill /pid ${pid} /T /F`);
+		ahkprocesses.get(pid)?.kill();
 		ahkprocesses.delete(pid);
 	}
 }
@@ -438,8 +437,7 @@ if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint
 	)')
 }`;
 	const isUIAccess = ahkStatusBarItem.text.endsWith('[UIAccess]');
-	const cmd = `"${executePath}" /ErrorStdOut=utf-8 ${isUIAccess ? createTempFile(script) : '*'}`;
-	const cp = spawn(cmd, { shell: true });
+	const cp = spawn(executePath, ['/ErrorStdOut', isUIAccess ? createTempFile(script) : '*']);
 	if (!isUIAccess)
 		cp.stdin.write(script), cp.stdin.end();
 }
