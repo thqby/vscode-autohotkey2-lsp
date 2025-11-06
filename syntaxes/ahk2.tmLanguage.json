@@ -1720,7 +1720,7 @@
           "name": "comment.line.ahk2"
         }
       },
-      "end": "(?!([*/<>?:=.]+|[+\\-]=?|!==?|,|\\b(?i:(and|contain|not|in|is|or))))[ \t]*([ \t];.*)?(?=\\n)|(?<=^[ \t]*(?i:class|static|if|try|loop|while)[ \t]+\\w+)",
+      "end": "(?!([*/<>?:=.]+|[+\\-]=?|!==?|,|\\b(?i:(and|contain|not|in|is|or))))[ \t]*([ \t];.*)?(?=\\n)|(?=^[ \t]*(?i:static|if|try|loop|while)[ \t(])",
       "endCaptures": {
         "3": {
           "name": "comment.line.ahk2"

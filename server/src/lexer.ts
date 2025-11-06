@@ -26,6 +26,7 @@ export interface ParamInfo {
 	method?: boolean
 	data?: string[]
 	name?: string
+	is_call?: boolean
 }
 
 export interface CallSite extends AhkSymbol {
@@ -1618,7 +1619,7 @@ export class Lexer {
 													if (tk.content as string === '=>') {
 														_parent = tn = FuncNode.create(_low, SymbolKind.Function,
 															make_range(lk.offset, parser_pos - lk.offset), make_range(lk.offset, lk.length), [...par]);
-														mode = BlockType.Method, tn.returns = [parser_pos, 0];
+														mode = BlockType.Method, tn.returns = [parser_pos, 0], tn.has_this_param = true;
 														tn.parent = prop, tn.children = parse_line(undefined, 'return', 1);
 														tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
 														mode = BlockType.Class, _parent = _cls, tk.fat_arrow_end = true;
@@ -1626,7 +1627,7 @@ export class Lexer {
 														if (_low === 'set')
 															tn.params.unshift(HIDDEN_PARAMS.value);
 														else prop.returns = tn.returns;
-														tn.has_this_param = true, adddeclaration(tn);
+														adddeclaration(tn);
 														line_ranges.push([tn.range.end.line, nk.offset]);
 													} else if (tk.content === '{') {
 														tn = FuncNode.create(_low, SymbolKind.Function,
@@ -1679,11 +1680,12 @@ export class Lexer {
 											let tn: FuncNode;
 											mode = BlockType.Method, _parent = tn = FuncNode.create('get', SymbolKind.Function,
 												rg = make_range(off, parser_pos - off), ZERO_RANGE, par);
+											tn.has_this_param = true;
 											tn.parent = prop, prop.get = tn, prop.returns = tn.returns = [parser_pos, 0];
 											tn.children = parse_line(undefined, 'return', 1), mode = BlockType.Class, _parent = _cls;
 											prop.range.end = tn.range.end = document.positionAt(tn.returns[1] = lk.offset + lk.length);
 											_this.addFoldingRangePos(tn.range.start, tn.range.end, 'line');
-											tn.has_this_param = tk.fat_arrow_end = true, adddeclaration(tn);
+											tk.fat_arrow_end = true, adddeclaration(tn);
 											line_ranges.push([prop.range.end.line, oo]);
 											fc.semantic.modifier! |= SemanticTokenModifiers.readonly;
 										}
@@ -3599,9 +3601,9 @@ export class Lexer {
 					mode |= BlockType.Pair;
 					const t = _pk.previous_token;
 					_pk.paraminfo = paraminfo;
-					if (paraminfo.name || !_pk.topofline && t && _pk.prefix_is_whitespace === undefined
-						&& ((t.previous_pair_pos ?? t.in_expr) !== undefined || t.type === TokenType.Identifier || t.type === TokenType.Dot))
-						iscall = true;
+					if (paraminfo.name || t && _pk.topofline < 1 &&
+						(b === '[' || _pk.prefix_is_whitespace === undefined) && isYieldsOperand(t))
+						paraminfo.is_call = iscall = true;
 				} else _pk.op_type = -1;
 				while (nexttoken()) {
 					if (tk.topofline) {
@@ -5493,14 +5495,18 @@ export class Lexer {
 					c += input[parser_pos++], i = m;
 
 				if (c === '?') {
-					lst = createToken(c, TokenType.Operator, offset, 1, bg);
-					const bak = parser_pos, tk = lst, t = get_token_ignore_comment(depth + 1);
-					parser_pos = bak;
-					if (t.type === TokenType.Reserved ? (t.topofline && LINE_STARTERS.includes(t.content.toLowerCase())) :
-						(')]},:??'.includes(t.content) || t.content === '.' && t.type !== TokenType.Operator)) {
-						tk.ignore = true;
-						if (t.content === '.' && ahkVersion < alpha_3 - 1)
-							_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), tk.offset, tk.length, { code: DiagnosticCode.opt_chain });
+					const pt = lst, tk = lst = createToken(c, TokenType.Operator, offset, 1, bg);
+					if (pt.type === TokenType.Identifier || (pt.type === TokenType.BracketEnd ?
+						_this.tokens[pt.previous_pair_pos!]?.paraminfo?.is_call :
+						pt.op_type === 1 && pt.content === '%')) {
+						const bak = parser_pos, t = get_token_ignore_comment(depth + 1);
+						parser_pos = bak;
+						if (t.type === TokenType.Reserved ? (t.topofline && LINE_STARTERS.includes(t.content.toLowerCase())) :
+							(')]},:??'.includes(t.content) || t.content === '.' && t.type !== TokenType.Operator)) {
+							tk.ignore = true;
+							if (t.content === '.' && ahkVersion < alpha_3 - 1)
+								_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), tk.offset, tk.length, { code: DiagnosticCode.opt_chain });
+						}
 					}
 					return lst = tk;
 				} else if (c === '??=' && ahkVersion < alpha_3 - 1)
@@ -8170,8 +8176,10 @@ export function isContinuousLine(lk: Token, tk: Token, parent?: AhkSymbol): bool
 					return true;
 				case TokenType.Operator:
 					return !/^(!|~|not|%|\+\+|--)$/i.test(tk.content) && (
-						!(parent as FuncNode)?.has_this_param || !allIdentifierChar.test(tk.content) ||
-						parent!.returns?.[1] !== 0 || parent!.kind === SymbolKind.Function);
+						!(parent as FuncNode)?.has_this_param || !allIdentifierChar.test(tk.content) || !(
+							(parent as FuncNode).ranges || parent!.returns?.[1] === 0 &&
+							(parent!.kind !== SymbolKind.Function || parent!.selectionRange === ZERO_RANGE)
+						));
 				// case TokenType.END_BLOCK:
 				// case TokenType.END_EXPR:
 				// 	return false;
