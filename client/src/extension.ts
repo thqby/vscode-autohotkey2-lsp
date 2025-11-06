@@ -27,7 +27,7 @@ import { resolve } from 'path';
 import { createServer, Socket } from 'net';
 import { lstatSync, readlinkSync } from 'fs';
 import { opendir, readFile } from 'fs/promises';
-import { ChildProcess, execSync, spawn, SpawnOptionsWithoutStdio } from 'child_process';
+import { ChildProcess, execSync, spawn, SpawnOptions } from 'child_process';
 import { registerCommonFeatures } from './common';
 
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
@@ -254,7 +254,7 @@ async function runScript(textEditor: TextEditor, selection = false) {
 			args.push(lc);
 		return '';
 	});
-	const opt: SpawnOptionsWithoutStdio = {
+	const opt: SpawnOptions = {
 		cwd: resolve(textEditor.document.fileName, '..'),
 	};
 	const uiAccess = ahkStatusBarItem.text.endsWith('[UIAccess]');
@@ -263,6 +263,7 @@ async function runScript(textEditor: TextEditor, selection = false) {
 		const redirect = `(()=>(std:=FileOpen('${pipe}','w'),DllCall('SetStdHandle','uint',-11,'ptr',std.Handle),DllCall('SetStdHandle','uint',-12,'ptr',std.Handle),OnExit((*)=>!std)))()`;
 		createPipeReadStream(pipe).then(out => out.on('data', output_append));
 		args.push('/include', createTempFile(redirect, 'ahk-stdout-redirect'));
+		opt.stdio = 'ignore';
 		if (selecttext)
 			path = createTempFile(selecttext);
 	} else opt.env = Object.fromEntries(Object.entries(process.env)
@@ -285,13 +286,14 @@ async function runScript(textEditor: TextEditor, selection = false) {
 	});
 	if (!cp.pid)
 		return;
-	if (path === '*')
-		cp.stdin?.write(selecttext), cp.stdin?.end();
+	if (!uiAccess) {
+		cp.stderr!.on('data', output_append), cp.stdout!.on('data', output_append);
+		if (path === '*')
+			cp.stdin!.end(selecttext);
+	}
 	ahkprocesses.set(cp.pid, cp);
 	cp.path = path;
 	commands.executeCommand('setContext', 'ahk2:isRunning', true);
-	if (!uiAccess)
-		cp.stderr?.on('data', output_append), cp.stdout?.on('data', output_append);
 	cp.on('exit', (code) => {
 		outputchannel.appendLine(`[info] ${spid}exited with code=${code} in ${(Date.now() - startTime) / 1000} seconds`);
 		ahkprocesses.delete(cp.pid!);
@@ -377,8 +379,8 @@ async function compileScript(editor: TextEditor) {
 			else
 				window.showErrorMessage(localize('ahk2.compiledfailed'));
 		});
-		cp.stderr?.on('data', output_append);
-		cp.stdout?.on('data', output_append);
+		cp.stderr.on('data', output_append);
+		cp.stdout.on('data', output_append);
 	} else
 		window.showErrorMessage(localize('ahk2.compiledfailed'));
 }
@@ -439,7 +441,7 @@ if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint
 	const isUIAccess = ahkStatusBarItem.text.endsWith('[UIAccess]');
 	const cp = spawn(executePath, ['/ErrorStdOut', isUIAccess ? createTempFile(script) : '*']);
 	if (!isUIAccess)
-		cp.stdin.write(script), cp.stdin.end();
+		cp.stdin.end(script);
 }
 
 function getConfig<T>(section: string) {
@@ -718,9 +720,11 @@ function createTempFile(str: string, prefix = 'ahk-script') {
 function createPipeReadStream(path: string): Promise<Socket> {
 	return new Promise((resolve) => {
 		const server = createServer((socket) => {
+			const destroy = () => socket.destroy();
 			server.close();
 			socket.setEncoding('utf-8');
-			socket.on('error', () => socket.destroy());
+			socket.on('close', destroy);
+			socket.on('error', destroy);
 			resolve(socket);
 		}).listen(path);
 		setTimeout(() => server.close(), 2000);

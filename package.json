@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.7.5",
+	"version": "2.7.6",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -661,6 +661,7 @@
 		"eslint": "eslint --fix",
 		"package": "vsce package",
 		"publish": "vsce publish",
+		"push-tag": "node push_tag.js",
 		"test": "mocha -u tdd ./server/out/test/*.test.js",
 		"test-grammar": "vscode-tmgrammar-snap tmgrammar-test/*.ahk",
 		"vscode:prepublish": "node esbuild.mjs && vscode-test && npm run test-grammar",
