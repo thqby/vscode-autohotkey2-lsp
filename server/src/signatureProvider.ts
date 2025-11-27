@@ -2,8 +2,8 @@ import { CancellationToken, ParameterInformation, SignatureHelp, SignatureHelpPa
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, SymbolKind, Variable,
-	ahkUris, decltypeExpr, decltypeInvoke, decltypeReturns,
-	getCallInfo, getClassConstructor, getClassMember, getSymbolDetail, lexers
+	ahkUris, decltypeExpr, decltypeInvoke, decltypeReturns, getCallInfo,
+	getClassConstructor, getClassMember, getClassOwnProp, getSymbolDetail, lexers
 } from './common';
 
 let cache: {
@@ -107,9 +107,22 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				if (iscall) {
 					if (n.kind === SymbolKind.Class)
 						n = getClassConstructor(n as ClassNode);
-					else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
-						n = getClassMember(lex, cls.prototype!, '__new', true) ?? n;
-					else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
+					else if ((n as FuncNode).full?.startsWith('(Object) static Call(')) {
+						let proto: AhkSymbol | undefined = cls.prototype, has_new;
+						if (!proto) {
+							proto = getClassOwnProp(lex, cls, 'PROTOTYPE');
+							if (proto?.kind === SymbolKind.Property) {
+								decltypeReturns(proto, lex).forEach(it => {
+									it = getClassMember(lexers[it.uri!] ?? lex, it, '__new', true)!;
+									it && nodes.push({ node: has_new = it, needthis, uri: it.uri! });
+								});
+								if (has_new) return;
+								proto = undefined;
+							}
+						}
+						if (proto)
+							n = getClassMember(lex, proto, '__new', true) ?? n;
+					} else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
 						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, lexers[n.uri!] ?? lex, cls);
 						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
 							tps = decltypeInvoke(lex, tps, 'call', true);

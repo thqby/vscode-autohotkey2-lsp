@@ -3495,7 +3495,9 @@ export class Lexer {
 						const cls = DocumentSymbol.create('', undefined, SymbolKind.Class, ZERO_RANGE, ZERO_RANGE) as ClassNode;
 						b.data = cls, cls.property = props, cls.name = cls.full = cls.extends = '';
 						for (k of mark)
-							((k.symbol = props[k.content.toUpperCase()]) ?? {}).parent = cls;
+							k.symbol = props[k.content.toUpperCase()];
+						const o: Partial<AhkSymbol> = { decl: true, parent: cls };
+						Object.values(props).forEach(p => Object.assign(p, o));
 					}
 					tk.data = b.data;
 				} else
@@ -6914,7 +6916,7 @@ export function getClassConstructor(cls: ClassNode, lex?: Lexer) {
 	return fn;
 }
 
-function getClassOwnProp(lex: Lexer, cls: ClassNode, name: string) {
+export function getClassOwnProp(lex: Lexer, cls: ClassNode, name: string) {
 	const bases: ClassNode[] = [];
 	let t;
 	do {
@@ -8004,7 +8006,7 @@ export function traverseInclude(lex: Lexer, included?: Record<string, string>) {
 	return cache;
 }
 
-export function getSymbolDetail(sym: AhkSymbol, lex: Lexer, remove_re?: RegExp): string | MarkupContent {
+export function getSymbolDetail(sym: AhkSymbol, lex?: Lexer, remove_re?: RegExp): string | MarkupContent {
 	let detail = sym.markdown_detail;
 	if (detail === undefined)
 		return sym.detail ?? '';
