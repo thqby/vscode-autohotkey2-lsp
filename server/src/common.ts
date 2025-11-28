@@ -41,6 +41,7 @@ export interface LSConfig {
 	commands?: string[]
 	extensionUri?: string
 	fullySemanticToken?: boolean
+	CompletionTriggerCharacters?: string
 	// settings
 	ActionWhenV1IsDetected: ActionType
 	AutoLibInclude: LibIncludeType

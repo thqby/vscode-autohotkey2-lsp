@@ -31,7 +31,7 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 			capabilities: {
 				codeActionProvider: true,
 				colorProvider: true,
-				completionProvider: { resolveProvider: false, triggerCharacters: ['.', '#', '*', '@'] },
+				completionProvider: { resolveProvider: false, triggerCharacters: getTriggerCharacters(configs) },
 				definitionProvider: true,
 				documentFormattingProvider: true,
 				documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinesePunctuations)] },
@@ -185,6 +185,10 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 		updateStatusBar,
 	});
 	connection.listen();
+}
+
+function getTriggerCharacters(configs: LSConfig) {
+	return ['.', '#', '*', '@'].concat((configs.CompletionTriggerCharacters ?? '').split(''));
 }
 
 function sendDiagnostics(uri: string, diagnostics = []) {

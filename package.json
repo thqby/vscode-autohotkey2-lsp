@@ -217,6 +217,10 @@
 					"uniqueItems": true,
 					"description": "%ahk2.completionsortorder%"
 				},
+				"AutoHotkey2.CompletionTriggerCharacters": {
+					"scope": "window",
+					"type": "string"
+				},
 				"AutoHotkey2.Files.Exclude": {
 					"scope": "window",
 					"type": "array",
