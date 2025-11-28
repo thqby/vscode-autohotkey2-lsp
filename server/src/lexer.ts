@@ -126,10 +126,12 @@ export enum DiagnosticCode {
 	typed_prop = 'typed properties',
 	v_ref = 'virtual references',
 }
+export enum AccessModifier { public, protected, private, all }
 
 enum Mode { BlockStatement, Statement, ObjectLiteral, ArrayLiteral, Conditional, Expression }
 
 export interface AhkSymbol extends DocumentSymbol {
+	access?: AccessModifier
 	alias?: string
 	alias_range?: Range
 	module?: string
@@ -4521,6 +4523,8 @@ export class Lexer {
 						continue;
 					case 'ignore': (tags ??= {}).ignore = sym.ignore = true; break;
 					case 'deprecated': (tags ??= {}).tags = sym.tags = [1]; break;
+					case 'private': (tags ??= {}).access = sym.access = AccessModifier.private; break;
+					case 'protected': (tags ??= {}).access = sym.access = AccessModifier.protected; break;
 					case 'since':
 						if (!process.env.BROWSER && (_this.d & 2) && !versionMatch(line = line.trim()))
 							sym.since = line || 'unknown';

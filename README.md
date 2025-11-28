@@ -62,6 +62,10 @@ Simple syntax error diagnosis.
 
 Supports intelligent completion of variables, functions, parameters, class names, and method names within the scope (by simple type deduction), and supports the completion of include files and function libraries.
 
+Support specifying jsdoc tags (`@protected`, `@private`) for class members and global variables to exclude them from the completion list of the corresponding scope.
+- Private and protected class members are respectively visible within the current class, within the current class and within its subclasses.
+- Private and protected global variables are respectively visible in the current file, files in the same-level and lower-level directories.
+
 ![snippet1](./pic/snippet.png)
 
 ![snippet2](./pic/snippet.gif)

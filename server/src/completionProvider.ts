@@ -3,11 +3,11 @@ import { opendir } from 'fs/promises';
 import { basename, relative, resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit } from 'vscode-languageserver';
 import {
-	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AhkSymbol, ClassNode, CompletionItemKind, FuncNode,
+	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, FuncNode,
 	Maybe, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
 	a_Vars, ahkUris, ahkVars, allIdentifierChar, completionItemCache, completionitem, configCache,
 	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getCallInfo,
-	getClassConstructor, getClassMember, getClassMembers, getSymbolDetail,
+	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail,
 	kindSortChar, lexers, libSymbols, makeSearchRegExp, utils, winapis
 } from './common';
 
@@ -545,6 +545,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return;
 		const props: Record<string, CompletionItem> = {};
 		let tps = decltypeExpr(lex, token, range.end), index = 0x20;
+		let cls_scope: AhkSymbol | false, cls_base_names: Set<string> | undefined;
 		const is_any = tps.includes(ANY), bases: ClassNode[] = [];
 		if (linetext[range.end.character] === '.')
 			right_is_paren = '(['.includes(linetext[range.end.character + word.length + 1]);
@@ -563,7 +564,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			for (temp of bases)
 				clsindex[temp.full] = String.fromCharCode(++index);
 			for (const [k, it] of Object.entries(omems)) {
-				if (expg.test(k)) {
+				if (expg.test(k) && (!it.access || isAccessible(it))) {
 					if (!(temp = props[k]))
 						items.push(props[k] = convertNodeCompletion(it));
 					else if (!temp.detail?.endsWith((it as Variable).full ?? '')) {
@@ -602,6 +603,28 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					}
 		}
 		return items;
+		function isAccessible(sym: AhkSymbol) {
+			cls_scope ??= get_scope();
+			if (!cls_scope)
+				return false;
+			const pf = sym.parent?.full;
+			if (sym.access === AccessModifier.private)
+				return cls_scope.full === pf;
+			return (cls_base_names ??= get_base_names(cls_scope)).has(pf!);
+			function get_scope() {
+				scope ??= lex.searchScopedNode(position);
+				while (scope && scope?.kind !== SymbolKind.Class)
+					scope = scope.parent;
+				return scope ?? false;
+			}
+			function get_base_names(cls: AhkSymbol) {
+				const bases = [cls], set = new Set;
+				while ((cls = getClassBase(cls, lexers[cls.uri!] ?? lex)!) && !bases.includes(cls))
+					bases.push(cls), set.add(cls.full);
+				set.delete(''), set.delete(undefined);
+				return set as Set<string>;
+			}
+		}
 	} else if (triggerCharacter === '.')
 		return;
 
@@ -675,15 +698,17 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (expg.test(l = it.name.toUpperCase()) && !at_edit_pos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
 			vars[l] = convertNodeCompletion(it);
 	}
-	const list_arr = Object.keys(list).reverse();
-	for (const uri of new Set([lex.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr])) {
-		if (!(temp = lexers[uri]))
+	const list_arr = Object.keys(list).reverse(), uri_dir = uri.substring(0, uri.lastIndexOf('/') + 1);
+	for (const u of new Set([lex.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr])) {
+		if (!(temp = lexers[u]))
 			continue;
-		const d = temp.d;
+		const d = temp.d, max_access = uri === u ? AccessModifier.all : u.startsWith(uri_dir) ? AccessModifier.private : AccessModifier.protected;
 		path = temp.fsPath, temp = temp.declaration;
 		for (const n in temp) {
 			const it = temp[n];
-			if (expg.test(n) && (d || !vars[n] || ((vars[n] as CompletionItem).kind === CompletionItemKind.Variable && it.kind !== SymbolKind.Variable)))
+			if (expg.test(n) && (d || ((n in vars) ?
+				it.kind !== SymbolKind.Variable && (vars[n] as CompletionItem).kind === CompletionItemKind.Variable :
+				(it.access ?? 0) < max_access)))
 				vars[n] = cpitem = convertNodeCompletion(it);
 		}
 	}
@@ -707,8 +732,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		for (const u in libSymbols) {
 			if (!list[u] && (path = libSymbols[u].fsPath) && ((configCache.AutoLibInclude > 1 && libSymbols[u].islib) ||
 				((configCache.AutoLibInclude & 1) && path.toLowerCase().startsWith(dir)))) {
+				const max_access = uri === u ? AccessModifier.all : u.startsWith(uri_dir) ? AccessModifier.private : AccessModifier.protected;
 				for (const it of libSymbols[u]) {
-					expg.test(l = it.name) && (vars[l.toUpperCase()] ??= (
+					expg.test(l = it.name) && (it.access ?? 0) < max_access && (vars[l.toUpperCase()] ??= (
 						cpitem = convertNodeCompletion(it), exportnum++,
 						cpitem.additionalTextEdits = caches[path] ??= autoinclude(path),
 						cpitem.detail = `${completionitem.include(path)}\n\n${cpitem.detail ?? ''}`,
