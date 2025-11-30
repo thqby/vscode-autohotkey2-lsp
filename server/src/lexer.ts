@@ -30,6 +30,7 @@ export interface ParamInfo {
 }
 
 export interface CallSite extends AhkSymbol {
+	checked?: boolean
 	offset?: number
 	paraminfo?: ParamInfo
 }
@@ -220,6 +221,7 @@ export interface Property extends Variable {
 export interface SemanticToken {
 	type: SemanticTokenTypes
 	modifier?: number
+	resolved?: boolean
 }
 
 export interface Token {
@@ -5502,9 +5504,8 @@ export class Lexer {
 
 				if (c === '?') {
 					const pt = lst, tk = lst = createToken(c, TokenType.Operator, offset, 1, bg);
-					if (pt.type === TokenType.Identifier || (pt.type === TokenType.BracketEnd ?
-						_this.tokens[pt.previous_pair_pos!]?.paraminfo?.is_call :
-						pt.op_type === 1 && pt.content === '%')) {
+					if (pt.type === TokenType.Identifier || pt.type === TokenType.BracketEnd ||
+						pt.op_type === 1 && pt.content === '%') {
 						const bak = parser_pos, t = get_token_ignore_comment(depth + 1);
 						parser_pos = bak;
 						if (t.type === TokenType.Reserved ? (t.topofline && LINE_STARTERS.includes(t.content.toLowerCase())) :
@@ -6521,7 +6522,7 @@ export class Lexer {
 			return {
 				...EMPTY_TOKEN, offset, topofline: top ?? tk.topofline,
 				previous_token: tk.previous_token
-			 };
+			};
 		}
 	}
 

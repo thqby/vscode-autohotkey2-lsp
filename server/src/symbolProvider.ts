@@ -324,9 +324,10 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 }
 
 export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
-	const paraminfo = info.paraminfo;
+	const { checked, paraminfo } = info;
 	let is_cls: boolean, params;
-	if (!paraminfo || !configCache.Diagnostics.ParamsCheck) return;
+	if (checked || !paraminfo || !configCache.Diagnostics.ParamsCheck) return;
+	info.checked = true;
 	if ((is_cls = node?.kind === SymbolKind.Class))
 		node = getClassConstructor(node as unknown as ClassNode) as FuncNode;
 	if (!(params = node?.params)) return;
@@ -378,12 +379,20 @@ export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 	}
 	if ((!node.returns?.length && !(node.type_annotations || null)?.length) && !(is_cls && node.name.toLowerCase() === '__new')) {
 		const tk = lex.tokens[info.offset!];
-		if (tk?.previous_token?.type === TokenType.Assign) {
-			let nt = lex.getToken(lex.document.offsetAt(info.range.end), true);
-			nt = lex.tokens[nt?.next_token_offset];
-			if (!nt || !isContinuousLine(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
-				lex.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, { severity: 2 });
-		}
+		if (tk?.semantic?.type === SemanticTokenTypes.method) {
+			let t = tk.previous_token;
+			while (t?.type === TokenType.Dot)
+				if ((t = t.previous_token)?.type === TokenType.Identifier)
+					t = t!.previous_token;
+				else return;
+			if (t?.type !== TokenType.Assign)
+				return;
+		} else if (tk?.previous_token?.type !== TokenType.Assign)
+			return;
+		let nt = lex.getToken(lex.document.offsetAt(info.range.end), true);
+		nt = lex.tokens[nt?.next_token_offset];
+		if (!nt || !isContinuousLine(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
+			lex.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, { severity: 2 });
 	}
 	function param_is_miss(params: Variable[], i: number) {
 		if (params[i].defaultVal !== undefined)

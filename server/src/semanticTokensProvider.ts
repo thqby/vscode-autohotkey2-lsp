@@ -47,7 +47,7 @@ function resolveSemantic(tk: Token, lex: Lexer, fully?: boolean) {
 			case SemanticTokenTypes.method:
 			case SemanticTokenTypes.property:
 				stb.push(pos.line, pos.character, tk.length,
-					tk.topofline ? type : resolvePropSemanticType(tk, lex),
+					tk.topofline || sem.resolved ? type : resolvePropSemanticType(tk, lex),
 					sem.modifier ?? 0);
 				break;
 			default:
@@ -108,6 +108,7 @@ interface _Flag {
 function resolvePropSemanticType(tk: Token, lex: Lexer) {
 	const sem = tk.semantic!;
 	if (curclass && !tk.ignore) {
+		sem.resolved = true;
 		const name = tk.content.toUpperCase();
 		let n = curclass.property[name], kind = n?.kind, temp: Record<string, AhkSymbol>;
 		if (!n || n.def === false) {
