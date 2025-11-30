@@ -468,7 +468,7 @@ export class Lexer {
 		const _this = this, uri = URI.parse(document.uri);
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
 		let in_loop = false, string_mode = false;
-		let warn_once: Record<string, unknown>;
+		let warn_once: Record<string, unknown>, mixes: [AhkSymbol, string][];
 
 		interface Flag {
 			array_style?: number,
@@ -740,7 +740,7 @@ export class Lexer {
 				let _parent = DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg, rg, this.children) as ClassNode;
 				let tk: Token, lk: Token, _cm: Token | undefined;
 
-				this.clear(), customblocks = { region: [], bracket: [] }, comments = {}, sharp_offsets = [];
+				this.clear(), customblocks = { region: [], bracket: [] }, comments = {}, sharp_offsets = [], mixes = [];
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath;
 				lst = { ...EMPTY_TOKEN }, begin_line = true, parser_pos = 0, last_LF = -1, currsymbol = last_comment_fr = undefined;
 				includetable = this.include, _parent.property = _parent.$property = this.declaration;
@@ -977,8 +977,8 @@ export class Lexer {
 						}
 					}
 				}
-				parse_unresolved_typedef();
 				checkDupError({}, this.children, this);
+				parse_unresolved_typedef();
 				this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 
@@ -1041,7 +1041,7 @@ export class Lexer {
 									const props: Record<string, AhkSymbol> = {}, b = lk;
 									while ((lk = skip_comment()) && (lk.type === TokenType.Identifier || allIdentifierChar.test(lk.content))) {
 										const p = Variable.create(lk.content, SymbolKind.Property, make_range(lk.offset, lk.length));
-										props[lk.content.toUpperCase()] ??= p, lk.semantic = SE_PROPERTY;
+										props[lk.content.toUpperCase()] ??= p, lk.semantic = SE_PROPERTY, p.decl = true;
 										full += ', ' + lk.content;
 										if (_cm && _cm === comments[p.selectionRange.start.line])
 											set_detail(p, _cm);
@@ -1240,7 +1240,7 @@ export class Lexer {
 				input = this.document.getText(), input_length = input.length, includedir = this.scriptpath, dlldir = '';
 				begin_line = true, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = maybev1 = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
-				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [];
+				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [], mixes = [];
 				callWithoutParentheses = configCache.Warn?.CallWithoutParentheses;
 				warn_once = {};
 				try {
@@ -1261,8 +1261,8 @@ export class Lexer {
 						includetable[this.d_uri = m.uri] = m.path;
 					else this.d_uri = '';
 				}
-				parse_unresolved_typedef();
 				checkDupError(this.declaration, this.children, this);
+				parse_unresolved_typedef();
 				this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 				if (this.actived)
@@ -1296,6 +1296,28 @@ export class Lexer {
 					continue;
 				parse_jsdoc_detail(_this, m.content, {} as AhkSymbol);
 			}
+			const { declaration, typedef } = _this;
+			for (const n of Object.keys(typedef)) {
+				const props = (declaration[n] as ClassNode)?.$property;
+				if (!props) continue;
+				const td = typedef[n];
+				delete typedef[n];
+				const tp = (td.type_annotations || []).pop() as ClassNode;
+				td.kind === SymbolKind.TypeParameter && tp?.property && Object.assign(props, tp.property);
+			}
+			for (const [sym, n] of mixes) {
+				const props = (sym as ClassNode).$property;
+				if (!props) continue;
+				let t;
+				t = findSymbol(_this, n)?.node;
+				if (t?.kind === SymbolKind.Class)
+					t = (t as ClassNode).$property;
+				else if (t?.kind === SymbolKind.TypeParameter)
+					t = ((t.type_annotations || []).at(-1) as ClassNode)?.property;
+				else continue;
+				t && Object.assign(props, t);
+			}
+			mixes.length = 0;
 		}
 
 		function stop_parse(tk: Token, allow_skip = false, message = diagnostic.maybev1()) {
@@ -4450,7 +4472,7 @@ export class Lexer {
 								details.push(t), vr && (vr.markdown_detail += `${t}\n\n`);
 								continue;
 							} else if (t.startsWith('prop')) {
-								t = 'property'
+								t = 'property';
 								obj ??= objs[''] ??= create_obj();
 								add_prop(add_obj_type(obj, obj.name), name.split('.'), tp,
 									`*@${t}* ${_name()}${tp && `: *\`${tp}\`*`}${defval && ` := \`${defval}\``}${line.trim() && `\n___\n${line}`}`);
@@ -4542,6 +4564,7 @@ export class Lexer {
 							}
 						}
 						break;
+					case 'mixes': sym.kind === SymbolKind.Class && mixes.push([sym, line.trim()]); break;
 				}
 				details.push(`*@${t}*${join_detail(line)}`);
 			}
@@ -4619,7 +4642,7 @@ export class Lexer {
 						name = name.slice(0, -2), is_arr++;
 					full += `.${u = name.toUpperCase()}`, l--;
 					obj = objs[full] ??= (obj.property[u] ??= {
-						kind: SymbolKind.Property, name,
+						kind: SymbolKind.Property, name, decl: true,
 						range: ZERO_RANGE, selectionRange: ZERO_RANGE
 					}) as ClassNode;
 					if (is_arr || l) {
