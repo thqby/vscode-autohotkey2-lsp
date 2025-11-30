@@ -1,5 +1,5 @@
 {
-	"ahk2.actionwhenv1isdetected": "Action when v1 script is detected",
+	"ahk2.actionwhenv1isdetected": "Action when v1 script is detected. After switching to v1, the basic features of the language are provided by external extension.",
 	"ahk2.autolibinclude": "Provide completion and automatic include from User and Standard library, Local library",
 	"ahk2.automaticallyopenoutputview": "Automatically open the output view when running the script",
 	"ahk2.commenttags": "A regular expression used to extract named tags from comments and generate module symbols",
@@ -33,7 +33,7 @@
 	"ahk2.set.scriptdir": "Set Here as A_ScriptDir",
 	"ahk2.stop": "Stop Running Script",
 	"ahk2.symbolfoldingfromopenbrace": "Forced symbol folding starts at open brace",
-	"ahk2.syntaxes": "Specifies the folder path to the `ahk2.json`, `*.snippet.json` and `ahk2.d.ahk` files used for IntelliSense.",
+	"ahk2.syntaxes": "Specifies the folder path to the `ahk2.json`, `*.snippet.json` and `ahk2.d.ahk` files used for IntelliSense. See [README](https://github.com/thqby/vscode-autohotkey2-lsp#declaration-document) for details.",
 	"ahk2.update.versioninfo": "Update File Version Info",
 	"ahk2.workingdirs": "Sets the working directory for the script"
 }

@@ -4376,7 +4376,7 @@ export class Lexer {
 			if (!/^\/\*\*(?!\/)/.test(comment)) {
 				sym.detail = (cm.data as string) ??= comment.replace(
 					new RegExp(`^${input.substring(input.lastIndexOf('\n', cm.offset) + 1, cm.offset)}`, 'gm'), '')
-					.replace(/^\/\*\s*\n|\s*\*+\/$/g, '');
+					.replace(/^\/\*\s*|\s*\*+\/$/g, '');
 				return;
 			}
 			if (!cm.data)

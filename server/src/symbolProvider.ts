@@ -385,9 +385,9 @@ export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 				if ((t = t.previous_token)?.type === TokenType.Identifier)
 					t = t!.previous_token;
 				else return;
-			if (t?.type !== TokenType.Assign)
+			if (!is_assign_or_return(t))
 				return;
-		} else if (tk?.previous_token?.type !== TokenType.Assign)
+		} else if (!is_assign_or_return(tk?.previous_token))
 			return;
 		let nt = lex.getToken(lex.document.offsetAt(info.range.end), true);
 		nt = lex.tokens[nt?.next_token_offset];
@@ -406,6 +406,14 @@ export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 			for (; j >= 0 && params[j].defaultVal !== false; j--);
 		}
 		return true;
+	}
+	function is_assign_or_return(tk?: Token) {
+		if (!tk) return false;
+		if (tk.type === TokenType.Assign)
+			return true;
+		if (tk.type === TokenType.Operator)
+			return tk.content === '=>';
+		return tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'return';
 	}
 }
 

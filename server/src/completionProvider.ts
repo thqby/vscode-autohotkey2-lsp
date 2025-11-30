@@ -106,14 +106,28 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		case TokenType.Comment:
 		case TokenType.InlineComment: return;
 		case TokenType.BlockComment:
-			if (!/[<{|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
+			if (!/[<>{|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
 				return;
 			if (text.includes('.')) {
 				for (const it of Object.values(findClass(lex, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
 					if (it.kind === SymbolKind.Class && expg.test(it.name))
 						items.push(convertNodeCompletion(it));
 				}
-			} else add_classes();
+			} else {
+				add_classes();
+				const tds = [lex.typedef];
+				let t = lexers[lex.d_uri];
+				t && tds.push(t.declaration, t.typedef);
+				for (const uri in list) {
+					if (!(t = lexers[uri])) continue;
+					tds.push(t.typedef);
+					(t = lexers[t.d_uri]) && tds.push(t.declaration, t.typedef);
+				}
+				for (const td of tds)
+					for (const n in td)
+						if (expg.test(n))
+							vars[n] ??= items.push(convertNodeCompletion(td[n]));
+			}
 			return items;
 		// #include |
 		// ::xxx::|
@@ -993,7 +1007,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				ci.kind = CompletionItemKind.Field, ci.label = ci.insertText = ci.label.slice(0, -1);
 				return ci;
 			case SymbolKind.Property: {
-				ci.kind = CompletionItemKind.Property, ci.detail = info.full || ci.label;
+				ci.kind = CompletionItemKind.Property, ci.detail = info.full;
 				set_ci_classinfo(ci, info.parent);
 				const prop = info as Property;
 				if (configCache.CompleteFunctionParens)
@@ -1006,6 +1020,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			case SymbolKind.Module:
 				ci.kind = CompletionItemKind.Module;
 				break;
+			case SymbolKind.TypeParameter:
+				ci.kind = CompletionItemKind.TypeParameter;
+				return ci;
 			default:
 				ci.kind = CompletionItemKind.Text;
 				return ci;

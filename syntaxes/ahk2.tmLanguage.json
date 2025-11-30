@@ -304,8 +304,7 @@
                 "1": {
                   "patterns": [
                     {
-                      "match": "\\b(?i:__item)\\b",
-                      "name": "storage.type.metafunction.ahk2"
+                      "include": "#metafunction"
                     }
                   ],
                   "name": "variable.other.property.ahk2"
@@ -334,8 +333,7 @@
                 "0": {
                   "patterns": [
                     {
-                      "match": "\\b(?i:__item)\\b",
-                      "name": "storage.type.metafunction.ahk2"
+                      "include": "#metafunction"
                     }
                   ],
                   "name": "variable.other.property.ahk2"
@@ -348,8 +346,7 @@
                 "1": {
                   "patterns": [
                     {
-                      "match": "\\b(__(?i:new|init|enum|get|call|set|delete))\\b",
-                      "name": "storage.type.metafunction.ahk2"
+                      "include": "#metafunction"
                     }
                   ],
                   "name": "entity.name.function.method.ahk2"
@@ -432,8 +429,7 @@
                 "0": {
                   "patterns": [
                     {
-                      "match": "\\b(?i:__item)\\b",
-                      "name": "storage.type.metafunction.ahk2"
+                      "include": "#metafunction"
                     }
                   ],
                   "name": "variable.other.property.ahk2"
@@ -1746,6 +1742,10 @@
           "include": "$base"
         }
       ]
+    },
+    "metafunction": {
+      "match": "\\b(__(?i:new|init|item|enum|get|call|set|delete))\\b",
+      "name": "storage.type.metafunction.ahk2"
     },
     "numbers": {
       "match": "(?<!\\w\\.?)\\.?\\d(?:(?:[\\w\\.])|(?<=[eE])[+-])*",

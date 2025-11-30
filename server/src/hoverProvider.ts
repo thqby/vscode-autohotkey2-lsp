@@ -59,8 +59,14 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		} else if (node.kind === SymbolKind.Variable) {
 			const kind = is_global === true ? '*@global*' : node.static ? '*@static*' : '*@local*';
 			md = `${kind} \`${node.name}\`${(t = joinTypes(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
-		} else if (node.kind === SymbolKind.Property && hover.length && (t = joinTypes(node.type_annotations)))
-			hover[0].value += `: ${t}`;
+		} else if (node.kind === SymbolKind.Property) {
+			t = joinTypes(node.type_annotations);
+			if (!hover.length) {
+				if (!md.startsWith('*@property* '))
+					hover.push({ value: `*@property* \`${node.name}\`${t && `: *\`${t}\`*`}` });
+			} else if (t)
+				hover[0].value += `: ${t}`;
+		}
 		md && hover.push({ value: (hover.length ? '___\n' : '') + md });
 	}
 	return {
