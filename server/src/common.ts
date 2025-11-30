@@ -332,7 +332,7 @@ export function loadSyntax(filename = 'ahk2', d = 3) {
 							detail: snip.description,
 							data: snip.body.charAt(0)
 						});
-						if (c === '#')
+						if (c === '#' || snip.syntax)
 							hoverCache[snip.prefix.toLowerCase()] = [snip.prefix, {
 								contents: { kind: 'markdown', value: '```ahk2\n' + (snip.syntax ?? trim(snip.body)) + '\n```\n\n' + (snip.description ?? '') }
 							}];

@@ -2653,6 +2653,7 @@ export class Lexer {
 					pi.offset = pk.offset;
 					range = make_range(fc.offset, fc.length);
 				} else {
+					const cwp = callWithoutParentheses;
 					if (nextc === ',' || maybev1) {
 						if (!kind && builtinCommands_v1.includes(fc.content.toLowerCase()) &&
 							stop_parse(fc, true) && (next = false, lk = EMPTY_TOKEN, tk = get_token_ignore_comment()))
@@ -2664,7 +2665,7 @@ export class Lexer {
 					fc.paraminfo = pi;
 					result.push(...parse_line(undefined, undefined, undefined, undefined, pi));
 					range = make_range(fc.offset, fc.length);
-					if (callWithoutParentheses === true || callWithoutParentheses && tp === TokenType.BracketStart)
+					if (cwp === true || cwp && tp === TokenType.BracketStart)
 						_this.diagnostics.push({
 							code: DiagnosticCode.call, range,
 							message: warn.callwithoutparentheses(),
@@ -5386,9 +5387,26 @@ export class Lexer {
 			}
 
 			if (c === ';') {
-				const comment_type = bg && '\n'.includes(input.charAt(last_LF)) ? TokenType.Comment : (bg = 0, TokenType.InlineComment);
-				let comment = '', t, rg: Range, ignore = undefined;
-				let next_LF = offset - 1, line: string, ln = 0, create_fr = true;
+				const cmm = {
+					type: bg && '\n'.includes(input.charAt(last_LF)) ? TokenType.Comment : (bg = 0, TokenType.InlineComment),
+					offset, previous_token: lst, next_token_offset: -1
+				} as Token;
+				let line: string, rg: Range, next_LF = offset - 1, ln = 0, create_fr = true, t, ignore;
+				function set_lint_directives(piars: Record<string, string>) {
+					for (const [k, v] of Object.entries(piars)) {
+						const enable = !v || v === 'on' || v === 'true';
+						switch (k) {
+							case 'call-without-parentheses':
+								callWithoutParentheses = enable || v === 'parentheses' && 1;
+								break;
+							case 'class-non-dynamic-member-check':
+								if (enable)
+									delete (currsymbol as ClassNode ?? _this).checkmember;
+								else (currsymbol as ClassNode ?? _this).checkmember = false;
+								break;
+						}
+					}
+				}
 				while (true) {
 					parser_pos = next_LF, next_LF = input.indexOf('\n', parser_pos + 1);
 					line = input.substring(parser_pos + 1, next_LF = next_LF < 0 ? input_length : next_LF).trim();
@@ -5398,25 +5416,23 @@ export class Lexer {
 							if (ln > 1) break;
 							let s = line.substring(t[0].length).replace(/\s+;.*$/, '').toLowerCase();
 							if ((t = s.match(/^([-.\w]+)(?=(\s|$))/))) {
+								s = s.substring(t[1].length).trimStart();
+								cmm.hover_word = '@' + t[1];
 								switch (t[1]) {
-									case 'include':
-										(s = s.substring(t[1].length).trimStart()) && add_include_dllload(s);
-										break;
+									case 'include': s && add_include_dllload(s); break;
 									case 'include-winapi':
 										h && (t = lexers[ahkUris.winapi]) && Object.defineProperty(
 											includetable, ahkUris.winapi, { value: t.fsPath, enumerable: false });
 										break;
-									case 'reference':
-										_this.d_uri ||= s.substring(t[1].length).trimStart();
-										break;
+									case 'reference': _this.d_uri ||= s; break;
+									case 'lint':
 									case 'lint-disable':
-									case 'lint-enable':
-										s = s.substring(t[1].length).trimStart();
-										if (s === 'class-non-dynamic-member-check')
-											if (t[1] === 'lint-enable')
-												delete (currsymbol as ClassNode ?? _this).checkmember;
-											else (currsymbol as ClassNode ?? _this).checkmember = false;
+									case 'lint-enable': {
+										const v = ['off', 'on'][12 - t[1].length];
+										set_lint_directives(Object.fromEntries(s.split(',').map(
+											v ? s => [s.trim(), v] : s => s.split(':', 2).map(s => s.trim()))));
 										break;
+									}
 								}
 							}
 							ignore = true;
@@ -5467,12 +5483,12 @@ export class Lexer {
 					}
 					break;
 				}
-				comment = input.substring(offset, parser_pos).trimEnd();
 				_this.token_ranges.push({ start: offset, end: parser_pos, type: 1 });
-				const cmm: Token = _this.tokens[offset] = {
-					type: comment_type, content: comment, offset, length: parser_pos - offset, has_LF: ln > 1,
-					next_token_offset: -1, topofline: bg, ignore, skip_pos: parser_pos, previous_token: lst
-				};
+				_this.tokens[offset] = Object.assign(cmm, {
+					content: input.substring(offset, parser_pos).trimEnd(),
+					has_LF: ln > 1, ignore, length: parser_pos - offset,
+					skip_pos: parser_pos, topofline: bg
+				} as Token);
 				if (!bg) {
 					if (!WHITESPACE.includes(input[offset - 1]))
 						unexpected(cmm);
@@ -6170,10 +6186,8 @@ export class Lexer {
 		function format_directives(str: string) {
 			const m = str.match(/^;\s*@format\b/i);
 			if (!m) return;
-			const new_opts = fixupFormatOptions(Object.fromEntries(str.substring(m[0].length).split(',').map(s => {
-				const p = s.indexOf(':');
-				return [s.substring(0, p).trim(), s.substring(p + 1).trim()];
-			})));
+			const new_opts = fixupFormatOptions(Object.fromEntries(str.substring(m[0].length)
+				.split(',').map(s => s.split(':', 2).map(s => s.trim()))));
 			for (const k of ['array_style', 'object_style'] as const)
 				if (k in new_opts)
 					flags[k] = new_opts[k], delete new_opts[k];

@@ -27,14 +27,16 @@
 			"description": "In ahk_h, enable winapi function completion"
 		},
 		{
-			"body": ";@lint-${1|disable,enable|} ${2|class-non-dynamic-member-check|}",
+			"body": ";@lint${1| ,-disable ,-enable |}${2|call-without-parentheses,class-non-dynamic-member-check|}",
 			"prefix": "@lint",
-			"description": "Enables or disables class non-dynamic member checking for the current file/class"
+			"description": "Enable or disable some checks",
+			"syntax": ";@lint rule1:value1 [, rule2:value2 ...]\n;@line-enable rule1 [, rule2 ...]\n;@line-disable rule1 [, rule2 ...]"
 		},
 		{
 			"body": ";@format ${1|array_style,object_style|}: ${2|collapse,expand,none|}",
 			"prefix": "@format",
-			"description": "Sets the object or array style of the current block for formatting"
+			"description": "Set FormatOptions",
+			"syntax": ";@format option1:value1 [, option2:value2 ...]"
 		},
 		{
 			"body": ";@reference ${1:$TM_FILENAME_BASE.%A_Locale%.d.ahk}",
