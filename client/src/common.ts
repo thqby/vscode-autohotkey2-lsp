@@ -74,12 +74,16 @@ export function registerCommonFeatures(client: LSP.BaseLanguageClient, localize:
 			}
 		}
 	};
+	const chars = workspace.getConfiguration('AutoHotkey2')
+		.get<string>('CompletionTriggerCharacters') ?? '';
 	const disposables = Object.entries(cmds).map(([cmd, callback]) =>
 		commands.registerTextEditorCommand(`ahk2.${cmd}`, callback));
 	disposables.push(...registerTextEditorCommands(client),
 		workspace.onDidCloseTextDocument(e => client.sendNotification('closeTextDocument',
 			e.isClosed ? { uri: '', id: '' } : { uri: e.uri.toString(), id: e.languageId })),
 	);
+	chars && disposables.push(languages.registerCompletionItemProvider({ language: 'ahk2' },
+		{ provideCompletionItems: () => null }, ...chars.split('')));
 	client.onNotification('switchToV1', (uri: string) => {
 		const it = workspace.textDocuments.find(it => it.uri.toString() === uri);
 		it && languages.setTextDocumentLanguage(it, 'ahk')
