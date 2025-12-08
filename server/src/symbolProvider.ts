@@ -413,7 +413,8 @@ export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 			return true;
 		if (tk.type === TokenType.Operator)
 			return tk.content === '=>';
-		return tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'return';
+		return tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'return' &&
+			!lex.tokens[tk.next_token_offset]?.topofline;
 	}
 }
 
