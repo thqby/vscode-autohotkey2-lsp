@@ -99,7 +99,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (!token.ignore)
 				return completionItemCache.key.filter(it => !it.label.toLowerCase().includes('alttab'));
 			const o = lex.document.offsetAt(position) - token.offset;
-			if (0 < o && o <= text.indexOf(':', 1))
+			if (0 < o && o <= token.content.indexOf(':', 1))
 				return completionItemCache.option.hotstring;
 			return;
 		}
