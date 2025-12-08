@@ -149,6 +149,7 @@ export interface AhkSymbol extends DocumentSymbol {
 	overwrite?: number
 	parent?: AhkSymbol
 	returns?: number[] | null
+	return_void?: boolean
 	since?: string
 	static?: boolean | null
 	type_annotations?: Array<string | AhkSymbol> | false
@@ -367,6 +368,7 @@ const FLOAT = createPrototype('Float', SymbolKind.Number);
 const INTEGER = createPrototype('Integer', SymbolKind.Number);
 const NUMBER = createPrototype('Number', SymbolKind.Number);
 const OBJECT = createPrototype('Object', SymbolKind.Class);
+const VOID = createPrototype('void', SymbolKind.Null);
 export const STRING = createPrototype('String', SymbolKind.String);
 export const UNSET = createPrototype('unset', SymbolKind.Null);
 export const VARREF = createPrototype('VarRef', SymbolKind.Class, 'Any');
@@ -988,7 +990,7 @@ export class Lexer {
 						lk = tokens[j = tokens.length - 1];
 					if (types.length) {
 						const t = new Set(types);
-						t.delete('void');
+						t.delete('void') && t.add(VOID);
 						sym.type_annotations = Array.from(t);
 					}
 					sym.range.end = _this.document.positionAt(lk.offset + lk.length);
@@ -2268,8 +2270,10 @@ export class Lexer {
 									stop_parse(lk);
 								const b = tk.offset;
 								result.push(...parse_line(undefined, _low));
-								if ((mode & BlockType.Func) && _low === 'return' && b <= lk.offset)
-									(_parent.returns ??= []).push(b, lk.offset + lk.length);
+								if ((mode & BlockType.Func) && _low === 'return')
+									if (b <= lk.offset)
+										(_parent.returns ??= []).push(b, lk.offset + lk.length);
+									else _parent.return_void = true;
 							} else if (_low === 'switch') {
 								result.push(...parse_line('{', _low, 0, 2));
 								if (tk.content === '{') {
@@ -7774,7 +7778,7 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode): 
 
 	let tps: AhkSymbol[];
 	if (lex && sym.returns) {
-		sym.cached_types = [ANY], tps = [];
+		sym.cached_types = [ANY], tps = [], sym.return_void && tps.push(VOID);
 		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
 			tps.push(...decltypeExpr(lex, lex.findToken(r[i], true), r[i + 1], _this));
 		if (types) {
@@ -7826,7 +7830,7 @@ export function typeNaming(sym: AhkSymbol) {
 		case 0 as SymbolKind:
 			return 'Any';
 		case SymbolKind.Null:
-			return 'unset';
+			return sym.name || 'unset';
 		case SymbolKind.Method:
 		case SymbolKind.Property:
 			if ((s = (sym as FuncNode).full?.match(/^\((.+?)\)/)?.[1]))

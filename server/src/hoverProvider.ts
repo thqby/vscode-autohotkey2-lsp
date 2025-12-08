@@ -1,7 +1,8 @@
 import { CancellationToken, Hover, HoverParams } from 'vscode-languageserver';
 import {
-	AhkSymbol, FuncNode, Maybe, SemanticTokenTypes, SymbolKind, Variable,
-	findSymbols, getSymbolDetail, hoverCache, joinTypes, lexers
+	AhkSymbol, ClassNode, FuncNode, Maybe, SemanticTokenTypes, SymbolKind, Variable,
+	findSymbols, generateTypeAnnotation, getClassBase, getClassMember, getSymbolDetail,
+	hoverCache, joinTypes, lexers
 } from './common';
 
 
@@ -29,11 +30,25 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		for (t of nodes)
 			(t = (t.node as FuncNode).full) && hover.push({ kind: 'ahk2', value: t });
 	} else {
-		const { node, is_global, uri } = nodes[0], fn = node as FuncNode;
-		if (node.kind === SymbolKind.Class && !fn.full?.startsWith('('))
-			hover.push({ kind: 'ahk2', value: 'class ' + (fn.full || node.name) });
-		else if (fn.full) {
+		const ll = lexers[nodes[0].uri] ?? lex;
+		if ((context.kind === SymbolKind.Method && !context.text || context.token.callsite)) {
+			let { node: s, parent: p } = nodes[0];
+			if (s.kind === SymbolKind.Class)
+				s = getClassMember(ll, p = s, 'call', true) ?? s;
+			if (s.full?.startsWith('(Object) static Call(') && (p = (p as ClassNode)?.prototype))
+				s = getClassMember(ll, p, '__new', true) ?? s;
+			nodes[0].node = s;
+		}
+		const { node, is_global } = nodes[0], fn = node as FuncNode;
+		if (node.kind === SymbolKind.Class && !fn.full?.startsWith('(')) {
+			let base: AhkSymbol | undefined = (node as ClassNode).prototype ?? node;
+			for (; base?.full === node.full; base = getClassBase(base!, ll));
+			const e = base?.full ? ` extends ${base.full}` : '';
+			hover.push({ kind: 'ahk2', value: `class ${(fn.full || node.name)}${e}` });
+		} else if (fn.full) {
 			hover.push({ kind: 'ahk2', value: fn.full });
+			if (fn.param_def_len === fn.full.length - fn.full.indexOf('(', fn.name ? 1 : 0))
+				hover.at(-1)!.value += ` => ${generateTypeAnnotation(fn, ll) || 'void'}`;
 			let overloads = fn.overloads;
 			switch (typeof overloads) {
 				case 'object':
@@ -48,7 +63,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			}
 		}
 
-		let md = getSymbolDetail(node, lexers[uri]);
+		let md = getSymbolDetail(node, ll);
 		if (typeof md === 'string')
 			md = md && ('```plaintext\n' + md + '\n```');
 		else md = md.value;
@@ -60,7 +75,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			const kind = is_global === true ? '*@global*' : node.static ? '*@static*' : '*@local*';
 			md = `${kind} \`${node.name}\`${(t = joinTypes(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
 		} else if (node.kind === SymbolKind.Property) {
-			t = joinTypes(node.type_annotations);
+			t = node.children ? generateTypeAnnotation(node, ll) : joinTypes(node.type_annotations);
 			if (!hover.length) {
 				if (!md.startsWith('*@property* '))
 					hover.push({ value: `*@property* \`${node.name}\`${t && `: *\`${t}\`*`}` });
