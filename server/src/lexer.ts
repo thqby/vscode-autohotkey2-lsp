@@ -256,6 +256,7 @@ export interface Token {
 	symbol?: AhkSymbol
 	topofline: number
 	type: TokenType
+	unexpected_lf?: boolean
 }
 
 export enum USAGE { Read, Write }
@@ -1289,7 +1290,7 @@ export class Lexer {
 		}
 
 		function unexpected_lf(tk: Token) {
-			_this.addDiagnostic(diagnostic.unexpected('`n'), input.lastIndexOf('\n', tk.offset), 1);
+			tk.unexpected_lf ??= (_this.addDiagnostic(diagnostic.unexpected('`n'), input.lastIndexOf('\n', tk.offset), 1), true);
 		}
 
 		function parse_unresolved_typedef() {
@@ -2733,6 +2734,8 @@ export class Lexer {
 					else delete t.body_start;
 					line_end_token = tk.previous_token;
 					next = tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'else';
+					if (e.type === TokenType.Reserved && t === tk)
+						unexpected(tk);
 				}
 				in_loop = oil, mode = prev;
 				if (typeof else_body === 'boolean') {
