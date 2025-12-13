@@ -776,7 +776,7 @@
           ]
         },
         {
-          "begin": "^[ \t]*((;[ \t]*@)(?i:include))\\b",
+          "begin": "^[ \t]*((;[ \t]*@)(?i:[\\w\\-]+))\\b",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
@@ -786,7 +786,6 @@
             }
           },
           "end": "(?=\\n)",
-          "name": "meta.preprocessor.include.ahk2",
           "patterns": [
             {
               "begin": "[^ \t;]",
@@ -798,24 +797,6 @@
               "name": "comment.line.ahk2"
             }
           ]
-        },
-        {
-          "match": "(?<=^[ \t]*);[ \t]*@(?i:ahk2exe-\\w+)\\b([ \t].*)?",
-          "name": "keyword.control.directive.ahk2",
-          "captures": {
-            "1": {
-              "name": "string.literal.ahk2"
-            }
-          }
-        },
-        {
-          "match": "(?<=^|[ \t]);[ \t]*@(?:[\\w\\-]+)\\b([ \t]+(.*))?",
-          "name": "keyword.control.directive.ahk2",
-          "captures": {
-            "2": {
-              "name": "comment.line.ahk2"
-            }
-          }
         }
       ]
     },

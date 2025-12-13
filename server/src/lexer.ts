@@ -6191,7 +6191,7 @@ export class Lexer {
 			const m = str.match(/^;\s*@format\b/i);
 			if (!m) return;
 			const new_opts = fixupFormatOptions(Object.fromEntries(str.substring(m[0].length)
-				.split(',').map(s => s.split(':', 2).map(s => s.trim()))));
+				.replace(/\s+;.*$/, '').split(',').map(s => s.split(':', 2).map(s => s.trim()))));
 			for (const k of ['array_style', 'object_style'] as const)
 				if (k in new_opts)
 					flags[k] = new_opts[k], delete new_opts[k];
