@@ -9,21 +9,24 @@ import {
 } from './common';
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
-	let uri = params.textDocument.uri.toLowerCase();
-	const lex = lexers[uri];
+	const lex = lexers[params.textDocument.uri.toLowerCase()];
 	if (!lex || token?.isCancellationRequested)
 		return [];
-	if (token !== null && lex.symbolInformation)
-		return lex.symbolInformation;
-	const { document, tokens } = lex;
+	return lex.symbolInformation ?? getSymbolInfo(lex);
+}
+function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
+	const fns = oncomp ?? [];
+	const { document, tokens, relevance } = lex;
 	const gvar: Record<string, Variable> = { ...ahkVars };
-	let list = [uri, ...Object.keys(lex.relevance)], winapis: Record<string, AhkSymbol> = {};
+	let list = [lex.uri, ...Object.keys(relevance)], winapis: Record<string, AhkSymbol> = {};
 	list = list.map(u => lexers[u]?.d_uri).concat(list);
+	lex.symbolInformation = [];
 	for (const uri of list) {
 		const lex = lexers[uri];
 		if (!lex) continue;
-		const d = lex.d, dec = lex.declaration;
+		const { d, declaration: dec } = lex;
 		let t;
+		d || (lex.symbolInformation ?? getSymbolInfo(lex, fns));
 		for (const k in dec) {
 			if (!(t = gvar[k]) || d || dec[k].kind !== SymbolKind.Variable && (t.kind === SymbolKind.Variable || t.def === false))
 				gvar[k] = dec[k];
@@ -31,8 +34,6 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 				t.def ??= false;
 		}
 	}
-	if (lex.symbolInformation)
-		return lex.symbolInformation;
 	if (ahkUris.winapi && !list.includes(ahkUris.winapi))
 		winapis = lexers[ahkUris.winapi]?.declaration ?? winapis;
 	const warnLocalSameAsGlobal = configCache.Warn?.LocalSameAsGlobal;
@@ -48,21 +49,24 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			result.push(v), converttype(v, v, islib || v === ahkVars[k]).definition = v;
 	}
 	flatTree(lex);
-	if (configCache.Warn?.VarUnset)
-		for (const [k, v] of unset_vars) {
-			if (k.assigned || k.has_warned)
-				continue;
-			k.has_warned = true;
-			let code, since, message = warn.varisunset(v.name);
-			if (!k.decl && (since = inactiveVars[k.name.toUpperCase()]))
-				message += `, ${diagnostic.requireversion(since)}`, code = 'built-in library';
-			lex.diagnostics.push({ code, message, range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+	fns.push(function () {
+		if (configCache.Warn?.VarUnset)
+			for (const [k, v] of unset_vars) {
+				if (k.assigned || k.has_warned)
+					continue;
+				k.has_warned = true;
+				let code, since, message = warn.varisunset(v.name);
+				if (!k.decl && (since = inactiveVars[k.name.toUpperCase()]))
+					message += `, ${diagnostic.requireversion(since)}`, code = 'built-in library';
+				lex.diagnostics.push({ code, message, range: v.selectionRange, severity: DiagnosticSeverity.Warning });
+			}
+		if (lex.actived) {
+			checksamename(lex);
+			lex.sendDiagnostics(false, true);
 		}
-	if (lex.actived) {
-		checksamename(lex);
-		lex.sendDiagnostics(false, true);
-	}
-	uri = lex.document.uri;
+	});
+	oncomp ?? fns.forEach(f => f());
+	const uri = lex.document.uri;
 	return lex.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
 	function maybe_unset(k: Variable, v: Variable) {
@@ -202,7 +206,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 			return;
 		const dec = { ...ahkVars }, lbs: Record<string, string> = {};
 		const severity = DiagnosticSeverity.Error;
-		const { relevance, uri } = lex;
+		const { uri } = lex;
 		let dd: Lexer, sym: AhkSymbol;
 		Object.entries(lex.labels).forEach(e => e[1][0].def && (lbs[e[0]] = uri));
 		for (const uri in relevance) {
