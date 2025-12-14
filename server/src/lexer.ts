@@ -2094,8 +2094,7 @@ export class Lexer {
 									break;
 								case TokenType.Identifier: {
 									const vr = addvariable(tk, 0);
-									if (vr)
-										vr.def = vr.assigned = true, vr.for_index = for_index, vr.returns = returns, vr.data = data;
+									vr.def = vr.assigned = true, vr.for_index = for_index, vr.returns = returns, vr.data = data;
 									break;
 								}
 								case TokenType.Operator:
@@ -2454,11 +2453,9 @@ export class Lexer {
 								unexpected(nk), next = false;
 							else {
 								const vr = addvariable(tk);
-								if (vr) {
-									next = true, vr.def = vr.assigned = true;
-									!tps.length && tps.push('Error');
-									vr.type_annotations = tps;
-								}
+								next = true, vr.def = vr.assigned = true;
+								!tps.length && tps.push('Error');
+								vr.type_annotations = tps;
 								if (p) {
 									if (t.content === ')')
 										parser_pos = t.offset + 1, next = true;
@@ -2597,7 +2594,7 @@ export class Lexer {
 					if (tk.type === TokenType.Dot) {
 						const v = addvariable(lk);
 						next = true;
-						maybe && v && (v.returns = null);
+						maybe && (v.returns = null);
 						while (nexttoken()) {
 							if (tk.type as TokenType === TokenType.Identifier) {
 								let maybecaller = true;
@@ -3095,7 +3092,7 @@ export class Lexer {
 									addprop(lk), byref && (lk.__ref = true);
 								else if (input[lk.offset - 1] !== '%') {
 									const vr = addvariable(lk);
-									if (vr && byref !== undefined) {
+									if (byref !== undefined) {
 										vr.def = vr.assigned = true;
 										if (byref)
 											vr.pass_by_ref = true;
@@ -3116,17 +3113,15 @@ export class Lexer {
 										}
 									} else {
 										const vr = addvariable(lk);
-										if (vr) {
-											if (byref !== undefined)
-												vr.def = vr.assigned = true, byref ? (vr.pass_by_ref = true) : (vr.cached_types = [NUMBER]);
-											if (suf)
-												vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
-											else if (tk.content === '??' || tk.ignore)
-												vr.returns = null;
-											else if (byref === undefined && tk.content === '=>')
-												parse_func({ ...EMPTY_TOKEN, offset: lk.offset }, next = false,
-													result.splice(-1), rpair, end ?? (ternarys.length ? ':' : undefined));
-										}
+										if (byref !== undefined)
+											vr.def = vr.assigned = true, byref ? (vr.pass_by_ref = true) : (vr.cached_types = [NUMBER]);
+										if (suf)
+											vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
+										else if (tk.content === '??' || tk.ignore)
+											vr.returns = null;
+										else if (byref === undefined && tk.content === '=>')
+											parse_func({ ...EMPTY_TOKEN, offset: lk.offset }, next = false,
+												result.splice(-1), rpair, end ?? (ternarys.length ? ':' : undefined));
 									}
 								} else if (predot) {
 									maybeclassprop(lk, null);
@@ -3141,7 +3136,7 @@ export class Lexer {
 								if (!predot) {
 									if (input[lk.offset - 1] !== '%') {
 										const vr = addvariable(lk);
-										if (vr && byref !== undefined) {
+										if (byref !== undefined) {
 											vr.def = vr.assigned = true;
 											if (byref)
 												vr.pass_by_ref = true;
@@ -3157,7 +3152,8 @@ export class Lexer {
 							}
 							if (!predot) {
 								let vr: Variable | undefined;
-								if (input[lk.offset - 1] !== '%' && (vr = addvariable(lk))) {
+								if (input[lk.offset - 1] !== '%') {
+									vr = addvariable(lk);
 									if (byref) {
 										if (tk.type as TokenType !== TokenType.Dot)
 											vr.assigned = vr.def = vr.pass_by_ref = true;
@@ -3680,38 +3676,36 @@ export class Lexer {
 								if (input[parser_pos] !== '(') {
 									if (b === '%' || (input[tk.offset - 1] !== '%' && input[tk.offset + tk.length] !== '%')) {
 										const vr = addvariable(tk);
-										if (vr) {
-											nexttoken(), next = false;
-											if (tk.type as TokenType === TokenType.Assign) {
-												if ((_cm = comments[vr.selectionRange.start.line])?.offset > pairpos.at(-1)!)
-													set_detail(vr, _cm);
-												const equ = tk.content, bb = parser_pos;
-												next = true;
-												result.push(...parse_expression(e, ternarys.length ? ':' : undefined));
-												vr.range.end = document.positionAt(lk.offset + lk.length);
-												if (equ === ':=' || equ === '??=' && (vr.assigned ??= 1))
-													vr.returns = [bb, lk.offset + lk.length];
-												else vr.cached_types = [equ === '.=' ? STRING : NUMBER];
-												vr.assigned ??= true, vr.def = true;
-											} else if (!byref) {
-												if (tk.type as TokenType === TokenType.Dot)
-													byref ||= undefined;
-												else !tk.topofline && ['++', '--'].includes(tk.content) && (byref = false);
-											}
-											if (byref) {
-												if (tk.type as TokenType !== TokenType.Dot) {
-													vr.assigned = vr.def = vr.pass_by_ref = true;
-												} else if (ahkVersion < alpha_3 + 7)
-													_this.addDiagnostic(diagnostic.requireVerN(alpha_3 + 7), lk.previous_token!.offset, 1, { code: DiagnosticCode.v_ref });
-												else { tk.topofline &&= -1; continue; }
-											} else if (byref === false)
-												vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
-											else if (tk.content === '??' || tk.ignore && tk.content === '?')
-												vr.returns = null;
-											else if (tk.content === '=>')
-												parse_func({ ...EMPTY_TOKEN, offset: lk.offset }, false,
-													result.splice(-1), e, ternarys.length ? ':' : undefined);
+										nexttoken(), next = false;
+										if (tk.type as TokenType === TokenType.Assign) {
+											if ((_cm = comments[vr.selectionRange.start.line])?.offset > pairpos.at(-1)!)
+												set_detail(vr, _cm);
+											const equ = tk.content, bb = parser_pos;
+											next = true;
+											result.push(...parse_expression(e, ternarys.length ? ':' : undefined));
+											vr.range.end = document.positionAt(lk.offset + lk.length);
+											if (equ === ':=' || equ === '??=' && (vr.assigned ??= 1))
+												vr.returns = [bb, lk.offset + lk.length];
+											else vr.cached_types = [equ === '.=' ? STRING : NUMBER];
+											vr.assigned ??= true, vr.def = true;
+										} else if (!byref) {
+											if (tk.type as TokenType === TokenType.Dot)
+												byref ||= undefined;
+											else !tk.topofline && ['++', '--'].includes(tk.content) && (byref = false);
 										}
+										if (byref) {
+											if (tk.type as TokenType !== TokenType.Dot) {
+												vr.assigned = vr.def = vr.pass_by_ref = true;
+											} else if (ahkVersion < alpha_3 + 7)
+												_this.addDiagnostic(diagnostic.requireVerN(alpha_3 + 7), lk.previous_token!.offset, 1, { code: DiagnosticCode.v_ref });
+											else { tk.topofline &&= -1; continue; }
+										} else if (byref === false)
+											vr.def = vr.assigned = true, vr.cached_types = [NUMBER];
+										else if (tk.content === '??' || tk.ignore && tk.content === '?')
+											vr.returns = null;
+										else if (tk.content === '=>')
+											parse_func({ ...EMPTY_TOKEN, offset: lk.offset }, false,
+												result.splice(-1), e, ternarys.length ? ':' : undefined);
 									} else tk.ignore = true;
 								} else {
 									if (input[tk.offset - 1] === '%' && lk.op_type === 1)
