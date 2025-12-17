@@ -195,7 +195,7 @@ function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boole
 	else if (node.assume === FuncScope.GLOBAL || node.global?.[name]) {
 		if (!global)
 			return;
-		assume_glo = assume = true;
+		assume_glo = assume = !node.local?.[name];
 	} else if (node.local?.[name] || ((!can_inherit || global && !assume_glo) && node.declaration?.[name])) {
 		if (!global)
 			return;
@@ -203,7 +203,7 @@ function findAllVar(node: FuncNode, name: string, ranges: Range[], global: boole
 	} else if (global && !assume_glo)
 		if (fn_is_static && (!(t = node.declaration?.[name]) || t.kind === SymbolKind.Variable && !t.def))
 			assume = true;
-		else if (node.unresolved_vars?.[name] || name.substring(0, 2) === 'A_' && name in ahkVars)
+		else if (!node.declaration?.[name] || name.substring(0, 2) === 'A_' && name in ahkVars)
 			assume = true;
 
 	if (assume === global) {

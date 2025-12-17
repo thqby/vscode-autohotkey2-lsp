@@ -2083,45 +2083,69 @@ export class Lexer {
 						break;
 					}
 					case 'for': {
-						const nq = is_next_char('('), returns: number[] = [], data: number[] = [];
-						let for_index = 0;
+						const nq = is_next_char('('), returns: number[] = [];
+						const fn = FuncNode.create('', undefined!, ZERO_RANGE, make_range(tk.offset, 0), []);
+						const ep: Partial<Variable> = {
+							assigned: true, data: { returns }, def: true
+						};
+						let for_index = 0, rl = result.length, vr;
 						if (nq) nk = get_next_token();
 						while (nexttoken()) {
 							switch (tk.type) {
-								case TokenType.Comma: for_index++; break;
+								case TokenType.Comma: for_index++, vr = undefined; break;
 								case TokenType.Reserved:
 									_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 									break;
 								case TokenType.Identifier: {
-									const vr = addvariable(tk, 0);
-									vr.def = vr.assigned = true, vr.for_index = for_index, vr.returns = returns, vr.data = data;
+									if (vr)
+										return unexpected(tk);
+									fn.params.push(vr = addvariable(tk, 0));
+									fn.local[tk.content.toUpperCase()] ??= vr;
+									Object.assign(vr, ep).for_index = for_index;
 									break;
 								}
 								case TokenType.Operator:
 									if (tk.content.toLowerCase() === 'in') {
+										(mode & BlockType.Mask) && (fn.parent = _parent);
+										const fc = fn.children = result.splice(rl);
 										returns.push(tk.offset + 2);
-										result.push(...parse_expression(undefined, '{'));
+										rl = result.push(...parse_expression(undefined, '{'), fn);
 										returns.push(lk.offset + lk.length);
 										if (nk) {
 											if (tk.content !== ')') {
 												_this.addDiagnostic(diagnostic.missing(')'), nk.offset, nk.length);
 											} else next = true, nexttoken();
 										}
-										data.push(tk.offset);
-										if (!parse_body(false, beginpos, true) && tk.type as TokenType === TokenType.Reserved && tk.content.toLowerCase() === 'until')
-											next = true, set_line_begin(tk.offset), result.push(...parse_line(undefined, 'until', 1));
-										data.push(tk.offset, for_index + 1);
+										parse_body(null, beginpos, true);
+										fc.push(...result.splice(rl));
+										let eo;
+										if (tk.type as TokenType === TokenType.Reserved) {
+											switch (tk.content.toLowerCase()) {
+												case 'else':
+													eo = lk.offset + lk.length;
+													next = true, set_line_begin(tk.offset);
+													nexttoken(), next = false;
+													parse_body(true, lk.offset);
+													break;
+												case 'until':
+													next = true, set_line_begin(tk.offset);
+													fc.push(...parse_line(undefined, 'until', 1));
+													break;
+											}
+										}
+										eo ??= lk.offset + lk.length;
+										fn.full = 'for-block', fn.data = returns;
+										fn.range = { start: fn.selectionRange.start, end: document.positionAt(eo) };
+										for (const it of fc)
+											(it.kind ?? SymbolKind.Function) === SymbolKind.Function && (it.parent = fn);
 										return;
 									}
-									_this.addDiagnostic(diagnostic.unknownoperatoruse(), tk.offset, tk.length);
-									next = false;
-									return;
+								// fall through
 								default:
 									next = false;
 								// fall through
 								case TokenType.BracketEnd:
-									unexpected(tk);
-									return;
+									return unexpected(tk);
 								case TokenType.Assign:
 									_this.addDiagnostic(diagnostic.reservedworderr(lk.content), lk.offset, lk.length);
 									return;
@@ -4078,7 +4102,8 @@ export class Lexer {
 				} else {
 					const fn = node as FuncNode, has_this_param = fn.has_this_param;
 					const dec = fn.declaration, local = fn.local ?? {}, global = fn.global ?? {};
-					let vars: Record<string, Variable> = {}, unresolved_vars: Record<string, Variable> = {}, vr: Variable;
+					const vs: Variable[] = [];
+					let vars: typeof pars = {}, unresolved_vars: typeof pars = {}, vr: Variable;
 					let named_params: Variable[] | undefined = [];
 					if (has_this_param) {
 						pars.THIS = dec.THIS = THIS;
@@ -4137,59 +4162,70 @@ export class Lexer {
 						v.assigned ||= Boolean(v.returns);
 						v.is_global = true;
 					}
-					for (const it of fn.children ??= []) {
-						_low = it.name.toUpperCase();
-						if (it.kind === SymbolKind.Function) {
-							const _f = it as FuncNode;
-							if (!_f.static)
-								_f.closure = true;
-							if (!_low)
-								continue;
-							if (dec[_low]) {
-								if ((t = pars[_low])) {
-									_diags.push({
-										message: diagnostic.conflictserr('function', 'parameter', t.name),
-										range: it.selectionRange
-									});
+					(function flat(syms: AhkSymbol[]) {
+						for (const it of syms) {
+							_low = it.name.toUpperCase();
+							if (it.kind === SymbolKind.Function) {
+								const _f = it as FuncNode;
+								if (!_f.static)
+									_f.closure = true;
+								if (!_low)
 									continue;
-								} else if ((t = global[_low])) {
-									_diags.push({
-										message: diagnostic.conflictserr(...(
-											t.selectionRange.start.line < it.selectionRange.start.line ||
-												t.selectionRange.start.line === it.selectionRange.start.line &&
-												t.selectionRange.start.character < it.selectionRange.start.character ?
-												(t = it, ['function', 'global']) : ['global', 'function']
-										), t.name),
-										range: t.selectionRange
-									});
-									if (it === t) continue;
-									delete global[_low];
-									delete t.is_global;
-									if (_this.declaration[_low] === t)
-										delete _this.declaration[_low];
-								} else if ((t = local[_low])) {
-									if (t.selectionRange.start.line < it.selectionRange.start.line ||
-										t.selectionRange.start.line === it.selectionRange.start.line &&
-										t.selectionRange.start.character < it.selectionRange.start.character) {
+								if (dec[_low]) {
+									if ((t = pars[_low])) {
 										_diags.push({
-											message: diagnostic.conflictserr('function',
-												t.kind === SymbolKind.Function ? 'Func' : t.static ? 'static' : 'local', it.name),
+											message: diagnostic.conflictserr('function', 'parameter', t.name),
 											range: it.selectionRange
 										});
 										continue;
-									} else if (t.static)
+									} else if ((t = global[_low])) {
 										_diags.push({
-											message: diagnostic.conflictserr(t.kind === SymbolKind.Function ? 'function' : 'static',
-												it.kind === SymbolKind.Function ? 'Func' : 'static', t.name),
+											message: diagnostic.conflictserr(...(
+												t.selectionRange.start.line < it.selectionRange.start.line ||
+													t.selectionRange.start.line === it.selectionRange.start.line &&
+													t.selectionRange.start.character < it.selectionRange.start.character ?
+													(t = it, ['function', 'global']) : ['global', 'function']
+											), t.name),
 											range: t.selectionRange
 										});
+										if (it === t) continue;
+										delete global[_low];
+										delete t.is_global;
+										if (_this.declaration[_low] === t)
+											delete _this.declaration[_low];
+									} else if ((t = local[_low])) {
+										if (t.selectionRange.start.line < it.selectionRange.start.line ||
+											t.selectionRange.start.line === it.selectionRange.start.line &&
+											t.selectionRange.start.character < it.selectionRange.start.character) {
+											_diags.push({
+												message: diagnostic.conflictserr('function',
+													t.kind === SymbolKind.Function ? 'Func' : t.static ? 'static' : 'local', it.name),
+												range: it.selectionRange
+											});
+											continue;
+										} else if (t.static)
+											_diags.push({
+												message: diagnostic.conflictserr(t.kind === SymbolKind.Function ? 'function' : 'static',
+													it.kind === SymbolKind.Function ? 'Func' : 'static', t.name),
+												range: t.selectionRange
+											});
+									}
 								}
-							}
-							dec[_low] = local[_low] = it;
-						} else if (it.kind === SymbolKind.Variable)
-							((vr = it as Variable).def ? vars : unresolved_vars)[_low] ??= (vr.assigned ||= Boolean(vr.returns), it);
-					}
+								dec[_low] = local[_low] = it;
+							} else if (it.kind === SymbolKind.Variable)
+								((vr = it as Variable).def ? vars : unresolved_vars)[_low] ??= (vr.assigned ||= Boolean(vr.returns), it);
+							else it.kind ?? vs.push(...flat_block(it as FuncNode, flat, vars, unresolved_vars));
+						}
+					})(fn.children ??= []);
 					fn.children.unshift(...named_params ?? []);
+					for (const v of vs) {
+						const t = local[_low = v.name.toUpperCase()];
+						if (!t) {
+							if (_low in unresolved_vars)
+								vars[_low] = unresolved_vars[_low], delete unresolved_vars[_low];
+						} else if (t.children)
+							v.has_warned ??= _diags.push({ message: makeDupError(t, v), range: v.selectionRange });
+					}
 					if (fn.assume === FuncScope.GLOBAL) {
 						for (const [k, v] of Object.entries(Object.assign(unresolved_vars, vars))) {
 							if (!(t = dec[k]))
@@ -4209,7 +4245,7 @@ export class Lexer {
 								if (dec[k] = v, is_outer)
 									local[k] = v, v.static = assme_static;
 							} else if (t.kind === SymbolKind.Function)
-								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
+								v.has_warned ??= v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
 								t.def = true, t.assigned ||= Boolean(v.returns);
 						}
@@ -4218,7 +4254,7 @@ export class Lexer {
 							if (!(t = dec[k])) {
 								(dec[k] = v).has_warned = true;
 							} else if (v.def && v.assigned !== 1 && t.kind === SymbolKind.Function)
-								_diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
+								v.has_warned ??= _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
 						}
 						unresolved_vars = {};
 					}
@@ -6564,33 +6600,47 @@ export class Lexer {
 		}
 	}
 
-	public searchScopedNode(pos: Position, root?: AhkSymbol[]): AhkSymbol | undefined {
+	public searchScopedNode(pos: Position): AhkSymbol | undefined {
 		const { line, character } = pos;
-		let its: AhkSymbol[] | undefined, cls: ClassNode, fn: FuncNode, offset: number;
-		for (let item of (root ?? this.children)) {
-			if (!(its = item.children) || line > item.range.end.line || line < item.selectionRange.start.line ||
-				(line === item.selectionRange.start.line && character < item.selectionRange.start.character) ||
-				(line === item.range.end.line && character > item.range.end.character))
-				continue;
-			if (pos.line > item.selectionRange.start.line || pos.character > item.selectionRange.end.character) {
-				item = this.searchScopedNode(pos, its) ?? item;
-				switch (item.kind) {
-					case SymbolKind.Property:
-						return this.searchScopedNode(pos, [(item as Property).get!,
-						(item as Property).set!].filter(Boolean)) ?? item;
-					case SymbolKind.Class:
-						offset = this.document.offsetAt(pos), cls = item as ClassNode;
-						for (fn of [cls.property.__INIT, cls.$property?.__INIT] as FuncNode[])
-							for (const rg of fn?.ranges ?? [])
-								if (offset < rg[0]) break;
-								else if (offset <= rg[1])
-									return this.searchScopedNode(pos, fn.children) ?? fn;
+		let syms = this.children, its, sp;
+		let cls: ClassNode, offset: number;
+		next: while (syms) {
+			for (const it of syms) {
+				if (!(its = it.children) || line > it.range.end.line || line < it.selectionRange.start.line ||
+					(line === it.selectionRange.start.line && character < it.selectionRange.start.character) ||
+					(line === it.range.end.line && character > it.range.end.character))
+					continue;
+				if (pos.line > it.selectionRange.start.line || pos.character > it.selectionRange.end.character) {
+					switch (syms = its, (sp = it).kind) {
+						case SymbolKind.Function:
+							if (it.full === 'for-block') {
+								const rg = it.data as number[];
+								offset ??= this.document.offsetAt(pos);
+								if (rg[0] < offset && offset <= rg[1])
+									return it.parent;
+							}
+							break;
+						case SymbolKind.Property:
+							syms = syms.concat([(it as Property).get!, (it as Property).set!].filter(Boolean));
+							break;
+						case SymbolKind.Class:
+							offset ??= this.document.offsetAt(pos), cls = it as ClassNode;
+							for (const fn of [cls.property.__INIT, cls.$property?.__INIT] as FuncNode[])
+								for (const rg of fn?.ranges ?? [])
+									if (offset < rg[0]) break;
+									else if (offset <= rg[1]) {
+										syms = (sp = fn).children!;
+										continue next;
+									}
+							break;
+					}
+					continue next;
 				}
-				return item;
+				break;
 			}
-			return;
+			syms = undefined!;
 		}
-		return;
+		return sp;
 	}
 
 	public getScopeSymbols(scope?: AhkSymbol): Record<string, Variable> {
@@ -7614,9 +7664,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			} else return [it];
 		}
 	if (sym.for_index !== undefined) {
-		if (sym === _def && !isVarInForBlock(sym, t ??= lex.document.offsetAt(pos)))
-			return [];
-		const tps = decltypeReturns(sym, lex, _this);
+		const tps = decltypeReturns(sym.data as AhkSymbol, lex, _this);
 		for (const it of tps)
 			if (resolve(it))
 				return [ANY];
@@ -7664,11 +7712,6 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 	ts.push(...decltypeReturns(sym, lex, _this));
 	ts = [...new Set(ts)];
 	return ts.includes(ANY) ? [ANY] : ts;
-}
-
-function isVarInForBlock(it: Variable, offset: number) {
-	const range = it.data as number[];
-	return range[0] <= offset && offset < range[1];
 }
 
 function decltypeTypeAnnotation(annotations: (string | AhkSymbol)[], lex: Lexer, _this?: ClassNode, type_params?: Record<string, AhkSymbol>) {
@@ -8125,78 +8168,105 @@ export function makeDupError(a: AhkSymbol, b: AhkSymbol): string {
 	}
 }
 
+function flat_block(block: FuncNode, flat: (syms: AhkSymbol[]) => void, ...decls: Record<string, Variable>[]) {
+	const local = block.local, baks: typeof decls = [], dels: string[][] = [];
+	let bak: Record<string, Variable>, del;
+	for (const d of decls) {
+		baks.push(bak = {}), dels.push(del = []);
+		for (const k in local)
+			(bak[k] = d[k]) || del.push(k);
+	}
+	block.kind = SymbolKind.Function;
+	flat(block.children!);
+	decls.forEach((d, i) => {
+		Object.assign(d, baks[i]);
+		for (const k of dels[i])
+			delete d[k];
+	});
+	return block.params;
+}
+
 export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer) {
 	const { children, diagnostics, uri, relevance } = lex;
-	const severity = DiagnosticSeverity.Error;
+	const same_uri = syms === children;
+	const vs: Variable[] = [];
 	let l = '', v1: Variable, v2: Variable;
 	if (ahkVersion < alpha_11)
 		Object.assign(relevance, { [ahkUris.ahk2]: 1, [ahkUris.ahk2_h ?? '\0']: 1 });
-	for (const it of syms) {
-		if (!it.name || it.selectionRange === ZERO_RANGE)
-			continue;
-		let is_var;
-		switch ((v1 = it as Variable).kind) {
-			case SymbolKind.Variable:
-				v1.assigned ||= !!v1.returns, is_var = true;
-			// fall through
-			case SymbolKind.Class:
-			case SymbolKind.Function:
-			case SymbolKind.Module:
-				v2 = decs[l = it.name.toUpperCase()];
-				if (l.substring(0, 2) === 'A_' && (l in ahkVars)) {
-					if (is_var) continue;
-					if ((it as FuncNode).params)
-						it.has_warned ??= diagnostics.push({
-							message: diagnostic.conflictserr('function', 'built-in variable', it.name),
-							range: it.selectionRange
-						});
-				}
-				if (syms === children)
-					it.uri = uri;
-				else if (v2 && !relevance[v2.uri!]) {
-					decs[l] = it;
-					continue;
-				}
-				if (!v2)
-					decs[l] = it;
-				else if (v2.is_global) {
-					if (is_var) {
-						if (v1.def && v2.kind !== SymbolKind.Variable) {
-							if (v1.assigned !== 1)
-								it.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(v2.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange, severity });
-							continue;
-						}
-					} else if (v2.kind === SymbolKind.Function) {
-						it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange, severity });
-						continue;
-					} else if (v2.def && (it.kind === SymbolKind.Class ? v2.assigned === true : v2.assigned !== 1))
-						v2.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange, severity });
-					decs[l] = it;
-				} else if (is_var) {
-					if (v2.kind === SymbolKind.Variable) {
-						if (v1.def && !v2.def)
-							decs[l] = it;
-						else v2.assigned ||= v1.assigned;
-					} else if (v1.def) {
-						delete v1.def;
-						if (v1.assigned !== 1)
-							it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange, severity });
+	(function flat(syms: AhkSymbol[]) {
+		for (const it of syms) {
+			if (!it.name || it.selectionRange === ZERO_RANGE) {
+				it.kind ?? vs.push(...flat_block(it as FuncNode, flat, decs));
+				continue;
+			}
+			let is_var;
+			switch ((v1 = it as Variable).kind) {
+				case SymbolKind.Variable:
+					v1.assigned ||= !!v1.returns, is_var = true;
+				// fall through
+				case SymbolKind.Class:
+				case SymbolKind.Function:
+				case SymbolKind.Module:
+					v2 = decs[l = it.name.toUpperCase()];
+					if (l.substring(0, 2) === 'A_' && (l in ahkVars)) {
+						if (is_var) continue;
+						if ((it as FuncNode).params)
+							it.has_warned ??= diagnostics.push({
+								message: diagnostic.conflictserr('function', 'built-in variable', it.name),
+								range: it.selectionRange
+							});
 					}
-				} else {
-					if (v2.kind === SymbolKind.Variable) {
-						if (v2.def) {
-							delete v2.def;
-							if (v2.assigned !== 1)
-								v2.has_warned ??= diagnostics.push({ message: makeDupError(it, v2), range: v2.selectionRange, severity });
+					if (same_uri)
+						it.uri = uri;
+					else if (v2 && !relevance[v2.uri!]) {
+						decs[l] = it;
+						continue;
+					}
+					if (!v2)
+						decs[l] = it;
+					else if (v2.is_global) {
+						if (is_var) {
+							if (v1.def && v2.kind !== SymbolKind.Variable) {
+								if (v1.assigned !== 1)
+									it.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(v2.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange });
+								continue;
+							}
+						} else if (v2.kind === SymbolKind.Function) {
+							it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange });
+							continue;
+						} else if (v2.def && (it.kind === SymbolKind.Class ? v2.assigned === true : v2.assigned !== 1))
+							v2.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange });
+						decs[l] = it;
+					} else if (is_var) {
+						if (v2.kind === SymbolKind.Variable) {
+							if (v1.def && !v2.def)
+								decs[l] = it;
+							else v2.assigned ||= v1.assigned;
+						} else if (v1.def) {
+							delete v1.def;
+							if (v1.assigned !== 1)
+								it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange });
 						}
-						decs[l] = it;
-					} else if (v2.def !== false)
-						it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange, severity });
-					else if (v1.def !== false)
-						decs[l] = it;
-				}
-				break;
+					} else {
+						if (v2.kind === SymbolKind.Variable) {
+							if (v2.def) {
+								delete v2.def;
+								if (v2.assigned !== 1)
+									v2.has_warned ??= diagnostics.push({ message: makeDupError(it, v2), range: v2.selectionRange });
+							}
+							decs[l] = it;
+						} else if (v2.def !== false)
+							it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange });
+						else if (v1.def !== false)
+							decs[l] = it;
+					}
+					break;
+			}
 		}
+	})(syms);
+	for (const v of vs) {
+		const t = decs[v.name.toUpperCase()];
+		t?.children && (v.has_warned ??= diagnostics.push({ message: makeDupError(t, v), range: v.selectionRange }));
 	}
 }
 
