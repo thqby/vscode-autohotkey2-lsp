@@ -4,7 +4,7 @@ import { existsSync, statSync } from 'fs';
 import { basename, resolve } from 'path';
 import {
 	ColorInformation, Diagnostic, DocumentSymbol, FoldingRange, MarkupContent,
-	Position, Range, SemanticTokensBuilder, SymbolInformation,
+	Position, Range, SemanticTokens, SymbolInformation,
 } from 'vscode-languageserver';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -450,7 +450,7 @@ export class Lexer {
 	public parseScript: () => void;
 	public scriptdir = '';
 	public scriptpath = '';
-	public STB = new SemanticTokensBuilder;
+	public st?: SemanticTokens;
 	public symbolInformation: SymbolInformation[] | undefined;
 	public texts: Record<string, string> = {};
 	public typedef: Record<string, AhkSymbol> = {};
@@ -6347,6 +6347,7 @@ export class Lexer {
 		this.diagnostics.length = this.folding_ranges.length = this.line_ranges.length = 0;
 		this.includedir.clear(), this.dlldir.clear();
 		this.d_uri = '';
+		delete this.st;
 		delete this.maybev1;
 		delete this.checkmember;
 		delete this.symbolInformation;

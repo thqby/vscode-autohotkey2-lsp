@@ -1,4 +1,4 @@
-import { CancellationToken, DocumentSymbol, Range, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams } from 'vscode-languageserver';
+import { CancellationToken, DocumentSymbol, Range, SemanticTokensBuilder, SemanticTokensParams, SemanticTokensRangeParams } from 'vscode-languageserver';
 import {
 	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticTokenModifiers,
 	SemanticTokenTypes, SymbolKind, TT2STT, Token, TokenType, Variable,
@@ -9,11 +9,10 @@ let resolve = resolveSemantic;
 let curclass: ClassNode | undefined;
 const memscache = new Map<ClassNode, Record<string, AhkSymbol>>();
 
-function resolveSemantic(tk: Token, lex: Lexer, fully?: boolean) {
+function resolveSemantic(tk: Token, lex: Lexer, stb: SemanticTokensBuilder, fully?: boolean) {
 	const sem = tk.semantic;
 	let t, m, n;
 	if (sem) {
-		const stb = lex.STB;
 		const pos = tk.pos ??= lex.document.positionAt(tk.offset);
 		const { type, modifier } = sem;
 		switch (type) {
@@ -47,8 +46,8 @@ function resolveSemantic(tk: Token, lex: Lexer, fully?: boolean) {
 			case SemanticTokenTypes.method:
 			case SemanticTokenTypes.property:
 				stb.push(pos.line, pos.character, tk.length,
-					tk.topofline || sem.resolved ? type : resolvePropSemanticType(tk, lex),
-					sem.modifier ?? 0);
+					tk.topofline || sem.resolved ? (curclass = undefined, type) : resolvePropSemanticType(tk, lex),
+					modifier ?? 0);
 				break;
 			default:
 				curclass = undefined;
@@ -64,41 +63,45 @@ function resolveSemantic(tk: Token, lex: Lexer, fully?: boolean) {
 		curclass = undefined;
 }
 
-function resolveSemanticFully(tk: Token, lex: Lexer) {
+function resolveSemanticFully(tk: Token, lex: Lexer, stb: SemanticTokensBuilder) {
 	tk.semantic ??= TT2STT[tk.type];
-	resolveSemantic(tk, lex, true);
+	resolveSemantic(tk, lex, stb, true);
 }
 
 export function fullySemanticToken() {
 	resolve = resolveSemanticFully;
 }
 
-export function semanticTokensOnFull(params: SemanticTokensParams, token?: CancellationToken): SemanticTokens {
+export function semanticTokensOnFull(params: SemanticTokensParams, token?: CancellationToken) {
 	const lex = lexers[params.textDocument.uri.toLowerCase()];
 	if (!lex || token?.isCancellationRequested) return { data: [] };
-	lex.STB.previousResult(''), curclass = undefined, memscache.clear();
+	if (lex.st)
+		return lex.st;
+	const stb = new SemanticTokensBuilder;
+	curclass = undefined, memscache.clear();
 	symbolProvider({ textDocument: params.textDocument }, null);
-	Object.values(lex.tokens).forEach(tk => resolve(tk, lex));
+	Object.values(lex.tokens).forEach(tk => resolve(tk, lex, stb));
 	resolveUndefinedProp(lex), memscache.clear();
 	lex.sendDiagnostics();
-	return lex.STB.build();
+	return lex.st = stb.build();
 }
 
-export function semanticTokensOnRange(params: SemanticTokensRangeParams, token?: CancellationToken): SemanticTokens {
+export function semanticTokensOnRange(params: SemanticTokensRangeParams, token?: CancellationToken) {
 	const lex = lexers[params.textDocument.uri.toLowerCase()];
 	if (!lex || token?.isCancellationRequested) return { data: [] };
 	const start = lex.document.offsetAt(params.range.start), end = lex.document.offsetAt(params.range.end);
-	lex.STB.previousResult(''), curclass = undefined, memscache.clear();
+	const stb = new SemanticTokensBuilder;
+	curclass = undefined, memscache.clear();
 	symbolProvider({ textDocument: params.textDocument }, null);
 	for (const tk of Object.values(lex.tokens)) {
 		if (tk.offset < start)
 			continue;
 		if (tk.offset > end)
 			break;
-		resolve(tk, lex);
+		resolve(tk, lex, stb);
 	}
 	resolveUndefinedProp(lex), memscache.clear();
-	return lex.STB.build();
+	return stb.build();
 }
 
 interface _Flag {
