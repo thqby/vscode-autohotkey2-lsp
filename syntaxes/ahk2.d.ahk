@@ -1753,12 +1753,6 @@ IsAlnum(Value, Mode?) => Integer
 IsAlpha(Value, Mode?) => Integer
 
 /**
- * If Value is a valid date and time stamp, it can be all or the beginning of the YYYYMMDDHH24MISS format, then it is True. For example, a 4-digit string like 2004 is considered valid. Use StrLen to determine whether there are other time components.
- * Years less than 1601 will be considered invalid because the operating system usually does not support them. The maximum year that is considered valid is 9999.
- */
-IsDate(Value) => Integer
-
-/**
  * If Value is a positive integer, an empty string, or a string containing only characters 0 to 9, then it is True. Other characters are not allowed, such as the following characters: space, tab, plus, minus, Decimal point, hexadecimal number, and 0x prefix.
  */
 IsDigit(Value) => Integer

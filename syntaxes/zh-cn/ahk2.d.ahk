@@ -1747,12 +1747,6 @@ IsAlnum(Value, Mode?) => Integer
 IsAlpha(Value, Mode?) => Integer
 
 /**
- * 如果 Value 是有效的日期时间戳, 可以是 YYYYMMDDHH24MISS 格式的全部或开始部分, 则为 True. 例如, 类似 2004 这样的 4 位字符串被视为有效的. 使用 StrLen 确定是否存在其他时间分量.
- * 小于 1601 的年份会被视为无效的, 因为操作系统通常不支持它们. 被视为有效的最大年份为 9999.
- */
-IsDate(Value) => Integer
-
-/**
  * 如果 Value 是一个正整数, 一个空字符串, 或仅包含字符 0 到 9 的字符串, 则为 True. 不允许使用其他字符, 例如以下字符: 空格, 制表符, 正号, 负号, 小数点, 十六进制数字, 以及 0x 前缀.
  */
 IsDigit(Value) => Integer
