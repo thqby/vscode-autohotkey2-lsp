@@ -4791,6 +4791,7 @@ class PropertyError extends MemberError {
 
 /** @since 2.1-alpha.10 */
 class PropRef extends Any {
+	static Call(Obj, Name) => this
 	__Value {
 		get => Any
 		set => void
