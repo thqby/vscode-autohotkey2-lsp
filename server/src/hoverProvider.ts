@@ -42,7 +42,10 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		const { node, is_global } = nodes[0], fn = node as FuncNode;
 		if (node.kind === SymbolKind.Class && !fn.full?.startsWith('(')) {
 			let base: AhkSymbol | undefined = (node as ClassNode).prototype ?? node;
-			for (; base?.full === node.full; base = getClassBase(base!, ll));
+			for (const bs = [base]; base?.full === node.full;)
+				if (bs.includes(base = getClassBase(base!, ll)!))
+					break;
+				else bs.push(base);
 			const e = base?.full ? ` extends ${base.full}` : '';
 			hover.push({ kind: 'ahk2', value: `class ${(fn.full || node.name)}${e}` });
 		} else if (fn.full) {

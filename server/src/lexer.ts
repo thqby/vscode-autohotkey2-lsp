@@ -7539,17 +7539,32 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 }
 
 function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: ClassNode) {
-	const res = getCallInfo(lex, sym.selectionRange.start);
+	const nk = lex.tokens[lex.tokens[lex.document.offsetAt(sym.selectionRange.start)]?.next_token_offset];
+	let pi;
+	switch (nk?.type) {
+		case TokenType.Comma:
+			pi = nk.paraminfo;
+			if (pi) break;
+			return;
+		case TokenType.BracketEnd:
+			pi = lex.tokens[nk.previous_pair_pos!]?.previous_token?.callsite?.paraminfo;
+			if (pi && nk.offset <= pi.end!) break;
+			return;
+		default:
+			if (nk && isContinuousLine(nk.previous_token ?? EMPTY_TOKEN, nk))
+				return;
+	}
+	const res = getCallInfo(lex, sym.selectionRange.start, pi);
 	if (!res || res.index < 0)
-		return [];
+		return;
 	const { pos, index, kind } = res;
 	const context = lex.getContext(pos);
 	const tps = decltypeExpr(lex, context.token, context.range.end, _this);
-	let iscall = true;
+	if (!tps.length)
+		return;
 	if (tps.includes(ANY))
 		return [ANY];
-	if (!tps.length)
-		return [];
+	let iscall = true;
 	let prop = context.text ? '' : context.word.toLowerCase();
 	if (kind === SymbolKind.Property)
 		prop ||= '__item', iscall = false;
@@ -7569,7 +7584,7 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 					break;
 			// fall through
 			case SymbolKind.Property: {
-				const param = (it as FuncNode).params?.[index + needthis];
+				const param = (it as FuncNode).params?.[index - needthis];
 				let annotations;
 				if (!param || !(annotations = param.type_annotations))
 					break;
@@ -7635,7 +7650,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			const v = lexers[uri]?.declaration?.[name];
 			v?.type_annotations && (syms.includes(v) || syms.push(v));
 		}
-	let ts: AhkSymbol[] | undefined, t;
+	let ts: AhkSymbol[] | undefined, t, ref;
 	for (const sym of syms) {
 		if ((t = sym.returns))
 			sym.returns = undefined;
@@ -7662,8 +7677,10 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			if (it.kind === SymbolKind.Variable) {
 				if (it.range.end.line > pos.line || (it.range.end.line === pos.line && it.range.end.character > pos.character))
 					break;
-				if (it.pass_by_ref || it.returns && (it.for_index === undefined || isVarInForBlock(it, t ??= lex.document.offsetAt(pos))))
-					sym = it;
+				if (it.returns)
+					sym = ref = it;
+				else if (it.pass_by_ref)
+					ref = it;
 			} else return [it];
 		}
 	if (sym.for_index !== undefined) {
@@ -7693,7 +7710,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 					needthis++;
 				// fall through
 				case SymbolKind.Function: {
-					const param = (it as FuncNode).params?.[sym.for_index! + needthis];
+					const param = (it as FuncNode).params?.[sym.for_index! - needthis];
 					let annotations;
 					if (!param || !(annotations = param.type_annotations))
 						break;
@@ -7710,8 +7727,10 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			}
 		}
 	}
-	if (sym.pass_by_ref && !sym.is_param)
-		return decltypeByref(sym, lex, ts, _this);
+	if (ref?.pass_by_ref && !ref.is_param) {
+		const t = decltypeByref(ref, lex, ts, _this);
+		if (t) return t;
+	}
 	ts.push(...decltypeReturns(sym, lex, _this));
 	if (ts.length)
 		ts = [...new Set(ts)];
