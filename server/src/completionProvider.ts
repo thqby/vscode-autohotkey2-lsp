@@ -512,7 +512,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	}
 
 	let right_is_paren = '(['.includes(linetext[range.end.character] || '\0');
-	const join_c = configCache.FormatOptions.brace_style === 0 ? '\n' : ' ';
+	const join_c = configCache.FormatOptions?.brace_style === 0 ? '\n' : ' ';
 
 	// fn|()=>...
 	if (symbol) {

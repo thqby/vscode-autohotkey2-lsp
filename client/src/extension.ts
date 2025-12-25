@@ -28,7 +28,7 @@ import { createServer, Socket } from 'net';
 import { lstatSync, readlinkSync } from 'fs';
 import { opendir, readFile } from 'fs/promises';
 import { ChildProcess, execSync, spawn, SpawnOptions } from 'child_process';
-import { registerCommonFeatures } from './common';
+import { registerCommonFeatures, updateConfig } from './common';
 
 const ahkconfig = workspace.getConfiguration('AutoHotkey2');
 const ahkprocesses = new Map<number, ChildProcess & { path?: string }>();
@@ -83,7 +83,7 @@ export async function activate(context: ExtensionContext) {
 		synchronize: { fileEvents: fsw },
 		initializationOptions: {
 			GlobalStorage: context.globalStorageUri.fsPath,
-			...ahkconfig
+			...updateConfig(ahkconfig)
 		},
 	};
 

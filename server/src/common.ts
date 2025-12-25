@@ -43,32 +43,32 @@ export interface LSConfig {
 	fullySemanticToken?: boolean
 	CompletionTriggerCharacters?: string
 	// settings
-	ActionWhenV1IsDetected: ActionType
+	ActionWhenV1IsDetected?: ActionType
 	AutoLibInclude: LibIncludeType
 	CommentTags?: string
-	CompleteFunctionParens: boolean
+	CompleteFunctionParens?: boolean
 	CompletionCommitCharacters?: {
-		Class: string
-		Function: string
+		Class?: string
+		Function?: string
 	}
 	CompletionKindSortOrder?: string[]
-	Diagnostics: {
-		ClassNonDynamicMemberCheck: boolean
-		ParamsCheck: boolean
+	Diagnostics?: {
+		ClassNonDynamicMemberCheck?: boolean
+		InvokeCheck?: string[]
 	}
-	Files: {
-		Exclude: string[]
-		MaxDepth: number
+	Files?: {
+		Exclude?: string[]
+		MaxDepth?: number
 	}
-	FormatOptions: FormatOptions
+	FormatOptions?: FormatOptions
 	InterpreterPath: string
 	GlobalStorage?: string
 	Syntaxes?: string
-	SymbolFoldingFromOpenBrace: boolean
-	Warn: {
-		VarUnset: boolean
-		LocalSameAsGlobal: boolean
-		CallWithoutParentheses: boolean | /* Parentheses */ 1
+	SymbolFoldingFromOpenBrace?: boolean
+	Warn?: {
+		VarUnset?: boolean
+		LocalSameAsGlobal?: boolean
+		CallWithoutParentheses?: boolean | /* Parentheses */ 1
 	}
 	WorkingDirs: string[]
 }
@@ -102,7 +102,6 @@ export const configCache: LSConfig = {
 	},
 	Diagnostics: {
 		ClassNonDynamicMemberCheck: true,
-		ParamsCheck: true
 	},
 	Files: {
 		Exclude: [],
@@ -143,6 +142,12 @@ export let completionItemCache: {
 	snippet: CompletionItem[];
 	text: CompletionItem[];
 };
+export let invokeCheck: {
+	ByrefParam?: boolean
+	ParamCount?: boolean
+	ReturnUnset?: boolean
+	ReturnVoid?: boolean
+} | undefined;
 
 interface LibSymbol extends Array<AhkSymbol> {
 	fsPath: string
@@ -411,7 +416,7 @@ export function loadSyntax(filename = 'ahk2', d = 3) {
 
 let scanExclude: { file?: RegExp[], folder?: RegExp[] } = {};
 export function enumFiles(dirpath: string, filter = /\.(ahk2?|ah2)$/i) {
-	const maxdepth = configCache.Files.MaxDepth;
+	const maxdepth = configCache.Files?.MaxDepth ?? 2;
 	const { file: file_exclude, folder: folder_exclude } = scanExclude;
 	return enumfile(restorePath(dirpath), 0);
 	async function* enumfile(dirpath: string, depth: number): AsyncGenerator<string> {
@@ -438,6 +443,10 @@ export function updateConfig(config: LSConfig) {
 		config.AutoLibInclude = config.AutoLibInclude ? 3 : 0;
 	if (typeof config.Warn?.CallWithoutParentheses === 'string')
 		config.Warn.CallWithoutParentheses = { On: true, Off: false, Parentheses: 1 }[config.Warn.CallWithoutParentheses];
+	if (!(config.Diagnostics?.InvokeCheck instanceof Array) ||
+		!Object.values(invokeCheck = Object.fromEntries(
+			config.Diagnostics.InvokeCheck.map(s => [s, true]))).length)
+		invokeCheck = undefined;
 	fixupFormatOptions(config.FormatOptions ?? {});
 	try {
 		commentTags = config.CommentTags ? new RegExp(config.CommentTags, 'i') : undefined;
@@ -453,7 +462,7 @@ export function updateConfig(config: LSConfig) {
 	});
 	delete kindSortChar[undefined!];
 	delete config.CompletionKindSortOrder;
-	if (config.WorkingDirs)
+	if (config.WorkingDirs instanceof Array)
 		config.WorkingDirs = config.WorkingDirs.map(dir =>
 			(dir = URI.file(dir.includes(':') ? dir : resolve(dir)).toString().toLowerCase())
 				.endsWith('/') ? dir : dir + '/');
@@ -560,7 +569,7 @@ export function setVersion(version: string) {
 export function setWorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];
-	configCache.WorkingDirs.forEach(it => !folders.has(it) && workspaceFolders.push(it));
+	configCache.WorkingDirs?.forEach(it => !folders.has(it) && workspaceFolders.push(it));
 	workspaceFolders.sort().reverse();
 	if (old.length === workspaceFolders.length &&
 		!old.some((v, i) => workspaceFolders[i] !== v))

@@ -1,4 +1,4 @@
-import { commands, languages, Range, SnippetString, TextEditor, TextEditorEdit, window, workspace, WorkspaceEdit } from 'vscode';
+import { commands, ConfigurationTarget, languages, Range, SnippetString, TextEditor, TextEditorEdit, window, workspace, WorkspaceConfiguration, WorkspaceEdit } from 'vscode';
 import * as LSP from 'vscode-languageclient';
 import type { LocalizeKey } from './extension';
 
@@ -94,4 +94,24 @@ export function registerCommonFeatures(client: LSP.BaseLanguageClient, localize:
 
 function editorUri(editor: TextEditor) {
 	return editor.document.uri.toString();
+}
+
+export function updateConfig(config: WorkspaceConfiguration) {
+	const ms = ['ParamsCheck', 'InvokeCheck'].map(s => 'Diagnostics.' + s);
+	const ks = ['workspaceValue', 'globalValue'] as const;
+	const ts = [ConfigurationTarget.Workspace, ConfigurationTarget.Global];
+	const o = ms.map(s => config.inspect(s));
+	let i = 0;
+	for (const k of ks) {
+		const v = o[0]?.[k];
+		config.update(ms[0], undefined, ts[i]);
+		if (o[1]?.[k] !== undefined)
+			break;
+		if (v !== undefined) {
+			config.update(ms[1], !v ? [] : undefined, ts[i]);
+			break;
+		}
+		i++;
+	}
+	return config;
 }

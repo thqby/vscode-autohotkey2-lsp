@@ -54,7 +54,7 @@ export const diagnostic = {
 	missing: localize('diagnostic.missing', 'Missing \'{0}\''),
 	missingparam: localize('diagnostic.missingparam', 'Missing a required parameter'),
 	missingoperand: localize('diagnostic.missingoperand', 'Missing operand'),
-	missingretval: localize('diagnostic.missingretval', 'The function missing a return value'),
+	missingretval: localize('diagnostic.missingretval', 'The return value may be unset or void'),
 	missingspace: localize('diagnostic.missingspace', 'Missing space or operator before this'),
 	objectliteralerr: localize('diagnostic.objectliteralerr', 'Error in object literal'),
 	outofloop: localize('diagnostic.outofloop', 'Break/Continue must be enclosed by a Loop'),

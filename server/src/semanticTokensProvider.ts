@@ -156,7 +156,7 @@ function resolvePropSemanticType(tk: Token, lex: Lexer) {
 				return sem.type = SemanticTokenTypes.property;
 			}
 			case undefined:
-				if ((curclass.checkmember ?? lex.checkmember) !== false && configCache.Diagnostics.ClassNonDynamicMemberCheck) {
+				if ((curclass.checkmember ?? lex.checkmember) !== false && configCache.Diagnostics?.ClassNonDynamicMemberCheck) {
 					const tt = lex.tokens[tk.next_token_offset];
 					if (ASSIGN_TYPE.includes(tt?.content)) {
 						cls_add_prop(curclass, tk.content, tk.offset);

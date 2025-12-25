@@ -10,7 +10,7 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	a_Vars, action, ahkUris, ahkVars, ahkVersion, alpha_11, alpha_3, builtinCommands_v1,
-	commentTags, configCache, diagnostic, hoverCache, inactiveVars, isahk2_h, lexers, libDirs,
+	commentTags, configCache, diagnostic, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
 	libSymbols, locale, openAndParse, parseInclude, reservedIndex, restorePath, rootDir,
 	symbolProvider, URI, utils, versionMatch, warn, workspaceFolders
 } from './common';
@@ -33,6 +33,7 @@ export interface CallSite extends AhkSymbol {
 	checked?: boolean
 	offset?: number
 	paraminfo?: ParamInfo
+	outer?: AhkSymbol
 }
 
 export interface AhkDoc {
@@ -369,7 +370,7 @@ const FLOAT = createPrototype('Float', SymbolKind.Number);
 const INTEGER = createPrototype('Integer', SymbolKind.Number);
 const NUMBER = createPrototype('Number', SymbolKind.Number);
 const OBJECT = createPrototype('Object', SymbolKind.Class);
-const VOID = createPrototype('void', SymbolKind.Null);
+export const VOID = createPrototype('void', SymbolKind.Null);
 export const STRING = createPrototype('String', SymbolKind.String);
 export const UNSET = createPrototype('unset', SymbolKind.Null);
 export const VARREF = createPrototype('VarRef', SymbolKind.Class, 'Any');
@@ -460,7 +461,7 @@ export class Lexer {
 	public workspaceFolder = '';
 	private hotstringExecuteAction = false;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
-		let begin_line: boolean, callWithoutParentheses: boolean | 1, comments: Record<number, Token>;
+		let begin_line: boolean, callWithoutParentheses: boolean | 1 | undefined, comments: Record<number, Token>;
 		let continuation_sections_mode: boolean | null, currsymbol: AhkSymbol | undefined;
 		let customblocks: { region: number[], bracket: number[] }, maybev1: number | undefined;
 		let dlldir: string, includedir: string, includetable: Record<string, string>;
@@ -2703,6 +2704,7 @@ export class Lexer {
 				const tn: CallSite = DocumentSymbol.create(fc.content, undefined,
 					kind ??= SymbolKind.Function, { ...range }, range);
 				tn.paraminfo = pi, tn.offset = fc.offset, fc.callsite = tn;
+				(mode & BlockType.Mask) && (tn.outer = _parent);
 				if (lk === fc) {
 					const lf = input.indexOf('\n', fc.offset);
 					pi.end = lf < 0 ? input_length : lf;
@@ -3900,7 +3902,7 @@ export class Lexer {
 					nexttoken(), parse_pair('(', ')');
 					const pc = tokens[tk.previous_pair_pos!]?.paraminfo?.count ?? 0;
 					if (pc !== 1)
-						configCache.Diagnostics.ParamsCheck && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
+						invokeCheck?.ParamCount && _this.addDiagnostic(diagnostic.paramcounterr(1, pc), fc.offset, parser_pos - fc.offset);
 					else if (result.length > l && lk.type === TokenType.Identifier) {
 						const vr = result.at(-1) as Variable;
 						if (lk.content === vr.name && lk.offset === _this.document.offsetAt(vr.range.start))
@@ -7711,7 +7713,10 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 	if (sym.pass_by_ref && !sym.is_param)
 		return decltypeByref(sym, lex, ts, _this);
 	ts.push(...decltypeReturns(sym, lex, _this));
-	ts = [...new Set(ts)];
+	if (ts.length)
+		ts = [...new Set(ts)];
+	else if (!sym.assigned)
+		ts.push(UNSET);
 	return ts.includes(ANY) ? [ANY] : ts;
 }
 

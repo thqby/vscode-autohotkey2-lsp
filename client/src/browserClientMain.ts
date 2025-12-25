@@ -1,6 +1,6 @@
 import { env, ExtensionContext, Uri, workspace } from 'vscode';
 import { LanguageClient, ProtocolConnection } from 'vscode-languageclient/browser';
-import { registerCommonFeatures } from './common';
+import { registerCommonFeatures, updateConfig } from './common';
 
 let client: LanguageClient;
 const fs = workspace.fs;
@@ -26,7 +26,7 @@ export function activate(context: ExtensionContext) {
 			Object.entries(request_handlers).forEach(([method, handler]) => connection.onRequest(method, handler));
 			return {
 				extensionUri: context.extensionUri.toString(),
-				...JSON.parse(JSON.stringify(workspace.getConfiguration('AutoHotkey2')))
+				...JSON.parse(JSON.stringify(updateConfig(workspace.getConfiguration('AutoHotkey2'))))
 			};
 		}
 	}, new Worker(serverMain.toString()));

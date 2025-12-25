@@ -16,7 +16,7 @@
 	"ahk2.description": "Autohotkey2 Language Support using vscode-lsp",
 	"ahk2.diagnose.all": "Diagnostic All",
 	"ahk2.diagnostics.class-non-dynamic-member-check": "Check whether non-dynamic members of class exist",
-	"ahk2.diagnostics.paramscheck": "Check that the function call has the correct number of arguments",
+	"ahk2.diagnostics.invokecheck": "Check invoke information such as the number of parameters and empty retur",
 	"ahk2.warn.varunset": "Display warnings for each variable that has never been directly assigned or used with the reference operator",
 	"ahk2.warn.localsameasglobal": "Display warnings for each undeclared local variable which has the same name as a global variable",
 	"ahk2.warn.callwithoutparentheses": "Display warnings for each function or method call without parentheses",

@@ -133,11 +133,16 @@
 					"default": true,
 					"description": "%ahk2.diagnostics.class-non-dynamic-member-check%"
 				},
-				"AutoHotkey2.Diagnostics.ParamsCheck": {
+				"AutoHotkey2.Diagnostics.InvokeCheck": {
 					"scope": "window",
-					"type": "boolean",
-					"default": true,
-					"description": "%ahk2.diagnostics.paramscheck%"
+					"type": "array",
+					"description": "%ahk2.diagnostics.invokecheck%",
+					"default": ["ParamCount"],
+					"items": {
+						"type": "string",
+						"enum": ["ParamCount", "ByrefParam", "ReturnUnset", "ReturnVoid"]
+					},
+					"uniqueItems": true
 				},
 				"AutoHotkey2.Warn.VarUnset": {
 					"scope": "window",
