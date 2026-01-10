@@ -31,7 +31,7 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 			capabilities: {
 				codeActionProvider: true,
 				colorProvider: true,
-				completionProvider: { resolveProvider: false, triggerCharacters: ['.', '#', '*', '@'] },
+				completionProvider: { resolveProvider: false, triggerCharacters: `.#*@'"`.split('') },
 				definitionProvider: true,
 				documentFormattingProvider: true,
 				documentOnTypeFormattingProvider: { firstTriggerCharacter: '}', moreTriggerCharacter: ['\n', ...Object.keys(chinesePunctuations)] },

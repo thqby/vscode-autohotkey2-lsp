@@ -1296,7 +1296,7 @@ export class Lexer {
 
 		function parse_unresolved_typedef() {
 			for (const m of Object.values(comments)) {
-				if (m.data !== null || !/^[ \t]*\*?[ \t]*@typedef\s/m.test(m.content))
+				if (m.data !== null || !/^(\/\*\*|[ \t]*\*?)[ \t]*@typedef\s/m.test(m.content))
 					continue;
 				parse_jsdoc_detail(_this, m.content, {} as AhkSymbol);
 			}

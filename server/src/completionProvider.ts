@@ -351,19 +351,28 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				const endchar = text.substring(1).endsWith(text[0]) ? '' : text[0];
 				const text2item: (label: string) => CompletionItem = !endchar ? (label) => ({ label, kind, command }) :
 					(label) => ({ label, kind, insertText: `${label}${endchar}` });
+				const esc = token.content[0] === '"' ?
+					(s: string) => s.replaceAll(/`.|"/g, s => s === '"' ? '`"' : s === "`'" ? "'" : s) :
+					(s: string) => s.replaceAll(/`.|'/g, s => s === "'" ? "`'" : s === '`"' ? '"' : s);
 				if (ci) {
 					let fn: FuncNode, l: string, index: number, is_builtin: boolean, it;
-					const syms = findSymbols(lex, lex.getContext(ci.pos)) ?? [];
+					const ctx = lex.getContext(ci.pos);
+					const syms = findSymbols(lex, ctx) ?? [];
 					const uris = Object.values(ahkUris);
 					const bases: ClassNode[] = [], set: AhkSymbol[] = [];
 					for (it of syms) {
 						fn = it.node as FuncNode;
 						if (set.includes(fn)) continue; set.push(fn);
+						if (fn.kind === SymbolKind.Variable) {
+							syms.push(...decltypeExpr(lex, ctx.token, ctx.range.end).map(it => ({ node: it } as typeof syms[0])));
+							continue;
+						}
 						is_builtin = uris.includes(fn.uri!), index = ci.index, l = fn.name.toLowerCase();
 						kind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
 						switch (is_builtin && ((it as { kind?: SymbolKind }).kind ?? ci.kind)) {
 							case SymbolKind.Method:
 								switch (l) {
+									case 'set': if (fn.params?.[2]?.arr === 2) index = index % 2; break;
 									case 'deleteprop': case 'getmethod': case 'getownpropdesc':
 									case 'hasownprop': case 'hasmethod': case 'hasprop': {
 										if (index !== 0 || !it.parent)
@@ -459,7 +468,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								continue;
 							}
 						}
-						await add_annotations(param.type_annotations || []);
+						await add_annotations(param.type_annotations || [], (fn.parent as ClassNode)?.type_params,
+							(it.parent ?? it.node) as ClassNode);
 					}
 				}
 				if (!items.length && (pt = token.previous_token)?.content === ':=' &&
@@ -471,7 +481,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				}
 				!items.length && add_texts();
 				return items;
-				async function add_annotations(annotations: (string | AhkSymbol)[]) {
+				async function add_annotations(annotations: (string | AhkSymbol)[],
+					type_params?: Record<string, AhkSymbol>, _this?: ClassNode) {
 					let t;
 					for (let s of annotations) {
 						if (cache.has(s))
@@ -493,7 +504,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							default:
 								if (typeof s === 'string') {
 									if (/['"]/.test(s[0]))
-										s.endsWith(s[0]) && expg.test(s = s.slice(1, -1)) && items.push(text2item(s));
+										s.endsWith(s[0]) && expg.test(s = esc(s.slice(1, -1))) && items.push(text2item(s));
+									else if ((t = type_params?.[s.toUpperCase()]))
+										await add_annotations(_this?.generic_types?.[t.data as number] ?? (t.type_annotations || []));
 									else if ((t = findSymbol(lex, s)?.node)?.type_annotations && !cache.has(t) && t.kind === SymbolKind.TypeParameter)
 										cache.add(t), await add_annotations(t.type_annotations);
 									break;

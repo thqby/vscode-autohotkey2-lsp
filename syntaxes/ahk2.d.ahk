@@ -4572,7 +4572,7 @@ class Map<K = Any, V = Any> extends Object {
 	/**
 	 * Retrieves or sets the value of a key-value pair.
 	 */
-	__Item[Index] {
+	__Item[Index: K] {
 		get => V
 		set => void
 	}
@@ -4590,22 +4590,22 @@ class Map<K = Any, V = Any> extends Object {
 	/**
 	 * Remove key-value pairs from the map.
 	 */
-	Delete(Key) => V
+	Delete(Key: K) => V
 
 	/**
 	 * Returns the value or default value associated with the key.
 	 */
-	Get(Key [, Default]) => V
+	Get(Key: K [, Default: V]) => V
 
 	/**
 	 * If Key has an associated value in the map, it returns true, otherwise it returns false.
 	 */
-	Has(Key) => Integer
+	Has(Key: K) => Integer
 
 	/**
 	 * Set zero or more items.
 	 */
-	Set(Key1, Value1, *) => void
+	Set(Key1: K, Value1: V, *, *) => void
 
 	/**
 	 * Retrieve the number of key-value pairs present in the map.

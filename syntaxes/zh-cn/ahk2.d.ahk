@@ -4550,7 +4550,7 @@ class Map<K = Any, V = Any> extends Object {
 	/**
 	 * 检索或设置键值对的值.
 	 */
-	__Item[Index] {
+	__Item[Index: K] {
 		get => V
 		set => void
 	}
@@ -4568,22 +4568,22 @@ class Map<K = Any, V = Any> extends Object {
 	/**
 	 * 从映射中删除键值对.
 	 */
-	Delete(Key) => V
+	Delete(Key: K) => V
 
 	/**
 	 * 返回与键关联的值或默认值.
 	 */
-	Get(Key [, Default]) => V
+	Get(Key: K [, Default: V]) => V
 
 	/**
 	 * 如果 Key 在映射中有关联的值, 则返回 true, 否则返回 false.
 	 */
-	Has(Key) => Integer
+	Has(Key: K) => Integer
 
 	/**
 	 * 设置零个或多个项目.
 	 */
-	Set(Key1, Value1, *) => void
+	Set(Key1: K, Value1: V, *, *) => void
 
 	/**
 	 * 检索映射中存在的键值对的数量.
