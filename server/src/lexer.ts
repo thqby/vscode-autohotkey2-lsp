@@ -11,7 +11,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	a_Vars, action, ahkUris, ahkVars, ahkVersion, alpha_11, alpha_3, builtinCommands_v1,
 	commentTags, configCache, diagnostic, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
-	libSymbols, locale, openAndParse, parseInclude, reservedIndex, restorePath, rootDir,
+	libSymbols, locale, metafnIndex, openAndParse, parseInclude, reservedIndex, restorePath, rootDir,
 	symbolProvider, URI, utils, versionMatch, warn, workspaceFolders
 } from './common';
 import { DiagnosticSeverity, MessageType, SymbolKind } from './lsp-enums';
@@ -357,7 +357,7 @@ const COLOR_VALS = JSON.parse('{"black":"000000","silver":"c0c0c0","gray":"80808
 const EMPTY_TOKEN: Token = { type: TokenType.EOF, content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[012])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|help|sleep|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
 const LINE_STARTERS = 'export break case catch continue else for finally global goto if local loop return static switch throw try until while'.split(' ');
-const META_FUNCNAME = '__NEW __INIT __ITEM __ENUM __GET __CALL __SET __DELETE'.split(' ');
+const META_FUNCNAME = '__REF __VALUE __NEW __INIT __ITEM __ENUM __GET __CALL __SET __DELETE'.split(' ');
 const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 }, PROP_NEXT_TOKEN = ['[', '{', '=>'];
 const PUNCT = '% : + ++ - -- * ** / // & && | || ^ < << <= = == => > >> >>> >= ? ?? ! != !== ~ ~= := += -= *= /= //= &= |= ^= ??= <<= >>= >>>='.split(' ');
 const RESERVED_OP = 'isset throw super false true'.split(' '), ASSIGN_INDEX = PUNCT.indexOf(':=');
@@ -776,7 +776,7 @@ export class Lexer {
 									let readonly = lk.content === '=>';
 									tk.symbol = tk.definition = tn, fn.parent = _parent, fn.has_this_param = fn.decl = true;
 									let params: ParamList = [];
-									if (!META_FUNCNAME.includes(_low = tn.name.toUpperCase()))
+									if (!META_FUNCNAME.includes(_low = tn.name.toUpperCase(), metafnIndex))
 										tk.semantic = sem;
 									tn.static = isstatic, tn.full = `(${cls.join('.')}) ${isstatic ? 'static ' : ''}` + tn.name;
 									if ((_cm = comments[tn.selectionRange.start.line]))
@@ -836,7 +836,7 @@ export class Lexer {
 									else fn.range.end = this.document.positionAt(lk.offset + lk.length);
 									fn.full += ` => ${joinTypes(fn.type_annotations) || 'void'}`;
 									tk.symbol = tk.definition = fn, fn.decl = true;
-									if (!META_FUNCNAME.includes(_low = fn.name.toUpperCase()))
+									if (!META_FUNCNAME.includes(_low = fn.name.toUpperCase(), metafnIndex))
 										tk.semantic = {
 											type: blocks ? SemanticTokenTypes.method : SemanticTokenTypes.function,
 											modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly
@@ -4061,7 +4061,7 @@ export class Lexer {
 					};
 					children.forEach((it: AhkSymbol) => {
 						_low = it.name.toUpperCase();
-						if (META_FUNCNAME.includes(_low))
+						if (META_FUNCNAME.includes(_low, metafnIndex))
 							delete (tokens[document.offsetAt(it.selectionRange.start)] ?? {}).semantic;
 						if (it.children) {
 							const tc = it.static || it.kind === SymbolKind.Class ? sdec : dec;

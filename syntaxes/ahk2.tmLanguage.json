@@ -1744,7 +1744,7 @@
       ]
     },
     "metafunction": {
-      "match": "\\b(__(?i:new|init|item|enum|get|call|set|delete))\\b",
+      "match": "\\b(__(?i:new|init|item|enum|get|call|set|delete|ref|value))\\b",
       "name": "storage.type.metafunction.ahk2"
     },
     "numbers": {
