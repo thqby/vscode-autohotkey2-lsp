@@ -6,7 +6,7 @@
 			"prefix": "#DefineDefault"
 		},
 		{
-			"body": "#DllImport ${1:Function_Name}, ${2:DllFile\\Function}${3:[, Type1, Arg1, Type2, Arg2, Cdecl ReturnType]}",
+			"body": "#DllImport ${1:Function_Name}, ${2:DllFile\\Function}, ${3:DynaCallParameterDefinition [, DefaultArg1, ...]}",
 			"description": "为dll或exe函数创建脚本函数.",
 			"prefix": "#DllImport"
 		},
