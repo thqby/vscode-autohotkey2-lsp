@@ -49,9 +49,9 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			const e = base?.full ? ` extends ${base.full}` : '';
 			hover.push({ kind: 'ahk2', value: `class ${(fn.full || node.name)}${e}` });
 		} else if (fn.full) {
-			hover.push({ kind: 'ahk2', value: fn.full });
 			if (fn.param_def_len === fn.full.length - fn.full.indexOf('(', fn.name ? 1 : 0))
-				hover.at(-1)!.value += ` => ${generateTypeAnnotation(fn, ll) || 'void'}`;
+				fn.full += ` => ${generateTypeAnnotation(fn, ll) || 'void'}`;
+			hover.push({ kind: 'ahk2', value: fn.full });
 			let overloads = fn.overloads;
 			switch (typeof overloads) {
 				case 'object':

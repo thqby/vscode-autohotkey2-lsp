@@ -2,7 +2,7 @@ import { CancellationToken, ParameterInformation, SignatureHelp, SignatureHelpPa
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, SymbolKind, Variable,
-	ahkUris, decltypeExpr, decltypeInvoke, decltypeReturns, getCallInfo,
+	ahkUris, decltypeExpr, decltypeInvoke, decltypeReturns, generateTypeAnnotation, getCallInfo,
 	getClassConstructor, getClassMember, getClassOwnProp, getSymbolDetail, lexers
 } from './common';
 
@@ -156,11 +156,14 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		if (!fn.params || set.has(fn))
 			continue;
 		const fns = [fn], pi = index - needthis;
-		let parameters: ParameterInformation[] = [], q = fn.name && fn.full.match(/^(\(.+?\))?[^([]+/)?.[0].length || 0;
+		let parameters: ParameterInformation[] = [];
 		let params: Variable[] | undefined, param: Variable | undefined;
 		let activeParameter: number, pc: number, label: string, name: string;
+		let q = fn.name && fn.full.match(/^(\(.+?\))?[^([]+/)?.[0].length || 0;
 		const documentation = getSymbolDetail(fn, lex,
 			/(^|\n)\*@param\*(.|\n|\r)*?(?=\n\*@|$)/g);
+		if (fn.param_def_len === fn.full.length - q)
+			fn.full += ` => ${generateTypeAnnotation(fn, lex) || 'void'}`;
 		if (fn.overloads) {
 			if (typeof fn.overloads === 'string') {
 				const lex = new Lexer(TextDocument.create('', 'ahk2', -10,
