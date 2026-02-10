@@ -4997,9 +4997,8 @@ export class Lexer {
 			if (begin_line) {
 				begin_line = false, bg = 1;
 				let next_LF = input.indexOf('\n', parser_pos);
-				if (next_LF < 0)
-					next_LF = input_length;
-				line = input.substring(offset, next_LF).replace(/((^|[ \t]+)(;.*)?)?\r?$/, '');
+				const ll = input.substring(offset, next_LF < 0 ? next_LF = input_length : next_LF);
+				line = ll.replace(/((^|[ \t]+)(;.*)?)?\r?$/, '');
 				if (line.includes('::') && (block_mode || !'"\''.includes(line[0]) ||
 					![TokenType.Assign, TokenType.Comma, TokenType.BracketStart].includes(lst.type))) {
 					if ((m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i))) {
@@ -5065,6 +5064,7 @@ export class Lexer {
 						return lst = createToken(m[1].replace(/[ \t]+/g, ' '), TokenType.Hotkey, offset, m[1].length, 1);
 					}
 				}
+				line = ll;
 				if (c !== '#') add_sharp_foldingrange();
 			}
 
