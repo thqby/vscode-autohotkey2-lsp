@@ -59,7 +59,9 @@ function resolveSemantic(tk: Token, lex: Lexer, stb: SemanticTokensBuilder, full
 			curclass = t!.node as ClassNode;
 			tk.callsite && checkParamInfo(lex, t!.node as FuncNode, tk.callsite);
 		} else curclass = undefined;
-	} else if (curclass && tk.type !== TokenType.Dot && !(tk.type & TokenType.Comment))
+	} else if (tk.type === TokenType.Dot)
+		curclass = tk.data as ClassNode ?? curclass;
+	else if (!(tk.type & TokenType.Comment))
 		curclass = undefined;
 }
 
@@ -131,11 +133,17 @@ function resolvePropSemanticType(tk: Token, lex: Lexer) {
 					if (n.full?.startsWith('(Object) static Call('))
 						n = getClassMember(lex, curclass.prototype!, '__new', true) ?? n;
 					else if (n.full?.startsWith('(Object) DefineProp(')) {
-						let tt = lex.tokens[tk.next_token_offset];
-						if (tt?.content === '(')
-							tt = lex.tokens[tt.next_token_offset];
+						const tks = lex.tokens;
+						let tt = tks[tk.next_token_offset];
+						if (tt?.content === '(' && tk.offset + tk.length === tt.offset) {
+							const t = tks[tks[tt.next_pair_pos!]?.next_token_offset];
+							if (t?.type === TokenType.Dot)
+								t.data = curclass;
+							tt = tks[tt.next_token_offset];
+						}
 						if (tt) {
-							if (tt.type === TokenType.String) {
+							if (tt.type === TokenType.String &&
+								tt.next_token_offset === tk.callsite.paraminfo?.comma[0]) {
 								cls_add_prop(curclass, tt.content.slice(1, -1), tt.offset + 1);
 							} else cls_add_prop(curclass, '');
 						}

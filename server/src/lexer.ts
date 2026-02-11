@@ -3946,23 +3946,35 @@ export class Lexer {
 				if (classfullname === '')
 					return;
 				let rg: Range, cls: ClassNode | undefined;
-				let proto = false, ts = tk.previous_token?.previous_token;
-				if (!ts) return;
-				if (input[ts.offset - 1] === '.' &&
+				let proto = false, ts = tk.previous_token;
+				cls = ts?.data as ClassNode;
+				if (!cls) {
+					if (!(ts = ts?.previous_token))
+						return;
+					if (ts.previous_token?.type === TokenType.Dot &&
 					(ts.content.toLowerCase() !== 'prototype' ||
 						(proto = true, !(ts = ts.previous_token?.previous_token) ||
-							input[ts.offset - 1] === '.')))
+								ts.previous_token?.type === TokenType.Dot)))
 					return;
-				_low = ts!.content.toLowerCase();
-				if (_low !== 'this' && _low !== 'super' || !(cls = get_class()) || proto && !(cls = cls.prototype) || !cls.cache)
+					_low = ts!.content.toUpperCase();
+					if (_low !== 'THIS' && _low !== 'SUPER' || !(cls = get_class()) || proto && !(cls = cls.prototype))
+						return;
+				}
+				if (!cls.cache)
 					return;
 				if (flag) {
+					if (tk.content.toLowerCase() === 'defineprop') {
 					const pi = tk.callsite?.paraminfo;
-					if (pi && tk.content.toLowerCase() === 'defineprop' && pi.count > 1 && pi.miss[0] !== 0) {
-						const end = pi.comma[0], s = !!cls.prototype;
 						let nk = tokens[tk.next_token_offset];
-						if (input[tk.offset + tk.length] === '(')
+						if (input[tk.offset + tk.length] === '(') {
+							const tt = nk.next_pair_pos ? _this.getToken(nk.next_pair_pos + 1, true) : null;
+							if (tt?.type === TokenType.Dot)
+								tt.data = cls;
 							nk = tokens[nk.next_token_offset];
+						}
+						if (!pi || pi.count < 2 || pi.miss[0] === 0)
+							return;
+						const end = pi.comma[0], s = !!cls.prototype;
 						if (nk.type !== TokenType.String || nk.next_token_offset !== end)
 							cls.checkmember = false;
 						else {
@@ -4010,7 +4022,10 @@ export class Lexer {
 				function get_class() {
 					let p = _parent;
 					while (p && p.kind !== SymbolKind.Class)
-						p = p.parent!;
+						if ((p as FuncNode).local?.[_low] ||
+							(p as FuncNode).params?.some(t => t.name.toUpperCase() === _low))
+							return;
+						else p = p.parent!;
 					return p as ClassNode;
 				}
 			}
