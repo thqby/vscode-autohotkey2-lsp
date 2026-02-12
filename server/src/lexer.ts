@@ -136,6 +136,7 @@ export interface AhkSymbol extends DocumentSymbol {
 	access?: AccessModifier
 	alias?: string
 	alias_range?: Range
+	is_builtin?: boolean
 	module?: string
 	cached_types?: Array<string | AhkSymbol>
 	children?: AhkSymbol[]
@@ -739,7 +740,7 @@ export class Lexer {
 		if (d || /\.d\.(ahk2?|ah2)$/i.test(this.fsPath)) {
 			this.d = d || 1, allow_$ ||= true;
 			this.parseScript = function (): void {
-				const p: ClassNode[] = [], cls: string[] = [], uri = this.uri
+				const p: ClassNode[] = [], cls: string[] = [], { d, uri } = this;
 				let _low = '', i = 0, j = 0, blocks = 0, isstatic = false, rg = ZERO_RANGE;
 				let _parent = DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg, rg, this.children) as ClassNode;
 				let tk: Token, lk: Token, _cm: Token | undefined;
@@ -886,7 +887,7 @@ export class Lexer {
 								let extends_ = '';
 								const cl = DocumentSymbol.create((tk = tokens[++i]).content, undefined, SymbolKind.Class,
 									make_range(tokens[i - 1].offset, 0), make_range(tk.offset, tk.length), []) as ClassNode;
-								j = i + 1, cls.push(cl.name);
+								j = i + 1, cls.push(cl.name), (d & 2) && (cl.is_builtin = true);
 								tk.semantic = { type: SemanticTokenTypes.class, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
 								tk.symbol = tk.definition = cl, cl.extends = '', cl.uri ??= this.uri;
 								if ((lk = tokens[j])?.content === '<' && !lk.topofline) {
@@ -959,15 +960,15 @@ export class Lexer {
 					}
 				}
 
-				if (this.d < 0)
+				if (d < 0)
 					return;
-				if (this.d & 2) {
+				if (d & 2) {
 					const overwrite = uri.endsWith('/ahk2_h.d.ahk') ? 1 : 0;
 					let t;
 					for (const [k, it] of Object.entries(this.declaration)) {
 						switch (it.kind) {
 							case SymbolKind.Function:
-								it.def = false, it.uri = uri;
+								it.def = false, it.uri = uri, it.is_builtin = true;
 							// fall through
 							case SymbolKind.Class:
 								it.overwrite ??= overwrite, it.def ??= true;
@@ -976,7 +977,7 @@ export class Lexer {
 								break;
 							case SymbolKind.Variable:
 								if (it.def)
-									ahkVars[k] = it, it.uri = uri;
+									ahkVars[k] = it, it.uri = uri, it.is_builtin = true;
 								break;
 						}
 					}
@@ -7465,30 +7466,76 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 			case 0 as SymbolKind: return [ANY];
 			case SymbolKind.Class:
 				if (call && name === 'call') {
+					switch (cls.is_builtin && cls.prototype && cls.full) {
+						case 'Class':
+							if (ahkVersion >= alpha_3 && paraminfo?.end) {
+								const tks = lex.tokens, ofs = [paraminfo.offset, ...paraminfo.comma, paraminfo.end],
+									l = Math.min(2, paraminfo.count);
+								let tt;
+								for (let i = 0; i < l; tt = undefined) {
+									tt = decltypeExpr(lex, tks[tks[ofs[i]].next_token_offset], ofs[++i]);
+									if ((tt = tt.filter(t => t.kind === SymbolKind.Class)).length)
+										break;
+								}
+								if (tt) {
+									const o = {}, c: ClassNode = {
+										full: '', extends: '', name: '', kind: SymbolKind.Class,
+										range: ZERO_RANGE, selectionRange: ZERO_RANGE, property: {},
+									};
+									for (const t of tt) {
+										const n = { ...c, $property: o };
+										n.prototype = { ...c, property: o };
+										if (t.full)
+											n.extends = n.prototype.extends = t.full;
+										else n.base = t, n.prototype.base = (t as ClassNode).prototype;
+										tps.add(n);
+									}
+									continue;
+								}
+							}
+							break;
+						case 'ComObject': {
+							const tks = lex.tokens, s = [];
+							let tk = tks[tks[paraminfo?.offset!]?.next_token_offset];
+							if (tk?.type === TokenType.String) {
+								s.push(tk.content);
+								if ((tk = tks[tk.next_token_offset])?.content === ',') {
+									tk = tks[tk.next_token_offset];
+									if (tk?.type === TokenType.String)
+										s.push(tk.content), tk = tks[tk.next_token_offset];
+								}
+								if (tk?.content === ')') {
+									tps.add({
+										kind: SymbolKind.Interface, name: 'ComObject',
+										full: `ComObject<${s.join(', ')}>`, generic_types: [s],
+										range: ZERO_RANGE, selectionRange: ZERO_RANGE
+									} as ClassNode);
+									continue;
+								}
+							}
+							break;
+						}
+						case 'Map':
+							if (paraminfo?.end) {
+								const tks = lex.tokens, ofs = [paraminfo.offset, ...paraminfo.comma, paraminfo.end];
+								const l = ofs.length, s = [];
+								for (let i = 0; i < l; i += 2) {
+									const p = tks[ofs[i + 1]]?.previous_token;
+									if (p?.previous_token?.offset === ofs[i] && p.type === TokenType.String)
+										s.push(p.content);
+								}
+								let r = cls.prototype!;
+								if (s.length)
+									r = { ...r, generic_types: [s] };
+								tps.add(r);
+								continue;
+							}
+							break;
+					}
 					if (!(n = getClassMember(lex, cls, name, call)!))
 						if ((n = invoke_meta_func(cls)!))
 							break;
 						else continue;
-					const full = (n as Variable).full ?? '';
-					if (full.startsWith('(ComObject)')) {
-						const tks = lex.tokens, s = [];
-						let tk = tks[tks[paraminfo?.offset!]?.next_token_offset];
-						if (tk?.type === TokenType.String) {
-							s.push(tk.content);
-							if ((tk = tks[tk.next_token_offset])?.content === ',') {
-								tk = tks[tk.next_token_offset];
-								if (tk?.type === TokenType.String)
-									s.push(tk.content), tk = tks[tk.next_token_offset];
-							}
-							if (tk?.content === ')')
-								tps.add({
-									kind: SymbolKind.Interface, name: 'ComObject',
-									full: `ComObject<${s.join(', ')}>`, generic_types: [s],
-									range: ZERO_RANGE, selectionRange: ZERO_RANGE
-								} as ClassNode);
-						}
-						continue;
-					}
 					break;
 				}
 			// fall through
@@ -7879,7 +7926,7 @@ export function typeNaming(sym: AhkSymbol) {
 		case SymbolKind.Class:
 			s = sym as ClassNode;
 			if (s.prototype)
-				return `typeof ${s.full}`;
+				return s.full ? `typeof ${s.full}` : 'Class';
 			return s.full || 'Object';
 		case SymbolKind.Function: {
 			if (sym.name) {
