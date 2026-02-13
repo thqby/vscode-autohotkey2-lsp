@@ -1,10 +1,10 @@
 import { CancellationToken, DefinitionParams, LocationLink, Range } from 'vscode-languageserver';
-import { AhkSymbol, findSymbols, lexers, restorePath, SymbolKind, Token, TokenType, URI, ZERO_RANGE } from './common';
+import { AhkSymbol, findSymbols, Lexer, lexers, restorePath, SymbolKind, Token, TokenType, URI, ZERO_RANGE } from './common';
 
 export async function defintionProvider(params: DefinitionParams, token: CancellationToken): Promise<LocationLink[] | undefined> {
 	if (token.isCancellationRequested) return;
 	let uri = params.textDocument.uri.toLowerCase();
-	const lex = lexers[uri], context = lex?.getContext(params.position);
+	const lex = Lexer.curr = lexers[uri], context = lex?.getContext(params.position);
 	const locas: LocationLink[] = [];
 	if (!context)
 		return;

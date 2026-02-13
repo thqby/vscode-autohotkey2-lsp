@@ -9,7 +9,7 @@ import {
 } from './common';
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
-	const lex = lexers[params.textDocument.uri.toLowerCase()];
+	const lex = Lexer.curr = lexers[params.textDocument.uri.toLowerCase()];
 	if (!lex || token?.isCancellationRequested)
 		return [];
 	return lex.symbolInformation ?? getSymbolInfo(lex);

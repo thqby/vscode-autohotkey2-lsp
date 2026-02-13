@@ -62,7 +62,7 @@ export function generateFuncComment(lex: Lexer, fn: FuncNode, detail?: string) {
 
 function generateComment(params: { uri: string, position: Position }) {
 	const { position, uri } = params;
-	const lex = lexers[uri.toLowerCase()];
+	const lex = Lexer.curr = lexers[uri.toLowerCase()];
 	if (!lex) return;
 	let scope = lex.searchScopedNode(position);
 	const ts = scope?.children || lex.children;
@@ -100,7 +100,7 @@ function generateComment(params: { uri: string, position: Position }) {
 }
 
 function extractSymbols(uri: string) {
-	let lex = lexers[uri.toLowerCase()];
+	let lex = Lexer.curr = lexers[uri.toLowerCase()];
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const cache: Record<string, string> = {}, result: any = {};
 	if (!lex)

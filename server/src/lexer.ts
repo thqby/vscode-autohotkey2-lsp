@@ -420,6 +420,7 @@ class ParseStopError {
 export type ActionType = 'Continue' | 'Warn' | 'SkipLine' | 'SwitchToV1' | 'Stop';
 
 export class Lexer {
+	static curr?: Lexer;
 	public actionwhenv1?: ActionType = 'Continue';
 	public actived = false;
 	public beautify: (options: FormatOptions, range?: Range) => string;
@@ -7833,7 +7834,7 @@ function resolveCachedTypes(tps: (string | AhkSymbol)[], resolved_types: Set<Ahk
 			if ((param = type_params?.[tp.toUpperCase()]))
 				resolveCachedTypes(_this!.generic_types?.[param.data as number] ?? (param.type_annotations || []),
 					resolved_types, lex, _this, type_params);
-			else if ((t = (is_this = tp === 'this') && _this || findSymbol(lex, tp)?.node as ClassNode))
+			else if ((t = (is_this = tp === 'this') && _this || findSymbol(Lexer.curr ?? lex, tp)?.node as ClassNode))
 				if (t.kind === SymbolKind.TypeParameter)
 					update = true, tps[i] = '', tps.push(...decltypeTypeAnnotation(t.type_annotations || [], lex));
 				else if (t.kind !== SymbolKind.Variable)

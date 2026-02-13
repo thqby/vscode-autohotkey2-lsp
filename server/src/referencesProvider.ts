@@ -15,7 +15,7 @@ export async function referenceProvider(params: ReferenceParams, token: Cancella
 
 export function getAllReferences(lex: Lexer, context: Context, allow_builtin = true): Record<string, Range[]> | null | undefined {
 	if (context.kind === SymbolKind.Null) return;
-	const nodes = findSymbols(lex, context);
+	const nodes = findSymbols(Lexer.curr = lex, context);
 	if (!nodes?.length)
 		return;
 	let name = context.text.toUpperCase();

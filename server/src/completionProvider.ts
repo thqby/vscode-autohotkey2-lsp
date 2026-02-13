@@ -4,7 +4,7 @@ import { basename, relative, resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit } from 'vscode-languageserver';
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, FuncNode,
-	Maybe, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
+	Lexer, Maybe, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
 	a_Vars, ahkUris, ahkVars, allIdentifierChar, completionItemCache, completionitem, configCache,
 	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getCallInfo,
 	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail,
@@ -13,7 +13,7 @@ import {
 
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
-	const lex = lexers[uri = uri.toLowerCase()], vars: Record<string, unknown> = {};
+	const lex = Lexer.curr = lexers[uri = uri.toLowerCase()], vars: Record<string, unknown> = {};
 	if (!lex || _token.isCancellationRequested) return;
 	let items: CompletionItem[] = [], cpitem = items.pop()!;
 	let l: string, path: string, pt: Token | undefined, scope: AhkSymbol | undefined, temp;

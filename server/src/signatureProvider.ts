@@ -16,7 +16,7 @@ let cache: {
 export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
 	if (token.isCancellationRequested) return;
 	const { textDocument: { uri }, context, position } = params;
-	const lex = lexers[uri.toLowerCase()], activeSignature = context?.activeSignatureHelp?.activeSignature;
+	const lex = Lexer.curr = lexers[uri.toLowerCase()], activeSignature = context?.activeSignatureHelp?.activeSignature;
 	let offset, pi;
 	switch (context?.triggerKind) {
 		case 2:	// TriggerCharacter

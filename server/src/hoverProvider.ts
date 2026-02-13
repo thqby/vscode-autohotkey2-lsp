@@ -1,6 +1,6 @@
 import { CancellationToken, Hover, HoverParams } from 'vscode-languageserver';
 import {
-	AhkSymbol, ClassNode, FuncNode, Maybe, SemanticTokenTypes, SymbolKind, Variable,
+	AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, SemanticTokenTypes, SymbolKind, Variable,
 	findSymbols, generateTypeAnnotation, getClassBase, getClassMember, getSymbolDetail,
 	hoverCache, joinTypes, lexers
 } from './common';
@@ -8,7 +8,7 @@ import {
 
 export async function hoverProvider(params: HoverParams, token: CancellationToken): Promise<Maybe<Hover>> {
 	if (token.isCancellationRequested) return;
-	const uri = params.textDocument.uri.toLowerCase(), lex = lexers[uri];
+	const uri = params.textDocument.uri.toLowerCase(), lex = Lexer.curr = lexers[uri];
 	const context = lex?.getContext(params.position), hover: { kind?: 'ahk2', value: string }[] = [];
 	let t;
 	if (!context)
