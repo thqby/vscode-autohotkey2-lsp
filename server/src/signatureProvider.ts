@@ -204,6 +204,8 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 					if (index < count - n && !params[activeParameter + n]?.name.length)
 						param = params[activeParameter += n] ?? p;
 				}
+				if (param.arr === 2)
+					param = params[activeParameter = param.index! - (parameters.length - 1 === activeParameter ? 1 : 2)];
 				parameters[activeParameter].documentation = getSymbolDetail(param, lex);
 			}
 			signinfo.signatures.push({ label, parameters, documentation, activeParameter });

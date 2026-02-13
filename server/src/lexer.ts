@@ -201,6 +201,7 @@ export interface Variable extends AhkSymbol {
 	defaultVal?: string | false | null
 	for_index?: number			// for v1, ... in
 	full?: string
+	index?: number
 	is_global?: boolean
 	is_param?: boolean
 	range_offset?: [number, number]
@@ -1180,7 +1181,7 @@ export class Lexer {
 									star_offset.push(full.length), full += '*';
 									if (star)
 										star.data = params.length % (star.arr = 2);
-									else star = vr;
+									else star = vr, vr.index = params.length;
 								} else if (lk.content === '[')
 									defVal++, lk.ignore = true, full += '[';
 								else if (defVal && lk.content === ']')
