@@ -1001,9 +1001,10 @@ export class Lexer {
 					sym.range.end = _this.document.positionAt(lk.offset + lk.length);
 					return j;
 					function parse(): Array<string | AhkSymbol> {
-						let t: Token, has_typeof: boolean, r: string, tp;
+						let t: Token, has_typeof: boolean, r: string, tp, tl;
 						const tps: (string | AhkSymbol)[] = [];
 						loop: while ((lk = tokens[++j])) {
+							tl = tps.length;
 							switch (lk.type) {
 								case TokenType.Identifier:
 									r = lk.content, tp = TokenType.Identifier;
@@ -1022,9 +1023,8 @@ export class Lexer {
 												const tp = {
 													name: r, kind: r.toLowerCase() === 'comobject' ? SymbolKind.Interface : SymbolKind.Class,
 													extends: r, full: `${r}<${generic_types.map(t => joinTypes(t)).join(', ')}>`,
-													range: ZERO_RANGE, selectionRange: ZERO_RANGE
+													range: ZERO_RANGE, selectionRange: ZERO_RANGE, generic_types
 												} as ClassNode;
-												tp.generic_types = generic_types;
 												if (has_typeof)
 													tp.prototype = { ...tp };
 												else tp.data = S2O[r.toUpperCase()];
@@ -1100,6 +1100,15 @@ export class Lexer {
 										break loop;
 									}
 									break;
+							}
+							while (lk?.content === '[' && !lk.topofline && tokens[j + 1]?.content === ']') {
+								const t = tps.splice(tl);
+								tps.push({
+									name: 'Array', kind: SymbolKind.Class,
+									extends: 'Array', full: `Array<${joinTypes(t)}>`,
+									range: ZERO_RANGE, selectionRange: ZERO_RANGE, generic_types: [t]
+								} as ClassNode);
+								lk = tokens[j += 2];
 							}
 							if (lk?.content !== '|')
 								break;
