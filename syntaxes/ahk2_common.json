@@ -39,6 +39,11 @@
 			"syntax": ";@format option1:value1 [, option2:value2 ...]"
 		},
 		{
+			"body": ";@format-${1|disable,enable|}",
+			"prefix": "@format-",
+			"description": "Disable or enable formatting"
+		},
+		{
 			"body": ";@reference ${1:$TM_FILENAME_BASE.%A_Locale%.d.ahk}",
 			"prefix": "@reference",
 			"description": "Set the `.d.ahk` file associated with the current file. `%A_Locale%` is same as VS Code's locale."

@@ -464,13 +464,15 @@ export class Lexer {
 	public workspaceFolder = '';
 	private hotstringExecuteAction = false;
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
-		let begin_line: boolean, callWithoutParentheses: boolean | 1 | undefined, comments: Record<number, Token>;
+		let begin_line: boolean, callWithoutParentheses: boolean | 1 | undefined;
 		let continuation_sections_mode: boolean | null, currsymbol: AhkSymbol | undefined;
-		let customblocks: { region: number[], bracket: number[] }, maybev1: number | undefined;
+		let comments: Record<number, Token>, maybev1: number | undefined;
 		let dlldir: string, includedir: string, includetable: Record<string, string>;
 		let input: string, input_length: number, input_wanted_newline: boolean;
 		let last_comment_fr: FoldingRange | undefined, last_LF: number, lst: Token;
 		let n_newlines: number, parser_pos: number, sharp_offsets: number[];
+		let customblocks: { region: number[], bracket: number[] };
+		let format_disable_flag = false;
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const _this = this, uri = URI.parse(document.uri);
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
@@ -483,6 +485,7 @@ export class Lexer {
 			catch_block: boolean,
 			declaration_statement: boolean,
 			disable_linewrap?: boolean,
+			disable_start?: [number, number],
 			else_block: boolean,
 			finally_block: boolean,
 			had_comment: number,
@@ -629,7 +632,7 @@ export class Lexer {
 			output_space_before_token = false, format_mode = true;
 			indent_string = opt.indent_string ?? '\t', space_in_other = opt.space_in_other ?? true;
 			output_lines = [create_output_line()];
-			flag_store = [], flags = undefined!;
+			flag_store = [], flags = undefined!, format_disable_flag = false;
 			set_mode(Mode.BlockStatement);
 
 			if (opt.symbol_with_same_case)
@@ -4816,7 +4819,7 @@ export class Lexer {
 
 		// Using object instead of string to allow for later expansion of info about each line
 		function create_output_line() {
-			return { text: [], indent: 0 };
+			return { text: [] as string[], indent: 0 };
 		}
 
 		function trim_newlines() {
@@ -4914,6 +4917,7 @@ export class Lexer {
 
 		function restore_mode(): void {
 			if (flag_store.length > 0) {
+				restore_formatted();
 				previous_flags = flags;
 				flags = flag_store.pop()!;
 			}
@@ -5195,9 +5199,9 @@ export class Lexer {
 									const top = !lst.type || (lst.type === TokenType.BlockStart && lst.topofline > 0);
 									lst = createToken(c, TokenType.BracketStart, offset, 1, 1);
 									lst.ignore = true, parser_pos = i - 1, continuation_sections_mode = true;
+									const content = input.substring(offset + 1, parser_pos).replace(/[ \t]+;.*/, '').trim();
 									while (' \t'.includes(input[++offset])) continue;
-									const content = input.substring(offset, parser_pos).trimEnd().replace(/[ \t]+;.*$/, '');
-									lst.data = { content, offset, length: content.length };
+									lst.data = { content, offset, length: content.length, data: { comments, ltrim } };
 									lst.skip_pos = parser_pos = offset + content.length;
 									_this.token_ranges.push({ start: offset, end: parser_pos, type: 3, previous: lst.offset });
 									const _lst = lst, _mode = format_mode, join_str = join[1].replace(/`[tsrn]/g, '  ');
@@ -5229,6 +5233,7 @@ export class Lexer {
 										}
 									}
 									format_mode = true, tk = get_next_token();
+									tk.type === TokenType.InlineComment && (tk = get_next_token());
 									if (continuation_sections_mode && tk.type !== TokenType.EOF) {
 										if (comments && (tk.topofline && tk.type & TokenType.Comment)) {
 											sum = n_newlines - 2;
@@ -5746,8 +5751,6 @@ export class Lexer {
 			if (ck.ignore) {
 				let c = (ck.data as Token).content;
 				flags.disable_linewrap = false;
-				if (opt.ignore_comment)
-					c = c.replace(/[ \t]+;.*$/, '');
 				if (c)
 					print_token(c);
 			} else {
@@ -6250,14 +6253,54 @@ export class Lexer {
 		}
 
 		function format_directives(str: string) {
-			const m = str.match(/^;\s*@format\b/i);
+			const m = str.match(/^;\s*@format(\s|-(dis|en)able(?=\s|$))/i);
 			if (!m) return;
+			const f = m[2];
+			if (f === 'dis')
+				return mark_format_disable();
+			if (f === 'en')
+				return restore_formatted(true);
 			const new_opts = fixupFormatOptions(Object.fromEntries(str.substring(m[0].length)
 				.replace(/\s+;.*$/, '').split(',').map(s => s.split(':', 2).map(s => s.trim()))));
 			for (const k of ['array_style', 'object_style'] as const)
 				if (k in new_opts)
 					flags[k] = new_opts[k], delete new_opts[k];
 			Object.assign(opt, new_opts);
+		}
+
+		function mark_format_disable() {
+			if (format_disable_flag)
+				return;
+			flags.had_comment = 2;
+			format_disable_flag = true;
+			if (ck.topofline)
+				print_newline(true);
+			let l = output_lines.length;
+			ck.topofline && opt.ignore_comment && l--;
+			flags.disable_start = [l, input.indexOf('\n', ck.offset) + 1 || input_length];
+		}
+
+		function restore_formatted(flag = false) {
+			if (!flags.disable_start) return;
+			flags.had_comment = 2;
+			if (flags.start_line_index >= output_lines.length)
+				flags.start_line_index = -1;
+			format_disable_flag = false;
+			const [i, o] = flags.disable_start;
+			let l = output_lines.length, t, end;
+			delete flags.disable_start;
+			if (flag)
+				end = input.lastIndexOf('\n', ck.offset);
+			else if (!ck.type)
+				end = input_length;
+			else {
+				const p = ck.previous_token!;
+				end = p.offset + p.length;
+				while (!output_lines[l - 1].text.length)
+					if (--l === i) break;
+			}
+			output_lines.splice(i, l - i, t = create_output_line());
+			t.text.push(input.substring(o, end).replaceAll('\r', ''));
 		}
 
 		function handle_inline_comment() {
