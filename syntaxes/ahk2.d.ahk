@@ -4778,7 +4778,7 @@ class Object extends Any {
 	GetOwnPropDesc(Name) => {
 		Get?: Func, Set?: Func, Call?: Func, Value?: Any,
 		/** @since 2.1-alpha.3 */
-		Type?: String | Integer | Class
+		Type?: String | Integer | Class, Offset?: Integer
 	}
 
 	/**

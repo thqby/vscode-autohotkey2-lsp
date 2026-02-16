@@ -575,8 +575,14 @@ export function setWorkspaceFolders(folders: Set<string>) {
 	if (old.length === workspaceFolders.length &&
 		!old.some((v, i) => workspaceFolders[i] !== v))
 		return;
-	for (const d of Object.values(lexers))
-		lexers[d.uri] && !d.setWorkspaceFolder() && !d.actived && d.close();
+	for (const d of Object.values(lexers)) {
+		if (!lexers[d.uri]) continue;
+		const o = d.workspaceFolder, n = d.setWorkspaceFolder();
+		if (!n)
+			!d.actived && d.close();
+		else if (o !== n && d.need_scriptdir && d.last_diags)
+			d.initLibDirs(restorePath(n));
+	}
 }
 
 export async function sleep(ms: number) {

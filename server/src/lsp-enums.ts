@@ -65,41 +65,58 @@ export enum DiagnosticSeverity {
 }
 
 export enum FileChangeType {
-    /**
-     * The file got created.
-     */
-    Created = 1,
-    /**
-     * The file got changed.
-     */
-    Changed = 2,
-    /**
-     * The file got deleted.
-     */
-    Deleted = 3,
+	/**
+	 * The file got created.
+	 */
+	Created = 1,
+	/**
+	 * The file got changed.
+	 */
+	Changed = 2,
+	/**
+	 * The file got deleted.
+	 */
+	Deleted = 3,
 }
 
 export enum MessageType {
-    /**
-     * An error message.
-     */
-    Error = 1,
-    /**
-     * A warning message.
-     */
-    Warning = 2,
-    /**
-     * An information message.
-     */
-    Info = 3,
-    /**
-     * A log message.
-     */
-    Log = 4,
-    /**
-     * A debug message.
-     *
-     * @since 3.18.0
-     */
-    Debug = 5,
+	/**
+	 * An error message.
+	 */
+	Error = 1,
+	/**
+	 * A warning message.
+	 */
+	Warning = 2,
+	/**
+	 * An information message.
+	 */
+	Info = 3,
+	/**
+	 * A log message.
+	 */
+	Log = 4,
+	/**
+	 * A debug message.
+	 *
+	 * @since 3.18.0
+	 */
+	Debug = 5,
+}
+
+export enum CompletionTriggerKind {
+	/**
+	 * Completion was triggered by typing an identifier (24x7 code
+	 * complete), manual invocation (e.g Ctrl+Space) or via API.
+	 */
+	Invoked = 1,
+	/**
+	 * Completion was triggered by a trigger character specified by
+	 * the `triggerCharacters` properties of the `CompletionRegistrationOptions`.
+	 */
+	TriggerCharacter = 2,
+	/**
+	 * Completion was re-triggered as current completion list is incomplete
+	 */
+	TriggerForIncompleteCompletions = 3,
 }

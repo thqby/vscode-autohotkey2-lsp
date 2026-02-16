@@ -2941,6 +2941,10 @@ export class Lexer {
 						else
 							warn_once.m ??= (_this.addDiagnostic(warn.notimplemented(), tk.offset, tk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
 						break;
+					case '#structpack':
+						if (ahkVersion < alpha_11 + 8)
+							_this.addDiagnostic(diagnostic.requireVerN(alpha_11 + 8), tk.offset, tk.length);
+						break;
 					default:
 						if (/^#(if|hotkey|(noenv|persistent|commentflag|escapechar|menumaskkey|maxmem|maxhotkeysperinterval|keyhistory)\b)/i.test(l) &&
 							!stop_parse(tk))
@@ -3983,10 +3987,10 @@ export class Lexer {
 					if (!(ts = ts?.previous_token))
 						return;
 					if (ts.previous_token?.type === TokenType.Dot &&
-					(ts.content.toLowerCase() !== 'prototype' ||
-						(proto = true, !(ts = ts.previous_token?.previous_token) ||
+						(ts.content.toLowerCase() !== 'prototype' ||
+							(proto = true, !(ts = ts.previous_token?.previous_token) ||
 								ts.previous_token?.type === TokenType.Dot)))
-					return;
+						return;
 					_low = ts!.content.toUpperCase();
 					if (_low !== 'THIS' && _low !== 'SUPER' || !(cls = get_class()) || proto && !(cls = cls.prototype))
 						return;
@@ -3995,7 +3999,7 @@ export class Lexer {
 					return;
 				if (flag) {
 					if (tk.content.toLowerCase() === 'defineprop') {
-					const pi = tk.callsite?.paraminfo;
+						const pi = tk.callsite?.paraminfo;
 						let nk = tokens[tk.next_token_offset];
 						if (input[tk.offset + tk.length] === '(') {
 							const tt = nk.next_pair_pos ? _this.getToken(nk.next_pair_pos + 1, true) : null;
@@ -5126,7 +5130,7 @@ export class Lexer {
 					if ((m = c.match(/^(\d+[Ee](\d+)?|(0[Xx][\da-fA-F]+)|(\d+))$/))) {
 						if (m[2] || m[3]) {
 							lst = createToken(c, TokenType.Number, offset, c.length, bg);
-							lst.data = !!m[2], lst.semantic = SE_NUMBER;
+							lst.data = m[2] ? FLOAT : INTEGER, lst.semantic = SE_NUMBER;
 							return lst;
 						}
 						if (m[4]) {
@@ -5138,7 +5142,7 @@ export class Lexer {
 								if (/^\d*([Ee]\d+)?$/.test(cc)) {
 									c += '.' + cc, parser_pos = p;
 									lst = createToken(c, TokenType.Number, offset, c.length, bg);
-									lst.data = true;
+									lst.data = FLOAT;
 									return lst.semantic = SE_NUMBER, lst;
 								} else if (/^\d*[Ee]$/.test(cc) && p < input_length && '-+'.includes(input[p])) {
 									cc += input[p], p += 1;
@@ -5147,9 +5151,10 @@ export class Lexer {
 									if (/^\d+$/.test(t))
 										c += '.' + cc + t, parser_pos = p;
 								}
-								data = true;
+								data = FLOAT;
 							}
-							lst = createToken(c, TokenType.Number, offset, c.length, bg), lst.data = data;
+							lst = createToken(c, TokenType.Number, offset, c.length, bg);
+							lst.data = data ?? INTEGER;
 							return lst.semantic = SE_NUMBER, lst;
 						} else if (parser_pos < input_length && '-+'.includes(input[parser_pos])) {
 							const sign = input[parser_pos], p = parser_pos;
@@ -5158,7 +5163,7 @@ export class Lexer {
 							delete _this.tokens[t.offset];
 							if (t.type === TokenType.Number && /^\d+$/.test(t.content)) {
 								c += sign + t.content;
-								lst = createToken(c, TokenType.Number, offset, c.length, bg), lst.data = true;
+								lst = createToken(c, TokenType.Number, offset, c.length, bg), lst.data = FLOAT;
 								return lst.semantic = SE_NUMBER, lst;
 							} else
 								parser_pos = p;
@@ -5211,8 +5216,8 @@ export class Lexer {
 									}
 									parser_pos = m ? i + m[0].length : input_length;
 									data.push(0, parser_pos - i);
-									lst = createToken(input.substring(o, parser_pos), TokenType.String, offset, parser_pos - offset, 1);
-									_this.addFoldingRange(o, parser_pos, 'block');
+									lst = createToken(input.substring(offset, parser_pos), TokenType.String, offset, parser_pos - offset, 1);
+									_this.addFoldingRange(offset, parser_pos, 'block');
 									lst.data = data;
 									return lst.ignore = true, lst;
 								} else {
@@ -5466,7 +5471,7 @@ export class Lexer {
 					if (/^\d+([Ee]\d+)?$/.test(nextc)) {
 						parser_pos = p, c += nextc;
 						lst = createToken('0' + c, TokenType.Number, offset, c.length, bg);
-						lst.data = true;
+						lst.data = FLOAT;
 						return lst.semantic = SE_NUMBER, lst;
 					} else if (p < input_length && /^\d+[Ee]$/.test(nextc) && '-+'.includes(input[p])) {
 						nextc += input[p], p += 1;
@@ -5475,7 +5480,7 @@ export class Lexer {
 						if (/^\d+$/.test(t)) {
 							parser_pos = p, c += nextc + t;
 							lst = createToken('0' + c, TokenType.Number, offset, c.length, bg);
-							lst.data = true;
+							lst.data = FLOAT;
 							return lst.semantic = SE_NUMBER, lst;
 						}
 					}
@@ -5676,7 +5681,7 @@ export class Lexer {
 					if (content) {
 						lst.skip_pos = parser_pos = offset + content.length;
 						_this.tokens[offset] = {
-							...lst.data = { content, offset, length: content.length },
+							...lst.data = { content, offset, length: content.length }, ignore: true,
 							type: TokenType.Text, previous_token: lst, next_token_offset: -1, topofline: 0
 						};
 						_this.token_ranges.push({ start: offset, end: offset + content.length, type: 3, previous: lst.offset });
@@ -6798,13 +6803,8 @@ export class Lexer {
 		if (process.env.BROWSER)
 			return;
 		let workfolder: string;
-		if (!dir) {
-			for (workfolder of configCache.WorkingDirs)
-				if (this.uri.startsWith(workfolder)) {
-					dir = restorePath(URI.parse(workfolder).fsPath.replace(/[\\/]$/, ''));
-					break;
-				}
-		}
+		if (!dir && this.workspaceFolder)
+			dir = restorePath(URI.parse(this.workspaceFolder).fsPath.replace(/[\\/]$/, ''));
 		if (dir)
 			this.scriptdir = dir;
 		else if ((workfolder = resolve()).toLowerCase() !== this.scriptpath.toLowerCase()
@@ -7385,11 +7385,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 				break;
 			}
 			case TokenType.Number:
-				if (/^[-+]?(\d+$|0[xX])/.test(tk.content))
-					syms = [INTEGER];
-				else if (/^[-+]?\d+[.eE]/.test(tk.content))
-					syms = [FLOAT];
-				else syms = [NUMBER];
+				syms = [tk.data as AhkSymbol ?? NUMBER];
 				break;
 			case TokenType.String: syms = [STRING]; break;
 			case TokenType.BlockStart:
@@ -7442,23 +7438,27 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 						stack.push(...rv);
 						return;
 					}
+					break;
 				}
 			// fall through
 			case 1:
+				if (rv.length === 1 && rv[0].type === TokenType.Number)
+					ret.data = '++--?'.includes(op.content) ? rv[0].data : INTEGER;
 				break;
 			case 0: {
 				const lv = stack.splice((l = operand.pop()) ?? 0);
 				let s;
 				if (l === undefined || !lv.length)
 					return !(stack.length = 0);
-				if (op.content.startsWith('.'))
+				if ((s = op.content) === '.' || s === '.=') {
 					ret.type = TokenType.String;
-				else if (op.content === ':=') {
+					break;
+				}
+				if (s === ':=') {
 					operand.push(stack.length), stack.push(...rv);
 					return;
-				} else if (['&&', 'and'].includes(s = op.content.toLowerCase())) {
+				} else if (['&&', 'and'].includes(s = s.toLowerCase())) {
 					operand.push(stack.length);
-					stack.push(ret), stack.push({ type: TokenType.Operator, content: '||', op_type: 0 } as Token);
 					stack.push(...rv);
 					return;
 				} else if (['||', 'or', '??', '??=', ':'].includes(s)) {
@@ -7466,6 +7466,19 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 					stack.push(...lv), stack.push({ type: TokenType.Operator, content: '||', op_type: 0 } as Token);
 					stack.push(...rv);
 					return;
+				}
+				if (/[<>&|^!~iI]|\/\/|^==?$/.test(s))
+					ret.data = INTEGER;
+				else if (s === '/' || s === '/=')
+					ret.data = FLOAT;
+				else if (/[-+*]/.test(s) && lv.length === 1 && rv.length === 1) {
+					ret.data = INTEGER;
+					for (const v of lv.concat(rv))
+						if (v.type !== TokenType.Number) {
+							delete ret.data;
+						} else if (v.data === FLOAT) {
+							ret.data = FLOAT; break;
+						}
 				}
 				break;
 			}

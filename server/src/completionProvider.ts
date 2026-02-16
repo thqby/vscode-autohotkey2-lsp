@@ -3,8 +3,8 @@ import { opendir } from 'fs/promises';
 import { basename, relative, resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit } from 'vscode-languageserver';
 import {
-	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, FuncNode,
-	Lexer, Maybe, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
+	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, CompletionTriggerKind,
+	FuncNode, Lexer, Maybe, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
 	a_Vars, ahkUris, ahkVars, allIdentifierChar, completionItemCache, completionitem, configCache,
 	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getCallInfo,
 	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail,
@@ -80,6 +80,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		.map((v: any) => (v[1] = (v[1] || undefined)?.split(''), v)));
 	// eslint-disable-next-line prefer-const
 	let { text, word, token, range, linetext, kind, symbol } = lex.getContext(position, true);
+	let right_is_paren = '(['.includes(linetext[range.end.character] || '\0');
 	const list = lex.relevance, { line, character } = position;
 	let isexpr = false, expg = makeSearchRegExp(word), offset;
 
@@ -106,7 +107,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		case TokenType.Comment:
 		case TokenType.InlineComment: return;
 		case TokenType.BlockComment:
-			if (!/[<>{|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
+			if (!/[<>{(|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
 				return;
 			if (text.includes('.')) {
 				for (const it of Object.values(findClass(lex, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
@@ -125,7 +126,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				}
 				for (const td of tds)
 					for (const n in td)
-						if (expg.test(n))
+						if (expg.test(n) && td[n].kind === SymbolKind.Class)
 							vars[n] ??= items.push(convertNodeCompletion(td[n]));
 			}
 			return items;
@@ -253,7 +254,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				break;
 		// fall through
 		default: {
-			if (token.callsite || token.topofline > 0)
+			if (token.callsite || token.topofline > 0 && token.type !== TokenType.String)
 				break;
 			const tp = [TokenType.Comma, TokenType.Dot, TokenType.Assign, TokenType.Number, TokenType.Operator, TokenType.Reserved, TokenType.String, TokenType.Identifier];
 			const maxn = token.type === TokenType.String ? 0 : 3, tokens = lex.tokens;
@@ -479,7 +480,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					for (const sym of syms)
 						await add_annotations(sym.node.type_annotations || []);
 				}
-				!items.length && add_texts();
+				!items.length && !`'"`.includes(triggerCharacter!) && add_texts();
 				return items;
 				async function add_annotations(annotations: (string | AhkSymbol)[],
 					type_params?: Record<string, AhkSymbol>, _this?: ClassNode) {
@@ -524,7 +525,6 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 	}
 
-	let right_is_paren = '(['.includes(linetext[range.end.character] || '\0');
 	const join_c = configCache.FormatOptions?.brace_style === 0 ? '\n' : ' ';
 
 	// fn|()=>...
@@ -602,7 +602,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				}
 			}
 		}
-		if (!is_any && (triggerKind !== 1 || word.length < 3))
+		if (!is_any && (triggerKind !== CompletionTriggerKind.Invoked || word.length < 3))
 			return items;
 		const objs = new Set([lex.object, lexers[ahkUris.ahk2]?.object, lexers[ahkUris.ahk2_h]?.object]);
 		objs.delete(undefined!);
@@ -817,7 +817,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 
 	// constant
 	if (!isexpr && kind !== SymbolKind.Event) {
-		if (triggerKind === 1 && text.length > 2 && text.includes('_') || /[A-Z]{2,}/.test(text))
+		if (triggerKind === CompletionTriggerKind.Invoked && text.length > 2 && text.includes('_') || /[A-Z]{2,}/.test(text))
 			for (const it of completionItemCache.constant)
 				expg.test(it.label) && items.push(it);
 	}

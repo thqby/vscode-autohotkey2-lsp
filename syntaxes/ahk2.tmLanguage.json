@@ -290,7 +290,7 @@
               "name": "storage.modifier.ahk2"
             },
             {
-              "begin": "(?<=^[ \t]*(?i:static[ \t]+)?)(\\w+)[ \t]*(=>)([ \t]+(;.*)\\n|[ \t]*\\n)?",
+              "begin": "(?<=^[ \t]*(?i:static[ \t]+)?)(\\w+)[ \t]*(=>)",
               "beginCaptures": {
                 "1": {
                   "patterns": [
@@ -302,23 +302,16 @@
                 },
                 "2": {
                   "name": "storage.type.function.arrow.ahk2"
-                },
-                "4": {
-                  "patterns": [
-                    {
-                      "include": "#comment_line"
-                    }
-                  ]
                 }
               },
-              "end": "(?=\\n)",
-              "name": "meta.block.prototype.body.ahk2",
+              "end": "(?=^)",
+              "name": "meta.block.property.body.ahk2",
               "patterns": [
                 {
-                  "include": "#line_continue"
+                  "include": "$base"
                 },
                 {
-                  "include": "$base"
+                  "include": "#line_continue"
                 }
               ]
             },
@@ -347,7 +340,7 @@
                   "name": "entity.name.function.method.ahk2"
                 }
               },
-              "end": "(?=\\n)",
+              "end": "(?=^)",
               "name": "meta.block.method.ahk2",
               "patterns": [
                 {
@@ -390,27 +383,20 @@
                   ]
                 },
                 {
-                  "begin": "(=>)([ \t]+(;.*)\\n|[ \t]*\\n)?",
+                  "begin": "(=>)",
                   "beginCaptures": {
                     "1": {
                       "name": "storage.type.function.arrow.ahk2"
-                    },
-                    "3": {
-                      "patterns": [
-                        {
-                          "include": "#comment_line"
-                        }
-                      ]
                     }
                   },
-                  "end": "(?=\\n)",
+                  "end": "(?=^)",
                   "name": "meta.block.method.body.ahk2",
                   "patterns": [
                     {
-                      "include": "#line_continue"
+                      "include": "$base"
                     },
                     {
-                      "include": "$base"
+                      "include": "#line_continue"
                     }
                   ]
                 },
@@ -432,7 +418,7 @@
                 }
               },
               "name": "meta.block.property.ahk2",
-              "end": "(?=\\n)",
+              "end": "(?=^)",
               "patterns": [
                 {
                   "begin": "\\G\\[",
@@ -478,7 +464,7 @@
                           "name": "storage.type.setter.ahk2"
                         }
                       },
-                      "end": "(?=\\n)",
+                      "end": "(?=^)",
                       "patterns": [
                         {
                           "include": "#comments"
@@ -504,27 +490,20 @@
                           ]
                         },
                         {
-                          "begin": "(=>)([ \t]+(;.*)\\n|[ \t]*\\n)?",
+                          "begin": "(=>)",
                           "beginCaptures": {
                             "1": {
                               "name": "storage.type.function.arrow.ahk2"
-                            },
-                            "3": {
-                              "patterns": [
-                                {
-                                  "include": "#comment_line"
-                                }
-                              ]
                             }
                           },
                           "name": "meta.block.property.setter.body.ahk2",
-                          "end": "(?=\\n)",
+                          "end": "(?=^)",
                           "patterns": [
                             {
-                              "include": "#line_continue"
+                              "include": "$base"
                             },
                             {
-                              "include": "$base"
+                              "include": "#line_continue"
                             }
                           ]
                         }
@@ -537,7 +516,7 @@
                           "name": "storage.type.getter.ahk2"
                         }
                       },
-                      "end": "(?=\\n)",
+                      "end": "(?=^)",
                       "patterns": [
                         {
                           "include": "#comments"
@@ -563,27 +542,20 @@
                           ]
                         },
                         {
-                          "begin": "(=>)([ \t]+(;.*)\\n|[ \t]*\\n)?",
+                          "begin": "(=>)",
                           "beginCaptures": {
                             "1": {
                               "name": "storage.type.function.arrow.ahk2"
-                            },
-                            "3": {
-                              "patterns": [
-                                {
-                                  "include": "#comment_line"
-                                }
-                              ]
                             }
                           },
                           "name": "meta.block.property.getter.body.ahk2",
-                          "end": "(?=\\n)",
+                          "end": "(?=^)",
                           "patterns": [
                             {
-                              "include": "#line_continue"
+                              "include": "$base"
                             },
                             {
-                              "include": "$base"
+                              "include": "#line_continue"
                             }
                           ]
                         }
@@ -595,27 +567,20 @@
                   ]
                 },
                 {
-                  "begin": "(=>)([ \t]+(;.*)\\n|[ \t]*\\n)?",
+                  "begin": "(=>)",
                   "beginCaptures": {
                     "1": {
                       "name": "storage.type.function.arrow.ahk2"
-                    },
-                    "3": {
-                      "patterns": [
-                        {
-                          "include": "#comment_line"
-                        }
-                      ]
                     }
                   },
                   "name": "meta.block.property.getter.body.ahk2",
-                  "end": "(?=\\n)",
+                  "end": "(?=^)",
                   "patterns": [
                     {
-                      "include": "#line_continue"
+                      "include": "$base"
                     },
                     {
-                      "include": "$base"
+                      "include": "#line_continue"
                     }
                   ]
                 },
@@ -626,9 +591,6 @@
             },
             {
               "include": "#class_block"
-            },
-            {
-              "include": "#line_continue"
             },
             {
               "include": "$base"
@@ -650,17 +612,13 @@
               "name": "punctuation.definition.comment.begin.ahk2"
             }
           },
-          "end": "(^[ \t]*\\*\\/|\\*\\/(?=[ \t]*$)|(?<=\\G.*)\\*\\/(?=[ \t]+;))",
+          "end": "(^[ \t]*\\*\\/|\\*\\/(?=[ \t]*$))",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.comment.end.ahk2"
             }
           },
           "patterns": [
-            {
-              "match": "(?<=\\G.*[ \t]);.*",
-              "name": "comment.line.ahk2"
-            },
             {
               "include": "#comment_tag"
             },
@@ -677,17 +635,13 @@
               "name": "punctuation.definition.comment.begin.ahk2"
             }
           },
-          "end": "(^[ \t]*\\*\\/|\\*\\/(?=[ \t]*$)|(?<=\\G.*)\\*\\/(?=[ \t]+;))",
+          "end": "(^[ \t]*\\*\\/|\\*\\/(?=[ \t]*$))",
           "endCaptures": {
             "1": {
               "name": "punctuation.definition.comment.end.ahk2"
             }
           },
           "patterns": [
-            {
-              "match": "(?<=\\G.*[ \t]);.*",
-              "name": "comment.line.ahk2"
-            },
             {
               "include": "#comment_tag"
             }
@@ -743,53 +697,17 @@
           }
         },
         {
-          "match": "(?<=^[ \t]*);[ \t]*@(?i:ahk2exe-ignore(begin|end))",
-          "name": "keyword.control.directive.ahk2"
-        },
-        {
-          "begin": "^[ \t]*(;[ \t]*@(?i:ahk2exe-let))\\b",
-          "beginCaptures": {
-            "0": {
-              "name": "keyword.control.directive.ahk2"
-            }
-          },
-          "end": "(?=\\n)",
-          "patterns": [
-            {
-              "include": "#strings"
-            },
-            {
-              "include": "#numbers"
-            },
-            {
-              "match": "\\b([_[:alpha:]][_[:alnum:]]*)(?=[ \t]*=)",
-              "name": "constant.language.ahk2"
-            },
-            {
-              "match": "=",
-              "name": "keyword.operator.assignment.ahk2"
-            },
-            {
-              "match": ",",
-              "name": "punctuation.separator.comma.ahk2"
-            }
-          ]
-        },
-        {
-          "begin": "^[ \t]*((;[ \t]*@)(?i:[\\w\\-]+))\\b",
+          "begin": "(?<=^[ \t]*)(;[ \t]*@[\\w\\-]+)\\b",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
-            },
-            "2": {
-              "name": "punctuation.definition.directive.ahk2"
             }
           },
-          "end": "(?=\\n)",
+          "end": "\n",
           "patterns": [
             {
               "begin": "[^ \t;]",
-              "end": "(?=(?:[ \t]+;))|(?=\\n)",
+              "end": "(?=[ \t]+;|\n)",
               "name": "string.literal.include.ahk2"
             },
             {
@@ -1686,60 +1604,35 @@
         }
       ]
     },
-    "line_continue": {
-      "begin": "([*/<>?:=.&|^]+|[~+\\-]=?|!==?|,|\\b(?i:(and|contain|not|in|is|or)))[ \t]*([ \t];.*)?\\n",
-      "beginCaptures": {
-        "1": {
-          "patterns": [
-            {
-              "include": "#operators"
-            },
-            {
-              "match": ",",
-              "name": "punctuation.separator.comma.ahk2"
-            },
-            {
-              "match": "=>",
-              "name": "storage.type.function.arrow.ahk2"
-            }
-          ]
-        },
-        "3": {
-          "patterns": [
-            {
-              "include": "#comment_line"
-            }
-          ]
-        }
-      },
-      "end": "(?!([*/<>?:=.]+|[+\\-]=?|!==?|,|\\b(?i:(and|contain|not|in|is|or))))[ \t]*([ \t];.*)?(?=\\n)|(?=^[ \t]*(?i:static|if|try|loop|while)[ \t(])",
-      "endCaptures": {
-        "3": {
-          "patterns": [
-            {
-              "include": "#comment_line"
-            }
-          ]
-        }
-      },
+    "line_s": {
+      "begin": "(?<=([-+*?!~/<:=.,;&|^]|\\b(?i:and|contain|in|is|or|not))[ \t]*)\n",
+      "end": "(?=\n)",
+      "applyEndPatternLast": 1,
       "patterns": [
         {
-          "match": "(?<=^[ \t]*)\\w+(?=(\\n|[ \t]))",
-          "captures": {
-            "0": {
-              "patterns": [
-                {
-                  "include": "#variables"
-                }
-              ]
-            }
-          }
+          "include": "$base"
         },
         {
-          "include": "#line_continue"
-        },
+          "match": "(?<=^[ \t]*)\n"
+        }
+      ]
+    },
+    "line_p": {
+      "begin": "(?=\n)",
+      "end": "(?=^[ \t]*[\\w}])",
+      "patterns": [
         {
           "include": "$base"
+        }
+      ]
+    },
+    "line_continue": {
+      "patterns": [
+        {
+          "include": "#line_s"
+        },
+        {
+          "include": "#line_p"
         }
       ]
     },
@@ -1943,7 +1836,7 @@
           ]
         },
         {
-          "match": "^[ \t]*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|inputlevel|initexec|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|notrayicon|suspendexempt|usehook|usestdlib|warn|warncontinuableexception|winactivateforce))\\b",
+          "match": "^[ \t]*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|inputlevel|initexec|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|notrayicon|structpack|suspendexempt|usehook|usestdlib|warn|warncontinuableexception|winactivateforce))\\b",
           "captures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
