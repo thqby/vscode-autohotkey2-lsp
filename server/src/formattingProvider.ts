@@ -24,29 +24,19 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 			start: { line: line - 1, character: 0 },
 			end: { line: line + 2, character: 0 }
 		}).split(/\r?\n/);
-		let s = linetexts[0].trimEnd(), indent_string: string;
+		const prev = opts.indent_string;
+		let s = linetexts[0].trimEnd(), indent_string = '', cc = '';
 
 		if (!linetexts[1].trim())
 			character = linetexts[1].length;
 
 		if (s.endsWith('{')) {
-			const prev = opts.indent_string;
 			if ((result = format_end_with_brace({ line: line - 1, character: s.length }))) {
-				indent_string = opts.indent_string;
+				indent_string = opts.indent_string, cc = '}';
 				if (linetexts[1].substring(0, character) !== indent_string)
 					result.push({
 						newText: indent_string,
 						range: { start: { line, character: 0 }, end: { line, character } }
-					});
-
-				if ((s = (linetexts[2] ??= '').trimStart()).startsWith('}') &&
-					!linetexts[2].startsWith((indent_string = indent_string.replace(prev, '')) + '}'))
-					result.push({
-						newText: indent_string,
-						range: {
-							start: { line: line + 1, character: 0 },
-							end: { line: line + 1, character: linetexts[2].length - s.length }
-						}
 					});
 			}
 		} else if (s && !/^(;|\/\*)|[ \t];/.test(s.trimStart())) {
@@ -64,6 +54,7 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 				else {
 					const range = { start: lex.document.positionAt(b), end: { line: ll, character: s.length } };
 					const newText = lex.beautify(opts, range).trim();
+					cc = { '(': ')', '[': ']' }[s.slice(-1)] ?? '';
 					result = [{ range, newText }];
 					if (linetexts[1].substring(0, character) !== (indent_string = opts.indent_string))
 						result.push({ newText: indent_string, range: { start, end: position } });
@@ -71,6 +62,15 @@ export async function typeFormatting(params: DocumentOnTypeFormattingParams): Pr
 				}
 			}
 		}
+		if (cc && (s = (linetexts[2] ??= '').trimStart()).startsWith(cc) &&
+			!linetexts[2].startsWith((indent_string = indent_string.replace(prev, '')) + cc))
+			result!.push({
+				newText: indent_string,
+				range: {
+					start: { line: line + 1, character: 0 },
+					end: { line: line + 1, character: linetexts[2].length - s.length }
+				}
+			});
 		return result;
 	} else if (ch === '}')
 		return format_end_with_brace(position);

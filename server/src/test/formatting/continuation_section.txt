@@ -1,0 +1,43 @@
+if 1 {
+	a := '
+	(
+		Parentheses are aligned with a,
+		and the first two lines are indented by one level.
+			The line be indented by two level.
+	)'
+
+	b := '
+	(ltrim
+		Parentheses are aligned with b,
+		and all line are indented by one level.
+	)'
+
+	c := '
+(ltrim0
+Parentheses are left-aligned,
+	and other lines remain unchanged.
+)'
+}
+
+if 2 {
+	a :=
+	(
+		'Parentheses are aligned with a,
+		and the first two lines are indented by one level.
+			The line be indented by two level.'
+	)
+
+	b :=
+	(ltrim
+		'Parentheses are aligned with b,
+		and all line are indented by one level.'
+	)
+
+	c :=
+(ltrim0
+	b .
+'Parentheses and the first line of the string
+	are aligned to the left,
+		and the other lines remain unchanged.'
+)
+}

@@ -228,13 +228,13 @@ export interface SemanticToken {
 	resolved?: boolean
 }
 
-export interface Token {
+export interface Token<T = unknown> {
 	// if expression
 	//   |statement
 	body_start?: number
 	callsite?: CallSite
 	content: string
-	data?: unknown
+	data?: T
 	has_LF?: boolean
 	definition?: AhkSymbol
 	fat_arrow_end?: boolean
@@ -472,6 +472,7 @@ export class Lexer {
 		let last_comment_fr: FoldingRange | undefined, last_LF: number, lst: Token;
 		let n_newlines: number, parser_pos: number, sharp_offsets: number[];
 		let customblocks: { region: number[], bracket: number[] };
+		let cs_opt: ContinueSectionOption | undefined;
 		let format_disable_flag = false;
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const _this = this, uri = URI.parse(document.uri);
@@ -508,8 +509,14 @@ export class Lexer {
 			ternary_depth?: number,
 			try_block: boolean
 		};
+		interface ContinueSectionOption {
+			comments?: boolean
+			indent: string
+			new_indent?: string
+			ltrim?: boolean
+		};
 		let output_lines: { text: string[], indent: number }[], flags: Flag, previous_flags: Flag, flag_store: Flag[];
-		let opt: FormatOptions, preindent_string: string, indent_string: string, space_in_other: boolean, ck: Token;
+		let opt: FormatOptions, indent_string: string, space_in_other: boolean, ck: Token;
 		let token_text: string, token_text_low: string, token_type: TokenType, last_type: TokenType, last_text: string;
 		let output_space_before_token: boolean | undefined;
 		const handlers: Record<number, () => void> = {
@@ -608,7 +615,6 @@ export class Lexer {
 		}
 
 		this.beautify = function (options: FormatOptions, range?: Range) {
-			let end_pos: number;
 			!_this.isparsed && _this.parseScript();
 
 			opt = {
@@ -626,13 +632,16 @@ export class Lexer {
 				...options
 			};
 
+			const re = /([ \t])\1*/;
+			let end_pos = input_length;
 			last_type = TokenType.EOF, last_text = '', begin_line = true, lst = { ...EMPTY_TOKEN };
-			last_LF = -1, end_pos = input_length, ck = _this.getToken(0);
-			preindent_string = input.substring(input.lastIndexOf('\n', parser_pos = ck.offset) + 1, parser_pos);
+			last_LF = -1, ck = _this.getToken(0), parser_pos = ck.offset;
 			output_space_before_token = false, format_mode = true;
-			indent_string = opt.indent_string ?? '\t', space_in_other = opt.space_in_other ?? true;
+			indent_string = opt.indent_string?.match(re)?.[0] ?? '\t';
+			space_in_other = opt.space_in_other ?? true;
 			output_lines = [create_output_line()];
-			flag_store = [], flags = undefined!, format_disable_flag = false;
+			flag_store = [], flags = undefined!;
+			format_disable_flag = false, cs_opt = undefined;
 			set_mode(Mode.BlockStatement);
 
 			if (opt.symbol_with_same_case)
@@ -642,7 +651,14 @@ export class Lexer {
 				end_pos = _this.document.offsetAt(range.end);
 				ck = _this.findToken(_this.document.offsetAt(range.start));
 				range.start = _this.document.positionAt(parser_pos = ck.offset);
-				preindent_string = input.substring(input.lastIndexOf('\n', parser_pos) + 1, parser_pos).match(/^[ \t]*/)![0];
+			}
+			let preindent = input.substring(input.lastIndexOf('\n', parser_pos) + 1, parser_pos).match(re)?.[0];
+			if (preindent) {
+				let c = preindent[0];
+				if (c === indent_string[0])
+					flags.indentation_level = Math.floor(preindent.length / indent_string.length);
+				else if (c === '\t')
+					flags.indentation_level = preindent.length, indent_string = '\t';
 			}
 
 			while (true) {
@@ -663,14 +679,14 @@ export class Lexer {
 						if (pt?.type) {
 							while ((ck = _this.findToken(pt.skip_pos ?? pt.offset + pt.length)).offset < end_pos)
 								pt = ck;
-							for (end = pt.offset + pt.length; ' \t'.includes(input[end]); end++);
+							for (end = pt.skip_pos ?? pt.offset + pt.length; ' \t'.includes(input[end]); end++);
 							if (!WHITESPACE.includes(input.charAt(end)))
 								end = pt.offset + pt.length;
 							while (just_added_newline())
 								output_lines.pop();
 						}
 						range.end = _this.document.positionAt(end);
-						options.indent_string = preindent_string + indent_string.repeat(flags.indentation_level);
+						options.indent_string = indent_string.repeat(flags.indentation_level);
 					}
 					while (flags.mode === Mode.Statement)
 						restore_mode();
@@ -681,8 +697,8 @@ export class Lexer {
 					flags.last_text = ')';
 					input_wanted_newline = n_newlines > 0;
 				} else if ((input_wanted_newline = n_newlines > 0)) {
-					if (continuation_sections_mode !== false) {
-						print_newline();
+					if (continuation_sections_mode !== false && !(ck.ignore && ck.content === '(')) {
+						print_newline(true);
 						for (let i = 1; i < n_newlines; i++)
 							output_lines.push(create_output_line());
 					} else if (!flags.in_expression && !flags.in_conditional) {
@@ -723,7 +739,7 @@ export class Lexer {
 		function format_params_default_val(tokens: Record<number, Token>, params: ParamList) {
 			opt = { max_preserve_newlines: 1 };
 			space_in_other = true, indent_string = '\t';
-			format_mode = true, preindent_string = '';
+			format_mode = true;
 			delete params.format;
 			for (const param of params) {
 				if (!param.range_offset)
@@ -4819,7 +4835,7 @@ export class Lexer {
 
 		// Using object instead of string to allow for later expansion of info about each line
 		function create_output_line() {
-			return { text: [] as string[], indent: 0 };
+			return { indent: 0, text: [] as string[] };
 		}
 
 		function trim_newlines() {
@@ -4873,8 +4889,6 @@ export class Lexer {
 		function print_token(printable_token?: string): void {
 			const line = output_lines.at(-1)!;
 			if (!line.text.length) {
-				if (preindent_string)
-					line.text.push(preindent_string);
 				flags.indentation_level = print_indent_string(flags.indentation_level);
 			} else if (output_space_before_token)
 				line.text.push(' ');
@@ -4883,15 +4897,18 @@ export class Lexer {
 
 			function print_indent_string(level: number) {
 				if (level) {
-					for (let i = output_lines.length - 2; i >= 0; i--)
-						if (output_lines[i].text.length) {
-							level = Math.min(output_lines[i].indent + 1, level);
-							break;
-						}
+					level = Math.min(level, previous_line_indent() + 1);
 					line.text.push(indent_string.repeat(line.indent = level));
 				}
 				return level;
 			}
+		}
+
+		function previous_line_indent() {
+			for (let i = output_lines.length - 2; i >= 0; i--)
+				if (output_lines[i].text.length)
+					return output_lines[i].indent;
+			return flags.indentation_level;
 		}
 
 		function indent(): void {
@@ -5156,17 +5173,26 @@ export class Lexer {
 			if (c === '(' || c === '[') {
 				if (c === '(') {
 					if (bg && !continuation_sections_mode) {
-						let i = parser_pos, b = i, lc = 0, t: string, join: [number, string] = [0, ''], comments = false;
+						let i = parser_pos, b = i, lc = 0, t: string, indent = '',
+							join: [number, string] = [0, ''], comments, ltrim;
 						function check_option() {
 							if ((t = input.slice(b, i - 1).toLowerCase()))
 								if (t.startsWith('join'))
 									join = [b + 4, input.substring(b + 4, i - 1)];
+								else if (t.startsWith('ltrim'))
+									ltrim = t[5] !== '0';
 								else if (/^c(com(ments)?)?$/.test(t))
 									comments = true;
 						}
 						while (true) {
 							if (i >= input_length || (t = input[i++]) === '\n') {
 								check_option();
+								if (' \t'.includes(t = input[i])) {
+									let j = i;
+									for (; input[++j] === t;);
+									indent = input.substring(i, j);
+								}
+								const opt: ContinueSectionOption = { comments, indent, ltrim };
 								if (string_mode) {
 									// raw string
 									// ::hotstring::string
@@ -5176,6 +5202,7 @@ export class Lexer {
 									// )
 									let next_LF = input.indexOf('\n', i), m: RegExpMatchArray | null = null;
 									const o = last_LF + 1, data = [lc, i - 1 - o - lc];
+									(data as unknown as { data: unknown }).data = opt;
 									while (!(m = (t = input.substring(i, next_LF < 0 ? next_LF = input_length : next_LF)).match(/^[ \t]*\)/)) && next_LF > 0) {
 										if (comments && (b = t.search(/(?<=^|[ \t]);/)) > -1)
 											data.push(t.length - b, b);
@@ -5201,7 +5228,7 @@ export class Lexer {
 									lst.ignore = true, parser_pos = i - 1, continuation_sections_mode = true;
 									const content = input.substring(offset + 1, parser_pos).replace(/[ \t]+;.*/, '').trim();
 									while (' \t'.includes(input[++offset])) continue;
-									lst.data = { content, offset, length: content.length, data: { comments, ltrim } };
+									lst.data = { content, offset, length: content.length, data: opt };
 									lst.skip_pos = parser_pos = offset + content.length;
 									_this.token_ranges.push({ start: offset, end: parser_pos, type: 3, previous: lst.offset });
 									const _lst = lst, _mode = format_mode, join_str = join[1].replace(/`[tsrn]/g, '  ');
@@ -5719,9 +5746,10 @@ export class Lexer {
 
 				next_mode = Mode.ArrayLiteral;
 			} else {
-				if (ck.ignore)
+				if (ck.ignore) {
+					flags.indentation_level = real_indentation_level(output_lines.length);
 					print_newline(true);
-				else if (last_type === TokenType.BracketEnd || last_type === TokenType.Identifier)
+				} else if (last_type === TokenType.BracketEnd || last_type === TokenType.Identifier)
 					output_space_before_token = WHITESPACE.includes(ck.prefix_is_whitespace || '\0');
 				else if (last_type === TokenType.String)
 					output_space_before_token = true;
@@ -5749,10 +5777,17 @@ export class Lexer {
 
 			// (options\n...\n)
 			if (ck.ignore) {
-				let c = (ck.data as Token).content;
+				let t = ck.data as Token<ContinueSectionOption>;
+				let c = t.content;
+				if (cs_opt = t.data) {
+					if (cs_opt.ltrim === false) {
+						flags.indent_after = true;
+						previous_flags.indentation_level = flags.indentation_level = 0;
+						output_lines.splice(-1, 1, { indent: 0, text: ['('] });
+					} else cs_opt.new_indent = indent_string.repeat(flags.indentation_level + 1);
+				}
 				flags.disable_linewrap = false;
-				if (c)
-					print_token(c);
+				c && print_token(c);
 			} else {
 				if (opt.space_in_paren)
 					output_space_before_token = true;
@@ -6045,9 +6080,8 @@ export class Lexer {
 				if (!start_of_object_property())
 					allow_wrap_or_preserved_newline();
 			} else {
-				// print_newline();
 				if (input_wanted_newline)
-					print_newline();
+					print_newline(ck.ignore);
 				// ck.ignore -> '
 				// (
 				// str
@@ -6060,17 +6094,42 @@ export class Lexer {
 				else output_space_before_token = true;
 			}
 			if (ck.ignore) {
-				let p: number;
-				print_newline(true);
-				if (opt.ignore_comment && token_text.trimStart().startsWith('(') && (p = token_text.indexOf('\n')) > 0) {
-					const t = token_text.slice(0, p).replace(/[ \t]+;.*$/, '');
-					if (/(^[ \t]*\(|[ \t])c(om(ments?)?)?([ \t]|$)/i.test(t))
-						token_text = `${t}\n${token_text.slice(p + 1).replace(/^[ \t]*;.*\r?\n|[ \t]+;.*/gm, '')}`;
-					else token_text = `${t}\n${token_text.slice(p + 1)}`;
+				const o = (ck.data as { data: ContinueSectionOption })?.data ?? { indent: '' };
+				token_text = token_text.replaceAll('\r\n', '\n');
+				if (opt.ignore_comment)
+					if (o.comments)
+						token_text = token_text.replaceAll(/^[ \t]*;.*\n|[ \t]+;.*/gm, '');
+					else token_text = token_text.replace(/^(.+?)[ \t]+;.*/, '$1');
+				const p = token_text.lastIndexOf('\n');
+				let ls = token_text.substring(p + 1), ps;
+				if (/^[ \t]*\)/.test(ls))
+					ps = token_text.substring(0, p), ls = ls.trimStart();
+				else ps = token_text, ls = '';
+				if (o.ltrim === false) {
+					token_text = `${ps}${ls && `\n${ls}`}`;
+				} else {
+					const ci = indent_string.repeat(previous_line_indent());
+					ps = ps.replaceAll(o.ltrim ? /\n[ \t]*/g :
+						o.indent ? new RegExp(`\n(${o.indent})?`, 'g') : '\n',
+						`\n${ci}${indent_string}`);
+					token_text = `${ci}${ps}${ls && `\n${ci}${ls}`}`;
 				}
-				print_token();
-				output_lines[output_lines.length - 1].text = [token_text];
+				print_newline(true);
+				output_lines.at(-1)!.text.push(token_text);
 				return;
+			}
+			if (continuation_sections_mode && cs_opt && ck.has_LF) {
+				const { indent, ltrim } = cs_opt;
+				token_text = token_text.replaceAll('\r\n', '\n');
+				if (ltrim === false) {
+					print_newline(true);
+					output_lines.at(-1)!.text.push(token_text);
+					return;
+				}
+				token_text = token_text.replaceAll(
+					ltrim ? /\n[ \t]*/g :
+					indent ? new RegExp(`\n(${indent})?`, 'g') : '\n',
+					`\n${cs_opt.new_indent}`);
 			}
 			print_token();
 		}

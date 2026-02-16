@@ -11,13 +11,19 @@ suite('Test formattingProvider', () => {
 				continue;
 			let title = file.slice(0, -4);
 			test(title, function () {
-				const path = resolve(dir, file);
+				let path = resolve(dir, file);
 				const lex = openAndParse(path, false, false);
 				if (!lex)
 					return assert.ok(false);
-				const newText = lex.beautify({ indent_string: '\t' });
-				const result = (existsSync(title += '.txt') ? readFileSync(title, { encoding: 'utf8' }) : lex.document.getText()).replaceAll('\r\n', '\n');
-				assert.ok(newText === result);
+				const newText = lex.beautify({ indent_string: '\t' }).replace(/\n+$/, '');
+				const result = (existsSync(path = resolve(dir, title + '.txt')) ?
+					readFileSync(path, { encoding: 'utf8' }) : lex.document.getText())
+					.replaceAll('\r\n', '\n').replace(/\n+$/, '');
+				if (newText !== result) {
+					const n = newText.split('\n');
+					const r = result.split('\n');
+					r.forEach((t, i) => assert.strictEqual(n[i], t, `line ${i + 1}`));
+				}
 			});
 		}
 	} catch { }
