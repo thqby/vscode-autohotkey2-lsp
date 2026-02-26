@@ -5105,7 +5105,7 @@ export class Lexer {
 							const t = mm[4].toLowerCase();
 							if (t.length === 1 || !/^joy|^pause$/.test(t) && KEYS_RE.test(t)) {
 								last_LF = next_LF, parser_pos = offset + m[0].length;
-								lst = createToken(m[1].replace(/[ \t]+/g, ' '), TokenType.HotkeyLine, offset, m[1].length, 1);
+								lst = createToken(m[1], TokenType.HotkeyLine, offset, m[1].length, 1);
 								offset += lst.length + mm[1].length, lst.skip_pos = parser_pos;
 								lst.data = { content: m[9].trim(), offset, length: parser_pos - offset, data: mm[2] };
 								_this.token_ranges.push({ start: offset, end: parser_pos, type: 3, previous: lst.offset });
@@ -5113,7 +5113,7 @@ export class Lexer {
 							}
 						}
 						parser_pos = input.indexOf('::', parser_pos) + 2;
-						return lst = createToken(m[1].replace(/[ \t]+/g, ' '), TokenType.Hotkey, offset, m[1].length, 1);
+						return lst = createToken(m[1], TokenType.Hotkey, offset, m[1].length, 1);
 					}
 				}
 				line = ll;
@@ -6419,7 +6419,9 @@ export class Lexer {
 
 		function handle_sharp() {
 			print_newline();
-			if (opt.symbol_with_same_case && token_type === TokenType.Directive)
+			if (token_type & TokenType.Hotkey)
+				ck.ignore || (token_text = token_text.replaceAll(/[ \t]+/g, ' '));
+			else if (opt.symbol_with_same_case && token_type === TokenType.Directive)
 				token_text = hoverCache[token_text_low]?.[0] || token_text;
 			if (token_text_low === '#hotif' && opt.indent_between_hotif_directive) {
 				if (flags.hotif_block)
@@ -7009,7 +7011,7 @@ function createPrototype(name: string, kind = 0, extends_ = '') {
 }
 
 function isValidHotkey(s: string) {
-	const m = s.match(/^((([<>$~*!+#^]*?)(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))|~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f])[ \t]+&[ \t]+~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))([ \t]+up)?::$/i);
+	const m = s.match(/^((([<>$~*!+#^]*?)(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))|~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f])[ \t]* & [ \t]*~?(`?;|[\x21-\x3A\x3C-\x7E]|\w+|[^\x00-\x7f]))([ \t]+up)?::$/i);
 	if (!m)
 		return false;
 	for (let i = 4; i < 7; i++)
