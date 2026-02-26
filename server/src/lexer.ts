@@ -6927,6 +6927,7 @@ export class Lexer {
 	}
 
 	public sendDiagnostics(update = false, all = false) {
+		if (this.is_virtual) return;
 		const last_diags = this.last_diags;
 		if (last_diags !== this.diagnostics.length || update && last_diags) {
 			this.last_diags = this.diagnostics.length;
@@ -6973,6 +6974,7 @@ export class Lexer {
 
 	public close(force = false, other = true) {
 		this.actived = false;
+		force ||= this.is_virtual;
 		if (!force && this.keepAlive())
 			return;
 		const relevance = other ? this.relevance : undefined;
