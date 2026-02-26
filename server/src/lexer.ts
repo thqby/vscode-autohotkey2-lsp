@@ -2710,6 +2710,11 @@ export class Lexer {
 					}
 					pi.offset = pk.offset;
 					range = make_range(fc.offset, fc.length);
+					if (pi.unknown && tk.type === TokenType.BracketEnd) {
+						const t = lk.previous_token!.type;
+						if (t === TokenType.Comma || t === TokenType.BracketStart)
+							_this.addDiagnostic(diagnostic.missingoperand(), lk.offset, 1);
+					}
 				} else {
 					const cwp = callWithoutParentheses;
 					if (nextc === ',' || maybev1) {
@@ -3846,8 +3851,6 @@ export class Lexer {
 								++paraminfo.count;
 								if (lk.type === TokenType.Comma || lk.type === TokenType.BracketStart)
 									paraminfo.miss.push(paraminfo.comma.length);
-								else if (!lk.ignore && lk.type === TokenType.Operator && !/(--|\+\+|%)/.test(lk.content))
-									unexpected(tk);
 								paraminfo.comma.push(tk.offset), iscall && (tk.paraminfo = paraminfo);
 							}
 							break;
