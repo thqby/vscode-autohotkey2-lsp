@@ -10,7 +10,8 @@ export async function documentFormatting(params: DocumentFormattingParams): Prom
 export async function rangeFormatting(params: DocumentRangeFormattingParams): Promise<TextEdit[] | undefined> {
 	const lex = lexers[params.textDocument.uri.toLowerCase()], { options, range } = params;
 	const newText = lex.beautify({ ...configCache.FormatOptions, indent_string: get_indent(options) }, range).trim();
-	return [{ range, newText }];
+	if (newText)
+		return [{ range, newText }];
 }
 
 export async function typeFormatting(params: DocumentOnTypeFormattingParams): Promise<TextEdit[] | undefined> {

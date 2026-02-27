@@ -650,7 +650,9 @@ export class Lexer {
 			if (range) {
 				end_pos = _this.document.offsetAt(range.end);
 				ck = _this.findToken(_this.document.offsetAt(range.start));
-				range.start = _this.document.positionAt(parser_pos = ck.offset);
+				if ((parser_pos = ck.offset) >= end_pos)
+					return format_mode = false, '';
+				range.start = _this.document.positionAt(parser_pos);
 			}
 			let preindent = input.substring(input.lastIndexOf('\n', parser_pos) + 1, parser_pos).match(re)?.[0];
 			if (preindent) {
@@ -4856,8 +4858,8 @@ export class Lexer {
 		}
 
 		function just_added_newline(): boolean {
-			const line = output_lines.at(-1)!;
-			return line.text.length === 0;
+			const line = output_lines.at(-1);
+			return line?.text.length === 0;
 		}
 
 		function allow_wrap_or_preserved_newline(force_linewrap = false): void {
