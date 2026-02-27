@@ -421,22 +421,21 @@ if !chm_hwnd
 WinShow(), WinActivate(), WinWaitActive(), ctl := 0, endt := A_TickCount + 3000
 while (!ctl && A_TickCount < endt)
 	try ctl := ControlGetHwnd('Internet Explorer_Server1')
-NumPut('int64', 0x11CF3C3D618736E0, 'int64', 0x719B3800AA000C81, IID_IAccessible := Buffer(16))
-if ${!!word} && !DllCall('oleacc\\AccessibleObjectFromWindow', 'ptr', ctl, 'uint', 0, 'ptr', IID_IAccessible, 'ptr*', IAccessible := ComValue(13, 0)) {
-	IServiceProvider := ComObjQuery(IAccessible, IID_IServiceProvider := '{6D5140C1-7436-11CE-8034-00AA006009FA}')
-	NumPut('int64', 0x11D026CB332C4427, 'int64', 0x1901D94FC00083B4, IID_IHTMLWindow2 := Buffer(16))
-	ComCall(3, IServiceProvider, 'ptr', IID_IHTMLWindow2, 'ptr', IID_IHTMLWindow2, 'ptr*', IHTMLWindow2 := ComValue(9, 0))
-	IHTMLWindow2.execScript('
-	(
-		document.querySelector('#head > div > div.h-tabs > ul > li:nth-child(3) > button').click()
-		searchinput = document.querySelector('#left > div.search > div.input > input[type=search]')
-		keyevent = document.createEvent('KeyboardEvent')
-		keyevent.initKeyboardEvent('keyup', false, true, document.defaultView, 13, null, false, false, false, false)
-		searchinput.value = '${word}'
-		searchinput.dispatchEvent(keyevent)
-		Object.defineProperties(keyevent, { type: { get: function() { return 'keydown' } }, which: { get: function() { return 13 } } })
-		searchinput.dispatchEvent(keyevent)
-	)')
+if ${!!word} && ctl {
+    r := SendMessage(DllCall('RegisterWindowMessage', 'str', 'WM_HTML_GETOBJECT', 'uint'), , , ctl)
+    NumPut('int64', 0x11D026CB332C4425, 'int64', 0x1901D94FC00083B4, IID_IHTMLDocument2 := Buffer(16))
+    DllCall('oleacc\\ObjectFromLresult', 'ptr', r, 'ptr', IID_IHTMLDocument2, 'ptr', 0, 'ptr*', doc := ComValue(9, 0), 'hresult')
+    doc.parentWindow.execScript('
+    (
+        document.querySelector('#head > div > div.h-tabs > ul > li:nth-child(3) > button').click()
+        searchinput = document.querySelector('#left > div.search > div.input > input[type=search]')
+        keyevent = document.createEvent('KeyboardEvent')
+        keyevent.initKeyboardEvent('keyup', false, true, document.defaultView, 13, null, false, false, false, false)
+        searchinput.value = '${word}'
+        searchinput.dispatchEvent(keyevent)
+        Object.defineProperties(keyevent, { type: { get: function() { return 'keydown' } }, which: { get: function() { return 13 } } })
+        searchinput.dispatchEvent(keyevent)
+    )')
 }`;
 	const isUIAccess = ahkStatusBarItem.text.endsWith('[UIAccess]');
 	const cp = spawn(executePath, ['/ErrorStdOut', isUIAccess ? createTempFile(script) : '*']);
