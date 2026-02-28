@@ -445,6 +445,7 @@ export class Lexer {
 	public need_scriptdir = false;
 	public include: Record<string, string> = {};
 	public includedir = new Map<number, string>();
+	public indent = '\t';
 	public isparsed = false;
 	public is_virtual = false;		// uris like `vscode-local-history:`
 	public labels: Record<string, AhkSymbol[]> = {};

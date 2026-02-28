@@ -137,8 +137,7 @@ export async function activate(context: ExtensionContext) {
 		...Object.entries(cmds).map(([cmd, cb]) => commands.registerCommand(`ahk2.${cmd}`, cb)),
 		...Object.entries(editor_cmds).map(([cmd, cb]) => commands.registerTextEditorCommand(`ahk2.${cmd}`, cb)),
 		extensions.onDidChange(updateExtensionsInfo),
-		window.onDidChangeActiveTextEditor(e => e?.document.languageId === 'ahk2'
-			? ahkStatusBarItem.show() : ahkStatusBarItem.hide()),
+		window.onDidChangeActiveTextEditor(changeActiveTextEditor),
 		workspace.registerTextDocumentContentProvider('ahkres', {
 			provideTextDocumentContent(uri, token) {
 				if (token.isCancellationRequested)
@@ -153,9 +152,18 @@ export async function activate(context: ExtensionContext) {
 			}
 		}),
 	);
-	if (window.activeTextEditor?.document.languageId === 'ahk2')
-		ahkStatusBarItem.show();
+	changeActiveTextEditor(window.activeTextEditor);
 	return client;
+
+	function changeActiveTextEditor(e?: TextEditor) {
+		if (e?.document.languageId !== 'ahk2')
+			return ahkStatusBarItem.hide();
+		ahkStatusBarItem.show();
+		client.sendNotification('changeIndent', {
+			uri: e.document.uri.toString(),
+			value: e.options.insertSpaces ? ' '.repeat(e.options.tabSize as number) : '\t'
+		});
+	}
 
 	function updateExtensionsInfo() {
 		debugexts = {};

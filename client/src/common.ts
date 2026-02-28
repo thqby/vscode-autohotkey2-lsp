@@ -79,6 +79,12 @@ export function registerCommonFeatures(client: LSP.BaseLanguageClient, localize:
 	const disposables = Object.entries(cmds).map(([cmd, callback]) =>
 		commands.registerTextEditorCommand(`ahk2.${cmd}`, callback));
 	disposables.push(...registerTextEditorCommands(client),
+		window.onDidChangeTextEditorOptions(e =>
+			e.textEditor.document.languageId === 'ahk2' &&
+			client.sendNotification('changeIndent', {
+				uri: e.textEditor.document.uri.toString(),
+				value: e.options.insertSpaces ? ' '.repeat(e.options.tabSize as number) : '\t'
+			})),
 		workspace.onDidCloseTextDocument(e => client.sendNotification('closeTextDocument',
 			e.isClosed ? { uri: '', id: '' } : { uri: e.uri.toString(), id: e.languageId })),
 	);

@@ -283,8 +283,7 @@
 							"default": false
 						},
 						"indent_string": {
-							"type": "string",
-							"default": "\t"
+							"type": "string"
 						},
 						"indent_between_hotif_directive": {
 							"type": "boolean",

@@ -1,4 +1,4 @@
-import { env, ExtensionContext, Uri, workspace } from 'vscode';
+import { env, ExtensionContext, Uri, window, workspace } from 'vscode';
 import { LanguageClient, ProtocolConnection } from 'vscode-languageclient/browser';
 import { registerCommonFeatures, updateConfig } from './common';
 
@@ -35,6 +35,11 @@ export function activate(context: ExtensionContext) {
 
 	context.subscriptions.push(
 		...registerCommonFeatures(client, loadedCollection),
+		window.onDidChangeActiveTextEditor(e => e?.document.languageId === 'ahk2' &&
+			client.sendNotification('changeIndent', {
+				uri: e.document.uri.toString(),
+				value: e.options.insertSpaces ? ' '.repeat(e.options.tabSize as number) : '\t'
+			})),
 	);
 }
 

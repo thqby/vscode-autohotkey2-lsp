@@ -172,6 +172,8 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 	connection.onSignatureHelp(signatureProvider);
 	connection.onWorkspaceSymbol(workspaceSymbolProvider);
 	connection.onNotification('resetInterpreter', path => utils.setInterpreter?.(configCache.InterpreterPath = path));
+	connection.onNotification('changeIndent', (params: { uri: string, value: string }) =>
+		(lexers[params.uri.toLowerCase()] ?? {}).indent = params.value);
 	connection.onNotification('closeTextDocument', (params: { uri: string, id: string }) => {
 		if (params.id === 'ahk2')
 			lexers[params.uri.toLowerCase()]?.close(true);

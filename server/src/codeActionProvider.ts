@@ -4,11 +4,11 @@ import { CodeActionKind, DiagnosticCode, DiagnosticTag, Maybe, TokenType, codeac
 
 const words = ['catch', 'else', 'finally', 'until'];
 
-export async function codeActionProvider(params: CodeActionParams & { indent?: string }, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
+export async function codeActionProvider(params: CodeActionParams, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
 	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()];
 	if (!lex || token.isCancellationRequested || lex.diag_pending !== undefined) return;
-	const { document, line_ranges, tokens } = lex,
-		{ context: { diagnostics, only }, indent, range } = params;
+	const { document, indent, line_ranges, tokens } = lex,
+		{ context: { diagnostics, only }, range } = params;
 	const acts: CodeAction[] = [], replaces: Record<string, TextEdit[]> = {},
 		parens: TextEdit[] = [], unuseds: TextEdit[] = [];
 	const has_refactor = only?.toString().includes(CodeActionKind.Refactor) !== false;
@@ -76,7 +76,6 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 		const sl = start.line;
 		const eo = document.offsetAt(end);
 		const so = document.offsetAt(start);
-		const tab = indent || configCache.FormatOptions?.indent_string || '\t';
 		const space = configCache.FormatOptions?.space_in_other === false ? '' : ' ';
 		let l = 0, r = line_ranges.length - 1, rl = l, rr = r, i;
 		while (l <= r) {
@@ -103,7 +102,7 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 				else {
 					m = get_indent(bo);
 					parens.push({
-						newText: `${space}{\n${m}${tab}`, range: {
+						newText: `${space}{\n${m}${indent}`, range: {
 							start, end: {
 								line: start.line,
 								character: start.character + bk.offset - tk.offset - tk.length

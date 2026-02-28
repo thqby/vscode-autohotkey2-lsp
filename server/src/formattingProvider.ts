@@ -3,20 +3,20 @@ import { chinesePunctuations, configCache, lexers, Token, TokenType } from './co
 
 export async function documentFormatting(params: DocumentFormattingParams): Promise<TextEdit[]> {
 	const lex = lexers[params.textDocument.uri.toLowerCase()], range = Range.create(0, 0, lex.document.lineCount, 0);
-	const newText = lex.beautify({ indent_string: get_indent(params.options), ...configCache.FormatOptions });
+	const newText = lex.beautify({ indent_string: lex.indent = get_indent(params.options), ...configCache.FormatOptions });
 	return [{ range, newText }];
 }
 
 export async function rangeFormatting(params: DocumentRangeFormattingParams): Promise<TextEdit[] | undefined> {
 	const lex = lexers[params.textDocument.uri.toLowerCase()], { options, range } = params;
-	const newText = lex.beautify({ ...configCache.FormatOptions, indent_string: get_indent(options) }, range).trim();
+	const newText = lex.beautify({ ...configCache.FormatOptions, indent_string: lex.indent = get_indent(options) }, range).trim();
 	if (newText)
 		return [{ range, newText }];
 }
 
 export async function typeFormatting(params: DocumentOnTypeFormattingParams): Promise<TextEdit[] | undefined> {
 	const lex = lexers[params.textDocument.uri.toLowerCase()], { ch, options, position } = params;
-	const opts = { ...configCache.FormatOptions, indent_string: get_indent(options) };
+	const opts = { ...configCache.FormatOptions, indent_string: lex.indent = get_indent(options) };
 	let tk: Token, s: string, pp: number | undefined, result: TextEdit[] | undefined;
 	if (ch === '\n') {
 		// eslint-disable-next-line prefer-const
