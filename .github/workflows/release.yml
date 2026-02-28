@@ -12,10 +12,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      - run: npm ci && npm run package
-      - env:
+      - run: npm ci
+      - name: Publish to Visual Studio Marketplace
+        uses: HaaLeo/publish-vscode-extension@v2
+        id: publishToVSC
+        with:
+          pat: ${{ secrets.VSCE_PAT }}
+          registryUrl: https://marketplace.visualstudio.com
+      - name: Publish to Open VSX Registry
+        uses: HaaLeo/publish-vscode-extension@v2
+        with:
+          pat: ${{ secrets.OVSX_PAT }}
+          extensionFile: ${{ steps.publishToVSC.outputs.vsixPath }}
+      - name: Publish to Github Releases
+        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
+          VSIX: ${{ steps.publishToVSC.outputs.vsixPath }}
         run:
-          gh release create $TAG_NAME --generate-notes --notes "[Download VSIX package](https://marketplace.visualstudio.com/_apis/public/gallery/publishers/thqby/vsextensions/vscode-autohotkey2-lsp/${TAG_NAME/v}/vspackage)" vscode-autohotkey2-lsp-${TAG_NAME/v}.vsix
+          gh release create $TAG_NAME --generate-notes --notes "[Download VSIX package](https://marketplace.visualstudio.com/_apis/public/gallery/publishers/thqby/vsextensions/vscode-autohotkey2-lsp/${TAG_NAME/v}/vspackage)" ${VSIX}
         shell: bash
