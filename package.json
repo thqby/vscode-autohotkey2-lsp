@@ -4,7 +4,7 @@
 	"description": "AutoHotkey v2 Language Support, based on vscode-lsp.",
 	"author": "thqby",
 	"publisher": "thqby",
-	"version": "2.8.3",
+	"version": "2.8.4",
 	"license": "LGPLv3.0",
 	"categories": [
 		"Formatters",
@@ -686,7 +686,6 @@
 		"@types/vscode": "^1.82.0",
 		"@vscode/test-cli": "^0.0.10",
 		"@vscode/test-electron": "^2.4.1",
-		"@vscode/vsce": "^2.32.0",
 		"esbuild": "^0.24.0",
 		"eslint": "^9.11.0",
 		"typescript": "5.5.4",
