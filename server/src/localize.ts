@@ -15,9 +15,10 @@ export const completionitem = {
 }
 
 export const codeaction = {
-	brace: localize('codeaction.brace', 'Replace with code block with braces'),
-	include: localize('codeaction.include', 'Import \'{0}\''),
-	parenthesized: localize('codeaction.parenthesized', 'Replace with parenthesized function call style'),
+	brace: localize('codeaction.brace', 'Convert to code block with braces'),
+	include: localize('codeaction.include', 'Batch include \'{0}\''),
+	parenthesized: localize('codeaction.parenthesized', 'Convert to parenthesized call style'),
+	removeunused: localize('codeaction.removeunused', 'Remove unused symbols'),
 	replace: localize('codeaction.replace', 'Replace \'{0}\' with \'{1}\''),
 }
 
@@ -79,6 +80,10 @@ export const diagnostic = {
 	unknowntoken: localize('diagnostic.unknowntoken', 'Unknown token \'{0}\''),
 	unsupportinclude: localize('diagnostic.unsupportinclude', '#Include in functions and classes cannot correctly deduce scope and code completion'),
 	unterminated: localize('diagnostic.unterminated', 'Unterminated string text'),
+}
+
+export const hint = {
+	unused: localize('hint.unused', 'Unused symbol'),
 }
 
 export const warn = {

@@ -66,6 +66,7 @@ export interface LSConfig {
 	Syntaxes?: string
 	SymbolFoldingFromOpenBrace?: boolean
 	Warn?: {
+		Unused?: boolean
 		VarUnset?: boolean
 		LocalSameAsGlobal?: boolean
 		CallWithoutParentheses?: boolean | /* Parentheses */ 1

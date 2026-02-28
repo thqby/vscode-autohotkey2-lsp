@@ -11,7 +11,7 @@
 AutoHotkey v2 语言支持 for VS Code, 功能实现基于 v2 语法分析。
 支持在`Chrome/Edge`等浏览器中使用 https://vscode.dev 或 https://github.dev/github/dev
 
-如果你想捐款，捐款可以寄到这里: [支付宝转账](https://qr.alipay.com/fkx19566u7ctegoppmu5i13) 或 [支付宝二维码](./pic/alipay.jpg) 或 [paypal](https://paypal.me/thqby)
+如果你想捐款, 捐款可以寄到这里: [支付宝转账](https://qr.alipay.com/fkx19566u7ctegoppmu5i13) 或 [支付宝二维码](./pic/alipay.jpg) 或 [paypal](https://paypal.me/thqby)
 
 - [AutoHotkey v2 语言支持](#autohotkey-v2-语言支持)
   - [语言特性](#语言特性)
@@ -26,6 +26,7 @@ AutoHotkey v2 语言支持 for VS Code, 功能实现基于 v2 语法分析。
     - [悬停提示](#悬停提示)
     - [转到定义](#转到定义)
     - [查找所有引用](#查找所有引用)
+    - [代码操作](#代码操作)
     - [代码格式化](#代码格式化)
     - [自定义折叠](#自定义折叠)
     - [声明文件](#声明文件)
@@ -58,9 +59,9 @@ AutoHotkey v2 语言支持 for VS Code, 功能实现基于 v2 语法分析。
 
 ### 智能感知
 
-支持对作用域范围内的变量、函数、参数、类名、方法名智能补全(简单的类型推导)，支持对 include 文件和函数库补全。
+支持对作用域范围内的变量、函数、参数、类名、方法名智能补全(简单的类型推导), 支持对 include 文件和函数库补全。
 
-支持为类成员和全局变量指定jsdoc标记(`@protected`, `@private`)，以将它们从相应作用域的完成列表中排除。
+支持为类成员和全局变量指定jsdoc标记(`@protected`, `@private`), 以将它们从相应作用域的完成列表中排除。
 - 私有、受保护的类成员分别在当前类、当前类和它的子类中可见。
 - 私有、受保护的全局变量分别在当前文件、同级目录和下级目录中可见。
 
@@ -109,7 +110,7 @@ class abc {
 
 ### 语义高亮
 
-语义高亮显示是语法高亮显示的补充，改进和改进语法中的语法突出显示。编辑器在来自语法的高亮显示之上应用来自语义标记的高亮显示。
+语义高亮显示是语法高亮显示的补充, 改进和改进语法中的语法突出显示。编辑器在来自语法的高亮显示之上应用来自语义标记的高亮显示。
 ![semanticTokens](./pic/semanticTokens.png)
 
 ### 代码标记
@@ -119,7 +120,7 @@ class abc {
 
 ### 颜色提示
 
-计算并解析文档中的颜色，并提供颜色选择器更直观地修改颜色数据。
+计算并解析文档中的颜色, 并提供颜色选择器更直观地修改颜色数据。
 
 ![documentcolor](./pic/documentcolor.png)
 
@@ -140,13 +141,23 @@ class abc {
 
 查看正在使用某个变量/函数的所有源代码位置。
 
+### 代码操作
+
+选中或悬停代码, 然后激活代码操作菜单, 选择操作项. 支持的代码操作如下:
+
+- 转换为带大括号代码块
+- 转换为带括号的调用样式
+- 批量引入文件
+- 删除未使用的符号
+- 替换预期外的字符
+
 ### 代码格式化
 
 用法:
 
 - 右键弹出菜单然后点击 格式化文档。
 - 或按 `Shift+Alt+F`。
-- 支持在键入`}`时格式化代码块，在代码行结束处键入`\n`时格式化行并缩进。支持在代码区(非注释、字符串)输入中文标点时替换为英文标点。 (需要开启`editor.format OnType`)
+- 支持在键入`}`时格式化代码块, 在代码行结束处键入`\n`时格式化行并缩进。支持在代码区(非注释、字符串)输入中文标点时替换为英文标点。 (需要开启`editor.format OnType`)
 - 支持使用格式化指令`;@format array_style: collapse, object_style: expand`改变不同块的对象样式
 
 ![codeFormat](./pic/codeFormat.gif)
@@ -209,7 +220,7 @@ Array.Prototype.DefineProp('Filter', { call: Array_Filter_impl })
 
 ### 调试脚本
 
-无需额外配置即可启动已安装的调试扩展，支持带参数调试。
+无需额外配置即可启动已安装的调试扩展, 支持带参数调试。
 
 ### 生成注释
 
@@ -243,7 +254,7 @@ node install.js
         "node",
         "<VSCODE-AUTOHOTKEY2-LSP>/server/dist/server.js",
         "--stdio"
-      ], // 更新node.exe的路径(可能已经在环境变量中，所以你不需要设置)和vscode-autohotkey2-lsp的文件夹
+      ], // 更新node.exe的路径(可能已经在环境变量中, 所以你不需要设置)和vscode-autohotkey2-lsp的文件夹
       "selector": "source.ahk2", // 与AutoHotkey2.sublime-syntax中的scope相同
       "schemes": ["file", "buffer", "res"],
       "initializationOptions": {
@@ -312,7 +323,7 @@ git clone --branch release https://github.com/neoclide/coc.nvim.git --depth=1
 
 #### nvim-lspconfig
 - 下载并安装[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)和[ray-x/lsp_signature.nvim](https://github.com/ray-x/lsp_signature.nvim).
-- 将以下内容添加到您的NVIM配置中(init.lua 等). 确定`cmd`指向vscode-autohotkey2-lsp的安装路径，`InterpreterPath`指向AHK exe.
+- 将以下内容添加到您的NVIM配置中(init.lua 等). 确定`cmd`指向vscode-autohotkey2-lsp的安装路径, `InterpreterPath`指向AHK exe.
 
 ```lua
 local function custom_attach(client, bufnr)

@@ -1,16 +1,18 @@
 import { opendir } from 'fs/promises';
-import { CancellationToken, CodeAction, CodeActionKind, CodeActionParams, TextEdit } from 'vscode-languageserver';
-import { DiagnosticCode, Maybe, TokenType, codeaction, configCache, lexers, restorePath } from './common';
+import { CancellationToken, CodeAction, CodeActionParams, TextEdit } from 'vscode-languageserver';
+import { CodeActionKind, DiagnosticCode, DiagnosticTag, Maybe, TokenType, codeaction, configCache, lexers, restorePath } from './common';
 
 const words = ['catch', 'else', 'finally', 'until'];
 
 export async function codeActionProvider(params: CodeActionParams & { indent?: string }, token: CancellationToken): Promise<Maybe<CodeAction[]>> {
 	const uri = params.textDocument.uri, lex = lexers[uri.toLowerCase()];
 	if (!lex || token.isCancellationRequested || lex.diag_pending !== undefined) return;
-	const acts: CodeAction[] = [], replaces: Record<string, TextEdit[]> = {}, parens: TextEdit[] = [];
-	const { document, line_ranges, tokens } = lex, { context: { diagnostics, only }, indent, range } = params;
-	const has_refactor = only?.includes(CodeActionKind.Refactor) !== false;
-	let m;
+	const { document, line_ranges, tokens } = lex,
+		{ context: { diagnostics, only }, indent, range } = params;
+	const acts: CodeAction[] = [], replaces: Record<string, TextEdit[]> = {},
+		parens: TextEdit[] = [], unuseds: TextEdit[] = [];
+	const has_refactor = only?.toString().includes(CodeActionKind.Refactor) !== false;
+	let m, text: string | undefined;
 
 	for (const it of diagnostics) {
 		switch (it.code) {
@@ -46,6 +48,9 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 					});
 				}
 				break;
+			default:
+				it.tags?.includes(DiagnosticTag.Unnecessary) && remove_unused(document.offsetAt(it.range.start));
+				break;
 		}
 	}
 	for (const [k, v] of Object.entries(replaces))
@@ -54,8 +59,13 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 			edit: { changes: { [uri]: v } },
 			title: k.replace(/(\S+) (\S+)/, (s, a, b) => codeaction.replace(a, b))
 		});
+	unuseds.length && acts.push({
+		kind: CodeActionKind.QuickFix,
+		edit: { changes: { [uri]: unuseds } },
+		title: codeaction.removeunused()
+	});
 	parens.length && acts.push({
-		kind: CodeActionKind.Refactor,
+		kind: CodeActionKind.RefactorRewrite,
 		edit: { changes: { [uri]: parens.splice(0) } },
 		title: codeaction.parenthesized()
 	});
@@ -117,7 +127,7 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 			parens.push(...rb.reverse());
 		}
 		parens.length && acts.push({
-			kind: CodeActionKind.Refactor,
+			kind: CodeActionKind.RefactorRewrite,
 			edit: { changes: { [uri]: parens } },
 			title: codeaction.brace()
 		});
@@ -125,5 +135,30 @@ export async function codeActionProvider(params: CodeActionParams & { indent?: s
 			const end = document.positionAt(bo);
 			return document.getText({ start: { line: end.line, character: 0 }, end }).replace(/[^ \t].*/, '');
 		}
+	}
+	function remove_unused(s: number) {
+		let tk = tokens[s], end;
+		const sym = tk?.symbol;
+		if (!sym?.children) return;
+		let e = document.offsetAt(sym.range.end);
+		while (tk && tk.topofline !== 1)
+			tk = tk.previous_token!;
+		if (!tk) return;
+		if (sym.detail !== undefined) {
+			const t = lex.findToken(document.offsetAt({
+				line: sym.range.start.line - 1,
+				character: 0
+			}));
+			if (t.symbol === sym)
+				tk = t;
+		}
+		s = tk.offset;
+		text ??= document.getText();
+		while (' \t'.includes(m = text[e]))
+			e++;
+		end = document.positionAt(e);
+		if (';\r\n'.includes(m))
+			end.line++, end.character = 0;
+		unuseds.push({ newText: '', range: { start: document.positionAt(s), end } });
 	}
 }

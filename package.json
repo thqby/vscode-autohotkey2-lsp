@@ -144,6 +144,12 @@
 					},
 					"uniqueItems": true
 				},
+				"AutoHotkey2.Warn.Unused": {
+					"scope": "window",
+					"type": "boolean",
+					"default": false,
+					"description": "%ahk2.warn.unused%"
+				},
 				"AutoHotkey2.Warn.VarUnset": {
 					"scope": "window",
 					"type": "boolean",

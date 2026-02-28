@@ -177,6 +177,7 @@ export interface FuncNode extends AhkSymbol {
 	has_this_param?: boolean
 	unresolved_vars?: Record<string, Variable>
 	ranges?: [number, number][]	// class's __init
+	in_expr?: boolean
 }
 
 export interface ClassNode extends AhkSymbol {
@@ -1878,7 +1879,7 @@ export class Lexer {
 								break;
 							}
 							if (tk.type as TokenType === TokenType.Identifier && is_func_def()) {
-								const fc = tk, fn = nexttoken() && parse_func(fc), r = fn && getParamCount(fn);
+								const fc = tk, fn = nexttoken() && parse_func(fc), r = fn && (fn.in_expr = true, getParamCount(fn));
 								if (!fc.topofline && ahkVersion < alpha_3)
 									_this.addDiagnostic(diagnostic.unexpected(fc.content), fc.offset);
 								if (!r || r.max < 1 || r.min > 1)
@@ -1964,11 +1965,12 @@ export class Lexer {
 					tn.kind = SymbolKind.Function;
 					(prev_mode & BlockType.Mask) && (tn.parent = prev_parent);
 					if (fc.length) {
+						fc.topofline < 1 && (tn.in_expr = true);
 						if (fc.content[0] <= '9')
 							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range });
 						else if (RESERVED_WORDS.includes(fc.content.toLowerCase()))
 							_this.diagnostics.push({ message: diagnostic.reservedworderr(fc.content), range });
-					} else tokens[fc.offset].symbol = tn;
+					} else tokens[fc.offset].symbol = tn, tn.in_expr = true;
 				}
 				Object.assign(tn, FuncNode.create(fc.content, tn.kind,
 					{ start: fc.pos = range.start, end: { character: 0, line: 0 } }, range,
@@ -2789,6 +2791,8 @@ export class Lexer {
 						} else if (tk.type !== TokenType.EOF)
 							lk = EMPTY_TOKEN, next = false, result.push(...parse_line());
 					}
+					if (t.symbol && t.type === TokenType.Identifier)
+						_this.diagnostics.push({ message: diagnostic.declarationerr(), range: t.symbol.selectionRange });
 					const e = tokens[previous_pos];
 					if (t.content.length)
 						e.body_start = t.offset;

@@ -27,7 +27,8 @@ If you wish to donate, donations can be sent here: [alipay](https://qr.alipay.co
     - [Hover](#hover)
     - [Goto Definition](#goto-definition)
     - [Find All References](#find-all-references)
-    - [CodeFormat](#codeformat)
+    - [Code Action](#code-action)
+    - [Code Format](#code-format)
     - [Custom folding](#custom-folding)
     - [Declaration document](#declaration-document)
   - [Context Menu](#context-menu)
@@ -145,7 +146,17 @@ usage: Move the mouse over the symbol.
 
 See all the source code locations where a certain variable/function is being used.
 
-### CodeFormat
+### Code Action
+
+Select or hover over the code, then activate the code action menu and select action item. The supported code actions are as follows:
+
+- Convert to code block with braces
+- Convert to parenthesized function call style
+- Batch include files
+- Remove unused symbols
+- Replace unexpected characters
+
+### Code Format
 
 usage:
 
