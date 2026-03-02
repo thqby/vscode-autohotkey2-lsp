@@ -12,7 +12,15 @@ if 1 {
 		and all line are indented by one level.
 	)'
 
+	;@format align_continuation_section_with_ltrim0_to_left: false
 	c := '
+	(ltrim0
+Parentheses are aligned with c,
+	and other lines remain unchanged.
+	)'
+
+	;@format align_continuation_section_with_ltrim0_to_left: true
+	d := '
 (ltrim0
 Parentheses are left-aligned,
 	and other lines remain unchanged.
@@ -33,11 +41,19 @@ if 2 {
 		and all line are indented by one level.'
 	)
 
+	;@format align_continuation_section_with_ltrim0_to_left: false
 	c :=
+	(ltrim0
+		b . 'Parentheses are aligned with c,
+		multi-line strings remain unchanged,
+			others are indented one level.'
+	)
+
+	;@format align_continuation_section_with_ltrim0_to_left: true
+	d :=
 (ltrim0
-	b .
-'Parentheses and the first line of the string
-	are aligned to the left,
-		and the other lines remain unchanged.'
+	b . 'Parentheses are aligned to the left,
+		multi-line strings remain unchanged,
+			others are indented one level.'
 )
 }

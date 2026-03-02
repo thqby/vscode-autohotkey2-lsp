@@ -252,6 +252,9 @@
 					"scope": "window",
 					"type": "object",
 					"properties": {
+						"align_continuation_section_with_ltrim0_to_left": {
+							"type": "boolean"
+						},
 						"array_style": {
 							"type": "string",
 							"enum": [

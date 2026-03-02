@@ -277,6 +277,7 @@ export interface Context {
 };
 
 export interface FormatOptions {
+	align_continuation_section_with_ltrim0_to_left?: boolean
 	array_style?: number
 	brace_style?: number
 	break_chained_methods?: boolean
@@ -5798,8 +5799,10 @@ export class Lexer {
 				if (cs_opt = t.data) {
 					if (cs_opt.ltrim === false) {
 						flags.indent_after = true;
-						previous_flags.indentation_level = flags.indentation_level = 0;
-						output_lines.splice(-1, 1, { indent: 0, text: ['('] });
+						if (opt.align_continuation_section_with_ltrim0_to_left) {
+							previous_flags.indentation_level = flags.indentation_level = 0;
+							output_lines.splice(-1, 1, { indent: 0, text: ['('] });
+						}
 					} else cs_opt.new_indent = indent_string.repeat(flags.indentation_level + 1);
 				}
 				flags.disable_linewrap = false;
@@ -6122,7 +6125,8 @@ export class Lexer {
 					ps = token_text.substring(0, p), ls = ls.trimStart();
 				else ps = token_text, ls = '';
 				if (o.ltrim === false) {
-					token_text = `${ps}${ls && `\n${ls}`}`;
+					const ci = opt.align_continuation_section_with_ltrim0_to_left ? '' : indent_string.repeat(il);
+					token_text = `${ci}${ps}${ls && `\n${ci}${ls}`}`;
 				} else {
 					const ci = indent_string.repeat(il);
 					ps = ps.replaceAll(o.ltrim ? /\n[ \t]*/g :
@@ -6341,7 +6345,11 @@ export class Lexer {
 			if (f === 'en')
 				return restore_formatted(true);
 			const new_opts = fixupFormatOptions(Object.fromEntries(str.substring(m[0].length)
-				.replace(/\s+;.*$/, '').split(',').map(s => s.split(':', 2).map(s => s.trim()))));
+				.replace(/\s+;.*$/, '').split(',').map(s => {
+					const [k, v] = s.split(':', 2).map(s => s.trim());
+					return [k, /^-?\d+/.test(v) ? parseInt(v) :
+						v === 'true' ? true : v === 'false' ? false : v];
+				})));
 			for (const k of ['array_style', 'object_style'] as const)
 				if (k in new_opts)
 					flags[k] = new_opts[k], delete new_opts[k];
@@ -6472,11 +6480,10 @@ export class Lexer {
 				return;
 			}
 			print_token();
-			const t = output_lines.at(-1)!.text;
-			if (t[0].trim() === '')
-				output_lines[output_lines.length - 1].text = t.slice(1);
-			else
-				indent();
+			const t = output_lines.at(-1)!;
+			if (t.indent)
+				t.text[0] = indent_string.repeat(real_indentation_level());
+			else indent();
 		}
 
 		function handle_unknown() {
@@ -8544,11 +8551,8 @@ export function isContinuousLine(lk: Token, tk: Token, parent?: AhkSymbol): bool
 export function fixupFormatOptions(opts: FormatOptions) {
 	if (typeof opts.brace_style === 'string') {
 		switch (opts.brace_style) {
-			case '0':
 			case 'Allman': opts.brace_style = 0; break;
-			case '1':
 			case 'One True Brace': opts.brace_style = 1; break;
-			case '-1':
 			case 'One True Brace Variant': opts.brace_style = -1; break;
 			default: delete opts.brace_style; break;
 		}
