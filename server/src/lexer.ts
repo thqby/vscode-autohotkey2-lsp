@@ -4911,7 +4911,8 @@ export class Lexer {
 
 			function print_indent_string(level: number) {
 				if (level) {
-					level = Math.min(level, previous_line_indent() + 1);
+					if (ck.topofline !== 1)
+						level = Math.min(level, previous_line_indent() + 1);
 					line.text.push(indent_string.repeat(line.indent = level));
 				}
 				return level;
@@ -6115,7 +6116,7 @@ export class Lexer {
 					if (o.comments)
 						token_text = token_text.replaceAll(/^[ \t]*;.*\n|[ \t]+;.*/gm, '');
 					else token_text = token_text.replace(/^(.+?)[ \t]+;.*/, '$1');
-				const p = token_text.lastIndexOf('\n');
+				const p = token_text.lastIndexOf('\n'), il = previous_line_indent();
 				let ls = token_text.substring(p + 1), ps;
 				if (/^[ \t]*\)/.test(ls))
 					ps = token_text.substring(0, p), ls = ls.trimStart();
@@ -6123,22 +6124,27 @@ export class Lexer {
 				if (o.ltrim === false) {
 					token_text = `${ps}${ls && `\n${ls}`}`;
 				} else {
-					const ci = indent_string.repeat(previous_line_indent());
+					const ci = indent_string.repeat(il);
 					ps = ps.replaceAll(o.ltrim ? /\n[ \t]*/g :
 						o.indent ? new RegExp(`\n(${o.indent})?`, 'g') : '\n',
 						`\n${ci}${indent_string}`);
 					token_text = `${ci}${ps}${ls && `\n${ci}${ls}`}`;
 				}
 				print_newline(true);
-				output_lines.at(-1)!.text.push(token_text);
+				output_space_before_token = undefined;
+				output_lines.splice(-1, 1, { indent: il, text: [token_text] });
 				return;
 			}
 			if (continuation_sections_mode && cs_opt && ck.has_LF) {
 				const { indent, ltrim } = cs_opt;
 				token_text = token_text.replaceAll('\r\n', '\n');
 				if (ltrim === false) {
-					print_newline(true);
-					output_lines.at(-1)!.text.push(token_text);
+					const t = output_lines.at(-1)!;
+					if (just_added_newline())
+						t.indent = previous_line_indent();
+					else output_space_before_token && t.text.push(' ');
+					output_space_before_token = undefined;
+					t.text.push(token_text);
 					return;
 				}
 				token_text = token_text.replaceAll(
