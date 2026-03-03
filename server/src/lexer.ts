@@ -439,6 +439,7 @@ export class Lexer {
 	public dlldir = new Map<number, string>();
 	public dllpaths: string[] = [];
 	public document: TextDocument;
+	public explicitContext?: boolean;
 	public findToken: (offset: number, ignore?: boolean) => Token;
 	public folding_ranges: FoldingRange[] = [];
 	public fsPath = '';
@@ -5516,8 +5517,11 @@ export class Lexer {
 								break;
 							case 'class-non-dynamic-member-check':
 								if (enable)
-									delete (currsymbol as ClassNode ?? _this).checkmember;
-								else (currsymbol as ClassNode ?? _this).checkmember = false;
+									delete (currsymbol as ClassNode | undefined ?? _this).checkmember;
+								else (currsymbol as ClassNode | undefined ?? _this).checkmember = false;
+								break;
+							case 'explicit-context-only':
+								_this.explicitContext = enable;
 								break;
 						}
 					}
@@ -6511,14 +6515,16 @@ export class Lexer {
 		delete this.st;
 		delete this.maybev1;
 		delete this.checkmember;
+		delete this.explicitContext;
 		delete this.symbolInformation;
 	}
 
 	get included() { return includedCache[this.uri] ?? {}; }
 	get relevance() {
 		const uri = this.uri, r = { ...includeCache[uri] };
-		for (const u in includedCache[uri])
-			Object.assign(r, includeCache[u]);
+		if (!(this.explicitContext ?? configCache.ExplicitContextOnly))
+			for (const u in includedCache[uri])
+				Object.assign(r, includeCache[u]);
 		delete r[uri];
 		return r;
 	}
@@ -8320,8 +8326,10 @@ export function traverseInclude(lex: Lexer, included?: Record<string, string>) {
 		if (!(lex = lexers[u]))
 			continue;
 		if (!cache[u]) {
-			if (hascache && included[u])
+			if (hascache && included[u]) {
+				cache[u] = included[u];
 				continue;
+			}
 			const c = traverseInclude(lex, included);
 			if (c[uri]) {
 				cache = includeCache[uri] = Object.assign(c, cache);

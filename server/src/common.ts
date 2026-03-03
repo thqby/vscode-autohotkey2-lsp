@@ -56,6 +56,7 @@ export interface LSConfig {
 		ClassNonDynamicMemberCheck?: boolean
 		InvokeCheck?: string[]
 	}
+	ExplicitContextOnly?: boolean
 	Files?: {
 		Exclude?: string[]
 		MaxDepth?: number

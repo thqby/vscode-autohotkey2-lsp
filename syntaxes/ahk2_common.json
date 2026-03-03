@@ -27,7 +27,7 @@
 			"description": "In ahk_h, enable winapi function completion"
 		},
 		{
-			"body": ";@lint${1| ,-disable ,-enable |}${2|call-without-parentheses,class-non-dynamic-member-check|}",
+			"body": ";@lint${1| ,-disable ,-enable |}${2|call-without-parentheses,class-non-dynamic-member-check,explicit-context-only|}",
 			"prefix": "@lint",
 			"description": "Enable or disable some checks",
 			"syntax": ";@lint rule1:value1 [, rule2:value2 ...]\n;@line-enable rule1 [, rule2 ...]\n;@line-disable rule1 [, rule2 ...]"

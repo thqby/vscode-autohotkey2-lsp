@@ -232,6 +232,11 @@
 					"scope": "window",
 					"type": "string"
 				},
+				"AutoHotkey2.ExplicitContextOnly": {
+					"scope": "window",
+					"type": "boolean",
+					"description": "%ahk2.explicitcontextonly%"
+				},
 				"AutoHotkey2.Files.Exclude": {
 					"scope": "window",
 					"type": "array",
