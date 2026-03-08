@@ -9,9 +9,9 @@ import {
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	a_Vars, action, ahkUris, ahkVars, ahkVersion, alpha_11, alpha_3, builtinCommands_v1,
+	a_Vars, action, ahkUris, ahkVars, ahkVersion, alpha_11, alpha_21, alpha_3, builtinCommands_v1,
 	commentTags, configCache, diagnostic, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
-	libSymbols, locale, metafnIndex, openAndParse, parseInclude, reservedIndex, restorePath, rootDir,
+	libSymbols, locale, metafnIndex, openAndParse, parseInclude, restorePath, rootDir,
 	symbolProvider, URI, utils, versionMatch, warn, workspaceFolders
 } from './common';
 import { DiagnosticSeverity, MessageType, SymbolKind } from './lsp-enums';
@@ -143,7 +143,7 @@ export interface AhkSymbol extends DocumentSymbol {
 	data?: unknown
 	decl?: boolean
 	def?: boolean
-	export?: boolean
+	exported?: boolean
 	full?: string
 	has_warned?: boolean | number
 	markdown_detail?: string
@@ -247,7 +247,7 @@ export interface Token<T = unknown> {
 	next_pair_pos?: number
 	next_token_offset: number	// Next non-comment token offset
 	offset: number
-	op_type?: -1 | 0 | 1
+	op_type?: null | -1 | 0 | 1
 	paraminfo?: ParamInfo
 	pos?: Position
 	prefix_is_whitespace?: string
@@ -360,13 +360,14 @@ const COLOR_RE = new RegExp(/['" \t](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2}
 const COLOR_VALS = JSON.parse('{"black":"000000","silver":"c0c0c0","gray":"808080","white":"ffffff","maroon":"800000","red":"ff0000","purple":"800080","fuchsia":"ff00ff","green":"008000","lime":"00ff00","olive":"808000","yellow":"ffff00","navy":"000080","blue":"0000ff","teal":"008080","aqua":"00ffff"}');
 const EMPTY_TOKEN: Token = { type: TokenType.EOF, content: '', offset: 0, length: 0, topofline: 0, next_token_offset: -1 };
 const KEYS_RE = /^(alttab|alttabandmenu|alttabmenu|alttabmenudismiss|shiftalttab|shift|lshift|rshift|alt|lalt|ralt|control|lcontrol|rcontrol|ctrl|lctrl|rctrl|lwin|rwin|appskey|lbutton|rbutton|mbutton|wheeldown|wheelup|wheelleft|wheelright|xbutton1|xbutton2|(0*[2-9]|0*1[0-6]?)?joy0*([1-9]|[12]\d|3[012])|space|tab|enter|escape|esc|backspace|bs|delete|del|insert|ins|pgdn|pgup|home|end|up|down|left|right|printscreen|ctrlbreak|pause|help|sleep|scrolllock|capslock|numlock|numpad0|numpad1|numpad2|numpad3|numpad4|numpad5|numpad6|numpad7|numpad8|numpad9|numpadmult|numpadadd|numpadsub|numpaddiv|numpaddot|numpaddel|numpadins|numpadclear|numpadleft|numpadright|numpaddown|numpadup|numpadhome|numpadend|numpadpgdn|numpadpgup|numpadenter|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|f13|f14|f15|f16|f17|f18|f19|f20|f21|f22|f23|f24|browser_back|browser_forward|browser_refresh|browser_stop|browser_search|browser_favorites|browser_home|volume_mute|volume_down|volume_up|media_next|media_prev|media_stop|media_play_pause|launch_mail|launch_media|launch_app1|launch_app2|vk[a-f\d]{1,2}(sc[a-f\d]+)?|sc[a-f\d]+|`[;{]|[\x21-\x7E])$/i;
-const LINE_STARTERS = 'export break case catch continue else for finally global goto if local loop return static switch throw try until while'.split(' ');
+const LINE_STARTERS = 'break case catch continue else for finally global goto if local loop return static switch throw try until while'.split(' ');
 const META_FUNCNAME = '__REF __VALUE __NEW __INIT __ITEM __ENUM __GET __CALL __SET __DELETE'.split(' ');
 const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 }, PROP_NEXT_TOKEN = ['[', '{', '=>'];
 const PUNCT = '% : + ++ - -- * ** / // & && | || ^ < << <= = == => > >> >>> >= ? ?? ! != !== ~ ~= := += -= *= /= //= &= |= ^= ??= <<= >>= >>>='.split(' ');
 const RESERVED_OP = 'isset throw super false true'.split(' '), ASSIGN_INDEX = PUNCT.indexOf(':=');
-const RESERVED_WORDS = LINE_STARTERS.concat('as false isset super true and contains in is not or'.split(' '));
+const RESERVED_WORDS = LINE_STARTERS.concat('false isset super true and as contains in is not or'.split(' '));
 const WHITESPACE = " \t\r\n", OP_INDEX = RESERVED_WORDS.indexOf('and');
+const DIRECTIVES_EXPR = ['#initexec', '#import', '#hotif'];
 export const ASSIGN_TYPE = [':=', '??='], ZERO_RANGE = Range.create(0, 0, 0, 0);
 export const ANY = createPrototype('Any');
 const ARRAY = createPrototype('Array', SymbolKind.Class, 'Array');
@@ -1455,7 +1456,7 @@ export class Lexer {
 			return result;
 
 			function is_func_def() {
-				if (input[tk.offset + tk.length] !== '(')
+				if (next && input[tk.offset + tk.length] !== '(')
 					return false;
 				if (mode === BlockType.Class)
 					return true;
@@ -1489,6 +1490,11 @@ export class Lexer {
 				// -1 prefix; 0 binary; 1 postfix
 				function op_type(op: Token) {
 					switch (op.content.toLowerCase()) {
+						case 'as':
+						case 'contains':
+						case 'in':
+							_this.addDiagnostic(diagnostic.unexpected(op.content), op.offset);
+							return null!;
 						case '!':
 						case '~':
 						case 'not':
@@ -1615,10 +1621,19 @@ export class Lexer {
 										if (!tk.topofline && parse_class())
 											continue;
 										break;
-									case 'import':
-										if (ahkVersion >= alpha_11 && mode === BlockType.Script && ' \t'.includes(input[lk.offset + lk.length])) {
-											parse_import();
+									case 'export':
+										if (ahkVersion < alpha_11)
+											break;
+										if (parse_export(ahkVersion < alpha_11 + 9))
 											continue;
+										break;
+									case 'import':
+										if (ahkVersion >= alpha_11 && ahkVersion < alpha_21 &&
+											mode === BlockType.Script && ' \t'.includes(input[lk.offset + lk.length])) {
+											const l = lk, t = tk, p = parser_pos;
+											if (parse_import(ahkVersion < alpha_11 + 9))
+												continue;
+											lk = l, tk = t, parser_pos = p, next = true;
 										}
 										break;
 									case 'macro':
@@ -2276,46 +2291,6 @@ export class Lexer {
 						else next = false;
 						tk.type = TokenType.Identifier;
 						break;
-					case 'export':
-						tk.semantic = SE_KEYWORD;
-						if (mode === BlockType.Script) {
-							let is_default = false;
-							tk.semantic = SE_KEYWORD;
-							nexttoken();
-							if (tk.topofline || tk.content !== '(' && !allIdentifierChar.test(tk.content)) {
-								unexpected(lk);
-								break;
-							}
-							warn_once.e ??= (_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
-							if ((_low = tk.content.toLowerCase()) === 'default') {
-								nk = _this.getToken(parser_pos, true);
-								if (!nk.topofline && (allIdentifierChar.test(nk.content) || nk.content === '(')) {
-									is_default = true, tk.semantic = SE_KEYWORD, tk.type = TokenType.Reserved;
-									nexttoken(), _low = tk.content.toLowerCase();
-								}
-							} else if (_low === 'import' && input[parser_pos] !== '(' &&
-								isContinuousLine(EMPTY_TOKEN, _this.getToken(parser_pos, true)))
-								return nexttoken() && parse_import();
-							if (_low === 'class' && ' \t'.includes(input[parser_pos]) &&
-								!(nk = _this.getToken(parser_pos, true)).topofline && allIdentifierChar.test(nk.content)) {
-								tk.topofline = 2, nexttoken(), parse_class(is_default ? 'd' : 'e');
-								break;
-							}
-							if (input[parser_pos] === '(' && allIdentifierChar.test(_low))
-								nk = tk, nexttoken();
-							else nk = undefined;
-							if (tk.content === '(') {
-								parse_func(nk ?? { ...EMPTY_TOKEN, offset: tk.offset });
-								break;
-							}
-							next = false, tk.topofline = 2;
-							is_default && _this.addDiagnostic(diagnostic.declarationerr(), lk.offset);
-							const sta = parse_statement('');
-							for (const it of sta)
-								it.export = true;
-							result.push(...sta);
-						} else unexpected(tk);
-						break;
 					case 'throw':
 						if (ahkVersion >= alpha_3) {
 							tk.type = TokenType.Identifier, next = false;
@@ -2433,7 +2408,7 @@ export class Lexer {
 					modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly
 				};
 				adddeclaration(tn), _this.addSymbolFolding(tn, tk.offset);
-				result.push(tn);
+				result.push(tn), export_ && (tn.exported = true);
 				return true;
 			}
 
@@ -2542,103 +2517,221 @@ export class Lexer {
 				}
 			}
 
-			function parse_import() {
-				const kw = SE_KEYWORD;
-				const mod = { type: SemanticTokenTypes.module };
-				let has_from = true, next_is_id = true, has_suffix_imps, sk, vk, vr;
-				lk.type = TokenType.Reserved;
-				lk.semantic = kw;
+			function parse_export(le20: boolean) {
+				if (mode !== BlockType.Script)
+					return le20 && unexpected(lk), false;
+				const l = lk, t = tk, p = parser_pos, r = parse();
+				if (r || le20) {
+					warn_once.e ??= (_this.addDiagnostic(warn.notimplemented(), l.offset, 6,
+						{ code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
+					l.semantic = SE_KEYWORD;
+					if (r) return r;
+				}
+				lk = l, tk = t, parser_pos = p;
+				if (le20) {
+					next = false;
+					const sta = parse_statement('');
+					for (const it of sta)
+						it.exported = true;
+					result.push(...sta);
+					lk === l && unexpected(t);
+					return true;
+				} else next = true;
+				return false;
+				function parse() {
+					let c, df, fc;
+					if (tk.topofline || !allIdentifierChar.test(tk.content)) return false;
+					c = input[parser_pos];
+					if (c === '(') {
+						_low = '', fc = tk, nexttoken();
+					} else if (!' \t'.includes(c))
+						return false;
+					else if ((_low = tk.content.toLowerCase()) === 'default') {
+						df = tk, nexttoken();
+						if (tk.topofline || tk.type !== TokenType.Identifier && tk.content !== '(')
+							return false;
+						if (tk.type === TokenType.Identifier) {
+							if ((c = input[parser_pos]) === '(')
+								fc = tk, nexttoken();
+							else if (!' \t'.includes(c))
+								return false;
+							else _low = tk.content.toLowerCase();
+						} else if (tk.content !== (c = '('))
+							return false;
+					} else if (ahkVersion <= alpha_11 + 9 && _low === 'import')
+						return nexttoken() && parse_import(le20, true);
+					else if (!le20 && _low === 'global') {
+						nexttoken();
+						if (tk.topofline || tk.type as unknown !== TokenType.Identifier)
+							return false;
+						next = false;
+						const sta = parse_statement('');
+						for (const it of sta)
+							it.exported = true;
+						result.push(...sta);
+						return true;
+					}
+					if (_low === 'class') {
+						if (nexttoken(), tk.topofline || !parse_class(df ? 'd' : 'e'))
+							return false
+					} else if (c !== '(' || (next = false, !is_func_def()))
+						return false;
+					else parse_func(fc ?? { ...EMPTY_TOKEN, offset: tk.offset });
+					if (df)
+						df.type = TokenType.Reserved, df.semantic = SE_KEYWORD, df.hover_word = 'export';
+					return true;
+				}
+			}
+
+			function parse_import(le20: boolean, export_?: boolean) {
+				const dl = _this.diagnostics.length, kws = [lk],
+					mods: Token[] = [], hs: Token[] = [], us: Token[] = [],
+					fr: number[] = [], syms: AhkSymbol[] = [];
+				let must = le20, has_suffix_imps: boolean | 0;
 				warn_once.i ??= (_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
-				if (tk.content === '*')
+				if (lk.type === TokenType.Directive) {
+					kws.pop(), must = true;
+					if (!tk.topofline && tk.type === TokenType.Identifier &&
+						tk.content.toLowerCase() === 'export')
+						kws.push(tk), nexttoken(), export_ = true;
+				}
+				const r = parse();
+				if (r) {
+					const mod = { type: SemanticTokenTypes.module };
+					mods.forEach(t => (t.semantic = mod, t.type = TokenType.Identifier));
+					kws.forEach(t => (t.semantic = SE_KEYWORD, t.type = TokenType.Reserved));
+					fr.length && _this.addFoldingRange(...fr as [number, number]);
+					result.push(...syms);
+				} else {
+					_this.diagnostics.splice(dl);
+					hs.forEach(t => delete t.has_warned);
+					us.forEach(t => delete t.unexpected_lf);
+				}
+				return r;
+
+				function ue(tk: Token) {
+					unexpected(tk), hs.push(tk);
+				}
+
+				function ue_lf(tk: Token) {
+					if (tk.type)
+						unexpected_lf(tk), us.push(tk);
+					else ue(tk);
+					return true;
+				}
+
+				function parse() {
+					const le21 = ahkVersion < alpha_21;
+					let has_from = true, sk, vk, vr;
+					if (le21 && tk.content === '*')
+						nexttoken();
+					else if (tk.topofline)	// import\n
+						return next = false, must && ue_lf(tk);
+					else if (le21 && tk.content === '{') {
+						if (!parse_imps() && !must)
+							return false;	// import {}\n
+					} else if ((has_from = !(tk.type === TokenType.String || allIdentifierChar.test(tk.content))))
+						if (must)
+							ue(tk);
+						else return false;	// import(, import +, ...
+					if (has_from) {
+						if (tk.content.toLowerCase() === 'from') {
+							if (tk.topofline && lk.content !== '*')
+								if (must)
+									ue_lf(tk);
+								else return false;	// import {...}\nfrom
+							kws.push(tk), nexttoken();
+							if (tk.topofline && !isContinuousLine(lk, tk))
+								return next = false, must && ue_lf(tk);	// import ... from\n
+							if (must = true, allIdentifierChar.test(tk.content))
+								mods.push(tk);
+							else next = tk.type as TokenType === TokenType.String;
+							if (next)
+								has_from = false, has_suffix_imps = 0;
+						} else if (!must)
+							return false;	// import ... other
+						else if (next = false, tk.topofline)
+							return ue_lf(tk);
+					}
 					nexttoken();
-				else if (tk.topofline)
-					return next = false, unexpected_lf(tk);
-				else if (tk.content === '{') {
-					parse_imps();
-				} else if ((has_from = !(tk.type === TokenType.String || allIdentifierChar.test(tk.content))))
-					unexpected(tk);
-				if (has_from) {
-					if (tk.content.toLowerCase() === 'from') {
-						if (tk.topofline && lk.content !== '*')
-							unexpected_lf(tk);
-						tk.type = TokenType.Reserved;
-						tk.semantic = kw, nexttoken();
-						if (tk.topofline)
-							return next = false, unexpected_lf(tk);
-						if (allIdentifierChar.test(tk.content))
-							tk.semantic = mod, tk.type = TokenType.Identifier;
-						else next = tk.type as TokenType === TokenType.String;
-						if (allIdentifierChar.test(tk.content) || tk.type as TokenType === TokenType.String)
-							has_from = false, has_suffix_imps = 0;
-						else next = false;
-					} else if (next = false, tk.topofline)
-						return unexpected_lf(tk);
-				}
-				nexttoken();
-				if (!has_from) {
-					if ((sk = lk).type !== TokenType.String)
-						(vk = lk).semantic = mod, lk.type = TokenType.Identifier;
-					if (tk.content.toLowerCase() === 'as') {
-						tk.semantic = kw, nexttoken();
-						if (tk.topofline && lk.topofline)
-							return next = false, unexpected_lf(tk);
-						if (allIdentifierChar.test(tk.content)) {
-							(vk = tk).semantic = mod, tk.type = TokenType.Identifier;
-							nexttoken();
-						} else vk = undefined, next = false;
+					if (!has_from) {
+						if ((sk = lk).type !== TokenType.String)
+							mods.push(vk = lk);
+						if (tk.type === TokenType.Operator && tk.content.toLowerCase() === 'as' && isContinuousLine(lk, tk)) {
+							tk.semantic = SE_KEYWORD, nexttoken();
+							if (must = true, allIdentifierChar.test(tk.content))
+								mods.push(vk = tk), nexttoken();
+							else vk = undefined, next = false;
+						} else if (!must && has_suffix_imps !== 0 && tk.topofline)
+							return false;	// import mod\n other
+						has_suffix_imps ??= next && !tk.topofline && tk.content === '{';
+						if (vk && (has_suffix_imps === false || sk !== vk || has_suffix_imps && !le20)) {
+							vr = Variable.create(vk.content, SymbolKind.Module,
+								make_range(vk.offset, vk.length));
+							if (sk !== vk)
+								vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
+							vr.decl = vr.def = vr.assigned = true;
+							syms.push(vr);
+							vk.type !== TokenType.Identifier && _this.diagnostics.push({
+								message: diagnostic.reservedworderr(vr.name),
+								range: vr.range
+							});
+						}
+						if (has_suffix_imps && !parse_imps() && !must)
+							return false;	// import mod { ... eof
 					}
-					has_suffix_imps ??= next && !tk.topofline && tk.content === '{';
-					if (vk && (has_suffix_imps === false || sk !== vk)) {
-						vr = Variable.create(vk.content, SymbolKind.Module,
-							make_range(vk.offset, vk.length));
-						if (sk !== vk)
-							vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
-						vr.decl = vr.def = vr.assigned = true;
-						result.push(vr);
-					}
-					has_suffix_imps && parse_imps();
+					if ((next = !tk.topofline || isContinuousLine(lk, tk)))
+						if (must)
+							ue(tk), parse_line();
+						else return false;
+					return true;
 				}
-				if ((next = !tk.topofline || isContinuousLine(lk, tk)))
-					unexpected(tk), parse_line();
 				function parse_imps() {
+					let sk, vk, vr;
 					const bk = tk, obj: Record<string, Variable> = {};
 					bk.data = obj;
 					while (nexttoken()) {
-						if (next_is_id && (sk = tk).type === TokenType.Identifier) {
-							if (nexttoken(), tk.content as string === 'as') {
-								tk.semantic = kw;
-								if (nexttoken(), tk.type === TokenType.Identifier) {
+						if (tk.content === '*') {
+							if (nexttoken(), tk.type === TokenType.Comma)
+								continue;
+						} else if (allIdentifierChar.test((sk = tk).content)) {
+							if (nexttoken(), tk.type === TokenType.Operator && tk.content.toLowerCase() === 'as') {
+								tk.semantic = SE_KEYWORD;
+								if (nexttoken(), allIdentifierChar.test(tk.content)) {
 									vk = tk, nexttoken();
-								} else vk = undefined, unexpected(tk);
+								} else vk = undefined, ue(tk);
 							} else vk = lk;
 							if (vk) {
 								const n = vk.content.toUpperCase();
-								if (obj[n])
+								vr = Variable.create(vk.content, SymbolKind.Variable,
+									make_range(vk.offset, vk.length));
+								if (sk !== vk)
+									vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
+								vr.decl = vr.def = vr.has_warned = true;
+								syms.push(vr);
+								if (vr !== (obj[n] ??= vr) && le20)
 									_this.addDiagnostic(diagnostic.dupdeclaration(), vk.offset, vk.length);
-								else {
-									obj[n] = vr = Variable.create(vk.content, SymbolKind.Variable,
-										make_range(vk.offset, vk.length));
-									if (sk !== vk)
-										vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
-									vr.decl = vr.def = vr.has_warned = true;
-									result.push(vr);
-								}
+								else vk.type !== TokenType.Identifier && _this.diagnostics.push({
+									message: diagnostic.reservedworderr(vr.name),
+									range: vr.range
+								});
 							}
-							if ((next_is_id = tk.content as string === ','))
-								continue;
-						} else if (next_is_id && tk.content === '*')
-							nexttoken();
-						if (tk.content as string === '}') {
+						}
+						if (tk.type === TokenType.Comma)
+							continue;
+						if (tk.type === TokenType.BlockEnd) {
 							begin_line = false;
 							bk.next_pair_pos = tk.offset;
 							tk.previous_pair_pos = bk.offset;
-							_this.addFoldingRange(bk.offset, tk.offset);
+							fr.push(bk.offset, tk.offset);
 							nexttoken();
+							if (must || !tk.topofline === !has_suffix_imps)
+								return true;
 							break;
 						}
-						next_is_id = tk.content as string === ',';
-						unexpected(tk);
+						ue(tk), next = false, parse_expression();
 					}
+					must || delete bk.data;
 				}
 			}
 
@@ -2954,6 +3047,11 @@ export class Lexer {
 							_this.addDiagnostic(diagnostic.requireVerN(alpha_11), tk.offset, tk.length, { code: DiagnosticCode.module });
 						else
 							warn_once.m ??= (_this.addDiagnostic(warn.notimplemented(), tk.offset, tk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
+						break;
+					case '#import':
+						if (ahkVersion < alpha_11 + 9)
+							_this.addDiagnostic(diagnostic.requireVerN(alpha_11 + 9), tk.offset, tk.length);
+						else nexttoken(), parse_import(false);
 						break;
 					case '#structpack':
 						if (ahkVersion < alpha_11 + 8)
@@ -5182,8 +5280,16 @@ export class Lexer {
 								parser_pos = p;
 						}
 					}
-					if (-1 < (i = RESERVED_WORDS.indexOf(c.toLowerCase(), reservedIndex)))
-						tp = i < OP_INDEX ? TokenType.Reserved : TokenType.Operator;
+					if (-1 < (i = RESERVED_WORDS.indexOf(c.toLowerCase())))
+						if (i < OP_INDEX)
+							tp = TokenType.Reserved;
+						else if (bg) {
+							lst = createToken(c, TokenType.Operator, offset, c.length, bg);
+							for (i = offset + c.length; ' \t'.includes(input[i]); i++);
+							if (';\r\n'.includes(input.charAt(i)))
+								lst.op_type = null;
+							return lst;
+						} else tp = TokenType.Operator;
 				}
 				return lst = createToken(c, tp, offset, c.length, bg);
 			}
@@ -5674,6 +5780,12 @@ export class Lexer {
 						}
 					}
 					return lst = tk;
+				} else if (c === '!') {
+					if (input.substring(parser_pos, parser_pos + 2) === '~=') {
+						c = '!~=', parser_pos += 2;
+						if (ahkVersion < alpha_21)
+							_this.addDiagnostic(diagnostic.requireVerN(alpha_21), offset, c.length);
+					}
 				} else if (c === '??=' && ahkVersion < alpha_3 - 1)
 					_this.addDiagnostic(diagnostic.requireVerN(alpha_3 - 1), offset, c.length, { code: DiagnosticCode.maybe_assign });
 				return lst = createToken(c, i >= ASSIGN_INDEX ? TokenType.Assign : TokenType.Operator, offset, c.length, bg);
@@ -5686,7 +5798,7 @@ export class Lexer {
 				sharp_offsets.push(offset);
 				lst = createToken(sharp, TokenType.Directive, offset, sharp.length, bg);
 				token_text_low = sharp.toLowerCase();
-				if (WHITESPACE.includes(c = input.charAt(parser_pos)) && (token_text_low === '#hotif' || h && token_text_low === '#initexec'))
+				if (WHITESPACE.includes(c = input.charAt(parser_pos)) && DIRECTIVES_EXPR.includes(token_text_low, h ? 0 : 1))
 					return lst;
 				last_LF = input.indexOf('\n', offset = parser_pos);
 				parser_pos = last_LF < 0 ? input_length : last_LF;
@@ -6157,7 +6269,7 @@ export class Lexer {
 				}
 				token_text = token_text.replaceAll(
 					ltrim ? /\n[ \t]*/g :
-					indent ? new RegExp(`\n(${indent})?`, 'g') : '\n',
+						indent ? new RegExp(`\n(${indent})?`, 'g') : '\n',
 					`\n${cs_opt.new_indent}`);
 			}
 			print_token();
@@ -8538,6 +8650,9 @@ export function isContinuousLine(lk: Token, tk: Token, parent?: AhkSymbol): bool
 				case TokenType.Assign:
 					return true;
 				case TokenType.Operator:
+					// ...\n op \n ...
+					if (tk.op_type === null)
+						return false;
 					return !/^(!|~|not|%|\+\+|--)$/i.test(tk.content) && (
 						!(parent as FuncNode)?.has_this_param || !allIdentifierChar.test(tk.content) || !(
 							(parent as FuncNode).ranges || parent!.returns?.[1] === 0 &&

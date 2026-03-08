@@ -43,6 +43,12 @@
 			"syntax": ""
 		},
 		{
+			"body": "#Import ",
+			"description": "Imports a module, or imports names from a module.",
+			"prefix": "#Import",
+			"syntax": "#Import [export] ModuleName [as ModuleAlias]\n#Import [export] { ExportName [as Alias], ... } from ModuleName\n#Import * from ModuleName\n#Import [export] ModuleName [as ModuleAlias] [{ *, ExportName ... }]"
+		},
+		{
 			"body": "#Include ${0:File_Dir_Or_LibName}",
 			"description": "File contents are inserted here when script runs, but not if already included earlier.",
 			"prefix": "#Include"
@@ -290,10 +296,10 @@
 			"description": "Specifies one or more statements to execute if the associated statement's body did not execute.\nThe condition for an Else statement executing depends on the associated statement:\n- If expression: The expression evaluated to false.\n- For, Loop (any kind), While: The loop had zero iterations.\n- Loop Read: As above, but the presence of Else also prevents an error from being thrown if the file or path is not found. Therefore, Else executes if the file is empty or does not exist.\n- Try...Catch: No exception was thrown within the Try block."
 		},
 		{
-			"body": "export ${1:default} $2",
+			"body": "export ${1|default ,global |}",
 			"description": "Allows other modules to import a function, class or variable defined by the current module.",
 			"prefix": "export",
-			"syntax": "export [default] Definition\nexport Variables"
+			"syntax": "export [default] ClassOrFuncDefinition\nexport global Variables"
 		},
 		{
 			"body": "finally",
@@ -324,7 +330,7 @@
 			"body": "import ${0:*} from ${1:ModuleName}",
 			"description": "Imports a module, or imports names from a module.",
 			"prefix": "import",
-			"syntax": "import ModuleName [as ModuleAlias]\nimport { ExportName [as Alias], ... } from ModuleName\nimport * from ModuleName"
+			"syntax": "[export] import ModuleName as ModuleAlias\n[export] import { ExportName [as Alias], ... } from ModuleName\nimport * from ModuleName\n[export] import ModuleName [as ModuleAlias] [{ *, ExportName ... }]"
 		},
 		{
 			"body": "loop files ${0:FilePattern [, Mode]}",

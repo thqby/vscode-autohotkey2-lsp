@@ -93,6 +93,7 @@ export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
 export const alpha_3 = versionEncode('2.1-alpha.3');
 export const alpha_11 = alpha_3 + 8;
+export const alpha_21 = alpha_11 + 10;
 export const configCache: LSConfig = {
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
@@ -128,7 +129,7 @@ export const utils: Utils = {
 export type Maybe<T> = T | undefined;
 export let locale = 'en-us', rootDir = '', isahk2_h = false;
 export let ahkPath = '', ahkPath_resolved = '';
-export let ahkVersion = Infinity, reservedIndex = 0, metafnIndex = 0;
+export let ahkVersion = Infinity, metafnIndex = 0;
 export let ahkUris: Record<string, string> = {};
 export let ahkVars: Record<string, AhkSymbol> = {};
 export let inactiveVars: Record<string, string> = {};
@@ -567,7 +568,6 @@ export function setLocale(str?: string) { if (str) locale = str.toLowerCase(); }
 export function setVersion(version: string) {
 	ahkVersion = versionEncode(version);
 	metafnIndex = ahkVersion < alpha_11 - 1 ? 2 : 0;
-	reservedIndex = ahkVersion < alpha_11 ? 1 : 0;
 }
 export function setWorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;

@@ -33,6 +33,12 @@
 			"syntax": ""
 		},
 		{
+			"body": "#Import ",
+			"description": "导入模块, 或从模块中导入名称.",
+			"prefix": "#Import",
+			"syntax": "#Import [export] ModuleName [as ModuleAlias]\n#Import [export] { ExportName [as Alias], ... } from ModuleName\n#Import * from ModuleName\n#Import [export] ModuleName [as ModuleAlias] [{ *, ExportName ... }]"
+		},
+		{
 			"body": "#Include ${0:File_Dir_Or_LibName}",
 			"description": "使脚本的行为与指定文件的内容位于此确切位置一样.",
 			"prefix": "#Include"
@@ -210,10 +216,10 @@
 			"description": "如果if语句的结果为false,则指定要执行的一个或多个语句."
 		},
 		{
-			"body": "export ${1:default} $2",
+			"body": "export ${1|default ,global |}",
 			"description": "允许其他模块导入由当前模块定义的函数,类或变量.",
 			"prefix": "export",
-			"syntax": "export [default] Definition\nexport Variables"
+			"syntax": "export [default] ClassOrFuncDefinition\nexport global Variables"
 		},
 		{
 			"body": "finally",
@@ -244,7 +250,7 @@
 			"body": "import ${0:*} from ${1:ModuleName}",
 			"description": "导入模块, 或从模块中导入名称.",
 			"prefix": "import",
-			"syntax": "import ModuleName [as ModuleAlias]\nimport { ExportName [as Alias], ... } from ModuleName\nimport * from ModuleName"
+			"syntax": "[export] import ModuleName as ModuleAlias\n[export] import { ExportName [as Alias], ... } from ModuleName\nimport * from ModuleName\n[export] import ModuleName [as ModuleAlias] [{ *, ExportName ... }]"
 		},
 		{
 			"body": "loop files ${0:FilePattern [, Mode]}",

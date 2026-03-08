@@ -1836,7 +1836,7 @@
           ]
         },
         {
-          "match": "^[ \t]*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|inputlevel|initexec|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|notrayicon|structpack|suspendexempt|usehook|usestdlib|warn|warncontinuableexception|winactivateforce))\\b",
+          "match": "^[ \t]*((#)(?i:clipboardtimeout|criticalobject(sleeptime|timeout)|hotif|hotiftimeout|import|inputlevel|initexec|maxthreads|maxthreadsbuffer|maxthreadsperhotkey|notrayicon|structpack|suspendexempt|usehook|usestdlib|warn|warncontinuableexception|winactivateforce))\\b",
           "captures": {
             "1": {
               "name": "keyword.control.directive.ahk2"
