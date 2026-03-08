@@ -1010,7 +1010,7 @@ export class Lexer {
 						}
 					}
 				}
-				checkDupError({}, this.children, this);
+				checkDupError({}, this.children, this, true);
 				parse_unresolved_typedef();
 				this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
@@ -1303,7 +1303,7 @@ export class Lexer {
 						includetable[this.d_uri = m.uri] = m.path;
 					else this.d_uri = '';
 				}
-				checkDupError(this.declaration, this.children, this);
+				checkDupError(this.declaration, this.children, this, true);
 				parse_unresolved_typedef();
 				this.isparsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
@@ -2670,7 +2670,7 @@ export class Lexer {
 								make_range(vk.offset, vk.length));
 							if (sk !== vk)
 								vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
-							vr.decl = vr.def = vr.assigned = true;
+							vr.decl = vr.def = true, vr.assigned = 1;
 							syms.push(vr);
 							vk.type !== TokenType.Identifier && _this.diagnostics.push({
 								message: diagnostic.reservedworderr(vr.name),
@@ -2707,7 +2707,7 @@ export class Lexer {
 									make_range(vk.offset, vk.length));
 								if (sk !== vk)
 									vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
-								vr.decl = vr.def = vr.has_warned = true;
+								vr.decl = vr.def = true, vr.assigned = 1;
 								syms.push(vr);
 								if (vr !== (obj[n] ??= vr) && le20)
 									_this.addDiagnostic(diagnostic.dupdeclaration(), vk.offset, vk.length);
@@ -2828,12 +2828,12 @@ export class Lexer {
 					fc.paraminfo = pi;
 					result.push(...parse_line(undefined, undefined, undefined, undefined, pi));
 					range = make_range(fc.offset, fc.length);
-					if (cwp === true || cwp && tp === TokenType.BracketStart)
-						_this.diagnostics.push({
-							code: DiagnosticCode.call, range,
-							message: warn.callwithoutparentheses(),
-							severity: DiagnosticSeverity.Warning,
-						});
+					_this.diagnostics.push({
+						code: DiagnosticCode.call, range,
+						message: warn.callwithoutparentheses(),
+						severity: cwp === true || cwp && tp === TokenType.BracketStart ?
+							DiagnosticSeverity.Warning : DiagnosticSeverity.Hint,
+					});
 				}
 				if (fc.ignore)
 					return delete fc.semantic, undefined;
@@ -4264,7 +4264,8 @@ export class Lexer {
 				} else {
 					const fn = node as FuncNode, has_this_param = fn.has_this_param;
 					const dec = fn.declaration, local = fn.local ?? {}, global = fn.global ?? {};
-					const vs: Variable[] = [];
+					const vs: Variable[] = [], gd = _this.declaration;
+					const uri = _this.document.uri;
 					let vars: typeof pars = {}, unresolved_vars: typeof pars = {}, vr: Variable;
 					let named_params: Variable[] | undefined = [];
 					if (has_this_param) {
@@ -4320,7 +4321,7 @@ export class Lexer {
 							delete local[k];
 						}
 						dec[k] ??= v;
-						_this.declaration[k] ??= v;
+						gd[k] ??= (v.uri = _this.uri, v);
 						v.assigned ||= Boolean(v.returns);
 						v.is_global = true;
 					}
@@ -4353,8 +4354,8 @@ export class Lexer {
 										if (it === t) continue;
 										delete global[_low];
 										delete t.is_global;
-										if (_this.declaration[_low] === t)
-											delete _this.declaration[_low];
+										if (gd[_low] === t)
+											delete gd[_low];
 									} else if ((t = local[_low])) {
 										if (t.selectionRange.start.line < it.selectionRange.start.line ||
 											t.selectionRange.start.line === it.selectionRange.start.line &&
@@ -4386,14 +4387,21 @@ export class Lexer {
 							if (_low in unresolved_vars)
 								vars[_low] = unresolved_vars[_low], delete unresolved_vars[_low];
 						} else if (t.children)
-							v.has_warned ??= _diags.push({ message: makeDupError(t, v), range: v.selectionRange });
+							v.has_warned ??= _diags.push({
+								message: diagnostic.assignerr(sym_type(t), t.name),
+								range: v.selectionRange,
+								relatedInformation: [sym_related_msg(t, uri)]
+							});
 					}
 					if (fn.assume === FuncScope.GLOBAL) {
 						for (const [k, v] of Object.entries(Object.assign(unresolved_vars, vars))) {
 							if (!(t = dec[k]))
-								_this.declaration[k] ??= global[k] = v, v.is_global = true;
+								gd[k] ??= global[k] = (v.uri = _this.uri, v), v.is_global = true;
 							else if (t.kind === SymbolKind.Function && v.def)
-								v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
+								v.assigned !== 1 && _diags.push({
+									message: diagnostic.assignerr('Func', t.name), range: v.selectionRange,
+									relatedInformation: [sym_related_msg(t, uri)]
+								});
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
 								t.def = true, t.assigned ||= Boolean(v.returns);
 						}
@@ -4407,7 +4415,10 @@ export class Lexer {
 								if (dec[k] = v, is_outer)
 									local[k] = v, v.static = assme_static;
 							} else if (t.kind === SymbolKind.Function)
-								v.has_warned ??= v.assigned !== 1 && _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
+								v.has_warned ??= v.assigned !== 1 && _diags.push({
+									message: diagnostic.assignerr('Func', t.name), range: v.selectionRange,
+									relatedInformation: [sym_related_msg(t, uri)]
+								});
 							else if (t.kind === SymbolKind.Variable && v.def && v.kind === t.kind)
 								t.def = true, t.assigned ||= Boolean(v.returns);
 						}
@@ -4416,7 +4427,10 @@ export class Lexer {
 							if (!(t = dec[k])) {
 								(dec[k] = v).has_warned = true;
 							} else if (v.def && v.assigned !== 1 && t.kind === SymbolKind.Function)
-								v.has_warned ??= _diags.push({ message: diagnostic.assignerr('Func', t.name), range: v.selectionRange });
+								v.has_warned ??= _diags.push({
+									message: diagnostic.assignerr('Func', t.name), range: v.selectionRange,
+									relatedInformation: [sym_related_msg(t, uri)]
+								});
 						}
 						unresolved_vars = {};
 					}
@@ -4433,7 +4447,7 @@ export class Lexer {
 						if (k.substring(0, 2) === 'A_' && (k in ahkVars)) {
 							if (!(vr = dec[k]).decl)
 								delete dec[k], delete local[k];
-							else _diags.push({
+							else vr.has_warned ??= _diags.push({
 								message: diagnostic.conflictserr(
 									(vr as FuncNode).params ? 'function' : vr.is_param ? 'parameter' : 'variable',
 									'built-in variable', vr.name),
@@ -8499,35 +8513,6 @@ export function getParamCount(fn: FuncNode) {
 	return { min, max, has_this_param: fn.has_this_param };
 }
 
-export function makeDupError(a: AhkSymbol, b: AhkSymbol): string {
-	if (a.kind === b.kind) {
-		if (a.kind === SymbolKind.Class)
-			return diagnostic.conflictserr('class', 'Class', a.name);
-		else if (a.kind === SymbolKind.Function)
-			return diagnostic.conflictserr('function', 'Func', a.name);
-		return diagnostic.dupdeclaration();
-	} else {
-		switch (b.kind) {
-			case SymbolKind.Variable:
-				return diagnostic.assignerr(a.kind === SymbolKind.Function ? 'Func' : 'Class', a.name);
-			case SymbolKind.Function:
-				if (a.kind === SymbolKind.Variable)
-					return diagnostic.assignerr('Func', a.name);
-				return diagnostic.conflictserr('function', 'Class', a.name);
-			case SymbolKind.Class:
-				if (a.kind === SymbolKind.Function)
-					return diagnostic.conflictserr('class', 'Func', a.name);
-				else if (a.kind === SymbolKind.Property || a.kind === SymbolKind.Method)
-					return diagnostic.dupdeclaration();
-				return diagnostic.assignerr('Class', a.name);
-			case SymbolKind.Property:
-			case SymbolKind.Method:
-				return diagnostic.dupdeclaration();
-		}
-		return '';
-	}
-}
-
 function flat_block(block: FuncNode, flat: (syms: AhkSymbol[]) => void, ...decls: Record<string, Variable>[]) {
 	const local = block.local, baks: typeof decls = [], dels: string[][] = [];
 	let bak: Record<string, Variable>, del;
@@ -8546,10 +8531,9 @@ function flat_block(block: FuncNode, flat: (syms: AhkSymbol[]) => void, ...decls
 	return block.params;
 }
 
-export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer) {
-	const { children, diagnostics, uri, relevance } = lex;
-	const same_uri = syms === children;
-	const vs: Variable[] = [];
+export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer, same_uri = false) {
+	const { diagnostics, uri, relevance } = lex;
+	const vs: Variable[] = [], uri2 = lex.document.uri;
 	let l = '', v1: Variable, v2: Variable;
 	if (ahkVersion < alpha_11)
 		Object.assign(relevance, { [ahkUris.ahk2]: 1, [ahkUris.ahk2_h ?? '\0']: 1 });
@@ -8573,7 +8557,8 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 						if ((it as FuncNode).params)
 							it.has_warned ??= diagnostics.push({
 								message: diagnostic.conflictserr('function', 'built-in variable', it.name),
-								range: it.selectionRange
+								range: it.selectionRange,
+								relatedInformation: [sym_related_msg(ahkVars[l])]
 							});
 					}
 					if (same_uri)
@@ -8584,50 +8569,82 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 					}
 					if (!v2)
 						decs[l] = it;
-					else if (v2.is_global) {
-						if (is_var) {
-							if (v1.def && v2.kind !== SymbolKind.Variable) {
-								if (v1.assigned !== 1)
-									it.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(v2.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: it.selectionRange });
-								continue;
-							}
-						} else if (v2.kind === SymbolKind.Function) {
-							it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange });
-							continue;
-						} else if (v2.def && (it.kind === SymbolKind.Class ? v2.assigned === true : v2.assigned !== 1))
-							v2.has_warned ??= diagnostics.push({ message: diagnostic.assignerr(it.kind === SymbolKind.Function ? 'Func' : 'Class', it.name), range: v2.selectionRange });
-						decs[l] = it;
-					} else if (is_var) {
-						if (v2.kind === SymbolKind.Variable) {
+					else if (is_var) {
+						if (v1.exported && v1.assigned !== true) {
+							if (v2.kind === SymbolKind.Variable && !v2.decl)
+								decs[l] = it;
+						} else if (v2.kind === SymbolKind.Variable) {
 							if (v1.def && !v2.def)
 								decs[l] = it;
 							else v2.assigned ||= v1.assigned;
-						} else if (v1.def) {
-							delete v1.def;
-							if (v1.assigned !== 1)
-								it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange });
-						}
-					} else {
-						if (v2.kind === SymbolKind.Variable) {
-							if (v2.def) {
-								delete v2.def;
-								if (v2.assigned !== 1)
-									v2.has_warned ??= diagnostics.push({ message: makeDupError(it, v2), range: v2.selectionRange });
-							}
-							decs[l] = it;
-						} else if (v2.def !== false)
-							it.has_warned ??= diagnostics.push({ message: makeDupError(v2, it), range: it.selectionRange });
-						else if (v1.def !== false)
-							decs[l] = it;
-					}
+						} else if (v1.decl && (!same_uri || is_before(v1, v2)))
+							v1.has_warned ??= lex.diagnostics.push({
+								message: diagnostic.conflictserr('global', sym_type(v2), v1.name),
+								range: v1.selectionRange,
+								relatedInformation: [sym_related_msg(v2, undefined, diagnostic.dupdeclaration())]
+							});
+						else if (v1.decl ? v1.assigned === true : v1.def && v1.assigned !== 1)
+							v1.has_warned ??= lex.diagnostics.push({
+								message: diagnostic.assignerr(sym_type(v2), v2.name),
+								range: v1.selectionRange,
+								relatedInformation: [sym_related_msg(v2)]
+							});
+					} else if (v2.kind === SymbolKind.Variable) {
+						if (decs[l] = v1, v2.decl && (!same_uri || is_before(v2, v1)))
+							v1.has_warned ??= lex.diagnostics.push({
+								message: diagnostic.conflictserr(sym_type(v1).toLowerCase(), 'global variable', v1.name),
+								range: v1.selectionRange,
+								relatedInformation: [sym_related_msg(v2, undefined, diagnostic.dupdeclaration())]
+							});
+						else if (same_uri && (v2.decl ? v2.assigned === true : v2.def && v2.assigned !== 1))
+							v2.has_warned ??= lex.diagnostics.push({
+								message: diagnostic.assignerr(sym_type(v1), v1.name),
+								range: v2.selectionRange,
+								relatedInformation: [sym_related_msg(v1)]
+							});
+					} else if (v2.def !== false) {
+						v1.has_warned ??= lex.diagnostics.push({
+							message: diagnostic.conflictserr(sym_type(v1).toLowerCase(), sym_type(v2), v1.name),
+							range: v1.selectionRange,
+							relatedInformation: [sym_related_msg(v2, undefined, diagnostic.dupdeclaration())]
+						});
+					} else decs[l] = v1;
 					break;
 			}
 		}
 	})(syms);
 	for (const v of vs) {
 		const t = decs[v.name.toUpperCase()];
-		t?.children && (v.has_warned ??= diagnostics.push({ message: makeDupError(t, v), range: v.selectionRange }));
+		t?.children && (v.has_warned ??= diagnostics.push({
+			message: diagnostic.assignerr(sym_type(t), t.name),
+			range: v.selectionRange,
+			relatedInformation: [sym_related_msg(t, uri2)]
+		}));
 	}
+}
+
+export function sym_related_msg(sym: AhkSymbol, uri?: string, message?: string) {
+	return {
+		location: {
+			uri: uri ?? lexers[sym.uri!]?.document.uri ?? sym.uri,
+			range: sym.selectionRange
+		}, message: message ?? diagnostic.readonly(sym_type(sym), sym.name)
+	};
+}
+
+export function sym_type(sym: AhkSymbol) {
+	switch (sym.kind) {
+		case SymbolKind.Module: return 'Module';
+		case SymbolKind.Class: return 'Class';
+		case SymbolKind.Function: return 'Func';
+		case SymbolKind.Variable: return 'Variable';
+		default: return '';
+	}
+}
+
+function is_before(a: AhkSymbol, b: AhkSymbol) {
+	const aa = a.selectionRange.start, bb = b.selectionRange.start;
+	return (aa.line - bb.line || aa.character - bb.character) < 0;
 }
 
 export function isContinuousLine(lk: Token, tk: Token, parent?: AhkSymbol): boolean {

@@ -5,7 +5,7 @@ import {
 	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles,
 	findClass, getClassConstructor, getClassMember, getParamCount, getWorkspaceFile, hint, inactiveVars,
-	invokeCheck, isContinuousLine, lexers, makeDupError, openFile, utils, warn, workspaceFolders
+	invokeCheck, isContinuousLine, lexers, openFile, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
@@ -16,6 +16,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 }
 function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 	const fns = oncomp ?? [];
+	const uri = lex.document.uri;
 	const unused = new Set<AhkSymbol>;
 	const { document, tokens, relevance } = lex;
 	const gvar: Record<string, Variable> = { ...ahkVars };
@@ -82,7 +83,6 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 		}
 	});
 	oncomp ?? fns.forEach(f => f());
-	const uri = lex.document.uri;
 	return lex.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
 	function maybe_unset(k: Variable, v: Variable) {
@@ -188,7 +188,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 							s !== v && (converttype(v, s, s === ahkVars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable));
 						else if (oig)
-							s = gvar[k] ??= (add(v), check_name(v), lex.declaration[k] = v),
+							s = gvar[k] ??= (add(v), check_name(v), lex.declaration[k] = (v.uri = lex.uri, v)),
 								(v as Variable).is_global = true, (fn.global ??= {})[v.name.toUpperCase()] = v,
 								converttype(v, s, s === ahkVars[k]).definition = s,
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
@@ -318,20 +318,21 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 			if (!(stk = tk.semantic)) {
 				tk.semantic = stk = { type: st };
 				if (it.kind === SymbolKind.Variable && it.def) {
-					const { assigned } = it as Variable;
+					const { assigned, decl } = it as Variable;
 					if (kind === SymbolKind.Class ? assigned === true :
-						kind === SymbolKind.Function && (islib ? assigned === true : assigned !== 1))
+						kind === SymbolKind.Function && (islib || decl ? assigned === true : assigned !== 1))
 						it.has_warned ??= lex.diagnostics.push({
-							message: makeDupError(it, { kind } as AhkSymbol),
-							range: it.selectionRange
-						}), delete it.def;
+							message: diagnostic.assignerr(sym_type(source), source.name),
+							range: it.selectionRange,
+							relatedInformation: [sym_related_msg(source, source.uri ? undefined : uri)]
+						});
 				}
 				if (!tk.callsite && st === SemanticTokenTypes.function) {
 					const nk = lex.tokens[tk.next_token_offset];
 					if (nk && nk.topofline < 1 && !(nk.op_type! >= 0 || ':?.+-*/=%<>,)]}'.includes(nk.content.charAt(0)) || !nk.data && nk.content === '{'))
 						lex.diagnostics.push({
 							message: diagnostic.funccallerr2(),
-							range: it.selectionRange, severity: 2
+							range: it.selectionRange, severity: DiagnosticSeverity.Warning
 						});
 				}
 			} else if (kind !== undefined)

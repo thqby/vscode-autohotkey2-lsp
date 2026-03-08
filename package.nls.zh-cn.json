@@ -109,6 +109,7 @@
 	"diagnostic.propdeclaraerr": "不是有效的方法, 类或属性定义",
 	"diagnostic.propemptyparams": "动态属性不允许使用空[]",
 	"diagnostic.propnotinit": "属性声明未初始化",
+	"diagnostic.readonly": "{0} '{1}'是只读的",
 	"diagnostic.requirev1": "此脚本需要AutoHotkey v1, lexer停止解析.",
 	"diagnostic.requirevariable": "'&'需要一个变量",
 	"diagnostic.requireversion": "该特性需要AutoHotkey版本: {0}",

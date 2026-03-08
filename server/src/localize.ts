@@ -64,6 +64,7 @@ export const diagnostic = {
 	propdeclaraerr: localize('diagnostic.propdeclaraerr', 'Not a valid method, class or property definition'),
 	propemptyparams: localize('diagnostic.propemptyparams', 'Empty [] not permitted'),
 	propnotinit: localize('diagnostic.propnotinit', 'Property declaration is not initialized'),
+	readonly: localize('diagnostic.readonly', "{0} '{1}' is read-only"),
 	requirev1: localize('diagnostic.requirev1', 'This script requires AutoHotkey v1, continue parsing?'),
 	requireVerN: (n: number) => diagnostic.requireversion(versionDecode(n)),
 	requireversion: localize('diagnostic.requireversion', 'This feature requires the AutoHotkey version: {0}'),
