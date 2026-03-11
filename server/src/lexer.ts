@@ -6,87 +6,21 @@ import {
 	ColorInformation, Diagnostic, DocumentSymbol, FoldingRange, MarkupContent,
 	Position, Range, SemanticTokens, SymbolInformation,
 } from 'vscode-languageserver';
-
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	a_Vars, action, ahkUris, ahkVars, ahkVersion, alpha_11, alpha_21, alpha_3, builtinCommands_v1,
-	commentTags, configCache, diagnostic, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
-	libSymbols, locale, metafnIndex, openAndParse, parseInclude, restorePath, rootDir,
+	a_Vars, action, ahkUris, ahkVars, ahkVersion, alpha_11, alpha_21, alpha_3,
+	builtinCommands_v1, commentTags, configCache, diagnostic, hoverCache,
+	inactiveVars, invokeCheck, isahk2_h, lexers, libDirs, libSymbols, locale,
+	metafnIndex, Mode, openAndParse, parseInclude, restorePath, rootDir,
 	symbolProvider, URI, utils, versionMatch, warn, workspaceFolders
 } from './common';
 import { DiagnosticSeverity, MessageType, SymbolKind } from './lsp-enums';
+import {
+	AccessModifier, ActionType, AhkSymbol, BlockType, CallSite, ClassNode, Context, ContinueSectionOption, DiagnosticCode,
+	FormatFlags, FormatOptions, FuncNode, FuncScope, Import, JsDoc, Module, ParamInfo, ParamList, Property,
+	SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, TokenType, USAGE, Variable
+} from './types';
 
-export interface ParamInfo {
-	offset: number
-	end?: number
-	count: number
-	comma: number[]
-	miss: number[]
-	unknown: boolean
-	method?: boolean
-	data?: string[]
-	name?: string
-	is_call?: boolean
-}
-
-export interface CallSite extends AhkSymbol {
-	checked?: boolean
-	offset?: number
-	paraminfo?: ParamInfo
-	outer?: AhkSymbol
-}
-
-export interface AhkDoc {
-	include: string[]
-	children: AhkSymbol[]
-}
-
-enum BlockType { Script, Func, Class, Method, Mask = Method, Body, Pair = 8 }
-
-export enum TokenType {
-	EOF,
-	Comma,
-	Dot,
-	Assign,
-	Operator,
-	String,
-	Identifier,
-	Reserved,
-	Number,
-	Directive,
-	Label,
-	Text,
-	Invoke,
-	Unknown,
-	BracketStart = 16,
-	BracketEnd,
-	BlockStart = 32,
-	BlockEnd,
-	Comment = 64,
-	BlockComment,
-	InlineComment,
-	Hotkey = 128,
-	HotkeyLine,
-}
-
-export enum FuncScope { DEFAULT, STATIC, GLOBAL }
-
-export enum SemanticTokenTypes {
-	class,
-	function,
-	method,
-	module,
-	parameter,
-	variable,
-	property,
-	keyword,
-	string,
-	number,
-	comment,
-	operator,
-	event,
-	'keyword.control.directive',
-}
 const SE_CLASS = { type: SemanticTokenTypes.class };
 const SE_KEYWORD = { type: SemanticTokenTypes.keyword };
 const SE_NUMBER = { type: SemanticTokenTypes.number };
@@ -109,204 +43,6 @@ export const TT2STT: Record<number, SemanticToken> = {
 	[TokenType.Directive]: { type: SemanticTokenTypes['keyword.control.directive'] },
 };
 
-export enum SemanticTokenModifiers {
-	static = 1,		// true
-	readonly = 2,
-	definition = 4,
-	defaultLibrary = 8,
-	deprecated = 16,
-}
-
-export enum DiagnosticCode {
-	call = 'call statement',
-	expect = 'expect',
-	func_expr = 'function definition expressions',
-	include = 'include',
-	maybe_assign = 'maybe-assign',
-	module = 'module',
-	opt_chain = 'optional chaining',
-	typed_prop = 'typed properties',
-	v_ref = 'virtual references',
-}
-export enum AccessModifier { public, protected, private, all }
-
-enum Mode { BlockStatement, Statement, ObjectLiteral, ArrayLiteral, Conditional, Expression }
-
-export interface AhkSymbol extends DocumentSymbol {
-	access?: AccessModifier
-	alias?: string
-	alias_range?: Range
-	is_builtin?: boolean
-	module?: string
-	cached_types?: Array<string | AhkSymbol>
-	children?: AhkSymbol[]
-	data?: unknown
-	decl?: boolean
-	def?: boolean
-	exported?: boolean
-	full?: string
-	has_warned?: boolean | number
-	markdown_detail?: string
-	ignore?: boolean
-	overwrite?: number
-	parent?: AhkSymbol
-	returns?: number[] | null
-	return_void?: boolean
-	since?: string
-	static?: boolean | null
-	type_annotations?: Array<string | AhkSymbol> | false
-	uri?: string
-}
-
-export interface FuncNode extends AhkSymbol {
-	assume: FuncScope
-	closure?: boolean
-	params: Variable[]
-	param_offsets: number[]
-	param_def_len: number
-	global: Record<string, Variable>
-	local: Record<string, Variable>
-	eval?: boolean
-	full: string
-	hasref: boolean
-	variadic: boolean
-	labels: Record<string, AhkSymbol[]>
-	declaration: Record<string, AhkSymbol>
-	overloads?: string | FuncNode[]
-	overload_params?: Record<string, Variable>
-	has_this_param?: boolean
-	unresolved_vars?: Record<string, Variable>
-	ranges?: [number, number][]	// class's __init
-	in_expr?: boolean
-}
-
-export interface ClassNode extends AhkSymbol {
-	base?: AhkSymbol
-	full: string
-	extends: string
-	extendsuri?: string
-	prototype?: ClassNode
-	property: Record<string, FuncNode | ClassNode | Variable>
-	$property?: Record<string, FuncNode | ClassNode | Variable> // aliases for prototype.property
-	cache?: Variable[]
-	undefined?: Record<string, Token>
-	checkmember?: boolean
-	static?: boolean	// not use
-	generic_types?: (string | AhkSymbol)[][]
-	type_params?: Record<string, AhkSymbol>
-}
-
-export interface Variable extends AhkSymbol {
-	arr?: boolean | 2			// *, *,  ...
-	assigned?: boolean | 1		// 1, ??=
-	defaultVal?: string | false | null
-	for_index?: number			// for v1, ... in
-	full?: string
-	index?: number
-	is_global?: boolean
-	is_param?: boolean
-	range_offset?: [number, number]
-	pass_by_ref?: boolean
-	typed?: boolean | 1			// typed properties
-}
-
-export interface Property extends Variable {
-	local?: Record<string, AhkSymbol>
-	declaration?: Record<string, AhkSymbol>
-	unresolved_vars?: Record<string, Variable>
-	has_this_param?: boolean
-	params?: Variable[]
-	param_offsets?: number[]
-	call?: FuncNode
-	get?: FuncNode
-	set?: FuncNode
-	val?: Variable
-}
-
-export interface SemanticToken {
-	type: SemanticTokenTypes
-	modifier?: number
-	resolved?: boolean
-}
-
-export interface Token<T = unknown> {
-	// if expression
-	//   |statement
-	body_start?: number
-	callsite?: CallSite
-	content: string
-	data?: T
-	has_LF?: boolean
-	definition?: AhkSymbol
-	fat_arrow_end?: boolean
-	has_warned?: boolean | number
-	hover_word?: string
-	ignore?: boolean
-	in_expr?: number
-	length: number
-	next_pair_pos?: number
-	next_token_offset: number	// Next non-comment token offset
-	offset: number
-	op_type?: null | -1 | 0 | 1
-	paraminfo?: ParamInfo
-	pos?: Position
-	prefix_is_whitespace?: string
-	previous_extra_tokens?: { i: number, len: number, tokens: Token[], suffix_is_whitespace: boolean }
-	previous_pair_pos?: number
-	previous_token?: Token		// Previous non-comment token
-	__ref?: boolean				// &x.y
-	semantic?: SemanticToken
-	skip_pos?: number
-	symbol?: AhkSymbol
-	topofline: number
-	type: TokenType
-	unexpected_lf?: boolean
-}
-
-export enum USAGE { Read, Write }
-
-export interface Context {
-	usage?: USAGE
-	kind: SymbolKind
-	linetext: string
-	range: Range
-	symbol?: AhkSymbol
-	text: string
-	token: Token
-	word: string
-};
-
-export interface FormatOptions {
-	align_continuation_section_with_ltrim0_to_left?: boolean
-	array_style?: number
-	brace_style?: number
-	break_chained_methods?: boolean
-	ignore_comment?: boolean
-	indent_string?: string
-	indent_between_hotif_directive?: boolean
-	keyword_start_with_uppercase?: boolean
-	max_preserve_newlines?: number
-	object_style?: number
-	preserve_newlines?: boolean
-	space_before_conditional?: boolean
-	space_after_double_colon?: boolean
-	space_in_empty_paren?: boolean
-	space_in_other?: boolean
-	space_in_paren?: boolean
-	switch_case_alignment?: boolean
-	symbol_with_same_case?: boolean
-	white_space_before_inline_comment?: string
-	wrap_line_length?: number
-}
-
-interface ParamList extends Array<Variable> {
-	format?: (params: Variable[]) => void
-	hasref?: boolean
-	offset?: number[]
-	full?: string
-	variadic?: boolean
-}
-
 namespace FuncNode {
 	export function create(name: string, kind: SymbolKind, range: Range, selectionRange: Range, params: ParamList, children?: AhkSymbol[], isstatic?: boolean | null): FuncNode {
 		let full = '', hasref = false, variadic = false;
@@ -322,7 +58,7 @@ namespace FuncNode {
 			hasref, name, kind, range, selectionRange, params, param_offsets,
 			param_def_len: full.length || 2,
 			full: `${isstatic ? 'static ' : ''}${name}(${full.substring(2)})`,
-			declaration: {}, global: {}, local: {}, labels: {}
+			declaration: {}, global: {}, local: {}
 		};
 	}
 }
@@ -412,62 +148,82 @@ const S2O: Record<string, AhkSymbol> = {
 	VARREF,
 };
 
+export const ahkModule: Module = {
+	children: [],
+	declaration: null!,
+	include: {},
+	kind: SymbolKind.Module,
+	name: 'ahk',
+	property: null!,
+	range: structuredClone(ZERO_RANGE),
+	selectionRange: ZERO_RANGE,
+};
+
 class ParseStopError {
-	public message: string;
-	public token: Token;
+	message: string;
+	token: Token;
 	constructor(message: string, token: Token) {
 		this.message = message;
 		this.token = token;
 	}
 }
 
-export type ActionType = 'Continue' | 'Warn' | 'SkipLine' | 'SwitchToV1' | 'Stop';
+export class Lexer implements Module {
+	uri = ''; name = '';
+	children: AhkSymbol[] = [];
+	declaration: Record<string, AhkSymbol> = {};
+	export?: Record<string, AhkSymbol>;
+	import?: Import;
+	include: Record<string, string> = {};
+	kind = SymbolKind.Module;
+	labels?: Record<string, AhkSymbol[]>;
+	property: Record<string, AhkSymbol> = null!;
+	range = structuredClone(ZERO_RANGE);
+	selectionRange = ZERO_RANGE;
 
-export class Lexer {
 	static curr?: Lexer;
-	public actionwhenv1?: ActionType = 'Continue';
-	public actived = false;
-	public beautify: (options: FormatOptions, range?: Range) => string;
-	public checkmember: boolean | undefined;
-	public children: AhkSymbol[] = [];
-	public d = 0;
-	public d_uri = '';
-	public declaration: Record<string, AhkSymbol> = {};
-	public diagnostics: Diagnostic[] = [];
-	public diag_pending?: boolean;
-	public diag_timer?: unknown;
-	public last_diags = 0;
-	public dlldir = new Map<number, string>();
-	public dllpaths: string[] = [];
-	public document: TextDocument;
-	public explicitContext?: boolean;
-	public findToken: (offset: number, ignore?: boolean) => Token;
-	public folding_ranges: FoldingRange[] = [];
-	public fsPath = '';
-	public getToken: (offset?: number, ignorecomment?: boolean) => Token;
-	public need_scriptdir = false;
-	public include: Record<string, string> = {};
-	public includedir = new Map<number, string>();
-	public indent = '\t';
-	public isparsed = false;
-	public is_virtual = false;		// uris like `vscode-local-history:`
-	public labels: Record<string, AhkSymbol[]> = {};
-	public libdirs: string[] = [];
-	public line_ranges: [number, number][] = [];
-	public maybev1?: number;
-	public object: { method: Record<string, FuncNode[]>, property: Record<string, Variable[]> } = { method: {}, property: {} };
-	public parseScript: () => void;
-	public scriptdir = '';
-	public scriptpath = '';
-	public st?: SemanticTokens;
-	public symbolInformation: SymbolInformation[] | undefined;
-	public texts: Record<string, string> = {};
-	public typedef: Record<string, AhkSymbol> = {};
-	public token_ranges: { start: number, end: number, type: number, previous?: number }[] = [];
-	public tokens: Record<number, Token> = {};
-	public uri = '';
-	public workspaceFolder = '';
 	private hotstringExecuteAction = false;
+	actionwhenv1?: ActionType = 'Continue';
+	actived = false;
+	beautify: (options: FormatOptions, range?: Range) => string;
+	checkmember: boolean | undefined;
+	curr_mod?: Module;
+	d = 0;
+	d_uri = '';
+	diag_pending?: boolean;
+	diag_timer?: unknown;
+	diagnostics: Diagnostic[] = [];
+	dlldir = new Map<number, string>();
+	dllpaths: string[] = [];
+	document: TextDocument;
+	explicitContext?: boolean;
+	findToken: (offset: number, ignore?: boolean) => Token;
+	folding_ranges: FoldingRange[] = [];
+	fsPath = '';
+	getToken: (offset?: number, ignorecomment?: boolean) => Token;
+	importLex?: Set<Lexer>;
+	importedLex?: Set<Lexer>;
+	includedir = new Map<number, string>();
+	indent = '\t';
+	is_virtual = false;		// uris like `vscode-local-history:`
+	is_parsed = false;
+	last_diags = 0;
+	libdirs: string[] = [];
+	line_ranges: [number, number][] = [];
+	maybev1?: number;
+	module?: Record<string, Module>;
+	need_scriptdir = false;
+	object: { method: Record<string, FuncNode[]>, property: Record<string, Variable[]> } = { method: {}, property: {} };
+	parseScript: () => void;
+	scriptdir = '';
+	scriptpath = '';
+	st?: SemanticTokens;
+	symbolInformation: SymbolInformation[] | undefined;
+	texts: Record<string, string> = {};
+	token_ranges: { start: number, end: number, type: number, previous?: number }[] = [];
+	tokens: Record<number, Token> = {};
+	typedef: Record<string, AhkSymbol> = {};
+	workspaceFolder = '';
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let begin_line: boolean, callWithoutParentheses: boolean | 1 | undefined;
 		let continuation_sections_mode: boolean | null, currsymbol: AhkSymbol | undefined;
@@ -477,53 +233,18 @@ export class Lexer {
 		let last_comment_fr: FoldingRange | undefined, last_LF: number, lst: Token;
 		let n_newlines: number, parser_pos: number, sharp_offsets: number[];
 		let customblocks: { region: number[], bracket: number[] };
-		let cs_opt: ContinueSectionOption | undefined;
-		let format_disable_flag = false;
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const _this = this, uri = URI.parse(document.uri);
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
 		let in_loop = false, string_mode = false;
 		let warn_once: Record<string, unknown>, mixes: [AhkSymbol, string][];
 
-		interface Flag {
-			array_style?: number,
-			case_body: boolean | null,
-			catch_block: boolean,
-			declaration_statement: boolean,
-			disable_linewrap?: boolean,
-			disable_start?: [number, number],
-			else_block: boolean,
-			finally_block: boolean,
-			had_comment: number,
-			hotif_block?: boolean,
-			if_block: boolean,
-			in_case_statement: boolean,
-			in_case: boolean,
-			in_conditional?: boolean,
-			in_expression: boolean,
-			in_fat_arrow?: boolean,
-			indentation_level: number,
-			indent_after?: boolean,
-			last_text: string,
-			last_word: string,
-			loop_block: number,
-			mode: Mode,
-			object_style?: number,
-			parent: Flag,
-			start_line_index: number,
-			ternary_depth?: number,
-			try_block: boolean
-		};
-		interface ContinueSectionOption {
-			comments?: boolean
-			indent: string
-			new_indent?: string
-			ltrim?: boolean
-		};
-		let output_lines: { text: string[], indent: number }[], flags: Flag, previous_flags: Flag, flag_store: Flag[];
+		let output_lines: { text: string[], indent: number }[], flags: FormatFlags, previous_flags: FormatFlags, flag_store: FormatFlags[];
 		let opt: FormatOptions, indent_string: string, space_in_other: boolean, ck: Token;
 		let token_text: string, token_text_low: string, token_type: TokenType, last_type: TokenType, last_text: string;
 		let output_space_before_token: boolean | undefined;
+		let cs_opt: ContinueSectionOption | undefined;
+		let format_disable_flag = false;
 		const handlers: Record<number, () => void> = {
 			[TokenType.BracketStart]: handle_start_expr,
 			[TokenType.BracketEnd]: handle_end_expr,
@@ -620,7 +341,7 @@ export class Lexer {
 		}
 
 		this.beautify = function (options: FormatOptions, range?: Range) {
-			!_this.isparsed && _this.parseScript();
+			!_this.is_parsed && _this.parseScript();
 
 			opt = {
 				break_chained_methods: false,
@@ -1012,7 +733,7 @@ export class Lexer {
 				}
 				checkDupError({}, this.children, this, true);
 				parse_unresolved_typedef();
-				this.isparsed = true;
+				this.is_parsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 
 				function parse_types(sym: AhkSymbol) {
@@ -1243,7 +964,6 @@ export class Lexer {
 						local: {},
 						hasref: params.hasref!,
 						kind: SymbolKind.Function,
-						labels: {},
 						name,
 						param_def_len: params.full!.length + 2,
 						param_offsets: params.offset!,
@@ -1300,12 +1020,17 @@ export class Lexer {
 				if (!process.env.BROWSER) {
 					const m = this.d_uri && find_d_ahk(resolve_scriptdir(this.d_uri)) || find_d_ahk(d_path);
 					if (m)
-						includetable[this.d_uri = m.uri] = m.path;
+						this.include[this.d_uri = m.uri] = m.path;
 					else this.d_uri = '';
 				}
 				checkDupError(this.declaration, this.children, this, true);
+				if (this.module) {
+					this.addFoldingRange(...this.curr_mod!.ranges!.at(-1)!)
+					Object.values(this.module)
+						.forEach(it => checkDupError(it.declaration, it.children, this, true));
+				}
 				parse_unresolved_typedef();
-				this.isparsed = true;
+				this.is_parsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
 				if (this.actived)
 					this.actionwhenv1 ??= 'Continue';
@@ -1436,13 +1161,14 @@ export class Lexer {
 		}
 
 		function parse_block(mode = BlockType.Script, _parent = _this as unknown as AhkSymbol, classfullname: string = ''): AhkSymbol[] {
-			const result: AhkSymbol[] = [], { document, line_ranges, tokens } = _this;
+			const { document, line_ranges, tokens } = _this;
 			let tk = tokens[parser_pos - 1] ?? EMPTY_TOKEN, lk = tk.previous_token ?? EMPTY_TOKEN;
-			let blocks = 0, next = true, _low = '';
+			let blocks = 0, next = true, _low = '', result: AhkSymbol[] = [];
 			let _cm: Token | undefined, tn: AhkSymbol | undefined;
 			let m: RegExpMatchArray | string | null, last_hotif: number | undefined;
 			let line_begin_offset: number | undefined, line_end_token: Token | undefined;
-			const baksym = currsymbol, oil = in_loop, blockpos: number[] = [], case_pos: number[] = [];
+			const blockpos: number[] = [], case_pos: number[] = [];
+			const baksym = currsymbol, oil = in_loop, oresult = result;
 			if (block_mode = true, mode & BlockType.Mask)
 				blockpos.push(parser_pos - 1), delete tk.data;
 			currsymbol = _parent, in_loop = false;
@@ -1453,7 +1179,7 @@ export class Lexer {
 					_this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (!(mode & BlockType.Mask) ? 1 : 0)], 1);
 			if (last_hotif !== undefined)
 				_this.addFoldingRange(last_hotif, lk.offset, 'region');
-			return result;
+			return oresult;
 
 			function is_func_def() {
 				if (next && input[tk.offset + tk.length] !== '(')
@@ -1599,7 +1325,7 @@ export class Lexer {
 									make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1));
 								tn.data = blockpos.at(-1), tn.def = true, result.push(tn);
 								(_cm = comments[tn.selectionRange.start.line]) && set_detail(tn, _cm);
-								const labels = (_parent as FuncNode).labels[tn.name.slice(0, -1).toUpperCase()] ??= [];
+								const labels = ((_parent as FuncNode).labels ??= {})[tn.name.slice(0, -1).toUpperCase()] ??= [];
 								if (labels[0]?.def)
 									_this.addDiagnostic(diagnostic.duplabel(), tk.offset, tk.length - 1),
 										labels.splice(1, 0, tn);
@@ -1889,7 +1615,7 @@ export class Lexer {
 								set_detail(tn, _cm);
 							tk.symbol = tn, nexttoken();
 							tn.declaration = {}, result.push(tn);
-							tn.global = {}, tn.local = {}, tn.labels = {};
+							tn.global = {}, tn.local = {};
 							while (tk.type as TokenType === TokenType.Directive)
 								parse_sharp(), nexttoken();
 							if (tk.type & TokenType.Hotkey) {
@@ -2335,11 +2061,9 @@ export class Lexer {
 				}
 
 				function addlabel(tk: Token) {
-					const labels = (_parent as FuncNode).labels;
-					if (!labels) return;
-					labels[_low = tk.content.toUpperCase()] ??= [];
+					const labels = ((_parent as FuncNode).labels ??= {})[tk.content.toUpperCase()] ??= [];
 					const rg = make_range(tk.offset, tk.length);
-					labels[_low].push(tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field, rg, rg));
+					labels.push(tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field, rg, rg));
 					tn.data = blockpos.at(-1);
 				}
 			}
@@ -2408,7 +2132,7 @@ export class Lexer {
 					modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly
 				};
 				adddeclaration(tn), _this.addSymbolFolding(tn, tk.offset);
-				result.push(tn), export_ && (tn.exported = true);
+				result.push(tn), export_ && add_export(tn, export_ === 'd');
 				return true;
 			}
 
@@ -2517,13 +2241,26 @@ export class Lexer {
 				}
 			}
 
+			function add_export(sym: AhkSymbol, is_def = false) {
+				const ep = (_this.curr_mod ?? _this).export ??= {}, n = is_def ? '' : sym.name.toUpperCase();
+				let o;
+				sym.exported = true;
+				if (sym === (o = ep[n] ??= sym))
+					return;
+				if (is_def)
+					_this.diagnostics.push({
+						message: diagnostic.dupdeclaration(), range: sym.selectionRange,
+						relatedInformation: [sym_related_msg(o, _this.document.uri, diagnostic.dupdeclaration())]
+					});
+				else if (o.kind === SymbolKind.Variable && sym.kind !== SymbolKind.Variable)
+					ep[n] = sym;
+			}
+
 			function parse_export(le20: boolean) {
 				if (mode !== BlockType.Script)
 					return le20 && unexpected(lk), false;
 				const l = lk, t = tk, p = parser_pos, r = parse();
 				if (r || le20) {
-					warn_once.e ??= (_this.addDiagnostic(warn.notimplemented(), l.offset, 6,
-						{ code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
 					l.semantic = SE_KEYWORD;
 					if (r) return r;
 				}
@@ -2532,7 +2269,7 @@ export class Lexer {
 					next = false;
 					const sta = parse_statement('');
 					for (const it of sta)
-						it.exported = true;
+						add_export(it);
 					result.push(...sta);
 					lk === l && unexpected(t);
 					return true;
@@ -2567,7 +2304,7 @@ export class Lexer {
 						next = false;
 						const sta = parse_statement('');
 						for (const it of sta)
-							it.exported = true;
+							add_export(it);
 						result.push(...sta);
 						return true;
 					}
@@ -2576,7 +2313,7 @@ export class Lexer {
 							return false
 					} else if (c !== '(' || (next = false, !is_func_def()))
 						return false;
-					else parse_func(fc ?? { ...EMPTY_TOKEN, offset: tk.offset });
+					else (c = parse_func(fc ?? { ...EMPTY_TOKEN, offset: tk.offset })) && add_export(c, !!df);
 					if (df)
 						df.type = TokenType.Reserved, df.semantic = SE_KEYWORD, df.hover_word = 'export';
 					return true;
@@ -2585,10 +2322,9 @@ export class Lexer {
 
 			function parse_import(le20: boolean, export_?: boolean) {
 				const dl = _this.diagnostics.length, kws = [lk],
-					mods: Token[] = [], hs: Token[] = [], us: Token[] = [],
-					fr: number[] = [], syms: AhkSymbol[] = [];
-				let must = le20, has_suffix_imps: boolean | 0;
-				warn_once.i ??= (_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
+					hs: Token[] = [], us: Token[] = [], ss: Token[] = [],
+					fr: number[] = [], syms: Variable[] = [];
+				let must = le20, wildcard = false, has_suffix_imps: boolean | 0, mk: Token | undefined;
 				if (lk.type === TokenType.Directive) {
 					kws.pop(), must = true;
 					if (!tk.topofline && tk.type === TokenType.Identifier &&
@@ -2597,13 +2333,19 @@ export class Lexer {
 				}
 				const r = parse();
 				if (r) {
-					const mod = { type: SemanticTokenTypes.module };
-					mods.forEach(t => (t.semantic = mod, t.type = TokenType.Identifier));
 					kws.forEach(t => (t.semantic = SE_KEYWORD, t.type = TokenType.Reserved));
 					fr.length && _this.addFoldingRange(...fr as [number, number]);
 					result.push(...syms);
+					if (!mk) return r;
+					const from = (mk.type === TokenType.String ? escape_str(mk.content) : mk.content) ||
+						(_this.curr_mod?.name ?? '');
+					((_this.curr_mod ?? _this).import ??= { imp: [] })
+						.imp.push({ from, tk: mk, wildcard, var: syms });
+					for (const s of syms)
+						s.from = from, export_ && add_export(s);
 				} else {
 					_this.diagnostics.splice(dl);
+					ss.forEach(t => delete t.semantic);
 					hs.forEach(t => delete t.has_warned);
 					us.forEach(t => delete t.unexpected_lf);
 				}
@@ -2622,9 +2364,9 @@ export class Lexer {
 
 				function parse() {
 					const le21 = ahkVersion < alpha_21;
-					let has_from = true, sk, vk, vr;
+					let has_from = true, vk, vr;
 					if (le21 && tk.content === '*')
-						nexttoken();
+						nexttoken(), wildcard = true;
 					else if (tk.topofline)	// import\n
 						return next = false, must && ue_lf(tk);
 					else if (le21 && tk.content === '{') {
@@ -2643,10 +2385,8 @@ export class Lexer {
 							kws.push(tk), nexttoken();
 							if (tk.topofline && !isContinuousLine(lk, tk))
 								return next = false, must && ue_lf(tk);	// import ... from\n
-							if (must = true, allIdentifierChar.test(tk.content))
-								mods.push(tk);
-							else next = tk.type as TokenType === TokenType.String;
-							if (next)
+							next = tk.type === TokenType.String || allIdentifierChar.test(tk.content);
+							if (must = true, next)
 								has_from = false, has_suffix_imps = 0;
 						} else if (!must)
 							return false;	// import ... other
@@ -2655,23 +2395,24 @@ export class Lexer {
 					}
 					nexttoken();
 					if (!has_from) {
-						if ((sk = lk).type !== TokenType.String)
-							mods.push(vk = lk);
+						if ((mk = lk).type !== TokenType.String)
+							vk = lk;
 						if (tk.type === TokenType.Operator && tk.content.toLowerCase() === 'as' && isContinuousLine(lk, tk)) {
 							tk.semantic = SE_KEYWORD, nexttoken();
 							if (must = true, allIdentifierChar.test(tk.content))
-								mods.push(vk = tk), nexttoken();
+								vk = tk, nexttoken();
 							else vk = undefined, next = false;
 						} else if (!must && has_suffix_imps !== 0 && tk.topofline)
 							return false;	// import mod\n other
 						has_suffix_imps ??= next && !tk.topofline && tk.content === '{';
-						if (vk && (has_suffix_imps === false || sk !== vk || has_suffix_imps && !le20)) {
-							vr = Variable.create(vk.content, SymbolKind.Module,
+						if (vk && (has_suffix_imps === false || mk !== vk || has_suffix_imps && !le20)) {
+							vr = Variable.create(vk.content, SymbolKind.Variable,
 								make_range(vk.offset, vk.length));
-							if (sk !== vk)
-								vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
 							vr.decl = vr.def = true, vr.assigned = 1;
-							syms.push(vr);
+							ss.push(vk), vk.semantic = { type: SemanticTokenTypes.module };
+							if (mk.type !== TokenType.String)
+								ss.push(mk), mk.semantic = vk.semantic;
+							syms.unshift(vr);
 							vk.type !== TokenType.Identifier && _this.diagnostics.push({
 								message: diagnostic.reservedworderr(vr.name),
 								range: vr.range
@@ -2688,11 +2429,11 @@ export class Lexer {
 				}
 				function parse_imps() {
 					let sk, vk, vr;
-					const bk = tk, obj: Record<string, Variable> = {};
-					bk.data = obj;
+					const bk = tk;
+					bk.data = {};
 					while (nexttoken()) {
 						if (tk.content === '*') {
-							if (nexttoken(), tk.type === TokenType.Comma)
+							if (nexttoken(), tk.type === TokenType.Comma && (wildcard = true))
 								continue;
 						} else if (allIdentifierChar.test((sk = tk).content)) {
 							if (nexttoken(), tk.type === TokenType.Operator && tk.content.toLowerCase() === 'as') {
@@ -2702,16 +2443,13 @@ export class Lexer {
 								} else vk = undefined, ue(tk);
 							} else vk = lk;
 							if (vk) {
-								const n = vk.content.toUpperCase();
 								vr = Variable.create(vk.content, SymbolKind.Variable,
 									make_range(vk.offset, vk.length));
-								if (sk !== vk)
-									vr.alias = sk.content, vr.alias_range = make_range(sk.offset, sk.length);
+								vr.alias = sk.content;
 								vr.decl = vr.def = true, vr.assigned = 1;
-								syms.push(vr);
-								if (vr !== (obj[n] ??= vr) && le20)
-									_this.addDiagnostic(diagnostic.dupdeclaration(), vk.offset, vk.length);
-								else vk.type !== TokenType.Identifier && _this.diagnostics.push({
+								sk.semantic = vk.semantic = { type: SemanticTokenTypes.variable };
+								ss.push(sk, vk), syms.push(vr);
+								vk.type !== TokenType.Identifier && _this.diagnostics.push({
 									message: diagnostic.reservedworderr(vr.name),
 									range: vr.range
 								});
@@ -2978,7 +2716,7 @@ export class Lexer {
 			}
 
 			function parse_sharp() {
-				let isdll = false, l: string;
+				let isdll = false, l;
 				const data = tk.data as Token ?? { content: '', offset: tk.offset + tk.length, length: 0 };
 				switch (l = tk.content.toLowerCase()) {
 					case '#dllload':
@@ -3041,12 +2779,36 @@ export class Lexer {
 							_this.hotstringExecuteAction = /x(?!0)/.test(l);
 						break;
 					case '#module':
+						l = { code: DiagnosticCode.module };
 						if (mode !== BlockType.Script)
 							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 						else if (ahkVersion < alpha_11)
-							_this.addDiagnostic(diagnostic.requireVerN(alpha_11), tk.offset, tk.length, { code: DiagnosticCode.module });
-						else
-							warn_once.m ??= (_this.addDiagnostic(warn.notimplemented(), tk.offset, tk.length, { code: DiagnosticCode.module, severity: DiagnosticSeverity.Warning }), 0);
+							_this.addDiagnostic(diagnostic.requireVerN(alpha_11), tk.offset, tk.length, l);
+						else if (!tk.data)
+							_this.addDiagnostic(diagnostic.acceptparams(tk.content, 1), tk.offset, tk.length, l);
+						else {
+							l = tk.data as Token;
+							const rg = make_range(l.offset, l.length), name = l.content;
+							let mod = _this.curr_mod, o;
+							if (!allIdentifierChar.test(name) || name[0] <= '9')
+								_this.diagnostics.push({ message: diagnostic.invalidsymbolname(), range: rg });
+							if (mod)
+								mod.ranges!.at(-1)![1] = tk.offset, _this.addFoldingRange(...mod.ranges!.at(-1)!);
+							mod = _this.curr_mod = (_this.module ??= {})[name.toUpperCase()] ??= {
+								name, kind: SymbolKind.Module,
+								range: ZERO_RANGE, selectionRange: rg,
+								children: [],
+								declaration: o = {},
+								property: o,
+								include: {},
+								ranges: [],
+								uri: _this.uri,
+							};
+							_parent = mod;
+							result = mod.children;
+							includetable = mod.include;
+							mod.ranges!.push([tk.offset, input_length]);
+						}
 						break;
 					case '#import':
 						if (ahkVersion < alpha_11 + 9)
@@ -4264,7 +4026,7 @@ export class Lexer {
 				} else {
 					const fn = node as FuncNode, has_this_param = fn.has_this_param;
 					const dec = fn.declaration, local = fn.local ?? {}, global = fn.global ?? {};
-					const vs: Variable[] = [], gd = _this.declaration;
+					const vs: Variable[] = [], gd = (_this.curr_mod ?? _this).declaration;
 					const uri = _this.document.uri;
 					let vars: typeof pars = {}, unresolved_vars: typeof pars = {}, vr: Variable;
 					let named_params: Variable[] | undefined = [];
@@ -4604,18 +4366,6 @@ export class Lexer {
 			}
 		}
 
-		interface JsDoc {
-			detail: string
-			tags?: Partial<AhkSymbol>
-			vars?: {
-				[name: string]: {
-					detail: string,
-					type_annotations?: (string | AhkSymbol)[] | false,
-					type_str?: string
-				}
-			}
-		}
-
 		function parse_jsdoc_detail(lex: Lexer, detail: string, sym: AhkSymbol): JsDoc {
 			sym.detail = detail;
 			detail = detail.replace(/^[ \t]*(\*?[ \t]*(?=@)|\* ?)/gm, '')
@@ -4919,7 +4669,7 @@ export class Lexer {
 			return tk;
 		}
 
-		function create_flags(flags_base: Flag | undefined, mode: Mode) {
+		function create_flags(flags_base: FormatFlags | undefined, mode: Mode) {
 			let indentation_level = 0, had_comment = 0, ternary_depth, disable_linewrap;
 			let last_text = '', last_word = '', array_style, object_style;
 			let in_expression = [Mode.ArrayLiteral, Mode.Expression, Mode.ObjectLiteral].includes(mode);
@@ -4934,7 +4684,7 @@ export class Lexer {
 				disable_linewrap = flags_base.disable_linewrap;
 			}
 
-			const next_flags: Flag = {
+			const next_flags: FormatFlags = {
 				array_style,
 				case_body: false,
 				catch_block: false,
@@ -6631,60 +6381,64 @@ export class Lexer {
 	}
 
 	private clear() {
-		this.texts = {}, this.declaration = {}, this.include = {}, this.tokens = {};
+		this.texts = {}, this.declaration = this.property = {}, this.include = {}, this.tokens = {};
 		this.labels = {}, this.typedef = {}, this.object = { method: {}, property: {} };
-		this.need_scriptdir = this.hotstringExecuteAction = this.isparsed = false;
+		this.need_scriptdir = this.hotstringExecuteAction = this.is_parsed = false;
 		this.children.length = this.dllpaths.length = this.token_ranges.length = 0;
 		this.diagnostics.length = this.folding_ranges.length = this.line_ranges.length = 0;
 		this.includedir.clear(), this.dlldir.clear();
 		this.d_uri = '';
-		delete this.st;
-		delete this.maybev1;
-		delete this.checkmember;
-		delete this.explicitContext;
-		delete this.symbolInformation;
+		this.importLex?.forEach(l => l.importedLex?.delete(this));
+		this.checkmember = this.curr_mod = this.explicitContext =
+			this.export = this.import = this.importLex = this.maybev1 =
+			this.module = this.st = this.symbolInformation = null!;
 	}
 
 	get included() { return includedCache[this.uri] ?? {}; }
-	get relevance() {
+	get relevance() { return this.getRelevance(); }
+
+	getRelevance(explicitContext?: boolean, include_self = false) {
 		const uri = this.uri, r = { ...includeCache[uri] };
-		if (!(this.explicitContext ?? configCache.ExplicitContextOnly))
+		if (!(explicitContext ?? this.explicitContext ?? configCache.ExplicitContextOnly)) {
 			for (const u in includedCache[uri])
 				Object.assign(r, includeCache[u]);
-		delete r[uri];
+			Object.assign(r, includedCache[uri]);
+		}
+		include_self || delete r[uri];
 		return r;
 	}
 
-	public findSymbol(name: string, kind?: SymbolKind, position?: Position)
+	findSymbol(name: string, kind?: SymbolKind, position?: Position)
 		: {
 			node: AhkSymbol, uri: string, is_global?: boolean | 1	// maybe
-			is_this?: boolean, parent?: AhkSymbol, scope?: AhkSymbol
+			is_this?: boolean, parent?: AhkSymbol, mod?: Module, scope?: AhkSymbol
 		} | null | undefined {
-		let node: AhkSymbol | undefined, scope: FuncNode | undefined, uri = this.uri;
+		let node, scope, mod, uri = this.uri;
 		if (kind === SymbolKind.Field) {
 			const tokens = this.tokens, offset = position ? this.document.offsetAt(position) : -1;
 			let data: number;
-			scope = position && this.searchScopedNode(position) as FuncNode;
-			for (node of (scope as FuncNode ?? this).labels?.[name.endsWith(':') ? name.slice(0, -1) : name] ?? []) {
+			({ mod, scope } = position ? this.searchScopedNode(position) : {});
+			for (node of (scope as FuncNode | undefined ?? mod ?? this).labels?.[name.endsWith(':') ? name.slice(0, -1) : name] ?? []) {
 				if (!node.def) break;
 				if ((data = node.data as number) === -1 || data < offset &&
 					(!(data = tokens[tokens[data].next_pair_pos!]?.offset) || offset < data))
-					return { node, uri, scope };
+					return { node, uri, mod, scope };
 			}
-			return scope && null;
+			return (scope ?? mod) && null;
 		}
 		let t: AhkSymbol | undefined, parent: AhkSymbol | undefined, is_global: boolean | 1 = true;
 		if (name.startsWith('$'))
 			return (node = from_d(this.d ? uri : this.d_uri) ?? this.typedef[name]) && { node, uri, is_global: true };
-		if ((scope = position && this.searchScopedNode(position) as FuncNode)) {
+		({ mod, scope } = position ? this.searchScopedNode(position) : {});
+		if (scope) {
 			if (scope.kind === SymbolKind.Class)
 				scope = undefined;
 			else if (scope.kind === SymbolKind.Property) {
 				if (name === 'THIS')
-					return { node: scope.parent!, uri, scope, is_this: true };
+					return { node: scope.parent!, uri, mod, scope, is_this: true };
 			}
 		}
-		let fn = scope;
+		let fn = scope as FuncNode | undefined;
 		while (fn?.local) {
 			if ((t = fn.local[name])) {
 				node = t, parent = fn, is_global = false;
@@ -6697,14 +6451,14 @@ export class Lexer {
 			if (fn.has_this_param && (name === 'THIS' || name === 'SUPER')) {
 				node = fn;
 				while (node.kind !== SymbolKind.Class)
-					if (!(node = node.parent as FuncNode))
+					if (!(node = node.parent))
 						return null;
 				if (name === 'THIS')
-					return { node, uri, scope, is_this: true };
+					return { node, uri, mod, scope, is_this: true };
 				if ((parent = getClassBase(node, this)))
 					return {
 						node: { ...parent, prototype: (node as ClassNode).prototype } as ClassNode,
-						uri, scope, is_this: false
+						uri, mod, scope, is_this: false
 					};
 				return null;
 			}
@@ -6733,9 +6487,9 @@ export class Lexer {
 			fn = fn.parent as FuncNode;
 		}
 		if (is_global)
-			node = from_d(this.d_uri) ?? this.declaration[name] ??
+			node = from_d(this.d_uri) ?? (mod ?? this).declaration[name] ??
 				(is_global = 1, node) ?? (is_global = true, this.typedef[name]);
-		return node && { node, uri, scope, is_global, parent };
+		return node ? { node, uri, mod, scope, is_global, parent } : mod && null;
 		function from_d(d_uri: string) {
 			const lex = lexers[d_uri];
 			if (!lex) return;
@@ -6744,7 +6498,7 @@ export class Lexer {
 		}
 	}
 
-	public getContext(position: Position, ignoreright = false): Context {
+	getContext(position: Position, ignoreright = false): Context {
 		// eslint-disable-next-line prefer-const
 		let { character, line } = position, usage;
 		let kind: SymbolKind, symbol: AhkSymbol | undefined, token: Token | undefined, start: number, is_end_expr, text;
@@ -6894,10 +6648,20 @@ export class Lexer {
 		}
 	}
 
-	public searchScopedNode(pos: Position): AhkSymbol | undefined {
+	searchScopedNode(pos: Position): { scope?: AhkSymbol, mod?: Module } {
 		const { line, character } = pos;
-		let syms = this.children, its, sp;
+		let { children: syms, module } = this, its, sp, mod;
 		let cls: ClassNode, offset: number;
+		if (module) {
+			offset = this.document.offsetAt(pos);
+			outloop: for (const n in module) {
+				const m = module[n];
+				for (const rg of m.ranges!)
+					if (offset < rg[0] || offset <= rg[1] && (mod = m))
+						break outloop;
+			}
+			mod && (syms = mod.children);
+		}
 		next: while (syms) {
 			for (const it of syms) {
 				if (!(its = it.children) || line > it.range.end.line || line < it.selectionRange.start.line ||
@@ -6911,7 +6675,7 @@ export class Lexer {
 								const rg = it.data as number[];
 								offset ??= this.document.offsetAt(pos);
 								if (rg[0] < offset && offset <= rg[1])
-									return it.parent;
+									return { mod, scope: it.parent };
 							}
 							break;
 						case SymbolKind.Property:
@@ -6934,10 +6698,10 @@ export class Lexer {
 			}
 			syms = undefined!;
 		}
-		return sp;
+		return { mod, scope: sp };
 	}
 
-	public getScopeSymbols(scope?: AhkSymbol): Record<string, Variable> {
+	getScopeSymbols(scope?: AhkSymbol): Record<string, Variable> {
 		if (!scope || scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Property)
 			return {};
 		let fn = scope as FuncNode, vars: Record<string, Variable> = {};
@@ -6956,7 +6720,7 @@ export class Lexer {
 		return vars;
 	}
 
-	public initLibDirs(dir?: string) {
+	initLibDirs(dir?: string) {
 		if (process.env.BROWSER)
 			return;
 		let workfolder: string;
@@ -6978,7 +6742,7 @@ export class Lexer {
 			dir !== t.toLowerCase() && this.libdirs.push(t);
 	}
 
-	public getColors() {
+	getColors() {
 		const t = this.token_ranges, document = this.document, text = document.getText(), colors: ColorInformation[] = [];
 		for (const a of t) {
 			if (a.type === 2) {
@@ -6996,7 +6760,7 @@ export class Lexer {
 		return colors;
 	}
 
-	public addDiagnostic(message: string, offset: number, length = 0, extra?: Partial<Diagnostic>) {
+	addDiagnostic(message: string, offset: number, length = 0, extra?: Partial<Diagnostic>) {
 		const beg = this.document.positionAt(offset);
 		const end = length ? this.document.positionAt(offset + length) : beg;
 		this.diagnostics.push({ message, range: Range.create(beg, end), ...extra });
@@ -7023,62 +6787,104 @@ export class Lexer {
 		}
 	}
 
-	public update() {
-		const uri = this.uri, initial = this.include;
+	update() {
+		const { uri, include: oi, module: om, importLex: ol } = this;
+		let flags = '' in oi ? 4 : 0, added, removed, included, l, u;
 		this.parseScript();
 		this.folding_ranges.reverse();
 		if (libSymbols[uri]) {
 			libSymbols[uri].length = 0;
 			libSymbols[uri].push(...Object.values(this.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
 		}
-		const after = this.include;
-		let l = Object.keys(after).length, change = 0;
-		for (const u in initial)
-			if (!(u in after)) { change = 2; break; }
-		if (!change && (l > Object.keys(initial).length || '' in initial))
-			change = 1;
-		if (!change)
-			return this.sendDiagnostics(true);
-		if (!process.env.BROWSER)
-			parseInclude(this, this.scriptdir);
-		if (change === 1) {
+		if (!flags) {
+			let diff = difference(Object.keys(oi), Object.keys(this.include));
+			flags |= !diff ? 0 : (removed = diff.removed) ? 1 : (added = diff.added, 4);
+			const { module } = this;
+			if (om ?? module) {
+				added ??= new Set<string>, removed ??= new Set<string>;
+				for (const n in { ...om, ...module }) {
+					diff = difference(Object.keys(om?.[n]?.include ?? {}),
+						Object.keys(module?.[n]?.include ?? {}));
+					flags |= !diff ? 0 : diff.removed ?
+						(removed = removed.union(diff.removed), 2) :
+						(added = added.union(diff.added!), 8);
+				}
+			}
+			if (flags & 3) {
+				({ included } = this);
+				for (u in included)
+					delete includeCache[u];
+				delete includeCache[uri];
+				const arr = [];
+				for (u in Object.assign({}, ...removed!.values().map(u => {
+					return arr.push(includedCache[u]), delete includedCache[u], includeCache[u];
+				})))
+					arr.push(includedCache[u]), delete includedCache[u];
+				included = Object.assign({}, included, ...arr);
+			}
+			if (flags & 10)
+				removed = difference(removed, added)?.removed;
+		}
+		if (flags) {
+			if (!process.env.BROWSER && (flags & 12))
+				parseInclude(this, this.scriptdir);
 			const c = traverseInclude(this);
-			for (const u in this.included)
-				Object.assign(includeCache[u], c);
-		} else updateIncludeCache();
-		let main = this.scriptpath, max = Object.keys(includeCache[uri]).length;
-		for (const u in includedCache[uri]) {
-			l = Object.keys(includeCache[u]).length;
-			if (l > max || l === max && lexers[u].scriptpath.length < main.length)
-				main = lexers[u].scriptpath, max = l;
+			if (flags & 3) {
+				const ls = new Set<Lexer>;
+				for (u in included)
+					(u = lexers[u.replace(/\|.+$/, '')]) && ls.add(u);
+				ls.delete(this);
+				ls.forEach(u => traverseInclude(u));
+				({ included } = this);
+			} else included ??= this.included;
+			for (u in included)
+				(u = includeCache[u]) && Object.assign(u, c);
+			let main = this.scriptpath, max = Object.keys(includeCache[uri]).length;
+			for (u in includedCache[uri]) {
+				l = Object.keys(includeCache[u] ?? {}).length;
+				u = u.replace(/\|.+$/, '');
+				if (l > max || l === max && lexers[u]?.scriptpath.length < main.length)
+					main = lexers[u].scriptpath, max = l;
+			}
+			let lex: Lexer, m = main.toLowerCase();
+			const relevance = this.relevance;
+			if ((m + '\\').startsWith(this.scriptdir.toLowerCase() + '\\lib\\'))
+				main = this.scriptdir, m = main.toLowerCase();
+			else if (m !== this.scriptdir.toLowerCase())
+				this.initLibDirs(main);
+			for (const u in relevance) {
+				if (!(lex = lexers[u]) || lex.scriptdir.toLowerCase() === m)
+					continue;
+				lex.initLibDirs(main), lex.need_scriptdir && lex.parseScript();
+			}
+			if (process.env.DEBUG) {
+				for (const lex of Object.values(lexers)) {
+					lex.actived && console.log(['>>> file: ' + lex.fsPath,
+						'> include:',
+					Object.values(includeCache[lex.uri] ?? {}).sort().join(', '),
+						'> included:',
+					Object.values(lex.included).sort().join(', '),
+					'-'.repeat(30), ''].join('\n'));
+				}
+			}
 		}
-		let lex: Lexer, m = main.toLowerCase();
-		const relevance = this.relevance;
-		if ((m + '\\').startsWith(this.scriptdir.toLowerCase() + '\\lib\\'))
-			main = this.scriptdir, m = main.toLowerCase();
-		else if (m !== this.scriptdir.toLowerCase())
-			this.initLibDirs(main);
-		for (const u in relevance) {
-			delete initial[u];
-			if (!(lex = lexers[u]) || lex.scriptdir.toLowerCase() === m)
-				continue;
-			lex.initLibDirs(main), lex.need_scriptdir && lex.parseScript();
-		}
-		for (const u in initial) {
-			const t = lexers[u];
-			t && !t.actived && t.close();
-		}
+		resolveImport(this);
+		removed ??= new Set<string>;
+		difference(ol, this.importLex)?.removed?.values()
+			.forEach(l => removed.add(l.uri));
+		for (u of removed)
+			(l = lexers[u])?.actived === false && l.close();
 		this.sendDiagnostics(true, true);
 	}
 
-	public clearDiagnostics() {
+	clearDiagnostics() {
 		if (!this.last_diags)
 			return;
 		this.include = {}, this.diagnostics = [], this.last_diags = 0;
 		utils.sendDiagnostics?.(this.document.uri, []);
 	}
 
-	public sendDiagnostics(update = false, all = false) {
+	sendDiagnostics(update = false, all = false) {
 		if (this.is_virtual) return;
 		const last_diags = this.last_diags;
 		if (last_diags !== this.diagnostics.length || update && last_diags) {
@@ -7098,7 +6904,7 @@ export class Lexer {
 			lexers[u]?.sendDiagnostics(update);
 	}
 
-	public setWorkspaceFolder() {
+	setWorkspaceFolder() {
 		const uri = this.uri;
 		for (const u of workspaceFolders)
 			if (uri.startsWith(u))
@@ -7106,7 +6912,7 @@ export class Lexer {
 		return this.workspaceFolder = '';
 	}
 
-	public keepAlive() {
+	keepAlive(visted: Map<Lexer, boolean | 0>) {
 		if (this.actived)
 			return true;
 		const { uri, d } = this;
@@ -7118,37 +6924,56 @@ export class Lexer {
 			// if (lexers[uri.slice(0, -5) + 'ahk']?.keepAlive())
 			// 	return true;
 		}
-		for (const u in this.relevance)
-			if (lexers[u]?.actived)
+		visted.set(this, true);
+		for (const u in this.getRelevance(false))
+			if (lexers[trim(u)]?.actived)
 				return true;
+		visted.set(this, false);
+		for (const u in { [this.uri]: '', ...this.included })
+			if (lexers[trim(u)]?.importedLex?.values().some(l => visted.get(l) ?? l.keepAlive(visted)))
+				return visted.set(this, true), true;
 		return false;
+		function trim(s: string) {
+			return s.replace(/\|.+$/, '');
+		}
 	}
 
-	public close(force = false, other = true) {
+	close(force = false, visted?: Map<Lexer, boolean | 0>) {
+		const other = !visted;
+		visted ??= new Map;
 		this.actived = false;
 		force ||= this.is_virtual;
-		if (!force && this.keepAlive())
+		if (!force && (visted.get(this) ?? this.keepAlive(visted)))
 			return;
-		const relevance = other ? this.relevance : undefined;
 		delete this.diag_timer;
 		this.clearDiagnostics();
 		if (force || !this.workspaceFolder) {
+			visted.set(this, 0);
+			this.importLex?.forEach(l => l.importedLex?.delete(this));
 			delete lexers[this.uri];
-			delete includeCache[this.uri];
-			!this.actived && lexers[this.d_uri]?.close(false, false);
+			del(this, includeCache);
+			lexers[this.d_uri]?.close(false, visted);
 		}
 		if (!other)
 			return;
-		let o = true;
-		for (const u in relevance)
-			o = false, lexers[u]?.close(false, false);
-		if (o) {
+		let t;
+		for (const u in this.getRelevance(false))
+			(t = lexers[u])?.actived !== false || visted.has(t) || t.keepAlive(visted);
+		for (t of this.importLex ?? [])
+			t.actived || visted.has(t) || t.keepAlive(visted);
+		visted.forEach((v, k) => v === false && k.close(false, visted));
+		if (visted.size < 2) {
 			if (!lexers[this.uri])
-				delete includedCache[this.uri];
+				del(this, includedCache);
 		} else updateIncludeCache();
+		function del(lex: Lexer, cache: typeof includeCache) {
+			const { uri, module } = lex;
+			delete cache[uri];
+			Object.keys(module ?? {}).forEach(s => delete cache[`${uri}|${s}`]);
+		}
 	}
 
-	public findStrOrComment(offset: number): Token | undefined {
+	findStrOrComment(offset: number): Token | undefined {
 		const rgs = this.token_ranges;
 		let l = 0, r = rgs.length - 1, i, it;
 		while (l <= r) {
@@ -7193,12 +7018,7 @@ function findLibrary(path: string, libdirs: string[], workdir: string = '', chec
 				}
 		}
 	} else {
-		while ((m = path.match(/%a_(\w+)%/i))) {
-			const a_ = m[1].toLowerCase();
-			if (vars[a_])
-				path = path.replace(m[0], vars[a_]);
-			else return;
-		}
+		path = deref_avar(path, vars);
 		if (path.indexOf(':') < 0)
 			path = resolve(workdir, path);
 		else if (path.includes('..'))
@@ -7217,6 +7037,7 @@ export function getClassBase(node: AhkSymbol, lex?: Lexer) {
 		case SymbolKind.Function: name = 'func'; break;
 		case SymbolKind.Number: name = node.name; break;
 		case SymbolKind.String: name = 'string'; break;
+		case SymbolKind.Module: return;
 		default: if (!(node as ClassNode).property) return;
 		// fall through
 		case SymbolKind.Class:
@@ -7240,8 +7061,18 @@ export function getClassBase(node: AhkSymbol, lex?: Lexer) {
 
 export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismethod: boolean | null, bases?: (ClassNode | null)[]): AhkSymbol | undefined {
 	let prop, method, sym, t, i = 0, cls = node as ClassNode;
-	const _bases = bases ??= [];
 	name = name.toUpperCase();
+	if (node.kind === SymbolKind.Module) {
+		for (const m of (t = node as Module).modules ?? [t]) {
+			if ((t = m.declaration[name]))
+				if (prop ??= t, t.kind !== SymbolKind.Variable)
+					return t;
+				else if ((t as Variable).from !== undefined)
+					sym ??= t;
+		}
+		return sym ?? prop;
+	}
+	const _bases = bases ??= [];
 	while (true) {
 		if (i === _bases.length) {
 			if (_bases.includes(cls))
@@ -7287,6 +7118,21 @@ export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismeth
 export function getClassMembers(lex: Lexer, node: AhkSymbol, bases?: ClassNode[]): Record<string, AhkSymbol> {
 	let cls = node as ClassNode;
 	const _bases = bases ?? [], properties = [];
+	if (node.kind === SymbolKind.Module) {
+		let m = node as Module, t;
+		if (!m.modules)
+			return { ...m.declaration };
+		const nv: Record<string, AhkSymbol> = {}, vv: typeof nv = {};
+		for (t of m.modules) {
+			properties.push(t = t.declaration);
+			for (const [n, s] of Object.entries(t))
+				if (s.kind !== SymbolKind.Variable)
+					nv[n] ??= s;
+				else if ((s as Variable).from !== undefined)
+					vv[n] ??= s;
+		}
+		return Object.assign({}, ...properties, vv, nv);
+	}
 	while (cls && !_bases.includes(cls))
 		_bases.push(cls), properties.push(cls.property), cls = getClassBase(cls, lex) as ClassNode;
 	if (!bases) for (let t; (cls = _bases.pop()!); t = cls.checkmember ??= t);
@@ -7520,7 +7366,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 			} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
 		} else switch (tk.type) {
 			case TokenType.Invoke: {
-				const call = !!tk.data, name = tk.content.toLowerCase() || (call ? 'call' : '__item');
+				const call = !!tk.data, name = tk.content.toLowerCase();
 				syms = decltypeInvoke(lex, syms, name, call, tk.paraminfo, that);
 				break;
 			}
@@ -7742,7 +7588,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 }
 
 export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, call: boolean, paraminfo?: ParamInfo, _this?: ClassNode) {
-	const tps = new Set<AhkSymbol>;
+	const tps = new Set<AhkSymbol>, _name = name || (call ? 'call' : '__item');
 	let that = _this;
 	for (let n of syms) {
 		const cls = n as ClassNode;
@@ -7750,7 +7596,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 		switch (n.kind) {
 			case 0 as SymbolKind: return [ANY];
 			case SymbolKind.Class:
-				if (call && name === 'call') {
+				if (call && _name === 'call') {
 					switch (cls.is_builtin && cls.prototype && cls.full) {
 						case 'Class':
 							if (ahkVersion >= alpha_3 && paraminfo?.end) {
@@ -7817,7 +7663,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 							}
 							break;
 					}
-					if (!(n = getClassMember(lex, cls, name, call)!))
+					if (!(n = getClassMember(lex, cls, _name, call)!))
 						if ((n = invoke_meta_func(cls)!))
 							break;
 						else continue;
@@ -7826,7 +7672,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 			// fall through
 			case SymbolKind.Function:
 			case SymbolKind.Method:
-				if (call && name === 'call') {
+				if (call && _name === 'call') {
 					if (!(n as FuncNode).has_this_param || (that = undefined, !paraminfo))
 						break;
 					for (const that of decltypeExpr(lex, lex.findToken(paraminfo.offset + 1),
@@ -7837,7 +7683,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 				}
 			// fall through
 			default:
-				if (!(n = getClassMember(lex, cls, name, call)!))
+				if (!(n = getClassMember(lex, cls, _name, call)!))
 					if ((n = invoke_meta_func(cls)!))
 						break;
 					else continue;
@@ -7866,6 +7712,17 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 					continue;
 				}
 				break;
+			case SymbolKind.Module:
+				if (name && (n = getClassMember(lex, cls, name, false)!)) {
+					let r;
+					r = n.kind !== SymbolKind.Variable ? [n] :
+						decltypeVar(n, lexers[cls.uri!] ?? lex, n.selectionRange.end);
+					if (call)
+						r = decltypeInvoke(lexers[cls.uri!] ?? lex, r, '', true, paraminfo);
+					for (const t of r)
+						tps.add(t);
+				}
+				continue;
 		}
 		for (const t of decltypeReturns(n, lexers[n.uri!] ?? lex, that))
 			tps.add(t);
@@ -7998,6 +7855,12 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			v?.type_annotations && (syms.includes(v) || syms.push(v));
 		}
 	let ts: AhkSymbol[] | undefined, t, ref;
+	if (sym.from !== undefined) {
+		t = resolveVarAlias(sym);
+		if (t.kind !== SymbolKind.Variable)
+			return [t];
+		t.type_annotations && (syms.includes(t) || syms.push(t));
+	}
 	for (const sym of syms) {
 		if ((t = sym.returns))
 			sym.returns = undefined;
@@ -8440,19 +8303,20 @@ export function updateIncludeCache() {
 	for (const lex of Object.values(lexers))
 		traverseInclude(lex);
 }
+
 export function traverseInclude(lex: Lexer, included?: Record<string, string>) {
-	const { uri, include } = lex;
-	let hascache = true;
-	let cache = includeCache[uri] ??= (hascache = false, { [uri]: lex.fsPath });
+	const { uri, fsPath, include, is_virtual, module } = lex;
+	let hascache = true, u;
+	let cache = includeCache[uri] ??= (hascache = false, { [uri]: fsPath });
 	included = ((included ??= includedCache[uri])) ? { ...included } : {};
-	if (!lex.is_virtual)
-		included[uri] = lex.fsPath;
-	for (const u in include) {
-		Object.assign(includedCache[u] ??= {}, included);
-		if (!(lex = lexers[u]))
-			continue;
-		if (!cache[u]) {
-			if (hascache && included[u]) {
+	if (!is_virtual)
+		included[uri] ??= fsPath;
+	for (u in include) {
+		if (!(u in cache)) {
+			Object.assign(includedCache[u] ??= {}, included);
+			if (!(lex = lexers[u]))
+				continue;
+			if (hascache && (u in included)) {
 				cache[u] = included[u];
 				continue;
 			}
@@ -8460,9 +8324,21 @@ export function traverseInclude(lex: Lexer, included?: Record<string, string>) {
 			if (c[uri]) {
 				cache = includeCache[uri] = Object.assign(c, cache);
 			} else Object.assign(cache, c);
-		} else if (!included[u])
+		} else if (includedCache[u] ??= { ...included }, !(u in included) && (lex = lexers[u]))
 			traverseInclude(lex, included);
 	}
+	for (const n in module) {
+		u = `${uri}|${n}`;
+		if (u in included)
+			module[n].duplicate = true;
+		else traverseInclude({
+			uri: u, fsPath: '', is_virtual, include: module[n].include
+		} as Lexer);
+	}
+	// module && !(`\n${uri}` in includeCache) && traverseInclude({
+	// 	uri: `\n${uri}`, fsPath, is_virtual,
+	// 	include: Object.assign({}, ...Object.values(module).map(m => m.include))
+	// } as Lexer);
 	return cache;
 }
 
@@ -8531,11 +8407,11 @@ function flat_block(block: FuncNode, flat: (syms: AhkSymbol[]) => void, ...decls
 	return block.params;
 }
 
-export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer, same_uri = false) {
-	const { diagnostics, uri, relevance } = lex;
+export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer, check_self = false) {
+	const { diagnostics, uri } = lex;
 	const vs: Variable[] = [], uri2 = lex.document.uri;
-	let l = '', v1: Variable, v2: Variable;
-	if (ahkVersion < alpha_11)
+	let l = '', v1: Variable, v2: Variable, relevance;
+	if (!check_self && (relevance = lex.relevance, ahkVersion < alpha_11))
 		Object.assign(relevance, { [ahkUris.ahk2]: 1, [ahkUris.ahk2_h ?? '\0']: 1 });
 	(function flat(syms: AhkSymbol[]) {
 		for (const it of syms) {
@@ -8561,9 +8437,9 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 								relatedInformation: [sym_related_msg(ahkVars[l])]
 							});
 					}
-					if (same_uri)
+					if (check_self)
 						it.uri = uri;
-					else if (v2 && !relevance[v2.uri!]) {
+					else if (v2 && !relevance![v2.uri!]) {
 						decs[l] = it;
 						continue;
 					}
@@ -8574,12 +8450,21 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 							if (v2.kind === SymbolKind.Variable && !v2.decl)
 								decs[l] = it;
 						} else if (v2.kind === SymbolKind.Variable) {
-							if (v1.def && !v2.def)
+							if (v1.from !== undefined && v2.from === undefined || v1.def && !v2.def)
 								decs[l] = it;
 							else v2.assigned ||= v1.assigned;
-						} else if (v1.decl && (!same_uri || is_before(v1, v2)))
+							if (v1.decl && v2.decl && (v1.from ?? v2.from) !== undefined) {
+								if (v1.from === undefined || v2.from === undefined)
+									v1.has_warned ??= lex.diagnostics.push({
+										message: diagnostic.conflictserr(var_type(v1),
+											`${var_type(v2)} variable`, v1.name),
+										range: v1.selectionRange,
+										relatedInformation: [sym_related_msg(v2, undefined, diagnostic.dupdeclaration())]
+									});
+							}
+						} else if (v1.decl && (!check_self || is_before(v1, v2)))
 							v1.has_warned ??= lex.diagnostics.push({
-								message: diagnostic.conflictserr('global', sym_type(v2), v1.name),
+								message: diagnostic.conflictserr(var_type(v1), sym_type(v2), v1.name),
 								range: v1.selectionRange,
 								relatedInformation: [sym_related_msg(v2, undefined, diagnostic.dupdeclaration())]
 							});
@@ -8590,13 +8475,14 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 								relatedInformation: [sym_related_msg(v2)]
 							});
 					} else if (v2.kind === SymbolKind.Variable) {
-						if (decs[l] = v1, v2.decl && (!same_uri || is_before(v2, v1)))
+						if (decs[l] = v1, v2.exported && v2.assigned !== true) {
+						} else if (v2.decl && (!check_self || is_before(v2, v1)))
 							v1.has_warned ??= lex.diagnostics.push({
 								message: diagnostic.conflictserr(sym_type(v1).toLowerCase(), 'global variable', v1.name),
 								range: v1.selectionRange,
 								relatedInformation: [sym_related_msg(v2, undefined, diagnostic.dupdeclaration())]
 							});
-						else if (same_uri && (v2.decl ? v2.assigned === true : v2.def && v2.assigned !== 1))
+						else if (check_self && (v2.decl ? v2.assigned === true : v2.def && v2.assigned !== 1))
 							v2.has_warned ??= lex.diagnostics.push({
 								message: diagnostic.assignerr(sym_type(v1), v1.name),
 								range: v2.selectionRange,
@@ -8642,9 +8528,29 @@ export function sym_type(sym: AhkSymbol) {
 	}
 }
 
+function var_type(sym: Variable) {
+	if (sym.from !== undefined)
+		return 'import';
+	return 'global';
+}
+
 function is_before(a: AhkSymbol, b: AhkSymbol) {
 	const aa = a.selectionRange.start, bb = b.selectionRange.start;
 	return (aa.line - bb.line || aa.character - bb.character) < 0;
+}
+
+function escape_str(str: string) {
+	const o: Record<string, string> = {
+		a: '\a', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v', s: ' '
+	};
+	let c, i, j, q, l = str.length, s = '';
+	for (i = `'"`.includes(q = str[0]) ? 1 : q = 0; i < l; i = ++j) {
+		for (j = i; (c = str.charAt(j)) && c !== '`'; j++);
+		if (c)
+			s += str.substring(i, j) + (o[c = str.charAt(++j)] ?? c);
+		else str[j - 1] === q && j--, s += str.substring(i, j);
+	}
+	return s;
 }
 
 export function isContinuousLine(lk: Token, tk: Token, parent?: AhkSymbol): boolean {
@@ -8672,7 +8578,7 @@ export function isContinuousLine(lk: Token, tk: Token, parent?: AhkSymbol): bool
 						return false;
 					return !/^(!|~|not|%|\+\+|--)$/i.test(tk.content) && (
 						!(parent as FuncNode)?.has_this_param || !allIdentifierChar.test(tk.content) || !(
-							(parent as FuncNode).ranges || parent!.returns?.[1] === 0 &&
+							(parent as FuncNode).ranges && parent!.kind !== SymbolKind.Module || parent!.returns?.[1] === 0 &&
 							(parent!.kind !== SymbolKind.Function || parent!.selectionRange === ZERO_RANGE)
 						));
 				// case TokenType.END_BLOCK:
@@ -8703,4 +8609,186 @@ export function fixupFormatOptions(opts: FormatOptions) {
 			opts[k] = OBJECT_STYLE[v];
 	}
 	return opts;
+}
+
+function difference<T>(old?: Iterable<T>, new_?: Iterable<T>) {
+	const o = new Set(old), n = new Set(new_), i = o.intersection(n);
+	let added, removed;
+	if (o.size === i.size) {
+		if (n.size === i.size)
+			return;
+		else added = n.difference(i);
+	} else if (removed = o.difference(i), n.size !== i.size)
+		added = n.difference(i);
+	return { added, removed };
+}
+
+function deref_avar(str: string, vars = a_Vars) {
+	return str.replaceAll(/%a_(\w+)%/ig, (s, m: string) => vars[m.toLowerCase()] || s);
+}
+
+function resolveImport(lex: Lexer) {
+	let imp = lex.import, module;
+	const imps = [];
+	imp && !imp.alias && imps.push(imp);
+	for (const n in (module = lex.module)) {
+		imp = module[n].import;
+		imp && !imp.alias && imps.push(imp);
+	}
+	if (!imps.length) return;
+	const list = traverseAllInclude(lex), cache = {};
+	imps.forEach(done);
+	function done(imp: Import) {
+		const mods = imp.mod ??= {}, alias = imp.alias ??= {}, decl: Record<string, Variable> = {};
+		for (const i of imp.imp) {
+			let n = i.from.toUpperCase();
+			const m = mods[n] ??= flatModule(findDirectiveModule(n, list) ?? findFileModule(n, lex, cache)) ?? false;
+			if (!m) {
+				lex.addDiagnostic(diagnostic.modulenotfound(i.from), i.tk.offset, i.tk.length);
+				continue;
+			}
+			for (const v of i.var) {
+				let r, t;
+				n = v.alias?.toUpperCase() ?? '';
+				if (!n) {
+					for (const o of m.modules ?? [m])
+						if (r = o.export?.[''])
+							break;
+					r ??= m;
+				} else for (const o of m.modules ?? [m]) {
+					t = o.declaration[n];
+					if (t && (t.kind !== SymbolKind.Variable || (t as Variable).from !== undefined)) {
+						r = t; break;
+					} else r ??= t;
+				}
+				v.alias_to = r ?? (r = v, null), decl[n = v.name.toUpperCase()] ??= v;
+				if (r !== (t = alias[n] ??= r)) {
+					if (r.selectionRange === t.selectionRange) {
+						const a = (r as Module).modules, b = (t as Module).modules;
+						if (a?.length === b?.length && new Set(a).isSubsetOf(new Set(b)))
+							continue;
+					}
+					v.has_warned ??= lex.diagnostics.push({
+						message: diagnostic.conflictserr('import', t instanceof Array ? 'Module' :
+							t.kind === SymbolKind.Variable ? 'import variable' : sym_type(t), v.name),
+						range: v.selectionRange, relatedInformation: [sym_related_msg(decl[n])]
+					});
+				}
+			}
+		}
+	}
+}
+
+function traverseAllInclude(lex: Lexer) {
+	const list = Object.keys(lex.getRelevance(undefined, true));
+	for (let u of list)
+		for (u in includeCache[`\n${u}`])
+			list.includes(u) || list.push(u);
+	return list;
+}
+
+function createModules(name: string, modules: Module[]) {
+	const m: Module = {
+		name, kind: SymbolKind.Module, modules,
+		range: ZERO_RANGE, selectionRange: ZERO_RANGE,
+		children: [], declaration: {},
+		include: null!, property: null!, ranges: null!,
+	};
+	return m;
+}
+
+function findDirectiveModule(n: string, uris: string[]) {
+	if (!allIdentifierChar.test(n)) return;
+	let mods: Module[] = [], u;
+	// TODO: Current module and main module are not located 
+	if (!n || n === '__MAIN') {
+		for (u of uris)
+			(u = lexers[u]) && mods.push(u);
+	} else {
+		if (n === 'AHK')
+			mods.push(ahkModule);
+		for (u of uris)
+			(u = lexers[u]?.module?.[n]) && mods.push(u);
+	}
+	if (mods.length > 1)
+		return createModules(n, mods);
+	return mods.pop();
+}
+
+function findFileModule(path: string, lex: Lexer, cache: Record<string, Module>) {
+	if (process.env.BROWSER) return;
+	let m;
+	m = /:([^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+)$/.exec(path);
+	m && (path = path.substring(0, m.index), m = m[1]);
+	if (path[0] === '*') {
+		const rs = utils.getRCData?.(path.substring(1));
+		if (!rs?.uri)
+			return;
+		lex = lexers[rs.uri];
+		return m ? findDirectiveModule(m, traverseAllInclude(lex)) : lex;
+	}
+	const dirs = a_Vars.$import ? deref_avar(a_Vars.$import, {
+		...a_Vars, scriptdir: lex.scriptdir, linefile: lex.scriptdir
+	}).split(';') : lex.libdirs.map(s => s.slice(0, -4));
+	for (let d of dirs) {
+		let f = resolve(d, path), s;
+		try {
+			s = statSync(d = f);
+			if (s.isDirectory())
+				s = statSync(d = `${f}\\__Init.ahk`);
+			if (!s.isFile())
+				throw 0;
+		} catch {
+			try {
+				if (!statSync(d = `${f}.ahk`).isFile())
+					continue;
+			} catch { continue; }
+		}
+		let t = lexers[URI.file(d).toString().toLowerCase()];
+		if (!t && (t = openAndParse(restorePath(d), false)!)) {
+			parseInclude(t, lex.scriptdir);
+			traverseInclude(t);
+		}
+		if (!t) break;
+		t !== lex && (t.importedLex ??= new Set).add(lex) && (lex.importLex ??= new Set).add(t);
+		return m ? findDirectiveModule(m, traverseAllInclude(t)) : cache[t.uri] ??= t;
+	}
+}
+
+export function resolveVarAlias(v: Variable, set?: Array<Variable>): AhkSymbol {
+	if (v.from === undefined)
+		return v;
+	if (v.alias_to === undefined) {
+		const t = lexers[v.uri!];
+		t && resolveImport(t);
+	}
+	let { alias_to } = v;
+	if (!alias_to || alias_to === v) return v;
+	if (alias_to.kind !== SymbolKind.Variable)
+		return alias_to;
+	if ((set ??= [v]).includes(alias_to))
+		return set[0];
+	set.push(alias_to);
+	return v.alias_to = resolveVarAlias(alias_to, set);
+}
+
+function flatModule(mod?: Module) {
+	if (!mod || mod.flat) return mod;
+	const mods = mod.modules ?? [mod];
+	const set = new Set(mods);
+	let m, t, u;
+	m = Object.assign({}, ...mods.map(m => m.include));
+	t = Object.assign({}, ...Object.keys(m).map(u => includeCache[u]));
+	for (u in t)
+		if ((t = lexers[u]) && !set.has(t))
+			set.add(t), mods.push(t);
+	// for (m of mods) {
+	// 	for (u in m.include) {
+	// 		if ((t = lexers[u]) && !set.has(t))
+	// 			set.add(t), mods.push(t);
+	// 	}
+	// }
+	if (mods.length > 1 && !mod.modules)
+		mod = createModules(mod.name, mods);
+	return mod.flat = true, mod;
 }

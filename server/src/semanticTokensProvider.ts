@@ -40,7 +40,7 @@ function resolveSemantic(tk: Token, lex: Lexer, stb: SemanticTokensBuilder, full
 				} else stb.push(pos.line, pos.character, tk.length, type, 0);
 				break;
 			case SemanticTokenTypes.class:
-				curclass = tk.definition as ClassNode;
+				curclass = (t = tk.definition) && ((t as Variable).alias_to ?? t) as ClassNode;
 				stb.push(pos.line, pos.character, tk.length, type, modifier ?? 0);
 				break;
 			case SemanticTokenTypes.method:
@@ -48,6 +48,10 @@ function resolveSemantic(tk: Token, lex: Lexer, stb: SemanticTokensBuilder, full
 				stb.push(pos.line, pos.character, tk.length,
 					tk.topofline || sem.resolved ? (curclass = undefined, type) : resolvePropSemanticType(tk, lex),
 					modifier ?? 0);
+				break;
+			case SemanticTokenTypes.module:
+				curclass = (t = tk.definition) && ((t as Variable).alias_to ?? t) as ClassNode;
+				stb.push(pos.line, pos.character, tk.length, type, modifier ?? 0);
 				break;
 			default:
 				curclass = undefined;
@@ -115,7 +119,7 @@ function resolvePropSemanticType(tk: Token, lex: Lexer) {
 	if (curclass && !tk.ignore) {
 		sem.resolved = true;
 		const name = tk.content.toUpperCase();
-		let n = curclass.property[name], kind = n?.kind, temp: Record<string, AhkSymbol>;
+		let n = curclass.property?.[name], kind = n?.kind, temp: Record<string, AhkSymbol>;
 		if (!n || n.def === false) {
 			const t = (temp = memscache.get(curclass) ?? (memscache.set(curclass, temp = getClassMembers(lex, curclass)), temp))[name];
 			if (t)
@@ -163,6 +167,9 @@ function resolvePropSemanticType(tk: Token, lex: Lexer) {
 				curclass = curclass.range === n.range ? curclass.prototype : undefined;
 				return sem.type = SemanticTokenTypes.property;
 			}
+			case SymbolKind.Variable:
+				curclass = undefined;
+				return sem.type = SemanticTokenTypes.variable;
 			case undefined:
 				if ((curclass.checkmember ?? lex.checkmember) !== false && configCache.Diagnostics?.ClassNonDynamicMemberCheck) {
 					const tt = lex.tokens[tk.next_token_offset];

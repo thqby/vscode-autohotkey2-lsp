@@ -2,14 +2,14 @@ import { execSync } from 'child_process';
 import { existsSync, lstatSync, readFileSync, readdirSync, readlinkSync, realpathSync } from 'fs';
 import { opendir, readFile } from 'fs/promises';
 import { resolve, sep } from 'path';
+import { CompletionItem, Diagnostic, Hover, InsertTextFormat, MessageActionItem } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { CompletionItem, Diagnostic, Hover, InsertTextFormat } from 'vscode-languageserver-types';
 import { URI } from 'vscode-uri';
 import { jsDocTagNames } from './constants';
-import { ActionType, AhkSymbol, FormatOptions, Lexer, ZERO_RANGE, fixupFormatOptions, traverseInclude } from './lexer';
+import { Lexer, ZERO_RANGE, ahkModule, fixupFormatOptions, traverseInclude } from './lexer';
 import { diagnostic, setting } from './localize';
 import { CompletionItemKind, MessageType, SymbolKind } from './lsp-enums';
-import { MessageActionItem } from 'vscode-languageclient';
+import { ActionType, AhkSymbol, FormatOptions } from './types';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -26,6 +26,7 @@ export * from './renameProvider';
 export * from './semanticTokensProvider';
 export * from './signatureProvider';
 export * from './symbolProvider';
+export * from './types';
 export { URI };
 
 enum LibIncludeType {
@@ -126,13 +127,12 @@ export const utils: Utils = {
 	showMessage: async (_, message) => (console.log(message), null)
 };
 
-export type Maybe<T> = T | undefined;
 export let locale = 'en-us', rootDir = '', isahk2_h = false;
 export let ahkPath = '', ahkPath_resolved = '';
 export let ahkVersion = Infinity, metafnIndex = 0;
-export let ahkUris: Record<string, string> = {};
-export let ahkVars: Record<string, AhkSymbol> = {};
-export let inactiveVars: Record<string, string> = {};
+export let ahkUris: Record<string, string>;
+export let ahkVars: Record<string, AhkSymbol>;
+export let inactiveVars: Record<string, string>;
 export let libSymbols: Record<string, LibSymbol> = {};
 export let commentTags: RegExp | undefined;
 export let workspaceFolders: string[] = [];
@@ -151,6 +151,8 @@ export let invokeCheck: {
 	ReturnUnset?: boolean
 	ReturnVoid?: boolean
 } | undefined;
+
+initCaches();
 
 interface LibSymbol extends Array<AhkSymbol> {
 	fsPath: string
@@ -262,6 +264,7 @@ export function getWorkspaceFile(uri: string) {
 export function initCaches() {
 	const kind = CompletionItemKind.Keyword, data = '*';
 	ahkVars = {}, ahkUris = {}, inactiveVars = {};
+	ahkModule.declaration = ahkModule.property = ahkVars;
 	completionItemCache = {
 		constant: [],
 		directive: {
@@ -305,6 +308,7 @@ export function loadSyntax(filename = 'ahk2', d = 3) {
 	}
 	function load_td(td: TextDocument) {
 		const lex = new Lexer(td, undefined, d);
+		filename === 'ahk2' && (ahkModule.uri = lex.uri);
 		lex.parseScript(), lexers[lex.uri] = lex, ahkUris[filename] = lex.uri;
 	}
 	function build_item_cache(str?: string) {
@@ -649,7 +653,10 @@ function glob2RegExp(glob: string) {
 }
 
 export function parseInclude(lex: Lexer, dir: string, _set = new Set()) {
-	const include = lex.include, l = dir.toLowerCase();
+	let include = lex.include;
+	const l = dir.toLowerCase();
+	if (lex.module)
+		include = Object.assign({}, include, ...Object.values(lex.module).map(m => m.include));
 	_set.add(lex);
 	for (const uri in include) {
 		const path = include[uri];
@@ -713,4 +720,13 @@ function getLibSymbols(lex: Lexer) {
 export function inLibDirs(path: string) {
 	path = path.toLowerCase();
 	return libDirs.some(p => path.startsWith(p.toLowerCase()));
+}
+
+export function getAllInclude(lex: Lexer) {
+	const { include, module } = lex;
+	const f = new Set(Object.keys(include));
+	for (const n in module)
+		for (const s in module[n].include)
+			f.add(s);
+	return f;
 }

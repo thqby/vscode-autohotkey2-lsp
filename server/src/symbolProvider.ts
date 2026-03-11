@@ -5,7 +5,7 @@ import {
 	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles,
 	findClass, getClassConstructor, getClassMember, getParamCount, getWorkspaceFile, hint, inactiveVars,
-	invokeCheck, isContinuousLine, lexers, openFile, sym_related_msg, sym_type, utils, warn, workspaceFolders
+	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
@@ -48,11 +48,11 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 			else if (v.returns === undefined)
 				unset_vars.set(t, v);
 		if (v.kind === SymbolKind.Variable ? t === v && (check_name(v), true) : t === v || (gvar[k] = v))
-			result.push(v), (v as FuncNode).in_expr || unused.add(v), converttype(v, v, islib || v === ahkVars[k]).definition = v;
+			(v as Variable).from ?? result.push(v), (v as FuncNode).in_expr || unused.add(v), converttype(v, v, islib || v === ahkVars[k]).definition = v;
 	}
 	const gu = new Set(unused);
 	flatTree(lex);
-	for (const t of unused.union(gu)) {
+	for (const t of unused.intersection(gu)) {
 		const n = t.name.toUpperCase();
 		for (const u in relevance)
 			if (lexers[u]?.declaration[n]) {
@@ -168,7 +168,8 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 						converttype(inherit[k] = v, v).definition = v;
 						if (v.kind === SymbolKind.Variable) {
 							check_name(v), unused.add(v);
-							if (v.is_param || v.decl && result.push(v)) continue;
+							if (v.is_param && (v.selectionRange !== ZERO_RANGE || unused.delete(v)) ||
+								v.decl && result.push(v)) continue;
 							if (!v.assigned && v.returns === undefined)
 								unset_vars.set(v, v);
 							else if (warnLocalSameAsGlobal && gvar[k])
@@ -230,13 +231,13 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 		const severity = DiagnosticSeverity.Error;
 		const { uri } = lex;
 		let dd: Lexer, sym: AhkSymbol;
-		Object.entries(lex.labels).forEach(e => e[1][0].def && (lbs[e[0]] = uri));
+		lex.labels && Object.entries(lex.labels).forEach(e => e[1][0].def && (lbs[e[0]] = uri));
 		for (const uri in relevance) {
 			if ((dd = lexers[uri])) {
 				if (dd.d) continue;
 				checkDupError(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd);
 				const labels = dd.labels;
-				if (!Object.keys(labels).length) continue;
+				if (!labels) continue;
 				const r = dd.relevance;
 				for (const l in labels) {
 					if (!(sym = labels[l][0]).def)
@@ -293,15 +294,25 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 	}
 	function converttype(it: AhkSymbol, source: Variable, islib = false): Token {
 		let stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined;
-		const kind = source.kind;
+		let { kind } = source;
 		switch (kind) {
 			case SymbolKind.Variable:
 				if (source.is_param) {
 					if (it.selectionRange === ZERO_RANGE)
 						return {} as Token;
 					st = SemanticTokenTypes.parameter;
-				} else if (!islib)
-					st = SemanticTokenTypes.variable;
+				} else if (!islib) {
+					const r = resolveVarAlias(source);
+					({ kind } = r);
+					if (kind === SymbolKind.Variable)
+						st = SemanticTokenTypes.variable;
+					else if (source = r, kind === SymbolKind.Function)
+						st = SemanticTokenTypes.function;
+					else if (kind === SymbolKind.Class)
+						st = SemanticTokenTypes.class;
+					else if (kind === SymbolKind.Module)
+						st = SemanticTokenTypes.module;
+				}
 				break;
 			case SymbolKind.Class:
 				st = SemanticTokenTypes.class; break;

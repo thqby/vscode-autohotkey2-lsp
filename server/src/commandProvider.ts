@@ -64,8 +64,8 @@ function generateComment(params: { uri: string, position: Position }) {
 	const { position, uri } = params;
 	const lex = Lexer.curr = lexers[uri.toLowerCase()];
 	if (!lex) return;
-	let scope = lex.searchScopedNode(position);
-	const ts = scope?.children || lex.children;
+	let { mod, scope } = lex.searchScopedNode(position);
+	const ts = (scope ?? mod ?? lex).children!;
 	for (const it of ts) {
 		if ((it.kind === SymbolKind.Function || it.kind === SymbolKind.Method) &&
 			it.selectionRange.start.line === position.line &&

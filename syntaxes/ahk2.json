@@ -46,7 +46,7 @@
 			"body": "#Import ",
 			"description": "Imports a module, or imports names from a module.",
 			"prefix": "#Import",
-			"syntax": "#Import [export] ModuleName [as ModuleAlias]\n#Import [export] { ExportName [as Alias], ... } from ModuleName\n#Import * from ModuleName\n#Import [export] ModuleName [as ModuleAlias] [{ *, ExportName ... }]"
+			"syntax": "#Import [export] ModuleName [as ModuleAlias] [{ *, ExportName [as NameAlias] ... }]"
 		},
 		{
 			"body": "#Include ${0:File_Dir_Or_LibName}",
@@ -325,12 +325,6 @@
 			"body": "if ",
 			"description": "Specify one or more statements to be executed when the expression evaluates to true.",
 			"syntax": "if Expression"
-		},
-		{
-			"body": "import ${0:*} from ${1:ModuleName}",
-			"description": "Imports a module, or imports names from a module.",
-			"prefix": "import",
-			"syntax": "[export] import ModuleName as ModuleAlias\n[export] import { ExportName [as Alias], ... } from ModuleName\nimport * from ModuleName\n[export] import ModuleName [as ModuleAlias] [{ *, ExportName ... }]"
 		},
 		{
 			"body": "loop files ${0:FilePattern [, Mode]}",

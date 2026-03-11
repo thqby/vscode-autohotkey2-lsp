@@ -4,7 +4,7 @@ import { basename, relative, resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit } from 'vscode-languageserver';
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, CompletionTriggerKind,
-	FuncNode, Lexer, Maybe, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
+	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
 	a_Vars, ahkUris, ahkVars, allIdentifierChar, completionItemCache, completionitem, configCache,
 	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getCallInfo,
 	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail,
@@ -15,8 +15,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	let { position, textDocument: { uri } } = params;
 	const lex = Lexer.curr = lexers[uri = uri.toLowerCase()], vars: Record<string, unknown> = {};
 	if (!lex || _token.isCancellationRequested) return;
-	let items: CompletionItem[] = [], cpitem = items.pop()!;
-	let l: string, path: string, pt: Token | undefined, scope: AhkSymbol | undefined, temp;
+	let items: CompletionItem[] = [], cpitem = items.pop()!, ms: { mod?: Module, scope?: AhkSymbol };
+	let l: string, path: string, pt: Token | undefined, scope: AhkSymbol | undefined, mod, temp;
 	const { triggerKind, triggerCharacter } = params.context ?? {};
 	const clsindex: Record<string, string> = {};
 
@@ -81,8 +81,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// eslint-disable-next-line prefer-const
 	let { text, word, token, range, linetext, kind, symbol } = lex.getContext(position, true);
 	let right_is_paren = '(['.includes(linetext[range.end.character] || '\0');
-	const list = lex.relevance, { line, character } = position;
-	let isexpr = false, expg = makeSearchRegExp(word), offset;
+	const { line, character } = position;
+	let isexpr = false, expg = makeSearchRegExp(word), list = lex.relevance, offset;
 
 	switch (token.type) {
 		case TokenType.Unknown:
@@ -265,19 +265,17 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					break;
 				if (t) {
 					isexpr = true;
-					if (pt.topofline > 0 || !(i++, pt = t.previous_token) || pt.topofline > 0) {
-						pt = undefined;
+					if (!(pt = t.previous_token) || pt.topofline > 0)
 						break;
-					}
 					continue;
 				}
 				isexpr ||= pt.next_pair_pos !== undefined || tp.includes(pt.type);
+				if ((cs ??= pt.callsite) || pt.topofline > 0)
+					break;
 				if ((pi ??= pt.paraminfo)) {
 					pt = tokens[pi.offset]?.previous_token, i++, isexpr = true;
 					break;
 				}
-				if ((cs ??= pt.callsite) || pt.topofline > 0)
-					break;
 			}
 			(cs ?? pi) && (pi ??= cs?.paraminfo, isexpr = true);
 			if (pt?.type === TokenType.Reserved) {
@@ -308,8 +306,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					case 'goto': {
 						if (i === 1 && token.type && token.type !== TokenType.Identifier)
 							return;
-						scope = lex.searchScopedNode(position);
-						let labels = ((scope as FuncNode) ?? lex).labels, data;
+						({ mod, scope } = ms = lex.searchScopedNode(position));
+						let labels = (scope as FuncNode | undefined ?? mod ?? lex).labels, data;
 						const offset = lex.document.offsetAt(position);
 						for (const n in labels) {
 							if (!expg.test(n))
@@ -529,7 +527,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 
 	// fn|()=>...
 	if (symbol) {
-		if (!symbol.children && (scope ??= lex.searchScopedNode(position))?.kind === SymbolKind.Class) {
+		if (!symbol.children && (scope = (ms ??= lex.searchScopedNode(position)).scope)?.kind === SymbolKind.Class) {
 			let cls = scope as ClassNode;
 			const metafns = ['__Init()', '__Call(${1:Name}, ${2:Params})', '__Delete()',
 				'__Enum(${1:NumberOfVars})', '__Get(${1:Key}, ${2:Params})',
@@ -563,7 +561,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		return;
 	}
 
-	if (kind === SymbolKind.Null && word)
+	if (kind === SymbolKind.Null && text)
 		return;
 
 	// obj.xxx|
@@ -639,7 +637,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				return cls_scope.full === pf;
 			return (cls_base_names ??= get_base_names(cls_scope)).has(pf!);
 			function get_scope() {
-				scope ??= lex.searchScopedNode(position);
+				({ scope } = ms ??= lex.searchScopedNode(position));
 				while (scope && scope?.kind !== SymbolKind.Class)
 					scope = scope.parent;
 				return scope ?? false;
@@ -659,7 +657,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	// snippet
 	items.push(...completionItemCache.snippet);
 
-	scope ??= lex.searchScopedNode(position);
+	({ mod, scope } = ms ??= lex.searchScopedNode(position));
 	// class cls {\nprop {\n|\n}\n}
 	if (scope?.children && scope.kind === SymbolKind.Property) {
 		if (token.topofline === 1)
@@ -721,7 +719,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			vars[n] = convertNodeCompletion(ahkVars[n]);
 
 	// global vars
-	for (const it of Object.values(lex.declaration)) {
+	for (const it of Object.values((mod ?? lex).declaration)) {
 		if (expg.test(l = it.name.toUpperCase()) && !at_edit_pos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
 			vars[l] = convertNodeCompletion(it);
 	}
@@ -844,7 +842,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			(t = lexers[uri]) && decls.push(t.declaration);
 		for (const decl of decls)
 			for (const cl in decl)
-				if ((t = decl[cl]).kind === SymbolKind.Class && expg.test(cl))
+				if (((t = decl[cl] as Variable).alias_to ?? t).kind === SymbolKind.Class && expg.test(cl))
 					vars[cl] ??= items.push(convertNodeCompletion(t));
 	}
 	async function add_paths(only_folder = false, ext_re?: RegExp) {

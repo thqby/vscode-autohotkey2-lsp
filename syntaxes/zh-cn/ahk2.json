@@ -36,7 +36,7 @@
 			"body": "#Import ",
 			"description": "导入模块, 或从模块中导入名称.",
 			"prefix": "#Import",
-			"syntax": "#Import [export] ModuleName [as ModuleAlias]\n#Import [export] { ExportName [as Alias], ... } from ModuleName\n#Import * from ModuleName\n#Import [export] ModuleName [as ModuleAlias] [{ *, ExportName ... }]"
+			"syntax": "#Import [export] ModuleName [as ModuleAlias] [{ *, ExportName [as NameAlias] ... }]"
 		},
 		{
 			"body": "#Include ${0:File_Dir_Or_LibName}",
@@ -245,12 +245,6 @@
 			"body": "if ",
 			"description": "指定在表达式计算为true时要执行的一个或多个语句.",
 			"syntax": "if Expression"
-		},
-		{
-			"body": "import ${0:*} from ${1:ModuleName}",
-			"description": "导入模块, 或从模块中导入名称.",
-			"prefix": "import",
-			"syntax": "[export] import ModuleName as ModuleAlias\n[export] import { ExportName [as Alias], ... } from ModuleName\nimport * from ModuleName\n[export] import ModuleName [as ModuleAlias] [{ *, ExportName ... }]"
 		},
 		{
 			"body": "loop files ${0:FilePattern [, Mode]}",

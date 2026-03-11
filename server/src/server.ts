@@ -7,7 +7,7 @@ import { sendAhkRequest } from './ahkProvider';
 import {
 	a_Vars, ahkPath, ahkPath_resolved, ahkVersion, builtinVars, builtinVars_h, clearLibSymbols, configCache,
 	initCaches, inLibDirs, isahk2_h, Lexer, lexers, libDirs, libSymbols, loadSyntax, localize, MessageType,
-	parseProject, parseUserLib, resolvePath, setAhkPath, setIsAhkH, setting, setVersion, URI, utils
+	parseInclude, parseProject, parseUserLib, resolvePath, setAhkPath, setIsAhkH, setting, setVersion, traverseInclude, URI, utils
 } from './common';
 import { documents, setConnection } from './connection';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
@@ -92,8 +92,8 @@ async function updateRCData() {
 }
 
 function clearRCData() {
-	loadedRCData.forEach(lex => lex.close(true));
-	loadedRCData.length = 0;
+	Object.values(loadedRCData).forEach(lex => lex.close(true));
+	loadedRCData = {};
 	rcData = undefined;
 }
 
@@ -161,22 +161,27 @@ async function getDllExport(paths: string[] | Set<string>, onlyone = false) {
 }
 
 let rcData: Record<string, Buffer> | undefined = undefined;
-const loadedRCData: Lexer[] = [];
+let loadedRCData: Record<string, Lexer> = {};
 function getRCData(name?: string) {
 	if (!rcData)
 		return;
 	if (!name) return { uri: '', path: '', paths: Object.keys(rcData ?? {}) };
 	const path = `${ahkPath}:${name}`;
 	const uri = URI.from({ scheme: 'ahkres', path }).toString().toLowerCase();
+	let lex;
 	if (lexers[uri])
 		return { uri, path };
+	if (lex = loadedRCData[uri])
+		return lexers[uri] = lex, { uri, path };
 	const data = rcData[name];
 	if (!data)
 		return;
 	try {
-		const lex = lexers[uri] = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
+		lex = new Lexer(TextDocument.create(uri, 'ahk2', -10, new TextDecoder('utf8', { fatal: true }).decode(data)));
 		lex.parseScript();
-		loadedRCData.push(lex);
+		parseInclude(lex, lex.scriptdir);
+		traverseInclude(lex);
+		lexers[uri] = loadedRCData[uri] = lex;
 		return { uri, path };
 	} catch { delete rcData[name]; }
 }
@@ -188,7 +193,7 @@ function getScriptVars(): Promise<Record<string, string> | undefined> {
 	const server = createServer().listen(path);
 	const script = `
 #NoTrayIcon
-s := ""
+s := "$import|" EnvGet("AhkImportPath") "\`n"
 for _, k in ${JSON.stringify([...builtinVars, ...builtinVars_h])}
 	try if SubStr(k, 1, 2) = "a_" && !IsObject(v := %k%)
 		s .= SubStr(k, 3) "|" v "\`n"

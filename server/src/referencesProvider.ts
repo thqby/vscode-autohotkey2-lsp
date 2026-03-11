@@ -20,7 +20,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 		return;
 	let name = context.text.toUpperCase();
 	const references: Record<string, Range[]> = {};
-	const { node, parent, uri, scope, is_this, is_global } = nodes[0];
+	const { node, parent, uri, mod, scope, is_this, is_global } = nodes[0];
 	if (is_this) {	// this
 		const range = scope?.children && findAllFromScope(scope, name, SymbolKind.Variable);
 		return range?.length ? { [lexers[uri].document.uri]: range } : undefined;
@@ -34,18 +34,18 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 
 	switch (node.kind) {
 		case SymbolKind.Field:
-			if (scope) {
-				const lbs = (scope as FuncNode).labels;
-				if (lbs && lbs[name])
-					references[lexers[uri].document.uri] = lbs[name].map(it => it.selectionRange);
+			if (scope ?? mod) {
+				const lbs = (scope as FuncNode | undefined ?? mod)!.labels?.[name];
+				if (lbs)
+					references[lexers[uri].document.uri] = lbs.map(it => it.selectionRange);
 			} else {
-				let lbs = lex.labels;
-				if (lbs[name])
-					references[lex.document.uri] = lbs[name].map(it => it.selectionRange);
+				let lbs = lex.labels?.[name];
+				if (lbs)
+					references[lex.document.uri] = lbs.map(it => it.selectionRange);
 				for (const uri in lex.relevance) {
-					lbs = lexers[uri].labels;
-					if (lbs[name])
-						references[lexers[uri].document.uri] = lbs[name].map(it => it.selectionRange);
+					lbs = lexers[uri].labels?.[name];
+					if (lbs)
+						references[lexers[uri].document.uri] = lbs.map(it => it.selectionRange);
 				}
 			}
 			break;
@@ -53,7 +53,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 		case SymbolKind.Variable:
 		case SymbolKind.Class:
 			if (node.kind !== SymbolKind.Class || !(node as FuncNode).full.includes('.')) {
-				const scope = is_global === true ? undefined : parent;
+				const scope = is_global === true ? mod : parent;
 				const all_uris = { [lex.uri]: scope };
 				if (uri !== lex.uri)
 					all_uris[uri] = undefined;
@@ -160,7 +160,7 @@ function findAllFromScope(scope: AhkSymbol, name: string, kind: SymbolKind, rang
 	if (kind === SymbolKind.Method || kind === SymbolKind.Property) {
 		//
 	} else {
-		const node = scope as FuncNode, gg = !scope.kind;
+		const node = scope as FuncNode, gg = !scope.kind || scope.kind === SymbolKind.Module;
 		let not_static = !(node?.local?.[name]?.static), assume: boolean | undefined = gg;
 		if (not_static && !gg && node.declaration?.[name]?.static === null)
 			not_static = false;
