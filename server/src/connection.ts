@@ -4,7 +4,7 @@ import {
 } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	a_Vars, ahkPath, ahkPath_resolved, ahkVars, chinesePunctuations, codeActionProvider, colorPresentation,
+	a_Vars, ahkVars, chinesePunctuations, codeActionProvider, colorPresentation,
 	colorProvider, completionProvider, configCache, defintionProvider, documentFormatting, enumNames,
 	fullySemanticToken, getRequestHandlers, hoverProvider, initCaches, initLocalize, isahk2_h, Lexer, lexers,
 	loadSyntax, LSConfig, MessageType, parseProject, parseUserLib, prepareRename, rangeFormatting,
@@ -18,7 +18,7 @@ export const documents = new TextDocuments(TextDocument);
 const workspaceFolders = new Set<string>();
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
-let isInitialized = false;
+export let isInitialized = false;
 let uri_switch_to_ahk2 = '';
 
 export function setConnection(conn: ProposedFeatures.Connection, extensionUri = '.') {
@@ -91,7 +91,7 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 		}
 		isInitialized = true;
 		if (process.env.BROWSER) return;
-		utils.updateStatusBar?.(a_Vars.ahkpath ? ahkPath_resolved : '');
+		utils.updateStatusBar?.(a_Vars.ahkpath ? undefined : '');
 		utils.getDllExport?.(['user32', 'kernel32', 'comctl32', 'gdi32'].map(name => `C:\\Windows\\System32\\${name}.dll`))
 			.then(val => winapis.push(...val));
 	});
@@ -184,7 +184,6 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 		sendNotification,
 		sendRequest,
 		showMessage,
-		updateStatusBar,
 	});
 	connection.listen();
 }
@@ -193,7 +192,7 @@ function sendDiagnostics(uri: string, diagnostics = []) {
 	return connection.sendDiagnostics({ uri, diagnostics });
 }
 
-function sendNotification(method: string, params?: unknown) {
+export function sendNotification(method: string, params?: unknown) {
 	connection.sendNotification(method, params);
 }
 
@@ -203,11 +202,4 @@ function sendRequest<T>(method: string, params?: unknown) {
 
 function showMessage(type: MessageType, message: string, ...actions: MessageActionItem[]) {
 	return connection.sendRequest<MessageActionItem | null>(ShowMessageRequest.method, { type, message, actions });
-}
-
-async function updateStatusBar(path = ahkPath_resolved) {
-	isInitialized && sendNotification('updateStatusBar', path ? {
-		path: ahkPath,
-		version: (await utils.getAhkVersion!([ahkPath_resolved])).pop()
-	} : null);
 }

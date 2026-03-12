@@ -5,11 +5,12 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { createConnection, ProposedFeatures } from 'vscode-languageserver/node';
 import { sendAhkRequest } from './ahkProvider';
 import {
-	a_Vars, ahkPath, ahkPath_resolved, ahkVersion, builtinVars, builtinVars_h, clearLibSymbols, configCache,
+	a_Vars, builtinVars, builtinVars_h, clearLibSymbols, configCache,
 	initCaches, inLibDirs, isahk2_h, Lexer, lexers, libDirs, libSymbols, loadSyntax, localize, MessageType,
-	parseInclude, parseProject, parseUserLib, resolvePath, setAhkPath, setIsAhkH, setting, setVersion, traverseInclude, URI, utils
+	parseInclude, parseProject, parseUserLib, resolvePath, setIsAhkH, setting, traverseInclude, URI, utils
 } from './common';
-import { documents, setConnection } from './connection';
+import { documents, isInitialized, sendNotification, setConnection } from './connection';
+import { ahkVersion, setVersion } from './lexer';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
 Object.assign(utils, {
@@ -17,6 +18,7 @@ Object.assign(utils, {
 	getDllExport,
 	getRCData,
 	setInterpreter,
+	updateStatusBar,
 });
 if (process.platform === 'win32')
 	utils.sendAhkRequest = sendAhkRequest;
@@ -219,6 +221,21 @@ FileOpen(A_ScriptFullPath, "w", "utf-8").Write(s)`;
 	}).then(() => {
 		const data = output?.trim();
 		if (data)
-			return Object.fromEntries(data.split('\n').map(l => l.split('|')));
+			return Object.fromEntries(data.split('\n').map(l => l.split('|')).concat(
+				['icontip', 'initialworkingdir', 'linefile', 'scriptdir', 'scriptname'].map(s => [s, null!])));
 	}).finally(() => server.close());
+}
+
+export let ahkPath = '', ahkPath_resolved = '';
+export function setAhkPath(path: string) {
+	const resolved = resolvePath(path, true);
+	if (resolved)
+		ahkPath = path, ahkPath_resolved = resolved;
+}
+
+async function updateStatusBar(path = ahkPath_resolved) {
+	isInitialized && sendNotification('updateStatusBar', path ? {
+		path: ahkPath,
+		version: (await utils.getAhkVersion!([ahkPath_resolved])).pop()
+	} : null);
 }

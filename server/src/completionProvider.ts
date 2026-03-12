@@ -5,9 +5,9 @@ import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, 
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, CompletionTriggerKind,
 	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
-	a_Vars, ahkUris, ahkVars, allIdentifierChar, completionItemCache, completionitem, configCache,
+	a_Vars, ahkUris, ahkVars, completionItemCache, completionitem, configCache,
 	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getCallInfo,
-	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail,
+	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail, isIdentifier,
 	kindSortChar, lexers, libSymbols, makeSearchRegExp, utils, winapis
 } from './common';
 
@@ -200,7 +200,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						const xg = pre.endsWith('/') ? '/' : '\\', ep = makeSearchRegExp(suf);
 						const extreg = isdll ? /\.(dll|ocx|cpl)$/i : inlib ? /\.ahk$/i : /\.(ahk2?|ah2)$/i;
 						const command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
-						const range = !allIdentifierChar.test(suf) ? {
+						const range = !isIdentifier(suf) ? {
 							start: {
 								line: position.line,
 								character: position.character - suf.length
@@ -293,7 +293,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							let tk = token;
 							const off = lex.document.offsetAt(range.end);
 							for (text = token.content; (tk = tokens[tk.next_token_offset!]) && tk.offset < off; text += tk.content);
-							if (allIdentifierChar.test(text.replaceAll('.', ''))) {
+							if (isIdentifier(text.replaceAll('.', ''))) {
 								for (const it of Object.values(findClass(lex, text)?.property ?? {})) {
 									if (it.kind === SymbolKind.Class && expg.test(it.name))
 										items.push(convertNodeCompletion(it));
@@ -603,9 +603,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (!is_any && (triggerKind !== CompletionTriggerKind.Invoked || word.length < 3))
 			return items;
 		const objs = new Set([lex.object, lexers[ahkUris.ahk2]?.object, lexers[ahkUris.ahk2_h]?.object]);
-		objs.delete(undefined!);
 		for (const uri in list)
-			objs.add(lexers[uri].object);
+			objs.add(lexers[uri.replace(/\|.+/, '')]?.object);
+		objs.delete(undefined!);
 		for (const k in (temp = lex.object.property)) {
 			const v = temp[k];
 			if (v.length === 1 && !v[0].full && at_edit_pos(v[0]))
@@ -862,7 +862,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 
 		const slash = path.endsWith('/') ? '/' : '\\', re = makeSearchRegExp(suf);
 		const command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
-		const range = !allIdentifierChar.test(suf) ? {
+		const range = !isIdentifier(suf) ? {
 			start: {
 				line: position.line,
 				character: position.character - suf.length
@@ -901,7 +901,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			(t = lexers[u]) && docs.push(t);
 		pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 		const expg = makeSearchRegExp(suf), kind = CompletionItemKind.Function;
-		const range = !allIdentifierChar.test(suf) ? {
+		const range = !isIdentifier(suf) ? {
 			start: {
 				line: position.line,
 				character: position.character - suf.length

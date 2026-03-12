@@ -19,6 +19,7 @@ export * from './definitionProvider';
 export * from './formattingProvider';
 export * from './hoverProvider';
 export * from './lexer';
+export * from './lexer2';
 export * from './localize';
 export * from './lsp-enums';
 export * from './referencesProvider';
@@ -89,12 +90,8 @@ interface Utils {
 	updateStatusBar?(path?: string): void
 }
 
-const VERSION_STAGE: Record<string, number | string> = { ALPHA: 3, BETA: 2, RC: 1, 3: 'alpha', 2: 'beta', 1: 'rc' };
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
-export const alpha_3 = versionEncode('2.1-alpha.3');
-export const alpha_11 = alpha_3 + 8;
-export const alpha_21 = alpha_11 + 10;
 export const configCache: LSConfig = {
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
@@ -128,8 +125,6 @@ export const utils: Utils = {
 };
 
 export let locale = 'en-us', rootDir = '', isahk2_h = false;
-export let ahkPath = '', ahkPath_resolved = '';
-export let ahkVersion = Infinity, metafnIndex = 0;
 export let ahkUris: Record<string, string>;
 export let ahkVars: Record<string, AhkSymbol>;
 export let inactiveVars: Record<string, string>;
@@ -504,44 +499,6 @@ export function updateConfig(config: LSConfig) {
 	Object.assign(configCache, config);
 }
 
-function versionEncode(version: string) {
-	const v = version.replace(/-\w+/, s => `.-${VERSION_STAGE[s.substring(1).toUpperCase()]}`).split('.');
-	let n = 0;
-	for (let i = 0; i < 4; i++)
-		n += parseInt(v[i] ?? '0') * 1000 ** (3 - i);
-	return n;
-}
-
-export function versionDecode(n: number) {
-	const v: number[] = [];
-	n += 3000;
-	for (let i = 0; i < 4; i++)
-		v[3 - i] = n % 1000, n = Math.floor(n / 1000);
-	(v[2] -= 3) >= 0 && (n = v.pop()!) && v.push(n);
-	return v.join('.').replace(/\.-\d+/, s => `-${VERSION_STAGE[s.substring(2)]}`);
-}
-
-export function versionMatch(requires: string) {
-	next:
-	for (const req of requires.split('||')) {
-		for (const m of req.matchAll(/(ahk_h\s*)?([<>]=?|=)?([^<>=]+)/g)) {
-			if (m[1] && !isahk2_h) continue next;
-			const v = versionEncode(m[3]);
-			let result = false;
-			switch (m[2] ?? '>=') {
-				case '>=': result = ahkVersion >= v; break;
-				case '<=': result = ahkVersion <= v; break;
-				case '=': result = ahkVersion === v; break;
-				case '>': result = ahkVersion > v; break;
-				case '<': result = ahkVersion < v; break;
-			}
-			if (!result) continue next;
-		}
-		return true;
-	}
-	return false;
-}
-
 export function makeSearchRegExp(search: string) {
 	let t = undefined;
 	search = search.replace(/([*.?+^$|\\/[\](){}])|([^\x00-\x7f])|(.)/g,
@@ -562,17 +519,10 @@ export function arrayEqual(a: string[], b: string[]) {
 
 export function clearLibSymbols() { libSymbols = {}; }
 export function setIsAhkH(v: boolean) { isahk2_h = v; }
-export function setAhkPath(path: string) {
-	const resolved = resolvePath(path, true);
-	if (resolved)
-		ahkPath = path, ahkPath_resolved = resolved;
-}
+
 export function setRootDir(dir: string) { rootDir = dir.replace(/[/\\]$/, ''); }
 export function setLocale(str?: string) { if (str) locale = str.toLowerCase(); }
-export function setVersion(version: string) {
-	ahkVersion = versionEncode(version);
-	metafnIndex = ahkVersion < alpha_11 - 1 ? 2 : 0;
-}
+
 export function setWorkspaceFolders(folders: Set<string>) {
 	const old = workspaceFolders;
 	workspaceFolders = [...folders];

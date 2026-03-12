@@ -1,4 +1,4 @@
-import { rootDir, versionDecode, getWorkspaceFile, readLocaleFile, HIDDEN_PARAMS } from './common';
+import { rootDir, getWorkspaceFile, readLocaleFile, HIDDEN_PARAMS } from './common';
 
 let loadedCollection: Record<string, string> = {};
 
@@ -67,7 +67,6 @@ export const diagnostic = {
 	propnotinit: localize('diagnostic.propnotinit', 'Property declaration is not initialized'),
 	readonly: localize('diagnostic.readonly', "{0} '{1}' is read-only"),
 	requirev1: localize('diagnostic.requirev1', 'This script requires AutoHotkey v1, continue parsing?'),
-	requireVerN: (n: number) => diagnostic.requireversion(versionDecode(n)),
 	requireversion: localize('diagnostic.requireversion', 'This feature requires the AutoHotkey version: {0}'),
 	requirevariable: localize('diagnostic.requirevariable', "'&' requires a variable"),
 	reservedworderr: localize('diagnostic.reservedworderr', 'The following reserved word \'{0}\' must not be used as a variable name'),

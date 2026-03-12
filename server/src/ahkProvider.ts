@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import { createClientSocketTransport, createMessageConnection, createServerSocketTransport, MessageConnection } from 'vscode-languageserver/node';
-import { ahkPath_resolved, rootDir } from './common';
+import { rootDir } from './common';
+import { ahkPath_resolved } from './server';
 let ahk_server: MessageConnection | undefined | null;
 
 async function getProviderPort(): Promise<number> {
