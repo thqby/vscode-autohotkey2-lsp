@@ -19,6 +19,7 @@ import {
 	ParamInfo, Property, Token, TokenType, USAGE, Variable
 } from './types';
 
+//#region type Inference
 export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, _this?: ClassNode): AhkSymbol[] {
 	const stack: Token[] = [], op_stack: Token[] = [], { document, tokens } = lex;
 	let operand = [0], pre = EMPTY_TOKEN, end: number, t, tt;
@@ -938,6 +939,7 @@ export function typeNaming(sym: AhkSymbol) {
 		default: return 'unknown';
 	}
 }
+//#endregion
 
 export function findClass(lex: Lexer, name: string, uri?: string) {
 	const arr = name.toUpperCase().split('.');
@@ -1041,9 +1043,11 @@ export function findSymbols(lex: Lexer, context: Context) {
 			syms.push({ node, uri: node.uri! });
 		return syms;
 	}
-	for (const tp of tps)
+	for (const tp of tps) {
+		const is_global = tp.kind === SymbolKind.Module || undefined;
 		if ((t = getClassMember(lex, tp, word, ismethod)))
-			syms.push({ node: t, uri: t.uri!, parent: tp });
+			syms.push({ node: t, uri: t.uri!, is_global, parent: tp });
+	}
 	if (syms.length)
 		return syms;
 }
@@ -1423,35 +1427,86 @@ export function resolveImport(lex: Lexer) {
 	}
 }
 
-function findDirectiveModule(n: string, lex: Lexer, cache: Record<string, string[]>) {
-	if (!isIdentifier(n)) return;
+function traverseRelevance(lex: Lexer) {
+	const r = Object.keys(lex.getRelevance(undefined, true)), ls: Lexer[] = [];
+	let i, l, m, n;
+	for (let u of r) {
+		if ((i = u.indexOf('|')) !== -1)
+			if (!r.includes(u = u.substring(0, i))) {
+				for (n in lexers[u]?.getRelevance(undefined, true))
+					r.includes(n) || r.push(n);
+			} else continue;
+		for (n in (l = lexers[u])?.module)
+			if (!r.includes(i = `${u}|${n}`))
+				for (m in includeCache[i])
+					r.includes(m) || r.push(m);
+		l && ls.push(l);
+	}
+	return ls;
+}
+
+function findIncludeEntry(lex: Lexer) {
+	let t = includedCache[lex.uri];
+	if (!t) return [lex];
+	const uris = Object.keys(t), r = [], result = [];
+	let u, mu = '', mn = Infinity, i;
+	for (u of uris) {
+		i = 0, u = u.replace(/\|.+/, '');
+		for (let t in includedCache[u])
+			i++, uris.includes(t) || uris.push(t);
+		!i ? r.push(u) : i < mn && (mu = u, mn = i);
+	}
+	!r.length && r.push(mu);
+	for (u of r)
+		(u = lexers[u]) && result.push(u);
+	!result.length && result.push(lex);
+	return result;
+}
+
+function findMainEntry(lex: Lexer) {
+	let ml = lex, mn = Infinity, i, l;
+	const lexs = findIncludeEntry(lex), result = [];
+	for (l of lexs) {
+		if (!(i = l.importedLex?.size))
+			result.push(l);
+		else {
+			i < mn && (ml = l, mn = i);
+			for (l of l.importedLex)
+				if (!lexs.includes(l))
+					for (l of findIncludeEntry(l))
+						lexs.includes(l) || lexs.push(l);
+		}
+	}
+	!result.length && result.push(ml);
+	return result;
+}
+
+function findDirectiveModule(n: string, lex: Lexer, cache: Record<string, Lexer[]>) {
 	let mods: Module[] = [], u;
-	// TODO: Current module and main module are not located
 	if (!n) {
-	} else if (n === '__MAIN') {
-		// for (u of uris)
-		// 	(u = lexers[u]) && mods.push(u);
-	} else {
+		mods.push(...findIncludeEntry(lex));
+	} else if (isIdentifier(n)) {
 		if (n === 'AHK')
 			mods.push(ahkModule);
-		for (u of cache[lex.uri] ??= Object.keys(lex.getRelevance(undefined, true)))
-			(u = lexers[u]?.module?.[n]) && mods.push(u);
-	}
+		else if (n === '__MAIN')
+			mods.push(...cache.__MAIN ??= findMainEntry(lex));
+		for (u of cache[lex.uri] ??= traverseRelevance(lex))
+			(u = u.module?.[n]) && mods.push(u);
+	} else return;
 	if (mods.length > 1)
 		return createModules(n, mods);
 	return mods.pop();
 }
 
-function findFileModule(path: string, lex: Lexer, cache: Record<string, string[]>) {
+function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>) {
 	if (process.env.BROWSER) return;
 	let m;
 	m = /:([^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+)$/.exec(path);
 	m && (path = path.substring(0, m.index), m = m[1]);
 	if (path[0] === '*') {
-		const rs = utils.getRCData?.(path.substring(1));
-		if (!rs?.uri)
+		let lex = utils.getRCData?.(path.substring(1))?.lex;
+		if (!lex)
 			return;
-		lex = lexers[rs.uri];
 		return m ? findDirectiveModule(m, lex, cache) : lex;
 	}
 	const dirs = a_Vars.$import ? derefVar(a_Vars.$import, undefined, {
@@ -1486,18 +1541,11 @@ export function flatModule(mod?: Module) {
 	if (!mod || mod.flat) return mod;
 	const mods = mod.modules ?? [mod];
 	const set = new Set(mods);
-	let m, t, u;
-	m = Object.assign({}, ...mods.map(m => m.include));
-	t = Object.assign({}, ...Object.keys(m).map(u => includeCache[u]));
+	let t, u;
+	t = Object.assign({}, ...mods.map(m => includeCache[`${m.uri!}${m.name && `|${m.name}`}`]));
 	for (u in t)
 		if ((t = lexers[u]) && !set.has(t))
 			set.add(t), mods.push(t);
-	// for (m of mods) {
-	// 	for (u in m.include) {
-	// 		if ((t = lexers[u]) && !set.has(t))
-	// 			set.add(t), mods.push(t);
-	// 	}
-	// }
 	if (mods.length > 1 && !mod.modules)
 		mod = createModules(mod.name, mods);
 	return mod.flat = true, mod;

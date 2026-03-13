@@ -9,7 +9,7 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	a_Vars, action, ahkUris, ahkVars, builtinCommands_v1, commentTags, configCache,
-	diagnostic, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
+	diagnostic, difference, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
 	libSymbols, locale, Mode, parseInclude, restorePath, rootDir,
 	symbolProvider, URI, utils, warn, workspaceFolders
 } from './common';
@@ -6748,7 +6748,6 @@ export class Lexer implements Module {
 		const { uri, include: oi, module: om, importLex: ol } = this;
 		let flags = '' in oi ? 4 : 0, added, removed, included, l, u;
 		this.parseScript();
-		this.folding_ranges.reverse();
 		if (libSymbols[uri]) {
 			libSymbols[uri].length = 0;
 			libSymbols[uri].push(...Object.values(this.declaration).filter(it => it.kind === SymbolKind.Class || it.kind === SymbolKind.Function));
@@ -6796,24 +6795,6 @@ export class Lexer implements Module {
 			} else included ??= this.included;
 			for (u in included)
 				(u = includeCache[u]) && Object.assign(u, c);
-			let main = this.scriptpath, max = Object.keys(includeCache[uri]).length;
-			for (u in includedCache[uri]) {
-				l = Object.keys(includeCache[u] ?? {}).length;
-				u = u.replace(/\|.+$/, '');
-				if (l > max || l === max && lexers[u]?.scriptpath.length < main.length)
-					main = lexers[u].scriptpath, max = l;
-			}
-			let lex: Lexer, m = main.toLowerCase();
-			const relevance = this.relevance;
-			if ((m + '\\').startsWith(this.scriptdir.toLowerCase() + '\\lib\\'))
-				main = this.scriptdir, m = main.toLowerCase();
-			else if (m !== this.scriptdir.toLowerCase())
-				this.initLibDirs(main);
-			for (const u in relevance) {
-				if (!(lex = lexers[u]) || lex.scriptdir.toLowerCase() === m)
-					continue;
-				lex.initLibDirs(main), lex.need_scriptdir && lex.parseScript();
-			}
 			if (process.env.DEBUG) {
 				for (const lex of Object.values(lexers)) {
 					lex.actived && console.log(['>>> file: ' + lex.fsPath,
@@ -7272,18 +7253,6 @@ export function fixupFormatOptions(opts: FormatOptions) {
 			opts[k] = OBJECT_STYLE[v];
 	}
 	return opts;
-}
-
-function difference<T>(old?: Iterable<T>, new_?: Iterable<T>) {
-	const o = new Set(old), n = new Set(new_), i = o.intersection(n);
-	let added, removed;
-	if (o.size === i.size) {
-		if (n.size === i.size)
-			return;
-		else added = n.difference(i);
-	} else if (removed = o.difference(i), n.size !== i.size)
-		added = n.difference(i);
-	return { added, removed };
 }
 
 export function derefVar(str: string, lex?: Lexer, vars = a_Vars) {

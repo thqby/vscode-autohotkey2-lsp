@@ -80,7 +80,7 @@ export interface LSConfig {
 interface Utils {
 	getAhkVersion?(paths: string[]): Promise<string[]>
 	getDllExport?(paths: string[] | Set<string>, onlyone?: boolean): Promise<string[]>
-	getRCData?(path?: string): { uri: string, path: string, paths?: string[] } | undefined
+	getRCData?(path?: string): { uri: string, path: string, lex?: Lexer, paths?: string[] } | undefined
 	sendAhkRequest?<T>(method: string, params: unknown[]): Promise<T | undefined>
 	sendDiagnostics?(uri: string, diagnostics: Diagnostic[]): Promise<void>
 	sendNotification?(method: string, params?: unknown): void
@@ -672,11 +672,14 @@ export function inLibDirs(path: string) {
 	return libDirs.some(p => path.startsWith(p.toLowerCase()));
 }
 
-export function getAllInclude(lex: Lexer) {
-	const { include, module } = lex;
-	const f = new Set(Object.keys(include));
-	for (const n in module)
-		for (const s in module[n].include)
-			f.add(s);
-	return f;
+export function difference<T>(old?: Iterable<T>, new_?: Iterable<T>) {
+	const o = new Set(old), n = new Set(new_), i = o.intersection(n);
+	let added, removed;
+	if (o.size === i.size) {
+		if (n.size === i.size)
+			return;
+		else added = n.difference(i);
+	} else if (removed = o.difference(i), n.size !== i.size)
+		added = n.difference(i);
+	return { added, removed };
 }

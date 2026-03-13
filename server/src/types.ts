@@ -183,7 +183,6 @@ export enum Mode { BlockStatement, Statement, ObjectLiteral, ArrayLiteral, Condi
 export interface Module extends AhkSymbol {
 	children: AhkSymbol[]
 	declaration: Record<string, AhkSymbol>
-	duplicate?: boolean
 	export?: Record<string, AhkSymbol>
 	flat?: boolean
 	import?: Import

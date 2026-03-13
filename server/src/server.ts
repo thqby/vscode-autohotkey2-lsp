@@ -171,10 +171,10 @@ function getRCData(name?: string) {
 	const path = `${ahkPath}:${name}`;
 	const uri = URI.from({ scheme: 'ahkres', path }).toString().toLowerCase();
 	let lex;
-	if (lexers[uri])
-		return { uri, path };
+	if (lex = lexers[uri])
+		return { uri, path, lex };
 	if (lex = loadedRCData[uri])
-		return lexers[uri] = lex, { uri, path };
+		return lexers[uri] = lex, { uri, path, lex };
 	const data = rcData[name];
 	if (!data)
 		return;
@@ -184,7 +184,7 @@ function getRCData(name?: string) {
 		parseInclude(lex, lex.scriptdir);
 		traverseInclude(lex);
 		lexers[uri] = loadedRCData[uri] = lex;
-		return { uri, path };
+		return { uri, path, lex };
 	} catch { delete rcData[name]; }
 }
 
