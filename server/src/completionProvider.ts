@@ -5,8 +5,8 @@ import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, 
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, CompletionTriggerKind,
 	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
-	a_Vars, ahkUris, ahkVars, completionItemCache, completionitem, configCache,
-	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getCallInfo,
+	a_Vars, ahkModule, ahkUris, ahkVars, ahkVersion, alpha_3, completionItemCache, completionitem, configCache,
+	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
 	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail, isIdentifier,
 	kindSortChar, lexers, libSymbols, makeSearchRegExp, utils, winapis
 } from './common';
@@ -82,7 +82,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	let { text, word, token, range, linetext, kind, symbol } = lex.getContext(position, true);
 	let right_is_paren = '(['.includes(linetext[range.end.character] || '\0');
 	const { line, character } = position;
-	let isexpr = false, expg = makeSearchRegExp(word), list = lex.relevance, offset;
+	let isexpr = false, expg = makeSearchRegExp(word), offset, lexs: Lexer[] | undefined;
 
 	switch (token.type) {
 		case TokenType.Unknown:
@@ -114,21 +114,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					if (it.kind === SymbolKind.Class && expg.test(it.name))
 						items.push(convertNodeCompletion(it));
 				}
-			} else {
-				add_classes();
-				const tds = [lex.typedef];
-				let t = lexers[lex.d_uri];
-				t && tds.push(t.declaration, t.typedef);
-				for (const uri in list) {
-					if (!(t = lexers[uri])) continue;
-					tds.push(t.typedef);
-					(t = lexers[t.d_uri]) && tds.push(t.declaration, t.typedef);
-				}
-				for (const td of tds)
-					for (const n in td)
-						if (expg.test(n) && td[n].kind === SymbolKind.Class)
-							vars[n] ??= items.push(convertNodeCompletion(td[n]));
-			}
+			} else add_classes(true);
 			return items;
 		// #include |
 		// ::xxx::|
@@ -322,8 +308,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							}
 						}
 						if (!scope) {
-							for (const u in list) {
-								for (const n in labels = lexers[u]?.labels) {
+							const f = mod ?? lex;
+							lexs ??= getAllModules(lex, mod) as Lexer[];
+							for (const l of lexs) {
+								if (l === f) continue;
+								for (const n in labels = l.labels) {
 									if (!expg.test(n))
 										continue;
 									for (const it of labels[n]) {
@@ -584,6 +573,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				Object.entries(result).forEach(it => expg.test(it[0]) &&
 					add_item(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
 				continue;
+			} else if (node.kind === SymbolKind.Module) {
+				const m = node as Module;
+				const vv = get_global_var(m.modules ?? [m], lex, uri.substring(0, uri.lastIndexOf('/') + 1), expg);
+				for (const [k, it] of Object.entries(vv))
+					if (it.def && !(k in props))
+						items.push(props[k] = convertNodeCompletion(it));
+				continue;
 			}
 			const omems = getClassMembers(lex, node, bases);
 			for (temp of bases)
@@ -603,14 +599,12 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (!is_any && (triggerKind !== CompletionTriggerKind.Invoked || word.length < 3))
 			return items;
 		const objs = new Set([lex.object, lexers[ahkUris.ahk2]?.object, lexers[ahkUris.ahk2_h]?.object]);
-		for (const uri in list)
+		for (const uri in lex.relevance)
 			objs.add(lexers[uri.replace(/\|.+/, '')]?.object);
 		objs.delete(undefined!);
-		for (const k in (temp = lex.object.property)) {
-			const v = temp[k];
-			if (v.length === 1 && !v[0].full && at_edit_pos(v[0]))
-				delete temp[k];
-		}
+		const t = (temp = lex.object.property)[word.toUpperCase()];
+		if (t?.length === 1 && at_edit_pos(t[0]))
+			delete temp[word.toUpperCase()];
 		for (const obj of objs) {
 			for (const arr of Object.values(obj))
 				for (const [k, its] of Object.entries(arr) as [string, Variable[]][])
@@ -713,39 +707,36 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		items = items.concat(temp[8] ? { label: 'Up', kind: CompletionItemKind.Keyword } :
 			completionItemCache.key.filter(it => !it.label.toLowerCase().includes('alttab')));
 
-	// built-in vars
-	for (const n in ahkVars)
-		if (expg.test(n))
-			vars[n] = convertNodeCompletion(ahkVars[n]);
+	const uri_dir = uri.substring(0, uri.lastIndexOf('/') + 1);
+	const vv = get_global_var(lexs ??= getAllModules(lex, mod) as Lexer[], lex, uri_dir, expg);
+	const uris = new Set(lexs.map(l => l.uri)), le11 = ahkVersion < alpha_3 + 8;
 
-	// global vars
-	for (const it of Object.values((mod ?? lex).declaration)) {
-		if (expg.test(l = it.name.toUpperCase()) && !at_edit_pos(it) && (!vars[l] || it.kind !== SymbolKind.Variable))
-			vars[l] = convertNodeCompletion(it);
-	}
-	const list_arr = Object.keys(list).reverse(), uri_dir = uri.substring(0, uri.lastIndexOf('/') + 1);
-	for (const u of new Set([lex.d_uri, ...list_arr.map(p => lexers[p]?.d_uri), ...list_arr])) {
-		if (!(temp = lexers[u]))
-			continue;
-		const d = temp.d, max_access = uri === u ? AccessModifier.all : u.startsWith(uri_dir) ? AccessModifier.private : AccessModifier.protected;
-		path = temp.fsPath, temp = temp.declaration;
-		for (const n in temp) {
-			const it = temp[n];
-			if (expg.test(n) && (d || ((n in vars) ?
-				it.kind !== SymbolKind.Variable && (vars[n] as CompletionItem).kind === CompletionItemKind.Variable :
-				(it.access ?? 0) < max_access)))
-				vars[n] = cpitem = convertNodeCompletion(it);
-		}
+	// built-in vars
+	if (le11) {
+		for (const n in ahkVars)
+			if (expg.test(n) && !vv[n]?.children)
+				vv[n] = ahkVars[n];
+	} else {
+		for (const n in ahkVars)
+			if (expg.test(n))
+				if (vv[n]?.def === undefined)
+					vv[n] = ahkVars[n];
+				else vv[n] ??= ahkVars[n];
 	}
 
 	// local vars
 	if (scope) {
 		position = range.end;
-		Object.entries(lex.getScopeSymbols(scope)).forEach(([l, it]) => {
-			if (expg.test(l) && (it.def !== false || !vars[l] && !at_edit_pos(it)))
-				vars[l] = convertNodeCompletion(it);
-		});
+		for (const [n, s] of Object.entries(lex.getScopeSymbols(scope))) {
+			if (!expg.test(n)) continue;
+			if (s.def && !s.is_global)
+				vv[n] = s;
+			else vv[n] ??= s;
+		}
 	}
+	del_edit(vv);
+	for (const n in vv)
+		vars[n] = convertNodeCompletion(vv[n]);
 
 	// auto-include
 	if (configCache.AutoLibInclude) {
@@ -755,7 +746,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		dir = (dir ? URI.parse(dir).fsPath : lex.scriptdir).toLowerCase();
 		lex.includedir.forEach((v, k) => line = k);
 		for (const u in libSymbols) {
-			if (!list[u] && (path = libSymbols[u].fsPath) && ((configCache.AutoLibInclude > 1 && libSymbols[u].islib) ||
+			if (!uris.has(u) && (path = libSymbols[u].fsPath) && ((configCache.AutoLibInclude > 1 && libSymbols[u].islib) ||
 				((configCache.AutoLibInclude & 1) && path.toLowerCase().startsWith(dir)))) {
 				const max_access = uri === u ? AccessModifier.all : u.startsWith(uri_dir) ? AccessModifier.private : AccessModifier.protected;
 				for (const it of libSymbols[u]) {
@@ -809,7 +800,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 	}
 
-	if ((list_arr.unshift(lex.uri), !list_arr.includes(ahkUris.winapi)) && list_arr.some(u => lexers[u]?.include[ahkUris.winapi]))
+	if (ahkUris.winapi && !uris.has(ahkUris.winapi) && lexs.some(l => ahkUris.winapi in l.include))
 		for (const n in temp = lexers[ahkUris.winapi]?.declaration)
 			expg.test(n) && (vars[n] ??= convertNodeCompletion(temp[n]));
 
@@ -835,15 +826,21 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (nk && (((t = nk.symbol)?.detail ?? (t = lex.tokens[nk.next_token_offset]?.symbol)?.detail) !== undefined))
 			return t;
 	}
-	function add_classes() {
-		let t;
-		const decls = [ahkVars, lex.declaration];
-		for (const uri in list)
-			(t = lexers[uri]) && decls.push(t.declaration);
-		for (const decl of decls)
-			for (const cl in decl)
-				if (((t = decl[cl] as Variable).alias_to ?? t).kind === SymbolKind.Class && expg.test(cl))
-					vars[cl] ??= items.push(convertNodeCompletion(t));
+	function add_classes(typedef = false) {
+		let n, s, t;
+		const mods = getAllModules(lex, lex.inDirectiveModule(position));
+		mods.push(ahkModule);
+		for (const m of mods)
+			for ([n, s] of Object.entries(m.declaration))
+				if (((s as Variable).alias_to ?? s).kind === SymbolKind.Class && expg.test(n))
+					vars[n] ??= items.push(convertNodeCompletion(s));
+		if (!typedef) return;
+		for (const m of mods as Lexer[])
+			for (n in t = m.typedef)
+				if ((s = t[n]).kind === SymbolKind.TypeParameter && s.type_annotations &&
+					(s = s.type_annotations[0] as AhkSymbol).kind === SymbolKind.Class && expg.test(n))
+					vars[n] ??= items.push(convertNodeCompletion(s));
+
 	}
 	async function add_paths(only_folder = false, ext_re?: RegExp) {
 		if (process.env.BROWSER)
@@ -897,8 +894,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		offset ??= lex.document.offsetAt(position);
 		let pre = token.content.substring(1, offset - token.offset), suf = '', t;
 		const docs = [lex], ls: Record<string, unknown> = {};
-		for (const u in list)
-			(t = lexers[u]) && docs.push(t);
+		for (const u in lex.relevance)
+			(t = lexers[u.replace(/\|.+/, '')]) && docs.push(t);
 		pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 		const expg = makeSearchRegExp(suf), kind = CompletionItemKind.Function;
 		const range = !isIdentifier(suf) ? {
@@ -959,10 +956,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (expg.test(it.label))
 				vars[it.label.toUpperCase()] = true, items.push(it);
 		}
-		for (const t in (temp = lex.texts))
-			expg.test(t) && add_item(temp[t], CompletionItemKind.Text);
-		for (const u in list)
-			for (const t in (temp = lexers[u]?.texts))
+		for (const u in lex.getRelevance(undefined, true))
+			for (const t in (temp = lexers[u.replace(/\|.+/, '')]?.texts))
 				expg.test(t) && add_item(temp[t], CompletionItemKind.Text);
 	}
 	function add_item(label: string, kind: CompletionItemKind) {
@@ -970,9 +965,14 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return false;
 		items.push(cpitem = { label, kind });
 		return vars[l] = true;
-	};
+	}
 	function at_edit_pos(it: AhkSymbol) {
 		return it.selectionRange.end.line === line && character === it.selectionRange.end.character;
+	}
+	function del_edit(obj: Record<string, AhkSymbol>) {
+		const n = word.toUpperCase(), t = obj[n];
+		if (!t || (t.uri ?? lex.uri) !== lex.uri || !at_edit_pos(t)) return;
+		delete obj[n];
 	}
 	function set_ci_classinfo(ci: CompletionItem, cls?: AhkSymbol) {
 		const name = cls?.full;
@@ -1046,4 +1046,21 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		return ci;
 	}
 	//#endregion
+}
+
+function get_global_var(lexs: Module[], lex: Lexer, dir: string, re: RegExp) {
+	const vars: Record<string, Variable> = {};
+	for (const l of lexs) {
+		const u = l.uri ?? '', max_access = l === lex ? AccessModifier.all : u.startsWith(dir) ? AccessModifier.private : AccessModifier.protected;
+		for (const [n, s] of Object.entries(l.declaration)) {
+			const v = vars[n];
+			if (v) {
+				if (v.kind !== SymbolKind.Variable || v.decl && s.kind === SymbolKind.Variable)
+					continue;
+			} else if ((s.access ?? 0) >= max_access)
+				continue;
+			vars[n] = s;
+		}
+	}
+	return Object.fromEntries(Object.entries(vars).filter(t => re.test(t[0])));
 }

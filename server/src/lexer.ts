@@ -2576,12 +2576,14 @@ export class Lexer implements Module {
 						l = { code: DiagnosticCode.module };
 						if (mode !== BlockType.Script)
 							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
-						else if (ahkVersion < alpha_11)
-							_this.addDiagnostic(requireVerN(alpha_11), tk.offset, tk.length, l);
-						else if (!tk.data)
-							_this.addDiagnostic(diagnostic.acceptparams(tk.content, 1), tk.offset, tk.length, l);
 						else {
 							l = tk.data as Token;
+							if (ahkVersion < alpha_11)
+								_this.addDiagnostic(requireVerN(alpha_11), tk.offset, tk.length, l);
+							else if (!l) {
+								_this.addDiagnostic(diagnostic.acceptparams(tk.content, 1), tk.offset, tk.length, l);
+								break;
+							}
 							const rg = make_range(l.offset, l.length), name = l.content;
 							let mod = _this.curr_mod, o;
 							if (!isIdentifier(name) || name[0] <= '9')
@@ -2607,7 +2609,7 @@ export class Lexer implements Module {
 					case '#import':
 						if (ahkVersion < alpha_11 + 9)
 							_this.addDiagnostic(requireVerN(alpha_11 + 9), tk.offset, tk.length);
-						else nexttoken(), parse_import(false);
+						nexttoken(), parse_import(false);
 						break;
 					case '#structpack':
 						if (ahkVersion < alpha_11 + 8)
@@ -6377,7 +6379,7 @@ export class Lexer implements Module {
 			({ mod, scope } = position ? this.searchScopedNode(position) : {});
 			for (node of (scope as FuncNode | undefined ?? mod ?? this).labels?.[name.endsWith(':') ? name.slice(0, -1) : name] ?? []) {
 				if (!node.def) break;
-				if ((data = node.data as number) === -1 || data < offset &&
+				if ((data = node.data as number ?? -1) === -1 || data < offset &&
 					(!(data = tokens[tokens[data].next_pair_pos!]?.offset) || offset < data))
 					return { node, uri, mod, scope };
 			}
@@ -6605,20 +6607,25 @@ export class Lexer implements Module {
 		}
 	}
 
+	inDirectiveModule(pos: Position) {
+		const mod = this.module;
+		if (!mod) return;
+		const offset = this.document.offsetAt(pos);
+		for (const n in mod) {
+			const m = mod[n];
+			for (const [s, e] of m.ranges!)
+				if (offset < s) break;
+				else if (offset <= e)
+					return m;
+		}
+	}
+
 	searchScopedNode(pos: Position): { scope?: AhkSymbol, mod?: Module } {
 		const { line, character } = pos;
-		let { children: syms, module } = this, its, sp, mod;
+		let { children: syms } = this, its, sp, mod;
 		let cls: ClassNode, offset: number;
-		if (module) {
-			offset = this.document.offsetAt(pos);
-			outloop: for (const n in module) {
-				const m = module[n];
-				for (const rg of m.ranges!)
-					if (offset < rg[0] || offset <= rg[1] && (mod = m))
-						break outloop;
-			}
-			mod && (syms = mod.children);
-		}
+		mod = this.inDirectiveModule(pos);
+		mod && (syms = mod.children);
 		next: while (syms) {
 			for (const it of syms) {
 				if (!(its = it.children) || line > it.range.end.line || line < it.selectionRange.start.line ||
@@ -6662,7 +6669,7 @@ export class Lexer implements Module {
 		if (!scope || scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Property)
 			return {};
 		let fn = scope as FuncNode, vars: Record<string, Variable> = {};
-		const roots = [fn];
+		const roots = [fn], ur = [], oo = [vars];
 		while (!fn.has_this_param && !fn.static && fn.assume !== FuncScope.GLOBAL && (fn = fn.parent as FuncNode))
 			roots.push(fn);
 		if (fn)
@@ -6670,11 +6677,9 @@ export class Lexer implements Module {
 				vars = { THIS, SUPER }, fn.kind === SymbolKind.Property && roots.pop();
 			else if (fn.static && (fn = fn.parent as FuncNode))
 				Object.entries(fn.declaration).forEach(([k, v]) => (v.static || v.static === null) && (vars[k] = v));
-		while ((fn = roots.pop() as FuncNode)) {
-			vars = { ...fn.unresolved_vars, ...fn.declaration, ...vars, ...fn.local };
-			for (const k in fn.global) delete vars[k];
-		}
-		return vars;
+		while ((fn = roots.pop() as FuncNode))
+			ur.push(fn.unresolved_vars), oo.unshift(fn.declaration), oo.push(fn.global, fn.local);
+		return Object.assign({}, ...ur.reverse(), ...oo);
 	}
 
 	initLibDirs(dir?: string) {
@@ -7113,18 +7118,18 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 				case SymbolKind.Function:
 				case SymbolKind.Module:
 					v2 = decs[l = it.name.toUpperCase()];
-					if (l.substring(0, 2) === 'A_' && (l in ahkVars)) {
-						if (is_var) continue;
-						if ((it as FuncNode).params)
-							it.has_warned ??= diagnostics.push({
-								message: diagnostic.conflictserr('function', 'built-in variable', it.name),
-								range: it.selectionRange,
-								relatedInformation: [sym_related_msg(ahkVars[l])]
-							});
-					}
-					if (check_self)
+					if (check_self) {
+						if (l.substring(0, 2) === 'A_' && (l in ahkVars)) {
+							if (is_var) continue;
+							if ((it as FuncNode).params)
+								it.has_warned ??= diagnostics.push({
+									message: diagnostic.conflictserr('function', 'built-in variable', it.name),
+									range: it.selectionRange,
+									relatedInformation: [sym_related_msg(ahkVars[l])]
+								});
+						}
 						it.uri = uri;
-					else if (v2 && !relevance![v2.uri!]) {
+					} else if (v2 && !relevance![v2.uri!]) {
 						decs[l] = it;
 						continue;
 					}
@@ -7135,7 +7140,8 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 							if (v2.kind === SymbolKind.Variable && !v2.decl)
 								decs[l] = it;
 						} else if (v2.kind === SymbolKind.Variable) {
-							if (v1.from !== undefined && v2.from === undefined || v1.def && !v2.def)
+							if (v1.from !== undefined && v2.from === undefined ||
+								v1.decl && !v2.decl || v1.def && !v2.def || !v1.is_global && v2.is_global)
 								decs[l] = it;
 							else v2.assigned ||= v1.assigned;
 							if (v1.decl && v2.decl && (v1.from ?? v2.from) !== undefined) {
@@ -7163,7 +7169,7 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 						if (decs[l] = v1, v2.exported && v2.assigned !== true) {
 						} else if (v2.decl && (!check_self || is_before(v2, v1)))
 							v1.has_warned ??= lex.diagnostics.push({
-								message: diagnostic.conflictserr(sym_type(v1).toLowerCase(), 'global variable', v1.name),
+								message: diagnostic.conflictserr(sym_type(v1).toLowerCase(), `${var_type(v2)} variable`, v1.name),
 								range: v1.selectionRange,
 								relatedInformation: [sym_related_msg(v2, undefined, diagnostic.dupdeclaration())]
 							});

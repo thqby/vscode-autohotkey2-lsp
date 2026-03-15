@@ -173,7 +173,10 @@ function resolvePropSemanticType(tk: Token, lex: Lexer) {
 			case undefined:
 				if ((curclass.checkmember ?? lex.checkmember) !== false && configCache.Diagnostics?.ClassNonDynamicMemberCheck) {
 					const tt = lex.tokens[tk.next_token_offset];
-					if (ASSIGN_TYPE.includes(tt?.content)) {
+					if (curclass.kind === SymbolKind.Module) {
+						if (!tk.__ref || tt?.content[0] !== '?' || !tt.ignore && tt.content === '?')
+							tk.has_warned ??= (lex.addDiagnostic(diagnostic.varundefined(tk.content), tk.offset), true);
+					} else if (ASSIGN_TYPE.includes(tt?.content)) {
 						cls_add_prop(curclass, tk.content, tk.offset);
 					} else if ((tk.__ref || tt?.content[0] !== '?' || !tt.ignore && tt.content === '?') &&
 						(memscache.get(curclass) as _Flag)?.['#checkmember'] !== false)

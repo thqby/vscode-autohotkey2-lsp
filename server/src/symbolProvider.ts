@@ -1,7 +1,7 @@
 import { CancellationToken, DocumentSymbolParams, Range, SymbolInformation, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	ANY, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Property, SUPER, SemanticToken,
+	ANY, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Module, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles,
 	findClass, getClassConstructor, getClassMember, getParamCount, getWorkspaceFile, hint, inactiveVars,
@@ -19,9 +19,8 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 	const uri = lex.document.uri;
 	const unused = new Set<AhkSymbol>;
 	const { document, tokens, relevance } = lex;
-	const gvar: Record<string, Variable> = { ...ahkVars };
+	const gvar: Record<string, Variable> = {};
 	let list = [lex.uri, ...Object.keys(relevance)], winapis: Record<string, AhkSymbol> = {};
-	list = list.map(u => lexers[u]?.d_uri).concat(list);
 	lex.symbolInformation = [];
 	for (const uri of list) {
 		const lex = lexers[uri];
@@ -35,6 +34,16 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 			else if (t.kind === SymbolKind.Variable && (t.assigned ||= (dec[k] as Variable).assigned, dec[k].def))
 				t.def ??= false;
 		}
+	}
+	if (ahkVersion < alpha_3 + 8) {
+		for (const n in ahkVars)
+			if (!gvar[n]?.children)
+				gvar[n] = ahkVars[n];
+	} else {
+		for (const n in ahkVars)
+			if (gvar[n]?.def === undefined)
+				gvar[n] = ahkVars[n];
+			else gvar[n] ??= ahkVars[n];
 	}
 	if (ahkUris.winapi && !list.includes(ahkUris.winapi))
 		winapis = lexers[ahkUris.winapi]?.declaration ?? winapis;
@@ -520,4 +529,24 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 		}
 		return false;
 	}
+}
+
+
+function get_global_var(lexs: Module[]) {
+	const vars: Record<string, Variable> = {};
+	for (const l of lexs) {
+		for (const [n, s] of Object.entries(l.declaration as typeof vars)) {
+			const v = vars[n];
+			if (v) {
+				if (v.kind !== SymbolKind.Variable)
+					continue;
+				if (!(v.kind === SymbolKind.Variable && s.children ||
+					v.from === undefined && s.from !== undefined ||
+					!v.decl && s.decl || !v.def && s.def || v.is_global && !s.is_global))
+					continue;
+			}
+			vars[n] = s;
+		}
+	}
+	return vars;
 }

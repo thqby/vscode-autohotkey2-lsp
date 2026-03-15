@@ -81,6 +81,7 @@ export const diagnostic = {
 	unknowntoken: localize('diagnostic.unknowntoken', 'Unknown token \'{0}\''),
 	unsupportinclude: localize('diagnostic.unsupportinclude', '#Include in functions and classes cannot correctly deduce scope and code completion'),
 	unterminated: localize('diagnostic.unterminated', 'Unterminated string text'),
+	varundefined: localize('diagnostic.varundefined', 'Variable \'{0}\' is undefined'),
 }
 
 export const hint = {

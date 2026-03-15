@@ -945,6 +945,8 @@ export function findClass(lex: Lexer, name: string, uri?: string) {
 	const arr = name.toUpperCase().split('.');
 	let n = arr.shift()!;
 	let cls = (uri ? lexers[uri]?.declaration[n] : findSymbol(lex, n)?.node) as ClassNode;
+	if (!uri && cls.kind === SymbolKind.Variable)
+		cls = resolveVarAlias(cls) as ClassNode;
 	if (!cls?.property || cls.def === false)
 		return;
 	uri ??= cls.uri;
@@ -1157,12 +1159,16 @@ export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismeth
 	if (node.kind === SymbolKind.Module) {
 		for (const m of (t = node as Module).modules ?? [t]) {
 			if ((t = m.declaration[name]))
-				if (prop ??= t, t.kind !== SymbolKind.Variable)
+				if (t.kind !== SymbolKind.Variable)
 					return t;
+				else if (t.decl)
+					method ??= t;
 				else if ((t as Variable).from !== undefined)
 					sym ??= t;
+				else if (t.def)
+					prop ??= t;
 		}
-		return sym ?? prop;
+		return sym ?? method ?? prop;
 	}
 	const _bases = bases ??= [];
 	while (true) {
@@ -1213,17 +1219,16 @@ export function getClassMembers(lex: Lexer, node: AhkSymbol, bases?: ClassNode[]
 	if (node.kind === SymbolKind.Module) {
 		let m = node as Module, t;
 		if (!m.modules)
-			return { ...m.declaration };
-		const nv: Record<string, AhkSymbol> = {}, vv: typeof nv = {};
+			return Object.fromEntries(Object.entries(m.declaration).filter(t => t[1].def));
+		const nv: Record<string, AhkSymbol> = {},
+			vv: typeof nv = {}, dd: typeof nv = {}, rr: typeof nv = {}, tt: typeof nv = {};
 		for (t of m.modules) {
-			properties.push(t = t.declaration);
-			for (const [n, s] of Object.entries(t))
-				if (s.kind !== SymbolKind.Variable)
-					nv[n] ??= s;
-				else if ((s as Variable).from !== undefined)
-					vv[n] ??= s;
+			for (const [n, s] of Object.entries(t.declaration))
+				(s.kind !== SymbolKind.Variable ? nv :
+					(s as Variable).from !== undefined ? vv :
+						s.decl ? dd : s.def ? rr : tt)[n] ??= s;
 		}
-		return Object.assign({}, ...properties, vv, nv);
+		return Object.assign(rr, dd, vv, nv);
 	}
 	while (cls && !_bases.includes(cls))
 		_bases.push(cls), properties.push(cls.property), cls = getClassBase(cls, lex) as ClassNode;
@@ -1431,11 +1436,13 @@ function traverseRelevance(lex: Lexer) {
 	const r = Object.keys(lex.getRelevance(undefined, true)), ls: Lexer[] = [];
 	let i, l, m, n;
 	for (let u of r) {
-		if ((i = u.indexOf('|')) !== -1)
+		if ((i = u.indexOf('|')) !== -1) {
 			if (!r.includes(u = u.substring(0, i))) {
 				for (n in lexers[u]?.getRelevance(undefined, true))
 					r.includes(n) || r.push(n);
-			} else continue;
+			}
+			continue;
+		}
 		for (n in (l = lexers[u])?.module)
 			if (!r.includes(i = `${u}|${n}`))
 				for (m in includeCache[i])
@@ -1552,3 +1559,35 @@ export function flatModule(mod?: Module) {
 }
 
 //#endregion
+
+function getModule(uri: string) {
+	const i = uri.lastIndexOf('|');
+	return i === -1 ? lexers[uri] : lexers[uri.substring(0, i)]?.module?.[uri.substring(i + 1)];
+}
+
+export function getAllModules(lex: Lexer, mod?: Module): Module[] {
+	let r1: Module[] = [], r2: Module[] = [];
+	let i, u, t, mm: Record<string, boolean> = {}, cc = {};
+	if (mod) {
+		t = findDirectiveModule(mod.name.toUpperCase(), lex, cc) ?? mod;
+		t = flatModule(t)!;
+		r1 = t.modules ?? [t];
+		(r1 as Lexer[]).sort((a, b) => (b.d ?? 0) - (a.d ?? 0) || (a === mod ? -1 : 0));
+	} else {
+		let r = lex.relevance, rr = { ...r };
+		r2.push(lex);
+		for (u in r) {
+			if ((i = u.indexOf('|')) !== -1 && !mm[u = u.substring(i + 1)]) {
+				mm[u] = true, t = findDirectiveModule(u, lex, cc);
+				if (!t) continue;
+				for (let o of t.modules ?? [t])
+					if (!((u = `${o.uri!}|${o.name.toUpperCase()}`) in rr))
+						Object.assign(rr, includeCache[u]);
+			}
+		}
+		delete rr[lex.uri];
+		for (u in rr)
+			(t = getModule(u)) && ((t as Lexer).d ? r1 : r2).push(t);
+	}
+	return r1.concat(r2);
+}
