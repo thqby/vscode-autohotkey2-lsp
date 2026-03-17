@@ -2132,6 +2132,7 @@ export class Lexer implements Module {
 				const dl = _this.diagnostics.length, kws = [lk],
 					hs: Token[] = [], us: Token[] = [], ss: Token[] = [],
 					fr: number[] = [], syms: Variable[] = [];
+				const pi: ParamInfo = { offset: tk.offset, count: 0, comma: [], miss: [], unknown: false };
 				let must = le20, wildcard = false, has_suffix_imps: boolean | 0, mk: Token | undefined;
 				if (lk.type === TokenType.Directive) {
 					kws.pop(), must = true;
@@ -2145,11 +2146,12 @@ export class Lexer implements Module {
 					fr.length && _this.addFoldingRange(...fr as [number, number]);
 					result.push(...syms);
 					if (!mk) return r;
-					const from = mk.type === TokenType.String ? escape_str(mk.content) : mk.content;
+					const from = mk.type === TokenType.String ? escape_str(mk.content).replace(/:$/, '') : mk.content;
 					((_this.curr_mod ?? _this).import ??= { imp: [] })
 						.imp.push({ from, tk: mk, wildcard, var: syms });
 					for (const s of syms)
 						s.from = from, export_ && add_export(s);
+					pi.name = from;
 				} else {
 					_this.diagnostics.splice(dl);
 					ss.forEach(t => delete t.semantic);
@@ -2176,12 +2178,12 @@ export class Lexer implements Module {
 						nexttoken(), wildcard = true;
 					else if (tk.topofline)	// import\n
 						return next = false, must && ue_lf(tk);
-					else if (le21 && tk.content === '{') {
+					else if (le21 && tk.type === TokenType.BlockStart) {
 						if (!parse_imps() && !must)
 							return false;	// import {}\n
 					} else if ((has_from = !(tk.type === TokenType.String || isIdentifier(tk.content))))
 						if (must)
-							ue(tk);
+							ue(tk), tk.type === TokenType.BlockStart && (has_suffix_imps = true);
 						else return false;	// import(, import +, ...
 					if (has_from) {
 						if (tk.content.toLowerCase() === 'from') {
@@ -2225,9 +2227,9 @@ export class Lexer implements Module {
 								range: vr.range
 							});
 						}
-						if (has_suffix_imps && !parse_imps() && !must)
-							return false;	// import mod { ... eof
 					}
+					if (has_suffix_imps && !parse_imps() && !must)
+						return false;	// import mod { ... eof
 					if ((next = !tk.topofline || isContinuousLine(lk, tk)))
 						if (must)
 							ue(tk), parse_line();
@@ -2236,12 +2238,13 @@ export class Lexer implements Module {
 				}
 				function parse_imps() {
 					let sk, vk, vr;
-					const bk = tk;
-					bk.data = {};
+					const bk = tk, cm = [bk];
+					bk.data = {}, bk.paraminfo = pi;
 					while (nexttoken()) {
 						if (tk.content === '*') {
-							if (nexttoken(), tk.type === TokenType.Comma && (wildcard = true))
-								continue;
+							nexttoken();
+							if (tk.type === TokenType.Comma || tk.type === TokenType.BlockEnd)
+								wildcard = true;
 						} else if (isIdentifier((sk = tk).content)) {
 							if (nexttoken(), tk.type === TokenType.Operator && tk.content.toLowerCase() === 'as') {
 								tk.semantic = SE_KEYWORD;
@@ -2262,8 +2265,10 @@ export class Lexer implements Module {
 								});
 							}
 						}
-						if (tk.type === TokenType.Comma)
+						if (tk.type === TokenType.Comma) {
+							cm.push(tk), tk.paraminfo = pi;
 							continue;
+						}
 						if (tk.type === TokenType.BlockEnd) {
 							begin_line = false;
 							bk.next_pair_pos = tk.offset;
@@ -2276,7 +2281,7 @@ export class Lexer implements Module {
 						}
 						ue(tk), next = false, parse_expression();
 					}
-					must || delete bk.data;
+					must || (cm.forEach(t => delete t.paraminfo), delete bk.data);
 				}
 			}
 

@@ -1538,7 +1538,7 @@ function findDirectiveModule(n: string, lex: Lexer, cache: Record<string, Lexer[
 function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>) {
 	if (process.env.BROWSER) return;
 	let m;
-	m = /:([^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]+)$/.exec(path);
+	m = /:([^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]*)$/.exec(path);
 	m && (path = path.substring(0, m.index), m = m[1]);
 	if (path[0] === '*') {
 		let lex = utils.getRCData?.(path.substring(1))?.lex;

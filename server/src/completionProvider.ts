@@ -1,12 +1,12 @@
-import { existsSync, statSync } from 'fs';
-import { opendir } from 'fs/promises';
+import { existsSync } from 'fs';
+import { opendir, stat } from 'fs/promises';
 import { basename, relative, resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit } from 'vscode-languageserver';
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, CompletionTriggerKind,
 	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
 	a_Vars, ahkModule, ahkUris, ahkVars, ahkVersion, alpha_3, completionItemCache, completionitem, configCache,
-	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
+	decltypeExpr, derefVar, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
 	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail, isIdentifier,
 	kindSortChar, lexers, libSymbols, makeSearchRegExp, utils, winapis
 } from './common';
@@ -117,15 +117,14 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				}
 			} else add_classes(true);
 			return items;
-		// #include |
-		// ::xxx::|
-		// xxx::|
+		//#region #include |, ::xxx::|, xxx::|
 		case TokenType.EOF:
 		case TokenType.Text:
-			// #include |
+			//#include |
 			if ((pt = token.previous_token)?.type === TokenType.Directive) {
 				let isdll = false;
 				switch (pt!.content.toLowerCase()) {
+					case '#import': return await import_items();
 					case '#dllload': isdll = true;
 					// fall through
 					case '#include':
@@ -135,7 +134,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						const l = lex.document.offsetAt(position) - token.offset;
 						const text = token!.content;
 						let pre = text.slice(0, l);
-						let paths: string[], c = pre[0], inlib = false, suf = '';
+						let paths: string[], c = pre[0], inlib = false;
 						if ('\'"'.includes(c))
 							pre = pre.slice(1);
 						else c = '';
@@ -150,7 +149,6 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							c = '>' + c, pre = pre.slice(1);
 						if (/["<>*?|]/.test(pre) || isdll && c.startsWith('>'))
 							return;
-						pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 						if (!c.startsWith('>') && text.includes('%')) {
 							if (text.replace(/%[^%]+%/g, m => '\0'.repeat(m.length))[l] === '\0')
 								return Object.values(ahkVars).filter(it =>
@@ -184,48 +182,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								c = c[0];
 						}
 
-						const xg = pre.endsWith('/') ? '/' : '\\', ep = makeSearchRegExp(suf);
 						const extreg = isdll ? /\.(dll|ocx|cpl)$/i : inlib ? /\.ahk$/i : /\.(ahk2?|ah2)$/i;
-						const command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
-						const range = !isIdentifier(suf) ? {
-							start: {
-								line: position.line,
-								character: position.character - suf.length
-							},
-							end: position
-						} : undefined;
-						const set_folder_text = range ? (item: CompletionItem, newText: string) => (item.textEdit = { newText, range }) :
-							(item: CompletionItem, newText: string) => item.insertText = newText;
-						const set_file_text = range || c ? set_folder_text : () => undefined;
-						for (let path of paths) {
-							try {
-								if (!existsSync(path = resolve(path, pre) + '\\') || !statSync(path).isDirectory() || vars[path = path.toUpperCase()])
-									continue;
-								vars[path] = 1;
-								for await (const ent of await opendir(path)) {
-									let label = ent.name;
-									if (ent.isDirectory()) {
-										if (!ep.test(label))
-											continue;
-										vars[`${label.toUpperCase()}/`] ??= (
-											label = label.replace(/(`|(?<= );)/g, '`$1'),
-											set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + xg),
-											1
-										);
-									} else {
-										if (!extreg.test(label) || !ep.test(inlib ? label = label.replace(extreg, '') : label))
-											continue;
-										vars[label.toUpperCase()] ??= (label = label.replace(/(`|(?<= );)/g, '`$1'),
-											set_file_text(cpitem = { label, kind: CompletionItemKind.File }, label + c),
-											1
-										);
-									}
-									items.push(cpitem);
-								}
-							} catch { }
-							if (pre.includes(':'))
-								break;
-						}
+						await add_paths(false, extreg, paths, inlib ? 1 : 0, pre, c);
 						return items;
 					}
 				}
@@ -239,12 +197,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				break;
 			} else if (token.type)
 				break;
+		//#endregion
 		// fall through
 		default: {
 			if (token.callsite || token.topofline > 0 && token.type !== TokenType.String)
 				break;
 			const tp = [TokenType.Comma, TokenType.Dot, TokenType.Assign, TokenType.Number, TokenType.Operator, TokenType.Reserved, TokenType.String, TokenType.Identifier];
-			const maxn = token.type === TokenType.String ? 0 : 3, tokens = lex.tokens;
+			const maxn = token.type === TokenType.String ? 0 : 4, tokens = lex.tokens;
 			let i = 0, t;
 			let cs = (pt = token).callsite, pi = cs?.paraminfo;
 			while ((pt = (t = tokens[pt.previous_pair_pos!]) ?? pt.previous_token)) {
@@ -334,7 +293,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								it.insertText = `'${it.insertText}'`;
 					}
 				}
-			} else if (!maxn && !token.ignore) {
+			} if (pt?.type === TokenType.Directive && pt.content.toLowerCase() === '#import')
+				return await import_items(pt, pi?.name);
+			//#region string items
+			else if (!maxn && !token.ignore) {
 				const cache = new Set<AhkSymbol | string>;
 				const ci = (pi && getCallInfo(lex, position, pi))!;
 				let kind: CompletionItemKind, command: { title: string, command: string } | undefined;
@@ -504,13 +466,14 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 								if (s.data === $FILEPATH) {
 									s = (s as ClassNode).generic_types?.[0]?.[0] ?? '';
 									if (typeof s === 'string' && /^(['"])\w+(\|\w+)*\1$/.test(s))
-										await add_paths(false, new RegExp(`[^.\\/]+$(?<!\\.(${s.slice(1, -1)}))`, 'i'));
+										await add_paths(false, new RegExp(`\\.(${s.slice(1, -1)})$`, 'i'));
 								}
 								break;
 						}
 					}
 				}
 			}
+			//#endregion
 		}
 	}
 
@@ -845,22 +808,18 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					vars[n] ??= items.push(convertNodeCompletion(s));
 
 	}
-	async function add_paths(only_folder = false, ext_re?: RegExp) {
+	// kind: 1 lib; 2 module
+	async function add_paths(only_folder = false, ext_re?: RegExp, dirs = [lex.scriptdir],
+		kind = 0, path?: string, trail = '') {
 		if (process.env.BROWSER)
 			return;
-		offset ??= lex.document.offsetAt(position);
-		let path = token.content.substring(1, offset - token.offset), suf = '';
+		path ??= token.content.substring(token.type === TokenType.String ? 1 : 0,
+			(offset ??= lex.document.offsetAt(position)) - token.offset);
 		if (/[*?"<>|\t]/.test(path))
 			return;
-		if (!/^\w:[\\/]/.test(path))
-			path = `${lex.scriptdir}/${path}`;
-		path = path.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
-		try {
-			if (!existsSync(path) || !statSync(path).isDirectory())
-				return;
-		} catch { return; };
-
-		const slash = path.endsWith('/') ? '/' : '\\', re = makeSearchRegExp(suf);
+		let cache: Set<string> | undefined, suf = '', ll;
+		const sp = path.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
+		const slash = sp.endsWith('/') ? '/' : '\\', re = makeSearchRegExp(suf);
 		const command = { title: 'Trigger Suggest', command: 'editor.action.triggerSuggest' };
 		const range = !isIdentifier(suf) ? {
 			start: {
@@ -871,25 +830,50 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		} : undefined;
 		const set_folder_text = range ? (item: CompletionItem, newText: string) => (item.textEdit = { newText, range }) :
 			(item: CompletionItem, newText: string) => item.insertText = newText;
-		try {
-			for await (const ent of await opendir(path)) {
-				let label = ent.name;
-				if (!re.test(label))
+		const set_file_text = range || trail ? set_folder_text : undefined;
+		if (sp.includes(':'))
+			dirs.length = 1;
+		if (dirs.length > 1)
+			cache = new Set;
+		for (const dir of dirs) {
+			try {
+				if ((await is_file(path = resolve(dir, sp))) !== false)
 					continue;
-				if (ent.isDirectory()) {
-					label = label.replace(/(`|(?<= );)/g, '`$1');
-					set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + slash);
-				} else if (only_folder || ext_re?.test(label))
-					continue;
-				else {
-					label = label.replace(/(`|(?<= );)/g, '`$1');
-					cpitem = { label, kind: CompletionItemKind.File };
-					if (range)
-						cpitem.textEdit = { range, newText: label };
+				for await (const ent of await opendir(path)) {
+					let label = ent.name;
+					if (!re.test(label))
+						continue;
+					if (ent.isDirectory()) {
+						if (cache?.has(ll = `${label.toUpperCase()}`))
+							continue;
+						else cache?.add(ll!);
+						if (kind === 2) {
+							if (!isIdentifier(label) || !(await is_file(`${path}/${label}/__Init.ahk`)))
+								continue;
+							cpitem = { label, kind: CompletionItemKind.Folder };
+						} else {
+							label = label.replace(/(`|(?<= );)/g, '`$1');
+							set_folder_text(cpitem = { label, command, kind: CompletionItemKind.Folder }, label + slash);
+						}
+					} else if (only_folder || ext_re?.test(label) === false ||
+						kind && (label = label.slice(0, -4), kind === 2 && !isIdentifier(label)) ||
+						cache?.has(ll = label.toLowerCase()))
+						continue;
+					else {
+						cache?.add(ll!);
+						label = label.replace(/(`|(?<= );)/g, '`$1');
+						cpitem = { label, kind: CompletionItemKind.File };
+						set_file_text?.(cpitem, label + trail);
+					}
+					items.push(cpitem);
 				}
-				items.push(cpitem);
-			}
-		} catch { }
+			} catch { }
+		}
+	}
+	async function is_file(path: string) {
+		try {
+			return !(await stat(path)).isDirectory();
+		} catch { return; }
 	}
 	async function add_dllexports() {
 		if (process.env.BROWSER)
@@ -928,7 +912,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			for (const label of winapis)
 				expg.test(label) && items.push({ label, kind });
 		} else {
-			await add_paths(false, /[^.\\/]+$(?<!\.(dll|ocx|cpl))/i);
+			await add_paths(false, /\.(dll|ocx|cpl)$/i);
 			if (pre.endsWith('/') || pre.endsWith(':\\'))
 				return;
 			const dlls = new Set<string>;
@@ -953,6 +937,49 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			for (const label of await utils.getDllExport?.(dlls, true) ?? [])
 				expg.test(label) && items.push({ label, kind });
 		}
+	}
+	async function import_items(tk?: Token, from?: string) {
+		let tt = token.previous_token, mod;
+		if (!tk)
+			mod = true;
+		else if (tt === tk) {
+			if (token.type === TokenType.Identifier)
+				mod = true, items.push({ label: 'export', kind: CompletionItemKind.Keyword });
+			else mod = token.type === TokenType.String;
+		} else if (tt?.previous_token === tk)
+			mod = (token.type === TokenType.Identifier || token.type === TokenType.String) &&
+				tt.content.toLowerCase() === 'export';
+		else if (tt?.paraminfo?.offset !== tk.next_token_offset)
+			mod = false;
+		if (mod === false)
+			return;
+		if (!mod) {
+			mod = lex.import?.mod?.[from?.toUpperCase()!];
+			if (!mod)
+				return;
+			for (const v of Object.values(get_global_var(mod.modules ?? [mod], lex,
+				uri.substring(0, uri.lastIndexOf('/') + 1), expg)))
+				add_item(v.name, getCompletionKind(v) ?? CompletionItemKind.Variable);
+			return items;
+		}
+		const is_id = token.type !== TokenType.String;
+		let path = token.content.substring(is_id ? 0 : 1,
+			(offset ??= lex.document.offsetAt(position)) - token.offset);
+		if (!is_id && path.endsWith(':')) {
+			if ((mod = lex.import?.mod?.[path.slice(0, -1).toUpperCase()])) {
+				for (let m of mod.modules ?? [mod])
+					for (m of Object.values((m as Lexer).module ?? {}))
+						add_item(m.name, CompletionItemKind.Module);
+				return items;
+			}
+		}
+		const dirs = a_Vars.$import ? derefVar(a_Vars.$import, undefined, {
+			...a_Vars, scriptdir: lex.scriptdir, linefile: lex.scriptdir
+		}).split(';') : lex.libdirs.map(s => s.slice(0, -4));
+		if (!dirs.length || dirs[0].toLowerCase() !== lex.scriptpath.toLowerCase())
+			dirs.unshift(lex.scriptpath);
+		await add_paths(false, is_id ? /\.ahk$/i : /\.(ahk2?|ah2)$/i, dirs, is_id ? 2 : 0, path);
+		return items;
 	}
 	function add_texts() {
 		for (const it of completionItemCache.text) {
@@ -1066,4 +1093,13 @@ function get_global_var(lexs: Module[], lex: Lexer, dir: string, re: RegExp) {
 		}
 	}
 	return Object.fromEntries(Object.entries(vars).filter(t => re.test(t[0])));
+}
+
+function getCompletionKind(sym: AhkSymbol) {
+	switch (sym.kind) {
+		case SymbolKind.Module: return CompletionItemKind.Module;
+		case SymbolKind.Class: return CompletionItemKind.Class;
+		case SymbolKind.Function: return CompletionItemKind.Function;
+		case SymbolKind.Variable: return CompletionItemKind.Variable;
+	}
 }
