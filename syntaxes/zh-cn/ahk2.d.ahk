@@ -859,6 +859,12 @@ DateAdd(DateTime, Time, TimeUnits: 'Seconds' | 'Minutes' | 'Hours' | 'Days') => 
 DateDiff(DateTime1, DateTime2, TimeUnits: 'Seconds' | 'Minutes' | 'Hours' | 'Days') => Integer
 
 /**
+ * 定义一个新的自有属性.
+ * @since 2.1-alpha.22
+ */
+DefineProp(Obj: T, Name, Desc) => T
+
+/**
  * 设置在查找窗口时是否 '看见' 隐藏的文本. 这将影响 WinExist 和 WinActivate 等内置函数.
  */
 DetectHiddenText(Mode) => Integer
@@ -2717,7 +2723,7 @@ StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCou
 StrSplit(String, Delimiters?, OmitChars?, MaxParts := -1) => Array
 
 /**
- * @since 2.1-alpha.9
+ * @since 2.1-alpha.9 <2.1-alpha.22
  */
 StructFromPtr(StructClass, Address) => Object
 
@@ -4722,6 +4728,12 @@ class MenuBar extends Menu {
 class MethodError extends MemberError {
 }
 
+/**
+ * @since 2.1-alpha.11
+ */
+class Module extends Any {
+}
+
 class Number extends Primitive {
 	/**
 	 * 将数字字符串或数值转换为整数或浮点数.
@@ -4732,6 +4744,7 @@ class Number extends Primitive {
 class Object extends Any {
 	/**
 	 * 构造类的新实例.
+	 * @constructor
 	 */
 	static Call() => this
 
@@ -4845,6 +4858,46 @@ class String extends Primitive {
 	 * 将值转换为字符串.
 	 */
 	static Call(Value) => String
+}
+
+/**
+ * @since 2.1-alpha.22
+ */
+class Struct extends Any {
+	/**
+	 * 创建新的结构.
+	 * @constructor
+	 */
+	static Call() => this
+
+	/**
+	 * 创建一个装箱指针, 其行为相当于StructClass的一个实例.
+	 */
+	static At(Address) => this
+
+	/** @returns {typeof Struct.Ptr<this>} */
+	class Ptr<T> extends Struct {
+		Value: iptr
+		__Value {
+			get => T | unset
+			set => void
+		}
+	}
+
+	/**
+	 * 检索嵌套结构或指向属性的虚拟引用.
+	 */
+	__Ref(Name) => PropRef
+
+	/**
+	 * 获取结构的地址.
+	 */
+	Ptr => Integer
+
+	/**
+	 * 获取结构的大小(以字节为单位).
+	 */
+	Size => Integer
 }
 
 class TargetError extends Error {

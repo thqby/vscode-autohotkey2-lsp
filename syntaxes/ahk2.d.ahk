@@ -865,6 +865,12 @@ DateAdd(DateTime, Time, TimeUnits: 'Seconds' | 'Minutes' | 'Hours' | 'Days') => 
 DateDiff(DateTime1, DateTime2, TimeUnits: 'Seconds' | 'Minutes' | 'Hours' | 'Days') => Integer
 
 /**
+ * Define a new own attribute.
+ * @since 2.1-alpha.22
+ */
+DefineProp(Obj: T, Name, Desc) => T
+
+/**
  * Set whether to'see' hidden text when searching for windows. This will affect built-in functions such as WinExist and Winactivate.
  */
 DetectHiddenText(Mode) => Integer
@@ -2723,7 +2729,7 @@ StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCou
 StrSplit(String, Delimiters?, OmitChars?, MaxParts := -1) => Array
 
 /**
- * @since 2.1-alpha.9
+ * @since 2.1-alpha.9 <2.1-alpha.22
  */
 StructFromPtr(StructClass, Address) => Object
 
@@ -4744,6 +4750,12 @@ class MenuBar extends Menu {
 class MethodError extends MemberError {
 }
 
+/**
+ * @since 2.1-alpha.11
+ */
+class Module extends Any {
+}
+
 class Number extends Primitive {
 	/**
 	 * Convert a numeric string or numerical to integer or floating point number.
@@ -4754,6 +4766,7 @@ class Number extends Primitive {
 class Object extends Any {
 	/**
 	 * Construct a new instance of the class.
+	 * @constructor
 	 */
 	static Call() => this
 
@@ -4869,6 +4882,46 @@ class String extends Primitive {
 	 * Convert the value to a string.
 	 */
 	static Call(Value) => String
+}
+
+/**
+ * @since 2.1-alpha.22
+ */
+class Struct extends Any {
+	/**
+	 * Creates a new Struct.
+	 * @constructor
+	 */
+	static Call() => this
+
+	/**
+	 * Creates a boxed pointer, which behaves as an instance of StructClass.
+	 */
+	static At(Address) => this
+
+	/** @returns {typeof Struct.Ptr<this>} */
+	class Ptr<T> extends Struct {
+		Value: iptr
+		__Value {
+			get => T | unset
+			set => void
+		}
+	}
+
+	/**
+	 * Retrieves a nested struct or virtual reference to a property.
+	 */
+	__Ref(Name) => PropRef
+
+	/**
+	 * Gets the address of the struct.
+	 */
+	Ptr => Integer
+
+	/**
+	 * Gets the size of the struct in bytes.
+	 */
+	Size => Integer
 }
 
 class TargetError extends Error {

@@ -70,7 +70,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 			}
 	}
 	const severity = configCache.Warn?.Unused ? DiagnosticSeverity.Warning : DiagnosticSeverity.Hint;
-	for (const t of unused)
+	if (!lex.d) for (const t of unused)
 		t.name[0] !== '_' && lex.diagnostics.push({
 			message: hint.unused(), range: t.selectionRange,
 			tags: [DiagnosticTag.Unnecessary], severity
@@ -286,9 +286,11 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 					}
 		}
 		function err_extends(lex: Lexer, it: ClassNode, not_exist = true) {
-			let o = lex.document.offsetAt(it.selectionRange.start), tk: Token;
+			let o = lex.document.offsetAt(it.selectionRange.start), tk, lk;
 			const tks = lex.tokens;
-			if (!(tk = tks[tks[o].next_token_offset]) || !(tk = tks[tk.next_token_offset]) || tk.has_warned)
+			if (!(lk = tks[tks[o].next_token_offset]) || !(tk = tks[lk.next_token_offset]) || tk.has_warned)
+				return;
+			if (tk.type !== TokenType.Identifier || lk.content.toLowerCase() !== 'extends')
 				return;
 			o = tk.offset, tk.has_warned = true;
 			const rg: Range = { start: lex.document.positionAt(o), end: lex.document.positionAt(o + it.extends.length) };

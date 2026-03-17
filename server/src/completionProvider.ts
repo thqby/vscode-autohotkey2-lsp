@@ -11,6 +11,7 @@ import {
 	kindSortChar, lexers, libSymbols, makeSearchRegExp, utils, winapis
 } from './common';
 
+const classkw = ['struct', 'class'];
 export async function completionProvider(params: CompletionParams, _token: CancellationToken): Promise<Maybe<CompletionItem[]>> {
 	let { position, textDocument: { uri } } = params;
 	const lex = Lexer.curr = lexers[uri = uri.toLowerCase()], vars: Record<string, unknown> = {};
@@ -267,6 +268,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (pt?.type === TokenType.Reserved) {
 				switch (l = pt.content.toLowerCase()) {
 					case 'class':
+					case 'struct':
 						if (i === 2)
 							return [{ label: 'extends', kind: CompletionItemKind.Keyword, preselect: true }];
 						if (i === 3 && token.previous_token?.content.toLowerCase() === 'extends')
@@ -523,10 +525,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				'__Item[$1]', '__New($1)', '__Set(${1:Key}, ${2:Params}, ${3:Value})'];
 			items.push(...completionItemCache.snippet);
 			if (token.topofline === 1)
-				items.push(completionItemCache.keyword.static ?? { label: 'static', kind: CompletionItemKind.Keyword }, {
-					label: 'class', insertText: ['class $1', '{\n\t$0\n}'].join(join_c),
-					kind: CompletionItemKind.Snippet, insertTextFormat: InsertTextFormat.Snippet
-				});
+				items.push(completionItemCache.keyword.static ?? { label: 'static', kind: CompletionItemKind.Keyword },
+					...classkw.slice(ahkVersion > alpha_3 + 18 ? 0 : 1).map(label => ({
+						label, insertText: [`${label} $1`, '{\n\t$0\n}'].join(join_c),
+						kind: CompletionItemKind.Snippet, insertTextFormat: InsertTextFormat.Snippet
+					})));
 			if (lex.tokens[token.next_token_offset]?.topofline === 0)
 				return token.topofline === 1 ? (items.pop(), items) : undefined;
 			const is_static = (symbol as Variable).static ?? false;
@@ -681,7 +684,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		for (const [label, arr] of [
 			['switch', ['switch $1', remove_indent(`{\n${tab}case \${2:}:\n\t${tab}\${3:}\n${tab}default:\n\t${tab}$0\n}`)]],
 			['trycatch', ['try', sel_text_block, 'catch ${2:Error} as ${3:e}', '{\n\t$0\n}']],
-			['class', ['class $1', '{\n\t$0\n}']]
+			...classkw.slice(ahkVersion > alpha_3 + 18 ? 0 : 1).map(s => [s, [`${s} $1`, '{\n\t$0\n}']])
 		] as [string, string[]][])
 			items.push({ label, kind, insertTextFormat, insertText: uppercase(arr.join(join_c)) });
 		const t = { ...completionItemCache.keyword };

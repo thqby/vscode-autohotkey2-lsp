@@ -139,6 +139,7 @@ export interface FormatFlags {
 export interface FuncNode extends AhkSymbol {
 	assume: FuncScope
 	closure?: boolean
+	construct?: string
 	params: Variable[]
 	param_offsets: number[]
 	param_def_len: number

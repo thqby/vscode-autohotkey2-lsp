@@ -499,6 +499,18 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 					if ((n = invoke_meta_func(cls)!))
 						break;
 					else continue;
+				if (n.kind === SymbolKind.Class) {
+					if (n.type_annotations) {
+						const tt = decltypeTypeAnnotation(n.type_annotations, lex,
+							that, cls.type_params);
+						for (const t of call ? decltypeInvoke(lex, tt, '', true, paraminfo) : tt)
+							tps.add(t);
+						continue;
+					}
+					that = n as ClassNode;
+					if (call)
+						n = getClassMember(lex, n, 'call', true) ?? n;
+				}
 				if (n.kind !== SymbolKind.Property) {
 					if ((n as FuncNode).eval) {
 						// if (paraminfo) continue;
@@ -839,7 +851,7 @@ export function joinTypes(tps?: Array<string | AhkSymbol> | false) {
 
 function resolveCachedTypes(tps: (string | AhkSymbol)[], resolved_types: Set<AhkSymbol>, lex: Lexer,
 	_this?: ClassNode, type_params?: Record<string, AhkSymbol>) {
-	let re: RegExp, i = -1, is_this, is_typeof, t, param, update;
+	let re: RegExp | false, i = -1, is_this, is_typeof, t, param, update;
 	for (let tp of tps) {
 		if (i++, typeof tp === 'string') {
 			(is_typeof = tp.startsWith('typeof ')) && (tp = tp.substring(7));
@@ -853,33 +865,48 @@ function resolveCachedTypes(tps: (string | AhkSymbol)[], resolved_types: Set<Ahk
 					resolved_types.add(t = !is_typeof && t.prototype || t), !is_this && (tps[i] = t);
 		} else if (tp.kind === SymbolKind.TypeParameter)
 			update = true, tps[i] = '', tps.push(...decltypeTypeAnnotation(tp.type_annotations || [], lex));
-
 		else
-			resolved_types.add(type_params ? resolve_generic_type(tp as ClassNode) : tp);
+			resolved_types.add(resolve_generic_type(tp as ClassNode));
 	}
 	if (update)
 		tps.push(...new Set(tps.splice(0).filter(Boolean)));
+
 	function resolve_generic_type(cls: ClassNode): AhkSymbol {
 		let generic_types = cls.generic_types;
 		if (!generic_types)
 			return cls;
-		re ??= new RegExp(`[< ](${Object.keys(type_params!).join('|')})[,>]`, 'i');
-		if (!re.test(cls.full))
+		re ??= make_re();
+		if (!re || !re.test(cls.full))
 			return cls;
 		generic_types = generic_types.map(gt => gt.flatMap(tp => {
 			if (typeof tp === 'object')
 				return [resolve_generic_type(tp as ClassNode)];
-			if ((param = type_params![tp.toUpperCase()]))
+			if ((param = type_params?.[tp.toUpperCase()]))
 				return _this!.generic_types?.[param.data as number] ?? (param.type_annotations || []);
+			if (tp === 'this')
+				return _this ? [_this.prototype ?? _this] : [];
+			if (tp === 'typeof this')
+				return _this ? [_this] : [];
 			return [tp];
 		}));
 		if (!generic_types.length)
 			generic_types = undefined;
-		return {
+		cls = {
 			...cls, generic_types,
 			full: cls.full.replace(/<.+/, !generic_types ? '' :
 				`<${generic_types.map(t => joinTypes(t)).join(', ')}>`)
 		} as ClassNode;
+		if (cls.prototype)
+			cls.prototype = { ...cls.prototype, generic_types, full: cls.full };
+		return cls;
+	}
+
+	function make_re() {
+		let p = Object.keys(type_params ?? {});
+		_this && p.push('this');
+		if (!p.length)
+			return false;
+		return new RegExp(`[< ](${p.join('|')})[,>]`);
 	}
 }
 
@@ -945,7 +972,7 @@ export function findClass(lex: Lexer, name: string, uri?: string) {
 	const arr = name.toUpperCase().split('.');
 	let n = arr.shift()!;
 	let cls = (uri ? lexers[uri]?.declaration[n] : findSymbol(lex, n)?.node) as ClassNode;
-	if (!uri && cls.kind === SymbolKind.Variable)
+	if (!uri && cls?.kind === SymbolKind.Variable)
 		cls = resolveVarAlias(cls) as ClassNode;
 	if (!cls?.property || cls.def === false)
 		return;
@@ -1124,7 +1151,7 @@ export function getClassBase(node: AhkSymbol, lex?: Lexer) {
 		case SymbolKind.Function: name = 'func'; break;
 		case SymbolKind.Number: name = node.name; break;
 		case SymbolKind.String: name = 'string'; break;
-		case SymbolKind.Module: return;
+		case SymbolKind.Module: name = 'any'; break;
 		default: if (!(node as ClassNode).property) return;
 		// fall through
 		case SymbolKind.Class:
@@ -1148,8 +1175,8 @@ export function getClassBase(node: AhkSymbol, lex?: Lexer) {
 
 export function getClassConstructor(cls: ClassNode, lex?: Lexer) {
 	const fn = getClassMember(lex ??= lexers[cls.uri!], cls, 'call', true) as FuncNode;
-	if (fn?.full?.startsWith('(Object) static Call('))
-		return getClassMember(lex, cls.prototype!, '__new', true) ?? fn;
+	if (fn?.construct !== undefined)
+		return getClassMember(lex, cls.prototype!, fn.construct || '__new', true) ?? fn;
 	return fn;
 }
 
@@ -1168,7 +1195,10 @@ export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismeth
 				else if (t.def)
 					prop ??= t;
 		}
-		return sym ?? method ?? prop;
+		if ((t = sym ?? method ?? prop))
+			return t;
+		cls = ahkVars.ANY as ClassNode;
+		return (t = cls?.$property?.[name]) && (t.uri ??= cls.uri, t);
 	}
 	const _bases = bases ??= [];
 	while (true) {
@@ -1228,7 +1258,7 @@ export function getClassMembers(lex: Lexer, node: AhkSymbol, bases?: ClassNode[]
 					(s as Variable).from !== undefined ? vv :
 						s.decl ? dd : s.def ? rr : tt)[n] ??= s;
 		}
-		return Object.assign(rr, dd, vv, nv);
+		return Object.assign({ ...(ahkVars.ANY as ClassNode)?.$property }, rr, dd, vv, nv);
 	}
 	while (cls && !_bases.includes(cls))
 		_bases.push(cls), properties.push(cls.property), cls = getClassBase(cls, lex) as ClassNode;

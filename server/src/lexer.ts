@@ -473,7 +473,7 @@ export class Lexer implements Module {
 									(!blocks && cl.name.startsWith('$') ? _this.typedef : _parent.property)[_low] ??= cl;
 								} else if (!blocks)
 									inactiveVars[_low] = cl.since;
-								blocks++, p.push(_parent), _parent = cl, cl.type_annotations = [cl.full];
+								blocks++, p.push(_parent), _parent = cl;
 								i = j + 1;
 							} else if (tk.topofline && 'global,static'.includes(_low = tk.content.toLowerCase()) &&
 								(!blocks || _low !== 'global') && (lk = tokens[i + 1])?.topofline === 0 &&
@@ -976,7 +976,7 @@ export class Lexer implements Module {
 				_this.addFoldingRange(last_hotif, lk.offset, 'region');
 			return oresult;
 
-			function is_func_def() {
+			function is_func_def(allow_fat = true) {
 				if (next && input[tk.offset + tk.length] !== '(')
 					return false;
 				if (mode === BlockType.Class)
@@ -999,7 +999,7 @@ export class Lexer implements Module {
 					}
 				}
 				lk = _lk, tk = _tk, lst = _lst, parser_pos = _ppos, next = true;
-				return e === '=>' || e === '{';
+				return allow_fat && e === '=>' || e === '{';
 			}
 
 			function check_operator(op: Token) {
@@ -1138,6 +1138,9 @@ export class Lexer implements Module {
 						case TokenType.Identifier:
 							if (tk.topofline > 0 && input[parser_pos] !== '%') {
 								switch (nexttoken(), lk.content.toLowerCase()) {
+									case 'struct':
+										if (ahkVersion <= alpha_21)
+											break;
 									case 'class':
 										if (!tk.topofline && parse_class())
 											continue;
@@ -1866,15 +1869,10 @@ export class Lexer implements Module {
 			function parse_class(export_?: string) {
 				if (!isIdentifier(tk.content))
 					return false;
+				let ex = '', isstruct, rl;
+				if (lk.content[0].toLowerCase() === 's')
+					isstruct = true, ex = 'struct', rl = result.length;
 				const cl = tk, bp = lk.offset;
-				let ex = '';
-				lk.type = TokenType.Reserved;
-				if (tk.type !== TokenType.Identifier) {
-					tk.type = TokenType.Identifier;
-					_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
-				} else if (tk.content[0] <= '9')
-					_this.addDiagnostic(diagnostic.invalidsymbolname(tk.content), tk.offset);
-				if (mode & BlockType.Func) _this.addDiagnostic(diagnostic.classinfuncerr(), tk.offset, tk.length);
 				tk = get_token_ignore_comment();
 				if (!tk.topofline && tk.content.toLowerCase() === 'extends') {
 					tk = get_next_token();
@@ -1890,20 +1888,35 @@ export class Lexer implements Module {
 						}
 						if (tk.type === TokenType.Identifier)
 							tk = get_token_ignore_comment();
-					} else if (tk.content === '{')
+					} else if (tk.type === TokenType.BlockStart)
 						unexpected(tk);
 				}
-				if (tk.content !== '{') {
-					unexpected(tk);
-					if (tk.topofline)
-						return lk = tk.previous_token!, !(next = false);
+				if (tk.type !== TokenType.BlockStart) {
+					if (!isstruct) {
+						unexpected(tk);
+						if (tk.topofline)
+							return lk = tk.previous_token!, !(next = false);
+					}
 					lk = tk, tk = get_token_ignore_comment();
-					if (tk.content !== '{') {
+					if (tk.type !== TokenType.BlockStart) {
+						if (isstruct) {
+							result.splice(rl!);
+							lk = (tk = cl).previous_token!;
+							parser_pos = tk.offset + tk.length;
+							return false;
+						}
 						lk = (tk = lk).previous_token!;
 						parser_pos = tk.offset + tk.length;
 						return !(next = false);
-					}
-				}
+					} else isstruct && unexpected(lk);
+				} else (lk = tk.previous_token!).type !== TokenType.Identifier && unexpected(lk);
+				cl.previous_token!.type = TokenType.Reserved;
+				if (cl.type !== TokenType.Identifier) {
+					cl.type = TokenType.Identifier;
+					_this.addDiagnostic(diagnostic.reservedworderr(cl.content), cl.offset);
+				} else if (cl.content[0] <= '9')
+					_this.addDiagnostic(diagnostic.invalidsymbolname(cl.content), cl.offset);
+				if (mode & BlockType.Func) _this.addDiagnostic(diagnostic.classinfuncerr(), cl.offset, cl.length);
 				tk.previous_pair_pos = bp;
 				const tn = DocumentSymbol.create(cl.content, undefined, SymbolKind.Class,
 					ZERO_RANGE, make_range(cl.offset, cl.length)) as ClassNode;
@@ -1913,7 +1926,6 @@ export class Lexer implements Module {
 					set_detail(tn, _cm);
 				tn.prototype = { ...tn, cache: [], detail: undefined, property: tn.$property = {} };
 				tn.children = [], tn.cache = [], tn.property = {};
-				tn.type_annotations = [tn.full];
 				let t = createFunc('__Init', SymbolKind.Method, ZERO_RANGE, ZERO_RANGE, [], [], true);
 				(tn.property.__INIT = t).ranges = [], t.parent = tn;
 				t.full = `(${tn.full}) static __Init()`, t.has_this_param = true;
@@ -2056,6 +2068,7 @@ export class Lexer implements Module {
 					return le20 && unexpected(lk), false;
 				const l = lk, t = tk, p = parser_pos, r = parse();
 				if (r || le20) {
+					l.type = TokenType.Reserved;
 					l.semantic = SE_KEYWORD;
 					if (r) return r;
 				}
@@ -2103,10 +2116,10 @@ export class Lexer implements Module {
 						result.push(...sta);
 						return true;
 					}
-					if (_low === 'class') {
+					if (_low === 'class' || ahkVersion > alpha_21 && _low === 'struct') {
 						if (nexttoken(), tk.topofline || !parse_class(df ? 'd' : 'e'))
 							return false
-					} else if (c !== '(' || (next = false, !is_func_def()))
+					} else if (c !== '(' || (next = false, !is_func_def(ahkVersion <= alpha_21)))
 						return false;
 					else (c = parse_func(fc ?? { ...EMPTY_TOKEN, offset: tk.offset })) && add_export(c, !!df);
 					if (df)
@@ -2410,8 +2423,9 @@ export class Lexer implements Module {
 							else result.push(...parse_line());
 					} else {
 						if (tk.type === TokenType.Identifier) {
-							if (tk.topofline > 0 && tk.content.toLowerCase() === 'class') {
-								if (nexttoken() && parse_class())
+							if (tk.topofline > 0 && ['struct', 'class'].includes(
+								tk.content.toLowerCase(), ahkVersion > alpha_21 ? 0 : 1)) {
+								if (nexttoken() && !tk.topofline && parse_class())
 									return mode = prev, else_body;
 								next = false;
 							}
@@ -4311,6 +4325,7 @@ export class Lexer implements Module {
 						}
 						break;
 					case 'mixes': sym.kind === SymbolKind.Class && mixes.push([sym, line.trim()]); break;
+					case 'constructor': (sym as FuncNode).construct = line.trim(); break;
 				}
 				details.push(`*@${t}*${join_detail(line)}`);
 			}
