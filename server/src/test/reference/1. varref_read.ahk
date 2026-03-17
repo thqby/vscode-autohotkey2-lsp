@@ -5,7 +5,7 @@ f() {
 		OutputDebug(x)	; 1
 		fff(), ggg()
 		static fff() {
-			OutputDebug(x)	; 0
+			OutputDebug(x)	; 1
 		}
 		ggg() {
 			OutputDebug(x)	; 1
@@ -15,7 +15,7 @@ f() {
 		OutputDebug(x)	; 1
 		fff(), ggg()
 		static fff() {
-			OutputDebug(x)	; 0
+			OutputDebug(x)	; 1
 		}
 		ggg() {
 			OutputDebug(x)	; 1
@@ -25,5 +25,5 @@ f() {
 }
 f()
 
-;@test {"p":[0,0],"r":[[0,0],[7,15],[17,15]]}
-;@test {"p":[2,8],"r":[[2,8],[4,14],[10,15],[14,14],[20,15]]}
+;@test {"p":[0,0],"r":[[0,0]]}
+;@test {"p":[2,8],"r":[[2,8],[4,14],[7,15],[10,15],[14,14],[17,15],[20,15]]}

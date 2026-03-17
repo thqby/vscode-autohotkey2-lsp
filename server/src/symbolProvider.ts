@@ -159,11 +159,9 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 							delete vars.SUPER;
 						if (fn.assume !== FuncScope.GLOBAL) {
 							if (fn.static) {
-								const p = fn.parent as FuncNode;
-								for (const [k, v] of Object.entries(p?.declaration ?? {}))
-									v.static && (inherit[k] = v);
-								for (const [k, v] of Object.entries(p?.global ?? {}))
-									v.decl && (inherit[k] = gvar[k] ?? v);
+								for (const [k, v] of Object.entries(vars))
+									if (v.static || v === gvar[k])
+										inherit[k] = v;
 							} else inherit = { ...vars };
 						} else oig = true;
 					}

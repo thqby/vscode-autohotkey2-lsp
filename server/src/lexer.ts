@@ -3954,7 +3954,7 @@ export class Lexer implements Module {
 					if (fn.assume === FuncScope.GLOBAL) {
 						for (const [k, v] of Object.entries(Object.assign(unresolved_vars, vars))) {
 							if (!(t = dec[k]))
-								gd[k] ??= global[k] = (v.uri = _this.uri, v), v.is_global = true;
+								gd[k] ??= (v.uri = _this.uri, v), global[k] = v, v.is_global = true;
 							else if (t.kind === SymbolKind.Function && v.def)
 								v.assigned !== 1 && _diags.push({
 									message: diagnostic.assignerr('Func', t.name), range: v.selectionRange,
@@ -6426,21 +6426,27 @@ export class Lexer implements Module {
 				break;
 			if ((t = fn.declaration?.[name]))
 				node = t, parent = fn, is_global = false;
-			else node ??= (parent = fn, fn.unresolved_vars?.[name]);
+			else if ((t = fn.unresolved_vars?.[name]))
+				node ??= (parent = fn, t);
 			if (fn.static && fn.kind === SymbolKind.Function) {
-				const f = fn.parent as FuncNode;
-				if ((t = f?.global?.[name])?.decl)
-					node = t, is_global = true;
-				else if ((t = f?.local[name])?.static)
-					node = t, parent = f, is_global = false;
-				else if (!t) {
-					if (node?.def) {
-						while (fn?.assume === FuncScope.DEFAULT)
-							fn = fn.parent as FuncNode;
-						fn?.assume === FuncScope.GLOBAL || (is_global = false);
+				let stash;
+				while ((fn = fn.parent as FuncNode)?.local) {
+					if (((t = fn.global?.[name]) && (node = t) ||
+						fn.assume === FuncScope.GLOBAL) && (stash = undefined, is_global = true))
+						break;
+					if ((t = fn.local[name])) {
+						stash = undefined;
+						t.static && (node = t, parent = fn, is_global = false);
+						break;
 					}
-				} else if (node?.def)
-					is_global = false;
+					if ((t = fn.declaration?.[name]))
+						if (stash = undefined, fn.static && fn.kind === SymbolKind.Function)
+							node = t, parent = fn;
+						else if (fn.assume === FuncScope.STATIC)
+							stash = { parent: fn, node: t };
+				}
+				if (stash)
+					({ node, parent } = stash), node.static = true, is_global = !node.def;
 				break;
 			}
 			fn = fn.parent as FuncNode;
