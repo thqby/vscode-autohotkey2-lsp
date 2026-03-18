@@ -2610,7 +2610,7 @@ export class Lexer implements Module {
 							if (mod)
 								mod.ranges!.at(-1)![1] = tk.offset, _this.addFoldingRange(...mod.ranges!.at(-1)!);
 							mod = _this.curr_mod = (_this.module ??= {})[name.toUpperCase()] ??= {
-								name, kind: SymbolKind.Module,
+								name: name || '\0', kind: SymbolKind.Module,
 								range: ZERO_RANGE, selectionRange: rg,
 								children: [],
 								declaration: o = {},
@@ -2771,7 +2771,9 @@ export class Lexer implements Module {
 											(_parent as FuncNode).ranges?.push([pp, lk.offset + lk.length]);
 											continue loop;
 										}
-										if (tk.content === ',' || (tk.content === '}' || tk.topofline && isIdentifier(tk.content)) && !(next = false)) {
+										if (tk.type === TokenType.Comma || (
+											tk.type === TokenType.BlockEnd || tk.type === TokenType.Directive ||
+											tk.topofline && isIdentifier(tk.content)) && !(next = false)) {
 											static_init.ranges?.push([pp, tk.offset - 1]);
 											continue loop;
 										}
