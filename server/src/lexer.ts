@@ -1081,7 +1081,7 @@ export class Lexer implements Module {
 				if (tk.type === TokenType.BlockStart) {
 					delete tk.data;
 					nexttoken(), next = false;
-					if (!tk.topofline && !lk.topofline)
+					if (tk.topofline < 1 && !lk.topofline)
 						unexpected(tk);
 				}
 				while (block_mode = true, nexttoken()) {
@@ -1830,12 +1830,15 @@ export class Lexer implements Module {
 							if (_low === 'return' || _low === 'throw') {
 								if (tk.type === TokenType.Comma)
 									stop_parse(lk);
-								const b = tk.offset;
+								const b = tk;
 								result.push(...parse_line(undefined, _low));
-								if ((mode & BlockType.Func) && _low === 'return')
-									if (b <= lk.offset)
-										(_parent.returns ??= []).push(b, lk.offset + lk.length);
+								if ((mode & BlockType.Func) && _low === 'return') {
+									if (b.offset <= lk.offset)
+										(_parent.returns ??= []).push(b.offset, lk.offset + lk.length);
 									else _parent.return_void = true;
+									if (b.symbol && (_cm = comments[b.symbol.selectionRange.start.line]))
+										set_detail(_cm.symbol = b.symbol, _cm);
+								}
 							} else if (_low === 'switch') {
 								result.push(...parse_line('{', _low, 0, 2));
 								if (tk.content === '{') {
@@ -2121,7 +2124,7 @@ export class Lexer implements Module {
 							return false
 					} else if (c !== '(' || (next = false, !is_func_def(ahkVersion <= alpha_21)))
 						return false;
-					else (c = parse_func(fc ?? { ...EMPTY_TOKEN, offset: tk.offset })) && add_export(c, !!df);
+					else (fc ??= { ...tk, content: '', length: 0 }, fc.topofline = 2, c = parse_func(fc)) && add_export(c, !!df);
 					if (df)
 						df.type = TokenType.Reserved, df.semantic = SE_KEYWORD, df.hover_word = 'export';
 					return true;
@@ -2875,7 +2878,7 @@ export class Lexer implements Module {
 										else if (tk.content === '??' || tk.ignore)
 											vr.returns = null;
 										else if (byref === undefined && tk.content === '=>')
-											parse_func({ ...EMPTY_TOKEN, offset: lk.offset }, next = false,
+											parse_func({ ...lk, content: '', length: 0 }, next = false,
 												result.splice(-1), rpair, end ?? (ternarys.length ? ':' : undefined));
 									}
 								} else if (predot) {
@@ -2958,7 +2961,7 @@ export class Lexer implements Module {
 										kind = SymbolKind.Method;
 									else if (input[lk.offset - 1] === '%' && fc.previous_token?.op_type === 1)
 										fc.ignore = delete fc.semantic;
-								} else fc = { ...EMPTY_TOKEN, offset: tk.offset, ignore: true };
+								} else fc = { ...tk, content: '', length: 0, ignore: true };
 								parse_call(fc, '(', kind, rpair, end ?? (ternarys.length ? ':' : undefined));
 							}
 							continue;
@@ -3423,7 +3426,7 @@ export class Lexer implements Module {
 						}
 						pairnum++, pairpos.push(parser_pos - 1);
 					} else if (tk.content === '(') {
-						parse_call({ ...EMPTY_TOKEN, offset: tk.offset, ignore: true },
+						parse_call({ ...tk, content: '', length: 0, ignore: true },
 							'(', undefined, e, ternarys.length ? ':' : undefined);
 					} else switch (tk.type) {
 						case TokenType.Identifier:
@@ -3459,7 +3462,7 @@ export class Lexer implements Module {
 										else if (tk.content === '??' || tk.ignore && tk.content === '?')
 											vr.returns = null;
 										else if (tk.content === '=>')
-											parse_func({ ...EMPTY_TOKEN, offset: lk.offset }, false,
+											parse_func({ ...lk, content: '', length: 0 }, false,
 												result.splice(-1), e, ternarys.length ? ':' : undefined);
 									} else tk.ignore = true;
 								} else {
@@ -3496,7 +3499,7 @@ export class Lexer implements Module {
 							else if (lk.content === ')' && lk.previous_pair_pos !== undefined) {
 								tk = tokens[lk.previous_pair_pos], parser_pos = tk.offset + 1;
 								lk = tk.previous_token ?? EMPTY_TOKEN, result.splice(rl!);
-								parse_func({ ...EMPTY_TOKEN, offset: tk.offset }, false, undefined, e, ternarys.length ? ':' : undefined);
+								parse_func({ ...tk, content: '', length: 0 }, false, undefined, e, ternarys.length ? ':' : undefined);
 								continue;
 							}
 							parse_obj(true);
@@ -3561,7 +3564,7 @@ export class Lexer implements Module {
 									else {
 										tk = tokens[lk.previous_pair_pos], parser_pos = tk.offset + 1;
 										lk = tk.previous_token ?? EMPTY_TOKEN, result.splice(rl!);
-										parse_func({ ...EMPTY_TOKEN, offset: tk.offset }, false, undefined, e, ternarys.length ? ':' : undefined);
+										parse_func({ ...tk, content: '', length: 0 }, false, undefined, e, ternarys.length ? ':' : undefined);
 									}
 									continue;
 								default:
