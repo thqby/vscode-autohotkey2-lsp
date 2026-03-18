@@ -260,6 +260,7 @@ export enum SemanticTokenTypes {
 }
 
 export interface Token<T = unknown> {
+	as?: Variable | null
 	// if expression
 	//   |statement
 	body_start?: number
@@ -291,6 +292,7 @@ export interface Token<T = unknown> {
 	topofline: number
 	type: TokenType
 	unexpected_lf?: boolean
+	value?: number | string
 }
 
 export enum TokenType {

@@ -1057,16 +1057,21 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 }
 
 export function findSymbols(lex: Lexer, context: Context) {
-	const { text, word, range, kind, usage } = context;
+	const { text, word, range, kind, token, usage } = context;
 	let t;
 	t = context.symbol;
 	if (t?.parent && !t.children) // kind === SymbolKind.Property
 		if ((t = getClassMember(lex, t.parent, t.name, t.def === false ? false : null)))
 			return [{ node: t, uri: t.uri ?? lex.uri, parent: context.symbol!.parent }];
+	if ((t = token.as) !== undefined) {
+		if (!t)
+			return;
+		return [{ node: t = resolveVarAlias(t), uri: t.uri!, }];
+	}
 	if (text)
 		return (t = findSymbol(lex, text, kind, range.end)) && [t];
 	const syms = [], ismethod = kind === SymbolKind.Method || usage === USAGE.Write && null;
-	const tps = decltypeExpr(lex, context.token, range.end);
+	const tps = decltypeExpr(lex, token, range.end);
 	if (!word && tps.length) {
 		for (const node of tps)
 			syms.push({ node, uri: node.uri! });
@@ -1424,8 +1429,8 @@ export function resolveImport(lex: Lexer) {
 		const mods = imp.mod ??= {}, alias = imp.alias ??= {}, decl: Record<string, Variable> = {};
 		for (const i of imp.imp) {
 			let n = i.from.toUpperCase();
-			const m = mods[n] ??= flatModule(findDirectiveModule(n, lex, cache) ??
-				findFileModule(n, lex, cache)) ?? false;
+			const m = mods[n] ??= findDirectiveModule(n, lex, cache) ??
+				findFileModule(n, lex, cache) ?? false;
 			if (!m) {
 				lex.addDiagnostic(diagnostic.modulenotfound(i.from), i.tk.offset, i.tk.length);
 				continue;
@@ -1531,8 +1536,8 @@ function findDirectiveModule(n: string, lex: Lexer, cache: Record<string, Lexer[
 			(u = u.module?.[n]) && mods.push(u);
 	} else return;
 	if (mods.length > 1)
-		return createModules(n, mods);
-	return mods.pop();
+		return flatModule(createModules(n, mods));
+	return (u = mods.pop()) && flatModule(u);
 }
 
 function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>) {
@@ -1544,7 +1549,7 @@ function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>
 		let lex = utils.getRCData?.(path.substring(1))?.lex;
 		if (!lex)
 			return;
-		return m ? findDirectiveModule(m, lex, cache) : lex;
+		return m ? findDirectiveModule(m, lex, cache) : flatModule(lex);
 	}
 	const dirs = a_Vars.$import ? derefVar(a_Vars.$import, undefined, {
 		...a_Vars, scriptdir: lex.scriptdir, linefile: lex.scriptdir
@@ -1570,12 +1575,13 @@ function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>
 		}
 		if (!t) break;
 		t !== lex && (t.importedLex ??= new Set).add(lex) && (lex.importLex ??= new Set).add(t);
-		return m ? findDirectiveModule(m, t, cache) : t;
+		return (cache as unknown as Record<string, Module | undefined>)[`${t.uri}|${m}`] ??=
+			m ? findDirectiveModule(m, t, cache) : flatModule(t);
 	}
 }
 
-export function flatModule(mod?: Module) {
-	if (!mod || mod.flat) return mod;
+export function flatModule(mod: Module) {
+	if (mod.flat) return mod;
 	const mods = mod.modules ?? [mod];
 	const set = new Set(mods);
 	let t, u;
@@ -1599,8 +1605,7 @@ export function getAllModules(lex: Lexer, mod?: Module): Module[] {
 	let r1: Module[] = [], r2: Module[] = [];
 	let i, u, t, mm: Record<string, boolean> = {}, cc = {};
 	if (mod) {
-		t = findDirectiveModule(mod.name.toUpperCase(), lex, cc) ?? mod;
-		t = flatModule(t)!;
+		t = findDirectiveModule(mod.name.toUpperCase(), lex, cc) ?? flatModule(mod);
 		r1 = t.modules ?? [t];
 		(r1 as Lexer[]).sort((a, b) => (b.d ?? 0) - (a.d ?? 0) || (a === mod ? -1 : 0));
 	} else {

@@ -2146,15 +2146,15 @@ export class Lexer implements Module {
 					fr.length && _this.addFoldingRange(...fr as [number, number]);
 					result.push(...syms);
 					if (!mk) return r;
-					const from = mk.type === TokenType.String ? escape_str(mk.content).replace(/:$/, '') : mk.content;
+					const from = mk.type === TokenType.String ? (mk.value = escape_str(mk.content)).replace(/:$/, '') : mk.content;
 					((_this.curr_mod ?? _this).import ??= { imp: [] })
 						.imp.push({ from, tk: mk, wildcard, var: syms });
 					for (const s of syms)
 						s.from = from, export_ && add_export(s);
-					pi.name = from;
+					pi.name = from, mk.as ??= null;
 				} else {
 					_this.diagnostics.splice(dl);
-					ss.forEach(t => delete t.semantic);
+					ss.forEach(t => (delete t.as, delete t.semantic));
 					hs.forEach(t => delete t.has_warned);
 					us.forEach(t => delete t.unexpected_lf);
 				}
@@ -2213,14 +2213,14 @@ export class Lexer implements Module {
 							else vk = undefined, next = false;
 						} else if (!must && has_suffix_imps !== 0 && tk.topofline)
 							return false;	// import mod\n other
-						has_suffix_imps ??= next && !tk.topofline && tk.content === '{';
+						has_suffix_imps ??= next && !tk.topofline && tk.type === TokenType.BlockStart;
 						if (vk && (has_suffix_imps === false || mk !== vk || has_suffix_imps && !le20)) {
-							vr = createVar(vk.content, SymbolKind.Variable,
+							mk.as = vr = createVar(vk.content, SymbolKind.Variable,
 								make_range(vk.offset, vk.length));
 							vr.decl = vr.def = true, vr.assigned = 1;
-							ss.push(vk), vk.semantic = { type: SemanticTokenTypes.module };
+							ss.push(mk, vk), vk.semantic = { type: SemanticTokenTypes.module };
 							if (mk.type !== TokenType.String)
-								ss.push(mk), mk.semantic = vk.semantic;
+								mk.semantic = vk.semantic;
 							syms.unshift(vr);
 							vk.type !== TokenType.Identifier && _this.diagnostics.push({
 								message: diagnostic.reservedworderr(vr.name),
@@ -2253,7 +2253,7 @@ export class Lexer implements Module {
 								} else vk = undefined, ue(tk);
 							} else vk = lk;
 							if (vk) {
-								vr = createVar(vk.content, SymbolKind.Variable,
+								sk.as = vr = createVar(vk.content, SymbolKind.Variable,
 									make_range(vk.offset, vk.length));
 								vr.alias = sk.content;
 								vr.decl = vr.def = true, vr.assigned = 1;
@@ -2385,8 +2385,6 @@ export class Lexer implements Module {
 							DiagnosticSeverity.Warning : DiagnosticSeverity.Hint,
 					});
 				}
-				if (fc.ignore)
-					return delete fc.semantic, undefined;
 				const tn: CallSite = DocumentSymbol.create(fc.content, undefined,
 					kind ??= SymbolKind.Function, { ...range }, range);
 				tn.paraminfo = pi, tn.offset = fc.offset, fc.callsite = tn;
@@ -2396,6 +2394,8 @@ export class Lexer implements Module {
 					pi.end = lf < 0 ? input_length : lf;
 				} else pi.end = lk.offset + lk.length;
 				tn.range.end = document.positionAt(pi.end);
+				if (fc.ignore)
+					return delete fc.semantic, undefined;
 				switch (kind) {
 					case SymbolKind.Method:
 						maybeclassprop(fc, pi.method = true)
@@ -2723,6 +2723,7 @@ export class Lexer implements Module {
 									delete v.def;
 									v.typed = true;
 									lk = tk, tk = get_next_token(), err = '';
+									const bb = tk.offset;
 									if (isIdentifier(tk.content)) {
 										_tp = tk, tpexp += tk.content, nexttoken();
 									} else if (tk.type === TokenType.BracketStart) {
@@ -2755,12 +2756,14 @@ export class Lexer implements Module {
 										}
 										if (_tp) {
 											if (tk.previous_token === _tp && /^([iu](8|16|32|64)|f(32|64)|[iu]ptr)$/i.test(_tp.content)) {
-												v.type_annotations = [/^f/i.test(_tp.content) ? 'Float' : 'Integer'];
+												v.type_annotations = [/^f/i.test(_tp.content) ? FLOAT : INTEGER];
 												_tp.semantic = SE_CLASS;
 											} else if (_tp.type === TokenType.Identifier)
 												addvariable(_tp, 3, static_init.children);
 										}
-										v.type_annotations ??= is_expr || !tpexp ? ['Any'] : [tpexp];
+										if (is_expr)
+											v.returns = [bb, lk.offset + lk.length], (v as FuncNode).eval = true;
+										else if (tpexp) v.type_annotations ??= [tpexp];
 										if (tk.content === ':=') {
 											static_init.ranges?.push([pp, tk.offset - 1]);
 											pp = tk.offset + 2;
@@ -6695,7 +6698,7 @@ export class Lexer implements Module {
 		if (!scope || scope.kind === SymbolKind.Class || scope.kind === SymbolKind.Property)
 			return {};
 		let fn = scope as FuncNode, vars: Record<string, Variable> = {};
-		const roots = [fn], ur = [], oo = [vars];
+		const roots = [fn], ur = [], oo = [];
 		while (!fn.has_this_param && !fn.static && fn.assume !== FuncScope.GLOBAL && (fn = fn.parent as FuncNode))
 			roots.push(fn);
 		if (fn)
@@ -6703,6 +6706,7 @@ export class Lexer implements Module {
 				vars = { THIS, SUPER }, fn.kind === SymbolKind.Property && roots.pop();
 			else if (fn.static && (fn = fn.parent as FuncNode))
 				Object.entries(fn.declaration).forEach(([k, v]) => (v.static || v.static === null) && (vars[k] = v));
+		oo.push(vars);
 		while ((fn = roots.pop() as FuncNode))
 			ur.push(fn.unresolved_vars), oo.unshift(fn.declaration), oo.push(fn.global, fn.local);
 		return Object.assign({}, ...ur.reverse(), ...oo);
