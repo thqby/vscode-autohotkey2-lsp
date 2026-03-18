@@ -2378,12 +2378,12 @@ export class Lexer implements Module {
 					fc.paraminfo = pi;
 					result.push(...parse_line(undefined, undefined, undefined, undefined, pi));
 					range = make_range(fc.offset, fc.length);
-					_this.diagnostics.push({
-						code: DiagnosticCode.call, range,
-						message: warn.callwithoutparentheses(),
-						severity: cwp === true || cwp && tp === TokenType.BracketStart ?
-							DiagnosticSeverity.Warning : DiagnosticSeverity.Hint,
-					});
+					if (cwp === true || cwp && tp === TokenType.BracketStart)
+						_this.diagnostics.push({
+							code: DiagnosticCode.call, range,
+							message: warn.callwithoutparentheses(),
+							severity: DiagnosticSeverity.Warning,
+						});
 				}
 				const tn: CallSite = DocumentSymbol.create(fc.content, undefined,
 					kind ??= SymbolKind.Function, { ...range }, range);
