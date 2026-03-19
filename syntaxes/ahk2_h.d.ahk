@@ -239,13 +239,13 @@ MinHookEnable(Target, Detour, &Original?) => Integer
 class Array<T> {
 	/**
 	 * Returns the elements of an array that meet the condition specified in a callback function.
-	 * @param {(Value [, Index]) => Integer} Predicate The filter method calls the predicate function one time for each element in the array.
+	 * @param {(Value: T [, Index]) => Integer} Predicate The filter method calls the predicate function one time for each element in the array.
 	 */
 	Filter(Predicate) => Array<T>
 
 	/**
 	 * Returns the index of the first element in the array where predicate is true, and 0 otherwise.
-	 * @param {(Value [, Index]) => Integer} Predicate FindIndex calls predicate once for each element of the array,
+	 * @param {(Value: T [, Index]) => Integer} Predicate FindIndex calls predicate once for each element of the array,
 	 * until it finds one where Predicate returns true. If such an element is found,
 	 * FindIndex immediately returns that element index. Otherwise, FindIndex returns 0.
 	 * @param {Integer} StartingPosition The array index at which to begin the search. Specify 1 to start at the first element,
@@ -270,13 +270,13 @@ class Array<T> {
 
 	/**
 	 * Calls a defined callback function on each element of an array, and returns an array that contains the results.
-	 * @param {(Value [, Index]) => Any} CallbackFn The map method calls the CallbackFn function one time for each element in the array.
+	 * @param {(Value: T [, Index]) => Any} CallbackFn The map method calls the CallbackFn function one time for each element in the array.
 	 */
 	Map(CallbackFn) => Array<T>
 
 	/**
 	 * Sorts an array in place. This method mutates the array and returns a reference to the same array.
-	 * @param {(a, b) => Integer} CompareFn Function used to determine the order of the elements.
+	 * @param {(a: T, b: T) => Integer} CompareFn Function used to determine the order of the elements.
 	 * It is expected to return a negative value if the first argument is less than the second argument,
 	 * zero if they're equal, and a positive value otherwise. If omitted, the elements are sorted in random order.
 	 */

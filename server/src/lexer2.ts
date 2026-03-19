@@ -792,6 +792,7 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode): 
 	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined, is_typeof, has_obj;
 	switch (!sym.cached_types) {
 		case true: {
+			resolveFuncType(sym as FuncNode, lex);
 			const annotations = sym.type_annotations;
 			if (!annotations) break;
 			types = new Set;
@@ -907,6 +908,35 @@ function resolveCachedTypes(tps: (string | AhkSymbol)[], resolved_types: Set<Ahk
 		if (!p.length)
 			return false;
 		return new RegExp(`[< ](${p.join('|')})[,>]`);
+	}
+}
+
+export function resolveFuncType(fn: FuncNode, lex: Lexer) {
+	if (fn.$type === null || fn.type_annotations !== undefined) return;
+	let tp;
+	tp = fn.$type, fn.$type = null;
+	tp = tp ? resolveTypeAnnotation(tp) : get_type_from_caller();
+	if (!tp) return;
+	const tps = new Set<AhkSymbol>;
+	resolveCachedTypes(tp, tps, lex), tp = undefined;
+	for (const t of tps)
+		if (t.kind === SymbolKind.Function && t !== (tp ??= t as FuncNode))
+			return;
+	if (!tp) return;
+	fn.type_annotations = tp.type_annotations;
+	fn.params.forEach((v, i) => v.type_annotations ??= tp.params[i]?.type_annotations);
+	function get_type_from_caller() {
+		let t, ci;
+		if (!(t = fn.caller)) return;
+		if (!(ci = getCallInfo(lex, fn.selectionRange.start, t))) return;
+		const r = findSymbols(lex, lex.getContext(ci.pos));
+		if (r?.length !== 1) return;
+		const { node, uri } = r[0], f = node as FuncNode;
+		if (!f.params) return;
+		if (node.kind === SymbolKind.Method && ci.kind === SymbolKind.Function)
+			ci.index--;
+		(t = lexers[uri]) && resolveFuncType(f, t);
+		return f.params[ci.index]?.type_annotations;
 	}
 }
 

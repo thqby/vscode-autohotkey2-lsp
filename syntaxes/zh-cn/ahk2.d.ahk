@@ -2187,7 +2187,7 @@ OnClipboardChange(Func, AddRemove := 1) => void
 
 /**
  * 指定在未处理错误发生时自动运行的函数.
- * @param {(Thrown, Mode) => Integer} Func 当未处理的错误发生时调用的函数对象.
+ * @param {(Thrown: Error, Mode) => Integer} Func 当未处理的错误发生时调用的函数对象.
  */
 OnError(Func, AddRemove := 1) => void
 
@@ -2345,8 +2345,7 @@ RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingP
 
 /**
  * 替换字符串中匹配模式(正则表达式) 出现的地方.
- * @param {String} Replacement
- * @param {(m: RegExMatchInfo) => String} Replacement {@since 2.1-alpha.1 || ahk_h 2.0}
+ * @param {String | ((m: RegExMatchInfo) => String)} Replacement {@since 2.1-alpha.1 || ahk_h 2.0} Replacement 可以是函数.
  */
 RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?: VarRef<Integer>, Limit := -1, StartingPosition := 1) => String
 

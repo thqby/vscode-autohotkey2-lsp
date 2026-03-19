@@ -239,13 +239,13 @@ MinHookEnable(Target, Detour, &Original?) => Integer
 class Array<T> {
 	/**
 	 * 返回满足回调函数中指定条件的数组元素.
-	 * @param {(Value [, Index]) => Integer} Predicate Filter方法为数组中的每个元素调用一次Predicate函数.
+	 * @param {(Value: T [, Index]) => Integer} Predicate Filter方法为数组中的每个元素调用一次Predicate函数.
 	 */
 	Filter(Predicate) => Array<T>
 
 	/**
 	 * 返回数组中Predicate为true的第一个元素的索引, 否则为0.
-	 * @param {(Value [, Index]) => Integer} Predicate FindIndex为数组的每个元素调用Predicate一次, 
+	 * @param {(Value: T [, Index]) => Integer} Predicate FindIndex为数组的每个元素调用Predicate一次, 
 	 * 直到它找到一个Predicate返回true的值. 如果找到这样的元素, FindIndex立即返回该元素索引. 否则, FindIndex返回0.
 	 * @param {Integer} StartingPosition 开始搜索的数组索引. 指定1从第一个元素开始升序搜索; 指定-1从最后一个元素开始降序搜索.
 	 */
@@ -266,13 +266,13 @@ class Array<T> {
 
 	/**
 	 * 对数组的每个元素调用定义的回调函数, 并返回包含结果的数组.
-	 * @param {(Value [, Index]) => Any} CallbackFn Map方法为数组中的每个元素调用一次CallbackFn函数.
+	 * @param {(Value: T [, Index]) => Any} CallbackFn Map方法为数组中的每个元素调用一次CallbackFn函数.
 	 */
 	Map(CallbackFn) => Array<T>
 
 	/**
 	 * 对数组进行排序. 此方法会使数组发生变化, 并返回对同一数组的引用.
-	 * @param {(a, b) => Integer} CompareFn 用于确定元素顺序的函数. 如果第一个参数小于第二个参数, 则返回负值;
+	 * @param {(a: T, b: T) => Integer} CompareFn 用于确定元素顺序的函数. 如果第一个参数小于第二个参数, 则返回负值;
 	 * 如果相等则返回零, 否则返回正值. 如果省略, 则元素按随机顺序排序.
 	 */
 	Sort(CompareFn?) => this

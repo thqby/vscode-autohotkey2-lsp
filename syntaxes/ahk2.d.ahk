@@ -2193,7 +2193,7 @@ OnClipboardChange(Func, AddRemove := 1) => void
 
 /**
  * Specify a function to run automatically when an unhandled error occurs.
- * @param {(Thrown, Mode) => Integer} Func The function object to call when an unhandled error occurs.
+ * @param {(Thrown: Error, Mode) => Integer} Func The function object to call when an unhandled error occurs.
  */
 OnError(Func, AddRemove := 1) => void
 
@@ -2351,8 +2351,7 @@ RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingP
 
 /**
  * Replace the place where the matching pattern (regular expression) appears in the string.
- * @param {String} Replacement
- * @param {(m: RegExMatchInfo) => String} Replacement {@since 2.1 || ahk_h 2.0}
+ * @param {String | ((m: RegExMatchInfo) => String)} Replacement {@since 2.1 || ahk_h 2.0} Replacement can be a function. 
  */
 RegExReplace(Haystack, NeedleRegEx, Replacement?, &OutputVarCount?: VarRef<Integer>, Limit := -1, StartingPosition := 1) => String
 

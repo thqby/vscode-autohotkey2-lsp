@@ -15,7 +15,7 @@ import {
 } from './common';
 import {
 	findLibrary, findSymbol, getClassBase, getParamCount, includeCache, includedCache,
-	joinTypes, resolveImport, resolveTypeAnnotation, traverseInclude, typeNaming, updateIncludeCache
+	joinTypes, resolveFuncType, resolveImport, resolveTypeAnnotation, traverseInclude, typeNaming, updateIncludeCache
 } from './lexer2';
 import { DiagnosticSeverity, MessageType, SymbolKind } from './lsp-enums';
 import {
@@ -552,7 +552,7 @@ export class Lexer implements Module {
 									r = lk.content, tp = TokenType.Identifier;
 									if ((has_typeof = r === 'typeof') && tokens[j + 1]?.type === tp && !tokens[j + 1].topofline)
 										lk.semantic = SE_OPERATOR, lk = tokens[++j], r = lk.content;
-									if (r.toLowerCase() !== 'this' || sym.kind === SymbolKind.Function && (sym as FuncNode).parent?.kind !== SymbolKind.Property)
+									if (r !== 'this' || sym.kind === SymbolKind.Function && (sym as FuncNode).parent?.kind !== SymbolKind.Property)
 										lk.semantic = SE_CLASS;
 									while ((lk = tokens[++j]) && !lk.topofline && lk.type !== tp &&
 										(/^[.#~]$/.test(lk.content) || lk.type === TokenType.Identifier && (lk.semantic = SE_CLASS)))
@@ -1503,6 +1503,8 @@ export class Lexer implements Module {
 					if (fc.content[0] <= '9')
 						_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range });
 				} else {
+					let t;
+					t = tokens[fc.offset];
 					mode = BlockType.Func;
 					tn.kind = SymbolKind.Function;
 					(prev_mode & BlockType.Mask) && (tn.parent = prev_parent);
@@ -1512,7 +1514,8 @@ export class Lexer implements Module {
 							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range });
 						else if (RESERVED_WORDS.includes(fc.content.toLowerCase()))
 							_this.diagnostics.push({ message: diagnostic.reservedworderr(fc.content), range });
-					} else tokens[fc.offset].symbol = tn, tn.in_expr = true;
+					} else t.symbol = tn, tn.in_expr = true;
+					(t = t.previous_token?.paraminfo) && (tn.caller = t);
 				}
 				Object.assign(tn, createFunc(fc.content, tn.kind,
 					{ start: fc.pos = range.start, end: { character: 0, line: 0 } }, range,
@@ -4275,6 +4278,8 @@ export class Lexer implements Module {
 						if (!kind || (sym as Property).get) {
 							if (kind || t !== 'type')
 								sym.type_annotations ??= resolveTypeAnnotation(tp);
+							else if (fn.params)
+								fn.$type = tp;
 						} else if (t === 'type') {
 							(vars ??= {})[''] ??= {
 								detail: line,
@@ -5128,7 +5133,7 @@ export class Lexer implements Module {
 				if (m?.[1])
 					parser_pos = input.indexOf('*/', last_LF) + 2, begin_line = true, last_LF = parser_pos - 1;
 				else if (!ln && m)
-					parser_pos = offset + line!.length;
+					parser_pos = offset + line!.length - m[2].length;
 				else parser_pos = (LF < 0 ? input_length : LF) - (m?.[2].length ?? 0);
 				_this.token_ranges.push({ start: offset, end: parser_pos, type: 1 });
 				const cmm: Token = {
@@ -6432,6 +6437,7 @@ export class Lexer implements Module {
 				if ((node as Variable).is_param) {
 					if (fn.parent?.kind === SymbolKind.Property)
 						parent = fn.parent;
+					else resolveFuncType(fn, this);
 				}
 				break;
 			}

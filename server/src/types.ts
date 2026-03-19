@@ -138,6 +138,7 @@ export interface FormatFlags {
 
 export interface FuncNode extends AhkSymbol {
 	assume: FuncScope
+	caller?: ParamInfo
 	closure?: boolean
 	construct?: string
 	params: Variable[]
@@ -157,6 +158,7 @@ export interface FuncNode extends AhkSymbol {
 	unresolved_vars?: Record<string, Variable>
 	ranges?: [number, number][]	// class's __init
 	in_expr?: boolean
+	$type?: string | null	// @type {...}
 }
 
 export enum FuncScope { DEFAULT, STATIC, GLOBAL }
