@@ -107,7 +107,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				if (iscall) {
 					if (n.kind === SymbolKind.Class)
 						n = getClassConstructor(n as ClassNode);
-					else if ((n as FuncNode).full?.startsWith('(Object) static Call(')) {
+					else if ((n as FuncNode).construct !== undefined) {
 						let proto: AhkSymbol | undefined = cls.prototype, has_new;
 						if (!proto) {
 							proto = getClassOwnProp(lex, cls, 'PROTOTYPE');
@@ -121,7 +121,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 							}
 						}
 						if (proto)
-							n = getClassMember(lex, proto, '__new', true) ?? n;
+							n = getClassMember(lex, proto, (n as FuncNode).construct || '__new', true) ?? n;
 					} else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
 						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, lexers[n.uri!] ?? lex, cls);
 						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)

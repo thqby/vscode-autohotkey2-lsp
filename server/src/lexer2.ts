@@ -634,8 +634,8 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 				if (iscall) {
 					if (n.kind === SymbolKind.Class)
 						n = getClassConstructor(n as ClassNode);
-					else if ((n as FuncNode).full?.startsWith('(Object) static Call('))
-						n = getClassMember(lex, cls.prototype!, '__new', true) ?? n;
+					else if ((n as FuncNode).construct !== undefined)
+						n = getClassMember(lex, cls.prototype!, (n as FuncNode).construct || '__new', true) ?? n;
 					else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
 						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, lexers[n.uri!] ?? lex, cls);
 						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
@@ -1024,9 +1024,9 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 	const scope = res?.scope;
 	if (!res || res.is_global === 1)
 		res = find_include_symbol(lex.relevance, name) ?? res;
-	else if (res.is_global && res.node.kind === SymbolKind.Variable) {
+	else if (res.is_global && res.node.kind === SymbolKind.Variable && (res.node as Variable).from === undefined) {
 		t = find_include_symbol(lex.relevance, name);
-		if (t && (t.node.kind !== SymbolKind.Variable || t.node.def && !res.node.def))
+		if (t && (t.node.kind !== SymbolKind.Variable || (t.node as Variable).from !== undefined || t.node.def && !res.node.def))
 			res = t;
 	}
 	if (kind === SymbolKind.Field)
@@ -1076,8 +1076,8 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 			return;
 		let ret, t;
 		for (const uri in list) {
-			if ((t = (lexers[uri] ?? openAndParse(restorePath(list[uri]), false))?.findSymbol(name, kind)))
-				if (t.node.kind !== SymbolKind.Variable)
+			if ((t = lexers[uri]?.findSymbol(name, kind)))
+				if (t.node.kind !== SymbolKind.Variable || (t.node as Variable).from !== undefined)
 					return t;
 				else if (!ret || t.node.def && !ret.node.def)
 					ret = t;
@@ -1221,16 +1221,14 @@ export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismeth
 	if (node.kind === SymbolKind.Module) {
 		for (const m of (t = node as Module).modules ?? [t]) {
 			if ((t = m.declaration[name]))
-				if (t.kind !== SymbolKind.Variable)
+				if (t.kind !== SymbolKind.Variable || (t as Variable).from !== undefined)
 					return t;
 				else if (t.decl)
 					method ??= t;
-				else if ((t as Variable).from !== undefined)
-					sym ??= t;
 				else if (t.def)
 					prop ??= t;
 		}
-		if ((t = sym ?? method ?? prop))
+		if ((t = method ?? prop))
 			return t;
 		cls = ahkVars.ANY as ClassNode;
 		return (t = cls?.$property?.[name]) && (t.uri ??= cls.uri, t);
@@ -1286,14 +1284,13 @@ export function getClassMembers(lex: Lexer, node: AhkSymbol, bases?: ClassNode[]
 		if (!m.modules)
 			return Object.fromEntries(Object.entries(m.declaration).filter(t => t[1].def));
 		const nv: Record<string, AhkSymbol> = {},
-			vv: typeof nv = {}, dd: typeof nv = {}, rr: typeof nv = {}, tt: typeof nv = {};
+			dd: typeof nv = {}, rr: typeof nv = {}, tt: typeof nv = {};
 		for (t of m.modules) {
 			for (const [n, s] of Object.entries(t.declaration))
-				(s.kind !== SymbolKind.Variable ? nv :
-					(s as Variable).from !== undefined ? vv :
-						s.decl ? dd : s.def ? rr : tt)[n] ??= s;
+				(s.kind !== SymbolKind.Variable || (s as Variable).from !== undefined ? nv :
+					s.decl ? dd : s.def ? rr : tt)[n] ??= s;
 		}
-		return Object.assign({ ...(ahkVars.ANY as ClassNode)?.$property }, rr, dd, vv, nv);
+		return { ...(ahkVars.ANY as ClassNode)?.$property, ...rr, ...dd, ...nv };
 	}
 	while (cls && !_bases.includes(cls))
 		_bases.push(cls), properties.push(cls.property), cls = getClassBase(cls, lex) as ClassNode;
@@ -1497,7 +1494,7 @@ export function resolveImport(lex: Lexer) {
 	}
 }
 
-function traverseRelevance(lex: Lexer) {
+export function traverseRelevance(lex: Lexer) {
 	const r = Object.keys(lex.getRelevance(undefined, true)), ls: Lexer[] = [];
 	let i, l, m, n;
 	for (let u of r) {

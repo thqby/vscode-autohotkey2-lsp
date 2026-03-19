@@ -134,8 +134,8 @@ function resolvePropSemanticType(tk: Token, lex: Lexer) {
 			case SymbolKind.Method:
 				sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | (n.static ? SemanticTokenModifiers.static : 0);
 				if (tk.callsite) {
-					if (n.full?.startsWith('(Object) static Call('))
-						n = getClassMember(lex, curclass.prototype!, '__new', true) ?? n;
+					if ((n as FuncNode).construct !== undefined)
+						n = getClassMember(lex, curclass.prototype!, (n as FuncNode).construct || '__new', true) ?? n;
 					else if (n.full?.startsWith('(Object) DefineProp(')) {
 						const tks = lex.tokens;
 						let tt = tks[tk.next_token_offset];

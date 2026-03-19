@@ -190,13 +190,11 @@ function extractSymbols(uri: string) {
 	}
 }
 
-function diagnoseAll(uri: string) {
-	const lex = lexers[uri.toLowerCase()];
-	if (!lex) return;
-	updateIncludeCache();
-	for (let uri in lex.relevance)
-		(uri = lexers[uri]?.document.uri) && semanticTokensOnFull({ textDocument: { uri } });
-	semanticTokensOnFull({ textDocument: { uri } });
+function diagnoseAll() {
+	const lexs = Object.values(lexers);
+	lexs.forEach(l => l.parseScript()), updateIncludeCache();
+	lexs.forEach(l => semanticTokensOnFull({ textDocument: { uri: l.document.uri } }));
+	lexs.forEach(l => l.sendDiagnostics());
 }
 
 function setScriptDir(uri: string) {
@@ -204,7 +202,7 @@ function setScriptDir(uri: string) {
 	if (!lex) return;
 	if (lex.scriptdir !== lex.scriptpath && (lex.initLibDirs(lex.scriptpath), lex.need_scriptdir) || lex.last_diags)
 		lex.parseScript();
-	parseInclude(lex, lex.scriptpath);
+	parseInclude(lex, lex.scriptpath), updateIncludeCache();
 	for (let uri in traverseInclude(lex))
 		(uri = lexers[uri]?.document.uri) && semanticTokensOnFull({ textDocument: { uri } });
 	lex.sendDiagnostics(false, true);

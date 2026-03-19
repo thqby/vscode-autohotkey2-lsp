@@ -8,7 +8,7 @@ import {
 	a_Vars, ahkModule, ahkUris, ahkVars, ahkVersion, alpha_3, completionItemCache, completionitem, configCache,
 	decltypeExpr, derefVar, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
 	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail, isIdentifier,
-	kindSortChar, lexers, libSymbols, makeSearchRegExp, utils, winapis
+	kindSortChar, lexers, libSymbols, makeSearchRegExp, traverseRelevance, utils, winapis
 } from './common';
 
 const classkw = ['struct', 'class'];
@@ -965,7 +965,11 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		const is_id = token.type !== TokenType.String;
 		let path = token.content.substring(is_id ? 0 : 1,
 			(offset ??= lex.document.offsetAt(position)) - token.offset);
-		if (!is_id && path.endsWith(':')) {
+		if (is_id) {
+			for (const l of traverseRelevance(lex))
+				for (const m of Object.values(l.module ?? {}))
+					add_item(m.name, CompletionItemKind.Module);
+		} else if (path.endsWith(':')) {
 			if ((mod = lex.import?.mod?.[path.slice(0, -1).toUpperCase()])) {
 				for (let m of mod.modules ?? [mod])
 					for (m of Object.values((m as Lexer).module ?? {}))

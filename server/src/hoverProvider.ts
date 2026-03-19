@@ -35,8 +35,8 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			let { node: s, parent: p } = nodes[0];
 			if (s.kind === SymbolKind.Class)
 				s = getClassMember(ll, p = s, 'call', true) ?? s;
-			if (s.full?.startsWith('(Object) static Call(') && (p = (p as ClassNode)?.prototype))
-				s = getClassMember(ll, p, '__new', true) ?? s;
+			if ((s as FuncNode).construct !== undefined && (p = (p as ClassNode)?.prototype))
+				s = getClassMember(ll, p, (s as FuncNode).construct || '__new', true) ?? s;
 			nodes[0].node = s;
 		}
 		const { node, is_global } = nodes[0], fn = node as FuncNode;
