@@ -1,10 +1,10 @@
 import { CancellationToken, DocumentSymbolParams, Range, SymbolInformation, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	ANY, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Module, Property, SUPER, SemanticToken,
+	ANY, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles,
-	findClass, getClassConstructor, getClassMember, getParamCount, getWorkspaceFile, hint, inactiveVars,
+	findClass, getClassConstructor, getClassMember, getModule, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
@@ -14,7 +14,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 		return [];
 	return lex.symbolInformation ?? getSymbolInfo(lex);
 }
-function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
+function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 	const fns = oncomp ?? [];
 	const uri = lex.document.uri;
 	const unused = new Set<AhkSymbol>;
@@ -61,21 +61,23 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 	}
 	const gu = new Set(unused);
 	flatTree(lex);
-	for (const t of unused.intersection(gu)) {
-		const n = t.name.toUpperCase();
-		for (const u in relevance)
-			if (lexers[u]?.declaration[n]) {
-				unused.delete(t);
-				break;
-			}
-	}
-	const severity = configCache.Warn?.Unused ? DiagnosticSeverity.Warning : DiagnosticSeverity.Hint;
-	if (!lex.d) for (const t of unused)
-		t.name[0] !== '_' && lex.diagnostics.push({
-			message: hint.unused(), range: t.selectionRange,
-			tags: [DiagnosticTag.Unnecessary], severity
-		});
 	fns.push(function () {
+		for (const t of unused.intersection(gu)) {
+			const n = t.name.toUpperCase();
+			for (const u in relevance)
+				if (getModule(u)?.declaration[n]) {
+					unused.delete(t);
+					break;
+				}
+		}
+		if (!lex.d) {
+			const diag = {
+				message: hint.unused(), tags: [DiagnosticTag.Unnecessary],
+				severity: configCache.Warn?.Unused ? DiagnosticSeverity.Warning : DiagnosticSeverity.Hint,
+			};
+			for (const t of unused)
+				t.name[0] !== '_' && lex.diagnostics.push({ range: t.selectionRange, ...diag });
+		}
 		if (configCache.Warn?.VarUnset)
 			for (const [k, v] of unset_vars) {
 				if (k.assigned || k.has_warned)
@@ -88,10 +90,10 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 			}
 		if (lex.actived) {
 			checksamename(lex);
-			lex.sendDiagnostics(false, true);
+			return () => lex.sendDiagnostics(false, true);
 		}
 	});
-	oncomp ?? fns.forEach(f => f());
+	oncomp ?? fns.map(f => f()).forEach(f => f?.());
 	return lex.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
 	function maybe_unset(k: Variable, v: Variable) {
@@ -212,7 +214,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => void>) {
 						if ((s = inherit[k] ?? (gvar[k] ??= winapis[k]))) {
 							converttype(v, s, s === ahkVars[k]).definition = s;
 							if (s === gvar[k])
-								(fn.global ??= {})[k] = v;
+								(fn.global ??= {})[k] = v, lex.declaration[k] ??= v;
 							else fn.declaration[k] = v;
 						} else {
 							converttype(fn.declaration[k] = fn.local[k] = v, v).definition = v;

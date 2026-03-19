@@ -1626,7 +1626,7 @@ export function flatModule(mod: Module) {
 
 //#endregion
 
-function getModule(uri: string) {
+export function getModule(uri: string) {
 	const i = uri.lastIndexOf('|');
 	return i === -1 ? lexers[uri] : lexers[uri.substring(0, i)]?.module?.[uri.substring(i + 1)];
 }
