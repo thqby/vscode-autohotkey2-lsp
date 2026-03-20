@@ -4024,7 +4024,7 @@ export class Lexer implements Module {
 					}
 					vars = unresolved_vars, unresolved_vars = {};
 					for (const k in vars)
-						if (!dec[k]) (unresolved_vars[k] = vars[k]).def = false;
+						if (!(k in dec)) unresolved_vars[k] = vars[k];
 					fn.unresolved_vars = unresolved_vars;
 					for (const v of Object.values(local))
 						v.def = true;

@@ -29,7 +29,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 		let t;
 		d || (lex.symbolInformation ?? getSymbolInfo(lex, fns));
 		for (const k in dec) {
-			if (!(t = gvar[k]) || d || dec[k].kind !== SymbolKind.Variable && (t.kind === SymbolKind.Variable || t.def === false))
+			if (!(t = gvar[k]) || d || t.kind === SymbolKind.Variable && dec[k].kind !== SymbolKind.Variable)
 				gvar[k] = dec[k];
 			else if (t.kind === SymbolKind.Variable && (t.assigned ||= (dec[k] as Variable).assigned, dec[k].def))
 				t.def ??= false;
@@ -214,7 +214,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 						if ((s = inherit[k] ?? (gvar[k] ??= winapis[k]))) {
 							converttype(v, s, s === ahkVars[k]).definition = s;
 							if (s === gvar[k])
-								(fn.global ??= {})[k] = v, lex.declaration[k] ??= v;
+								(fn.global ??= {})[k] = v, lex.declaration[k] ??= (v.is_global = true, v);
 							else fn.declaration[k] = v;
 						} else {
 							converttype(fn.declaration[k] = fn.local[k] = v, v).definition = v;
