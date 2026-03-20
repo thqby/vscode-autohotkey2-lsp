@@ -2,7 +2,7 @@ import { CancellationToken, Hover, HoverParams } from 'vscode-languageserver';
 import {
 	AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, SemanticTokenTypes, SymbolKind, Variable,
 	findSymbols, generateTypeAnnotation, getClassBase, getClassMember, getSymbolDetail,
-	hoverCache, joinTypes, lexers
+	hoverCache, joinTypes, lexers, resolveVarAlias
 } from './common';
 
 
@@ -21,7 +21,14 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		}
 		return;
 	}
-	let nodes = findSymbols(lex, context);
+	let nodes = findSymbols(lex, context)?.map(it => {
+		let { node } = it;
+		if ((node as Variable).from !== undefined) {
+			if (it.node !== (node = resolveVarAlias(node as Variable)))
+				return { node, uri: node.uri!, is_global: true };
+		}
+		return it;
+	});
 	if (!nodes?.length)
 		return;
 	const set = [] as AhkSymbol[];
