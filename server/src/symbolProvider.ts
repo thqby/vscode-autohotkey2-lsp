@@ -57,7 +57,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 			else if (v.returns === undefined)
 				unset_vars.set(t, v);
 		if (v.kind === SymbolKind.Variable ? t === v && (check_name(v), true) : t === v || (gvar[k] = v))
-			(v as Variable).from ?? result.push(v), (v as FuncNode).in_expr || unused.add(v), converttype(v, v, islib || v === ahkVars[k]).definition = v;
+			(v as Variable).from ?? result.push(v), (v as FuncNode).in_expr || unused.add(v), converttype(v, v);
 	}
 	const gu = new Set(unused);
 	flatTree(lex);
@@ -119,15 +119,11 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 				if (sym === info || !sym)
 					return;
 				unused.delete(sym);
-				(tk = converttype(info, sym, sym === ahkVars[name])).definition = sym;
-				if (sym.selectionRange === ZERO_RANGE)
-					delete tk.semantic;
-				else if (info.kind !== SymbolKind.Variable)
+				converttype(info, sym);
+				if (info.kind !== SymbolKind.Variable)
 					result.push(info);
 				else if (sym.kind === SymbolKind.Variable)
 					maybe_unset(sym, info);
-				else if (tk.callsite)
-					checkParamInfo(lex, sym as FuncNode, tk.callsite);
 			} else result.push(info);
 		});
 		for (const info of t) {
@@ -172,9 +168,9 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 					oig ||= fn.assume === FuncScope.GLOBAL;
 					assme_static = fn.assume === FuncScope.STATIC && !(oig = false);
 					for (const [k, v] of Object.entries(fn.global ?? {}))
-						s = inherit[k] = gvar[k] ??= v, converttype(v, s, s === ahkVars[k]).definition = s;
+						s = inherit[k] = gvar[k] ??= v, converttype(v, s);
 					for (const [k, v] of Object.entries(fn.local ?? {})) {
-						converttype(inherit[k] = v, v).definition = v;
+						converttype(inherit[k] = v, v);
 						if (v.kind === SymbolKind.Variable) {
 							check_name(v), unused.add(v);
 							if (v.is_param && (v.selectionRange !== ZERO_RANGE || unused.delete(v)) ||
@@ -190,34 +186,34 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 						const vars = { ...fn.global, ...fn.local };
 						for (const [k, v] of Object.entries(fn.declaration ??= {}))
 							if (!vars[k])
-								converttype(inherit[k] = v, v).definition = v;
+								converttype(inherit[k] = v, v);
 						break;
 					}
 					for (const [k, v] of Object.entries(fn.declaration ??= {}))
 						if ((s = inherit[k]))
-							s !== v && (converttype(v, s, s === ahkVars[k]).definition = s,
+							s !== v && (converttype(v, s),
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable));
 						else if (oig)
 							s = gvar[k] ??= (add(v), check_name(v), lex.declaration[k] = (v.uri = lex.uri, v)),
 								(v as Variable).is_global = true, (fn.global ??= {})[v.name.toUpperCase()] = v,
-								converttype(v, s, s === ahkVars[k]).definition = s,
+								converttype(v, s),
 								s.kind === SymbolKind.Variable && maybe_unset(s, v as Variable);
 						else if (!v.def && (s = gvar[k]))
-							converttype(v, s, s === ahkVars[k]).definition = s;
+							converttype(v, s);
 						else {
-							converttype(inherit[k] = fn.local[k] = v, v).definition = v, add(v);
+							converttype(inherit[k] = fn.local[k] = v, v), add(v);
 							assme_static && (v.static = true), check_name(v);
 							if (warnLocalSameAsGlobal && v.kind === SymbolKind.Variable && gvar[k])
 								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
 					for (const [k, v] of Object.entries(fn.unresolved_vars ?? {}))
 						if ((s = inherit[k] ?? (gvar[k] ??= winapis[k]))) {
-							converttype(v, s, s === ahkVars[k]).definition = s;
+							converttype(v, s);
 							if (s === gvar[k])
 								(fn.global ??= {})[k] = v, lex.declaration[k] ??= (v.is_global = true, v);
 							else fn.declaration[k] = v;
 						} else {
-							converttype(fn.declaration[k] = fn.local[k] = v, v).definition = v;
+							converttype(fn.declaration[k] = fn.local[k] = v, v);
 							add(inherit[k] = v), check_name(v);
 							if (fn.assume === FuncScope.STATIC)
 								v.static = true;
@@ -303,18 +299,19 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 		if (sym.name[0] <= '9')
 			lex.diagnostics.push({ message: diagnostic.invalidsymbolname(sym.name), range: sym.selectionRange });
 	}
-	function converttype(it: AhkSymbol, source: Variable, islib = false): Token {
-		let stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined;
-		let { kind } = source;
+	function converttype(it: AhkSymbol, source: Variable) {
+		let stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined, ss;
+		let { is_builtin, kind } = ss = source;
 		switch (kind) {
 			case SymbolKind.Variable:
 				if (source.is_param) {
 					if (it.selectionRange === ZERO_RANGE)
-						return {} as Token;
-					st = SemanticTokenTypes.parameter;
-				} else if (!islib) {
+						return;
+					if (source.selectionRange !== ZERO_RANGE)
+						st = SemanticTokenTypes.parameter;
+				} else if (!is_builtin) {
 					const r = resolveVarAlias(source);
-					({ kind } = r);
+					({ is_builtin, kind } = r);
 					if (kind === SymbolKind.Variable)
 						st = SemanticTokenTypes.variable;
 					else if (source = r, kind === SymbolKind.Function)
@@ -333,7 +330,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 				st = SemanticTokenTypes.module; break;
 		}
 		const tk = tokens[document.offsetAt(it.selectionRange.start)];
-		if (!tk) return {} as Token;
+		if (!tk) return;
 		if (st === undefined)
 			delete tk.semantic;
 		else if (!tk.ignore) {
@@ -342,9 +339,9 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 				if (it.kind === SymbolKind.Variable && it.def) {
 					const { assigned, decl } = it as Variable;
 					if (kind === SymbolKind.Class ? assigned === true :
-						kind === SymbolKind.Function && (islib || decl ? assigned === true : assigned !== 1))
+						kind === SymbolKind.Function && (is_builtin || decl ? assigned === true : assigned !== 1))
 						it.has_warned ??= lex.diagnostics.push({
-							message: diagnostic.assignerr(sym_type(source), source.name),
+							message: diagnostic.assignerr(sym_type(source), ss.name),
 							range: it.selectionRange,
 							relatedInformation: [sym_related_msg(source, source.uri ? undefined : uri)]
 						});
@@ -362,13 +359,14 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 			let modifier = stk.modifier ?? 0;
 			if (st <= SemanticTokenTypes.module)
 				modifier |= SemanticTokenModifiers.readonly;
-			if (islib)
+			if (is_builtin)
 				modifier |= SemanticTokenModifiers.defaultLibrary;
 			if (source.static)
 				modifier |= SemanticTokenModifiers.static;
 			if (modifier) stk.modifier = modifier;
 		}
-		return tk;
+		tk.definition = ss;
+		(ss = tk.callsite) && checkParamInfo(lex, source as FuncNode, ss);
 	}
 }
 

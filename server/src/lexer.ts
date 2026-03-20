@@ -282,9 +282,10 @@ export class Lexer implements Module {
 		}
 
 		if (d || /\.d\.(ahk2?|ah2)$/i.test(this.fsPath)) {
-			this.d = d || 1, allow_$ ||= true;
+			const { uri } = this;
+			this.d = d ||= 1, allow_$ ||= true;
 			this.parseScript = function (): void {
-				const p: ClassNode[] = [], cls: string[] = [], { d, uri } = this;
+				const p: ClassNode[] = [], cls: string[] = [];
 				let _low = '', i = 0, j = 0, blocks = 0, isstatic = false, rg = ZERO_RANGE;
 				let _parent = DocumentSymbol.create('', undefined, SymbolKind.Namespace, rg, rg, this.children) as ClassNode;
 				let tk: Token, lk: Token, _cm: Token | undefined;
@@ -433,7 +434,7 @@ export class Lexer implements Module {
 									make_range(tokens[i - 1].offset, 0), make_range(tk.offset, tk.length), []) as ClassNode;
 								j = i + 1, cls.push(cl.name), (d & 2) && (cl.is_builtin = true);
 								tk.semantic = { type: SemanticTokenTypes.class, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
-								tk.symbol = tk.definition = cl, cl.extends = '', cl.uri ??= this.uri;
+								tk.symbol = tk.definition = cl, cl.extends = '', cl.uri ??= uri;
 								if ((lk = tokens[j])?.content === '<' && !lk.topofline) {
 									const type_params: typeof cl.type_params = {};
 									let data = 0;
@@ -506,22 +507,24 @@ export class Lexer implements Module {
 
 				if (d < 0)
 					return;
-				if (d & 2) {
-					const overwrite = uri.endsWith('/ahk2_h.d.ahk') ? 1 : 0;
+				if (d === 2)
+					this.children.forEach(t => t.is_builtin = true);
+				else if (d > 2) {
 					let t;
 					for (const [k, it] of Object.entries(this.declaration)) {
+						it.is_builtin = true;
 						switch (it.kind) {
 							case SymbolKind.Function:
 								it.def = false, it.uri = uri, it.is_builtin = true;
 							// fall through
 							case SymbolKind.Class:
-								it.overwrite ??= overwrite, it.def ??= true;
-								if (!(t = ahkVars[k]) || overwrite >= (t.overwrite ?? 0))
+								it.overwrite ??= d, it.def ??= true;
+								if (!(t = ahkVars[k]) || d >= (t.overwrite ?? 0))
 									ahkVars[k] = it;
 								break;
 							case SymbolKind.Variable:
 								if (it.def)
-									ahkVars[k] = it, it.uri = uri, it.is_builtin = true;
+									ahkVars[k] = it;
 								break;
 						}
 					}
@@ -604,7 +607,7 @@ export class Lexer implements Module {
 									}
 									if (lk?.content === '}') {
 										const cls = DocumentSymbol.create('', undefined, SymbolKind.Class, ZERO_RANGE, ZERO_RANGE) as ClassNode;
-										cls.property = props, cls.name = cls.extends = '', cls.uri = _this.uri;
+										cls.property = props, cls.name = cls.extends = '', cls.uri = uri;
 										tps.push(b.data = lk.data = cls), cls.full = (full = full.substring(2)) && `{ ${full} }`;
 									} else skip('}'), b.data = OBJECT, lk?.content === '}' && (lk.data = OBJECT);
 									lk = tokens[++j];
@@ -626,7 +629,7 @@ export class Lexer implements Module {
 												++j, parse_types(fn), lk = tokens[++j];
 											else fn.range.end = _this.document.positionAt(lk.offset + lk.length);
 											fn.full += ` => ${joinTypes(fn.type_annotations) || 'void'}`;
-											tps.push(fn), fn.uri = _this.uri;
+											tps.push(fn), fn.uri = uri;
 											if (_cm && _cm === comments[fn.selectionRange.start.line])
 												set_detail(_cm.symbol = fn, _cm);
 										} else {
@@ -4328,12 +4331,12 @@ export class Lexer implements Module {
 					case 'private': (tags ??= {}).access = sym.access = AccessModifier.private; break;
 					case 'protected': (tags ??= {}).access = sym.access = AccessModifier.protected; break;
 					case 'since':
-						if (!process.env.BROWSER && (lex.d & 2) && !versionMatch(line = line.trim()))
+						if (!process.env.BROWSER && (lex.d > 2) && !versionMatch(line = line.trim()))
 							sym.since = line || 'unknown';
 						break;
 					case 'alias':
 						if (sym.kind === SymbolKind.Class && (tp = line.trim()).endsWith('>') && tp.startsWith(sym.name + '<')) {
-							const lex = new Lexer(TextDocument.create('', 'ahk2', 0, `class ${tp}{\n}`), undefined, 1);
+							const lex = new Lexer(TextDocument.create('', 'ahk2', 0, `class ${tp}{\n}`), undefined, -1);
 							lex.parseScript();
 							const params = (lex.declaration[sym.name.toUpperCase()] as ClassNode)?.type_params;;
 							if (params) {
@@ -6903,7 +6906,7 @@ export class Lexer implements Module {
 		if (!lexers[uri])
 			return false;
 		if (d) {
-			if (d > 2 && !uri.includes('?'))
+			if (d >= 2 && !uri.includes('?'))
 				return true;
 			// if (lexers[uri.slice(0, -5) + 'ahk']?.keepAlive())
 			// 	return true;

@@ -56,11 +56,11 @@ async function initEnv(samefolder: boolean): Promise<boolean> {
 		initCaches();
 		setIsAhkH(h);
 		loadSyntax();
-		if (h) loadSyntax('ahk2_h'), loadSyntax('winapi', 4);
+		if (h) loadSyntax('ahk2_h', 5), loadSyntax('winapi', 2);
 		samefolder = false;
 	} else if (a_Vars.threadid) {
 		if (!isahk2_h)
-			setIsAhkH(true), samefolder = false, loadSyntax('ahk2_h'), loadSyntax('winapi', 4);
+			setIsAhkH(true), samefolder = false, loadSyntax('ahk2_h', 5), loadSyntax('winapi', 2);
 	} else {
 		if (isahk2_h)
 			setIsAhkH(false), samefolder = false, initCaches(), loadSyntax();

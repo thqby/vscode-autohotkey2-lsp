@@ -71,8 +71,8 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 		setWorkspaceFolders(workspaceFolders);
 		if (process.env.BROWSER) {
 			loadSyntax();
-			loadSyntax('ahk2_h');
-			loadSyntax('winapi', 4);
+			loadSyntax('ahk2_h', 5);
+			loadSyntax('winapi', 2);
 		} else {
 			await utils.setInterpreter?.(resolvePath(configCache.InterpreterPath ??= ''));
 			prev === ahkVars && loadSyntax();
@@ -118,7 +118,7 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 		if (prev === ahkVars && Syntaxes !== configCache.Syntaxes) {
 			initCaches(), loadSyntax();
 			if (isahk2_h)
-				loadSyntax('ahk_h'), loadSyntax('winapi', 4);
+				loadSyntax('ahk_h', 5), loadSyntax('winapi', 2);
 		}
 	});
 	!process.env.BROWSER && connection.onDidChangeWatchedFiles((change) => {
