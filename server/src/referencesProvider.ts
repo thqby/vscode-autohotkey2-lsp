@@ -1,7 +1,7 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
 	ANY, AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, TokenType, Variable, ZERO_RANGE,
-	ahkUris, ahkVars, decltypeExpr, findClass, findSymbols, getClassBase, lexers, symbolProvider
+	ahkUris, ahkVars, decltypeExpr, findClass, findSymbols, getAllModules, getClassBase, lexers, symbolProvider
 } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
@@ -33,22 +33,28 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 		return null;
 
 	switch (node.kind) {
-		case SymbolKind.Field:
-			if (scope ?? mod) {
-				const lbs = (scope as FuncNode | undefined ?? mod)!.labels?.[name];
-				if (lbs)
-					references[lexers[uri].document.uri] = lbs.map(it => it.selectionRange);
-			} else {
-				let lbs = lex.labels?.[name];
-				if (lbs)
-					references[lex.document.uri] = lbs.map(it => it.selectionRange);
-				for (const uri in lex.relevance) {
-					lbs = lexers[uri].labels?.[name];
-					if (lbs)
-						references[lexers[uri].document.uri] = lbs.map(it => it.selectionRange);
+		case SymbolKind.Field: {
+			const d = node.data as number | undefined, { document, tokens } = lex;;
+			let u;
+			if (d === undefined) {
+				const mods = getAllModules(lex, mod);
+				for (const m of mods) {
+					const rs = m.labels?.[name]?.map(t => t.selectionRange);
+					if (rs?.length && (u = lexers[m.uri!]?.document.uri))
+						(references[u] ??= []).push(...rs);
 				}
+			} else {
+				const e = tokens[d].next_pair_pos ?? Infinity;
+				const rs = (scope as FuncNode | undefined ?? mod ?? lex).labels?.[name].flatMap(it => {
+					if (it.data === d || d < (u = document.offsetAt(it.selectionRange.start)) && u < e)
+						return it.selectionRange;
+					return [];
+				});
+				if (rs?.length)
+					references[document.uri] = rs;
 			}
 			break;
+		}
 		case SymbolKind.Function:
 		case SymbolKind.Variable:
 		case SymbolKind.Class:

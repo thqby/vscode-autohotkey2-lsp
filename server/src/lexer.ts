@@ -1081,6 +1081,39 @@ export class Lexer implements Module {
 				return line_end_token = undefined, line_begin_offset = offset;
 			}
 
+			function is_label(maybe_default: boolean) {
+				let nk;
+				if (input[parser_pos] !== ':' || !WHITESPACE.includes(input.charAt(parser_pos + 1)) || !isIdentifier(tk.content))
+					if (!maybe_default || tk.content.toLowerCase() !== 'default' || (nk = _this.getToken(parser_pos, true)).content !== ':')
+						return false;
+				if (nk) {
+					if ((tk.next_token_offset = nk.next_token_offset) > 0)
+						tokens[nk.next_token_offset].previous_token = tk;
+					delete tokens[nk.offset];
+					tk.skip_pos = parser_pos = nk.offset + 1;
+				} else parser_pos++;
+				tk.content += ':', tk.length++, tk.type = TokenType.Label, line_begin_offset = undefined;
+				delete tk.semantic;
+				if (maybe_default && (nk || tk.content.toLowerCase() === 'default')) {
+					const last_case = case_pos.pop();
+					if (case_pos.push(tk.offset), last_case)
+						_this.addFoldingRange(last_case, lk.offset, 'case');
+					tk.hover_word = 'default', nexttoken(), next = false, tk.topofline ||= -1;
+					return true;
+				}
+				tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field,
+					make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1));
+				tn.data = blockpos.at(-1), tn.def = true, result.push(tn);
+				(_cm = comments[tn.selectionRange.start.line]) && set_detail(tn, _cm);
+				const labels = ((_parent as FuncNode).labels ??= {})[tn.name.slice(0, -1).toUpperCase()] ??= [];
+				if (labels[0]?.def)
+					_this.addDiagnostic(diagnostic.duplabel(), tk.offset, tk.length - 1), labels.splice(1, 0, tn);
+				else labels.unshift(tn);
+				nexttoken(), next = false;
+				tk.topofline || unexpected(tk);
+				return true;
+			}
+
 			function parse_brace(level = 0) {
 				if (tk.type === TokenType.BlockStart) {
 					delete tk.data;
@@ -1097,43 +1130,8 @@ export class Lexer implements Module {
 								(tk.content.toLowerCase() !== 'static' || '.[('.includes(input[parser_pos]) ||
 									(nk = _this.getToken(parser_pos, true)).topofline || !isIdentifierChar(nk.content.charCodeAt(0))))
 								tk.type = TokenType.Identifier;
-						} else {
-							const is_default = case_pos.length && tk.content.toLowerCase() === 'default' &&
-								(nk = _this.getToken(parser_pos, true)).content === ':';
-							if (is_default || input[parser_pos] === ':' &&
-								WHITESPACE.includes(input.charAt(parser_pos + 1)) && isIdentifier(tk.content)) {
-								if (nk) {
-									if ((tk.next_token_offset = nk.next_token_offset) > 0)
-										tokens[nk.next_token_offset].previous_token = tk;
-									delete tokens[nk.offset];
-									tk.skip_pos = parser_pos = nk.offset + 1;
-								} else parser_pos++;
-								tk.content += ':', tk.length++, tk.type = TokenType.Label;
-								line_begin_offset = undefined;
-								delete tk.semantic;
-								if (is_default) {
-									const last_case = case_pos.pop();
-									if (case_pos.push(tk.offset), last_case)
-										_this.addFoldingRange(last_case, lk.offset, 'case');
-									tk.hover_word = 'default';
-									nexttoken(), next = false;
-									tk.topofline ||= -1;
-									continue;
-								}
-								tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field,
-									make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1));
-								tn.data = blockpos.at(-1), tn.def = true, result.push(tn);
-								(_cm = comments[tn.selectionRange.start.line]) && set_detail(tn, _cm);
-								const labels = ((_parent as FuncNode).labels ??= {})[tn.name.slice(0, -1).toUpperCase()] ??= [];
-								if (labels[0]?.def)
-									_this.addDiagnostic(diagnostic.duplabel(), tk.offset, tk.length - 1),
-										labels.splice(1, 0, tn);
-								else labels.unshift(tn);
-								nexttoken(), next = false;
-								tk.topofline || unexpected(tk);
-								continue;
-							}
-						}
+						} else if (is_label(case_pos.length > 0))
+							continue;
 					}
 
 					switch (tk.type) {
@@ -2421,15 +2419,17 @@ export class Lexer implements Module {
 			}
 
 			function parse_body(else_body: boolean | null, previous_pos: number, loop_body = false) {
-				const oil = in_loop, prev = mode;
+				const oil = in_loop, prev = mode, t = tk;
 				in_loop ||= loop_body, next = true, mode |= BlockType.Body;
+				for (blockpos.push(tk.offset); is_label(false) && nexttoken();); blockpos.pop();
 				if ((block_mode = false, tk.type === TokenType.BlockStart)) {
 					tk.previous_pair_pos = previous_pos;
 					blockpos.push(parser_pos - 1), parse_brace(++blocks);
 					nexttoken();
 					next = tk.type as TokenType === TokenType.Reserved && tk.content.toLowerCase() === 'else';
+					if (t.type === TokenType.Label)
+						t.next_pair_pos = lk.offset;
 				} else {
-					const t = tk;
 					if (tk.type === TokenType.Reserved && LINE_STARTERS.includes(tk.content.toLowerCase())) {
 						parse_reserved();
 						if (t === tk || (t === lk && !next && !tk.topofline))
@@ -2458,6 +2458,8 @@ export class Lexer implements Module {
 					next = tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'else';
 					if (e.type === TokenType.Reserved && t === tk)
 						unexpected(tk);
+					if (t.type === TokenType.Label)
+						t.next_pair_pos = parser_pos;
 				}
 				in_loop = oil, mode = prev;
 				if (typeof else_body === 'boolean') {
@@ -6411,12 +6413,12 @@ export class Lexer implements Module {
 		let node, scope, mod, uri = this.uri;
 		if (kind === SymbolKind.Field) {
 			const tokens = this.tokens, offset = position ? this.document.offsetAt(position) : -1;
-			let data: number;
+			let data;
 			({ mod, scope } = position ? this.searchScopedNode(position) : {});
 			for (node of (scope as FuncNode | undefined ?? mod ?? this).labels?.[name.endsWith(':') ? name.slice(0, -1) : name] ?? []) {
 				if (!node.def) break;
-				if ((data = node.data as number ?? -1) === -1 || data < offset &&
-					(!(data = tokens[tokens[data].next_pair_pos!]?.offset) || offset < data))
+				if ((data = node.data as number) === undefined || data <= offset &&
+					offset < (tokens[data].next_pair_pos ?? Infinity))
 					return { node, uri, mod, scope };
 			}
 			return scope ? null : mod && { mod, node: null!, uri };

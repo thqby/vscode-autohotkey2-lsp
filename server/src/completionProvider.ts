@@ -262,7 +262,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							for (const it of labels[n]) {
 								if (!it.def) break;
 								if ((data = it.data as number) === undefined || data < offset &&
-									(!(data = tokens[tokens[data].next_pair_pos!]?.offset) || offset < data)) {
+									offset < (tokens[data].next_pair_pos ?? Infinity)) {
 									items.push(convertNodeCompletion(it));
 									break;
 								}
@@ -278,7 +278,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 										continue;
 									for (const it of labels[n]) {
 										if (!it.def) break;
-										if (it.data !== -1)
+										if (it.data !== undefined)
 											continue;
 										items.push(convertNodeCompletion(it));
 										break;
