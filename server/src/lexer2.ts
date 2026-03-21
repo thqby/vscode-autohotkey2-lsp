@@ -1022,13 +1022,14 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 	if (res === null)
 		return;
 	const scope = res?.scope;
-	if (!res || res.is_global === 1)
-		res = find_include_symbol(lex.relevance, name) ?? res;
+	if (!res?.node || res.is_global === 1)
+		res = find_include_symbol(name, res?.mod) ?? res;
 	else if (res.is_global && res.node.kind === SymbolKind.Variable && (res.node as Variable).from === undefined) {
-		t = find_include_symbol(lex.relevance, name);
+		t = find_include_symbol(name, res.mod);
 		if (t && (t.node.kind !== SymbolKind.Variable || (t.node as Variable).from !== undefined || t.node.def && !res.node.def))
 			res = t;
 	}
+	if (!res?.node) res = undefined;
 	if (kind === SymbolKind.Field)
 		return res;
 	if ((!res || res.node.kind === SymbolKind.Variable && ((notdef = !res.node.def) || res.is_global)) && (t = find_builtin_symbol(name)))
@@ -1071,19 +1072,50 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 			if ((t = lexers[uri = ahkUris.winapi]?.declaration[name]))
 				return t.uri ??= uri, t;
 	}
-	function find_include_symbol(list: Record<string, string>, name: string) {
-		if (process.env.BROWSER)
-			return;
-		let ret, t;
-		for (const uri in list) {
-			if ((t = lexers[uri]?.findSymbol(name, kind)))
+	function find_include_symbol(name: string, mod?: Module) {
+		const mods = getAllModules(lex, mod);
+		let ret, t, ii, mm = [];
+		name = name.toUpperCase();
+		for (mod of mods) {
+			if ((t = findSymbol2(mod, name, kind)))
 				if (t.node.kind !== SymbolKind.Variable || (t.node as Variable).from !== undefined)
 					return t;
 				else if (!ret || t.node.def && !ret.node.def)
 					ret = t;
+			if ((ii = mod.import)) for (t of ii.imp)
+				t.wildcard && (t = ii.mod?.[t.from.toUpperCase()]) && mm.push(t);
+		}
+		if (ret?.node?.def === undefined) {
+			for (let m of mm.reverse())
+				for (t of m.modules ?? [m])
+					if ((t = t.export?.[name])) {
+						if (t.kind === SymbolKind.Variable && (t as Variable).from === undefined)
+							t = getModuleMember(m, name) ?? t;
+						return { node: t, uri: t.uri!, is_global: true, mod: m };
+					}
 		}
 		return ret;
 	}
+}
+
+function findSymbol2(mod: Module, name: string, kind?: SymbolKind) {
+	if (kind === SymbolKind.Field) {
+		let lex, data;
+		if (!mod.labels || !(lex = lexers[mod.uri!]))
+			return;
+		const tokens = lex.tokens;
+		for (const node of mod.labels?.[name.endsWith(':') ? name.slice(0, -1) : name] ?? []) {
+			if (!node.def) return;
+			if ((data = node.data as number ?? -1) === -1 || data < -1 &&
+				(!(data = tokens[tokens[data].next_pair_pos!]?.offset) || -1 < data))
+				return { node, uri: lex.uri, mod };
+		}
+		return;
+	}
+	if (mod instanceof Lexer)
+		return mod.findSymbol(name, kind);
+	const node = mod.declaration[name];
+	return node && { mod, node, uri: node.uri!, is_global: true };
 }
 
 export function findSymbols(lex: Lexer, context: Context) {
@@ -1219,19 +1251,8 @@ export function getClassMember(lex: Lexer, node: AhkSymbol, name: string, ismeth
 	let prop, method, sym, t, i = 0, cls = node as ClassNode;
 	name = name.toUpperCase();
 	if (node.kind === SymbolKind.Module) {
-		for (const m of (t = node as Module).modules ?? [t]) {
-			if ((t = m.declaration[name]))
-				if (t.kind !== SymbolKind.Variable || (t as Variable).from !== undefined)
-					return t;
-				else if (t.decl)
-					method ??= t;
-				else if (t.def)
-					prop ??= t;
-		}
-		if ((t = method ?? prop))
-			return t;
-		cls = ahkVars.ANY as ClassNode;
-		return (t = cls?.$property?.[name]) && (t.uri ??= cls.uri, t);
+		return getModuleMember(node as Module, name) ?? (
+			(t = (cls = ahkVars.ANY as ClassNode)?.$property?.[name]) && (t.uri ??= cls.uri, t));
 	}
 	const _bases = bases ??= [];
 	while (true) {
@@ -1324,6 +1345,20 @@ function getDeclareClass(lex: Lexer, cls?: ClassNode): ClassNode | undefined {
 	const t = findSymbol(lex, cls.full.replace(/<.+/, ''))?.node as ClassNode;
 	if (t?.prototype)
 		return t;
+}
+
+function getModuleMember(mod: Module, name: string) {
+	let t, d, v;
+	for (const m of mod.modules ?? [mod]) {
+		if ((t = m.declaration[name]))
+			if (t.kind !== SymbolKind.Variable || (t as Variable).from !== undefined)
+				return t;
+			else if (t.decl)
+				d ??= t;
+			else if (t.def)
+				v ??= t;
+	}
+	return d ?? v;
 }
 
 export function getParamCount(fn: FuncNode) {
@@ -1652,4 +1687,20 @@ export function getAllModules(lex: Lexer, mod?: Module): Module[] {
 			(t = getModule(u)) && ((t as Lexer).d ? r1 : r2).push(t);
 	}
 	return r1.concat(r2);
+}
+
+export function getImplicitImports(mods: Module[], ...others: Record<string, AhkSymbol>[]): Record<string, AhkSymbol> {
+	let t, ii, m, mm = [];
+	const o: Record<string, AhkSymbol> = { ['']: true as unknown as AhkSymbol };
+	for (m of mods) {
+		if ((ii = m.import)) for (t of ii.imp)
+			t.wildcard && (t = ii.mod?.[t.from.toUpperCase()]) && mm.push(t);
+	}
+	for (m of mm.reverse())
+		for (t of m.modules ?? [m])
+			for (const k in ii = t.export)
+				o[k] ??= (t = ii[k]).kind !== SymbolKind.Variable ||
+					(t as Variable).from !== undefined ? t : getModuleMember(m, k) ?? t;
+	delete o['']
+	return Object.assign({}, ...others, o);
 }

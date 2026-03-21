@@ -29,7 +29,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 	if (!uri || /* super */ is_this === false)
 		return;
 
-	if (!allow_builtin && (node === ahkVars[name] || uri === ahkUris.winapi))
+	if (!allow_builtin && node.is_builtin)
 		return null;
 
 	switch (node.kind) {

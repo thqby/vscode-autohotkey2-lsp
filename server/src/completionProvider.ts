@@ -7,7 +7,7 @@ import {
 	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
 	a_Vars, ahkModule, ahkUris, ahkVars, ahkVersion, alpha_3, completionItemCache, completionitem, configCache,
 	decltypeExpr, derefVar, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
-	getClassBase, getClassConstructor, getClassMember, getClassMembers, getSymbolDetail, isIdentifier,
+	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getSymbolDetail, isIdentifier,
 	kindSortChar, lexers, libSymbols, makeSearchRegExp, traverseRelevance, utils, winapis
 } from './common';
 
@@ -677,17 +677,18 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 	const vv = get_global_var(lexs ??= getAllModules(lex, mod) as Lexer[], lex, uri_dir, expg);
 	const uris = new Set(lexs.map(l => l.uri)), le11 = ahkVersion < alpha_3 + 8;
 
-	// built-in vars
+	// implicit import vars
 	if (le11) {
 		for (const n in ahkVars)
 			if (expg.test(n) && !vv[n]?.children)
 				vv[n] = ahkVars[n];
 	} else {
-		for (const n in ahkVars)
+		const ii = getImplicitImports(lexs, ahkVars);
+		for (const n in ii)
 			if (expg.test(n))
 				if (vv[n]?.def === undefined)
-					vv[n] = ahkVars[n];
-				else vv[n] ??= ahkVars[n];
+					vv[n] = ii[n];
+				else vv[n] ??= ii[n];
 	}
 
 	// local vars
@@ -766,7 +767,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 	}
 
-	if (ahkUris.winapi && !uris.has(ahkUris.winapi) && lexs.some(l => ahkUris.winapi in l.include))
+	if (ahkUris.winapi && !uris.has(ahkUris.winapi) && lexs.some(l => l.winapi))
 		for (const n in temp = lexers[ahkUris.winapi]?.declaration)
 			expg.test(n) && (vars[n] ??= convertNodeCompletion(temp[n]));
 

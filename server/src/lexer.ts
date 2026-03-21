@@ -192,6 +192,7 @@ export class Lexer implements Module {
 	token_ranges: { start: number, end: number, type: number, previous?: number }[] = [];
 	tokens: Record<number, Token> = {};
 	typedef: Record<string, AhkSymbol> = {};
+	winapi?: boolean;
 	workspaceFolder = '';
 	constructor(document: TextDocument, scriptdir?: string, d = 0) {
 		let begin_line: boolean, callWithoutParentheses: boolean | 1 | undefined;
@@ -5042,8 +5043,7 @@ export class Lexer implements Module {
 								switch (t[1]) {
 									case 'include': s && add_include_dllload(s); break;
 									case 'include-winapi':
-										h && (t = lexers[ahkUris.winapi]) && Object.defineProperty(
-											includetable, ahkUris.winapi, { value: t.fsPath, enumerable: false });
+										h && (t = lexers[ahkUris.winapi]) && (_this.winapi = true);
 										break;
 									case 'reference': _this.d_uri ||= s; break;
 									case 'lint':
@@ -6386,7 +6386,7 @@ export class Lexer implements Module {
 		this.importLex?.forEach(l => l.importedLex?.delete(this));
 		this.checkmember = this.curr_mod = this.explicitContext =
 			this.export = this.import = this.importLex = this.maybev1 =
-			this.module = this.st = this.symbolInformation = null!;
+			this.module = this.st = this.symbolInformation = this.winapi = undefined!;
 	}
 
 	get included() { return includedCache[this.uri] ?? {}; }
@@ -6419,7 +6419,7 @@ export class Lexer implements Module {
 					(!(data = tokens[tokens[data].next_pair_pos!]?.offset) || offset < data))
 					return { node, uri, mod, scope };
 			}
-			return (scope ?? mod) && null;
+			return scope ? null : mod && { mod, node: null!, uri };
 		}
 		let t: AhkSymbol | undefined, parent: AhkSymbol | undefined, is_global: boolean | 1 = true;
 		if (name.startsWith('$'))

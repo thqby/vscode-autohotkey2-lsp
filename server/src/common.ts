@@ -259,7 +259,7 @@ export function getWorkspaceFile(uri: string) {
 export function initCaches() {
 	const kind = CompletionItemKind.Keyword, data = '*';
 	ahkVars = {}, ahkUris = {}, inactiveVars = {};
-	ahkModule.declaration = ahkModule.property = ahkVars;
+	ahkModule.export = ahkModule.declaration = ahkModule.property = ahkVars;
 	completionItemCache = {
 		constant: [],
 		directive: {

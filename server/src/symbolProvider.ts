@@ -4,7 +4,7 @@ import {
 	ANY, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles,
-	findClass, getClassConstructor, getClassMember, getModule, getParamCount, getWorkspaceFile, hint, inactiveVars,
+	findClass, getAllModules, getClassConstructor, getClassMember, getImplicitImports, getModule, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
@@ -20,7 +20,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 	const unused = new Set<AhkSymbol>;
 	const { document, tokens, relevance } = lex;
 	const gvar: Record<string, Variable> = {};
-	let list = [lex.uri, ...Object.keys(relevance)], winapis: Record<string, AhkSymbol> = {};
+	let list = [lex.uri, ...Object.keys(relevance)];
 	lex.symbolInformation = [];
 	for (const uri of list) {
 		const lex = lexers[uri];
@@ -35,26 +35,24 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 				t.def ??= false;
 		}
 	}
+	let implicitVars;
 	if (ahkVersion < alpha_3 + 8) {
 		for (const n in ahkVars)
 			if (!gvar[n]?.children)
 				gvar[n] = ahkVars[n];
-	} else {
-		for (const n in ahkVars)
-			if (gvar[n]?.def === undefined)
-				gvar[n] = ahkVars[n];
-			else gvar[n] ??= ahkVars[n];
+		implicitVars = lexers[ahkUris.winapi]?.declaration ?? {};
 	}
-	if (ahkUris.winapi && !list.includes(ahkUris.winapi))
-		winapis = lexers[ahkUris.winapi]?.declaration ?? winapis;
+	implicitVars ??= getImplicitImports(getAllModules(lex), lexers[ahkUris.winapi]?.declaration, ahkVars);
+	for (const n in implicitVars)
+		if (gvar[n]?.def === undefined)
+			gvar[n] = implicitVars[n];
+		else gvar[n] ??= implicitVars[n];
 	const warnLocalSameAsGlobal = configCache.Warn?.LocalSameAsGlobal;
 	const result: AhkSymbol[] = [], unset_vars = new Map<Variable, Variable>();
 	for (const [k, v] of Object.entries(lex.declaration)) {
-		let t = gvar[k], islib = false;
+		let t = gvar[k];
 		if (t.kind === SymbolKind.Variable && !t.assigned && !v.decl)
-			if (k in winapis)
-				t = gvar[k] = winapis[k], islib = true;
-			else if (v.returns === undefined)
+			if (v.returns === undefined)
 				unset_vars.set(t, v);
 		if (v.kind === SymbolKind.Variable ? t === v && (check_name(v), true) : t === v || (gvar[k] = v))
 			(v as Variable).from ?? result.push(v), (v as FuncNode).in_expr || unused.add(v), converttype(v, v);
@@ -70,14 +68,13 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 					break;
 				}
 		}
-		if (!lex.d) {
-			const diag = {
-				message: hint.unused(), tags: [DiagnosticTag.Unnecessary],
-				severity: configCache.Warn?.Unused ? DiagnosticSeverity.Warning : DiagnosticSeverity.Hint,
-			};
-			for (const t of unused)
-				t.name[0] !== '_' && lex.diagnostics.push({ range: t.selectionRange, ...diag });
-		}
+		if (lex.d) return;
+		const diag = {
+			message: hint.unused(), tags: [DiagnosticTag.Unnecessary],
+			severity: configCache.Warn?.Unused ? DiagnosticSeverity.Warning : DiagnosticSeverity.Hint,
+		};
+		for (const t of unused)
+			t.name[0] !== '_' && lex.diagnostics.push({ range: t.selectionRange, ...diag });
 		if (configCache.Warn?.VarUnset)
 			for (const [k, v] of unset_vars) {
 				if (k.assigned || k.has_warned)
@@ -105,7 +102,6 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 	}
 	function flatTree(node: { children?: AhkSymbol[] }, vars: Record<string, Variable> = {}, outer_is_global = false) {
 		const t: AhkSymbol[] = [];
-		let tk: Token;
 		if ((node as AhkSymbol).kind === SymbolKind.Class)
 			node.children?.forEach(it => it.children && t.push(it));
 		else node.children?.forEach((info: Variable) => {
@@ -207,7 +203,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
 					for (const [k, v] of Object.entries(fn.unresolved_vars ?? {}))
-						if ((s = inherit[k] ?? (gvar[k] ??= winapis[k]))) {
+						if ((s = inherit[k] ?? gvar[k])) {
 							converttype(v, s);
 							if (s === gvar[k])
 								(fn.global ??= {})[k] = v, lex.declaration[k] ??= (v.is_global = true, v);
@@ -230,8 +226,6 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 		}
 	}
 	function checksamename(lex: Lexer) {
-		if (lex.d)
-			return;
 		const dec = { ...ahkVars }, lbs: Record<string, string> = {};
 		const severity = DiagnosticSeverity.Error;
 		const { uri } = lex;
