@@ -1094,7 +1094,7 @@ export class Lexer implements Module {
 				} else parser_pos++;
 				tk.content += ':', tk.length++, tk.type = TokenType.Label, line_begin_offset = undefined;
 				delete tk.semantic;
-				if (maybe_default && (nk || tk.content.toLowerCase() === 'default')) {
+				if (maybe_default && (nk || tk.content.toLowerCase() === 'default:')) {
 					const last_case = case_pos.pop();
 					if (case_pos.push(tk.offset), last_case)
 						_this.addFoldingRange(last_case, lk.offset, 'case');
