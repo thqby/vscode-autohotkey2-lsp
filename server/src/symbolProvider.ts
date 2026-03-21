@@ -94,7 +94,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 	return lex.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
 	function maybe_unset(k: Variable, v: Variable) {
-		if (!(k.assigned ||= v.assigned) && v.returns === undefined)
+		if (!(k.assigned ||= v.assigned) && !v.decl && v.returns === undefined)
 			unset_vars.has(k) || unset_vars.set(k, v);
 	}
 	function add(v: AhkSymbol) {
