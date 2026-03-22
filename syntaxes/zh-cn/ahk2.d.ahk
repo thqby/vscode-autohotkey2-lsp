@@ -2721,9 +2721,7 @@ StrReplace(Haystack, SearchText, ReplaceText?, CaseSense := false, &OutputVarCou
  */
 StrSplit(String, Delimiters?, OmitChars?, MaxParts := -1) => Array
 
-/**
- * @since 2.1-alpha.9 <2.1-alpha.22
- */
+/** @since 2.1-alpha.9 <2.1-alpha.22 */
 StructFromPtr(StructClass, Address) => Object
 
 /**
@@ -2775,9 +2773,7 @@ Tan(Number) => Float
  */
 Thread(SubFunction [, Value1, Value2]) => void
 
-/**
- * @since 2.1-alpha.3
- */
+/** @since 2.1-alpha.3 */
 Throw(Value*) => void
 
 /**
@@ -3580,6 +3576,16 @@ class Float extends Number {
 	 * 将数字字符串或数值转换为浮点数.
 	 */
 	static Call(Value) => Float
+}
+
+/** @since 2.1-alpha.23 */
+class Float32 extends Struct {
+	__Value: Float
+}
+
+/** @since 2.1-alpha.23 */
+class Float64 extends Struct {
+	__Value: Float
 }
 
 class Func extends Object {
@@ -4541,6 +4547,31 @@ class Integer extends Number {
 	static Call(Value) => Integer
 }
 
+/** @since 2.1-alpha.23 */
+class Int16 extends Struct {
+	__Value: Integer
+}
+
+/** @since 2.1-alpha.23 */
+class Int32 extends Struct {
+	__Value: Integer
+}
+
+/** @since 2.1-alpha.23 */
+class Int64 extends Struct {
+	__Value: Integer
+}
+
+/** @since 2.1-alpha.23 */
+class Int8 extends Struct {
+	__Value: Integer
+}
+
+/** @since 2.1-alpha.23 */
+class IntPtr extends Struct {
+	__Value: Integer
+}
+
 class Map<K = Any, V = Any> extends Object {
 	/**
 	 * Map对象将一组称为键的值关联或映射到另一组值.
@@ -4727,9 +4758,7 @@ class MenuBar extends Menu {
 class MethodError extends MemberError {
 }
 
-/**
- * @since 2.1-alpha.11
- */
+/** @since 2.1-alpha.11 */
 class Module extends Any {
 }
 
@@ -4859,9 +4888,7 @@ class String extends Primitive {
 	static Call(Value) => String
 }
 
-/**
- * @since 2.1-alpha.22
- */
+/** @since 2.1-alpha.22 */
 class Struct extends Any {
 	/**
 	 * 创建新的结构.
@@ -4874,9 +4901,35 @@ class Struct extends Any {
 	 */
 	static At(Address) => this
 
-	/** @returns {typeof Struct.Ptr<this>} */
+	/**
+	 * 获取结构的固定长度的数组类.
+	 * @since 2.1-alpha.23 
+	 */
+	static __Item[Length] => typeof Struct.Array<this>
+
+	/** @since 2.1-alpha.23 */
+	class Array<T> extends Struct {
+		/**
+		 * 获取数组的长度.
+		 */
+		Length => Integer
+
+		/**
+		 * 获取或设置数组元素的值.
+		 */
+		__Item[Index] {
+			get => T
+			set => void
+		}
+	}
+
+	/** 
+	 * 获取结构的指针类.
+	 * @returns {typeof Struct.Ptr<this>}
+	 */
 	class Ptr<T> extends Struct {
 		Value: iptr
+
 		__Value {
 			get => T | unset
 			set => void
@@ -4906,6 +4959,21 @@ class TimeoutError extends Error {
 }
 
 class TypeError extends Error {
+}
+
+/** @since 2.1-alpha.23 */
+class UInt16 extends Struct {
+	__Value: Integer
+}
+
+/** @since 2.1-alpha.23 */
+class UInt32 extends Struct {
+	__Value: Integer
+}
+
+/** @since 2.1-alpha.23 */
+class UInt8 extends Struct {
+	__Value: Integer
 }
 
 class UnsetError extends Error {
