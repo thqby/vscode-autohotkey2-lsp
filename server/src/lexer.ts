@@ -1682,7 +1682,7 @@ export class Lexer implements Module {
 								case TokenType.Identifier: {
 									if (vr)
 										return unexpected(tk);
-									fn.params.push(vr = addvariable(tk, 0));
+									fn.params.push(vr = addvariable(tk));
 									fn.local[tk.content.toUpperCase()] ??= vr;
 									Object.assign(vr, ep).for_index = for_index;
 									break;
@@ -1886,7 +1886,7 @@ export class Lexer implements Module {
 					tk = get_next_token();
 					if (!tk.topofline && tk.type === TokenType.Identifier) {
 						ex = tk.content;
-						addvariable(tk, 0, _this.children);
+						addvariable(tk, BlockType.Script, _this.children);
 						while (parser_pos < input_length && input[parser_pos] === '.') {
 							get_next_token();
 							tk = get_next_token();
@@ -2697,7 +2697,7 @@ export class Lexer implements Module {
 								vr.range.end = document.positionAt(lk.offset + lk.length);
 							} else if (incls) {
 								let err = diagnostic.propnotinit(), dots = 0;
-								const llk = lk, v = addvariable(lk, 2, sta)!;
+								const llk = lk, v = addvariable(lk, BlockType.Class, sta)!;
 								if (v.def = false, local)
 									lk.semantic!.modifier = SemanticTokenModifiers.static;
 								if (tk.type as TokenType === TokenType.Dot) {
@@ -2758,10 +2758,10 @@ export class Lexer implements Module {
 													tpexp += '.' + tk.content, addprop(tk), nexttoken();
 											} else if (tk.type === TokenType.BracketStart && !tk.prefix_is_whitespace && isIdentifier(lk.content)) {
 												const l = result.length, predot = lk.previous_token?.type === TokenType.Dot;
-												_parent = static_init, is_expr = true;
-												parse_call(lk, tk.content, tk.content === '[' ?
-													predot ? SymbolKind.Property : SymbolKind.Variable :
-													predot ? SymbolKind.Method : SymbolKind.Function);
+												_parent = static_init, is_expr = true, _tp = undefined;
+												if (tk.content === '[')
+													!predot && addvariable(lk, BlockType.Method, static_init.children), parse_pair('[', ']');
+												else parse_call(lk, tk.content, predot ? SymbolKind.Method : SymbolKind.Function);
 												static_init.children!.push(...result.splice(l));
 												_parent = _p, nexttoken();
 											} else break;
@@ -2771,7 +2771,7 @@ export class Lexer implements Module {
 												v.type_annotations = [/^f/i.test(_tp.content) ? FLOAT : INTEGER];
 												_tp.semantic = SE_CLASS;
 											} else if (_tp.type === TokenType.Identifier)
-												addvariable(_tp, 3, static_init.children);
+												addvariable(_tp, BlockType.Method, static_init.children);
 										}
 										if (is_expr)
 											v.returns = [bb, lk.offset + lk.length], (v as FuncNode).eval = true;
@@ -3769,7 +3769,7 @@ export class Lexer implements Module {
 				}
 			}
 
-			function addvariable(token: Token, md: number = 0, p?: AhkSymbol[]) {
+			function addvariable(token: Token, md = BlockType.Script, p?: AhkSymbol[]) {
 				const rg = make_range(token.offset, token.length), tn = createVar(token.content, SymbolKind.Variable, rg);
 				token.pos = rg.start;
 				if (md === 2) {
