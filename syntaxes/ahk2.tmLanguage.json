@@ -188,7 +188,7 @@
     },
     "class_block": {
       "name": "meta.block.class.ahk2",
-      "begin": "(?<=^([ \t]*\\*\/)?[ \t]*(?i:export[ \t]+(default[ \t]+)?)?)(?i:(class|struct))[ \t]+(\\$?\\w+(\\.\\w+)*)",
+      "begin": "(?<=^([ \t]*\\*\/)?[ \t]*(?i:export[ \t]+(default[ \t]+)?)?)(?i:(class|struct))[ \t]+(\\$?\\w+)",
       "beginCaptures": {
         "3": {
           "name": "storage.type.class.ahk2"
@@ -197,22 +197,24 @@
           "name": "entity.name.type.class.ahk2"
         }
       },
-      "end": "}",
+      "end": "(})|(?=^[ \t]*[^{ \t\r\n])",
       "endCaptures": {
-        "0": {
+        "1": {
           "name": "punctuation.definition.block.class.end.ahk2"
         }
       },
+      "applyEndPatternLast": 1,
       "patterns": [
         {
-          "begin": "\\G(?!\\{)",
-          "end": "(?=\\{)",
+          "begin": "\\G(?!{)",
+          "end": "(?={)|(?=^[ \t]*[^{ \t\r\n])",
+          "applyEndPatternLast": 1,
           "patterns": [
             {
               "include": "#comments"
             },
             {
-              "begin": "\\G[ \t]*(<)",
+              "begin": "\\G(<)",
               "beginCaptures": {
                 "1": {
                   "name": "punctuation.definition.typeparameters.begin.ahk2"
