@@ -2729,7 +2729,7 @@ export class Lexer implements Module {
 										else break;
 									}
 								} else if (!local && tk.content === ':') {	// Typed properties
-									let pp = tk.offset + 1, tpexp = '', is_expr = false, _tp: Token | undefined;
+									let pp = tk.offset + 1, _tp: Token | undefined;
 									const _p = _parent, static_init = (currsymbol as ClassNode).property.__INIT as FuncNode;
 									const scl = static_init.children!.length;
 									delete v.def;
@@ -2737,10 +2737,10 @@ export class Lexer implements Module {
 									lk = tk, tk = get_next_token(), err = '';
 									const bb = tk.offset;
 									if (isIdentifier(tk.content)) {
-										_tp = tk, tpexp += tk.content, nexttoken();
+										_tp = tk, nexttoken();
 									} else if (tk.type === TokenType.BracketStart) {
 										const l = result.length;
-										_parent = static_init, is_expr = true;
+										_parent = static_init;
 										parse_pair(tk.content, tk.content === '(' ? ')' : ']');
 										static_init.children!.push(...result.splice(l));
 										_parent = _p, nexttoken();
@@ -2755,10 +2755,10 @@ export class Lexer implements Module {
 												if (tk.type !== TokenType.Dot)
 													unexpected(tk);
 												if (nexttoken() && tk.type === TokenType.Identifier)
-													tpexp += '.' + tk.content, addprop(tk), nexttoken();
+													addprop(tk), nexttoken();
 											} else if (tk.type === TokenType.BracketStart && !tk.prefix_is_whitespace && isIdentifier(lk.content)) {
 												const l = result.length, predot = lk.previous_token?.type === TokenType.Dot;
-												_parent = static_init, is_expr = true, _tp = undefined;
+												_parent = static_init, _tp = undefined;
 												if (tk.content === '[')
 													!predot && addvariable(lk, BlockType.Method, static_init.children), parse_pair('[', ']');
 												else parse_call(lk, tk.content, predot ? SymbolKind.Method : SymbolKind.Function);
@@ -2773,9 +2773,8 @@ export class Lexer implements Module {
 											} else if (_tp.type === TokenType.Identifier)
 												addvariable(_tp, BlockType.Method, static_init.children);
 										}
-										if (is_expr)
+										if (!v.type_annotations)
 											v.returns = [bb, lk.offset + lk.length], (v as FuncNode).eval = true;
-										else if (tpexp) v.type_annotations ??= [tpexp];
 										if (tk.content === ':=') {
 											static_init.ranges?.push([pp, tk.offset - 1]);
 											pp = tk.offset + 2;

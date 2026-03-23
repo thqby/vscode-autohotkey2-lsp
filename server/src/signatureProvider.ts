@@ -125,7 +125,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 					} else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
 						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, lexers[n.uri!] ?? lex, cls);
 						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
-							tps = decltypeInvoke(lex, tps, 'call', true);
+							tps = decltypeInvoke(lex, tps, '', 1);
 						return tps.forEach(it => add(it, 'call', -1));
 					} else if (fn && prop === 'bind') {
 						if (set.has(fn)) return; else set.add(fn);

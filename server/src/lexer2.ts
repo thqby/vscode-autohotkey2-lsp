@@ -178,8 +178,8 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 			} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
 		} else switch (tk.type) {
 			case TokenType.Invoke: {
-				const call = !!tk.data, name = tk.content.toLowerCase();
-				syms = decltypeInvoke(lex, syms, name, call, tk.paraminfo, that);
+				syms = decltypeInvoke(lex, syms, tk.content.toLowerCase(),
+					tk.data ? InvokeFlag.CALL : InvokeFlag.PROP, tk.paraminfo, that);
 				break;
 			}
 			case TokenType.Identifier: {
@@ -400,8 +400,10 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 	}
 }
 
-export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, call: boolean, paraminfo?: ParamInfo, _this?: ClassNode) {
-	const tps = new Set<AhkSymbol>, _name = name || (call ? 'call' : '__item');
+enum InvokeFlag { PROP, CALL, META, OPT_HANDLED = 4 }
+export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, flag: InvokeFlag, paraminfo?: ParamInfo, _this?: ClassNode) {
+	const tps = new Set<AhkSymbol>, call = !!(flag & InvokeFlag.CALL);
+	name ||= (flag |= InvokeFlag.META, call ? 'call' : '__item');
 	let that = _this;
 	for (let n of syms) {
 		const cls = n as ClassNode;
@@ -409,7 +411,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 		switch (n.kind) {
 			case 0 as SymbolKind: return [ANY];
 			case SymbolKind.Class:
-				if (call && _name === 'call') {
+				if (call && name === 'call') {
 					switch (cls.is_builtin && cls.prototype && cls.full) {
 						case 'Class':
 							if (ahkVersion >= alpha_3 && paraminfo?.end) {
@@ -475,16 +477,19 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 							}
 							break;
 					}
-					if (!(n = getClassMember(lex, cls, _name, call)!))
-						if ((n = invoke_meta_func(cls)!))
+					if (!(n = getClassMember(lex, cls, name, call)!))
+						if (!(flag & InvokeFlag.META) && (n = invoke_meta_func(cls)!))
 							break;
-						else continue;
+						else {
+							(flag & InvokeFlag.OPT_HANDLED) && tps.add(cls);
+							continue;
+						}
 					break;
 				}
 			// fall through
 			case SymbolKind.Function:
 			case SymbolKind.Method:
-				if (call && _name === 'call') {
+				if (call && name === 'call') {
 					if (!(n as FuncNode).has_this_param || (that = undefined, !paraminfo))
 						break;
 					for (const that of decltypeExpr(lex, lex.findToken(paraminfo.offset + 1),
@@ -495,15 +500,18 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 				}
 			// fall through
 			default:
-				if (!(n = getClassMember(lex, cls, _name, call)!))
-					if ((n = invoke_meta_func(cls)!))
+				if (!(n = getClassMember(lex, cls, name, call)!))
+					if (!(flag & InvokeFlag.META) && (n = invoke_meta_func(cls)!))
 						break;
-					else continue;
+					else {
+						(flag & InvokeFlag.OPT_HANDLED) && tps.add(cls);
+						continue;
+					}
 				if (n.kind === SymbolKind.Class) {
 					if (n.type_annotations) {
 						const tt = decltypeTypeAnnotation(n.type_annotations, lex,
 							that, cls.type_params);
-						for (const t of call ? decltypeInvoke(lex, tt, '', true, paraminfo) : tt)
+						for (const t of call ? decltypeInvoke(lex, tt, '', InvokeFlag.CALL, paraminfo) : tt)
 							tps.add(t);
 						continue;
 					}
@@ -515,34 +523,36 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 					if ((n as FuncNode).eval) {
 						// if (paraminfo) continue;
 						const tt = decltypeReturns(n, lexers[n.uri!] ?? lex, that);
-						for (const t of call ? decltypeInvoke(lex, tt, 'call', true) : tt)
+						for (const t of call ? decltypeInvoke(lex, tt, '', InvokeFlag.CALL) : tt)
 							tps.add(t);
 						continue;
 					} else if (call) break;
 					if (!paraminfo)
 						tps.add(n);
-					else for (const t of decltypeInvoke(lex, [n], '__item', false, paraminfo, that))
+					else for (const t of decltypeInvoke(lex, [n], '', InvokeFlag.PROP, paraminfo, that))
 						tps.add(t);
 					continue;
 				} else if ((n as FuncNode).eval) {
-					const tt = decltypeInvoke(lex, decltypeReturns(n, lexers[n.uri!] ?? lex, that), 'call', true);
-					for (const t of call ? decltypeInvoke(lex, tt, 'call', true) : tt)
+					let tt = decltypeInvoke(lex, decltypeReturns(n, lexers[n.uri!] ?? lex, that), '', InvokeFlag.CALL);
+					if ((n as Property).typed)
+						tt = decltypeInvoke(lex, tt, '__value', InvokeFlag.PROP | InvokeFlag.META | InvokeFlag.OPT_HANDLED);
+					for (const t of call ? decltypeInvoke(lex, tt, '', flag | InvokeFlag.CALL, paraminfo) : tt)
 						tps.add(t);
 					continue;
 				} else if (call || paraminfo && !(n as Property).get?.params.length) {
 					for (const t of decltypeInvoke(lex, decltypeReturns(n, lexers[n.uri!] ?? lex, that),
-						call ? 'call' : '__item', call, paraminfo))
+						'', flag, paraminfo))
 						tps.add(t);
 					continue;
 				}
 				break;
 			case SymbolKind.Module:
-				if (name && (n = getClassMember(lex, cls, name, false)!)) {
+				if (!(flag & InvokeFlag.META) && (n = getClassMember(lex, cls, name, false)!)) {
 					let r;
 					r = n.kind !== SymbolKind.Variable ? [n] :
 						decltypeVar(n, lexers[cls.uri!] ?? lex, n.selectionRange.end);
 					if (call)
-						r = decltypeInvoke(lexers[cls.uri!] ?? lex, r, '', true, paraminfo);
+						r = decltypeInvoke(lexers[cls.uri!] ?? lex, r, '', InvokeFlag.CALL, paraminfo);
 					for (const t of r)
 						tps.add(t);
 				}
@@ -561,7 +571,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 			decltypeReturns(n, lexers[n.uri!] ?? lex, that) : undefined;
 		if (!syms?.length)
 			return;
-		for (const t of decltypeInvoke(lex, syms, 'call', true, paraminfo))
+		for (const t of decltypeInvoke(lex, syms, '', InvokeFlag.CALL, paraminfo))
 			tps.add(t);
 	}
 }
@@ -639,7 +649,7 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 					else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
 						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, lexers[n.uri!] ?? lex, cls);
 						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
-							tps = decltypeInvoke(lex, tps, 'call', true);
+							tps = decltypeInvoke(lex, tps, '', InvokeFlag.CALL);
 						tps.forEach(it => resolve(it, 'call', types, -1));
 						return;
 					}
