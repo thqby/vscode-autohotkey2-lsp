@@ -2154,7 +2154,7 @@ export class Lexer implements Module {
 					fr.length && _this.addFoldingRange(...fr as [number, number]);
 					result.push(...syms);
 					if (!mk) return r;
-					const from = mk.type === TokenType.String ? (mk.value = escape_str(mk.content)).replace(/:$/, '') : mk.content;
+					const from = mk.type === TokenType.String ? (mk.value = escape_str(mk.content)) : mk.content;
 					((_this.curr_mod ?? _this).import ??= { imp: [] })
 						.imp.push({ from, tk: mk, wildcard, var: syms });
 					for (const s of syms)
