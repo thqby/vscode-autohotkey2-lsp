@@ -1596,20 +1596,23 @@ function findMainEntry(lex: Lexer) {
 }
 
 function findDirectiveModule(n: string, lex: Lexer, cache: Record<string, Lexer[]>) {
-	let mods: Module[] = [], u;
-	if (!n) {
-		mods.push(...findIncludeEntry(lex));
-	} else if (isIdentifier(n)) {
+	if (!isIdentifier(n ||= '__INIT'))
+		return;
+	return ((cache as unknown as Record<string, Module | false>)[`${lex.uri}|${n}`] ??= get()) || undefined;
+	function get() {
+		let mods: Module[] = [], u;
 		if (n === 'AHK')
 			mods.push(ahkModule);
-		else if (n === '__MAIN')
+		else if (n === '__MAIN')	// todo: __main in imported modules
 			mods.push(...cache.__MAIN ??= findMainEntry(lex));
+		else if (n === '__INIT')
+			mods.push(...findIncludeEntry(lex));
 		for (u of cache[lex.uri] ??= traverseRelevance(lex))
 			(u = u.module?.[n]) && mods.push(u);
-	} else return;
-	if (mods.length > 1)
-		return flatModule(createModules(n, mods));
-	return (u = mods.pop()) && flatModule(u);
+		if (mods.length > 1)
+			return flatModule(createModules(n, mods));
+		return (u = mods.pop()) ? flatModule(u) : false;
+	}
 }
 
 function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>) {
@@ -1617,11 +1620,12 @@ function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>
 	let m;
 	m = /:([^\x00-\x2f\x3a-\x40\x5b-\x5e\x60\x7b-\x7f]*)$/.exec(path);
 	m && (path = path.substring(0, m.index), m = m[1]);
+	m ||= '__INIT';
 	if (path[0] === '*') {
 		let lex = utils.getRCData?.(path.substring(1))?.lex;
 		if (!lex)
 			return;
-		return m ? findDirectiveModule(m, lex, cache) : flatModule(lex);
+		return findDirectiveModule(m, lex, cache);
 	}
 	const dirs = a_Vars.$import ? derefVar(a_Vars.$import, undefined, {
 		...a_Vars, scriptdir: lex.scriptdir, linefile: lex.scriptdir
@@ -1647,8 +1651,7 @@ function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>
 		}
 		if (!t) break;
 		t !== lex && (t.importedLex ??= new Set).add(lex) && (lex.importLex ??= new Set).add(t);
-		return (cache as unknown as Record<string, Module | undefined>)[`${t.uri}|${m}`] ??=
-			m ? findDirectiveModule(m, t, cache) : flatModule(t);
+		return findDirectiveModule(m, t, cache);
 	}
 }
 
