@@ -47,18 +47,23 @@ const SE_PROPERTY = { type: SemanticTokenTypes.property };
 const SE_STRING = { type: SemanticTokenTypes.string };
 const SE_COMMENT = { type: SemanticTokenTypes.comment };
 const SE_EVENT = { type: SemanticTokenTypes.event };
-export const TT2STT: Record<number, SemanticToken> = {
-	[TokenType.Number]: SE_NUMBER,
-	[TokenType.Reserved]: SE_KEYWORD,
-	[TokenType.String]: SE_STRING,
-	[TokenType.Text]: SE_STRING,
-	[TokenType.Comment]: SE_COMMENT,
-	[TokenType.BlockComment]: SE_COMMENT,
-	[TokenType.InlineComment]: SE_COMMENT,
-	[TokenType.Hotkey]: SE_EVENT,
-	[TokenType.HotkeyLine]: SE_EVENT,
-	[TokenType.Directive]: { type: SemanticTokenTypes['keyword.control.directive'] },
-};
+export const TT2ST = new Map([
+	[TokenType.Number, SE_NUMBER],
+	[TokenType.Reserved, SE_KEYWORD],
+	[TokenType.String, SE_STRING],
+	[TokenType.Text, SE_STRING],
+	[TokenType.Comment, SE_COMMENT],
+	[TokenType.BlockComment, SE_COMMENT],
+	[TokenType.InlineComment, SE_COMMENT],
+	[TokenType.Hotkey, SE_EVENT],
+	[TokenType.HotkeyLine, SE_EVENT],
+	[TokenType.Directive, { type: SemanticTokenTypes['keyword.control.directive'] }],
+]);
+export const SK2STT = new Map([
+	[SymbolKind.Class, SemanticTokenTypes.class],
+	[SymbolKind.Function, SemanticTokenTypes.function],
+	[SymbolKind.Module, SemanticTokenTypes.module],
+]);
 
 const COLOR_RE = new RegExp(/['" \t](c|background|#)?((0x)?[\da-f]{6}([\da-f]{2})?|(black|silver|gray|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua))\b/i);
 const COLOR_VALS = JSON.parse('{"black":"000000","silver":"c0c0c0","gray":"808080","white":"ffffff","maroon":"800000","red":"ff0000","purple":"800080","fuchsia":"ff00ff","green":"008000","lime":"00ff00","olive":"808000","yellow":"ffff00","navy":"000080","blue":"0000ff","teal":"008080","aqua":"00ffff"}');

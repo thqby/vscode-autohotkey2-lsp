@@ -1,8 +1,8 @@
 import { CancellationToken, DocumentSymbol, Range, SemanticTokensBuilder, SemanticTokensParams, SemanticTokensRangeParams } from 'vscode-languageserver';
 import {
-	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SemanticTokenModifiers,
-	SemanticTokenTypes, SymbolKind, TT2STT, Token, TokenType, Variable,
-	checkParamInfo, configCache, diagnostic, getClassMember, getClassMembers, lexers, symbolProvider
+	ASSIGN_TYPE, AhkSymbol, ClassNode, FuncNode, Lexer, Property, SK2STT, SemanticTokenModifiers,
+	SemanticTokenTypes, SymbolKind, TT2ST, Token, TokenType, Variable,
+	checkParamInfo, configCache, diagnostic, getClassMember, getClassMembers, lexers, resolveVarAlias, symbolProvider
 } from './common';
 
 let resolve = resolveSemantic;
@@ -70,7 +70,7 @@ function resolveSemantic(tk: Token, lex: Lexer, stb: SemanticTokensBuilder, full
 }
 
 function resolveSemanticFully(tk: Token, lex: Lexer, stb: SemanticTokensBuilder) {
-	tk.semantic ??= TT2STT[tk.type];
+	tk.semantic ??= TT2ST.get(tk.type);
 	resolveSemantic(tk, lex, stb, true);
 }
 
@@ -167,9 +167,12 @@ function resolvePropSemanticType(tk: Token, lex: Lexer) {
 				curclass = curclass.range === n.range ? curclass.prototype : undefined;
 				return sem.type = SemanticTokenTypes.property;
 			}
-			case SymbolKind.Variable:
-				curclass = undefined;
-				return sem.type = SemanticTokenTypes.variable;
+			case SymbolKind.Variable: {
+				const t = resolveVarAlias(n);
+				if (!(curclass = t as ClassNode).property)
+					curclass = undefined;
+				return sem.type = SK2STT.get(t.kind) ?? SemanticTokenTypes.variable;
+			}
 			case undefined:
 				if ((curclass.checkmember ?? lex.checkmember) !== false && configCache.Diagnostics?.ClassNonDynamicMemberCheck) {
 					const tt = lex.tokens[tk.next_token_offset];
