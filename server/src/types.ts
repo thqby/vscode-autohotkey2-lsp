@@ -164,7 +164,7 @@ export interface FuncNode extends AhkSymbol {
 export enum FuncScope { DEFAULT, STATIC, GLOBAL }
 
 export interface Import {
-	imp: Array<{ from: string, tk: Token, wildcard: boolean, var: Variable[] }>
+	imp: Array<{ from: string, tk: Token, wildcard: Wildcard, var: Variable[] }>
 	mod?: Record<string, Module | false>
 	alias?: Record<string, AhkSymbol>
 }
@@ -340,4 +340,8 @@ export interface Variable extends AhkSymbol {
 	range_offset?: [number, number]
 	pass_by_ref?: boolean
 	typed?: boolean | 1			// typed properties
+}
+
+export enum Wildcard {
+	None, Import, Export
 }

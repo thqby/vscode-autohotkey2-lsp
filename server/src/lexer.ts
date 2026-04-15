@@ -15,13 +15,13 @@ import {
 } from './common';
 import {
 	findLibrary, findSymbol, getClassBase, getParamCount, includeCache, includedCache,
-	joinTypes, resolveFuncType, resolveImport, resolveTypeAnnotation, traverseInclude, typeNaming, updateIncludeCache
+	joinTypes, resolveFuncType, resolveImports, resolveTypeAnnotation, traverseInclude, typeNaming, updateIncludeCache
 } from './lexer2';
 import { DiagnosticSeverity, MessageType, SymbolKind } from './lsp-enums';
 import {
 	AccessModifier, ActionType, AhkSymbol, BlockType, CallSite, ClassNode, Context, ContinueSectionOption, DiagnosticCode,
 	FormatFlags, FormatOptions, FuncNode, FuncScope, Import, JsDoc, Module, ParamInfo, ParamList, Property,
-	SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, TokenType, USAGE, Variable
+	SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, TokenType, USAGE, Variable, Wildcard
 } from './types';
 export { traverseInclude };
 
@@ -521,10 +521,10 @@ export class Lexer implements Module {
 						it.is_builtin = true;
 						switch (it.kind) {
 							case SymbolKind.Function:
-								it.def = false, it.uri = uri, it.is_builtin = true;
+								it.uri = uri, it.is_builtin = true;
 							// fall through
 							case SymbolKind.Class:
-								it.overwrite ??= d, it.def ??= true;
+								it.overwrite ??= d, it.decl = it.def = true;
 								if (!(t = ahkVars[k]) || d >= (t.overwrite ?? 0))
 									ahkVars[k] = it;
 								break;
@@ -2146,7 +2146,7 @@ export class Lexer implements Module {
 					hs: Token[] = [], us: Token[] = [], ss: Token[] = [],
 					fr: number[] = [], syms: Variable[] = [];
 				const pi: ParamInfo = { offset: tk.offset, count: 0, comma: [], miss: [], unknown: false };
-				let must = le20, wildcard = false, has_suffix_imps: boolean | 0, mk: Token | undefined;
+				let must = le20, wildcard = Wildcard.None, has_suffix_imps: boolean | 0, mk: Token | undefined;
 				if (lk.type === TokenType.Directive) {
 					kws.pop(), must = true;
 					if (!tk.topofline && tk.type === TokenType.Identifier &&
@@ -2160,6 +2160,7 @@ export class Lexer implements Module {
 					result.push(...syms);
 					if (!mk) return r;
 					const from = mk.type === TokenType.String ? (mk.value = escape_str(mk.content)) : mk.content;
+					export_ && wildcard && (wildcard = Wildcard.Export);
 					((_this.curr_mod ?? _this).import ??= { imp: [] })
 						.imp.push({ from, tk: mk, wildcard, var: syms });
 					for (const s of syms)
@@ -2188,7 +2189,7 @@ export class Lexer implements Module {
 					const le21 = ahkVersion < alpha_21;
 					let has_from = true, vk, vr;
 					if (le21 && tk.content === '*')
-						nexttoken(), wildcard = true;
+						nexttoken(), wildcard = Wildcard.Import;
 					else if (tk.topofline)	// import\n
 						return next = false, must && ue_lf(tk);
 					else if (le21 && tk.type === TokenType.BlockStart) {
@@ -2257,7 +2258,7 @@ export class Lexer implements Module {
 						if (tk.content === '*') {
 							nexttoken();
 							if (tk.type === TokenType.Comma || tk.type === TokenType.BlockEnd)
-								wildcard = true;
+								wildcard = Wildcard.Import;
 						} else if (isIdentifier((sk = tk).content)) {
 							if (nexttoken(), tk.type === TokenType.Operator && tk.content.toLowerCase() === 'as') {
 								tk.semantic = SE_KEYWORD;
@@ -6861,7 +6862,7 @@ export class Lexer implements Module {
 				}
 			}
 		}
-		resolveImport(this);
+		resolveImports(this);
 		removed ??= new Set<string>;
 		difference(ol, this.importLex)?.removed?.values()
 			.forEach(l => removed.add(l.uri));
@@ -7023,7 +7024,7 @@ export function resolveVarAlias(v: Variable, set?: Array<Variable>): AhkSymbol {
 		return v;
 	if (v.alias_to === undefined) {
 		const t = lexers[v.uri!];
-		t && resolveImport(t);
+		t && resolveImports(t);
 	}
 	let { alias_to } = v;
 	if (!alias_to || alias_to === v) return v;
@@ -7229,7 +7230,7 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 								range: v2.selectionRange,
 								relatedInformation: [sym_related_msg(v1)]
 							});
-					} else if (v2.def !== false) {
+					} else if (v2.def !== false && (v1.is_builtin === v2.is_builtin || v2.kind !== SymbolKind.Function)) {
 						v1.has_warned ??= lex.diagnostics.push({
 							message: diagnostic.conflictserr(sym_type(v1).toLowerCase(), sym_type(v2), v1.name),
 							range: v1.selectionRange,

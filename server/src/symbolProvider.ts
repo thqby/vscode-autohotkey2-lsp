@@ -42,7 +42,7 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 				gvar[n] = ahkVars[n];
 		implicitVars = lexers[ahkUris.winapi]?.declaration ?? {};
 	}
-	implicitVars ??= getImplicitImports(getAllModules(lex), lexers[ahkUris.winapi]?.declaration, ahkVars);
+	implicitVars ??= getImplicitImports(getAllModules(lex), undefined, lexers[ahkUris.winapi]?.declaration, ahkVars);
 	for (const n in implicitVars)
 		if (gvar[n]?.def === undefined)
 			gvar[n] = implicitVars[n];

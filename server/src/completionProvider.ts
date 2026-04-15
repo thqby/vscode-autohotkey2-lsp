@@ -4,7 +4,7 @@ import { basename, relative, resolve } from 'path';
 import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, TextEdit } from 'vscode-languageserver';
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, CompletionTriggerKind,
-	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE,
+	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, Wildcard, ZERO_RANGE,
 	a_Vars, ahkModule, ahkUris, ahkVars, ahkVersion, alpha_3, completionItemCache, completionitem, configCache,
 	decltypeExpr, derefVar, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
 	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getSymbolDetail, isIdentifier,
@@ -540,9 +540,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					add_item(it[0], it[1] === 1 ? CompletionItemKind.Method : CompletionItemKind.Property));
 				continue;
 			} else if (node.kind === SymbolKind.Module) {
-				const m = node as Module;
-				const vv = get_global_var(m.modules ?? [m], lex, uri.substring(0, uri.lastIndexOf('/') + 1), expg);
-				for (const [k, it] of Object.entries(vv))
+				const m = node as Module, ms = m.modules ?? [m];
+				for (const [k, it] of Object.entries(add_implicit_vars(
+					get_global_var(ms, lex, uri.substring(0, uri.lastIndexOf('/') + 1), expg),
+					getImplicitImports(ms, Wildcard.Export), expg)))
 					if (it.def && !(k in props))
 						items.push(props[k] = convertNodeCompletion(it));
 				continue;
@@ -683,12 +684,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (expg.test(n) && !vv[n]?.children)
 				vv[n] = ahkVars[n];
 	} else {
-		const ii = getImplicitImports(lexs, ahkVars);
-		for (const n in ii)
-			if (expg.test(n))
-				if (vv[n]?.def === undefined)
-					vv[n] = ii[n];
-				else vv[n] ??= ii[n];
+		add_implicit_vars(vv, getImplicitImports(lexs, Wildcard.Import, ahkVars), expg);
 	}
 
 	// local vars
@@ -958,8 +954,10 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			mod = lex.import?.mod?.[from?.toUpperCase()!];
 			if (!mod)
 				return;
-			for (const v of Object.values(get_global_var(mod.modules ?? [mod], lex,
-				uri.substring(0, uri.lastIndexOf('/') + 1), expg)))
+			const ms = mod.modules ?? [mod];
+			for (const v of Object.values(add_implicit_vars(get_global_var(ms, lex,
+				uri.substring(0, uri.lastIndexOf('/') + 1), expg),
+				getImplicitImports(ms, Wildcard.Export), expg)))
 				add_item(v.name, getCompletionKind(v) ?? CompletionItemKind.Variable);
 			return items;
 		}
@@ -1081,6 +1079,15 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		return ci;
 	}
 	//#endregion
+}
+
+function add_implicit_vars(vars: Record<string, AhkSymbol>, implicit: typeof vars, re: RegExp) {
+	for (const n in implicit)
+		if (re.test(n))
+			if (vars[n]?.def === undefined)
+				vars[n] = implicit[n];
+			else vars[n] ??= implicit[n];
+	return vars;
 }
 
 function get_global_var(lexs: Module[], lex: Lexer, dir: string, re: RegExp) {
