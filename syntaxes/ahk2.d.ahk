@@ -4598,7 +4598,7 @@ class Map<K = Any, V = Any> extends Object {
 	/**
 	 * The Map object associates or maps a set of values called keys to another set of values.
 	 */
-	__New([Key1, Value1, *]) => void
+	__New([Key1, Value1, *, *]) => void
 
 	/**
 	 * Enumerates key-value pairs.

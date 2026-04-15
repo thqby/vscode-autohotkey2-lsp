@@ -34,6 +34,7 @@
 	"ahk2.find": "浏览...",
 	"ahk2.generate.comment": "生成注释模板",
 	"ahk2.help": "快捷帮助",
+	"ahk2.inlayhints.parameternames": "启用参数名称的内嵌提示",
 	"ahk2.interpreterpath": "`AutoHotkey.exe`可执行文件的路径. 如果选择`AutoHotkeyUX.exe`, 将使用UX Launcher启动脚本.",
 	"ahk2.run": "运行ahk文件",
 	"ahk2.run.selection": "运行选择的脚本",

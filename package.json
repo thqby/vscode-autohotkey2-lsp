@@ -144,6 +144,12 @@
 					},
 					"uniqueItems": true
 				},
+				"AutoHotkey2.InlayHints.ParameterNames": {
+					"scope": "window",
+					"type": "boolean",
+					"default": false,
+					"description": "%ahk2.inlayhints.parameternames%"
+				},
 				"AutoHotkey2.Warn.Unused": {
 					"scope": "window",
 					"type": "boolean",

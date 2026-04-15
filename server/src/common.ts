@@ -64,6 +64,9 @@ export interface LSConfig {
 		MaxDepth?: number
 	}
 	FormatOptions?: FormatOptions
+	InlayHints?: {
+		ParameterNames?: boolean
+	}
 	InterpreterPath: string
 	GlobalStorage?: string
 	Syntaxes?: string

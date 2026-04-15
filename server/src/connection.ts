@@ -12,6 +12,7 @@ import {
 	semanticTokensOnRange, SemanticTokenTypes, setIsAhkH, setLocale, setRootDir, setWorkspaceFolders,
 	signatureProvider, symbolProvider, typeFormatting, updateConfig, utils, winapis, workspaceSymbolProvider
 } from './common';
+import { inlayHintProvider } from './inlayHintProvider';
 
 export let connection: ProposedFeatures.Connection;
 export const documents = new TextDocuments(TextDocument);
@@ -39,6 +40,7 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 				documentSymbolProvider: true,
 				foldingRangeProvider: true,
 				hoverProvider: true,
+				inlayHintProvider: true,
 				referencesProvider: true,
 				renameProvider: { prepareProvider: true },
 				semanticTokensProvider: {
@@ -153,6 +155,7 @@ export function setConnection(conn: ProposedFeatures.Connection, extensionUri = 
 				Object.keys(lex.included).length && lex.update());
 	});
 
+	connection.languages.inlayHint.on(inlayHintProvider);
 	connection.languages.semanticTokens.on(semanticTokensOnFull);
 	connection.languages.semanticTokens.onRange(semanticTokensOnRange);
 	connection.onCodeAction(codeActionProvider);

@@ -4576,7 +4576,7 @@ class Map<K = Any, V = Any> extends Object {
 	/**
 	 * Map对象将一组称为键的值关联或映射到另一组值.
 	 */
-	__New([Key1, Value1, *]) => void
+	__New([Key1, Value1, *, *]) => void
 
 	/**
 	 * 枚举键值对.

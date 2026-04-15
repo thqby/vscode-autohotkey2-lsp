@@ -155,20 +155,25 @@ function resolvePropSemanticType(tk: Token, lex: Lexer) {
 					checkParamInfo(lex, n as FuncNode, tk.callsite);
 				}
 				curclass = undefined;
+				tk.definition = n;
 				return sem.type = SemanticTokenTypes.method;
 			case SymbolKind.Class:
 				sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;
 				curclass = n as ClassNode;
+				tk.definition = n;
 				if (tk.callsite) checkParamInfo(lex, n as FuncNode, tk.callsite);
 				return sem.type = SemanticTokenTypes.class;
 			case SymbolKind.Property: {
 				const t = n as Property;
 				sem.modifier = (sem.modifier ?? 0) | (n.static ? SemanticTokenModifiers.static : 0) | (!t.set && t.children ? SemanticTokenModifiers.readonly : 0);
 				curclass = curclass.range === n.range ? curclass.prototype : undefined;
+				tk.definition = n;
 				return sem.type = SemanticTokenTypes.property;
 			}
+			case SymbolKind.Function: tk.definition = n; break;
 			case SymbolKind.Variable: {
 				const t = resolveVarAlias(n);
+				tk.definition = n;
 				if (!(curclass = t as ClassNode).property)
 					curclass = undefined;
 				return sem.type = SK2STT.get(t.kind) ?? SemanticTokenTypes.variable;

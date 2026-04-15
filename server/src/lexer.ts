@@ -745,7 +745,7 @@ export class Lexer implements Module {
 								} else if (lk.content === '[')
 									defVal++, lk.ignore = true, full += '[';
 								else if (defVal && lk.content === ']')
-									defVal--, lk.ignore = true, full = full.trimEnd() + '] ';
+									defVal--, lk.ignore = true, full = full.trimEnd() + ']', tokens[j + 1]?.type === TokenType.Identifier && (full += ' ');
 								else if (next_is_param === true && lk.content === '&')
 									next_is_param = 1, lk.op_type = -1;
 								else {
