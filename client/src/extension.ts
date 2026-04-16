@@ -264,6 +264,7 @@ async function runScript(textEditor: TextEditor, selection = false) {
 	});
 	const opt: SpawnOptions = {
 		cwd: resolve(textEditor.document.fileName, '..'),
+		detached: true,
 	};
 	const uiAccess = ahkStatusBarItem.text.endsWith('[UIAccess]');
 	if (uiAccess) {

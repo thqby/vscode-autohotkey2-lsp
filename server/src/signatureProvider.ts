@@ -17,6 +17,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 	if (token.isCancellationRequested) return;
 	const { textDocument: { uri }, context, position } = params;
 	const lex = Lexer.curr = lexers[uri.toLowerCase()], activeSignature = context?.activeSignatureHelp?.activeSignature;
+	if (!lex) return;
 	let offset, pi;
 	switch (context?.triggerKind) {
 		case 2:	// TriggerCharacter
