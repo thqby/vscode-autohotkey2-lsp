@@ -98,7 +98,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 						let p;
 						if (t.kind === SymbolKind.Class) {
 							const n = t.full?.replace(/\.?[^.]+$/, '');
-							p = n && findClass(lex, n);
+							p = n && findClass(lex, n, tk.pos ??= document.positionAt(tk.offset));
 							p && match(p) && refs.push(t.selectionRange);
 						} else if (t.kind !== SymbolKind.Function)
 							(p = t.parent) && match(p) && refs.push(t.selectionRange);

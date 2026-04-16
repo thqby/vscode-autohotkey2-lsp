@@ -111,7 +111,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (!/[<>{(|:.,][ \t]*$/.test(linetext.substring(0, range.start.character)))
 				return;
 			if (text.includes('.')) {
-				for (const it of Object.values(findClass(lex, text.replace(/\.[^.]*$/, ''))?.property ?? {})) {
+				for (const it of Object.values(findClass(lex, text.replace(/\.[^.]*$/, ''), position)?.property ?? {})) {
 					if (it.kind === SymbolKind.Class && expg.test(it.name))
 						items.push(convertNodeCompletion(it));
 				}
@@ -241,7 +241,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							const off = lex.document.offsetAt(range.end);
 							for (text = token.content; (tk = tokens[tk.next_token_offset!]) && tk.offset < off; text += tk.content);
 							if (isIdentifier(text.replaceAll('.', ''))) {
-								for (const it of Object.values(findClass(lex, text)?.property ?? {})) {
+								for (const it of Object.values(findClass(lex, text, position)?.property ?? {})) {
 									if (it.kind === SymbolKind.Class && expg.test(it.name))
 										items.push(convertNodeCompletion(it));
 								}

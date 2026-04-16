@@ -1008,10 +1008,10 @@ export function typeNaming(sym: AhkSymbol) {
 }
 //#endregion
 
-export function findClass(lex: Lexer, name: string, uri?: string) {
+export function findClass(lex: Lexer, name: string, pos?: Position, uri?: string) {
 	const arr = name.toUpperCase().split('.');
 	let n = arr.shift()!;
-	let cls = (uri ? lexers[uri]?.declaration[n] : findSymbol(lex, n)?.node) as ClassNode;
+	let cls = (uri ? lexers[uri]?.declaration[n] : findSymbol(lex, n, undefined, pos)?.node) as ClassNode;
 	if (!uri && cls?.kind === SymbolKind.Variable)
 		cls = resolveVarAlias(cls) as ClassNode;
 	if (!cls?.property || cls.def === false)
@@ -1027,8 +1027,8 @@ const MaybeLocalKind: SymbolKind[] = [SymbolKind.Variable, SymbolKind.Function, 
 export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?: Position) {
 	const names = fullname.toUpperCase().split(/[.#~]/), l = names.length - 1;
 	let name = names.shift()!, notdef = true, uri, t;
-	let res = lex.findSymbol(name, kind,
-		!l && MaybeLocalKind.includes(kind!) ? pos : undefined);
+	let res = lex.findSymbol(name, kind, pos,
+		!pos || !(!l && MaybeLocalKind.includes(kind!)));
 	if (res === null)
 		return;
 	const scope = res?.scope;
@@ -1213,21 +1213,25 @@ export function getCallInfo(lex: Lexer, position: Position, pi?: ParamInfo) {
 }
 
 export function getClassBase(node: AhkSymbol, lex?: Lexer) {
-	let iscls = false, uri, base, name: string, cls: ClassNode;
+	let iscls = false, uri, base, pos, ll, name: string, cls: ClassNode;
 	switch (node.kind) {
 		case SymbolKind.Method:
-		case SymbolKind.Function: name = 'func'; break;
-		case SymbolKind.Number: name = node.name; break;
-		case SymbolKind.String: name = 'string'; break;
-		case SymbolKind.Module: name = 'any'; break;
+		case SymbolKind.Function: name = 'FUNC'; break;
+		case SymbolKind.Number: name = node.name.toUpperCase(); break;
+		case SymbolKind.String: name = 'STRING'; break;
+		case SymbolKind.Module: name = 'ANY'; break;
 		default: if (!(node as ClassNode).property) return;
 		// fall through
 		case SymbolKind.Class:
-			cls = node as ClassNode, base;
+			cls = node as ClassNode;
 			if ((base = cls.base))
 				return base;
+			if ((ll = lexers[cls.uri!]))
+				pos = cls.selectionRange.start;
+			else if (!(ll = lex))
+				return;
 			iscls = !!cls.prototype, name = cls.extends;
-			lex ??= lexers[cls.uri!], uri = cls.extendsuri;
+			uri = cls.extendsuri;
 			if (!name) {
 				if ((cls.full || cls.name).toLowerCase() === 'any')
 					if (iscls)
@@ -1237,7 +1241,9 @@ export function getClassBase(node: AhkSymbol, lex?: Lexer) {
 			}
 			break;
 	}
-	cls = findClass(lex ?? lexers[ahkUris.ahk2], name, uri)!;
+	if (!ll)
+		return (ahkVars[name] as ClassNode)?.prototype;
+	cls = findClass(ll, name, pos, uri)!;
 	return iscls ? cls : cls?.prototype;
 }
 
@@ -1338,7 +1344,7 @@ function getClassOwnProps(doc: Lexer, node: AhkSymbol) {
 	const cls = node as ClassNode;
 	if (!cls.extends || cls.extends.toLowerCase() !== cls.full.toLowerCase())
 		return cls.property ?? {};
-	let ex = findClass(doc, cls.extends, cls.extendsuri);
+	let ex = findClass(doc, cls.extends, cls.selectionRange.start, cls.extendsuri);
 	!cls.prototype && (ex = ex?.prototype);
 	return { ...ex?.property, ...cls.property };
 }

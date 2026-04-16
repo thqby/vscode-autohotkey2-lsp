@@ -4,7 +4,7 @@ import {
 	ANY, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SUPER, SemanticToken,
 	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles,
-	findClass, getAllModules, getClassConstructor, getClassMember, getImplicitImports, getModule, getParamCount, getWorkspaceFile, hint, inactiveVars,
+	findClass, getAllModules, getClassConstructor, getClassMember, getImplicitImports, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
@@ -12,22 +12,20 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	const lex = Lexer.curr = lexers[params.textDocument.uri.toLowerCase()];
 	if (!lex || token?.isCancellationRequested)
 		return [];
-	return lex.symbolInformation ?? getSymbolInfo(lex);
+	return lex.symbolInformation ?? getSymbolInfo(lex) ?? [];
 }
-function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
+function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[], oncomp?: Array<() => Maybe<() => void>>) {
 	const fns = oncomp ?? [];
 	const uri = lex.document.uri;
 	const unused = new Set<AhkSymbol>;
-	const { document, tokens, relevance } = lex;
+	const { document, tokens } = lex;
 	const gvar: Record<string, Variable> = {};
-	let list = [lex.uri, ...Object.keys(relevance)];
-	lex.symbolInformation = [];
-	for (const uri of list) {
-		const lex = lexers[uri];
-		if (!lex) continue;
-		const { d, declaration: dec } = lex;
+	const mods = getAllModules(lex, mod);
+	mod ??= (lex.symbolInformation = [], lex);
+	for (let m of mods) {
+		const { d } = m as Lexer, { declaration: dec } = m, lex = m instanceof Lexer ? m : lexers[m.uri!];
 		let t;
-		d || (lex.symbolInformation ?? getSymbolInfo(lex, fns));
+		d || lex && (lex.symbolInformation ?? getSymbolInfo(lex, undefined, undefined, fns));
 		for (const k in dec) {
 			if (!(t = gvar[k]) || d || t.kind === SymbolKind.Variable && dec[k].kind !== SymbolKind.Variable)
 				gvar[k] = dec[k];
@@ -42,14 +40,14 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 				gvar[n] = ahkVars[n];
 		implicitVars = lexers[ahkUris.winapi]?.declaration ?? {};
 	}
-	implicitVars ??= getImplicitImports(getAllModules(lex), undefined, lexers[ahkUris.winapi]?.declaration, ahkVars);
+	implicitVars ??= getImplicitImports(mods, undefined, lexers[ahkUris.winapi]?.declaration, ahkVars);
 	for (const n in implicitVars)
 		if (gvar[n]?.def === undefined)
 			gvar[n] = implicitVars[n];
 		else gvar[n] ??= implicitVars[n];
 	const warnLocalSameAsGlobal = configCache.Warn?.LocalSameAsGlobal;
-	const result: AhkSymbol[] = [], unset_vars = new Map<Variable, Variable>();
-	for (const [k, v] of Object.entries(lex.declaration)) {
+	const result = result_ ?? [], unset_vars = new Map<Variable, Variable>();
+	for (const [k, v] of Object.entries(mod.declaration)) {
 		let t = gvar[k];
 		if (t.kind === SymbolKind.Variable && !t.assigned && !v.decl)
 			if (v.returns === undefined)
@@ -58,12 +56,12 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 			(v as Variable).from ?? result.push(v), (v as FuncNode).in_expr || unused.add(v), converttype(v, v);
 	}
 	const gu = new Set(unused);
-	flatTree(lex);
+	flatTree(mod);
 	fns.push(function () {
 		for (const t of unused.intersection(gu)) {
 			const n = t.name.toUpperCase();
-			for (const u in relevance)
-				if (getModule(u)?.declaration[n]) {
+			for (const m of mods)
+				if (m.declaration[n]) {
 					unused.delete(t);
 					break;
 				}
@@ -86,10 +84,22 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 				lex.diagnostics.push({ code, message, range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 			}
 		if (lex.actived) {
-			checksamename(lex);
-			return () => lex.sendDiagnostics(false, true);
+			checksamename(lex, mod);
+			if (lex === mod)
+				return () => lex.sendDiagnostics(false, true);
 		}
 	});
+	if (mod !== lex) return;
+	if (lex.module)
+		for (const m of Object.values(lex.module)) {
+			m.name && result.push(...m.ranges!.map(r => ({
+				...m, range: {
+					start: document.positionAt(r[0]),
+					end: document.positionAt(r[1]),
+				}
+			})));
+			getSymbolInfo(lex, m, result, fns);
+		}
 	oncomp ?? fns.map(f => f()).forEach(f => f?.());
 	return lex.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
@@ -225,55 +235,49 @@ function getSymbolInfo(lex: Lexer, oncomp?: Array<() => Maybe<() => void>>) {
 			h && unused.add(info);
 		}
 	}
-	function checksamename(lex: Lexer) {
+	function checksamename(lex: Lexer, mod: Module) {
 		const dec = { ...ahkVars }, lbs: Record<string, string> = {};
 		const severity = DiagnosticSeverity.Error;
-		const { uri } = lex;
-		let dd: Lexer, sym: AhkSymbol;
-		lex.labels && Object.entries(lex.labels).forEach(e => e[1][0].def && (lbs[e[0]] = uri));
-		for (const uri in relevance) {
-			if ((dd = lexers[uri])) {
-				if (dd.d) continue;
-				checkDupError(dec, Object.values(dd.declaration).filter(it => it.kind !== SymbolKind.Variable), dd);
-				const labels = dd.labels;
-				if (!labels) continue;
-				const r = dd.relevance;
-				for (const l in labels) {
-					if (!(sym = labels[l][0]).def)
-						continue;
-					const u = lbs[l];
-					if (!u)
-						lbs[l] = uri;
-					else if (r[u])
-						sym.has_warned ??=
-							dd.diagnostics.push({ message: diagnostic.duplabel(), range: sym.selectionRange, severity });
-				}
+		const { uri } = lex, mi = mods.indexOf(mod);
+		let dd: Lexer, sym: AhkSymbol, rele;
+		mod.labels && Object.entries(mod.labels).forEach(e => e[1][0].def && (lbs[e[0]] = uri));
+		if (mods.some(m => m.selectionRange !== ZERO_RANGE))
+			rele = Object.fromEntries(mods.map(m => [m.uri!, ' ']));
+		mi !== -1 && mods.splice(mi, 1);
+		for (const m of mods) {
+			if ((m as Lexer).d || !(dd = m instanceof Lexer ? m : lexers[m.uri!]))
+				continue;
+			checkDupError(dec, Object.values(m.declaration).filter(it => it.kind !== SymbolKind.Variable), dd, false, rele);
+			const labels = m.labels;
+			if (!labels) continue;
+			const r = rele ? undefined : dd.relevance;
+			for (const l in labels) {
+				if (!(sym = labels[l][0]).def)
+					continue;
+				const u = lbs[l];
+				if (!u)
+					lbs[l] = uri;
+				else if (!r || r[u])
+					sym.has_warned ??=
+						dd.diagnostics.push({ message: diagnostic.duplabel(), range: sym.selectionRange, severity });
 			}
 		}
-		const t = Object.values(lex.declaration);
-		checkDupError(dec, t, lex);
-		for (const uri in relevance) {
-			if ((dd = lexers[uri]))
-				checkDupError(dec, Object.values(dd.declaration).filter(it => it.kind === SymbolKind.Variable), dd);
+		const t = Object.values(mod.declaration);
+		checkDupError(dec, t, lex, false, rele);
+		for (const m of mods) {
+			if ((dd = m instanceof Lexer ? m : lexers[m.uri!]))
+				checkDupError(dec, Object.values(m.declaration).filter(it => it.kind === SymbolKind.Variable), dd, false, rele);
 		}
 		let cls: ClassNode;
-		t.forEach(it => {
-			if (it.kind === SymbolKind.Class && (cls = it as ClassNode).extendsuri === undefined) {
-				const l = cls.extends?.toUpperCase();
-				if (l === it.name.toUpperCase())
-					err_extends(lex, cls, false);
-				else if (l && !findClass(lex, l)?.prototype)
-					err_extends(lex, cls);
-			}
-		});
-		for (const uri in relevance) {
-			if ((dd = lexers[uri]))
-				for (const it of Object.values(dd.declaration))
+		mods.splice(mi, 0, mod);
+		for (const m of mods) {
+			if ((dd = m instanceof Lexer ? m : lexers[m.uri!]))
+				for (const it of Object.values(m.declaration))
 					if (it.kind === SymbolKind.Class && (cls = it as ClassNode).extendsuri === undefined) {
 						const l = cls.extends?.toUpperCase();
 						if (l === it.name.toUpperCase())
 							err_extends(dd, cls, false);
-						else if (l && !findClass(dd, l)?.prototype)
+						else if (l && !findClass(dd, l, it.selectionRange.start)?.prototype)
 							err_extends(dd, cls);
 					}
 		}

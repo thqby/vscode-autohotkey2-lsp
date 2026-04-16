@@ -6410,7 +6410,7 @@ export class Lexer implements Module {
 		return r;
 	}
 
-	findSymbol(name: string, kind?: SymbolKind, position?: Position)
+	findSymbol(name: string, kind?: SymbolKind, position?: Position, glo = !position)
 		: {
 			node: AhkSymbol, uri: string, is_global?: boolean | 1	// maybe
 			is_this?: boolean, parent?: AhkSymbol, mod?: Module, scope?: AhkSymbol
@@ -6431,7 +6431,9 @@ export class Lexer implements Module {
 		let t: AhkSymbol | undefined, parent: AhkSymbol | undefined, is_global: boolean | 1 = true;
 		if (name.startsWith('$'))
 			return (node = from_d(this.d ? uri : this.d_uri) ?? this.typedef[name]) && { node, uri, is_global: true };
-		({ mod, scope } = position ? this.searchScopedNode(position) : {});
+		if (glo)
+			mod = position && this.inDirectiveModule(position);
+		else ({ mod, scope } = position ? this.searchScopedNode(position) : {});
 		if (scope) {
 			if (scope.kind === SymbolKind.Class)
 				scope = undefined;
@@ -7148,11 +7150,11 @@ function flatBlock(block: FuncNode, flat: (syms: AhkSymbol[]) => void, ...decls:
 	return block.params;
 }
 
-export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer, check_self = false) {
+export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer, check_self = false, relevance?: Record<string, string>) {
 	const { diagnostics, uri } = lex;
 	const vs: Variable[] = [], uri2 = lex.document.uri;
-	let l = '', v1: Variable, v2: Variable, relevance;
-	if (!check_self && (relevance = lex.relevance, ahkVersion < alpha_11))
+	let l = '', v1: Variable, v2: Variable;
+	if (!check_self && (relevance ??= lex.relevance, ahkVersion < alpha_11))
 		Object.assign(relevance, { [ahkUris.ahk2]: 1, [ahkUris.ahk2_h ?? '\0']: 1 });
 	(function flat(syms: AhkSymbol[]) {
 		for (const it of syms) {

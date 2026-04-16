@@ -171,7 +171,7 @@ function extractSymbols(uri: string) {
 			let s;
 			if (!(s = cl.extends))
 				return;
-			return cache[`${cl.extendsuri},${s}`] ??= findClass(lex, s, cl.extendsuri)?.full || s;
+			return cache[`${cl.extendsuri},${s}`] ??= findClass(lex, s, cl.selectionRange.start, cl.extendsuri)?.full || s;
 		}
 		function get_detail(sym: AhkSymbol) {
 			if (sym.markdown_detail)
