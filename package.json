@@ -150,6 +150,12 @@
 					"default": false,
 					"description": "%ahk2.inlayhints.parameternames%"
 				},
+				"AutoHotkey2.InlayHints.SuppressWhenArgumentMatchesName": {
+					"scope": "window",
+					"type": "boolean",
+					"default": true,
+					"description": "%ahk2.inlayhints.suppresswhenargumentmatchesname%"
+				},
 				"AutoHotkey2.Warn.Unused": {
 					"scope": "window",
 					"type": "boolean",

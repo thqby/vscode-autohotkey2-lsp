@@ -1,8 +1,8 @@
 import { CancellationToken, InlayHint, InlayHintParams } from 'vscode-languageserver';
-import { ClassNode, configCache, FuncNode, getClassConstructor, lexers, resolveVarAlias, SymbolKind, Token } from './common';
+import { ClassNode, configCache, FuncNode, getClassConstructor, lexers, resolveVarAlias, SymbolKind, Token, TokenType } from './common';
 
 export function inlayHintProvider(params: InlayHintParams, token?: CancellationToken) {
-	const { ParameterNames } = configCache.InlayHints ?? {};
+	const { ParameterNames, SuppressWhenArgumentMatchesName } = configCache.InlayHints ?? {};
 	const { range, textDocument: { uri } } = params;
 	const lex = lexers[uri.toLowerCase()];
 	if (!lex || !ParameterNames || token?.isCancellationRequested) return;
@@ -50,6 +50,10 @@ export function inlayHintProvider(params: InlayHintParams, token?: CancellationT
 			} else param = params[i];
 			if (i++, !param?.name)
 				break;
+			if (SuppressWhenArgumentMatchesName && tk.type === TokenType.Identifier &&
+				(tk.next_token_offset === arr[i] || tk.offset + tk.length === pi.end) &&
+				param.name.toLowerCase() === tk.content.toLowerCase())
+				continue;
 			result.push({
 				label: ll ? [{
 					value: param.name, location: { uri: ll.document.uri, range: param.selectionRange }

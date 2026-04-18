@@ -66,6 +66,7 @@ export interface LSConfig {
 	FormatOptions?: FormatOptions
 	InlayHints?: {
 		ParameterNames?: boolean
+		SuppressWhenArgumentMatchesName?: boolean
 	}
 	InterpreterPath: string
 	GlobalStorage?: string
