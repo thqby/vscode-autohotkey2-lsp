@@ -31,7 +31,6 @@ export interface AhkSymbol extends DocumentSymbol {
 export enum BlockType { Script, Func, Class, Method, Mask = Method, Body, Pair = 8 }
 
 export interface CallSite extends AhkSymbol {
-	checked?: boolean
 	offset?: number
 	paraminfo?: ParamInfo
 	outer?: AhkSymbol
@@ -46,7 +45,7 @@ export interface ClassNode extends AhkSymbol {
 	property: Record<string, FuncNode | ClassNode | Variable>
 	$property?: Record<string, FuncNode | ClassNode | Variable> // aliases for prototype.property
 	cache?: Variable[]
-	undefined?: Record<string, Token>
+	undefined?: Record<string, boolean>
 	checkmember?: boolean
 	static?: boolean	// not use
 	generic_types?: (string | AhkSymbol)[][]
@@ -233,7 +232,6 @@ export interface Property extends Variable {
 export interface SemanticToken {
 	type: SemanticTokenTypes
 	modifier?: number
-	resolved?: boolean
 }
 
 export enum SemanticTokenModifiers {

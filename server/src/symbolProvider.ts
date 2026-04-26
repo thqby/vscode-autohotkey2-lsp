@@ -1,31 +1,36 @@
 import { CancellationToken, DocumentSymbolParams, Range, SymbolInformation, WorkspaceSymbolParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	ANY, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SUPER, SemanticToken,
-	SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
-	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles,
-	findClass, getAllModules, getClassConstructor, getClassMember, getImplicitImports, getParamCount, getWorkspaceFile, hint, inactiveVars,
+	ANY, ASSIGN_TYPE, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SK2STT,
+	SUPER, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
+	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles, findClass, getAllModules,
+	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
-export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken | null): SymbolInformation[] {
+export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken): SymbolInformation[] {
 	const lex = Lexer.curr = lexers[params.textDocument.uri.toLowerCase()];
 	if (!lex || token?.isCancellationRequested)
 		return [];
 	return lex.symbolInformation ?? getSymbolInfo(lex) ?? [];
 }
-function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[], oncomp?: Array<() => Maybe<() => void>>) {
+
+export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
+	oncomp?: Array<() => Maybe<() => void>>, caches = new Map<ClassNode, Record<string, AhkSymbol>>()) {
 	const fns = oncomp ?? [];
 	const uri = lex.document.uri;
 	const unused = new Set<AhkSymbol>;
 	const { document, tokens } = lex;
 	const gvar: Record<string, Variable> = {};
 	const mods = getAllModules(lex, mod);
+	const undefined_props = new Map<Token, ClassNode>();
+	const ClassNonDynamicMemberCheck = configCache.Diagnostics?.ClassNonDynamicMemberCheck;
+	let p_this: ClassNode | undefined;
 	mod ??= (lex.symbolInformation = [], lex);
 	for (let m of mods) {
 		const { d } = m as Lexer, { declaration: dec } = m, lex = m instanceof Lexer ? m : lexers[m.uri!];
 		let t;
-		d || lex && (lex.symbolInformation ?? getSymbolInfo(lex, undefined, undefined, fns));
+		d || lex && (lex.symbolInformation ?? getSymbolInfo(lex, undefined, undefined, fns, caches));
 		for (const k in dec) {
 			if (!(t = gvar[k]) || d || t.kind === SymbolKind.Variable && dec[k].kind !== SymbolKind.Variable)
 				gvar[k] = dec[k];
@@ -85,6 +90,7 @@ function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[], oncomp?:
 			}
 		if (lex.actived) {
 			checksamename(lex, mod);
+			resolveUndefinedProp();
 			if (lex === mod)
 				return () => lex.sendDiagnostics(false, true);
 		}
@@ -98,7 +104,7 @@ function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[], oncomp?:
 					end: document.positionAt(r[1]),
 				}
 			})));
-			getSymbolInfo(lex, m, result, fns);
+			getSymbolInfo(lex, m, result, fns, caches);
 		}
 	oncomp ?? fns.map(f => f()).forEach(f => f?.());
 	return lex.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
@@ -155,9 +161,11 @@ function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[], oncomp?:
 				case SymbolKind.Method:
 				case SymbolKind.Function:
 					if (fn.has_this_param) {
+						let p;
 						inherit = { THIS, SUPER };
-						if (fn.parent?.kind === SymbolKind.Property)
-							Object.assign(inherit, (fn.parent as Property).local);
+						if ((p = fn.parent)?.kind === SymbolKind.Property)
+							Object.assign(inherit, (p as Property).local), p = p!.parent;
+						p_this = p as ClassNode;
 					} else {
 						if (vars.SUPER?.selectionRange === ZERO_RANGE)
 							delete vars.SUPER;
@@ -297,12 +305,12 @@ function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[], oncomp?:
 		if (sym.name[0] <= '9')
 			lex.diagnostics.push({ message: diagnostic.invalidsymbolname(sym.name), range: sym.selectionRange });
 	}
-	function converttype(it: AhkSymbol, source: Variable) {
+	function converttype(it: AhkSymbol, source: AhkSymbol) {
 		let stk: SemanticToken | undefined, st: SemanticTokenTypes | undefined, ss;
 		let { is_builtin, kind } = ss = source;
 		switch (kind) {
 			case SymbolKind.Variable:
-				if (source.is_param) {
+				if ((source as Variable).is_param) {
 					if (it.selectionRange === ZERO_RANGE)
 						return;
 					if (source.selectionRange !== ZERO_RANGE)
@@ -364,15 +372,162 @@ function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[], oncomp?:
 			if (modifier) stk.modifier = modifier;
 		}
 		tk.definition = ss;
-		(ss = tk.callsite) && checkParamInfo(lex, source as FuncNode, ss);
+		if (st === undefined) {
+			ss = source === THIS ? p_this : source === SUPER ? getClassBase(p_this!, lex) : undefined;
+			if (!ss) return;
+			source = ss, st = SemanticTokenTypes.class;
+		}
+		if ((ss = tk.callsite))
+			return checkParamInfo(lex, source as FuncNode, ss);
+		let o;
+		if (st <= SemanticTokenTypes.module && tokens[o = tk.next_token_offset]?.type === TokenType.Dot && (ss = (o = tokens[o + 1])?.semantic) &&
+			!o.ignore && (ss.type === SemanticTokenTypes.method || ss.type === SemanticTokenTypes.property))
+			resolvePropSemanticType(o, ss, source as ClassNode);
+	}
+
+	interface _Flag {
+		'#checkmember'?: boolean
+	}
+
+	function resolvePropSemanticType(tk: Token, sem: SemanticToken, obj: ClassNode) {
+		let n, t, kind, ps, name;
+		do {
+			name = tk.content.toUpperCase();
+			n = obj.property?.[name];
+			if (!n || n.def === false) {
+				t = (ps = caches.get(obj) ?? (caches.set(obj, ps = getClassMembers(lex, obj)), ps))[name];
+				if (t)
+					n = t, kind = t.kind;
+				else if ((sem.type === SemanticTokenTypes.method ? '__CALL' : '__GET') in ps)
+					return;
+				else kind = undefined;
+			} else ({ kind } = n);
+			switch (kind) {
+				case SymbolKind.Method:
+					sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | (n.static ? SemanticTokenModifiers.static : 0);
+					sem.type = SemanticTokenTypes.method, tk.definition = n;
+					if ((t = tk.callsite)) {
+						let tt, nk;
+						if ((n as FuncNode).construct !== undefined)
+							n = obj.prototype && getClassMember(lex, obj.prototype, (n as FuncNode).construct || '__new', true) || n;
+						else if (obj.property && n.full?.startsWith('(Object) DefineProp(')) {
+							tt = tokens[tk.next_token_offset];
+							if (tt?.content === '(' && tk.offset + tk.length === tt.offset)
+								nk = tokens[tt.next_pair_pos!], tt = tokens[tt.next_token_offset];
+							if (tt) {
+								if (tt.type === TokenType.String &&
+									tt.next_token_offset === tk.callsite.paraminfo?.comma[0]) {
+									addClassProp(obj, tt.content.slice(1, -1), tt.offset + 1);
+								} else addClassProp(obj, '');
+							}
+						}
+						checkParamInfo(lex, n as FuncNode, t);
+						if (!nk) return;
+						tk = nk;
+					} else obj = n as ClassNode;
+					break;
+				case SymbolKind.Class:
+					sem.type = SemanticTokenTypes.class;
+					sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;
+					obj = n as ClassNode, tk.definition = n;
+					if ((t = tk.callsite)) checkParamInfo(lex, n as FuncNode, t);
+					break;
+				case SymbolKind.Property: {
+					const t = n as Property;
+					sem.type = SemanticTokenTypes.property;
+					sem.modifier = (sem.modifier ?? 0) | (n.static ? SemanticTokenModifiers.static : 0) | (!t.set && t.children ? SemanticTokenModifiers.readonly : 0);
+					tk.definition = n;
+					if (obj.range !== n.range || !(obj = obj.prototype!))
+						return;
+					break;
+				}
+				case SymbolKind.Function:
+					sem.type = SemanticTokenTypes.function;
+					sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;
+					tk.definition = n, obj = n as ClassNode;
+					break;
+				case SymbolKind.Variable: {
+					const t = resolveVarAlias(tk.definition = n);
+					sem.type = SK2STT.get(t.kind) ?? SemanticTokenTypes.variable;
+					if (t.kind === SymbolKind.Variable)
+						return;
+					sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;
+					obj = t as ClassNode;
+					break;
+				}
+				case undefined:
+					if (ClassNonDynamicMemberCheck && (obj.checkmember ?? lex.checkmember) !== false) {
+						const tt = lex.tokens[tk.next_token_offset];
+						if (obj.kind === SymbolKind.Module) {
+							if (!tk.__ref || tt?.content[0] !== '?' || !tt.ignore && tt.content === '?')
+								tk.has_warned ??= (lex.addDiagnostic(diagnostic.varundefined(tk.content), tk.offset), true);
+						} else if (obj.kind !== SymbolKind.Class)
+							return;
+						else if (ASSIGN_TYPE.includes(tt?.content)) {
+							('__SET' in ps!) || addClassProp(obj, tk.content, tk.offset);
+						} else if ((tk.__ref || tt?.content[0] !== '?' || !tt.ignore && tt.content === '?') &&
+							(ps as _Flag)?.['#checkmember'] !== false) {
+							t = obj.undefined ??= {};
+							if (tk.__ref)
+								t[name] = false;
+							else t[name] ??= (undefined_props.set(tk, obj), true);
+						}
+					}
+				// fall through
+				default: return;
+			}
+			tk = tokens[tk.next_token_offset];
+			if (tk?.type !== TokenType.Dot)
+				return;
+			tk = tokens[tk.next_token_offset];
+			sem = tk?.semantic!;
+		} while (sem && !tk.ignore && (sem.type === SemanticTokenTypes.method || sem.type === SemanticTokenTypes.property));
+	}
+
+	function addClassProp(cls: ClassNode, name: string, offset?: number) {
+		const l = lexers[cls.uri!];
+		if (l && offset) {
+			const n = name.toUpperCase();
+			if (cls.property[n])
+				return;
+			const range = Range.create(l.document.positionAt(offset), l.document.positionAt(offset + name.length));
+			const p: Variable = {
+				name, kind: SymbolKind.Property,
+				range, selectionRange: range, static: !!cls.prototype
+			};
+			if (l === lex && l.d < 2)
+				cls.children?.push(p), cls.property[n] ??= p;
+			else {
+				const t = caches.get(cls);
+				if (t)
+					t[n] ??= p;
+			}
+			if (cls.undefined)
+				delete cls.undefined[n];
+		} else {
+			delete cls.undefined;
+			if (l && l.d < 2)
+				cls.checkmember = false;
+			else {
+				const t = caches.get(cls) as _Flag;
+				if (t)
+					t['#checkmember'] = false;
+			}
+		}
+	}
+
+	function resolveUndefinedProp() {
+		for (const [tk, cls] of undefined_props.entries()) {
+			if (cls.undefined?.[tk.content.toUpperCase()])
+				lex.addDiagnostic(diagnostic.maybehavenotmember(cls.name, tk.content), tk.offset, tk.length, { severity: 2 });
+		}
 	}
 }
 
 export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
-	const { checked, paraminfo } = info;
+	const { paraminfo } = info;
 	let is_cls: boolean, params, cRV: boolean;
-	if (checked || !paraminfo || !invokeCheck) return;
-	info.checked = true;
+	if (!paraminfo || !invokeCheck) return;
 	if ((is_cls = node?.kind === SymbolKind.Class))
 		node = getClassConstructor(node as unknown as ClassNode) as FuncNode;
 	if (!(params = node?.params)) return;
