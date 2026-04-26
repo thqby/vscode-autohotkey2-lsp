@@ -1,5 +1,5 @@
 import { CancellationToken, InlayHint, InlayHintParams } from 'vscode-languageserver';
-import { ClassNode, configCache, FuncNode, getClassConstructor, lexers, resolveVarAlias, SymbolKind, Token, TokenType } from './common';
+import { ClassNode, configCache, FuncNode, getClassConstructor, getSymbolInfo, lexers, resolveVarAlias, SymbolKind, Token, TokenType } from './common';
 
 export function inlayHintProvider(params: InlayHintParams, token?: CancellationToken) {
 	const { ParameterNames, SuppressWhenArgumentMatchesName } = configCache.InlayHints ?? {};
@@ -9,6 +9,7 @@ export function inlayHintProvider(params: InlayHintParams, token?: CancellationT
 	const result: InlayHint[] = [], { document, tokens } = lex;
 	const start = document.offsetAt(range.start);
 	const end = document.offsetAt(range.end);
+	lex.symbolInformation ?? getSymbolInfo(lex);
 	for (const tk of Object.values(lex.tokens)) {
 		if (tk.offset < start)
 			continue;
