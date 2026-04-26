@@ -1624,8 +1624,8 @@ function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>
 	const dirs = a_Vars.$import ? derefVar(a_Vars.$import, undefined, {
 		...a_Vars, scriptdir: lex.scriptdir, linefile: lex.scriptdir
 	}).split(';') : lex.libdirs.map(s => s.slice(0, -4));
-	if (dirs[0]?.toLowerCase() !== lex.fsPath.toLowerCase())
-		dirs.unshift(lex.fsPath);
+	if (dirs[0]?.toLowerCase() !== lex.scriptpath.toLowerCase())
+		dirs.unshift(lex.scriptpath);
 	for (let d of dirs) {
 		let f = resolve(d, path), s;
 		try {
