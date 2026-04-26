@@ -85,7 +85,7 @@ export const diagnostic = {
 }
 
 export const hint = {
-	unused: localize('hint.unused', 'Unused symbol'),
+	unused: localize('hint.unused', 'The symbol is used only here'),
 }
 
 export const warn = {

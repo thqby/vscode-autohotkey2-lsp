@@ -19,7 +19,7 @@
 	"ahk2.diagnostics.invokecheck": "Check invoke information such as the number of parameters and empty return",
 	"ahk2.explicitcontextonly": "Only the files included by `#Include` are considered as the context",
 	"ahk2.extract.symbols": "Extract Symbol Information",
-	"ahk2.warn.unused": "Display warnings for each symbol that has never been used",
+	"ahk2.warn.unused": "Display warnings for each symbol used no more than once",
 	"ahk2.warn.varunset": "Display warnings for each variable that has never been directly assigned or used with the reference operator",
 	"ahk2.warn.localsameasglobal": "Display warnings for each undeclared local variable which has the same name as a global variable",
 	"ahk2.warn.callwithoutparentheses": "Display warnings for each function or method call without parentheses",
