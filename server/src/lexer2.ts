@@ -10,7 +10,7 @@ import {
 	ANY, ARRAY, EMPTY_TOKEN, FLOAT, INTEGER, Lexer,
 	NUMBER, OBJECT, STRING, UNSET, VARREF, VOID, ZERO_RANGE,
 	ahkModule, ahkVersion, alpha_3, createModules, derefVar,
-	isContinuousLine, isIdentifier, isYieldsOperand,
+	escape_str, isContinuousLine, isIdentifier, isYieldsOperand,
 	resolveVarAlias, sym_related_msg, sym_type
 } from './lexer';
 import { SymbolKind } from './lsp-enums';
@@ -777,50 +777,38 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 
 function decltypeTypeAnnotation(annotations: (string | AhkSymbol)[], lex: Lexer, _this?: ClassNode, type_params?: Record<string, AhkSymbol>) {
 	const types = new Set<string | AhkSymbol>;
-	let is_typeof;
-	for (let tp of annotations) {
-		if (typeof tp === 'object') {
-			types.add(tp);
-			continue;
-		}
-		if ((is_typeof = tp.startsWith('typeof ')))
-			tp = tp.substring(7);
-		if ('\'"'.includes(tp[0]))
-			types.add(STRING);
-		else if (/^[-+]?(\d+$|0[xX])/.test(tp))
-			types.add(INTEGER);
-		else if (/^[-+]?\d+[.eE]/.test(tp))
-			types.add(FLOAT);
-		else types.add(`${is_typeof ? 'typeof ' : ''}${tp}`);
-	}
+	for (const tp of annotations)
+		types.add(literal2Sym(tp));
 	const tps = new Set<AhkSymbol>;
 	resolveCachedTypes([...types], tps, lex, _this, type_params);
 	return [...tps];
 }
 
+function literal2Sym(tp: string | AhkSymbol) {
+	if (typeof tp === 'object')
+		return tp;
+	const is_typeof = tp.startsWith('typeof ');
+	if (is_typeof)
+		tp = tp.substring(7);
+	if ('\'"'.includes(tp[0]))
+		return STRING;
+	else if (/^[-+]?(\d+$|0[xX])/.test(tp))
+		return INTEGER;
+	else if (/^[-+]?\d+[.eE]/.test(tp))
+		return FLOAT;
+	return `${is_typeof ? 'typeof ' : ''}${tp}`;
+}
+
 export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode): AhkSymbol[] {
-	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined, is_typeof, has_obj;
+	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined, has_obj;
 	switch (!sym.cached_types) {
 		case true: {
 			resolveFuncType(sym as FuncNode, lex);
 			const annotations = sym.type_annotations;
 			if (!annotations) break;
 			types = new Set;
-			for (let tp of annotations) {
-				if (typeof tp === 'object') {
-					types.add(tp);
-					continue;
-				}
-				if ((is_typeof = tp.startsWith('typeof ')))
-					tp = tp.substring(7);
-				if ('\'"'.includes(tp[0]))
-					types.add(STRING);
-				else if (/^[-+]?(\d+$|0[xX])/.test(tp))
-					types.add(INTEGER);
-				else if (/^[-+]?\d+[.eE]/.test(tp))
-					types.add(FLOAT);
-				else types.add(`${is_typeof ? 'typeof ' : ''}${tp}` as unknown as AhkSymbol);
-			}
+			for (const tp of annotations)
+				types.add(literal2Sym(tp) as unknown as AhkSymbol);
 			if (types.has(ANY))
 				return sym.cached_types = [ANY];
 			sym.cached_types = [...types], has_obj = types.has(OBJECT);
@@ -1174,7 +1162,7 @@ export function getCallInfo(lex: Lexer, position: Position, pi?: ParamInfo) {
 			for (const c of pi.comma)
 				if (offset > c) ++index; else break;
 		kind ??= pi.method ? SymbolKind.Method : SymbolKind.Function;
-		return { name: pi.name ?? '', pos, index, kind, count: pi.count };
+		return { name: pi.name ?? '', pos, index, kind, count: pi.count, pi };
 	}
 	if (pi)
 		return get(pi);
@@ -1371,6 +1359,26 @@ function getModuleMember(mod: Module, name: string, wildcard = Wildcard.Export) 
 	return d ?? v ?? getImplicitImport(mm, name, wildcard)?.node;
 }
 
+export function getOverloads(fn: FuncNode) {
+	if (typeof fn.overloads === 'string') {
+		const label = fn.name || '_';
+		const lex = new Lexer(TextDocument.create('', 'ahk2', -10,
+			fn.kind === SymbolKind.Function ? fn.overloads :
+				`class _ {\n${fn.overloads}\n}`), undefined, -1);
+		lex.parseScript();
+		const children = (fn.kind === SymbolKind.Function ? lex.children : lex.declaration._?.children ?? []) as FuncNode[];
+		const pre = fn.full.match(/^(\(.+?\))?[^([]+/)?.[0] ?? label, fns = [];
+		for (const it of children) {
+			if (it.name !== label || !it.params)
+				continue;
+			it.full = pre + it.full.replace(/^(\(.+?\))?[^([]+/, '');
+			fns.push(it);
+		}
+		return fn.overloads = fns.length ? fns : undefined;
+	}
+	return fn.overloads;
+}
+
 export function getParamCount(fn: FuncNode) {
 	const params = fn.params;
 	let min = params.length, max = min;
@@ -1416,6 +1424,69 @@ export function getSymbolDetail(sym: AhkSymbol, lex?: Lexer, remove_re?: RegExp)
 	if (detail)
 		return { kind: 'markdown', value: detail };
 	return '';
+}
+
+export function matchOverloads(fns: FuncNode[], param_count: number, lex: Lexer, pi?: ParamInfo, skip_min = false) {
+	const l = fns.length;
+	let r: number[] = [], r2: number[] = [], i;
+	for (i = 0; i < l; i++)
+		r.push(i);
+	if (r.length < 2)
+		return r[0];
+	if (!pi) return;
+	const { tokens } = lex;
+	const po = [pi.offset, ...pi.comma, pi.end!];
+	for (i = 0; i < param_count; i++) {
+		const ft = tokens[tokens[po[i]]?.next_token_offset];
+		let et;
+		for (const index of r.splice(0)) {
+			const p = fns[index].params[i];
+			if (!p) { r2.push(index); continue; }
+			let tt;
+			if (p.kind === SymbolKind.String) {
+				if (ft?.type === TokenType.String && ft.next_token_offset >= po[i + 1] &&
+					escape_str(p.name) === escape_str(ft.content))
+					return index;
+				tt = [STRING];
+			} else tt = p?.type_annotations;
+			if (!tt || tt.includes(ANY))
+				r.push(index);
+			else {
+				// if (p.defaultVal !== undefined && !tt.includes(UNSET))
+				// 	tt = [...tt, UNSET];
+				et ??= !ft || ft.offset >= po[i + 1] ? [UNSET] :
+					decltypeExpr(lex, ft, po[i + 1]);
+				if (matchTypes(tt, et))
+					r.push(index);
+			}
+		}
+		if (r.length < 2)
+			return r[0];
+		r.push(...r2), r2.length = 0;
+	}
+	if (r.length === 2 && r[0] === 0 && fns[0].overloads)
+		return r[1];
+}
+
+export function matchTypes(target: (string | AhkSymbol)[], expr_tp: AhkSymbol[]) {
+	const set = new Set, ets = new Set(expr_tp);
+	if (!ets.size || ets.has(ANY)) return true;
+	for (let tp of target) {
+		if (set.has(tp = literal2Sym(tp))) continue;
+		set.add(tp);
+		if (typeof tp === 'string') {
+			return false;
+		}
+		for (const t of ets) {
+			if (t.kind !== tp.kind)
+				continue;
+			if (t === tp || t.name === tp.name) {
+				ets.delete(t);
+				break;
+			}
+		}
+	}
+	return !ets.size;
 }
 
 //#region library

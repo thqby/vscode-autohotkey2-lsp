@@ -2667,13 +2667,13 @@ StrCompare(String1, String2, CaseSense := false) => Integer
 
 /**
  * Copy a string from a memory address or buffer, optionally convert it from a given code page.
- * @overload StrGet(Source, Encoding?) => String
+ * @overload StrGet(Source, Encoding?: String) => String
  * @param Source contains the buffer-like object of the string, or the memory address of the string. If the buffer-like object is provided, or the Length parameter is specified, the string does not need to end with a null terminator.
  * @param Length The maximum number of characters to be read. If the string ends with a null terminator, it can be omitted.
  * By default, only the first binary zero is copied. If Length is negative, its absolute value indicates the exact number of characters to be converted, including any binary zeros that the string may contain-in other words, the result is always with String of that length.
  * @param Encoding "UTF-8", "UTF-16" or "CP936". For numeric identifiers, the prefix "CP" can be omitted only when Length is specified. Specify an empty string or "CP0" to use the system The default ANSI code page.
  */
-StrGet(Source [, Length, Encoding]) => String
+StrGet(Source [, Length: Integer, Encoding: String | Integer]) => String
 
 /**
  * Retrieve the number of characters in a string.
@@ -2693,7 +2693,8 @@ StrPtr(Value) => Integer
 /**
  * Copy the string to the memory address, you can choose to convert it to the given code page.
  * If Target, Length, and Encoding are omitted, this function returns the required buffer size in bytes, including space for the null-terminator.
- * @overload StrPut(String, Encoding := 'UTF-16') => Integer
+ * @overload StrPut(String, Encoding: String := 'UTF-16') => Integer
+ * @overload StrPut(String, Target, Encoding: String := 'UTF-16') => Integer
  * @param Target class buffer object or memory address, the string will be written into it.
  * @param Length The maximum number of characters to be written, including the null terminator when necessary.
  * 
@@ -2703,7 +2704,7 @@ StrPtr(Value) => Integer
  * @param Encoding "UTF-8", "UTF-16" or "CP936". For numeric identifiers, the prefix "CP" can be omitted only when Length is specified. Specify an empty string or "CP0" to use the system The default ANSI code.
  * @returns returns the number of bytes written. If Target is not specified, it returns the necessary buffer size in bytes. If Length is exactly equal to the length of the source string, then the string does not contain the null terminator; otherwise it returns The size includes the null terminator.
  */
-StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Integer
+StrPut(String [, Target [, Length: Integer]], Encoding := 'UTF-16') => Integer
 
 /**
  * Replace the specified substring with a new string.
@@ -2772,7 +2773,7 @@ Tan(Number) => Float
 
 /**
  * Set the thread priority or whether it can be interrupted. It can also temporarily disable all timers.
- * @overload Thread('NoTimers', TrueOrFalse)
+ * @overload Thread('NoTimers' [, Bool])
  * @overload Thread('Priority', Level)
  * @overload Thread('Interrupt' [, Duration, LineCount])
  * @param {'NoTimers'|'Priority'|'Interrupt'} SubFunction
@@ -3897,18 +3898,18 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * @param Callback The function, method or object to call when the event is raised.
 	 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
 	 * Otherwise, this parameter must be a function object.
-	 * - Close(GuiObj) => Integer
-	 * - ContextMenu(GuiObj, GuiCtrlObj, Item, IsRightClick, X, Y) => Integer
-	 * - DropFiles(GuiObj, GuiCtrlObj, FileArray, X, Y) => Integer
-	 * - Escape(GuiObj) => Integer
-	 * - Size(GuiObj, MinMax, Width, Height) => Integer
+	 * @overload OnEvent('Close', Callback: (GuiObj: Gui) => Integer, AddRemove := 1)
+	 * @overload OnEvent('ContextMenu', Callback: (GuiObj: Gui, GuiCtrlObj, Item, IsRightClick, X, Y) => Integer, AddRemove := 1)
+	 * @overload OnEvent('DropFiles', Callback: (GuiObj: Gui, GuiCtrlObj, FileArray, X, Y) => Integer, AddRemove := 1)
+	 * @overload OnEvent('Escape', Callback: (GuiObj: Gui) => Integer, AddRemove := 1)
+	 * @overload OnEvent('Size', Callback: (GuiObj: Gui, MinMax, Width, Height) => Integer, AddRemove := 1)
 	 */
 	OnEvent(EventName, Callback, AddRemove := 1) => void
 
 	/**
 	 * Registers a function or method to be called whenever the Gui receives the specified message.
 	 * @param {Integer} Msg The number of the message to monitor, which should be between 0 and 4294967295 (0xFFFFFFFF).
-	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback The function, method or object to call when the event is raised.
+	 * @param {String|(GuiObj: Gui, wParam, lParam, Msg) => Integer} Callback The function, method or object to call when the event is raised.
 	 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
 	 * Otherwise, this parameter must be a function object. The function may also consult the built-in variable `A_EventInfo`, which contains 0 if the message was sent via SendMessage.
 	 * If sent via PostMessage, it contains the tick-count time the message was posted.
@@ -4076,18 +4077,18 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 		 * @param Callback The function, method or object to call when the event is raised.
 		 * If the GUI has an event sink (that is, if Gui()'s EventObj parameter was specified), this parameter may be the name of a method belonging to the event sink.
 		 * Otherwise, this parameter must be a function object.
-		 * - Change(GuiCtrlObj, Info)
-		 * - Click(GuiCtrlObj, Info, Href?)
-		 * - DoubleClick(GuiCtrlObj, Info)
-		 * - ColClick(GuiCtrlObj, Info)
-		 * - ContextMenu(GuiCtrlObj, Item, IsRightClick, X, Y)
-		 * - Focus(GuiCtrlObj, Info)
-		 * - LoseFocus(GuiCtrlObj, Info)
-		 * - ItemCheck(GuiCtrlObj, Item, Checked)
-		 * - ItemEdit(GuiCtrlObj, Item)
-		 * - ItemExpand(GuiCtrlObj, Item, Expanded)
-		 * - ItemFocus(GuiCtrlObj, Item)
-		 * - ItemSelect(GuiCtrlObj, Item, Selected?)
+		 * @overload OnEvent('Change', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('Click', Callback: (GuiCtrlObj, Info, Href?) => Integer, AddRemove := 1)
+		 * @overload OnEvent('DoubleClick', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ColClick', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ContextMenu', Callback: (GuiCtrlObj, Item, IsRightClick, X, Y) => Integer, AddRemove := 1)
+		 * @overload OnEvent('Focus', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('LoseFocus', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemCheck', Callback: (GuiCtrlObj, Item, Checked) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemEdit', Callback: (GuiCtrlObj, Item) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemExpand', Callback: (GuiCtrlObj, Item, Expanded) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemFocus', Callback: (GuiCtrlObj, Item) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemSelect', Callback: (GuiCtrlObj, Item, Selected?) => Integer, AddRemove := 1)
 		 */
 		OnEvent(EventName, Callback, AddRemove := 1) => void
 

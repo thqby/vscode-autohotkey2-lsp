@@ -1,16 +1,17 @@
 import { CancellationToken, ParameterInformation, SignatureHelp, SignatureHelpParams } from 'vscode-languageserver';
-import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, SymbolKind, Variable,
+	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, ParamInfo, SymbolKind, Variable,
 	ahkUris, decltypeExpr, decltypeInvoke, decltypeReturns, generateTypeAnnotation, getCallInfo,
-	getClassConstructor, getClassMember, getClassOwnProp, getSymbolDetail, lexers
+	getClassConstructor, getClassMember, getClassOwnProp, getOverloads, getSymbolDetail, lexers,
+	matchOverloads
 } from './common';
 
 let cache: {
 	index?: number,
 	loc?: string,
 	nodes?: { node: AhkSymbol, uri: string, needthis?: number }[],
-	signinfo?: SignatureHelp
+	signinfo?: SignatureHelp,
+	calc?: (lex: Lexer, pi?: ParamInfo, skip?: boolean) => number | undefined
 } = {};
 
 export async function signatureProvider(params: SignatureHelpParams, token: CancellationToken): Promise<Maybe<SignatureHelp>> {
@@ -50,6 +51,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 	} else cache = { loc, index };
 	let nodes = cache.nodes!;
 	const set = new Set<AhkSymbol>(), signinfo: SignatureHelp = { activeSignature, signatures: [] };
+	cache.calc = undefined;
 	if (!nodes) {
 		const context = lex.getContext(pos);
 		let iscall = true;
@@ -153,7 +155,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		}
 	}
 	for (const it of nodes) {
-		const fn = it.node as FuncNode, lex = lexers[it.uri], needthis = it.needthis ?? 0;
+		const fn = it.node as FuncNode, ll = lexers[it.uri], needthis = it.needthis ?? 0;
 		if (!fn.params || set.has(fn))
 			continue;
 		const fns = [fn], pi = index - needthis;
@@ -161,27 +163,11 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		let params: Variable[] | undefined, param: Variable | undefined;
 		let activeParameter: number, pc: number, label: string, name: string;
 		let q = fn.name && fn.full.match(/^(\(.+?\))?[^([]+/)?.[0].length || 0;
-		const documentation = getSymbolDetail(fn, lex,
+		const documentation = getSymbolDetail(fn, ll,
 			/(^|\n)\*@param\*(.|\n|\r)*?(?=\n\*@|$)/g);
 		if (fn.param_def_len === fn.full.length - q)
-			fn.full += ` => ${generateTypeAnnotation(fn, lex) || 'void'}`;
-		if (fn.overloads) {
-			if (typeof fn.overloads === 'string') {
-				const lex = new Lexer(TextDocument.create('', 'ahk2', -10,
-					fn.kind === SymbolKind.Function ? fn.overloads :
-						`class _ {\n${fn.overloads}\n}`), undefined, -1);
-				lex.parseScript(), label = fn.name || '_';
-				const children = (fn.kind === SymbolKind.Function ? lex.children : lex.declaration._?.children ?? []) as FuncNode[];
-				const pre = fn.full.match(/^(\(.+?\))?[^([]+/)?.[0] ?? label;
-				for (const it of children) {
-					if (it.name !== label || !it.params)
-						continue;
-					it.full = pre + it.full.replace(/^(\(.+?\))?[^([]+/, '');
-					fns.push(it);
-				}
-				fn.overloads = fns.slice(1);
-			} else fns.push(...fn.overloads);
-		}
+			fn.full += ` => ${generateTypeAnnotation(fn, ll) || 'void'}`;
+		fns.push(...getOverloads(fn) ?? []);
 		q += needthis > 0 ? 7 : 1, set.add(fn);
 		for (const f of fns) {
 			label = f.full, params = f.params, pc = params.length;
@@ -207,15 +193,17 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				}
 				if (param.arr === 2)
 					param = params[activeParameter = param.index! - (parameters.length - 1 === activeParameter ? 1 : 2)];
-				parameters[activeParameter].documentation = getSymbolDetail(param, lex);
+				parameters[activeParameter].documentation = getSymbolDetail(param, ll);
 			}
 			signinfo.signatures.push({ label, parameters, documentation, activeParameter });
 		}
+		cache.calc = cache.calc === undefined ? matchOverloads.bind(undefined, fns, count - needthis) : null!;
 	}
+	signinfo.activeSignature ??= cache.calc?.(lex, res.pi, true);
 	return cache.signinfo = signinfo;
 	function cached_sh() {
 		const sh = cache.signinfo;
-		sh && (sh.activeSignature = activeSignature);
+		sh && (sh.activeSignature = activeSignature ?? cache.calc?.(lex, res?.pi, true));
 		return sh;
 	}
 }

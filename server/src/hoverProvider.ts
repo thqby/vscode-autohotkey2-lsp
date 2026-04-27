@@ -1,7 +1,7 @@
 import { CancellationToken, Hover, HoverParams } from 'vscode-languageserver';
 import {
 	AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, SemanticTokenTypes, SymbolKind, Variable,
-	findSymbols, generateTypeAnnotation, getClassBase, getClassMember, getSymbolDetail,
+	findSymbols, generateTypeAnnotation, getClassBase, getClassMember, getOverloads, getSymbolDetail,
 	hoverCache, joinTypes, lexers, resolveVarAlias
 } from './common';
 
@@ -59,17 +59,15 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 			if (fn.param_def_len === fn.full.length - fn.full.indexOf('(', fn.name ? 1 : 0))
 				fn.full += ` => ${generateTypeAnnotation(fn, ll) || 'void'}`;
 			hover.push({ kind: 'ahk2', value: fn.full });
-			let overloads = fn.overloads;
-			switch (typeof overloads) {
-				case 'object':
-					overloads = overloads.map(it => it.full).join('\n');
-				// fallthrough
-				case 'string':
-					if (fn.name)
-						overloads = overloads.replace(/^(\w|[^\x00-\x7f])+/gm,
-							fn.full.substring(0, fn.full.search(/(?!^)[([]/)));
-					hover.at(-1)!.value += `\n${overloads}`;
-					break;
+			const overloads = getOverloads(fn);
+			if (overloads) {
+				let n = 0, s = '';
+				for (const f of overloads)
+					if (f.params[0]?.kind === SymbolKind.String)
+						n++;
+					else s += `\n${f.full}`;
+				if (n) s += ` (+${n} overload${n > 1 ? 's' : ''})`;
+				hover.at(-1)!.value += s;
 			}
 		}
 

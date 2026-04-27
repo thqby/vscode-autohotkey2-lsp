@@ -7283,7 +7283,7 @@ function is_before(a: AhkSymbol, b: AhkSymbol) {
 	return (aa.line - bb.line || aa.character - bb.character) < 0;
 }
 
-function escape_str(str: string) {
+export function escape_str(str: string) {
 	const o: Record<string, string> = {
 		a: '\a', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v', s: ' '
 	};

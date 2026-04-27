@@ -2661,13 +2661,13 @@ StrCompare(String1, String2, CaseSense := false) => Integer
 
 /**
  * 从内存地址或缓冲中复制字符串, 可选地从给定的代码页进行转换.
- * @overload StrGet(Source, Encoding?) => String
+ * @overload StrGet(Source, Encoding?: String) => String
  * @param Source 包含字符串的类缓冲对象, 或字符串的内存地址. 如果提供了类缓冲对象, 或者指定了 Length 参数, 则字符串不需要以空终止符结尾.
  * @param Length 需读取的最大字符数. 如果字符串以空终止符结尾, 则可以省略.
  * 默认情况下, 只复制到第一个二进制零. 如果 Length 为负数, 则它的绝对值指示要转换的确切字符数, 包括字符串可能包含的任何二进制零 - 换句话说, 结果始终是具有该长度的字符串.
  * @param Encoding "UTF-8", "UTF-16" 或 "CP936". 对于数字标识符, 只有在指定 Length 时, 才可以省略前缀 "CP". 指定空字符串或 "CP0" 则使用系统默认 ANSI 代码页.
  */
-StrGet(Source [, Length, Encoding]) => String
+StrGet(Source [, Length: Integer, Encoding: String | Integer]) => String
 
 /**
  * 检索字符串中的字符数.
@@ -2687,7 +2687,8 @@ StrPtr(Value) => Integer
 /**
  * 将字符串复制到内存地址,可以选择将其转换为给定的代码页.
  * 如果省略了Target、Length和Encoding, 此函数将返回所需的缓冲区大小(以字节为单位), 包括空结束符的空间.
- * @overload StrPut(String, Encoding := 'UTF-16') => Integer
+ * @overload StrPut(String, Encoding: String := 'UTF-16') => Integer
+ * @overload StrPut(String, Target, Encoding: String := 'UTF-16') => Integer
  * @param Target 类缓冲对象或内存地址, 字符串将写入其中.
  * @param Length 要写入的最大字符数, 需要时包含空终止符.
  * 
@@ -2697,7 +2698,7 @@ StrPtr(Value) => Integer
  * @param Encoding "UTF-8", "UTF-16" 或 "CP936". 对于数字标识符, 只有在指定 Length 时, 才可以省略前缀 "CP". 指定空字符串或 "CP0" 则使用系统默认 ANSI 代码.
  * @returns 返回写入的字节数. 如果没有指定 Target, 则返回以字节数表示的必须的缓冲大小. 如果 Length 准确等于源字符串的长度, 那么字符串不包含空终止符; 否则返回的大小包含空终止符.
  */
-StrPut(String [, Target [, Length]], Encoding := 'UTF-16') => Integer
+StrPut(String [, Target [, Length: Integer]], Encoding := 'UTF-16') => Integer
 
 /**
  * 用新字符串替换指定的子字符串.
@@ -2766,7 +2767,7 @@ Tan(Number) => Float
 
 /**
  * 设置线程的优先级或是否可以被中断. 它也可以临时禁用所有的计时器.
- * @overload Thread('NoTimers', TrueOrFalse)
+ * @overload Thread('NoTimers' [, Bool])
  * @overload Thread('Priority', Level)
  * @overload Thread('Interrupt' [, Duration, LineCount])
  * @param {'NoTimers'|'Priority'|'Interrupt'} SubFunction
@@ -3892,18 +3893,18 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * @param Callback 事件发生时要调用的函数, 方法或对象.
 	 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
 	 * 否则, 这个参数必须是一个函数对象.
-	 * - Close(GuiObj) => Integer
-	 * - ContextMenu(GuiObj, GuiCtrlObj, Item, IsRightClick, X, Y) => Integer
-	 * - DropFiles(GuiObj, GuiCtrlObj, FileArray, X, Y) => Integer
-	 * - Escape(GuiObj) => Integer
-	 * - Size(GuiObj, MinMax, Width, Height) => Integer
+	 * @overload OnEvent('Close', Callback: (GuiObj: Gui) => Integer, AddRemove := 1)
+	 * @overload OnEvent('ContextMenu', Callback: (GuiObj: Gui, GuiCtrlObj, Item, IsRightClick, X, Y) => Integer, AddRemove := 1)
+	 * @overload OnEvent('DropFiles', Callback: (GuiObj: Gui, GuiCtrlObj, FileArray, X, Y) => Integer, AddRemove := 1)
+	 * @overload OnEvent('Escape', Callback: (GuiObj: Gui) => Integer, AddRemove := 1)
+	 * @overload OnEvent('Size', Callback: (GuiObj: Gui, MinMax, Width, Height) => Integer, AddRemove := 1)
 	 */
 	OnEvent(EventName, Callback, AddRemove := 1) => void
 
 	/**
 	 * 注册要在Gui接收到指定消息时调用的函数或方法.
 	 * @param {Integer} Msg 需要监听的消息编号, 应该介于 0 和 4294967295(0xFFFFFFFF) 之间.
-	 * @param {String|(GuiObj, wParam, lParam, Msg) => Integer} Callback 事件发生时要调用的函数, 方法或对象.
+	 * @param {String|(GuiObj: Gui, wParam, lParam, Msg) => Integer} Callback 事件发生时要调用的函数, 方法或对象.
 	 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
 	 * 否则, 这个参数必须是一个函数对象. 该函数还可以查询内置变量 A_EventInfo, 如果消息是通过 SendMessage 发送的, 则其为 0.
 	 * 如果是通过 PostMessage 发送的, 则其为消息发出时的 tick-count 时间.
@@ -4055,18 +4056,18 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 		 * @param Callback 事件发生时要调用的函数, 方法或对象.
 		 * 如果 GUI 有事件接收器(即, 如果指定了 Gui() 的 EventObj 参数), 那么这个参数可能是属于事件接收器的方法的名称.
 		 * 否则, 这个参数必须是一个函数对象.
-		 * - Change(GuiCtrlObj, Info)
-		 * - Click(GuiCtrlObj, Info, Href?)
-		 * - DoubleClick(GuiCtrlObj, Info)
-		 * - ColClick(GuiCtrlObj, Info)
-		 * - ContextMenu(GuiCtrlObj, Item, IsRightClick, X, Y)
-		 * - Focus(GuiCtrlObj, Info)
-		 * - LoseFocus(GuiCtrlObj, Info)
-		 * - ItemCheck(GuiCtrlObj, Item, Checked)
-		 * - ItemEdit(GuiCtrlObj, Item)
-		 * - ItemExpand(GuiCtrlObj, Item, Expanded)
-		 * - ItemFocus(GuiCtrlObj, Item)
-		 * - ItemSelect(GuiCtrlObj, Item, Selected?)
+		 * @overload OnEvent('Change', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('Click', Callback: (GuiCtrlObj, Info, Href?) => Integer, AddRemove := 1)
+		 * @overload OnEvent('DoubleClick', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ColClick', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ContextMenu', Callback: (GuiCtrlObj, Item, IsRightClick, X, Y) => Integer, AddRemove := 1)
+		 * @overload OnEvent('Focus', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('LoseFocus', Callback: (GuiCtrlObj, Info) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemCheck', Callback: (GuiCtrlObj, Item, Checked) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemEdit', Callback: (GuiCtrlObj, Item) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemExpand', Callback: (GuiCtrlObj, Item, Expanded) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemFocus', Callback: (GuiCtrlObj, Item) => Integer, AddRemove := 1)
+		 * @overload OnEvent('ItemSelect', Callback: (GuiCtrlObj, Item, Selected?) => Integer, AddRemove := 1)
 		 */
 		OnEvent(EventName, Callback, AddRemove := 1) => void
 
