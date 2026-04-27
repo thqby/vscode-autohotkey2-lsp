@@ -57,10 +57,15 @@ export function inlayHintProvider(params: InlayHintParams, token?: CancellationT
 			} else param = params[i];
 			if (i++, !param?.name)
 				break;
-			if (SuppressWhenArgumentMatchesName && tk.type === TokenType.Identifier &&
-				(tk.next_token_offset === arr[i] || tk.offset + tk.length === pi.end) &&
-				param.name.toLowerCase() === tk.content.toLowerCase())
-				continue;
+			if (SuppressWhenArgumentMatchesName &&
+				(tk.next_token_offset === arr[i] || tk.offset + tk.length === pi.end)) {
+				if (param.kind === SymbolKind.String) {
+					if (tk.type === TokenType.String &&
+						escape_str(param.name).toLowerCase() === escape_str(tk.content).toLowerCase())
+						continue;
+				} else if (tk.type === TokenType.Identifier && param.name.toLowerCase() === tk.content.toLowerCase())
+					continue;
+			}
 			result.push({
 				label: ll ? [{
 					value: param.name, location: { uri: ll.document.uri, range: param.selectionRange }

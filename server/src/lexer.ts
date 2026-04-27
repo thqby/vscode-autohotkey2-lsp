@@ -7014,7 +7014,10 @@ export function createModules(name: string, modules: Module[]) {
 }
 
 function createPrototype(name: string, kind = 0, extends_ = '') {
-	return { name, full: name, kind, extends: extends_, range: ZERO_RANGE, selectionRange: ZERO_RANGE, uri: '' } as AhkSymbol;
+	return {
+		name, full: name, kind, extends: extends_, is_builtin: true,
+		range: ZERO_RANGE, selectionRange: ZERO_RANGE, uri: ''
+	} as AhkSymbol;
 }
 
 function createVar(name: string, kind: SymbolKind, range: Range): Variable {

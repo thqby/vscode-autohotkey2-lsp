@@ -698,7 +698,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 				if (t === VARREF)
 					return [ANY];
 				if (t.data === VARREF)
-					resolveCachedTypes((t as ClassNode).generic_types?.[1] ?? [ANY], tt, lex, _this);
+					decltypeTypeAnnotation((t as ClassNode).generic_types?.[1] ?? [ANY], lex, _this, undefined, tt);
 				else tt.add(t);
 			}
 			ts = [...tt];
@@ -775,12 +775,10 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 	return ts.includes(ANY) ? [ANY] : ts;
 }
 
-function decltypeTypeAnnotation(annotations: (string | AhkSymbol)[], lex: Lexer, _this?: ClassNode, type_params?: Record<string, AhkSymbol>) {
-	const types = new Set<string | AhkSymbol>;
-	for (const tp of annotations)
-		types.add(literal2Sym(tp));
-	const tps = new Set<AhkSymbol>;
-	resolveCachedTypes([...types], tps, lex, _this, type_params);
+function decltypeTypeAnnotation(annotations: (string | AhkSymbol)[], lex: Lexer, _this?: ClassNode,
+	type_params?: Record<string, AhkSymbol>, tps = new Set<AhkSymbol>) {
+	resolveCachedTypes([...new Set(annotations.map(literal2Sym))],
+		tps, lex, _this, type_params);
 	return [...tps];
 }
 
@@ -855,9 +853,9 @@ function resolveCachedTypes(tps: (string | AhkSymbol)[], resolved_types: Set<Ahk
 		if (i++, typeof tp === 'string') {
 			(is_typeof = tp.startsWith('typeof ')) && (tp = tp.substring(7));
 			if ((param = type_params?.[tp.toUpperCase()]))
-				resolveCachedTypes(_this!.generic_types?.[param.data as number] ?? (param.type_annotations || []),
-					resolved_types, lex, _this, type_params);
-			else if ((t = (is_this = tp === 'this') && _this || findSymbol(Lexer.curr ?? lex, tp)?.node as ClassNode))
+				decltypeTypeAnnotation(_this!.generic_types?.[param.data as number] ?? (param.type_annotations || []),
+					Lexer.curr ?? lex, _this, type_params, resolved_types);
+			else if ((t = (is_this = tp === 'this') && _this || findSymbol(lex, tp)?.node as ClassNode))
 				if (t.kind === SymbolKind.TypeParameter)
 					update = true, tps[i] = '', tps.push(...decltypeTypeAnnotation(t.type_annotations || [], lex));
 				else if (t.kind !== SymbolKind.Variable)
@@ -915,8 +913,8 @@ export function resolveFuncType(fn: FuncNode, lex: Lexer) {
 	tp = fn.$type, fn.$type = null;
 	tp = tp ? resolveTypeAnnotation(tp) : get_type_from_caller();
 	if (!tp) return;
-	const tps = new Set<AhkSymbol>;
-	resolveCachedTypes(tp, tps, lex), tp = undefined;
+	const tps = decltypeTypeAnnotation(tp, lex);
+	tp = undefined;
 	for (const t of tps)
 		if (t.kind === SymbolKind.Function && t !== (tp ??= t as FuncNode))
 			return;
