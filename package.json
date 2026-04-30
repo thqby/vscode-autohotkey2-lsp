@@ -29,6 +29,7 @@
 	"engines": {
 		"vscode": "^1.82.0"
 	},
+	"activationEvents": ["onLanguage:ahk2"],
 	"main": "./client/dist/extension",
 	"browser": "./client/dist/browserClientMain",
 	"contributes": {
@@ -307,7 +308,7 @@
 						},
 						"indent_between_hotif_directive": {
 							"type": "boolean",
-							"default": false
+							"default": true
 						},
 						"keyword_start_with_uppercase": {
 							"type": "boolean",

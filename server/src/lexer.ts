@@ -5274,6 +5274,7 @@ export class Lexer implements Module {
 			opt = {
 				break_chained_methods: false,
 				ignore_comment: false,
+				indent_between_hotif_directive: true,
 				indent_string: '\t',
 				max_preserve_newlines: 3,
 				preserve_newlines: true,
@@ -6328,12 +6329,16 @@ export class Lexer implements Module {
 				ck.ignore || (token_text = token_text.replaceAll(/[ \t]+/g, ' '));
 			else if (opt.symbol_with_same_case && token_type === TokenType.Directive)
 				token_text = hoverCache[token_text_low]?.[0] || token_text;
-			if (token_text_low === '#hotif' && opt.indent_between_hotif_directive) {
+			if (token_text_low === '#hotif' && opt.indent_between_hotif_directive !== false) {
 				if (flags.hotif_block)
-					deindent(), flags.hotif_block = false;
+					restore_mode();
 				print_token();
-				if (_this.tokens[ck.next_token_offset]?.topofline === 0)
-					indent(), flags.hotif_block = true;
+				if (_this.tokens[ck.next_token_offset]?.topofline === 0) {
+					set_mode(Mode.BlockStatement);
+					flags.indentation_level = real_indentation_level();
+					flags.hotif_block = true;
+					indent();
+				}
 				output_space_before_token = true;
 				return;
 			}
