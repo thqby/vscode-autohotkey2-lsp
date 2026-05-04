@@ -1835,3 +1835,34 @@ export function getImplicitImports(mods: Module[], wildcard = Wildcard.Import, .
 		v && (r[k] = v);
 	return r;
 }
+
+export function getModuleImporteds(mod: Module) {
+	let u = mod.uri!, t, v;
+	const rs = new Map<Module, Import["imp"]>(), r = new Map;
+	if (mod.selectionRange !== ZERO_RANGE)
+		u += `|${mod.name}`;
+	for (u in { [u]: '', ...includedCache[u] }) {
+		const l = lexers[u.replace(/\|.+/, '')];
+		if (!l?.importedLex) continue;
+		for (t of l.importedLex) {
+			resolveImports(t);
+			for (const m of [t, ...Object.values(t.module ?? {})]) {
+				const imp = m.import;
+				const rr = imp?.imp.flatMap(i => {
+					t = imp.mod![i.from.toUpperCase()];
+					if (t && (r.get(t) ?? (r.set(t, v = moduleInclude(t, mod)), v)))
+						return i;
+					return [];
+				});
+				if (rr?.length)
+					rs.set(m, rr);
+			}
+		}
+	}
+	return rs;
+
+	function moduleInclude(mod: Module, m: Module) {
+		return (mod.modules ?? [mod]).some(t => t === m || t.uri === m.uri &&
+			t.name.toLowerCase() === m.name.toLowerCase());
+	}
+}

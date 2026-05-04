@@ -4,7 +4,7 @@ import {
 	ANY, ASSIGN_TYPE, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SK2STT,
 	SUPER, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles, findClass, getAllModules,
-	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getParamCount, getWorkspaceFile, hint, inactiveVars,
+	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getModuleImporteds, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
@@ -62,16 +62,31 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	}
 	const gu = new Set(unused);
 	flatTree(mod);
-	fns.push(function () {
+	!lex.d && fns.push(function () {
+		const mm = mods.filter(m => m !== mod);
 		for (const t of unused.intersection(gu)) {
+			if (t.exported) {
+				unused.delete(t);
+				continue;
+			}
 			const n = t.name.toUpperCase();
-			for (const m of mods)
+			for (const m of mm)
 				if (m.declaration[n]) {
 					unused.delete(t);
 					break;
 				}
 		}
-		if (lex.d) return;
+		const ug = unused.intersection(gu);
+		if (ug.size) {
+			const ns = new Set(ug.values().map(t => t.name.toUpperCase()));
+			let s;
+			for (const imps of getModuleImporteds(mod).values()) {
+				for (const imp of imps)
+					for (const v of imp.var)
+						ns.has(s = v.alias?.toUpperCase()!) && ns.delete(s);
+			}
+			ug.forEach(n => !ns.has(n.name.toUpperCase()) && unused.delete(n));
+		}
 		const diag = {
 			message: hint.unused(), tags: [DiagnosticTag.Unnecessary],
 			severity: configCache.Warn?.Unused ? DiagnosticSeverity.Warning : DiagnosticSeverity.Hint,
