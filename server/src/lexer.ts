@@ -143,7 +143,7 @@ class ParseStopError {
 }
 
 export class Lexer implements Module {
-	uri = ''; name = '';
+	uri = ''; name = ''; bc_mode?: boolean; bc_mode_def = true;
 	children: AhkSymbol[] = [];
 	declaration: Record<string, AhkSymbol> = {};
 	export?: Record<string, AhkSymbol>;
@@ -214,6 +214,7 @@ export class Lexer implements Module {
 		let in_loop = false, string_mode = false;
 		let warn_once: Record<string, unknown>, mixes: [AhkSymbol, string][];
 		let has_return: (boolean | undefined)[] = [undefined];
+		let bc_mode = true;
 
 		this.document = document;
 		if (document.uri) {
@@ -808,7 +809,7 @@ export class Lexer implements Module {
 				begin_line = true, lst = { ...EMPTY_TOKEN }, currsymbol = last_comment_fr = maybev1 = undefined;
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [], mixes = [];
-				callWithoutParentheses = configCache.Warn?.CallWithoutParentheses;
+				callWithoutParentheses = configCache.Warn?.CallWithoutParentheses, bc_mode = true;
 				warn_once = {};
 				try {
 					const rs = utils.getRCData?.('#2');
@@ -1263,12 +1264,13 @@ export class Lexer implements Module {
 														const pop = return_push();
 														tn = createFunc(_low, SymbolKind.Function,
 															make_range(nk.offset, parser_pos - nk.offset), make_range(nk.offset, 3), [...par]);
+														tn.bc_mode = bc_mode;
 														sk = tk, tn.parent = prop, tn.children = parse_block(BlockType.Method, tn, classfullname);
 														tn.range.end = document.positionAt(parser_pos);
-														pop(true) || (tn.return_void = true);
+														pop(true) || (tn.implicit_return ??= tn.bc_mode ? VOID : (tn.returns ??= [], UNSET));
 														if (_low === 'set')
 															tn.params.unshift(HIDDEN_PARAMS.value);
-														else prop.returns = tn.returns, prop.return_void = tn.return_void;
+														else prop.returns = tn.returns, prop.implicit_return = tn.implicit_return;
 														tn.has_this_param = true, adddeclaration(tn);
 														_this.addSymbolFolding(tn, sk.offset);
 													} else {
@@ -1513,7 +1515,7 @@ export class Lexer implements Module {
 
 			function parse_func(fc: Token, is_static: boolean | null = false, params?: Variable[], rpair?: string, end?: string) {
 				const in_cls = mode === BlockType.Class, prev_mode = mode, prev_parent = _parent;
-				const range = make_range(fc.offset, fc.length), tn = _parent = {} as FuncNode;
+				const range = make_range(fc.offset, fc.length), tn = _parent = { bc_mode } as FuncNode;
 				const se: SemanticToken = fc.semantic = {
 					type: SemanticTokenTypes.function,
 					modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly |
@@ -1576,7 +1578,7 @@ export class Lexer implements Module {
 						lb.in_expr = tk.in_expr = fc.offset;
 						begin_line = false;
 					}
-					pop(true) || (tn.return_void = true);
+					pop(true) || (tn.implicit_return = tn.bc_mode ? VOID : (tn.returns ??= [], UNSET));
 				} else {
 					_this.diagnostics.push({ message: diagnostic.declarationerr(), range: tn.selectionRange });
 					_parent = prev_parent, mode = prev_mode;
@@ -1880,7 +1882,8 @@ export class Lexer implements Module {
 										break;
 									if (b.offset <= lk.offset)
 										(_parent.returns ??= []).push(b.offset, lk.offset + lk.length);
-									else _parent.return_void = true;
+									else _parent.implicit_return = (_parent as FuncNode).bc_mode ? VOID :
+										(_parent.returns ??= [], UNSET);
 									has_return[has_return.length - 1] = true;
 								}
 							} else if (_low === 'switch') {
@@ -2624,13 +2627,31 @@ export class Lexer implements Module {
 						}
 						break;
 					case '#requires':
-						l = data.content.toLowerCase();
-						h ||= l.startsWith('autohotkey_h');
-						if ((m = l.match(/^\w+[ \t]+v(1|2)/))) {
-							if (m[1] === '2')
-								_this.maybev1 = maybev1 = 0;
-							else if (_this.maybev1 = maybev1 = 3, !stop_parse(data, false, diagnostic.requirev1()))
-								unexpected(data);
+						if ((l = data.content.toLowerCase().trim())) {
+							const p = l.split(/[ \t]+/);
+							let bc = true;
+							if (p.shift() === 'autohotkey_h')
+								h = true;
+							for (let s of p) {
+								if (s === '32-bit' || s === '64-bit')
+									continue;
+								let flag = 0;
+								let i = 0;
+								if (s[i] == '<') i++, flag |= 1;
+								if (s[i] == '>') i++, flag |= 4;
+								if (s[i] == '=') i++, flag |= 2;
+								s[i] === 'v' && i++;
+								const n = versionEncode(s = s.substring(i));
+								let r;
+								r = v2alpha1 - n;
+								if ((flag & 4) || r < 0 || !r && flag !== 1)
+									_this.maybev1 = maybev1 = 0;
+								else if (_this.maybev1 = maybev1 = 3, !stop_parse(data, false, diagnostic.requirev1()))
+									unexpected(data);
+								bc &&= !!(flag & 1) || n < alpha_21 + 7;
+								(_this.curr_mod ?? _this).bc_mode ??= bc;
+								bc_mode = bc;
+							}
 						}
 						break;
 					case '#hotif':
@@ -2669,6 +2690,7 @@ export class Lexer implements Module {
 							mod = _this.curr_mod = (_this.module ??= {})[name.toUpperCase()] ??= {
 								name: name || '\0', kind: SymbolKind.Module,
 								range: ZERO_RANGE, selectionRange: rg,
+								bc_mode_def: bc_mode = _this.bc_mode ?? _this.bc_mode_def,
 								children: [],
 								declaration: o = {},
 								property: o,
@@ -6430,7 +6452,7 @@ export class Lexer implements Module {
 		this.includedir.clear(), this.dlldir.clear();
 		this.d_uri = '';
 		this.importLex?.forEach(l => l.importedLex?.delete(this));
-		this.checkmember = this.curr_mod = this.explicitContext =
+		this.bc_mode = this.checkmember = this.curr_mod = this.explicitContext =
 			this.export = this.import = this.importLex = this.maybev1 =
 			this.module = this.st = this.symbolInformation = this.winapi = undefined!;
 	}
@@ -7380,6 +7402,7 @@ export function setVersion(version: string) {
 
 const VERSION_STAGE: Record<string, number | string> = { ALPHA: 3, BETA: 2, RC: 1, 3: 'alpha', 2: 'beta', 1: 'rc' };
 export const alpha_3 = versionEncode('2.1-alpha.3');
+const v2alpha1 = versionEncode('2.0-alpha.1');
 const alpha_11 = alpha_3 + 8;
 const alpha_21 = alpha_11 + 10;
 function versionDecode(n: number) {
@@ -7403,7 +7426,7 @@ function versionMatch(requires: string) {
 	next: for (const req of requires.split('||')) {
 		for (const m of req.matchAll(/(ahk_h\s*)?([<>]=?|=)?([^<>=]+)/g)) {
 			if (m[1] && !isahk2_h) continue next;
-			const v = versionEncode(m[3]);
+			const v = versionEncode(m[3].replace(/^v/, ''));
 			let result = false;
 			switch (m[2] ?? '>=') {
 				case '>=': result = ahkVersion >= v; break;

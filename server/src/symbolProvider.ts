@@ -541,7 +541,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 
 export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 	const { paraminfo } = info;
-	let is_cls: boolean, params, cRV: boolean;
+	let is_cls: boolean, params, tr: number;
 	if (!paraminfo || !invokeCheck) return;
 	if ((is_cls = node?.kind === SymbolKind.Class))
 		node = getClassConstructor(node as unknown as ClassNode) as FuncNode;
@@ -634,21 +634,23 @@ export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
 			ret = tk.content === '=>';
 		else ret = tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'return' &&
 			!lex.tokens[tk.next_token_offset]?.topofline;
-		if (ret && cRV && (info.outer?.type_annotations || null)?.includes(VOID))
+		if (ret && tr === 2 && (info.outer?.type_annotations || null)?.includes(VOID))
 			ret = false;
 		return ret;
 	}
 	function test_returns() {
-		if (is_cls && node.name.toLowerCase() === '__new')
+		if (is_cls && !node.static)
 			return false;
+		if ((tr = node.test_return!) !== undefined)
+			return tr === 2 ? fRV : tr && fRU;
 		const ta = node.type_annotations || decltypeReturns(node, lexers[node.uri!] ?? lex);
 		let r;
 		if (ta?.length) {
-			if (fRU && ta.includes(UNSET))
-				return true;
-			r = fRV && ta.length === 1 && ta[0] === VOID;
-		} else r = fRV && !node.returns?.length;
-		return r && (cRV = true);
+			if (ta.includes(UNSET))
+				return tr = node.test_return = 1, fRU;
+			r = ta.length === 1 && ta[0] === VOID;
+		} else r = !node.returns?.length;
+		return (tr = node.test_return = r ? 2 : 0) && fRV;
 	}
 }
 

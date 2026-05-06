@@ -20,7 +20,7 @@ import {
 } from './types';
 
 //#region type Inference
-export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, _this?: ClassNode): AhkSymbol[] {
+export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, _this?: ClassNode, v2u?: boolean): AhkSymbol[] {
 	const stack: Token[] = [], op_stack: Token[] = [], { document, tokens } = lex;
 	let operand = [0], pre = EMPTY_TOKEN, end: number, t, tt;
 	if (typeof end_pos === 'object')
@@ -179,7 +179,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 		} else switch (tk.type) {
 			case TokenType.Invoke: {
 				syms = decltypeInvoke(lex, syms, tk.content.toLowerCase(),
-					tk.data ? InvokeFlag.CALL : InvokeFlag.PROP, tk.paraminfo, that);
+					tk.data ? InvokeFlag.CALL : InvokeFlag.PROP, tk.paraminfo, that, v2u);
 				break;
 			}
 			case TokenType.Identifier: {
@@ -401,7 +401,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 }
 
 enum InvokeFlag { PROP, CALL, META, OPT_HANDLED = 4 }
-export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, flag: InvokeFlag, paraminfo?: ParamInfo, _this?: ClassNode) {
+export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, flag: InvokeFlag, paraminfo?: ParamInfo, _this?: ClassNode, v2u?: boolean) {
 	const tps = new Set<AhkSymbol>, call = !!(flag & InvokeFlag.CALL);
 	name ||= (flag |= InvokeFlag.META, call ? 'call' : '__item');
 	let that = _this;
@@ -558,7 +558,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 				}
 				continue;
 		}
-		for (const t of decltypeReturns(n, lexers[n.uri!] ?? lex, that))
+		for (const t of decltypeReturns(n, lexers[n.uri!] ?? lex, that, v2u))
 			tps.add(t);
 	}
 	return tps;
@@ -680,7 +680,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			const v = lexers[uri]?.declaration?.[name];
 			v?.type_annotations && (syms.includes(v) || syms.push(v));
 		}
-	let ts: AhkSymbol[] | undefined, t, ref;
+	let ts: AhkSymbol[] | undefined, t, ref, v2u = !(scope as FuncNode ?? lex).bc_mode;
 	if (sym.from !== undefined) {
 		t = resolveVarAlias(sym);
 		if (t.kind !== SymbolKind.Variable)
@@ -767,7 +767,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 		const t = decltypeByref(ref, lex, ts, _this);
 		if (t) return t;
 	}
-	ts.push(...decltypeReturns(sym, lex, _this));
+	ts.push(...decltypeReturns(sym, lex, _this, v2u));
 	if (ts.length)
 		ts = [...new Set(ts)];
 	else if (!sym.assigned)
@@ -797,7 +797,7 @@ function literal2Sym(tp: string | AhkSymbol) {
 	return `${is_typeof ? 'typeof ' : ''}${tp}`;
 }
 
-export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode): AhkSymbol[] {
+export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, v2u?: boolean): AhkSymbol[] {
 	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined, has_obj;
 	switch (!sym.cached_types) {
 		case true: {
@@ -814,15 +814,19 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode): 
 		// fall through
 		default:
 			resolveCachedTypes(ct = sym.cached_types!, types = new Set, lex, _this, _this && (sym.parent as ClassNode)?.type_params);
+			// feat: void to unset
+			// if (v2u && sym.is_builtin && types.delete(VOID))
+			// 	return [...types.add(UNSET)];
 			if (!has_obj)
 				return [...types];
 	}
 
 	let tps: AhkSymbol[];
 	if (lex && sym.returns) {
-		sym.cached_types = [ANY], tps = [], sym.return_void && tps.push(VOID);
+		sym.cached_types = [ANY], tps = [], (sym as FuncNode).bc_mode === false && (v2u = true);
 		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
-			tps.push(...decltypeExpr(lex, lex.findToken(r[i], true), r[i + 1], _this));
+			tps.push(...decltypeExpr(lex, lex.findToken(r[i], true), r[i + 1], _this, v2u));
+		sym.implicit_return && tps.push(sym.implicit_return);
 		if (types) {
 			for (const n of new Set(tps as ClassNode[]))
 				if (n.property && !n.name && !types.has(n))

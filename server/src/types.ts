@@ -18,10 +18,10 @@ export interface AhkSymbol extends DocumentSymbol {
 	has_warned?: boolean | number
 	markdown_detail?: string
 	ignore?: boolean
+	implicit_return?: AhkSymbol
 	overwrite?: number
 	parent?: AhkSymbol
 	returns?: number[] | null
-	return_void?: boolean
 	since?: string
 	static?: boolean | null
 	type_annotations?: Array<string | AhkSymbol> | false
@@ -137,6 +137,7 @@ export interface FormatFlags {
 
 export interface FuncNode extends AhkSymbol {
 	assume: FuncScope
+	bc_mode?: boolean
 	caller?: ParamInfo
 	closure?: boolean
 	construct?: string
@@ -157,6 +158,7 @@ export interface FuncNode extends AhkSymbol {
 	unresolved_vars?: Record<string, Variable>
 	ranges?: [number, number][]	// class's __init
 	in_expr?: boolean
+	test_return?: 0 | 1 | 2
 	$type?: string | null	// @type {...}
 }
 
@@ -183,6 +185,8 @@ export type Maybe<T> = T | undefined;
 export enum Mode { BlockStatement, Statement, ObjectLiteral, ArrayLiteral, Conditional, Expression }
 
 export interface Module extends AhkSymbol {
+	bc_mode?: boolean
+	bc_mode_def?: boolean
 	children: AhkSymbol[]
 	declaration: Record<string, AhkSymbol>
 	export?: Record<string, AhkSymbol>
