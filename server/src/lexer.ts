@@ -1116,7 +1116,7 @@ export class Lexer implements Module {
 				delete tk.semantic;
 				if (maybe_default && (nk || tk.content.toLowerCase() === 'default:')) {
 					const last_case = case_pos.pop();
-					if (case_pos.push(0, tk.offset), last_case)
+					if (case_pos.push(tk.offset, tk.offset), last_case)
 						_this.addFoldingRange(last_case, lk.offset, 'case'),
 							has_return.length++;
 					tk.hover_word = 'default', nexttoken(), next = false, tk.topofline ||= -1;
@@ -1889,16 +1889,26 @@ export class Lexer implements Module {
 							} else if (_low === 'switch') {
 								result.push(...parse_line('{', _low, 0, 2));
 								if (tk.content === '{') {
-									const pop = return_push();
+									const pop = return_push(), cl = case_pos.length;
 									tk.previous_pair_pos = beginpos, next = true;
 									blockpos.push(parser_pos - 1);
 									case_pos.push(0);
 									parse_brace(++blocks);
-									const last_case = case_pos.pop();
+									const last_case = case_pos.pop(), cc = case_pos.splice(cl);
 									if (last_case)
 										_this.addFoldingRange(last_case, lk.offset, 'case');
-									if (case_pos.pop() === undefined)	// no default:
-										has_return.length++;
+									switch (cc.length) {
+										case 0: has_return.length++;	// no default:
+										// fall through
+										case 1: break;
+										default: _this.addDiagnostic(diagnostic.duplabel(), cc.shift()!, 7, {
+											severity: DiagnosticSeverity.Warning,
+											relatedInformation: cc.map(o => ({
+												location: { uri: _this.document.uri, range: make_range(o, 7) },
+												message: diagnostic.duplabel()
+											}))
+										});
+									}
 									pop();
 									nexttoken(), next = false;
 								} else unexpected(tk);
