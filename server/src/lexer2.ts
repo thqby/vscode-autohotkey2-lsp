@@ -49,22 +49,23 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 						paraminfo: tk.callsite.paraminfo ?? tk.paraminfo
 					} as Token);
 					tk = tokens[tk.next_token_offset];
-					t.data = tk?.content === '(';
+					t.data = tk?.content === '(' ? InvokeFlag.CALL : InvokeFlag.PROP;
 					if (!tk || !(tk = tokens[tk.next_pair_pos!])) {
 						stack.length = 0;
 						break loop;
 					}
 				}
 				break;
-			case TokenType.Dot:
+			case TokenType.Dot: {
+				let data = pre.type === TokenType.Operator && pre.content === '?' ? InvokeFlag.MAYBE : InvokeFlag.PROP;
 				if ((tk = tokens[tk.next_token_offset])?.type === TokenType.Identifier) {
 					t = tokens[tk.next_token_offset];
 					if (t?.content === '[' && t.topofline < 1 || t?.content === '(' && !t.prefix_is_whitespace) {
-						const call = { content: tk.content, type: TokenType.Invoke } as Token;
+						const call = { content: tk.content, data, type: TokenType.Invoke } as Token<InvokeFlag>;
 						stack.push(call);
 						if (t.offset >= end)
 							break loop;
-						call.data = t.content === '(';
+						t.content === '(' && (call.data! |= InvokeFlag.CALL);
 						call.paraminfo = t.paraminfo;
 						if (!(tk = tokens[t.next_pair_pos!])) {
 							stack.length = 0;
@@ -74,16 +75,15 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 					}
 					if (t?.content === '%' && !t.prefix_is_whitespace && t.previous_pair_pos === undefined)
 						skip_operand();
-
 					else
-						stack.push({ content: tk.content, type: TokenType.Invoke } as Token);
+						stack.push({ content: tk.content, data, type: TokenType.Invoke } as Token);
 				} else if (tk?.type === TokenType.BracketStart) {
 					if (tk.offset >= end)
 						break loop;
+					tk.content === '(' && (data |= InvokeFlag.CALL);
 					stack.push({
 						content: '', type: TokenType.Invoke,
-						data: tk.content === '(',
-						paraminfo: tk.paraminfo
+						data, paraminfo: tk.paraminfo
 					} as Token);
 					if (!(tk = tokens[tk.next_pair_pos!])) {
 						stack.length = 0;
@@ -91,6 +91,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 					}
 				} else skip_operand();
 				break;
+			}
 			case TokenType.Operator:
 				if (tk.content === '%' && tk.previous_pair_pos === undefined) {
 					if (!tk.prefix_is_whitespace)
@@ -117,7 +118,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 						pre.type === TokenType.BlockEnd && (tt = tokens[pre.previous_pair_pos!]) && (tt.data ?? tt.in_expr !== undefined))) {
 					stack.push({
 						content: '', type: TokenType.Invoke,
-						paraminfo: t.paraminfo, data: t.content === '('
+						paraminfo: t.paraminfo, data: t.content === '(' ? InvokeFlag.CALL : InvokeFlag.PROP
 					} as Token);
 				} else if (t.content === '[') {
 					stack.push({ symbol: ARRAY } as Token);
@@ -179,7 +180,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 		} else switch (tk.type) {
 			case TokenType.Invoke: {
 				syms = decltypeInvoke(lex, syms, tk.content.toLowerCase(),
-					tk.data ? InvokeFlag.CALL : InvokeFlag.PROP, tk.paraminfo, that, v2u);
+					tk.data as InvokeFlag, tk.paraminfo, that, v2u);
 				break;
 			}
 			case TokenType.Identifier: {
@@ -248,7 +249,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 						ret = { symbol: VARREF } as Token;
 					else {
 						const t = rv.at(-1)!;
-						if (t.type !== TokenType.Invoke || t.data)
+						if (t.type !== TokenType.Invoke || t.data as InvokeFlag & InvokeFlag.CALL)
 							return !(stack.length = 0);
 						operand.push(stack.length);
 						t.content = '__ref', t.data = true;
@@ -400,7 +401,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 	}
 }
 
-enum InvokeFlag { PROP, CALL, META, OPT_HANDLED = 4 }
+enum InvokeFlag { PROP, CALL, META, OPT_HANDLED = 4, MAYBE = 8 }
 export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, flag: InvokeFlag, paraminfo?: ParamInfo, _this?: ClassNode, v2u?: boolean) {
 	const tps = new Set<AhkSymbol>, call = !!(flag & InvokeFlag.CALL);
 	name ||= (flag |= InvokeFlag.META, call ? 'call' : '__item');
@@ -410,6 +411,10 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 		that = _this ?? cls;
 		switch (n.kind) {
 			case 0 as SymbolKind: return [ANY];
+			case SymbolKind.Null:
+				if (flag & InvokeFlag.MAYBE)
+					tps.add(UNSET);
+				break;
 			case SymbolKind.Class:
 				if (call && name === 'call') {
 					switch (cls.is_builtin && cls.prototype && cls.full) {
