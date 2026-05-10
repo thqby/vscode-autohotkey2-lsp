@@ -1101,10 +1101,12 @@ export class Lexer implements Module {
 				return line_end_token = undefined, line_begin_offset = offset;
 			}
 
-			function is_label(maybe_default: boolean) {
+			function is_label(maybe_default = false) {
 				let nk;
 				if (input[parser_pos] !== ':' || !WHITESPACE.includes(input.charAt(parser_pos + 1)) || !isIdentifier(tk.content))
-					if (!maybe_default || tk.content.toLowerCase() !== 'default' || (nk = _this.getToken(parser_pos, true)).content !== ':')
+					if (!maybe_default || tk.content.toLowerCase() !== 'default' ||
+						!tokens[blockpos.at(-1)!]?.switch_block ||
+						(nk = _this.getToken(parser_pos, true)).content !== ':')
 						return false;
 				if (nk) {
 					if ((tk.next_token_offset = nk.next_token_offset) > 0)
@@ -1153,7 +1155,7 @@ export class Lexer implements Module {
 								(tk.content.toLowerCase() !== 'static' || '.[('.includes(input[parser_pos]) ||
 									(nk = _this.getToken(parser_pos, true)).topofline || !isIdentifierChar(nk.content.charCodeAt(0))))
 								tk.type = TokenType.Identifier;
-						} else if (is_label(case_pos.length > 0))
+						} else if (is_label(blocks === level && case_pos.length > 0))
 							continue;
 					}
 
@@ -1809,7 +1811,7 @@ export class Lexer implements Module {
 						break;
 					case 'super': parse_super(); break;
 					case 'case':
-						if (case_pos.length && tk.topofline) {
+						if (case_pos.length && tk.topofline && tokens[blockpos.at(-1)!]?.switch_block) {
 							const last_case = case_pos.pop();
 							if (case_pos.push(tk.offset), last_case)
 								_this.addFoldingRange(last_case, lk.offset, 'case'),
@@ -1890,7 +1892,7 @@ export class Lexer implements Module {
 								result.push(...parse_line('{', _low, 0, 2));
 								if (tk.content === '{') {
 									const pop = return_push(), cl = case_pos.length;
-									tk.previous_pair_pos = beginpos, next = true;
+									tk.previous_pair_pos = beginpos, next = tk.switch_block = true;
 									blockpos.push(parser_pos - 1);
 									case_pos.push(0);
 									parse_brace(++blocks);
@@ -2481,22 +2483,23 @@ export class Lexer implements Module {
 			function parse_body(else_body: boolean | null, previous_pos: number, loop_body = false) {
 				const oil = in_loop, prev = mode, t = tk;
 				in_loop ||= loop_body, next = true, mode |= BlockType.Body;
-				for (blockpos.push(tk.offset); is_label(false) && nexttoken();); blockpos.pop();
+				for (blockpos.push(tk.offset); is_label() && nexttoken(););
 				if ((block_mode = false, tk.type === TokenType.BlockStart)) {
 					tk.previous_pair_pos = previous_pos;
-					blockpos.push(parser_pos - 1), parse_brace(++blocks);
+					blockpos.splice(-1, 1, parser_pos - 1), parse_brace(++blocks);
 					nexttoken();
 					next = tk.type as TokenType === TokenType.Reserved && tk.content.toLowerCase() === 'else';
 					if (t.type === TokenType.Label)
 						t.next_pair_pos = lk.offset;
 				} else {
 					if (tk.type === TokenType.Reserved && LINE_STARTERS.includes(tk.content.toLowerCase())) {
-						parse_reserved();
+						parse_reserved(), blockpos.pop();
 						if (t === tk || (t === lk && !next && !tk.topofline))
 							if (t === tk && t.type === TokenType.Identifier)
 								next = true, parse_top_word();
 							else result.push(...parse_line());
 					} else {
+						blockpos.pop();
 						if (tk.type === TokenType.Identifier) {
 							if (tk.topofline > 0 && ['struct', 'class'].includes(
 								tk.content.toLowerCase(), ahkVersion > alpha_21 ? 0 : 1)) {

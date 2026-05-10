@@ -292,6 +292,7 @@ export interface Token<T = unknown> {
 	__ref?: boolean				// &x.y
 	semantic?: SemanticToken
 	skip_pos?: number
+	switch_block?: boolean
 	symbol?: AhkSymbol
 	topofline: number
 	type: TokenType
