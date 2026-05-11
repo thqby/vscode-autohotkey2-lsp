@@ -9,7 +9,7 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	a_Vars, action, ahkUris, ahkVars, builtinCommands_v1, commentTags, configCache,
-	diagnostic, difference, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
+	diagnostic, difference, hint, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
 	libSymbols, locale, Mode, parseInclude, restorePath, rootDir,
 	symbolProvider, URI, utils, warn, workspaceFolders
 } from './common';
@@ -17,7 +17,7 @@ import {
 	findLibrary, findSymbol, getClassBase, getParamCount, includeCache, includedCache,
 	joinTypes, resolveFuncType, resolveImports, resolveTypeAnnotation, traverseInclude, typeNaming, updateIncludeCache
 } from './lexer2';
-import { DiagnosticSeverity, MessageType, SymbolKind } from './lsp-enums';
+import { DiagnosticSeverity, DiagnosticTag, MessageType, SymbolKind } from './lsp-enums';
 import {
 	AccessModifier, ActionType, AhkSymbol, BlockType, CallSite, ClassNode, Context, ContinueSectionOption, DiagnosticCode,
 	FormatFlags, FormatOptions, FuncNode, FuncScope, Import, JsDoc, Module, ParamInfo, ParamList, Property,
@@ -213,7 +213,7 @@ export class Lexer implements Module {
 		let allow_$ = true, block_mode = true, format_mode = false, h = isahk2_h;
 		let in_loop = false, string_mode = false;
 		let warn_once: Record<string, unknown>, mixes: [AhkSymbol, string][];
-		let has_return: (boolean | undefined)[] = [undefined];
+		let has_return: (number | undefined)[] = [undefined], return_index: number | undefined;
 		let bc_mode = true;
 
 		this.document = document;
@@ -810,6 +810,7 @@ export class Lexer implements Module {
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [], mixes = [];
 				callWithoutParentheses = configCache.Warn?.CallWithoutParentheses, bc_mode = true;
+				has_return = [return_index = undefined];
 				warn_once = {};
 				try {
 					const rs = utils.getRCData?.('#2');
@@ -966,16 +967,50 @@ export class Lexer implements Module {
 			}
 		}
 
-		function return_push() {
+		function return_push(r = false) {
 			const l = has_return.length++;
-			return (r = false) => {
+			return (o = parser_pos) => {
 				let i = l;
 				while (has_return[i]) i++;
 				i -= has_return.length;
+				if (return_index === has_return.length)
+					return_index = undefined;
 				has_return.length = l;
 				if (r)
 					return !i;
-				has_return[l - 1] ||= !i;
+				if ((has_return[l - 1] ||= !i ? o : undefined))
+					return_index ??= l;
+			};
+		}
+
+		function return_branch() {
+			if (return_index === has_return.length++)
+				return_index = undefined;
+		}
+
+		function mark_unreachable(lk: Token, nk?: Token | number) {
+			if (return_index !== has_return.length)
+				return;
+			let s = has_return[return_index - 1]!;
+			const e = lk.skip_pos ?? lk.offset + lk.length;
+			if (nk) {
+				if (typeof nk === 'number')
+					nk = _this.getToken(nk, true);
+				has_return[return_index - 1] = nk.offset;
+			} else return_index = undefined;
+			e > s && _this.addDiagnostic(hint.unreachable(), s, e - s, {
+				severity: DiagnosticSeverity.Hint,
+				tags: [DiagnosticTag.Unnecessary],
+				code: DiagnosticCode.unreachable,
+			});
+		}
+
+		function skip_reachable() {
+			if (return_index === undefined) return;
+			const ri = return_index;
+			return_index = undefined;
+			return (lk: Token, nk: Token | number) => {
+				return_index = ri, mark_unreachable(lk, nk);
 			};
 		}
 
@@ -994,7 +1029,7 @@ export class Lexer implements Module {
 			parse_brace();
 			currsymbol = baksym, in_loop = oil;
 			if (tk.type === TokenType.EOF)
-				if (set_line_begin(), blocks > (!(mode & BlockType.Mask) ? 0 : -1))
+				if (set_line_begin(), mark_unreachable(lk), blocks > (!(mode & BlockType.Mask) ? 0 : -1))
 					_this.addDiagnostic(diagnostic.missing('}'), blockpos[blocks - (!(mode & BlockType.Mask) ? 1 : 0)], 1);
 			if (last_hotif !== undefined)
 				_this.addFoldingRange(last_hotif, lk.offset, 'region');
@@ -1120,12 +1155,14 @@ export class Lexer implements Module {
 					const last_case = case_pos.pop();
 					if (case_pos.push(tk.offset, tk.offset), last_case)
 						_this.addFoldingRange(last_case, lk.offset, 'case'),
-							has_return.length++;
+							mark_unreachable(lk), return_branch();
 					tk.hover_word = 'default', nexttoken(), next = false, tk.topofline ||= -1;
 					return true;
 				}
-				if (mode & BlockType.Func)
-					has_return[has_return.length - 1] = undefined;
+				const rl = has_return.length - 1;
+				has_return[rl] = undefined;
+				if (return_index === rl)
+					return_index = undefined;
 				tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Field,
 					make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 1));
 				tn.data = blockpos.at(-1), tn.def = true, result.push(tn);
@@ -1263,13 +1300,13 @@ export class Lexer implements Module {
 														adddeclaration(tn);
 														line_ranges.push([tn.range.end.line, nk.offset]);
 													} else if (tk.content === '{') {
-														const pop = return_push();
+														const pop = return_push(true);
 														tn = createFunc(_low, SymbolKind.Function,
 															make_range(nk.offset, parser_pos - nk.offset), make_range(nk.offset, 3), [...par]);
 														tn.bc_mode = bc_mode;
 														sk = tk, tn.parent = prop, tn.children = parse_block(BlockType.Method, tn, classfullname);
 														tn.range.end = document.positionAt(parser_pos);
-														pop(true) || (tn.implicit_return ??= tn.bc_mode ? VOID : (tn.returns ??= [], UNSET));
+														pop() || (tn.implicit_return ??= tn.bc_mode ? VOID : (tn.returns ??= [], UNSET));
 														if (_low === 'set')
 															tn.params.unshift(HIDDEN_PARAMS.value);
 														else prop.returns = tn.returns, prop.implicit_return = tn.implicit_return;
@@ -1398,11 +1435,12 @@ export class Lexer implements Module {
 									unexpected(tk), blocks = blockpos.length = 0;
 								else {
 									!tk.topofline && unexpected(tk);
+									mark_unreachable(lk);
 									if (blockpos.length && tk.previous_pair_pos === undefined)
 										tokens[tk.previous_pair_pos = blockpos.at(-1)!].next_pair_pos = tk.offset;
 									return;
 								}
-							}
+							} else mark_unreachable(lk, parser_pos);
 							break;
 
 						// case TokenType.DOT:
@@ -1412,6 +1450,7 @@ export class Lexer implements Module {
 							break;
 
 						case TokenType.HotkeyLine: {
+							const ok = lk;
 							tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Event,
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2));
 							tn.range.end = document.positionAt(parser_pos - 1), result.push(tn);
@@ -1426,10 +1465,9 @@ export class Lexer implements Module {
 								}
 								tn.range.end = document.positionAt(lk.offset + lk.length);
 								next = false;
-								break;
-							}
-							if (!isValidHotkey(tk.content))
+							} else if (!isValidHotkey(tk.content))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
+							mark_unreachable(ok, next ? parser_pos : tk);
 							break;
 						}
 						case TokenType.Hotkey: {
@@ -1437,7 +1475,7 @@ export class Lexer implements Module {
 								_this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
 							else if (!tk.ignore && !isValidHotkey(tk.content))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
-							const ht = tk, tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Event,
+							const ok = lk, ht = tk, tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Event,
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2)) as FuncNode;
 							if ((_cm = comments[tn.selectionRange.start.line]))
 								set_detail(tn, _cm);
@@ -1447,18 +1485,21 @@ export class Lexer implements Module {
 							while (tk.type as TokenType === TokenType.Directive)
 								parse_sharp(), nexttoken();
 							if (tk.type & TokenType.Hotkey) {
-								next = false;
+								mark_unreachable(ok, tk), next = false;
 								break;
 							}
+							const skip = skip_reachable();
 							if (tk.type as TokenType === TokenType.Identifier && is_func_def()) {
 								const fc = tk, fn = nexttoken() && parse_func(fc), r = fn && (fn.in_expr = true, getParamCount(fn));
 								if (!fc.topofline && ahkVersion < alpha_3)
 									_this.addDiagnostic(diagnostic.unexpected(fc.content), fc.offset);
 								if (!r || r.max < 1 || r.min > 1)
 									_this.addDiagnostic(diagnostic.hotparamerr(), fc.offset);
+								skip?.(ok, next ? parser_pos : tk);
 								break;
 							}
 							if (tk.topofline && tk.content !== '{') {
+								skip?.(ok, tk);
 								stop_parse(ht) || _this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
 								next = false;
 								break;
@@ -1490,6 +1531,7 @@ export class Lexer implements Module {
 								line_ranges.push([tn.range.end.line, ht.offset]);
 							}
 							adddeclaration(tn);
+							skip?.(ok, next ? parser_pos : tk);
 							break;
 						}
 						case TokenType.Unknown:
@@ -1524,6 +1566,7 @@ export class Lexer implements Module {
 						(is_static as unknown as number)
 				};
 				const rl = result.length, oo = is_static ? fc.previous_token!.offset : fc.offset;
+				let _ri;
 				if (in_cls) {
 					mode = BlockType.Method;
 					tn.has_this_param = true;
@@ -1539,6 +1582,7 @@ export class Lexer implements Module {
 					tn.kind = SymbolKind.Function;
 					(prev_mode & BlockType.Mask) && (tn.parent = prev_parent);
 					if (fc.length) {
+						_ri = return_index, return_index = undefined;
 						fc.topofline < 1 && (tn.in_expr = true);
 						if (fc.content[0] <= '9')
 							_this.diagnostics.push({ message: diagnostic.invalidsymbolname(fc.content), range });
@@ -1568,7 +1612,7 @@ export class Lexer implements Module {
 						line_ranges.push([tn.range.end.line, oo]);
 					}
 				} else if (tk.content === '{') {
-					const rs = result.splice(rl), lb = tk, pop = return_push();
+					const rs = result.splice(rl), lb = tk, pop = return_push(true);
 					result.push(tn), (tn.children = rs).push(...parse_block(mode, tn, classfullname));
 					tn.range.end = document.positionAt(parser_pos);
 					_this.addSymbolFolding(tn, lb.offset);
@@ -1580,11 +1624,16 @@ export class Lexer implements Module {
 						lb.in_expr = tk.in_expr = fc.offset;
 						begin_line = false;
 					}
-					pop(true) || (tn.implicit_return = tn.bc_mode ? VOID : (tn.returns ??= [], UNSET));
+					pop() || (tn.implicit_return = tn.bc_mode ? VOID : (tn.returns ??= [], UNSET));
 				} else {
 					_this.diagnostics.push({ message: diagnostic.declarationerr(), range: tn.selectionRange });
-					_parent = prev_parent, mode = prev_mode;
+					_parent = prev_parent, mode = prev_mode, return_index = _ri;
 					return next = false, undefined;
+				}
+				if ((return_index = _ri)) {
+					let t = fc.previous_token!;
+					is_static && (t = t.previous_token!);
+					mark_unreachable(t, next ? parser_pos : tk);
 				}
 				_parent = prev_parent, mode = prev_mode;
 				if (in_cls) {
@@ -1732,7 +1781,7 @@ export class Lexer implements Module {
 										}
 										const pop = return_push();
 										parse_body(null, beginpos, true);
-										fc.push(...result.splice(rl)), has_return.length++;
+										fc.push(...result.splice(rl)), return_branch();
 										let eo;
 										if (tk.type as TokenType === TokenType.Reserved) {
 											switch (tk.content.toLowerCase()) {
@@ -1815,7 +1864,7 @@ export class Lexer implements Module {
 							const last_case = case_pos.pop();
 							if (case_pos.push(tk.offset), last_case)
 								_this.addFoldingRange(last_case, lk.offset, 'case'),
-									has_return.length++;
+									mark_unreachable(lk), return_branch();
 							nexttoken(), next = false;
 							if (tk.content !== ':' && !tk.topofline) {
 								result.push(...parse_line(':', 'case', 1, 20));
@@ -1839,15 +1888,15 @@ export class Lexer implements Module {
 						const pop = return_push();
 						parse_body(true, beginpos);
 						if (tk.type === TokenType.Reserved && tk.content.toLowerCase() !== 'else') {
-							const pop = return_push();
+							const pop = return_push(true);
 							has_return.length--;
 							while (tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'catch')
-								next = true, has_return.length++, parse_catch();
-							const r = pop(true);
+								next = true, return_branch(), parse_catch();
+							const r = pop();
 							for (const l of ['else', 'finally'])
 								if (tk.type === TokenType.Reserved && tk.content.toLowerCase() === l)
 									next = true, set_line_begin(tk.offset), nexttoken(), next = false, parse_body(true, lk.offset);
-							has_return.push(r);
+							has_return.push(r ? parser_pos : undefined);
 						}
 						pop();
 						break;
@@ -1877,17 +1926,21 @@ export class Lexer implements Module {
 									stop_parse(lk);
 								const b = tk;
 								result.push(...parse_line(undefined, _low));
-								if ((mode & BlockType.Func) && _low === 'return') {
-									if (b.symbol && (_cm = comments[b.symbol.selectionRange.start.line]))
-										set_detail(_cm.symbol = b.symbol, _cm);
-									if (has_return.at(-1))
-										break;
-									if (b.offset <= lk.offset)
-										(_parent.returns ??= []).push(b.offset, lk.offset + lk.length);
-									else _parent.implicit_return = (_parent as FuncNode).bc_mode ? VOID :
-										(_parent.returns ??= [], UNSET);
-									has_return[has_return.length - 1] = true;
+								has_return[has_return.length - 1] ??= tk.offset;
+								if (_low === 'return') {
+									if (mode & BlockType.Func) {
+										if (b.symbol && (_cm = comments[b.symbol.selectionRange.start.line]))
+											set_detail(_cm.symbol = b.symbol, _cm);
+										if (return_index !== undefined)
+											break;
+										if (b.offset <= lk.offset)
+											(_parent.returns ??= []).push(b.offset, lk.offset + lk.length);
+										else _parent.implicit_return = (_parent as FuncNode).bc_mode ? VOID :
+											(_parent.returns ??= [], UNSET);
+									} else if (b.offset <= lk.offset)
+										unexpected(b);
 								}
+								return_index ??= has_return.length;
 							} else if (_low === 'switch') {
 								result.push(...parse_line('{', _low, 0, 2));
 								if (tk.content === '{') {
@@ -1900,7 +1953,7 @@ export class Lexer implements Module {
 									if (last_case)
 										_this.addFoldingRange(last_case, lk.offset, 'case');
 									switch (cc.length) {
-										case 0: has_return.length++;	// no default:
+										case 0: return_branch();	// no default:
 										// fall through
 										case 1: break;
 										default: _this.addDiagnostic(diagnostic.duplabel(), cc.shift()!, 7, {
@@ -1920,7 +1973,7 @@ export class Lexer implements Module {
 								result.push(...parse_line('{', _low, 1));
 								const pop = return_push();
 								const r = parse_body(false, beginpos, _low === 'while');
-								!r && has_return.length++;
+								!r && return_branch();
 								pop();
 							}
 						}
@@ -1989,6 +2042,8 @@ export class Lexer implements Module {
 				tk.previous_pair_pos = bp;
 				const tn = DocumentSymbol.create(cl.content, undefined, SymbolKind.Class,
 					ZERO_RANGE, make_range(cl.offset, cl.length)) as ClassNode;
+				const skip = skip_reachable();
+				return_index = undefined;
 				cl.symbol = cl.definition = tn, tn.full = classfullname + cl.content;
 				tn.extends = ex, tn.uri = _this.uri;
 				if ((_cm = comments[tn.selectionRange.start.line]))
@@ -2007,6 +2062,7 @@ export class Lexer implements Module {
 					type: SemanticTokenTypes.class,
 					modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly
 				};
+				skip?.(cl.previous_token!, parser_pos);
 				adddeclaration(tn), _this.addSymbolFolding(tn, tk.offset);
 				result.push(tn), export_ && add_export(tn, export_ === 'd');
 				return true;
@@ -2135,7 +2191,9 @@ export class Lexer implements Module {
 			function parse_export(le20: boolean) {
 				if (mode !== BlockType.Script)
 					return le20 && unexpected(lk), false;
+				const skip = skip_reachable();
 				const l = lk, t = tk, p = parser_pos, r = parse();
+				skip?.(l.previous_token!, next ? parser_pos : tk);
 				if (r || le20) {
 					l.type = TokenType.Reserved;
 					l.semantic = SE_KEYWORD;
@@ -2528,7 +2586,7 @@ export class Lexer implements Module {
 				if (else_body === false) {
 					if (next) {
 						set_line_begin(tk.offset);
-						nexttoken(), next = false, has_return.length++;
+						nexttoken(), next = false, return_branch();
 						parse_body(true, lk.offset);
 						return true;
 					}
@@ -2602,8 +2660,9 @@ export class Lexer implements Module {
 			}
 
 			function parse_sharp() {
-				let isdll = false, l;
+				let isdll = false, l, skip = skip_reachable();
 				const data = tk.data as Token ?? { content: '', offset: tk.offset + tk.length, length: 0 };
+				const _lk = lk;
 				switch (l = tk.content.toLowerCase()) {
 					case '#dllload':
 						isdll = true;
@@ -2676,6 +2735,9 @@ export class Lexer implements Module {
 							nexttoken(), next = false;
 							last_hotif = tk.topofline ? undefined : lk.offset;
 						}
+					// fall through
+					case '#initexec':
+						result.push(...parse_line());
 						break;
 					case '#hotstring':
 						l = data.content?.trim().toLowerCase() ?? '';
@@ -2683,19 +2745,20 @@ export class Lexer implements Module {
 							_this.hotstringExecuteAction = /x(?!0)/.test(l);
 						break;
 					case '#module':
-						l = { code: DiagnosticCode.module };
 						if (mode !== BlockType.Script)
 							_this.addDiagnostic(diagnostic.unexpected(tk.content), tk.offset, tk.length);
 						else {
+							skip?.(lk, 0), skip = undefined;
 							l = tk.data as Token;
 							if (ahkVersion < alpha_11)
-								_this.addDiagnostic(requireVerN(alpha_11), tk.offset, tk.length, l);
+								_this.addDiagnostic(requireVerN(alpha_11), tk.offset, tk.length, { code: DiagnosticCode.module });
 							else if (!l) {
 								_this.addDiagnostic(diagnostic.acceptparams(tk.content, 1), tk.offset, tk.length, l);
 								break;
 							}
 							const rg = make_range(l.offset, l.length), name = l.content;
 							let mod = _this.curr_mod, o;
+							has_return = [return_index = undefined];
 							if (!isIdentifier(name) || name[0] <= '9')
 								_this.diagnostics.push({ message: diagnostic.invalidsymbolname(), range: rg });
 							if (mod)
@@ -2732,6 +2795,7 @@ export class Lexer implements Module {
 							unexpected(tk);
 						break;
 				}
+				skip?.(_lk, next ? parser_pos : tk);
 			}
 
 			function parse_statement(local: string) {

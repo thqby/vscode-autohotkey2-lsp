@@ -49,7 +49,7 @@ export async function codeActionProvider(params: CodeActionParams, token: Cancel
 				}
 				break;
 			default:
-				it.tags?.includes(DiagnosticTag.Unnecessary) && remove_unused(document.offsetAt(it.range.start));
+				it.tags?.includes(DiagnosticTag.Unnecessary) && !it.code && remove_unused(document.offsetAt(it.range.start));
 				break;
 		}
 	}

@@ -79,6 +79,7 @@ export enum DiagnosticCode {
 	module = 'module',
 	opt_chain = 'optional chaining',
 	typed_prop = 'typed properties',
+	unreachable = 'unreachable',
 	v_ref = 'virtual references',
 }
 

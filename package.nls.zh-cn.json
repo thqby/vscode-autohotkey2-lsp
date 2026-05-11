@@ -131,6 +131,7 @@
 	"diagnostic.varundefined": "变量'{0}'未定义",
 	"warn.callwithoutparentheses": "函数或方法调用没有使用括号",
 	"hint.unused": "符号仅在此处使用",
+	"hint.unreachable": "检测到无法访问的代码",
 	"warn.localsameasglobal": "局部变量'{0}'与全局变量具有相同的名称",
 	"warn.notimplemented": "该特性还未实现",
 	"warn.varisunset": "变量'{0}'似乎从未被赋值",

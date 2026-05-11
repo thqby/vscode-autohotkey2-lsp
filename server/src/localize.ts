@@ -86,6 +86,7 @@ export const diagnostic = {
 
 export const hint = {
 	unused: localize('hint.unused', 'The symbol is used only here'),
+	unreachable: localize('hint.unreachable', 'Unreachable code detected'),
 }
 
 export const warn = {
