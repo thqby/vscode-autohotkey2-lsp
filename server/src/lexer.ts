@@ -2561,7 +2561,8 @@ export class Lexer implements Module {
 			function parse_body(else_body: boolean | null, previous_pos: number, loop_body = false) {
 				const oil = in_loop, prev = mode, t = tk;
 				in_loop ||= loop_body, next = true, mode |= BlockType.Body;
-				for (blockpos.push(tk.offset); is_label() && nexttoken(););
+				for (blockpos.push(tk.offset); is_label() && (lk.parent_start = previous_pos, nexttoken()););
+				tk.parent_start = previous_pos;
 				if ((block_mode = false, tk.type === TokenType.BlockStart)) {
 					tk.previous_pair_pos = previous_pos;
 					blockpos.splice(-1, 1, parser_pos - 1), parse_brace(++blocks);
@@ -5539,7 +5540,7 @@ export class Lexer implements Module {
 
 				handlers[token_type]();
 
-				if (!(token_type & TokenType.Comment)) {
+				if (!(token_type & TokenType.Comment) && token_type !== TokenType.Label) {
 					if (token_type === TokenType.Reserved && ['if', 'for', 'while', 'loop', 'catch', 'switch'].includes(token_text_low)) {
 						set_mode(Mode.Conditional);
 						flags.in_conditional = true;
@@ -5936,7 +5937,7 @@ export class Lexer implements Module {
 				print_token();
 				if (flags.indentation_level < previous_flags.indentation_level)
 					previous_flags.indentation_level = flags.indentation_level, flags.indent_after = true;
-				if (!(opt.switch_case_alignment && flags.last_word === 'switch'))
+				if (!(opt.switch_case_alignment && ck.switch_block))
 					indent();
 				if (need_newline || opt.brace_style !== undefined)
 					print_newline(true);
@@ -6352,7 +6353,7 @@ export class Lexer implements Module {
 			if (flags.mode === Mode.Statement) {
 				const nk = _this.tokens[ck.previous_token?.next_token_offset!];
 				if (!nk || !flags.in_expression && !isContinuousLine(nk.previous_token ?? EMPTY_TOKEN, nk))
-					print_newline();
+					print_newline(nk.parent_start !== undefined || null);
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
@@ -6457,7 +6458,7 @@ export class Lexer implements Module {
 			if (flags.mode === Mode.Statement) {
 				const nk = _this.tokens[ck.previous_token?.next_token_offset!];
 				if (!nk || !flags.in_expression && !isContinuousLine(nk.previous_token ?? EMPTY_TOKEN, nk))
-					print_newline();
+					print_newline(nk.parent_start !== undefined || null);
 				else if (flags.had_comment < 2)
 					trim_newlines();
 			}
@@ -6513,8 +6514,8 @@ export class Lexer implements Module {
 		}
 
 		function handle_label() {
-			print_newline(null);
-			if (token_text_low === 'default:' && (flags.in_case_statement || (flags.mode === Mode.BlockStatement && flags.last_word === 'switch'))) {
+			print_newline(ck.parent_start !== undefined || null);
+			if (token_text_low === 'default:' && (flags.in_case_statement || ck.previous_token?.switch_block)) {
 				if (flags.case_body)
 					deindent();
 				else flags.case_body = true;

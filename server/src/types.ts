@@ -269,6 +269,7 @@ export interface Token<T = unknown> {
 	// if expression
 	//   |statement
 	body_start?: number
+	parent_start?: number
 	callsite?: CallSite
 	content: string
 	data?: T

@@ -57,7 +57,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 				}
 				break;
 			case TokenType.Dot: {
-				let data = pre.type === TokenType.Operator && pre.content === '?' ? InvokeFlag.MAYBE : InvokeFlag.PROP;
+				let data = InvokeFlag.PROP;
 				if ((tk = tokens[tk.next_token_offset])?.type === TokenType.Identifier) {
 					t = tokens[tk.next_token_offset];
 					if (t?.content === '[' && t.topofline < 1 || t?.content === '(' && !t.prefix_is_whitespace) {
@@ -401,7 +401,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 	}
 }
 
-enum InvokeFlag { PROP, CALL, META, OPT_HANDLED = 4, MAYBE = 8 }
+enum InvokeFlag { PROP, CALL, META, OPT_HANDLED = 4 }
 export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, flag: InvokeFlag, paraminfo?: ParamInfo, _this?: ClassNode, bc_mode = true) {
 	const tps = new Set<AhkSymbol>, call = !!(flag & InvokeFlag.CALL);
 	name ||= (flag |= InvokeFlag.META, call ? 'call' : '__item');
@@ -412,8 +412,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 		switch (n.kind) {
 			case 0 as SymbolKind: return [ANY];
 			case SymbolKind.Null:
-				if (flag & InvokeFlag.MAYBE)
-					tps.add(UNSET);
+				tps.add(UNSET);
 				break;
 			case SymbolKind.Class:
 				if (call && name === 'call') {
@@ -1226,17 +1225,17 @@ export function getClassBase(node: AhkSymbol, lex?: Lexer) {
 				return base;
 			if ((ll = lexers[cls.uri!]))
 				pos = cls.selectionRange.start;
-			else if (!(ll = lex))
+			else if (!cls.is_builtin && !(ll = lex))
 				return;
 			iscls = !!cls.prototype, name = cls.extends;
 			uri = cls.extendsuri;
 			if (!name) {
 				if ((cls.full || cls.name).toLowerCase() === 'any')
 					if (iscls)
-						iscls = false, name = 'class';
+						iscls = false, name = 'CLASS';
 					else return;
-				else name = 'object';
-			}
+				else name = 'OBJECT';
+			} else name = name.toUpperCase();
 			break;
 	}
 	if (!ll)
