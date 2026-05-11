@@ -1521,7 +1521,7 @@ GetKeyVK(KeyName) => Integer
 /**
  * 检索方法的实现函数.
  */
-GetMethod(Value [, Name, ParamCount]) => Func
+GetMethod(Value [, Name, ParamCount]) => Func | unset
 
 /**
  * 激活由 GroupAdd 定义的窗口组中的下一个窗口.
@@ -1557,13 +1557,13 @@ GroupDeactivate(GroupName, Mode?) => void
 /**
  * 检索与指定的 HWND 关联的 GUI 控件的 GuiControl 对象.
  */
-GuiCtrlFromHwnd(Hwnd) => Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView
+GuiCtrlFromHwnd(Hwnd) => Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView | unset?
 
 /**
  * 检索与指定的 HWND 关联的 Gui 窗口的 Gui 对象.
  * @param RecurseParent 如果该参数为 1(true), 则会自动搜索并检索与指定的 HWND 最接近的父级(即 GUI).
  */
-GuiFromHwnd(Hwnd, RecurseParent := false) => Gui
+GuiFromHwnd(Hwnd, RecurseParent := false) => Gui?
 
 /**
  * 如果指定的值派生自指定的基对象, 则返回非零数字.
@@ -1921,7 +1921,7 @@ Max(Numbers*) => Float | Integer
 /**
  * 检索对应于 Win32 菜单句柄的菜单或菜单栏对象.
  */
-MenuFromHandle(Handle) => Menu
+MenuFromHandle(Handle) => Menu?
 
 /**
  * 从指定窗口的菜单栏中调用菜单项.
@@ -2105,7 +2105,7 @@ ObjFromPtrAddRef(Address) => Object
 /**
  * 返回值的Base对象.
  */
-ObjGetBase(Value) => Object
+ObjGetBase(Value) => Object?
 
 /**
  * 对象内部属性数组的当前容量.
@@ -2341,7 +2341,7 @@ RegDeleteKey([KeyName]) => void
 /**
  * 确定字符串是否包含某个匹配模式（正则表达式）.
  */
-RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingPosition := 1) => Integer
+RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo?>, StartingPosition := 1) => Integer
 
 /**
  * 替换字符串中匹配模式(正则表达式) 出现的地方.
@@ -3088,7 +3088,7 @@ class Any {
 	/**
 	 * 检索方法的实现函数.
 	 */
-	GetMethod(Name) => Func
+	GetMethod(Name) => Func | unset
 
 	/**
 	 * 如果 BaseObj 在 Value 的基对象链中, 则返回 true, 否则返回 false.
@@ -3119,7 +3119,7 @@ class Any {
 	 * 检索值的基对象.
 	 */
 	Base {
-		get => Object | void
+		get => Object?
 		set => void
 	}
 }
@@ -3139,7 +3139,7 @@ class Array<T = Any> extends Object {
 	 * 检索或设置数组元素的值.
 	 */
 	__Item[Index] {
-		get => T
+		get => T | unset
 		set => void
 	}
 
@@ -3156,12 +3156,12 @@ class Array<T = Any> extends Object {
 	/**
 	 * 删除数组元素的值, 使索引不包含值.
 	 */
-	Delete(Index) => T
+	Delete(Index) => T?
 
 	/**
 	 * 返回给定索引处的值, 或默认值.
 	 */
-	Get(Index [, Default]) => T
+	Get(Index [, Default]) => T | unset
 
 	/**
 	 * 如果 Index 有效且在该位置有一个值, 则返回 true, 否则返回 false.
@@ -3176,7 +3176,7 @@ class Array<T = Any> extends Object {
 	/**
 	 * 删除并返回最后的数组元素.
 	 */
-	Pop() => T
+	Pop() => T?
 
 	/**
 	 * 追加值到数组的末尾.
@@ -3186,7 +3186,7 @@ class Array<T = Any> extends Object {
 	/**
 	 * 从数组中移除项目.
 	 */
-	RemoveAt(Index, Length := 1) => T
+	RemoveAt(Index, Length := 1) => T?
 
 	/**
 	 * 检索或设置数组的长度.
@@ -3650,7 +3650,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	/**
 	 * 检索 GUI 的焦点控件的 GuiControl 对象.
 	 */
-	FocusedCtrl => ControlType
+	FocusedCtrl => ControlType?
 
 	/**
 	 * 检索 GUI 窗口的窗口句柄(HWND).
@@ -3677,7 +3677,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * 检索或设置窗口的菜单栏.
 	 */
 	MenuBar {
-		get => MenuBar
+		get => MenuBar?
 		set => void
 	}
 
@@ -3706,6 +3706,8 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * 枚举 GUI 的控件.
 	 */
 	__Enum(NumberOfVars?) => Enumerator<ControlType> | Enumerator<Integer, ControlType>
+
+	__Item[Name] => ControlType?
 
 	/**
 	 * 创建文本, 按钮或复选框等控件, 返回一个GuiControl对象.
@@ -4370,7 +4372,7 @@ class InputHook extends Object {
 	 * 检索或设置在 Input 终止时调用的函数对象.
 	 */
 	OnEnd {
-		get => Func | void
+		get => Func?
 		set => void
 	}
 
@@ -4378,7 +4380,7 @@ class InputHook extends Object {
 	 * 检索或设置函数对象, 该函数对象将在字符添加到输入缓冲后调用.
 	 */
 	OnChar {
-		get => Func | void
+		get => Func?
 		set => void
 	}
 
@@ -4386,7 +4388,7 @@ class InputHook extends Object {
 	 * 检索或设置函数对象, 该函数对象将在按下启用通知的按键时调用.
 	 */
 	OnKeyDown {
-		get => Func | void
+		get => Func?
 		set => void
 	}
 
@@ -4394,7 +4396,7 @@ class InputHook extends Object {
 	 * 检索或设置函数对象, 该函数对象将在释放启用通知按键时被调用.
 	 */
 	OnKeyUp {
-		get => Func | void
+		get => Func?
 		set => void
 	}
 
@@ -4588,7 +4590,7 @@ class Map<K = Any, V = Any> extends Object {
 	 * 检索或设置键值对的值.
 	 */
 	__Item[Index: K] {
-		get => V
+		get => V | unset
 		set => void
 	}
 
@@ -4605,12 +4607,12 @@ class Map<K = Any, V = Any> extends Object {
 	/**
 	 * 从映射中删除键值对.
 	 */
-	Delete(Key: K) => V
+	Delete(Key: K) => V | unset
 
 	/**
 	 * 返回与键关联的值或默认值.
 	 */
-	Get(Key: K [, Default: V]) => V
+	Get(Key: K [, Default: V]) => V | unset
 
 	/**
 	 * 如果 Key 在映射中有关联的值, 则返回 true, 否则返回 false.
@@ -4790,7 +4792,7 @@ class Object extends Any {
 	/**
 	 * 删除对象拥有的属性.
 	 */
-	DeleteProp(Name) => Any
+	DeleteProp(Name) => Any?
 
 	/**
 	 * 返回给定自有属性的描述符, 兼容于 DefineProp.
@@ -4799,7 +4801,7 @@ class Object extends Any {
 		Get?: Func, Set?: Func, Call?: Func, Value?: Any,
 		/** @since 2.1-alpha.3 */
 		Type?: String | Integer | Class, Offset?: Integer
-	}
+	} | unset
 
 	/**
 	 * 如果对象拥有该名称的属性, 则返回 true, 否则返回 false.

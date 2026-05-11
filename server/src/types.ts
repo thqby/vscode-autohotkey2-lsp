@@ -7,6 +7,7 @@ export type ActionType = 'Continue' | 'Warn' | 'SkipLine' | 'SwitchToV1' | 'Stop
 
 export interface AhkSymbol extends DocumentSymbol {
 	access?: AccessModifier
+	bc_mode?: boolean
 	is_builtin?: boolean
 	cached_types?: Array<string | AhkSymbol>
 	children?: AhkSymbol[]
@@ -138,7 +139,6 @@ export interface FormatFlags {
 
 export interface FuncNode extends AhkSymbol {
 	assume: FuncScope
-	bc_mode?: boolean
 	caller?: ParamInfo
 	closure?: boolean
 	construct?: string
@@ -159,7 +159,7 @@ export interface FuncNode extends AhkSymbol {
 	unresolved_vars?: Record<string, Variable>
 	ranges?: [number, number][]	// class's __init
 	in_expr?: boolean
-	test_return?: 0 | 1 | 2
+	unset_kind?: UnsetKind
 	$type?: string | null	// @type {...}
 }
 
@@ -325,6 +325,10 @@ export enum TokenType {
 	InlineComment,
 	Hotkey = 128,
 	HotkeyLine,
+}
+
+export enum UnsetKind {
+	None, Unset, Void, Blank
 }
 
 export enum USAGE { Read, Write }

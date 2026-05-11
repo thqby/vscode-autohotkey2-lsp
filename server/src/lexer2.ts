@@ -7,7 +7,7 @@ import {
 	openAndParse, parseInclude, restorePath, utils
 } from './common';
 import {
-	ANY, ARRAY, EMPTY_TOKEN, FLOAT, INTEGER, Lexer,
+	ANY, ARRAY, BLANK, EMPTY_TOKEN, FLOAT, INTEGER, Lexer,
 	NUMBER, OBJECT, STRING, UNSET, VARREF, VOID, ZERO_RANGE,
 	ahkModule, ahkVersion, alpha_3, createModules, derefVar,
 	escape_str, isContinuousLine, isIdentifier, isYieldsOperand,
@@ -20,7 +20,7 @@ import {
 } from './types';
 
 //#region type Inference
-export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, _this?: ClassNode, v2u?: boolean): AhkSymbol[] {
+export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, _this?: ClassNode, bc_mode = true): AhkSymbol[] {
 	const stack: Token[] = [], op_stack: Token[] = [], { document, tokens } = lex;
 	let operand = [0], pre = EMPTY_TOKEN, end: number, t, tt;
 	if (typeof end_pos === 'object')
@@ -180,7 +180,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 		} else switch (tk.type) {
 			case TokenType.Invoke: {
 				syms = decltypeInvoke(lex, syms, tk.content.toLowerCase(),
-					tk.data as InvokeFlag, tk.paraminfo, that, v2u);
+					tk.data as InvokeFlag, tk.paraminfo, that, bc_mode);
 				break;
 			}
 			case TokenType.Identifier: {
@@ -402,7 +402,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 }
 
 enum InvokeFlag { PROP, CALL, META, OPT_HANDLED = 4, MAYBE = 8 }
-export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, flag: InvokeFlag, paraminfo?: ParamInfo, _this?: ClassNode, v2u?: boolean) {
+export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, flag: InvokeFlag, paraminfo?: ParamInfo, _this?: ClassNode, bc_mode = true) {
 	const tps = new Set<AhkSymbol>, call = !!(flag & InvokeFlag.CALL);
 	name ||= (flag |= InvokeFlag.META, call ? 'call' : '__item');
 	let that = _this;
@@ -563,7 +563,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 				}
 				continue;
 		}
-		for (const t of decltypeReturns(n, lexers[n.uri!] ?? lex, that, v2u))
+		for (const t of decltypeReturns(n, lexers[n.uri!] ?? lex, that, bc_mode))
 			tps.add(t);
 	}
 	return tps;
@@ -685,7 +685,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			const v = lexers[uri]?.declaration?.[name];
 			v?.type_annotations && (syms.includes(v) || syms.push(v));
 		}
-	let ts: AhkSymbol[] | undefined, t, ref, v2u = !(scope as FuncNode ?? lex).bc_mode;
+	let ts: AhkSymbol[] | undefined, t, ref, bc_mode = scope?.bc_mode ?? (scope as Module)?.bc_mode_def ?? lex.bc_mode ?? lex.bc_mode_def;
 	if (sym.from !== undefined) {
 		t = resolveVarAlias(sym);
 		if (t.kind !== SymbolKind.Variable)
@@ -772,7 +772,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 		const t = decltypeByref(ref, lex, ts, _this);
 		if (t) return t;
 	}
-	ts.push(...decltypeReturns(sym, lex, _this, v2u));
+	ts.push(...decltypeReturns(sym, lex, _this, bc_mode));
 	if (ts.length)
 		ts = [...new Set(ts)];
 	else if (!sym.assigned)
@@ -802,7 +802,7 @@ function literal2Sym(tp: string | AhkSymbol) {
 	return `${is_typeof ? 'typeof ' : ''}${tp}`;
 }
 
-export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, v2u?: boolean): AhkSymbol[] {
+export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, bc_mode = true): AhkSymbol[] {
 	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined, has_obj;
 	switch (!sym.cached_types) {
 		case true: {
@@ -819,25 +819,28 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, v
 		// fall through
 		default:
 			resolveCachedTypes(ct = sym.cached_types!, types = new Set, lex, _this, _this && (sym.parent as ClassNode)?.type_params);
-			// feat: void to unset
-			// if (v2u && sym.is_builtin && types.delete(VOID))
-			// 	return [...types.add(UNSET)];
+			if (bc_mode && sym.is_builtin && types.delete(sym.implicit_return!))
+				return [...types.add(VOID)];
 			if (!has_obj)
 				return [...types];
 	}
 
 	let tps: AhkSymbol[];
 	if (lex && sym.returns) {
-		sym.cached_types = [ANY], tps = [], (sym as FuncNode).bc_mode === false && (v2u = true);
+		sym.cached_types = [ANY], tps = [], bc_mode = (sym as FuncNode).bc_mode ?? bc_mode;
 		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
-			tps.push(...decltypeExpr(lex, lex.findToken(r[i], true), r[i + 1], _this, v2u));
-		sym.implicit_return && tps.push(sym.implicit_return);
+			tps.push(...decltypeExpr(lex, lex.findToken(r[i], true), r[i + 1], _this, bc_mode));
 		if (types) {
 			for (const n of new Set(tps as ClassNode[]))
 				if (n.property && !n.name && !types.has(n))
 					types.add(n), ct!.push(n);
 			tps = [...types], sym.cached_types = ct;
-		} else types = new Set(tps), sym.cached_types = tps = [...types];
+		} else {
+			types = new Set(tps);
+			sym.implicit_return && types.add(sym.implicit_return);
+			types.has(UNSET) && types.delete(BLANK);
+			sym.cached_types = tps = [...types];
+		}
 	} else tps = types ? [...types] : [];
 	return tps;
 }

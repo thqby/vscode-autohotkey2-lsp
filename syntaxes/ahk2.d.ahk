@@ -1527,7 +1527,7 @@ GetKeyVK(KeyName) => Integer
 /**
  * The implementation function of the retrieval method.
  */
-GetMethod(Value [, Name, ParamCount]) => Func
+GetMethod(Value [, Name, ParamCount]) => Func | unset
 
 /**
  * Activate the next window in the window group defined by GroupAdd.
@@ -1563,13 +1563,13 @@ GroupDeactivate(GroupName, Mode?) => void
 /**
  * Retrieve the GuiControl object of the GUI control associated with the specified HWND.
  */
-GuiCtrlFromHwnd(Hwnd) => Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView
+GuiCtrlFromHwnd(Hwnd) => Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.TreeView | unset?
 
 /**
  * Retrieve the Gui object of the Gui window associated with the specified HWND.
  * @param RecurseParent If this parameter is 1 (true), it will automatically search and retrieve the parent (i.e. GUI) closest to the specified HWND.
  */
-GuiFromHwnd(Hwnd, RecurseParent := false) => Gui
+GuiFromHwnd(Hwnd, RecurseParent := false) => Gui?
 
 /**
  * If the specified value is derived from the specified base object, a non-zero number is returned.
@@ -1927,7 +1927,7 @@ Max(Numbers*) => Float | Integer
 /**
  * Retrieve the menu or menu bar object corresponding to the Win32 menu handle.
  */
-MenuFromHandle(Handle) => Menu
+MenuFromHandle(Handle) => Menu?
 
 /**
  * Call the menu item from the menu bar of the specified window.
@@ -2111,7 +2111,7 @@ ObjFromPtrAddRef(Address) => Object
 /**
  * The Base object of the return value.
  */
-ObjGetBase(Value) => Object
+ObjGetBase(Value) => Object?
 
 /**
  * The current capacity of the internal attribute array of the object.
@@ -2347,7 +2347,7 @@ RegDeleteKey([KeyName]) => void
 /**
  * Determine whether the string contains a certain matching pattern (regular expression).
  */
-RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo>, StartingPosition := 1) => Integer
+RegExMatch(Haystack, NeedleRegEx, &OutputVar?: VarRef<RegExMatchInfo?>, StartingPosition := 1) => Integer
 
 /**
  * Replace the place where the matching pattern (regular expression) appears in the string.
@@ -3094,7 +3094,7 @@ class Any {
 	/**
 	 * The implementation function of the retrieval method.
 	 */
-	GetMethod(Name) => Func
+	GetMethod(Name) => Func | unset
 
 	/**
 	 * If BaseObj is in Value's base object chain, it returns true, otherwise it returns false.
@@ -3125,7 +3125,7 @@ class Any {
 	 * The base object to retrieve the value.
 	 */
 	Base {
-		get => Object | void
+		get => Object?
 		set => void
 	}
 }
@@ -3145,7 +3145,7 @@ class Array<T = Any> extends Object {
 	 * Retrieves or sets the value of an array element.
 	 */
 	__Item[Index] {
-		get => T
+		get => T | unset
 		set => void
 	}
 
@@ -3162,12 +3162,12 @@ class Array<T = Any> extends Object {
 	/**
 	 * Delete the value of the array element so that the index does not contain a value.
 	 */
-	Delete(Index) => T
+	Delete(Index) => T?
 
 	/**
 	 * Returns the value at a given index, or a default value.
 	 */
-	Get(Index [, Default]) => T
+	Get(Index [, Default]) => T | unset
 
 	/**
 	 * If Index is valid and there is a value at that position, it returns true, otherwise it returns false.
@@ -3182,7 +3182,7 @@ class Array<T = Any> extends Object {
 	/**
 	 * Delete and return the last array element.
 	 */
-	Pop() => T
+	Pop() => T?
 
 	/**
 	 * Append the value to the end of the array.
@@ -3192,7 +3192,7 @@ class Array<T = Any> extends Object {
 	/**
 	 * Removes items from the array.
 	 */
-	RemoveAt(Index, Length := 1) => T
+	RemoveAt(Index, Length := 1) => T?
 
 	/**
 	 * Retrieve or set the length of the array.
@@ -3605,7 +3605,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	/**
 	 * Retrieve the GuiControl object of the focus control of the GUI.
 	 */
-	FocusedCtrl => ControlType
+	FocusedCtrl => ControlType?
 
 	/**
 	 * Retrieve the window handle (HWND) of the GUI window.
@@ -3632,7 +3632,7 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * Retrieve or set the menu bar of the window.
 	 */
 	MenuBar {
-		get => MenuBar
+		get => MenuBar?
 		set => void
 	}
 
@@ -3667,6 +3667,8 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	 * Enumerates the GUI's controls.
 	 */
 	__Enum(NumberOfVars?) => Enumerator<ControlType> | Enumerator<Integer, ControlType>
+
+	__Item[Name] => ControlType?
 
 	/**
 	 * Create controls such as text, buttons or checkboxes, and return a GuiControl object.
@@ -4392,7 +4394,7 @@ class InputHook extends Object {
 	 * Retrieve or set the function object called when Input is terminated.
 	 */
 	OnEnd {
-		get => Func | void
+		get => Func?
 		set => void
 	}
 
@@ -4400,7 +4402,7 @@ class InputHook extends Object {
 	 * Retrieve or set a function object, which will be called after characters are added to the input buffer.
 	 */
 	OnChar {
-		get => Func | void
+		get => Func?
 		set => void
 	}
 
@@ -4408,7 +4410,7 @@ class InputHook extends Object {
 	 * Retrieve or set the function object, which will be called when the button that enables notification is pressed.
 	 */
 	OnKeyDown {
-		get => Func | void
+		get => Func?
 		set => void
 	}
 
@@ -4416,7 +4418,7 @@ class InputHook extends Object {
 	 * Retrieve or set the function object, which will be called when the enable notification button is released.
 	 */
 	OnKeyUp {
-		get => Func | void
+		get => Func?
 		set => void
 	}
 
@@ -4610,7 +4612,7 @@ class Map<K = Any, V = Any> extends Object {
 	 * Retrieves or sets the value of a key-value pair.
 	 */
 	__Item[Index: K] {
-		get => V
+		get => V | unset
 		set => void
 	}
 
@@ -4627,12 +4629,12 @@ class Map<K = Any, V = Any> extends Object {
 	/**
 	 * Remove key-value pairs from the map.
 	 */
-	Delete(Key: K) => V
+	Delete(Key: K) => V | unset
 
 	/**
 	 * Returns the value or default value associated with the key.
 	 */
-	Get(Key: K [, Default: V]) => V
+	Get(Key: K [, Default: V]) => V | unset
 
 	/**
 	 * If Key has an associated value in the map, it returns true, otherwise it returns false.
@@ -4812,7 +4814,7 @@ class Object extends Any {
 	/**
 	 * Delete the attributes owned by the object.
 	 */
-	DeleteProp(Name) => Any
+	DeleteProp(Name) => Any?
 
 	/**
 	 * Returns the descriptor of a given own property, compatible with DefineProp.
@@ -4821,7 +4823,7 @@ class Object extends Any {
 		Get?: Func, Set?: Func, Call?: Func, Value?: Any,
 		/** @since 2.1-alpha.3 */
 		Type?: String | Integer | Class, Offset?: Integer
-	}
+	} | unset
 
 	/**
 	 * If the object has the attribute of the name, it returns true, otherwise it returns false.

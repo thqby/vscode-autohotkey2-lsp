@@ -73,8 +73,8 @@ const LINE_STARTERS = 'break case catch continue else for finally global goto if
 const META_FUNCNAME = '__REF __VALUE __NEW __INIT __ITEM __ENUM __GET __CALL __SET __DELETE'.split(' ');
 const OBJECT_STYLE = { collapse: 2, expand: 1, none: 0 }, PROP_NEXT_TOKEN = ['[', '{', '=>'];
 const PUNCT = '% : + ++ - -- * ** / // & && | || ^ < << <= = == => > >> >>> >= ? ?? ! != !== ~ ~= := += -= *= /= //= &= |= ^= ??= <<= >>= >>>='.split(' ');
-const RESERVED_OP = 'isset throw super false true'.split(' '), ASSIGN_INDEX = PUNCT.indexOf(':=');
-const RESERVED_WORDS = LINE_STARTERS.concat('false isset super true and as contains in is not or'.split(' '));
+const RESERVED_OP = 'isset throw super false true unset'.split(' '), ASSIGN_INDEX = PUNCT.indexOf(':=');
+const RESERVED_WORDS = LINE_STARTERS.concat('false isset super true unset and as contains in is not or'.split(' '));
 const WHITESPACE = " \t\r\n", OP_INDEX = RESERVED_WORDS.indexOf('and');
 const DIRECTIVES_EXPR = ['#initexec', '#import', '#hotif'];
 export const ASSIGN_TYPE = [':=', '??='], ZERO_RANGE = Range.create(0, 0, 0, 0);
@@ -84,9 +84,10 @@ export const FLOAT = createPrototype('Float', SymbolKind.Number);
 export const INTEGER = createPrototype('Integer', SymbolKind.Number);
 export const NUMBER = createPrototype('Number', SymbolKind.Number);
 export const OBJECT = createPrototype('Object', SymbolKind.Class);
-export const VOID = createPrototype('void', SymbolKind.Null);
+export const VOID = createPrototype('void', SymbolKind.String);
 export const STRING = createPrototype('String', SymbolKind.String);
 export const UNSET = createPrototype('unset', SymbolKind.Null);
+export const BLANK = createPrototype('unset?', SymbolKind.Null);
 export const VARREF = createPrototype('VarRef', SymbolKind.Class, 'Any');
 export const $DIRPATH = { ...STRING }, $DLLFUNC = { ...STRING }, $FILEPATH = { ...STRING };
 export const THIS: Variable = {
@@ -290,7 +291,7 @@ export class Lexer implements Module {
 		}
 
 		if (d || /\.d\.(ahk2?|ah2)$/i.test(this.fsPath)) {
-			const { uri } = this;
+			const { uri } = this, is_builtin = d >= 2;
 			this.d = d ||= 1, allow_$ ||= true;
 			this.parseScript = function (): void {
 				const p: ClassNode[] = [], cls: string[] = [];
@@ -440,7 +441,7 @@ export class Lexer implements Module {
 								let extends_ = '';
 								const cl = DocumentSymbol.create((tk = tokens[++i]).content, undefined, SymbolKind.Class,
 									make_range(tokens[i - 1].offset, 0), make_range(tk.offset, tk.length), []) as ClassNode;
-								j = i + 1, cls.push(cl.name), (d & 2) && (cl.is_builtin = true);
+								j = i + 1, cls.push(cl.name), is_builtin && (cl.is_builtin = true);
 								tk.semantic = { type: SemanticTokenTypes.class, modifier: SemanticTokenModifiers.definition | SemanticTokenModifiers.readonly };
 								tk.symbol = tk.definition = cl, cl.extends = '', cl.uri ??= uri;
 								if ((lk = tokens[j])?.content === '<' && !lk.topofline) {
@@ -523,7 +524,7 @@ export class Lexer implements Module {
 						it.is_builtin = true;
 						switch (it.kind) {
 							case SymbolKind.Function:
-								it.uri = uri, it.is_builtin = true;
+								it.uri = uri;
 							// fall through
 							case SymbolKind.Class:
 								it.overwrite ??= d, it.decl = it.def = true;
@@ -592,6 +593,15 @@ export class Lexer implements Module {
 									} else if (r)
 										tps.push(has_typeof ? `typeof ${r}` : S2O[r.toUpperCase()] ?? r);
 									break;
+								case TokenType.Reserved:
+									if ((_low = lk.content.toLowerCase()) === 'unset') {
+										if ((lk = tokens[++j])?.content === '?')
+											sym.implicit_return ??= (tps.push(BLANK), BLANK), lk.ignore = true, lk.op_type = 1, lk = tokens[++j];
+										else tps.push(sym.implicit_return = UNSET);
+										break;
+									} else if (_low === 'throw' && lk.previous_token?.content === '=>')
+										lk = tokens[++j];
+									break loop;
 								case TokenType.Number:
 								case TokenType.String:
 									tps.push(lk.content), lk = tokens[++j];
@@ -647,11 +657,7 @@ export class Lexer implements Module {
 										}
 									} else if (lk.content === '-' && (lk = tokens[++j])?.type === TokenType.Number)
 										tps.push(`-${lk.content}`), lk = tokens[++j];
-									else {
-										if (lk.content.toLowerCase() === 'throw' && lk.previous_token?.content === '=>')
-											lk = tokens[++j];
-										break loop;
-									}
+									else break loop;
 									break;
 							}
 							while (lk?.content === '[' && !lk.topofline && tokens[j + 1]?.content === ']') {
@@ -663,6 +669,8 @@ export class Lexer implements Module {
 								} as ClassNode);
 								lk = tokens[j += 2];
 							}
+							if (lk?.content === '?')
+								lk.ignore = true, lk.op_type = 1, lk = tokens[++j], tps.push(BLANK), is_builtin && (sym.implicit_return ??= BLANK);
 							if (lk?.content !== '|')
 								break;
 							_cm = undefined;
@@ -1306,7 +1314,9 @@ export class Lexer implements Module {
 														tn.bc_mode = bc_mode;
 														sk = tk, tn.parent = prop, tn.children = parse_block(BlockType.Method, tn, classfullname);
 														tn.range.end = document.positionAt(parser_pos);
-														pop() || (tn.implicit_return ??= tn.bc_mode ? VOID : (tn.returns ??= [], UNSET));
+														pop() || (tn.implicit_return ??= tn.bc_mode ? VOID : (tn.returns ??= [], BLANK));
+														if (tn.implicit_return === BLANK && tn.returns?.length)
+															tn.implicit_return = UNSET;
 														if (_low === 'set')
 															tn.params.unshift(HIDDEN_PARAMS.value);
 														else prop.returns = tn.returns, prop.implicit_return = tn.implicit_return;
@@ -1624,7 +1634,9 @@ export class Lexer implements Module {
 						lb.in_expr = tk.in_expr = fc.offset;
 						begin_line = false;
 					}
-					pop() || (tn.implicit_return = tn.bc_mode ? VOID : (tn.returns ??= [], UNSET));
+					pop() || (tn.implicit_return = tn.bc_mode ? VOID : (tn.returns ??= [], BLANK));
+					if (tn.implicit_return === BLANK && tn.returns?.length)
+						tn.implicit_return = UNSET;
 				} else {
 					_this.diagnostics.push({ message: diagnostic.declarationerr(), range: tn.selectionRange });
 					_parent = prev_parent, mode = prev_mode, return_index = _ri;
@@ -1904,6 +1916,11 @@ export class Lexer implements Module {
 						parse_isset(input[tk.offset + 5]);
 						break;
 					case 'false': case 'true':
+						tk.data = INTEGER;
+					// fall through
+					case 'unset':
+						tk.data ??= UNSET;
+						tk.type = TokenType.Number;
 						if (_this.getToken(parser_pos, true).type === TokenType.Assign)
 							_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset, tk.length);
 						else next = false;
@@ -1931,12 +1948,15 @@ export class Lexer implements Module {
 									if (mode & BlockType.Func) {
 										if (b.symbol && (_cm = comments[b.symbol.selectionRange.start.line]))
 											set_detail(_cm.symbol = b.symbol, _cm);
-										if (return_index !== undefined)
+										if (return_index !== undefined) {
+											if (b.offset <= lk.offset && (_parent as FuncNode).bc_mode === false)
+												_parent.implicit_return = UNSET, _parent.returns ??= [];
 											break;
+										}
 										if (b.offset <= lk.offset)
 											(_parent.returns ??= []).push(b.offset, lk.offset + lk.length);
-										else _parent.implicit_return = (_parent as FuncNode).bc_mode ? VOID :
-											(_parent.returns ??= [], UNSET);
+										else _parent.implicit_return ??= (_parent as FuncNode).bc_mode ? VOID :
+											(_parent.returns ??= [], BLANK);
 									} else if (b.offset <= lk.offset)
 										unexpected(b);
 								}
@@ -3156,7 +3176,11 @@ export class Lexer implements Module {
 							}
 							switch (_low = tk.content.toLowerCase()) {
 								case 'false': case 'true':
-									tk.type = TokenType.Identifier;
+									tk.data = INTEGER;
+								// fall through
+								case 'unset':
+									tk.data ??= UNSET;
+									tk.type = TokenType.Number;
 									if (byref !== undefined || _this.getToken(parser_pos, true).type === TokenType.Assign)
 										_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 									else next = false;
@@ -3675,7 +3699,11 @@ export class Lexer implements Module {
 							}
 							switch (_low = tk.content.toLowerCase()) {
 								case 'false': case 'true':
-									tk.type = TokenType.Identifier;
+									tk.data = INTEGER;
+								// fall through
+								case 'unset':
+									tk.data ??= UNSET;
+									tk.type = TokenType.Number;
 									if (byref !== undefined || _this.getToken(parser_pos, true).type === TokenType.Assign)
 										_this.addDiagnostic(diagnostic.reservedworderr(tk.content), tk.offset);
 									else next = false;
@@ -5310,7 +5338,7 @@ export class Lexer implements Module {
 				if (c === '?') {
 					const pt = lst, tk = lst = createToken(c, TokenType.Operator, offset, 1, bg);
 					if (pt.type === TokenType.Identifier || pt.type === TokenType.BracketEnd ||
-						pt.op_type === 1 && pt.content === '%') {
+						pt.op_type === 1 && pt.content === '%' || pt.data === UNSET) {
 						const bak = parser_pos, t = get_token_ignore_comment(depth + 1);
 						parser_pos = bak;
 						if (t.type === TokenType.Reserved ? (t.topofline && LINE_STARTERS.includes(t.content.toLowerCase())) :

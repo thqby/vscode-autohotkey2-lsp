@@ -2,7 +2,7 @@ import { CancellationToken, DocumentSymbolParams, Range, SymbolInformation, Work
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	ANY, ASSIGN_TYPE, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SK2STT,
-	SUPER, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, VARREF, VOID, Variable, ZERO_RANGE,
+	SUPER, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, UnsetKind, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles, findClass, getAllModules,
 	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getModuleImporteds, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
@@ -27,6 +27,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	const ClassNonDynamicMemberCheck = configCache.Diagnostics?.ClassNonDynamicMemberCheck;
 	let p_this: ClassNode | undefined;
 	mod ??= (lex.symbolInformation = [], lex);
+	let bc_mode = mod.bc_mode ?? mod.bc_mode_def ?? true;
 	for (let m of mods) {
 		const { d } = m as Lexer, { declaration: dec } = m, lex = m instanceof Lexer ? m : lexers[m.uri!];
 		let t;
@@ -237,7 +238,6 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 						}
 					for (const [k, v] of Object.entries(fn.unresolved_vars ?? {}))
 						if ((s = inherit[k] ?? gvar[k])) {
-							converttype(v, s);
 							if (s === gvar[k])
 								(fn.global ??= {})[k] = v, lex.declaration[k] ??= (v.is_global = true, v);
 							else fn.declaration[k] = v;
@@ -254,7 +254,10 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 				default: inherit = { ...vars }; break;
 			}
 			const h = info.kind === SymbolKind.Function && unused.has(info);
+			const bbc = bc_mode;
+			bc_mode = info.bc_mode ?? bc_mode;
 			flatTree(info, inherit, oig);
+			bc_mode = bbc;
 			h && unused.add(info);
 		}
 	}
@@ -537,120 +540,130 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 				lex.addDiagnostic(diagnostic.maybehavenotmember(cls.name, tk.content), tk.offset, tk.length, { severity: 2 });
 		}
 	}
-}
 
-export function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
-	const { paraminfo } = info;
-	let is_cls: boolean, params, tr: number;
-	if (!paraminfo || !invokeCheck) return;
-	if ((is_cls = node?.kind === SymbolKind.Class))
-		node = getClassConstructor(node as unknown as ClassNode) as FuncNode;
-	if (!(params = node?.params)) return;
-	const { ParamCount: fPC, ByrefParam: fBP, ReturnUnset: fRU, ReturnVoid: fRV } = invokeCheck;
-	if (fPC || fBP && node.hasref) {
-		const { max, min } = getParamCount(node), l = params.length - (node.variadic ? 1 : 0);
-		const _miss: Record<number, boolean> = {};
-		let { count, miss } = paraminfo, index;
-		miss = [...miss];
-		while ((index = miss.pop()) !== undefined) {
-			if (index !== --count) {
-				count++, miss.push(index);
-				break;
+	function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
+		const { paraminfo } = info;
+		let is_cls: boolean, params, tr = UnsetKind.None;
+		if (!paraminfo || !invokeCheck) return;
+		if ((is_cls = node?.kind === SymbolKind.Class))
+			node = getClassConstructor(node as unknown as ClassNode) as FuncNode;
+		if (!(params = node?.params)) return;
+		const { ParamCount: fPC, ByrefParam: fBP, ReturnUnset: fRU, ReturnVoid: fRV } = invokeCheck;
+		if (fPC || fBP && node.hasref) {
+			const { max, min } = getParamCount(node), l = params.length - (node.variadic ? 1 : 0);
+			const _miss: Record<number, boolean> = {};
+			let { count, miss } = paraminfo, index;
+			miss = [...miss];
+			while ((index = miss.pop()) !== undefined) {
+				if (index !== --count) {
+					count++, miss.push(index);
+					break;
+				}
+			}
+			if ((count < min && !paraminfo.unknown) || count > max)
+				fPC && lex.diagnostics.push({
+					message: diagnostic.paramcounterr(min === max ? min : max === Infinity ? `${min}+` : `${min}-${max}`, count),
+					range: info.range, severity: DiagnosticSeverity.Error
+				});
+			for (index of miss) {
+				if (index >= l)
+					break;
+				if (_miss[index] = true, fPC && param_is_miss(params, index))
+					lex.addDiagnostic(diagnostic.missingparam(),
+						paraminfo.comma[index] ?? lex.document.offsetAt(info.range.end), 1);
+			}
+			if (fBP && node.hasref) {
+				params.forEach((param, index) => {
+					if (index < count && param.pass_by_ref && !_miss[index]) {
+						let o: number, t: Token;
+						if (index === 0)
+							o = info.offset! + info.name.length + 1;
+						else o = paraminfo.comma[index - 1] + 1;
+						if ((t = lex.findToken(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && lex.tokens[t.next_token_offset]?.type !== TokenType.Dot) {
+							let end = 0;
+							const ts = decltypeExpr(lex, t, paraminfo.comma[index] ?? (end = paraminfo.end!));
+							if (ts.some(it => it === VARREF || it === ANY || it.data === VARREF))
+								return;
+							if (ahkVersion >= alpha_3 + 7 && ts.some(it =>
+								getClassMember(lex, it, '__value', false)))
+								return;
+							const lk = lex.tokens[paraminfo.comma[index]]?.previous_token;
+							if (lk)
+								end = lk.offset + lk.length;
+							lex.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
+								Math.max(0, end - t.offset), { severity: 2 });
+						}
+					}
+				});
 			}
 		}
-		if ((count < min && !paraminfo.unknown) || count > max)
-			fPC && lex.diagnostics.push({
-				message: diagnostic.paramcounterr(min === max ? min : max === Infinity ? `${min}+` : `${min}-${max}`, count),
-				range: info.range, severity: DiagnosticSeverity.Error
-			});
-		for (index of miss) {
-			if (index >= l)
-				break;
-			if (_miss[index] = true, fPC && param_is_miss(params, index))
-				lex.addDiagnostic(diagnostic.missingparam(),
-					paraminfo.comma[index] ?? lex.document.offsetAt(info.range.end), 1);
-		}
-		if (fBP && node.hasref) {
-			params.forEach((param, index) => {
-				if (index < count && param.pass_by_ref && !_miss[index]) {
-					let o: number, t: Token;
-					if (index === 0)
-						o = info.offset! + info.name.length + 1;
-					else o = paraminfo.comma[index - 1] + 1;
-					if ((t = lex.findToken(o)).content !== '&' && (t.content.toLowerCase() !== 'unset' || param.defaultVal === undefined) && lex.tokens[t.next_token_offset]?.type !== TokenType.Dot) {
-						let end = 0;
-						const ts = decltypeExpr(lex, t, paraminfo.comma[index] ?? (end = paraminfo.end!));
-						if (ts.some(it => it === VARREF || it === ANY || it.data === VARREF))
-							return;
-						if (ahkVersion >= alpha_3 + 7 && ts.some(it =>
-							getClassMember(lex, it, '__value', false)))
-							return;
-						const lk = lex.tokens[paraminfo.comma[index]]?.previous_token;
-						if (lk)
-							end = lk.offset + lk.length;
-						lex.addDiagnostic(diagnostic.typemaybenot('VarRef'), t.offset,
-							Math.max(0, end - t.offset), { severity: 2 });
-					}
-				}
-			});
-		}
-	}
-	if (test_returns()) {
-		const tk = lex.tokens[info.offset!];
-		if (tk?.semantic?.type === SemanticTokenTypes.method) {
-			let t = tk.previous_token;
-			while (t?.type === TokenType.Dot)
-				if ((t = t.previous_token)?.type === TokenType.Identifier)
-					t = t!.previous_token;
-				else return;
-			if (!is_assign_or_return(t))
+		if (test_returns()) {
+			const tk = lex.tokens[info.offset!];
+			if (tk?.semantic?.type === SemanticTokenTypes.method) {
+				let t = tk.previous_token;
+				while (t?.type === TokenType.Dot)
+					if ((t = t.previous_token)?.type === TokenType.Identifier)
+						t = t!.previous_token;
+					else return;
+				if (!is_assign_or_return(t))
+					return;
+			} else if (!is_assign_or_return(tk?.previous_token))
 				return;
-		} else if (!is_assign_or_return(tk?.previous_token))
-			return;
-		let nt = lex.getToken(lex.document.offsetAt(info.range.end), true);
-		nt = lex.tokens[nt?.next_token_offset];
-		if (!nt || !isContinuousLine(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
-			lex.addDiagnostic(diagnostic.missingretval(), tk.offset, tk.length, { severity: 2 });
-	}
-	function param_is_miss(params: Variable[], i: number) {
-		if (params[i].defaultVal !== undefined)
-			return false;
-		let j = i - 1;
-		while (j >= 0) {
-			// Skip negligible parameters
-			for (; j >= 0 && params[j].defaultVal === false; j--, i++);
-			if (!params[i] || params[i].defaultVal !== undefined)
-				return false;
-			for (; j >= 0 && params[j].defaultVal !== false; j--);
+			let nt = lex.getToken(lex.document.offsetAt(info.range.end), true);
+			nt = lex.tokens[nt?.next_token_offset];
+			if (!nt || !isContinuousLine(nt.previous_token!, nt) || nt.content !== '??' && (nt.content !== '?' || !nt.ignore))
+				lex.addDiagnostic(diagnostic.missingretval(tr as UnsetKind === UnsetKind.Void ? 'void' : 'unset'),
+					tk.offset, tk.length, { severity: DiagnosticSeverity.Warning });
 		}
-		return true;
-	}
-	function is_assign_or_return(tk?: Token) {
-		if (!tk) return false;
-		if (tk.type === TokenType.Assign)
+		function param_is_miss(params: Variable[], i: number) {
+			if (params[i].defaultVal !== undefined)
+				return false;
+			let j = i - 1;
+			while (j >= 0) {
+				// Skip negligible parameters
+				for (; j >= 0 && params[j].defaultVal === false; j--, i++);
+				if (!params[i] || params[i].defaultVal !== undefined)
+					return false;
+				for (; j >= 0 && params[j].defaultVal !== false; j--);
+			}
 			return true;
-		let ret;
-		if (tk.type === TokenType.Operator)
-			ret = tk.content === '=>';
-		else ret = tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'return' &&
-			!lex.tokens[tk.next_token_offset]?.topofline;
-		if (ret && tr === 2 && (info.outer?.type_annotations || null)?.includes(VOID))
-			ret = false;
-		return ret;
-	}
-	function test_returns() {
-		if (is_cls && !node.static)
-			return false;
-		if ((tr = node.test_return!) !== undefined)
-			return tr === 2 ? fRV : tr && fRU;
-		const ta = node.type_annotations || decltypeReturns(node, lexers[node.uri!] ?? lex);
-		let r;
-		if (ta?.length) {
-			if (ta.includes(UNSET))
-				return tr = node.test_return = 1, fRU;
-			r = ta.length === 1 && ta[0] === VOID;
-		} else r = !node.returns?.length;
-		return (tr = node.test_return = r ? 2 : 0) && fRV;
+		}
+		function is_assign_or_return(tk?: Token) {
+			if (!tk) return false;
+			if (tk.type === TokenType.Assign)
+				return true;
+			let ret;
+			if (tk.type === TokenType.Operator) {
+				ret = tk.content === '=>';
+				if (ret && tr === UnsetKind.Blank)
+					return false;
+			} else ret = tk.type === TokenType.Reserved && tk.content.toLowerCase() === 'return' &&
+				!lex.tokens[tk.next_token_offset]?.topofline;
+			if (ret && tr === UnsetKind.Void && (info.outer?.type_annotations || null)?.includes(VOID))
+				ret = false;
+			return ret;
+		}
+		function test_returns() {
+			if (is_cls && !node.static)
+				return false;
+			if ((tr = node.unset_kind!) !== undefined)
+				return tr === UnsetKind.Void ? fRV : tr && fRU && bc();
+			const ta = node.type_annotations || decltypeReturns(node, lexers[node.uri!] ?? lex, undefined, false);
+			let r;
+			if (ta?.length) {
+				if (!(r = ta.length === 1 && ta[0] === VOID)) {
+					for (const v of ta)
+						if ((v as AhkSymbol).kind === SymbolKind.Null)
+							return tr = node.unset_kind = v === UNSET ? UnsetKind.Unset : UnsetKind.Blank, fRU && bc();
+				}
+			} else r = !node.returns?.length;
+			return (tr = node.unset_kind = r ? UnsetKind.Void : UnsetKind.None) && fRV;
+		}
+		function bc() {
+			if (bc_mode && node.is_builtin)
+				return tr = UnsetKind.None;
+			return true;
+		}
 	}
 }
 
