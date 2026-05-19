@@ -1460,7 +1460,7 @@ export class Lexer implements Module {
 							break;
 
 						case TokenType.HotkeyLine: {
-							const ok = lk;
+							const ok = tk.previous_token!;
 							tk.symbol = tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Event,
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2));
 							tn.range.end = document.positionAt(parser_pos - 1), result.push(tn);
@@ -1485,7 +1485,7 @@ export class Lexer implements Module {
 								_this.addDiagnostic(diagnostic.hotdeferr(), tk.offset, tk.length);
 							else if (!tk.ignore && !isValidHotkey(tk.content))
 								_this.addDiagnostic(diagnostic.invalidhotdef(), tk.offset, tk.length);
-							const ok = lk, ht = tk, tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Event,
+							const ht = tk, tn = DocumentSymbol.create(tk.content, undefined, SymbolKind.Event,
 								make_range(tk.offset, tk.length), make_range(tk.offset, tk.length - 2)) as FuncNode;
 							if ((_cm = comments[tn.selectionRange.start.line]))
 								set_detail(tn, _cm);
@@ -1495,7 +1495,7 @@ export class Lexer implements Module {
 							while (tk.type as TokenType === TokenType.Directive)
 								parse_sharp(), nexttoken();
 							if (tk.type & TokenType.Hotkey) {
-								mark_unreachable(ok, tk), next = false;
+								mark_unreachable(ht.previous_token!, tk), next = false;
 								break;
 							}
 							const skip = skip_reachable();
@@ -1505,19 +1505,20 @@ export class Lexer implements Module {
 									_this.addDiagnostic(diagnostic.unexpected(fc.content), fc.offset);
 								if (!r || r.max < 1 || r.min > 1)
 									_this.addDiagnostic(diagnostic.hotparamerr(), fc.offset);
-								skip?.(ok, next ? parser_pos : tk);
+								skip?.(ht.previous_token!, next ? parser_pos : tk);
 								break;
 							}
 							if (tk.topofline && tk.content !== '{') {
-								skip?.(ok, tk);
+								skip?.(ht.previous_token!, tk);
 								stop_parse(ht) || _this.addDiagnostic(diagnostic.hotmissbrace(), ht.offset, ht.length);
 								next = false;
 								break;
 							}
+							const pop = return_push(true);
 							tn.params = [HIDDEN_PARAMS.thishotkey];
 							if (tk.content === '{') {
 								tk.previous_pair_pos = ht.offset;
-								tn.children = parse_block(1, tn);
+								tn.children = parse_block(BlockType.Func, tn);
 								tn.range = make_range(ht.offset, parser_pos - ht.offset);
 								_this.addSymbolFolding(tn, tk.offset);
 							} else {
@@ -1540,8 +1541,9 @@ export class Lexer implements Module {
 								line_begin_offset = undefined;
 								line_ranges.push([tn.range.end.line, ht.offset]);
 							}
+							pop();
 							adddeclaration(tn);
-							skip?.(ok, next ? parser_pos : tk);
+							skip?.(ht.previous_token!, next ? parser_pos : tk);
 							break;
 						}
 						case TokenType.Unknown:
@@ -2076,7 +2078,7 @@ export class Lexer implements Module {
 				t = createFunc('__Init', SymbolKind.Method, ZERO_RANGE, ZERO_RANGE, [], []);
 				(tn.$property!.__INIT = t).ranges = [], t.parent = tn.prototype!;
 				t.full = `(${tn.full}) __Init()`, t.has_this_param = true;
-				tn.children = parse_block(2, tn as unknown as FuncNode, classfullname + cl.content + '.');
+				tn.children = parse_block(BlockType.Class, tn as unknown as FuncNode, classfullname + cl.content + '.');
 				tn.range = tn.prototype!.range = make_range(bp, parser_pos - bp);
 				cl.semantic = {
 					type: SemanticTokenTypes.class,
