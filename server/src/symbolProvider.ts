@@ -425,8 +425,8 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 					sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly | (n.static ? SemanticTokenModifiers.static : 0);
 					sem.type = SemanticTokenTypes.method, tk.definition = n;
 					if ((t = tk.callsite)) {
-						let tt, nk;
-						if ((n as FuncNode).construct !== undefined)
+						let tt, nk, cc;
+						if (cc = (n as FuncNode).construct !== undefined)
 							n = obj.prototype && getClassMember(lex, obj.prototype, (n as FuncNode).construct || '__new', true) || n;
 						else if (obj.property && n.full?.startsWith('(Object) DefineProp(')) {
 							tt = tokens[tk.next_token_offset];
@@ -439,7 +439,8 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 								} else addClassProp(obj, '');
 							}
 						}
-						checkParamInfo(lex, n as FuncNode, t);
+						n.uri ??= n.parent?.uri;
+						checkParamInfo(lex, n as FuncNode, t, cc);
 						if (!nk) return;
 						tk = nk;
 					} else obj = n as ClassNode;
@@ -541,12 +542,16 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 		}
 	}
 
-	function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite) {
+	function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite, is_construct?: boolean) {
 		const { paraminfo } = info;
-		let is_cls: boolean, params, tr = UnsetKind.None;
+		let params, tr = UnsetKind.None;
 		if (!paraminfo || !invokeCheck) return;
-		if ((is_cls = node?.kind === SymbolKind.Class))
-			node = getClassConstructor(node as unknown as ClassNode) as FuncNode;
+		if (is_construct === undefined && node?.kind === SymbolKind.Class) {
+			const cls = node as unknown as ClassNode, ll = lexers[node.uri!] ?? lex;
+			node = getClassMember(ll, cls, 'call', true) as FuncNode;
+			if ((is_construct = node?.construct !== undefined))
+				node = (getClassMember(ll, cls.prototype!, node.construct || '__new', true) ?? node) as FuncNode;
+		}
 		if (!(params = node?.params)) return;
 		const { ParamCount: fPC, ByrefParam: fBP, ReturnUnset: fRU, ReturnVoid: fRV } = invokeCheck;
 		if (fPC || fBP && node.hasref) {
@@ -644,7 +649,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 			return ret;
 		}
 		function test_returns() {
-			if (is_cls && !node.static)
+			if (is_construct)
 				return false;
 			if ((tr = node.unset_kind!) !== undefined)
 				return tr === UnsetKind.Void ? fRV : tr && fRU && bc();

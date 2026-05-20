@@ -1415,7 +1415,7 @@ export class Lexer implements Module {
 								_parent = (_parent as ClassNode).$property!.__INIT;
 								const sta = parse_statement('');
 								_parent.children!.push(...result.splice(rl)), _parent = _;
-								result.push(...sta), sta.forEach(it => it.parent = _);
+								result.push(...sta), sta.forEach(it => it.parent = (_ as ClassNode).prototype);
 							} else if (tk.topofline)
 								next = true, parse_top_word();
 							else next = false, result.push(...parse_line());

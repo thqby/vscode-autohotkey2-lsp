@@ -827,6 +827,7 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, b
 	let tps: AhkSymbol[];
 	if (lex && sym.returns) {
 		sym.cached_types = [ANY], tps = [], bc_mode = (sym as FuncNode).bc_mode ?? bc_mode;
+		_this ??= get_this();
 		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
 			tps.push(...decltypeExpr(lex, lex.findToken(r[i], true), r[i + 1], _this, bc_mode));
 		if (types) {
@@ -842,6 +843,14 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, b
 		}
 	} else tps = types ? [...types] : [];
 	return tps;
+	function get_this() {
+		if (!(sym as FuncNode).has_this_param)
+			return;
+		let t = sym.parent;
+		if (t?.kind === SymbolKind.Property)
+			t = t.parent;
+		return t as ClassNode;
+	}
 }
 
 export function generateTypeAnnotation(sym: AhkSymbol, lex?: Lexer, _this?: ClassNode) {
