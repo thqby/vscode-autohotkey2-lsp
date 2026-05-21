@@ -164,79 +164,79 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 		return [];
 	while ((tk = op_stack.pop()!))
 		calculate(tk);
-	const result = new Set<AhkSymbol>;
-	let syms: Set<AhkSymbol> | AhkSymbol[] = [], that;
-	for (tk of stack) {
-		if (tk.symbol) {
-			if (tk.symbol.kind === SymbolKind.Property) {
-				let prop = tk.symbol as Property;
-				const cls = prop.parent as ClassNode;
-				if ((prop = cls?.property?.[prop.name.toUpperCase()])) {
-					if (!prop.get && ((t = prop).kind !== SymbolKind.Property || (t = prop.call)))
-						syms = [t];
-					else syms = decltypeReturns(prop, lexers[cls.uri!] ?? lex, cls);
-				} else syms = [];
-			} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
-		} else switch (tk.type) {
-			case TokenType.Invoke: {
-				syms = decltypeInvoke(lex, syms, tk.content.toLowerCase(),
-					tk.data as InvokeFlag, tk.paraminfo, that, bc_mode);
-				break;
-			}
-			case TokenType.Identifier: {
-				const pos = document.positionAt(tk.offset);
-				const r = findSymbol(lex, tk.content, SymbolKind.Variable, pos);
-				if (!r) break;
-				syms = new Set;
-				const node = r.node;
-				if (node.kind === SymbolKind.Variable) {
-					if (r.uri !== lex.uri)
-						pos.line = NaN;
-					for (const n of decltypeVar(node, lexers[r.uri] ?? lex, pos, r.scope, _this))
-						syms.add(n);
-				} else if (syms.add(node), r.is_this !== undefined) {
-					that = _this ?? node as ClassNode;
-					if (_this && r.is_this === false)
-						(node as ClassNode).prototype = _this.prototype;
-					continue;
+	return decltype(stack);
+	function decltype(operand: Token[]) {
+		let syms: AhkSymbol[] = [], that;
+		for (const tk of operand) {
+			if (tk.symbol) {
+				if (tk.symbol.kind === SymbolKind.Property) {
+					let prop = tk.symbol as Property;
+					const cls = prop.parent as ClassNode;
+					if ((prop = cls?.property?.[prop.name.toUpperCase()])) {
+						if (!prop.get && ((t = prop).kind !== SymbolKind.Property || (t = prop.call)))
+							syms = [t];
+						else syms = decltypeReturns(prop, lexers[cls.uri!] ?? lex, cls);
+					} else syms = [];
+				} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
+			} else switch (tk.type) {
+				case TokenType.Invoke: {
+					const r = decltypeInvoke(lex, syms, tk.content.toLowerCase(),
+						tk.data as InvokeFlag, tk.paraminfo, that, bc_mode);
+					syms = 'length' in r ? r : [...r];
+					break;
 				}
-				break;
-			}
-			case TokenType.Number:
-				syms = [tk.data as AhkSymbol ?? NUMBER];
-				break;
-			case TokenType.String: syms = [STRING]; break;
-			case TokenType.BlockStart:
-				if (!(t = tk.data as ClassNode)) break;
-				syms = [t], t.uri ??= lex.uri;
-				if ((tt = !t.extends && t.property?.BASE)) {
-					const tps = decltypeReturns(tt, lex, _this);
-					if (tps.length < 2)
-						t.base = tps[0];
-					else {
-						syms = [];
-						for (const base of tps)
-							syms.push({ ...t, base } as ClassNode);
+				case TokenType.Identifier: {
+					const pos = document.positionAt(tk.offset);
+					const r = findSymbol(lex, tk.content, SymbolKind.Variable, pos);
+					if (!r) break;
+					const node = r.node;
+					if (node.kind === SymbolKind.Variable) {
+						if (r.uri !== lex.uri)
+							pos.line = NaN;
+						syms = decltypeVar(node, lexers[r.uri] ?? lex, pos, r.scope, _this);
+					} else if (syms = [node], r.is_this !== undefined) {
+						that = _this ?? node as ClassNode;
+						if (_this && r.is_this === false)
+							(node as ClassNode).prototype = _this.prototype;
+						continue;
 					}
+					break;
 				}
-				break;
-			case TokenType.BracketStart: {
-				const b = (t = tk.paraminfo?.comma)?.length ? t.at(-1)! : tk.next_token_offset;
-				syms = decltypeExpr(lex, tokens[b], tk.next_pair_pos!, _this);
-				break;
+				case TokenType.Number:
+					syms = [tk.data as AhkSymbol ?? NUMBER];
+					break;
+				case TokenType.String: syms = [STRING]; break;
+				case TokenType.BlockStart:
+					if (!(t = tk.data as ClassNode)) break;
+					syms = [t], t.uri ??= lex.uri;
+					if ((tt = !t.extends && t.property?.BASE)) {
+						const tps = decltypeReturns(tt, lex, _this);
+						if (tps.length < 2)
+							t.base = tps[0];
+						else {
+							syms = [];
+							for (const base of tps)
+								syms.push({ ...t, base } as ClassNode);
+						}
+					}
+					break;
+				case TokenType.BracketStart: {
+					const b = (t = tk.paraminfo?.comma)?.length ? t.at(-1)! : tk.next_token_offset;
+					syms = decltypeExpr(lex, tokens[b], tk.next_pair_pos!, _this);
+					break;
+				}
+				case TokenType.Operator: {
+					const [l, r] = (tk.data as [Token[], Token[]]).map(decltype);
+					let ss = tk.content[0] === '?' ? l.filter(t => t.kind !== SymbolKind.Null) : l;
+					ss.push(...r), syms = [...new Set(ss)];
+					break;
+				}
+				default: syms = []; break;
 			}
-			default:
-				if (tk.content === '||')
-					for (const n of syms)
-						result.add(n);
-				syms = [];
-				break;
+			that = undefined;
 		}
-		that = undefined;
+		return syms;
 	}
-	for (const n of syms)
-		result.add(n);
-	return [...result];
 	function calculate(op: Token) {
 		let l = operand.pop(), ret = { content: '', type: TokenType.Number } as Token;
 		const rv = stack.splice(l ?? 0);
@@ -276,12 +276,21 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 					operand.push(stack.length), stack.push(...rv);
 					return;
 				} else if (['&&', 'and'].includes(s = s.toLowerCase())) {
+					if (lv.length === 1 && isFalse(lv[0])) {
+						ret = lv[0];
+						break;
+					}
 					operand.push(stack.length);
 					stack.push(...rv);
 					return;
 				} else if (['||', 'or', '??', '??=', ':'].includes(s)) {
+					if (lv.length !== 1 || '?:'.includes(s[0]) || !isFalse(lv[0])) {
+						ret = {
+							type: TokenType.Operator, content: s, op_type: 0, data: [lv, rv]
+						} as Token;
+						break;
+					}
 					operand.push(stack.length);
-					stack.push(...lv), stack.push({ type: TokenType.Operator, content: '||', op_type: 0 } as Token);
 					stack.push(...rv);
 					return;
 				}
@@ -303,6 +312,15 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 			default: return !(stack.length = 0);
 		}
 		operand.push(stack.length), stack.push(ret);
+		function isFalse(tk: Token) {
+			switch (tk.type) {
+				case TokenType.Number:
+					return tk.content as unknown == 0 || tk.content.toLowerCase() === 'false';
+				case TokenType.String:
+					return !tk.ignore && tk.content.slice(1, -1) as unknown == 0;
+				default: return false;
+			}
+		}
 	}
 	function op_push(tk: Token) {
 		const p2 = precedence(tk, false);
@@ -359,6 +377,7 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 					return tk.op_type === -1 ? 77 : 82;
 				case '||':
 				case 'or': return 17;
+				case '??': return 10;
 				case '&&':
 				case 'and': return 21;
 				case 'is': return 28;
@@ -604,7 +623,7 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 	const tps = decltypeExpr(lex, context.token, context.range.end, _this);
 	if (!tps.length)
 		return;
-	if (tps.includes(ANY))
+	if (tps[0] === ANY)
 		return [ANY];
 	let iscall = true;
 	let prop = context.text ? '' : context.word.toLowerCase();
@@ -615,7 +634,7 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 		if (resolve(it, prop, types))
 			return [ANY];
 	types = [...new Set(types)];
-	return types.includes(ANY) ? [ANY] : types;
+	return maybe_any(types);
 	function resolve(it: AhkSymbol, prop: string, types: AhkSymbol[], needthis = 0) {
 		switch (it.kind) {
 			case SymbolKind.Method:
@@ -707,7 +726,8 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			}
 			ts = [...tt];
 		}
-		if (ts.includes(ANY) && (ts = [ANY]) || !ts.includes(OBJECT))
+		ts = maybe_any(ts);
+		if (!ts.includes(OBJECT))
 			return ts;
 		break;
 	}
@@ -729,7 +749,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			if (resolve(it))
 				return [ANY];
 		ts = [...new Set(ts)];
-		return ts.includes(ANY) ? [ANY] : ts;
+		return maybe_any(ts);
 		function resolve(it: AhkSymbol, invoke_enum = true) {
 			let needthis = 0, cls: ClassNode | undefined;
 			switch (it.kind) {
@@ -775,8 +795,8 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 	if (ts.length)
 		ts = [...new Set(ts)];
 	else if (!sym.assigned)
-		ts.push(UNSET);
-	return ts.includes(ANY) ? [ANY] : ts;
+		return [UNSET];
+	return maybe_any(ts);
 }
 
 function decltypeTypeAnnotation(annotations: (string | AhkSymbol)[], lex: Lexer, _this?: ClassNode,
@@ -812,7 +832,7 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, b
 			for (const tp of annotations)
 				types.add(literal2Sym(tp) as unknown as AhkSymbol);
 			if (types.has(ANY))
-				return sym.cached_types = [ANY];
+				return sym.cached_types = maybe_any([...types]);
 			sym.cached_types = [...types], has_obj = types.has(OBJECT);
 		}
 		// fall through
@@ -839,7 +859,7 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, b
 			types = new Set(tps);
 			sym.implicit_return && types.add(sym.implicit_return);
 			types.has(UNSET) && types.delete(BLANK);
-			sym.cached_types = tps = [...types];
+			sym.cached_types = tps = maybe_any([...types]);
 		}
 	} else tps = types ? [...types] : [];
 	return tps;
@@ -1027,6 +1047,14 @@ export function findClass(lex: Lexer, name: string, pos?: Position, uri?: string
 		if (!(cls = getClassOwnProp(lex, cls, n) as ClassNode))
 			return;
 	return cls.uri ??= uri, cls;
+}
+
+function maybe_any(tps: AhkSymbol[]) {
+	let a, b;
+	for (const t of tps)
+		if (t === ANY ? (a = t, b) : t.kind === SymbolKind.Null && (b ??= t, a))
+			return [ANY, b!];
+	return a ? [a] : tps;
 }
 
 const MaybeLocalKind: SymbolKind[] = [SymbolKind.Variable, SymbolKind.Function, SymbolKind.Field];
