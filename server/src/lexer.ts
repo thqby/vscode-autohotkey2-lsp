@@ -361,9 +361,9 @@ export class Lexer implements Module {
 											if (tk.content === '=>') {
 												const tt = createFunc(lk.content, SymbolKind.Function, rg = make_range(lk.offset, lk.length), { ...rg }, params);
 												_low = lk.content.toLowerCase(), tt.parent = tn;
-												lk.symbol = lk.definition = tt, parse_types(tt);
 												if (_low === 'get' || _low === 'set')
 													tt.has_this_param = true, t[_low] = tt;
+												lk.symbol = lk.definition = tt, parse_types(tt);
 											} else lk = tk;
 										}
 										tn.type_annotations = t.get?.type_annotations, readonly = Boolean(t.get && !t.set);
@@ -555,7 +555,7 @@ export class Lexer implements Module {
 					sym.range.end = _this.document.positionAt(lk.offset + lk.length);
 					return j;
 					function parse(): Array<string | AhkSymbol> {
-						let t: Token, has_typeof: boolean, r: string, tp, tl;
+						let t: Token, has_typeof: boolean, r: string, tp, tl, _low;
 						const tps: (string | AhkSymbol)[] = [];
 						loop: while ((lk = tokens[++j])) {
 							tl = tps.length;
