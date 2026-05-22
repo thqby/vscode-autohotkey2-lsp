@@ -429,7 +429,8 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 		const cls = n as ClassNode;
 		that = _this ?? cls;
 		switch (n.kind) {
-			case 0 as SymbolKind: return [ANY];
+			case 0 as SymbolKind: return tps.has(UNSET) ||
+				syms.values().some(t => t.kind === SymbolKind.Null) ? [ANY, UNSET] : [ANY];
 			case SymbolKind.Null:
 				tps.add(UNSET);
 				break;
@@ -504,7 +505,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 						if (!(flag & InvokeFlag.META) && (n = invoke_meta_func(cls)!))
 							break;
 						else {
-							(flag & InvokeFlag.OPT_HANDLED) && tps.add(cls);
+							tps.add(flag & InvokeFlag.OPT_HANDLED ? cls : UNSET);
 							continue;
 						}
 					break;
@@ -527,7 +528,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 					if (!(flag & InvokeFlag.META) && (n = invoke_meta_func(cls)!))
 						break;
 					else {
-						(flag & InvokeFlag.OPT_HANDLED) && tps.add(cls);
+						tps.add(flag & InvokeFlag.OPT_HANDLED ? cls : UNSET);
 						continue;
 					}
 				if (n.kind === SymbolKind.Class) {
@@ -633,6 +634,7 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 	for (const it of tps)
 		if (resolve(it, prop, types))
 			return [ANY];
+	if (!types.length) return;
 	types = [...new Set(types)];
 	return maybe_any(types);
 	function resolve(it: AhkSymbol, prop: string, types: AhkSymbol[], needthis = 0) {
@@ -784,6 +786,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 					}
 					break;
 				}
+				case 0 as SymbolKind: return true;
 			}
 		}
 	}
@@ -793,10 +796,10 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 	}
 	ts.push(...decltypeReturns(sym, lex, _this, bc_mode));
 	if (ts.length)
-		ts = [...new Set(ts)];
-	else if (!sym.assigned)
-		return [UNSET];
-	return maybe_any(ts);
+		return maybe_any([...new Set(ts)]);
+	if (sym.assigned)
+		return ts.push(ANY), sym.defaultVal === null && ts.push(UNSET), ts;
+	return [UNSET];
 }
 
 function decltypeTypeAnnotation(annotations: (string | AhkSymbol)[], lex: Lexer, _this?: ClassNode,

@@ -600,7 +600,7 @@ export class Lexer implements Module {
 										else tps.push(sym.implicit_return = UNSET);
 										break;
 									} else if (_low === 'throw' && lk.previous_token?.content === '=>')
-										lk = tokens[++j];
+										lk = tokens[++j], tps.push(UNSET);
 									break loop;
 								case TokenType.Number:
 								case TokenType.String:
