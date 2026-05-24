@@ -8,7 +8,7 @@ import {
 } from './common';
 import {
 	ANY, ARRAY, BLANK, EMPTY_TOKEN, FLOAT, INTEGER, Lexer,
-	NUMBER, OBJECT, STRING, UNSET, VARREF, VOID, ZERO_RANGE,
+	NUMBER, STRING, UNSET, VARREF, VOID, ZERO_RANGE,
 	ahkModule, ahkVersion, alpha_3, createModules, derefVar,
 	escape_str, isContinuousLine, isIdentifier, isYieldsOperand,
 	resolveVarAlias, sym_related_msg, sym_type
@@ -20,7 +20,9 @@ import {
 } from './types';
 
 //#region type Inference
-export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, _this?: ClassNode, bc_mode = true): AhkSymbol[] {
+let can_cache_types = false;
+export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position,
+	_this?: ClassNode, bc_mode = true): AhkSymbol[] & { operand?: Token[] } {
 	const stack: Token[] = [], op_stack: Token[] = [], { document, tokens } = lex;
 	let operand = [0], pre = EMPTY_TOKEN, end: number, t, tt;
 	if (typeof end_pos === 'object')
@@ -161,82 +163,10 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 		tk = tokens[tk.next_token_offset];
 	}
 	if (!stack.length)
-		return [];
+		return [ANY];
 	while ((tk = op_stack.pop()!))
 		calculate(tk);
-	return decltype(stack);
-	function decltype(operand: Token[]) {
-		let syms: AhkSymbol[] = [], that;
-		for (const tk of operand) {
-			if (tk.symbol) {
-				if (tk.symbol.kind === SymbolKind.Property) {
-					let prop = tk.symbol as Property;
-					const cls = prop.parent as ClassNode;
-					if ((prop = cls?.property?.[prop.name.toUpperCase()])) {
-						if (!prop.get && ((t = prop).kind !== SymbolKind.Property || (t = prop.call)))
-							syms = [t];
-						else syms = decltypeReturns(prop, lexers[cls.uri!] ?? lex, cls);
-					} else syms = [];
-				} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
-			} else switch (tk.type) {
-				case TokenType.Invoke: {
-					const r = decltypeInvoke(lex, syms, tk.content.toLowerCase(),
-						tk.data as InvokeFlag, tk.paraminfo, that, bc_mode);
-					syms = 'length' in r ? r : [...r];
-					break;
-				}
-				case TokenType.Identifier: {
-					const pos = document.positionAt(tk.offset);
-					const r = findSymbol(lex, tk.content, SymbolKind.Variable, pos);
-					if (!r) break;
-					const node = r.node;
-					if (node.kind === SymbolKind.Variable) {
-						if (r.uri !== lex.uri)
-							pos.line = NaN;
-						syms = decltypeVar(node, lexers[r.uri] ?? lex, pos, r.scope, _this);
-					} else if (syms = [node], r.is_this !== undefined) {
-						that = _this ?? node as ClassNode;
-						if (_this && r.is_this === false)
-							(node as ClassNode).prototype = _this.prototype;
-						continue;
-					}
-					break;
-				}
-				case TokenType.Number:
-					syms = [tk.data as AhkSymbol ?? NUMBER];
-					break;
-				case TokenType.String: syms = [STRING]; break;
-				case TokenType.BlockStart:
-					if (!(t = tk.data as ClassNode)) break;
-					syms = [t], t.uri ??= lex.uri;
-					if ((tt = !t.extends && t.property?.BASE)) {
-						const tps = decltypeReturns(tt, lex, _this);
-						if (tps.length < 2)
-							t.base = tps[0];
-						else {
-							syms = [];
-							for (const base of tps)
-								syms.push({ ...t, base } as ClassNode);
-						}
-					}
-					break;
-				case TokenType.BracketStart: {
-					const b = (t = tk.paraminfo?.comma)?.length ? t.at(-1)! : tk.next_token_offset;
-					syms = decltypeExpr(lex, tokens[b], tk.next_pair_pos!, _this);
-					break;
-				}
-				case TokenType.Operator: {
-					const [l, r] = (tk.data as [Token[], Token[]]).map(decltype);
-					let ss = tk.content[0] === '?' ? l.filter(t => t.kind !== SymbolKind.Null) : l;
-					ss.push(...r), syms = [...new Set(ss)];
-					break;
-				}
-				default: syms = []; break;
-			}
-			that = undefined;
-		}
-		return syms;
-	}
+	return decltypeExpr2(lex, stack, _this, bc_mode);
 	function calculate(op: Token) {
 		let l = operand.pop(), ret = { content: '', type: TokenType.Number } as Token;
 		const rv = stack.splice(l ?? 0);
@@ -420,6 +350,85 @@ export function decltypeExpr(lex: Lexer, tk: Token, end_pos: number | Position, 
 	}
 }
 
+function decltypeExpr2(lex: Lexer, operand: Token[], _this?: ClassNode, bc_mode = true) {
+	const { document, tokens } = lex;
+	function decltype(operand: Token[]) {
+		let syms: AhkSymbol[] = [], that, t, tt;
+		for (const tk of operand) {
+			if (tk.symbol) {
+				if (tk.symbol.kind === SymbolKind.Property) {
+					let prop = tk.symbol as Property;
+					const cls = prop.parent as ClassNode;
+					if ((prop = cls?.property?.[prop.name.toUpperCase()])) {
+						if (!prop.get && ((t = prop).kind !== SymbolKind.Property || (t = prop.call)))
+							syms = [t];
+						else syms = decltypeReturns(prop, lexers[cls.uri!] ?? lex, cls);
+					} else syms = [];
+				} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
+			} else switch (tk.type) {
+				case TokenType.Invoke: {
+					const r = decltypeInvoke(lex, syms, tk.content.toLowerCase(),
+						tk.data as InvokeFlag, tk.paraminfo, that ?? _this, bc_mode);
+					syms = 'length' in r ? r : [...r];
+					break;
+				}
+				case TokenType.Identifier: {
+					let pos = tk.pos ??= document.positionAt(tk.offset);
+					const r = findSymbol(lex, tk.content, SymbolKind.Variable, pos);
+					if (!r) break;
+					const node = r.node;
+					if (node.kind === SymbolKind.Variable) {
+						if (r.uri !== lex.uri)
+							pos = { line: Infinity, character: 0 };
+						syms = decltypeVar(node, lexers[r.uri] ?? lex, pos, r.scope ?? r.mod, _this);
+					} else if (syms = [node], r.is_this !== undefined) {
+						that = _this ?? node as ClassNode;
+						if (r.is_this)
+							can_cache_types = false, syms[0] = that;
+						else if (_this)
+							(node as ClassNode).prototype = _this.prototype;
+						continue;
+					}
+					break;
+				}
+				case TokenType.Number:
+					syms = [tk.data as AhkSymbol ?? NUMBER];
+					break;
+				case TokenType.String: syms = [STRING]; break;
+				case TokenType.BlockStart:
+					if (!(t = tk.data as ClassNode)) break;
+					syms = [t], t.uri ??= lex.uri;
+					if ((tt = !t.extends && t.property?.BASE)) {
+						const tps = decltypeReturns(tt, lex, _this);
+						if (tps.length < 2)
+							t.base = tps[0];
+						else {
+							syms = [];
+							for (const base of tps)
+								syms.push({ ...t, base } as ClassNode);
+						}
+					}
+					break;
+				case TokenType.BracketStart: {
+					const b = (t = tk.paraminfo?.comma)?.length ? t.at(-1)! : tk.next_token_offset;
+					syms = decltypeExpr(lex, tokens[b], tk.next_pair_pos!, _this);
+					break;
+				}
+				case TokenType.Operator: {
+					const [l, r] = (tk.data as [Token[], Token[]]).map(decltype);
+					let ss = tk.content[0] === '?' ? l.filter(t => t.kind !== SymbolKind.Null) : l;
+					ss.push(...r), syms = [...new Set(ss)];
+					break;
+				}
+				default: syms = []; break;
+			}
+			that = undefined;
+		}
+		return syms;
+	}
+	return Object.assign(decltype(operand), { operand });
+}
+
 enum InvokeFlag { PROP, CALL, META, OPT_HANDLED = 4 }
 export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], name: string, flag: InvokeFlag, paraminfo?: ParamInfo, _this?: ClassNode, bc_mode = true) {
 	const tps = new Set<AhkSymbol>, call = !!(flag & InvokeFlag.CALL);
@@ -514,7 +523,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 			case SymbolKind.Function:
 			case SymbolKind.Method:
 				if (call && name === 'call') {
-					if (!(n as FuncNode).has_this_param || (that = undefined, !paraminfo))
+					if (!(n as FuncNode).has_this_param && (n !== that || !(that = undefined)) || (that = undefined, !paraminfo))
 						break;
 					for (const that of decltypeExpr(lex, lex.findToken(paraminfo.offset + 1),
 						paraminfo.comma[0] ?? paraminfo.end, _this))
@@ -573,8 +582,13 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 			case SymbolKind.Module:
 				if (!(flag & InvokeFlag.META) && (n = getClassMember(lex, cls, name, false)!)) {
 					let r;
-					r = n.kind !== SymbolKind.Variable ? [n] :
-						decltypeVar(n, lexers[cls.uri!] ?? lex, n.selectionRange.end);
+					if (n.kind !== SymbolKind.Variable)
+						r = [n];
+					else {
+						let mod = cls as unknown as Module;
+						mod = mod.modules?.find(t => t.uri === n.uri) ?? mod;
+						r = decltypeVar(n, lexers[mod.uri!] ?? lex, { line: Infinity, character: 0 }, mod);
+					}
 					if (call)
 						r = decltypeInvoke(lexers[cls.uri!] ?? lex, r, '', InvokeFlag.CALL, paraminfo);
 					for (const t of r)
@@ -600,8 +614,9 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 	}
 }
 
-function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: ClassNode) {
+function decltypeByref(sym: Variable, lex: Lexer, _this?: ClassNode) {
 	const nk = lex.tokens[lex.tokens[lex.document.offsetAt(sym.selectionRange.start)]?.next_token_offset];
+	const types: AhkSymbol[] = [];
 	let pi;
 	switch (nk?.type) {
 		case TokenType.Comma:
@@ -632,12 +647,11 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 		prop ||= '__item', iscall = false;
 	else prop ||= 'call';
 	for (const it of tps)
-		if (resolve(it, prop, types))
+		if (resolve(it, prop))
 			return [ANY];
 	if (!types.length) return;
-	types = [...new Set(types)];
-	return maybe_any(types);
-	function resolve(it: AhkSymbol, prop: string, types: AhkSymbol[], needthis = 0) {
+	return types;
+	function resolve(it: AhkSymbol, prop: string, needthis = 0) {
 		switch (it.kind) {
 			case SymbolKind.Method:
 				needthis++;
@@ -675,11 +689,11 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, lexers[n.uri!] ?? lex, cls);
 						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
 							tps = decltypeInvoke(lex, tps, '', InvokeFlag.CALL);
-						tps.forEach(it => resolve(it, 'call', types, -1));
+						tps.forEach(it => resolve(it, 'call', -1));
 						return;
 					}
 					if (n?.kind === SymbolKind.Method)
-						resolve(n, 'call', types, -1);
+						resolve(n, 'call', -1);
 					return;
 				} else if (n.kind === SymbolKind.Class)
 					n = getClassMember(lex, n, '__item', false);
@@ -688,10 +702,10 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 				else if (!(n as FuncNode).params) {
 					for (let t of decltypeReturns(n, lexers[n.uri!] ?? lex, cls))
 						(t = getClassMember(lex, t, '__item', false)!) &&
-							resolve(t, '', types);
+							resolve(t, '');
 					return;
 				}
-				n && resolve(n, '', types);
+				n && resolve(n, '');
 			}
 		}
 		return;
@@ -699,25 +713,24 @@ function decltypeByref(sym: Variable, lex: Lexer, types: AhkSymbol[], _this?: Cl
 }
 
 function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol, _this?: ClassNode): AhkSymbol[] {
-	const name = sym.name.toUpperCase(), _def = sym, syms = sym.type_annotations ? [sym] : [];
-	if (!scope)
-		for (const uri in lex?.relevance) {
-			const v = lexers[uri]?.declaration?.[name];
-			v?.type_annotations && (syms.includes(v) || syms.push(v));
-		}
-	let ts: AhkSymbol[] | undefined, t, ref, bc_mode = scope?.bc_mode ?? (scope as Module)?.bc_mode_def ?? lex.bc_mode ?? lex.bc_mode_def;
+	const name = sym.name.toUpperCase();
+	let ts: AhkSymbol[] | undefined, t, var_with_type;
 	if (sym.from !== undefined) {
 		t = resolveVarAlias(sym);
 		if (t.kind !== SymbolKind.Variable)
 			return [t];
-		t.type_annotations && (syms.includes(t) || syms.push(t));
+		t.type_annotations && (var_with_type = t as Variable);
 	}
-	for (const sym of syms) {
-		if ((t = sym.returns))
-			sym.returns = undefined;
-		ts = decltypeReturns(sym, lex, _this);
-		t && (sym.returns = t);
-		if (sym.is_param && sym.pass_by_ref) {
+	var_with_type ??= sym.type_annotations ? sym : undefined;
+	if (!var_with_type && (!scope || scope.kind === SymbolKind.Module))
+		for (const m of getAllModules(lex, scope as Module))
+			if ((t = m.declaration?.[name]).type_annotations) {
+				var_with_type = t as Variable;
+				break;
+			}
+	if (var_with_type) {
+		ts = decltypeReturns(var_with_type, lex, _this);
+		if (var_with_type.is_param && var_with_type.pass_by_ref) {
 			const tt = new Set<AhkSymbol>;
 			for (const t of ts) {
 				if (t === VARREF)
@@ -728,18 +741,16 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 			}
 			ts = [...tt];
 		}
-		ts = maybe_any(ts);
-		if (!ts.includes(OBJECT))
-			return ts;
-		break;
+		return maybe_any(ts);
 	}
-	ts ??= [], t = undefined;
+	let ref, bc_mode = scope?.bc_mode ?? (scope as Module)?.bc_mode_def ?? lex.bc_mode ?? lex.bc_mode_def;
+	t = undefined;
 	for (const it of (scope ?? lex).children as Variable[] ?? [])
 		if (name === it.name.toUpperCase()) {
 			if (it.kind === SymbolKind.Variable) {
 				if (it.range.end.line > pos.line || (it.range.end.line === pos.line && it.range.end.character > pos.character))
 					break;
-				if (it.returns)
+				if (it.returns || it.cached_types || it.type_annotations)
 					sym = ref = it;
 				else if (it.pass_by_ref)
 					ref = it;
@@ -747,11 +758,10 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 		}
 	if (sym.for_index !== undefined) {
 		const tps = decltypeReturns(sym.data as AhkSymbol, lex, _this);
+		ts = [];
 		for (const it of tps)
 			if (resolve(it))
 				return [ANY];
-		ts = [...new Set(ts)];
-		return maybe_any(ts);
 		function resolve(it: AhkSymbol, invoke_enum = true) {
 			let needthis = 0, cls: ClassNode | undefined;
 			switch (it.kind) {
@@ -789,12 +799,9 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 				case 0 as SymbolKind: return true;
 			}
 		}
-	}
-	if (ref?.pass_by_ref && !ref.is_param) {
-		const t = decltypeByref(ref, lex, ts, _this);
-		if (t) return t;
-	}
-	ts.push(...decltypeReturns(sym, lex, _this, bc_mode));
+	} else if (ref?.pass_by_ref && !ref.is_param)
+		ts = decltypeByref(ref, lex, _this);
+	ts ??= decltypeReturns(sym, lex, _this, bc_mode);
 	if (ts.length)
 		return maybe_any([...new Set(ts)]);
 	if (sym.assigned)
@@ -825,9 +832,20 @@ function literal2Sym(tp: string | AhkSymbol) {
 }
 
 export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, bc_mode = true): AhkSymbol[] {
-	let types: Set<AhkSymbol> | undefined, ct: Array<string | AhkSymbol> | undefined, has_obj;
-	switch (!sym.cached_types) {
-		case true: {
+	let types: Set<AhkSymbol> | undefined, ct = sym.cached_types;
+	switch (ct) {
+		case null: {
+			const m = sym.cached_types_map!;
+			if (!(ct = m.get((_this ??= get_this()) ?? UNSET))) {
+				bc_mode = (sym as FuncNode).bc_mode ?? bc_mode;
+				types = new Set(sym.cached_exprs!.map(r => decltypeExpr2(lex, r, _this, bc_mode)).flat());
+				sym.implicit_return && types.add(sym.implicit_return);
+				types.has(UNSET) && types.delete(BLANK);
+				m.set(_this ?? UNSET, ct = maybe_any([...types]));
+			}
+			return ct as AhkSymbol[];
+		}
+		case undefined: {
 			resolveFuncType(sym as FuncNode, lex);
 			const annotations = sym.type_annotations;
 			if (!annotations) break;
@@ -836,35 +854,46 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, b
 				types.add(literal2Sym(tp) as unknown as AhkSymbol);
 			if (types.has(ANY))
 				return sym.cached_types = maybe_any([...types]);
-			sym.cached_types = [...types], has_obj = types.has(OBJECT);
+			sym.cached_types = ct = [...types];
 		}
 		// fall through
 		default:
-			resolveCachedTypes(ct = sym.cached_types!, types = new Set, lex, _this, _this && (sym.parent as ClassNode)?.type_params);
+			if (ct.resolved) {
+				if (bc_mode && sym.is_builtin) {
+					const i = ct.indexOf(sym.implicit_return!);
+					if (i !== -1)
+						ct = ct.with(i, VOID);
+				}
+				return ct as AhkSymbol[];
+			}
+			_this ??= get_this();
+			resolveCachedTypes(ct, types = new Set, lex, _this, _this && (sym.parent as ClassNode)?.type_params);
 			if (bc_mode && sym.is_builtin && types.delete(sym.implicit_return!))
 				return [...types.add(VOID)];
-			if (!has_obj)
-				return [...types];
+			return [...types];
 	}
 
-	let tps: AhkSymbol[];
-	if (lex && sym.returns) {
-		sym.cached_types = [ANY], tps = [], bc_mode = (sym as FuncNode).bc_mode ?? bc_mode;
-		_this ??= get_this();
-		for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
-			tps.push(...decltypeExpr(lex, lex.findToken(r[i], true), r[i + 1], _this, bc_mode));
-		if (types) {
-			for (const n of new Set(tps as ClassNode[]))
-				if (n.property && !n.name && !types.has(n))
-					types.add(n), ct!.push(n);
-			tps = [...types], sym.cached_types = ct;
-		} else {
-			types = new Set(tps);
-			sym.implicit_return && types.add(sym.implicit_return);
-			types.has(UNSET) && types.delete(BLANK);
-			sym.cached_types = tps = maybe_any([...types]);
-		}
-	} else tps = types ? [...types] : [];
+	if (!lex || !sym.returns)
+		return [];
+
+	const rr = [], oc = can_cache_types;
+	sym.cached_types = [ANY], bc_mode = (sym as FuncNode).bc_mode ?? bc_mode;
+	_this ??= get_this(), can_cache_types = true;
+	for (let i = 0, r = sym.returns, l = r.length; i < l; i += 2)
+		rr.push(decltypeExpr(lex, lex.findToken(r[i], true), r[i + 1], _this, bc_mode));
+	let tps: AhkSymbol[] & { resolved?: boolean } = rr.flat();
+	types = new Set(tps);
+	sym.implicit_return && types.add(sym.implicit_return);
+	types.has(UNSET) && types.delete(BLANK);
+	tps = maybe_any([...types]);
+	if (can_cache_types)
+		return can_cache_types = oc, tps.resolved = true, sym.cached_types = tps;
+	if ((sym as FuncNode).has_this_param)
+		can_cache_types = oc;
+	else can_cache_types &&= oc;
+	sym.cached_types = null;
+	(sym.cached_types_map = new WeakMap).set(_this ?? UNSET, tps);
+	sym.cached_exprs = rr.map(r => r.operand!);
 	return tps;
 	function get_this() {
 		if (!(sym as FuncNode).has_this_param)
@@ -889,25 +918,26 @@ export function joinTypes(tps?: Array<string | AhkSymbol> | false) {
 	return ts.join(' | ');
 }
 
-function resolveCachedTypes(tps: (string | AhkSymbol)[], resolved_types: Set<AhkSymbol>, lex: Lexer,
+function resolveCachedTypes(tps: (string | AhkSymbol)[] & { resolved?: boolean }, resolved_types: Set<AhkSymbol>, lex: Lexer,
 	_this?: ClassNode, type_params?: Record<string, AhkSymbol>) {
-	let re: RegExp | false, i = -1, is_this, is_typeof, t, param, update;
+	let re: RegExp | false, i = -1, is_this, is_typeof, t, param, update, resolved = true;
 	for (let tp of tps) {
 		if (i++, typeof tp === 'string') {
 			(is_typeof = tp.startsWith('typeof ')) && (tp = tp.substring(7));
 			if ((param = type_params?.[tp.toUpperCase()]))
 				decltypeTypeAnnotation(_this!.generic_types?.[param.data as number] ?? (param.type_annotations || []),
-					Lexer.curr ?? lex, _this, type_params, resolved_types);
+					Lexer.curr ?? lex, _this, type_params, resolved_types), resolved = false;
 			else if ((t = (is_this = tp === 'this') && _this || findSymbol(lex, tp)?.node as ClassNode))
 				if (t.kind === SymbolKind.TypeParameter)
 					update = true, tps[i] = '', tps.push(...decltypeTypeAnnotation(t.type_annotations || [], lex));
 				else if (t.kind !== SymbolKind.Variable)
-					resolved_types.add(t = !is_typeof && t.prototype || t), !is_this && (tps[i] = t);
+					resolved_types.add(t = !is_typeof && t.prototype || t), is_this ? (resolved = false) : (tps[i] = t);
 		} else if (tp.kind === SymbolKind.TypeParameter)
 			update = true, tps[i] = '', tps.push(...decltypeTypeAnnotation(tp.type_annotations || [], lex));
 		else
 			resolved_types.add(resolve_generic_type(tp as ClassNode));
 	}
+	tps.resolved ??= resolved;
 	if (update)
 		tps.push(...new Set(tps.splice(0).filter(Boolean)));
 
@@ -918,6 +948,7 @@ function resolveCachedTypes(tps: (string | AhkSymbol)[], resolved_types: Set<Ahk
 		re ??= make_re();
 		if (!re || !re.test(cls.full))
 			return cls;
+		resolved = false;
 		generic_types = generic_types.map(gt => gt.flatMap(tp => {
 			if (typeof tp === 'object')
 				return [resolve_generic_type(tp as ClassNode)];

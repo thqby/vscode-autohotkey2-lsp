@@ -9,7 +9,9 @@ export interface AhkSymbol extends DocumentSymbol {
 	access?: AccessModifier
 	bc_mode?: boolean
 	is_builtin?: boolean
-	cached_types?: Array<string | AhkSymbol>
+	cached_exprs?: Token[][]	// cached_types === null
+	cached_types?: Array<string | AhkSymbol> & { resolved?: boolean } | null
+	cached_types_map?: WeakMap<AhkSymbol, AhkSymbol[] & { unset_kind?: UnsetKind }>
 	children?: AhkSymbol[]
 	data?: unknown
 	decl?: boolean
@@ -329,7 +331,7 @@ export enum TokenType {
 }
 
 export enum UnsetKind {
-	None, Unset, Void, Blank
+	None, Unset, Void, Blank, Unknown
 }
 
 export enum USAGE { Read, Write }

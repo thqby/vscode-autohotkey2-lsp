@@ -440,7 +440,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 							}
 						}
 						n.uri ??= n.parent?.uri;
-						checkParamInfo(lex, n as FuncNode, t, cc);
+						checkParamInfo(lex, n as FuncNode, t, obj, cc);
 						if (!nk) return;
 						tk = nk;
 					} else obj = n as ClassNode;
@@ -542,7 +542,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 		}
 	}
 
-	function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite, is_construct?: boolean) {
+	function checkParamInfo(lex: Lexer, node: FuncNode, info: CallSite, that?: ClassNode, is_construct?: boolean) {
 		const { paraminfo } = info;
 		let params, tr = UnsetKind.None;
 		if (!paraminfo || !invokeCheck) return;
@@ -551,6 +551,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 			node = getClassMember(ll, cls, 'call', true) as FuncNode;
 			if ((is_construct = node?.construct !== undefined))
 				node = (getClassMember(ll, cls.prototype!, node.construct || '__new', true) ?? node) as FuncNode;
+			else that ??= cls;
 		}
 		if (!(params = node?.params)) return;
 		const { ParamCount: fPC, ByrefParam: fBP, ReturnUnset: fRU, ReturnVoid: fRV } = invokeCheck;
@@ -602,7 +603,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 				});
 			}
 		}
-		if (test_returns()) {
+		if ((fRU || fRV) && test_returns()) {
 			const tk = lex.tokens[info.offset!];
 			if (tk?.semantic?.type === SemanticTokenTypes.method) {
 				let t = tk.previous_token;
@@ -651,18 +652,30 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 		function test_returns() {
 			if (is_construct)
 				return false;
-			if ((tr = node.unset_kind!) !== undefined)
-				return tr === UnsetKind.Void ? fRV : tr && fRU && bc();
-			const ta = node.type_annotations || decltypeReturns(node, lexers[node.uri!] ?? lex, undefined, false);
+			switch (tr = node.unset_kind!) {
+				case undefined: break;
+				case UnsetKind.Unknown:
+					tr = node.cached_types_map?.get(that ?? UNSET)?.unset_kind!;
+					if (tr === undefined) break;
+				// fall through
+				default: return tr === UnsetKind.Void ? fRV : tr && fRU && bc();
+			}
+			const ta = node.type_annotations || decltypeReturns(node, lexers[node.uri!] ?? lex, that, false);
 			let r;
+			node.unset_kind ??= node.cached_types_map && UnsetKind.Unknown;
 			if (ta?.length) {
 				if (!(r = ta.length === 1 && ta[0] === VOID)) {
 					for (const v of ta)
 						if ((v as AhkSymbol).kind === SymbolKind.Null)
-							return tr = node.unset_kind = v === UNSET ? UnsetKind.Unset : UnsetKind.Blank, fRU && bc();
+							return tr = v === UNSET ? UnsetKind.Unset : UnsetKind.Blank,
+								set(), fRU && bc();
 				}
 			} else r = !node.returns?.length;
-			return (tr = node.unset_kind = r ? UnsetKind.Void : UnsetKind.None) && fRV;
+			tr = r ? UnsetKind.Void : UnsetKind.None;
+			return set(), tr && fRV;
+		}
+		function set() {
+			(node.cached_types_map?.get(that ?? UNSET) ?? node).unset_kind ??= tr;
 		}
 		function bc() {
 			if (bc_mode && node.is_builtin)
