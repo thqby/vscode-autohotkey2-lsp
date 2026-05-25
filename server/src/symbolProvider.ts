@@ -390,8 +390,9 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 			if (modifier) stk.modifier = modifier;
 		}
 		tk.definition = ss;
+		let that;
 		if (st === undefined) {
-			ss = source === THIS ? p_this : source === SUPER ? getClassBase(p_this!, lex) : undefined;
+			ss = source === THIS ? p_this : source === SUPER ? getClassBase(that = p_this!, lex) : undefined;
 			if (!ss) return;
 			source = ss, st = SemanticTokenTypes.class;
 		}
@@ -400,14 +401,14 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 		let o;
 		if (st <= SemanticTokenTypes.module && tokens[o = tk.next_token_offset]?.type === TokenType.Dot && (ss = (o = tokens[o + 1])?.semantic) &&
 			!o.ignore && (ss.type === SemanticTokenTypes.method || ss.type === SemanticTokenTypes.property))
-			resolvePropSemanticType(o, ss, source as ClassNode);
+			resolvePropSemanticType(o, ss, source as ClassNode, that);
 	}
 
 	interface _Flag {
 		'#checkmember'?: boolean
 	}
 
-	function resolvePropSemanticType(tk: Token, sem: SemanticToken, obj: ClassNode) {
+	function resolvePropSemanticType(tk: Token, sem: SemanticToken, obj: ClassNode, that?: ClassNode) {
 		let n, t, kind, ps, name;
 		do {
 			name = tk.content.toUpperCase();
@@ -440,7 +441,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 							}
 						}
 						n.uri ??= n.parent?.uri;
-						checkParamInfo(lex, n as FuncNode, t, obj, cc);
+						checkParamInfo(lex, n as FuncNode, t, that ?? obj, cc);
 						if (!nk) return;
 						tk = nk;
 					} else obj = n as ClassNode;

@@ -20,13 +20,13 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 		return;
 	let name = context.text.toUpperCase();
 	const references: Record<string, Range[]> = {};
-	const { node, parent, uri, mod, scope, is_this, is_global } = nodes[0];
-	if (is_this) {	// this
+	const { node, parent, uri, mod, scope, this: that, is_global } = nodes[0];
+	if (that === node) {	// this
 		const range = scope?.children && findAllFromScope(scope, name, SymbolKind.Variable);
 		return range?.length ? { [lexers[uri].document.uri]: range } : undefined;
 	}
 
-	if (!uri || /* super */ is_this === false)
+	if (!uri || /* super */ that)
 		return;
 
 	if (!allow_builtin && node.is_builtin)

@@ -375,18 +375,17 @@ function decltypeExpr2(lex: Lexer, operand: Token[], _this?: ClassNode, bc_mode 
 				case TokenType.Identifier: {
 					let pos = tk.pos ??= document.positionAt(tk.offset);
 					const r = findSymbol(lex, tk.content, SymbolKind.Variable, pos);
-					if (!r) break;
+					if (!r) { syms = [r === null ? UNSET : ANY]; break; }
 					const node = r.node;
 					if (node.kind === SymbolKind.Variable) {
 						if (r.uri !== lex.uri)
 							pos = { line: Infinity, character: 0 };
 						syms = decltypeVar(node, lexers[r.uri] ?? lex, pos, r.scope ?? r.mod, _this);
-					} else if (syms = [node], r.is_this !== undefined) {
-						that = _this ?? node as ClassNode;
-						if (r.is_this)
-							can_cache_types = false, syms[0] = that;
-						else if (_this)
-							(node as ClassNode).prototype = _this.prototype;
+					} else if (syms = [node], r.this) {
+						that = _this ?? r.this as ClassNode;
+						can_cache_types = false;
+						if (r.this === node)
+							syms[0] = that;
 						continue;
 					}
 					break;
@@ -1098,7 +1097,7 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 	let res = lex.findSymbol(name, kind, pos,
 		!pos || !(!l && MaybeLocalKind.includes(kind!)));
 	if (res === null)
-		return;
+		return null;
 	const scope = res?.scope;
 	if (!res?.node || res.is_global === 1)
 		res = find_include_symbol(name, res?.mod) ?? res;

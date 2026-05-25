@@ -6582,7 +6582,7 @@ export class Lexer implements Module {
 	findSymbol(name: string, kind?: SymbolKind, position?: Position, glo = !position)
 		: {
 			node: AhkSymbol, uri: string, is_global?: boolean | 1	// maybe
-			is_this?: boolean, parent?: AhkSymbol, mod?: Module, scope?: AhkSymbol
+			this?: AhkSymbol, parent?: AhkSymbol, mod?: Module, scope?: AhkSymbol
 		} | null | undefined {
 		let node, scope, mod, uri = this.uri;
 		if (kind === SymbolKind.Field) {
@@ -6608,7 +6608,7 @@ export class Lexer implements Module {
 				scope = undefined;
 			else if (scope.kind === SymbolKind.Property) {
 				if (name === 'THIS')
-					return { node: scope.parent!, uri, mod, scope, is_this: true };
+					return { node: node = scope.parent!, uri, mod, scope, this: node };
 			}
 		}
 		let fn = scope as FuncNode | undefined;
@@ -6628,12 +6628,9 @@ export class Lexer implements Module {
 					if (!(node = node.parent))
 						return null;
 				if (name === 'THIS')
-					return { node, uri, mod, scope, is_this: true };
+					return { node, uri, mod, scope, this: node };
 				if ((parent = getClassBase(node, this)))
-					return {
-						node: { ...parent, prototype: (node as ClassNode).prototype } as ClassNode,
-						uri, mod, scope, is_this: false
-					};
+					return { node: parent, uri, mod, scope, this: node };
 				return null;
 			}
 			if (((t = fn.global?.[name]) && (node = t) ||
