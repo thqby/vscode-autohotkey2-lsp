@@ -498,7 +498,7 @@ export class Lexer implements Module {
 								_parent.property.PROTOTYPE = {
 									..._parent.prototype!, children: undefined, decl: true,
 									name: 'Prototype', kind: SymbolKind.Property,
-									full: `(${_parent.full}) Prototype`,
+									full: `(${_parent.full}) Prototype`, parent: _parent,
 									selectionRange: ZERO_RANGE,
 									type_annotations: [_parent.full]
 								};
@@ -3983,7 +3983,7 @@ export class Lexer implements Module {
 					sdec.PROTOTYPE = {
 						...prototype, children: undefined, decl: true,
 						name: 'Prototype', kind: SymbolKind.Property,
-						full: `(${cls.full}) Prototype`,
+						full: `(${cls.full}) Prototype`, parent: cls,
 						selectionRange: ZERO_RANGE,
 						type_annotations: [cls.full]
 					};

@@ -397,19 +397,15 @@ function decltypeExpr2(lex: Lexer, operand: Token[], _this?: ClassNode, bc_mode 
 				case TokenType.BlockStart:
 					if (!(t = tk.data as ClassNode)) break;
 					syms = [t], t.uri ??= lex.uri;
-					if ((tt = !t.extends && t.property?.BASE)) {
-						const tps = decltypeReturns(tt, lex, _this);
+					if ((tt = !t.extends && !t.base && t.property?.BASE)) {
+						const tps = decltypeReturns(tt, lex, _this), o = t;;
 						if (tps.length < 2)
-							t.base = tps[0];
-						else {
-							syms = [];
-							for (const base of tps)
-								syms.push({ ...t, base } as ClassNode);
-						}
+							(t.base = tps[0]) && (t.full = t.base.full ?? '');
+						else syms = tps.map(base => ({ ...o, base, full: base.full ?? '' }));
 					}
 					break;
 				case TokenType.BracketStart: {
-					const b = (t = tk.paraminfo?.comma)?.length ? t.at(-1)! : tk.next_token_offset;
+					const b = tk.paraminfo?.comma?.at(-1) ?? tk.next_token_offset;
 					syms = decltypeExpr(lex, tokens[b], tk.next_pair_pos!, _this);
 					break;
 				}
