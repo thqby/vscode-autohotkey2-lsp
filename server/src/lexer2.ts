@@ -719,7 +719,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 	var_with_type ??= sym.type_annotations ? sym : undefined;
 	if (!var_with_type && (!scope || scope.kind === SymbolKind.Module))
 		for (const m of getAllModules(lex, scope as Module))
-			if ((t = m.declaration?.[name]).type_annotations) {
+			if ((t = m.declaration?.[name])?.type_annotations) {
 				var_with_type = t as Variable;
 				break;
 			}
