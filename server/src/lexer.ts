@@ -2022,7 +2022,7 @@ export class Lexer implements Module {
 					tk = get_next_token();
 					if (!tk.topofline && tk.type === TokenType.Identifier) {
 						ex = tk.content;
-						addvariable(tk, BlockType.Script, _this.children);
+						addvariable(tk, BlockType.Script, (_this.curr_mod ?? _this).children);
 						while (parser_pos < input_length && input[parser_pos] === '.') {
 							get_next_token();
 							tk = get_next_token();
