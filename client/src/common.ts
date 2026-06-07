@@ -110,7 +110,8 @@ export function updateConfig(config: WorkspaceConfiguration) {
 	let i = 0;
 	for (const k of ks) {
 		const v = o[0]?.[k];
-		config.update(ms[0], undefined, ts[i]);
+		if (v !== undefined)
+			config.update(ms[0], undefined, ts[i]);
 		if (o[1]?.[k] !== undefined)
 			break;
 		if (v !== undefined) {
