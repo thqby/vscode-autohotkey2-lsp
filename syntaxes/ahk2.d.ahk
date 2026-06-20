@@ -1235,6 +1235,8 @@ FileExist(FilePattern: $FilePath) => String
  * C = COMPRESSED (compressed)
  * 
  * T = TEMPORARY (temporary)
+ * 
+ * L = REPARSE_POINT (typically a symbolic link)
  */
 FileGetAttrib(FileName?: $FilePath) => String
 

@@ -1229,6 +1229,8 @@ FileExist(FilePattern: $FilePath) => String
  * C = COMPRESSED(压缩)
  * 
  * T = TEMPORARY(临时)
+ * 
+ * L = REPARSE_POINT(通常是符号链接)
  */
 FileGetAttrib(FileName?: $FilePath) => String
 
