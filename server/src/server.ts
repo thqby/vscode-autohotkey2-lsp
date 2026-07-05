@@ -199,7 +199,7 @@ s := "$import|" EnvGet("AhkImportPath") "\`n"
 for _, k in ${JSON.stringify([...builtinVars, ...builtinVars_h])}
 	try if SubStr(k, 1, 2) = "a_" && !IsObject(v := %k%)
 		s .= SubStr(k, 3) "|" v "\`n"
-FileOpen(A_ScriptFullPath, "w", "utf-8").Write(s)`;
+FileOpen(A_ScriptFullPath, "w", "utf-8-raw").Write(s)`;
 	return new Promise<void>(r => {
 		server.on('connection', socket => {
 			const destroy = () => socket.destroy();
