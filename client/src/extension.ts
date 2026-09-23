@@ -364,7 +364,7 @@ async function compileScript(editor: TextEditor) {
 	if (cmdop.match(/\bahk2exe\w*\.exe/i)) {
 		cmd = cmdop + ' /in ' + currentPath;
 		if (!cmd.toLowerCase().includes(' /out '))
-			cmd += '/out "' + exePath + '"';
+			cmd += ' /out "' + exePath + '"';
 	} else {
 		const compilePath = findFile(['Compiler\\Ahk2Exe.exe', '..\\Compiler\\Ahk2Exe.exe'], ws);
 		if (!compilePath) {
@@ -373,7 +373,7 @@ async function compileScript(editor: TextEditor) {
 		}
 		cmd = `"${compilePath}" ${cmdop} /in "${currentPath}" `;
 		if (!cmdop.toLowerCase().includes(' /out '))
-			cmd += '/out "' + exePath + '"';
+			cmd += ' /out "' + exePath + '"';
 	}
 	const cp = spawn(cmd, { cwd: resolve(currentPath, '..'), shell: true });
 	if (cp.pid) {
