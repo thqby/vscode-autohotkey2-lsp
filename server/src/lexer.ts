@@ -1747,7 +1747,11 @@ export class Lexer implements Module {
 								tk.topofline = 0;
 							next = false;
 						}
-						if (!tk.topofline || tk.type === TokenType.Comma)
+						if (tk.type === TokenType.BlockStart) {
+							// `loop {` opens the loop body directly; the brace is not a count expression.
+							if (min)
+								_this.addDiagnostic(diagnostic.acceptparams(act, `${min}~${max}`), bak.offset, bak.length);
+						} else if (!tk.topofline || tk.type === TokenType.Comma)
 							result.push(...parse_line('{', act, min, max));
 						else if (min)
 							_this.addDiagnostic(diagnostic.acceptparams(act, `${min}~${max}`), bak.offset, bak.length);
