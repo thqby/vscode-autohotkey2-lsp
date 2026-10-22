@@ -3145,7 +3145,7 @@ export class Lexer implements Module {
 								const l = _this.diagnostics.length, bo = tk.offset;
 								let must;
 								if (end === '{') {
-									if (lk.topofline && lk.type === TokenType.Reserved) {
+									if (lk.type === TokenType.Reserved && (lk.topofline || LINE_STARTERS.includes(lk.content.toLowerCase()))) {
 										if (!tk.topofline && !_this.getToken(parser_pos, true).topofline)
 											must = true;
 									} else if (!(lk.op_type === 1 || isYieldsOperand(lk)))
