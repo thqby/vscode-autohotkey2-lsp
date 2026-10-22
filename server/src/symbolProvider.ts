@@ -114,7 +114,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	if (mod !== lex) return;
 	if (lex.module)
 		for (const m of Object.values(lex.module)) {
-			m.name && result.push(...m.ranges!.map(r => ({
+			m.name && result.push(...m.offsets!.map(r => ({
 				...m, range: {
 					start: document.positionAt(r[0]),
 					end: document.positionAt(r[1]),

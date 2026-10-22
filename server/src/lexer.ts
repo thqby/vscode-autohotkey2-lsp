@@ -840,7 +840,7 @@ export class Lexer implements Module {
 				}
 				checkDupError(this.declaration, this.children, this, true);
 				if (this.module) {
-					this.addFoldingRange(...this.curr_mod!.ranges!.at(-1)!)
+					this.addFoldingRange(...this.curr_mod!.offsets!.at(-1)!)
 					Object.values(this.module)
 						.forEach(it => checkDupError(it.declaration, it.children, this, true));
 				}
@@ -2785,7 +2785,7 @@ export class Lexer implements Module {
 							if (!isIdentifier(name) || name[0] <= '9')
 								_this.diagnostics.push({ message: diagnostic.invalidsymbolname(), range: rg });
 							if (mod)
-								mod.ranges!.at(-1)![1] = tk.offset, _this.addFoldingRange(...mod.ranges!.at(-1)!);
+								mod.offsets!.at(-1)![1] = tk.offset, _this.addFoldingRange(...mod.offsets!.at(-1)!);
 							mod = _this.curr_mod = (_this.module ??= {})[name.toUpperCase()] ??= {
 								name: name || '\0', kind: SymbolKind.Module,
 								range: ZERO_RANGE, selectionRange: rg,
@@ -2794,13 +2794,13 @@ export class Lexer implements Module {
 								declaration: o = {},
 								property: o,
 								include: {},
-								ranges: [],
+								offsets: [],
 								uri: _this.uri,
 							};
 							_parent = mod;
 							result = mod.children;
 							includetable = mod.include;
-							mod.ranges!.push([tk.offset, input_length]);
+							mod.offsets!.push([tk.offset, input_length]);
 						}
 						break;
 					case '#import':
@@ -6831,7 +6831,7 @@ export class Lexer implements Module {
 		const offset = this.document.offsetAt(pos);
 		for (const n in mod) {
 			const m = mod[n];
-			for (const [s, e] of m.ranges!)
+			for (const [s, e] of m.offsets!)
 				if (offset < s) break;
 				else if (offset <= e)
 					return m;
@@ -7174,7 +7174,7 @@ export function createModules(name: string, modules: Module[]) {
 		name, kind: SymbolKind.Module, modules,
 		range: ZERO_RANGE, selectionRange: ZERO_RANGE,
 		children: [], declaration: {},
-		include: null!, property: null!, ranges: null!,
+		include: null!, property: null!, offsets: null!,
 	};
 	return m;
 }

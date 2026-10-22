@@ -199,7 +199,7 @@ export interface Module extends AhkSymbol {
 	labels?: Record<string, AhkSymbol[]>
 	modules?: Module[]
 	property: Record<string, Variable>
-	ranges?: [number, number][]
+	offsets?: [number, number][]
 }
 
 export interface ParamInfo {
