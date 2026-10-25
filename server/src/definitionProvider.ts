@@ -26,6 +26,8 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 		return;
 	}
 	pt = tk.previous_token;
+	if (pt?.type === TokenType.Reserved && pt.content.toLowerCase() === 'export')
+		pt = pt.previous_token;
 	if (pt?.type === TokenType.Directive && !tk.topofline && pt.content.toLowerCase() === '#import' &&
 		(tk.type === TokenType.Identifier || tk.type === TokenType.String)) {
 		const v = tk.value as string ?? tk.content;
