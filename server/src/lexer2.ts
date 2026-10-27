@@ -1856,21 +1856,19 @@ function getImplicitImport(mods: Module[], name: string, wildcard = Wildcard.Imp
 				if (!(w = i.wildcard)) continue;
 				!ii.mod && resolveImports(lexers[m.uri!]);
 				if (!(mm = ii.mod?.[i.from.toUpperCase()])) continue;
+				if (w < wildcard) continue;
 				if (v3.has(mm)) continue; else v3.add(mm);
 				const ms = mm.modules ?? [mm];
-				if (w >= wildcard) {
-					for (m of ms) {
-						if ((t = m.export?.[name])) {
-							if (t.kind === SymbolKind.Variable && (t as Variable).from === undefined)
-								i.wildcard = Wildcard.None, t = getModuleMember(mm, name) ?? t, i.wildcard = w;
-							return { node: t, mod: mm };
-						}
+				for (m of ms) {
+					if ((t = m.export?.[name])) {
+						if (t.kind === SymbolKind.Variable && (t as Variable).from === undefined)
+							i.wildcard = Wildcard.None, t = getModuleMember(mm, name) ?? t, i.wildcard = w;
+						return { node: t, mod: mm };
 					}
-					const r = traverse(ms, Wildcard.Export, v2) as { node: AhkSymbol, mod: Module };
-					if (r)
-						return r;
-				} else if (ms.some(m => m.export?.[name]))
-					return;
+				}
+				const r = traverse(ms, Wildcard.Export, v2) as { node: AhkSymbol, mod: Module };
+				if (r)
+					return r;
 			}
 		}
 	})(mods, wildcard, wildcard === Wildcard.Export ? v2 : v1);
@@ -1881,32 +1879,25 @@ export function getImplicitImports(mods: Module[], wildcard = Wildcard.Import, .
 	const v1 = new Set<Module>, v2 = new Set<Module>, v3 = new Set<Module>;
 	(function traverse(mods: Module[], wildcard: Wildcard, visted = v1) {
 		let ee, ii, m, mm, t, w;
-		const hs = [];
 		for (m of mods) {
 			if (!(ii = m.import) || visted.has(m)) continue; else visted.add(m);
 			for (const i of ii.imp.toReversed()) {
 				if (!(w = i.wildcard)) continue;
 				!ii.mod && resolveImports(lexers[m.uri!]);
 				if (!(mm = ii.mod?.[i.from.toUpperCase()])) continue;
+				if (w < wildcard) continue;
 				if (v3.has(mm)) continue; else v3.add(mm);
 				const ms = mm.modules ?? [mm];
-				if (w >= wildcard) {
-					i.wildcard = Wildcard.None;
-					for (m of ms)
-						for (const k in ee = m.export)
-							o[k] ??= (t = ee[k]).kind !== SymbolKind.Variable ||
-								(t as Variable).from !== undefined ?
-								t : getModuleMember(mm, k) ?? t;
-					traverse(ms, Wildcard.Export, v2);
-					i.wildcard = w;
-				} else {
-					for (m of ms)
-						for (const k in m.export)
-							o[k] ??= !hs.push(k) as unknown as AhkSymbol;
-				}
+				i.wildcard = Wildcard.None;
+				for (m of ms)
+					for (const k in ee = m.export)
+						o[k] ??= (t = ee[k]).kind !== SymbolKind.Variable ||
+							(t as Variable).from !== undefined ?
+							t : getModuleMember(mm, k) ?? t;
+				traverse(ms, Wildcard.Export, v2);
+				i.wildcard = w;
 			}
 		}
-		hs.forEach(k => o[k] = undefined!);
 	})(mods, wildcard, wildcard === Wildcard.Export ? v2 : v1);
 	delete o[''];
 	const r = Object.assign({}, ...others);
