@@ -415,36 +415,28 @@ async function quickHelp(editor: TextEditor) {
 	}
 	const script = `
 #NoTrayIcon
-#DllLoad oleacc.dll
-chm_hwnd := 0, chm_path := '${helpPath}', DetectHiddenWindows(true), !(WinGetExStyle(top := WinExist('A')) & 8) && (top := 0)
+chm_hwnd := 0, path := '${helpPath}', DetectHiddenWindows(true), !(WinGetExStyle(top := WinExist('A')) & 8) && (top := 0)
 for hwnd in WinGetList('AutoHotkey ahk_class HH Parent')
 	for item in ComObjGet('winmgmts:').ExecQuery('SELECT CommandLine FROM Win32_Process WHERE ProcessID=' WinGetPID(hwnd))
-		if InStr(item.CommandLine, chm_path) {
+		if InStr(item.CommandLine, path) {
 			chm_hwnd := WinExist(hwnd)
 			break 2
 		}
 if top && top != chm_hwnd
 	WinSetAlwaysOnTop(0, top)
+if word := '${word}'
+	path .= '::/docs/search.htm#q=${word}&m=2'
 if !chm_hwnd
-	Run(chm_path, , , &pid), chm_hwnd := WinWait('AutoHotkey ahk_class HH Parent ahk_pid' pid)
+	Run('hh.exe "ms-its:' path '"'), ExitApp()
 WinShow(), WinActivate(), WinWaitActive(), ctl := 0, endt := A_TickCount + 3000
 while (!ctl && A_TickCount < endt)
 	try ctl := ControlGetHwnd('Internet Explorer_Server1')
-if ${!!word} && ctl {
-    r := SendMessage(DllCall('RegisterWindowMessage', 'str', 'WM_HTML_GETOBJECT', 'uint'), , , ctl)
-    NumPut('int64', 0x11D026CB332C4425, 'int64', 0x1901D94FC00083B4, IID_IHTMLDocument2 := Buffer(16))
-    DllCall('oleacc\\ObjectFromLresult', 'ptr', r, 'ptr', IID_IHTMLDocument2, 'ptr', 0, 'ptr*', doc := ComValue(9, 0), 'hresult')
-    doc.parentWindow.execScript('
-    (
-        document.querySelector('#head > div > div.h-tabs > ul > li:nth-child(3) > button').click()
-        searchinput = document.querySelector('#left > div.search > div.input > input[type=search]')
-        keyevent = document.createEvent('KeyboardEvent')
-        keyevent.initKeyboardEvent('keyup', false, true, document.defaultView, 13, null, false, false, false, false)
-        searchinput.value = '${word}'
-        searchinput.dispatchEvent(keyevent)
-        Object.defineProperties(keyevent, { type: { get: function() { return 'keydown' } }, which: { get: function() { return 13 } } })
-        searchinput.dispatchEvent(keyevent)
-    )')
+if word && ctl {
+	r := SendMessage(DllCall('RegisterWindowMessage', 'str', 'WM_HTML_GETOBJECT', 'uint'), , , ctl)
+	NumPut('int64', 0x11D026CB332C4425, 'int64', 0x1901D94FC00083B4, IID_IHTMLDocument2 := Buffer(16))
+	DllCall('oleacc\\ObjectFromLresult', 'ptr', r, 'ptr', IID_IHTMLDocument2, 'ptr', 0, 'ptr*', doc := ComValue(9, 0), 'hresult')
+	ComObjQuery(doc, '{0002DF05-0000-0000-C000-000000000046}', '{00020400-0000-0000-C000-000000000046}')
+		.Navigate('mk:@MSITStore:' path)
 }`;
 	const isUIAccess = ahkStatusBarItem.text.endsWith('[UIAccess]');
 	const cp = spawn(executePath, ['/ErrorStdOut', isUIAccess ? createTempFile(script) : '*']);
