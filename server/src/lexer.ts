@@ -6666,7 +6666,7 @@ export class Lexer implements Module {
 		if (is_global)
 			node = from_d(this.d_uri) ?? (mod ?? this).declaration[name] ??
 				(is_global = 1, node) ?? (is_global = true, this.typedef[name]);
-		return node ? { node, uri, mod, scope, is_global, parent } : mod && null;
+		return node && { node, uri, mod, scope, is_global, parent };
 		function from_d(d_uri: string) {
 			const lex = lexers[d_uri];
 			if (!lex) return;
