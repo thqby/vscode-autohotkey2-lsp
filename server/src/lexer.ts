@@ -1218,7 +1218,7 @@ export class Lexer implements Module {
 											continue;
 										break;
 									case 'export':
-										if (ahkVersion < alpha_11)
+										if (ahkVersion < alpha_11 || ahkVersion >= alpha_31)
 											break;
 										if (parse_export(ahkVersion < alpha_11 + 9))
 											continue;
@@ -2792,6 +2792,7 @@ export class Lexer implements Module {
 								bc_mode_def: bc_mode = _this.bc_mode ?? _this.bc_mode_def,
 								children: [],
 								declaration: o = {},
+								export: ahkVersion >= alpha_31 ? o : undefined,
 								property: o,
 								include: {},
 								offsets: [],
@@ -6563,6 +6564,7 @@ export class Lexer implements Module {
 		this.bc_mode = this.checkmember = this.curr_mod = this.explicitContext =
 			this.export = this.import = this.importLex = this.maybev1 =
 			this.module = this.st = this.symbolInformation = this.winapi = undefined!;
+		ahkVersion >= alpha_31 && (this.export = this.declaration);
 	}
 
 	get included() { return includedCache[this.uri] ?? {}; }
@@ -7510,6 +7512,7 @@ export const alpha_3 = versionEncode('2.1-alpha.3');
 const v2alpha1 = versionEncode('2.0-alpha.1');
 const alpha_11 = alpha_3 + 8;
 const alpha_21 = alpha_11 + 10;
+const alpha_31 = alpha_11 + 20;
 function versionDecode(n: number) {
 	const v: number[] = [];
 	n += 3000;
