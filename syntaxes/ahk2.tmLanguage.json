@@ -408,6 +408,10 @@
               ]
             },
             {
+              "match": "(?<=^[ \t]*)(?i:union)(?=[ \t]*([{;]|$))",
+              "name": "storage.type.union.ahk2"
+            },
+            {
               "begin": "(?<=^[ \t]*(?i:static[ \t]+)?)\\b\\w+\\b(?=(\\[|[ \t]*\\{?([ \t];.*)?\\n))",
               "beginCaptures": {
                 "0": {
