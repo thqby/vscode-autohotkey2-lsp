@@ -6,8 +6,8 @@ import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, CompletionTriggerKind,
 	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, Wildcard, ZERO_RANGE,
 	a_Vars, ahkModule, ahkUris, ahkVars, ahkVersion, alpha_3, completionItemCache, completionitem, configCache,
-	decltypeExpr, derefVar, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
-	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getSymbolDetail, isIdentifier,
+	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
+	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getImportPath, getSymbolDetail, isIdentifier,
 	kindSortChar, lexers, libSymbols, makeSearchRegExp, traverseRelevance, utils, winapis
 } from './common';
 
@@ -976,11 +976,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				return items;
 			}
 		}
-		const dirs = a_Vars.$import ? derefVar(a_Vars.$import, undefined, {
-			...a_Vars, scriptdir: lex.scriptdir, linefile: lex.scriptdir
-		}).split(';') : lex.libdirs.map(s => s.slice(0, -4));
-		if (!dirs.length || dirs[0].toLowerCase() !== lex.scriptpath.toLowerCase())
-			dirs.unshift(lex.scriptpath);
+		const dirs = getImportPath(lex);
 		await add_paths(false, is_id ? /\.ahk$/i : /\.(ahk2?|ah2)$/i, dirs, is_id ? 2 : 0, path);
 		return items;
 	}

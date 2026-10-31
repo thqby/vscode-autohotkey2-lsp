@@ -10,7 +10,7 @@ import {
 	parseInclude, parseProject, parseUserLib, resolvePath, setIsAhkH, setting, traverseInclude, URI, utils
 } from './common';
 import { documents, isInitialized, sendNotification, setConnection } from './connection';
-import { ahkVersion, setVersion } from './lexer';
+import { ahkVersion, alpha_35, setVersion } from './lexer';
 import { PEFile, RESOURCE_TYPE, searchAndOpenPEFile } from './PEFile';
 
 Object.assign(utils, {
@@ -45,7 +45,9 @@ async function initEnv(samefolder: boolean): Promise<boolean> {
 		showPathError(setting.versionerr());
 	if (!samefolder || !libDirs.length) {
 		libDirs.length = 0;
-		libDirs.push(a_Vars.mydocuments + '\\AutoHotkey\\Lib\\',
+		if (ahkVersion >= alpha_35 && a_Vars.$lib)
+			libDirs.push(...a_Vars.$lib.split(';'));
+		else libDirs.push(a_Vars.mydocuments + '\\AutoHotkey\\Lib\\',
 			a_Vars.ahkpath.replace(/[^\\/]+$/, 'Lib\\'));
 		let lb;
 		for (lb of Object.values(libSymbols))
@@ -195,7 +197,7 @@ function getScriptVars(): Promise<Record<string, string> | undefined> {
 	const server = createServer().listen(path);
 	const script = `
 #NoTrayIcon
-s := "$import|" EnvGet("AhkImportPath") "\`n"
+s := "$lib|" EnvGet(VerCompare(A_AhkVersion, "2.1-alpha.35") ? "AhkLibPath" : "AhkImportPath") "\`n"
 for _, k in ${JSON.stringify([...builtinVars, ...builtinVars_h])}
 	try if SubStr(k, 1, 2) = "a_" && !IsObject(v := %k%)
 		s .= SubStr(k, 3) "|" v "\`n"

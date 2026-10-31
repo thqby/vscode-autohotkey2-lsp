@@ -9,8 +9,8 @@ import {
 import {
 	ANY, ARRAY, BLANK, EMPTY_TOKEN, FLOAT, INTEGER, Lexer,
 	NUMBER, STRING, UNSET, VARREF, VOID, ZERO_RANGE,
-	ahkModule, ahkVersion, alpha_3, createModules, derefVar,
-	escape_str, isContinuousLine, isIdentifier, isYieldsOperand,
+	ahkModule, ahkVersion, alpha_3, createModules, escape_str,
+	getImportPath, isContinuousLine, isIdentifier, isYieldsOperand,
 	resolveVarAlias, sym_related_msg, sym_type
 } from './lexer';
 import { SymbolKind } from './lsp-enums';
@@ -1769,11 +1769,7 @@ function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>
 			return;
 		return findDirectiveModule(m, lex, cache);
 	}
-	const dirs = a_Vars.$import ? derefVar(a_Vars.$import, undefined, {
-		...a_Vars, scriptdir: lex.scriptdir, linefile: lex.scriptdir
-	}).split(';') : lex.libdirs.map(s => s.slice(0, -4));
-	if (dirs[0]?.toLowerCase() !== lex.scriptpath.toLowerCase())
-		dirs.unshift(lex.scriptpath);
+	const dirs = getImportPath(lex);
 	for (let d of dirs) {
 		let f = resolve(d, path), s;
 		try {

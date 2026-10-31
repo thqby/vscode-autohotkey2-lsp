@@ -178,6 +178,7 @@ export class Lexer implements Module {
 	getToken: (offset?: number, ignorecomment?: boolean) => Token;
 	importLex?: Set<Lexer>;
 	importedLex?: Set<Lexer>;
+	importDir?: string[];
 	includedir = new Map<number, string>();
 	indent = '\t';
 	is_virtual = false;		// uris like `vscode-local-history:`
@@ -6904,6 +6905,7 @@ export class Lexer implements Module {
 	}
 
 	initLibDirs(dir?: string) {
+		this.importDir = undefined;
 		if (process.env.BROWSER)
 			return;
 		let workfolder: string;
@@ -6921,8 +6923,11 @@ export class Lexer implements Module {
 		} else this.scriptdir = this.scriptpath.replace(/\\Lib(\\.+)?$/i, '');
 		this.libdirs = [dir = this.scriptdir + '\\Lib\\'];
 		dir = dir.toLowerCase();
-		for (const t of libDirs)
+		for (let t of libDirs) {
+			if (ahkVersion >= alpha_35 && t.includes('%'))
+				t = derefVar(t, this);
 			dir !== t.toLowerCase() && this.libdirs.push(t);
+		}
 	}
 
 	getColors() {
@@ -7500,6 +7505,28 @@ export function derefVar(str: string, lex?: Lexer, vars = a_Vars) {
 	});
 }
 
+export function getImportPath(lex: Lexer) {
+	return lex.importDir ??= (function () {
+		const dirs = [lex.scriptpath], set = new Set();
+		let t;
+		set.add(dirs[0].toLowerCase());
+		if (ahkVersion >= alpha_35) {
+			for (let p of [lex.scriptdir, ...libDirs]) {
+				if (p.includes('%'))
+					p = derefVar(p, lex);
+				if (!set.has(t = p.toLowerCase()))
+					set.add(t), dirs.push(p);
+			}
+		} else {
+			const r = a_Vars.$lib ? derefVar(a_Vars.$lib, undefined, {
+				...a_Vars, scriptdir: lex.scriptdir, linefile: lex.fsPath
+			}).split(';') : lex.libdirs.map(s => s.slice(0, -4));
+			r.forEach(p => set.has(t = p.toLowerCase()) || set.add(t) && dirs.push(p));
+		}
+		return dirs;
+	})();
+}
+
 //#region version
 export let ahkVersion = Infinity, metafnIndex = 0;
 export function setVersion(version: string) {
@@ -7513,6 +7540,7 @@ const v2alpha1 = versionEncode('2.0-alpha.1');
 const alpha_11 = alpha_3 + 8;
 const alpha_21 = alpha_11 + 10;
 const alpha_31 = alpha_11 + 20;
+export const alpha_35 = alpha_31 + 4;
 function versionDecode(n: number) {
 	const v: number[] = [];
 	n += 3000;
