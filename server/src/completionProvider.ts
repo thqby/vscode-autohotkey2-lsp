@@ -1090,11 +1090,12 @@ function get_global_var(lexs: Module[], lex: Lexer, dir: string, re: RegExp) {
 	const vars: Record<string, Variable> = {};
 	for (const l of lexs) {
 		const u = l.uri ?? '', max_access = l === lex ? AccessModifier.all : u.startsWith(dir) ? AccessModifier.private : AccessModifier.protected;
+		const { d } = l as Lexer;
 		for (const [n, s] of Object.entries(l.declaration)) {
 			const v = vars[n];
 			if (v) {
 				if (v.kind !== SymbolKind.Variable || v.decl && s.kind === SymbolKind.Variable)
-					continue;
+					if (!d) continue;
 			} else if ((s.access ?? 0) >= max_access)
 				continue;
 			vars[n] = s;

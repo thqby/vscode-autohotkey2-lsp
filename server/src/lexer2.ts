@@ -1800,7 +1800,7 @@ export function flatModule(mod: Module) {
 	const mods = mod.modules ?? [mod];
 	const set = new Set(mods);
 	let t, u;
-	t = Object.assign({}, ...mods.map(m => includeCache[`${m.uri!}${m.name && `|${m.name}`}`]));
+	t = Object.assign({}, ...mods.map(m => includeCache[`${m.uri!}${m.name && `|${m.name.toUpperCase()}`}`]));
 	for (u in t)
 		if ((t = lexers[u]) && !set.has(t))
 			set.add(t), mods.push(t);
@@ -1906,7 +1906,7 @@ export function getModuleImporteds(mod: Module) {
 	let u = mod.uri!, t, v;
 	const rs = new Map<Module, Import["imp"]>(), r = new Map;
 	if (mod.selectionRange !== ZERO_RANGE)
-		u += `|${mod.name}`;
+		u += `|${mod.name.toUpperCase()}`;
 	for (u in { [u]: '', ...includedCache[u] }) {
 		const l = lexers[u.replace(/\|.+/, '')];
 		if (!l?.importedLex) continue;

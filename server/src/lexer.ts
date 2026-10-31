@@ -391,7 +391,7 @@ export class Lexer implements Module {
 										++j, parse_types(fn);
 									else fn.range.end = this.document.positionAt(lk.offset + lk.length);
 									fn.full += ` => ${joinTypes(fn.type_annotations) || 'void'}`;
-									tk.symbol = tk.definition = fn, fn.decl = true;
+									tk.symbol = tk.definition = fn, fn.decl = fn.def = true;
 									if (!META_FUNCNAME.includes(_low = fn.name.toUpperCase(), metafnIndex))
 										tk.semantic = {
 											type: blocks ? SemanticTokenTypes.method : SemanticTokenTypes.function,
@@ -478,6 +478,7 @@ export class Lexer implements Module {
 									set_detail(_cm.symbol = cl, _cm);
 								cl.full = cls.join('.'), cl.property = {}, cl.prototype =
 									{ ...cl, detail: undefined, property: cl.$property = {} };
+								cl.decl = cl.def = true;
 								_low = cl.name.toUpperCase();
 								_parent.children!.push(cl);
 								if (!cl.since) {
@@ -528,7 +529,7 @@ export class Lexer implements Module {
 								it.uri = uri;
 							// fall through
 							case SymbolKind.Class:
-								it.overwrite ??= d, it.decl = it.def = true;
+								it.overwrite ??= d;
 								if (!(t = ahkVars[k]) || d >= (t.overwrite ?? 0))
 									ahkVars[k] = it;
 								break;
