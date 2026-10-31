@@ -134,6 +134,7 @@
 	"hint.unreachable": "检测到无法访问的代码",
 	"warn.localsameasglobal": "局部变量'{0}'与全局变量具有相同的名称",
 	"warn.notimplemented": "该特性还未实现",
+	"warn.notmethodcall": "这不是方法调用, 而是表达式",
 	"warn.varisunset": "变量'{0}'似乎从未被赋值",
 	"response.cannotrename": "无法重命名此元素。",
 	"response.cannotrenamestdlib": "不能重命名标准AutoHotkey库中定义的元素。",

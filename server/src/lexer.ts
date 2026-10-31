@@ -2468,9 +2468,19 @@ export class Lexer implements Module {
 									continue;
 								next = false;
 								if (maybecaller && tk.type as TokenType !== TokenType.Assign && !'=??'.includes(tk.content || ' ') &&
-									', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length)))
-									parse_call(lk, c, SymbolKind.Method);
-								else
+									', \t\r\n'.includes(c = input.charAt(lk.offset + lk.length))) {
+									if (!tk.topofline && tk.content === '[') {
+										const b = tk;
+										let t;
+										_this.diagnostics.push(t = {
+											message: warn.notmethodcall(),
+											range: ZERO_RANGE,
+											severity: DiagnosticSeverity.Warning
+										});
+										result.push(...parse_line());
+										t.range = make_range(b.previous_token!.offset, (b.next_pair_pos ?? input_length) + 1 - b.previous_token!.offset);
+									} else parse_call(lk, c, SymbolKind.Method);
+								} else
 									result.push(...parse_line());
 							} else
 								next = false, result.push(...parse_line());
