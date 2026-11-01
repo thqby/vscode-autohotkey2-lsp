@@ -684,7 +684,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if (expg.test(n) && !vv[n]?.children)
 				vv[n] = ahkVars[n];
 	} else {
-		add_implicit_vars(vv, getImplicitImports(lexs, Wildcard.Import, ahkVars), expg);
+		add_implicit_vars(vv, getImplicitImports(lexs, Wildcard.Import, scope, ahkVars), expg);
 	}
 
 	// local vars

@@ -4,7 +4,7 @@ import {
 	ANY, ASSIGN_TYPE, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SK2STT,
 	SUPER, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, UnsetKind, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles, findClass, getAllModules,
-	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getModuleImporteds, getParamCount, getWorkspaceFile, hint, inactiveVars,
+	getClassBase, getClassMember, getClassMembers, getImplicitImports, getModuleImporteds, getModuleMembers, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
@@ -46,7 +46,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 				gvar[n] = ahkVars[n];
 		implicitVars = lexers[ahkUris.winapi]?.declaration ?? {};
 	}
-	implicitVars ??= getImplicitImports(mods, undefined, lexers[ahkUris.winapi]?.declaration, ahkVars);
+	implicitVars ??= getImplicitImports(mods, undefined, undefined, lexers[ahkUris.winapi]?.declaration, ahkVars);
 	for (const n in implicitVars)
 		if (gvar[n]?.def === undefined)
 			gvar[n] = implicitVars[n];
@@ -236,6 +236,13 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 							if (warnLocalSameAsGlobal && v.kind === SymbolKind.Variable && gvar[k])
 								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
+					// if (fn.import && mod!.import?.mod) {
+					// 	const ms = mod!.import.mod;
+					// 	implicit = Object.assign({ ...implicit }, ...fn.import.flatMap(s => {
+					// 		const m = ms[s.toUpperCase()];
+					// 		return m ? [getModuleMembers(m)] : [];
+					// 	}));
+					// }
 					for (const [k, v] of Object.entries(fn.unresolved_vars ?? {}))
 						if ((s = inherit[k] ?? gvar[k])) {
 							if (s === gvar[k])

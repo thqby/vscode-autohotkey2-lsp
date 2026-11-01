@@ -2095,14 +2095,20 @@ ObjAddRef(Ptr) => Integer
 ObjBindMethod(Obj, Method := 'Call', Params*) => Func
 
 /**
+ * 创建具有内部数据指针的对象.
+ * @since 2.1-alpha.36
+ */
+ObjCreateWithDataPtr(ClassObj: T, Address) => T
+
+/**
  * 将地址转换为一个合适的引用.
  */
-ObjFromPtr(Address) => Object
+ObjFromPtr(Address) => Any
 
 /**
  * 将地址转换为一个合适的引用并增加引用计数.
  */
-ObjFromPtrAddRef(Address) => Object
+ObjFromPtrAddRef(Address) => Any
 
 /**
  * 返回值的Base对象.
@@ -3655,6 +3661,12 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	FocusedCtrl => ControlType?
 
 	/**
+	 * 获取SetFont设置的字体的句柄.
+	 * @since 2.1-alpha.32
+	 */
+	FontHandle => Integer
+
+	/**
 	 * 检索 GUI 窗口的窗口句柄(HWND).
 	 */
 	Hwnd => Integer
@@ -4801,8 +4813,8 @@ class Object extends Any {
 	 */
 	GetOwnPropDesc(Name) => {
 		Get?: Func, Set?: Func, Call?: Func, Value?: Any,
-		/** @since 2.1-alpha.3 */
-		Type?: String | Integer | Class, Offset?: Integer
+		Type?: Struct, Offset?: Integer, Pack?: Integer,
+		Enumerable?: Integer
 	} | unset
 
 	/**
@@ -4940,6 +4952,9 @@ class Struct extends Any {
 			set => void
 		}
 	}
+
+	/** @since 2.1-alpha.37 */
+	__New(FieldValues*) => void
 
 	/**
 	 * 检索嵌套结构或指向属性的虚拟引用.

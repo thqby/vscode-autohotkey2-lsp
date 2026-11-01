@@ -32,7 +32,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 		(tk.type === TokenType.Identifier || tk.type === TokenType.String)) {
 		const v = tk.value as string ?? tk.content;
 		let mod, has_default;
-		mod = lex.import?.mod?.[v.toUpperCase()];
+		mod = (lex.inDirectiveModule(params.position) ?? lex).import?.mod?.[v.toUpperCase()];
 		if (mod) {
 			const rg: Range = {
 				start: lex.document.positionAt(tk.offset),

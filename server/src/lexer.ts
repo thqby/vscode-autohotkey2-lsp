@@ -863,6 +863,11 @@ export class Lexer implements Module {
 							throw new Error();
 						else l = start;
 				}
+				// function sort_import(mod: Module) {
+				// 	mod.import?.imp.sort((a, b) =>
+				// 		(a.parent?.selectionRange.start.line ?? -1) -
+				// 		(b.parent?.selectionRange.start.line ?? -1));
+				// }
 			}
 		}
 
@@ -2278,11 +2283,14 @@ export class Lexer implements Module {
 					fr: number[] = [], syms: Variable[] = [];
 				const pi: ParamInfo = { offset: tk.offset, count: 0, comma: [], miss: [], unknown: false };
 				let must = le20, wildcard = Wildcard.None, has_suffix_imps: boolean | 0, mk: Token | undefined;
+				// let parent;
 				if (lk.type === TokenType.Directive) {
 					kws.pop(), must = true;
 					if (!tk.topofline && tk.type === TokenType.Identifier &&
 						tk.content.toLowerCase() === 'export')
 						kws.push(tk), nexttoken(), export_ = true;
+					if (mode & BlockType.Func)
+						export_ && (export_ = false, unexpected(lk));
 				}
 				const r = parse();
 				if (r) {
@@ -2294,6 +2302,8 @@ export class Lexer implements Module {
 					export_ && wildcard && (wildcard = Wildcard.Export);
 					((_this.curr_mod ?? _this).import ??= { imp: [] })
 						.imp.push({ from, tk: mk, wildcard, var: syms });
+					// if (parent && wildcard)
+					// 	((parent as FuncNode).import ??= []).push(from);
 					for (const s of syms)
 						s.from = from, export_ && add_export(s);
 					pi.name = from, mk.as ??= null;
@@ -2388,8 +2398,13 @@ export class Lexer implements Module {
 					while (nexttoken()) {
 						if (tk.content === '*') {
 							nexttoken();
-							if (tk.type === TokenType.Comma || tk.type === TokenType.BlockEnd)
-								wildcard = Wildcard.Import;
+							if (tk.type === TokenType.Comma || tk.type === TokenType.BlockEnd) {
+								if (mode & BlockType.Func)
+									_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, {
+										severity: DiagnosticSeverity.Warning
+									});
+								else wildcard = Wildcard.Import;
+							} else unexpected(lk);
 						} else if (isIdentifier((sk = tk).content)) {
 							if (nexttoken(), tk.type === TokenType.Operator && tk.content.toLowerCase() === 'as') {
 								tk.semantic = SE_KEYWORD;
@@ -2812,6 +2827,10 @@ export class Lexer implements Module {
 					case '#import':
 						if (ahkVersion < alpha_11 + 9)
 							_this.addDiagnostic(requireVerN(alpha_11 + 9), tk.offset, tk.length);
+						if (mode === BlockType.Class) {
+							unexpected(tk);
+							break;
+						}
 						nexttoken(), parse_import(false);
 						break;
 					case '#structpack':

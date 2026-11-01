@@ -2101,14 +2101,20 @@ ObjAddRef(Ptr) => Integer
 ObjBindMethod(Obj, Method := 'Call', Params*) => Func
 
 /**
+ * Creates an object with an internal data pointer.
+ * @since 2.1-alpha.36
+ */
+ObjCreateWithDataPtr(ClassObj: T, Address) => T
+
+/**
  * Convert the address to a suitable reference.
  */
-ObjFromPtr(Address) => Object
+ObjFromPtr(Address) => Any
 
 /**
  * Convert the address to a suitable reference and increase the reference count.
  */
-ObjFromPtrAddRef(Address) => Object
+ObjFromPtrAddRef(Address) => Any
 
 /**
  * The Base object of the return value.
@@ -3610,6 +3616,12 @@ class Gui<ControlType = Gui.List | Gui.ListView | Gui.StatusBar | Gui.Tab | Gui.
 	FocusedCtrl => ControlType?
 
 	/**
+	 * Gets a handle to the font set by SetFont.
+	 * @since 2.1-alpha.32
+	 */
+	FontHandle => Integer
+
+	/**
 	 * Retrieve the window handle (HWND) of the GUI window.
 	 */
 	Hwnd => Integer
@@ -4823,8 +4835,8 @@ class Object extends Any {
 	 */
 	GetOwnPropDesc(Name) => {
 		Get?: Func, Set?: Func, Call?: Func, Value?: Any,
-		/** @since 2.1-alpha.3 */
-		Type?: String | Integer | Class, Offset?: Integer
+		Type?: Struct, Offset?: Integer, Pack?: Integer,
+		Enumerable?: Integer
 	} | unset
 
 	/**
@@ -4963,6 +4975,9 @@ class Struct extends Any {
 			set => void
 		}
 	}
+
+	/** @since 2.1-alpha.37 */
+	__New(FieldValues*) => void
 
 	/**
 	 * Retrieves a nested struct or virtual reference to a property.
