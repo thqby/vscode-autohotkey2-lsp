@@ -20,7 +20,7 @@ import {
 import { DiagnosticSeverity, DiagnosticTag, MessageType, SymbolKind } from './lsp-enums';
 import {
 	AccessModifier, ActionType, AhkSymbol, BlockType, CallSite, ClassNode, Context, ContinueSectionOption, DiagnosticCode,
-	FormatFlags, FormatOptions, FuncNode, FuncScope, Import, JsDoc, Module, ParamInfo, ParamList, Property,
+	FormatFlags, FormatOptions, FuncNode, FuncScope, HotStringOpt, Import, JsDoc, Module, ParamInfo, ParamList, Property,
 	SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, TokenType, USAGE, Variable, Wildcard
 } from './types';
 export { traverseInclude };
@@ -157,7 +157,7 @@ export class Lexer implements Module {
 	selectionRange = ZERO_RANGE;
 
 	static curr?: Lexer;
-	private hotstringExecuteAction = false;
+	hs_opt: HotStringOpt = {};
 	actionwhenv1?: ActionType = 'Continue';
 	actived = false;
 	beautify: (options: FormatOptions, range?: Range) => string;
@@ -869,6 +869,20 @@ export class Lexer implements Module {
 				// 		(b.parent?.selectionRange.start.line ?? -1));
 				// }
 			}
+		}
+
+		function update_hs_opt(opt: HotStringOpt, val?: string) {
+			const l = val?.length ?? 0;
+			for (let i = 0; i < l; i++) {
+				let c0 = val![i];
+				if (c0 !== 'x' && c0 !== 't' && (c0 !== 'r' || !(c0 = 't')))
+					continue;
+				const c1 = val![i + 1];
+				if (c1 === '0')
+					opt[c0 as keyof HotStringOpt] = false, i++;
+				else opt[c0 as keyof HotStringOpt] = true, c1 === '1' && i++;
+			}
+			return opt;
 		}
 
 		function unexpected(tk: Token) {
@@ -2783,9 +2797,9 @@ export class Lexer implements Module {
 						result.push(...parse_line());
 						break;
 					case '#hotstring':
-						l = data.content?.trim().toLowerCase() ?? '';
+						l = data.content?.trim().toLowerCase();
 						if (l !== 'nomouse' && l !== 'endchars')
-							_this.hotstringExecuteAction = /x(?!0)/.test(l);
+							update_hs_opt((_this.curr_mod ?? _this).hs_opt ??= {}, l);
 						break;
 					case '#module':
 						if (mode !== BlockType.Script)
@@ -4764,8 +4778,9 @@ export class Lexer implements Module {
 				if (line.includes('::') && (block_mode || !'"\''.includes(line[0]) ||
 					![TokenType.Assign, TokenType.Comma, TokenType.BracketStart].includes(lst.type))) {
 					if ((m = line.match(/^(:([^:]*):(`.|[^`])*?::)(.*)$/i))) {
-						let execute: boolean;
-						if ((execute = /x(?!0)/i.test(m[2])) || /^[ \t]*\{?$/.test(m[4]) || (execute = _this.hotstringExecuteAction && !/x0/i.test(m[2])))
+						const opt = update_hs_opt({ ...(_this.curr_mod ?? _this).hs_opt }, m[2].toLowerCase());
+						const v = m[4].trim(), use_otb = v === '{' && !opt.t;
+						if (opt.x || !v || use_otb)
 							parser_pos += m[1].length - 1, lst = createToken(m[1], TokenType.Hotkey, offset, m[1].length, 1);
 						else {
 							last_LF = next_LF, parser_pos = offset + m[0].length;
@@ -4780,13 +4795,13 @@ export class Lexer implements Module {
 						lst.ignore = true, add_sharp_foldingrange();
 						if (!m[3])
 							_this.addDiagnostic(diagnostic.invalidhotdef(), lst.offset, lst.length);
-						if (lst.type === TokenType.HotkeyLine || (!execute && !/^[ \t]*\{/.test(m[4]))) {
+						if (lst.type === TokenType.HotkeyLine || (!use_otb && !opt.x)) {
 							if (depth > 5) {
 								delete _this.tokens[lst.offset];
 								return lst;
 							}
-							string_mode = execute = true;
-							const _lst = lst;
+							string_mode = true;
+							const _lst = lst, trl = _this.token_ranges.length;
 							let tk = get_token_ignore_comment(depth + 1), t: number;
 							while (tk.ignore && tk.type === TokenType.String) {
 								if ((parser_pos = input.indexOf('\n', t = parser_pos)) < 0)
@@ -4796,14 +4811,14 @@ export class Lexer implements Module {
 									tk.content += s, tk.length += s.length;
 								}
 								_this.token_ranges.push({ start: tk.offset, end: tk.offset + tk.length, type: 3 });
-								execute = false, tk = get_token_ignore_comment(depth + 1);
+								tk = get_token_ignore_comment(depth + 1);
 							}
 							string_mode = false, lst = _lst;
-							if (!execute && lst.type === TokenType.Hotkey) {
+							if (lst.type === TokenType.Hotkey && trl < _this.token_ranges.length) {
 								lst.type = TokenType.HotkeyLine, lst.skip_pos = parser_pos = offset + m[0].length;
 								offset += m[1].length;
 								lst.data = { content: input.substring(offset, parser_pos), offset, length: parser_pos - offset };
-								_this.token_ranges.push({ start: offset, end: parser_pos, type: 3, previous: lst.offset });
+								_this.token_ranges.splice(trl, 0, { start: offset, end: parser_pos, type: 3, previous: lst.offset });
 							} else
 								parser_pos = _lst.skip_pos ?? _lst.offset + _lst.length;
 						}
@@ -6580,7 +6595,8 @@ export class Lexer implements Module {
 	private clear() {
 		this.texts = {}, this.declaration = this.property = {}, this.include = {}, this.tokens = {};
 		this.labels = {}, this.typedef = {}, this.object = { method: {}, property: {} };
-		this.need_scriptdir = this.hotstringExecuteAction = this.is_parsed = false;
+		this.hs_opt = {};
+		this.need_scriptdir = this.is_parsed = false;
 		this.children.length = this.dllpaths.length = this.token_ranges.length = 0;
 		this.diagnostics.length = this.folding_ranges.length = this.line_ranges.length = 0;
 		this.includedir.clear(), this.dlldir.clear();

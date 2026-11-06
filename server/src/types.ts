@@ -167,6 +167,8 @@ export interface FuncNode extends AhkSymbol {
 
 export enum FuncScope { DEFAULT, STATIC, GLOBAL }
 
+export interface HotStringOpt { x?: boolean, t?: boolean }
+
 export interface Import {
 	imp: Array<{ from: string, tk: Token, wildcard: Wildcard, var: Variable[] }>
 	mod?: Record<string, Module | false>
@@ -194,6 +196,7 @@ export interface Module extends AhkSymbol {
 	declaration: Record<string, AhkSymbol>
 	export?: Record<string, AhkSymbol>
 	flat?: boolean
+	hs_opt?: HotStringOpt
 	import?: Import
 	include: Record<string, string>
 	labels?: Record<string, AhkSymbol[]>
