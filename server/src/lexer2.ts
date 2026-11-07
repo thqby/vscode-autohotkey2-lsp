@@ -1895,17 +1895,18 @@ export function getImplicitImports(mods: Module[], wildcard = Wildcard.Import, s
 				i.wildcard = Wildcard.None;
 				for (m of ms)
 					for (const k in ee = m.export)
-						o[k] ??= (t = ee[k]).kind !== SymbolKind.Variable ||
-							(t as Variable).from !== undefined ?
-							t : getModuleMember(mm, k) ?? t;
+						if (!(k in o) && (
+							(t = ee[k]).kind !== SymbolKind.Variable ||
+							(t as Variable).from !== undefined ||
+							(t = getModuleMember(mm, k))
+						)) o[k] = t;
 				traverse(ms, Wildcard.Export, v2);
 				i.wildcard = w;
 			}
 		}
 	})(mods, wildcard, wildcard === Wildcard.Export ? v2 : v1);
 	delete o[''];
-	const r = Object.assign({}, ...others, o);
-	return r;
+	return Object.assign({}, ...others, o);
 }
 
 export function getModuleImporteds(mod: Module) {
