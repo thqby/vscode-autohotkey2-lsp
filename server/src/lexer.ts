@@ -176,6 +176,8 @@ export class Lexer implements Module {
 	folding_ranges: FoldingRange[] = [];
 	fsPath = '';
 	getToken: (offset?: number, ignorecomment?: boolean) => Token;
+	imports?: Import[];
+	importMod?: Record<string, Module | false> | null;
 	importLex?: Set<Lexer>;
 	importedLex?: Set<Lexer>;
 	importDir?: string[];
@@ -2297,14 +2299,14 @@ export class Lexer implements Module {
 					fr: number[] = [], syms: Variable[] = [];
 				const pi: ParamInfo = { offset: tk.offset, count: 0, comma: [], miss: [], unknown: false };
 				let must = le20, wildcard = Wildcard.None, has_suffix_imps: boolean | 0, mk: Token | undefined;
-				// let parent;
+				let scope;
 				if (lk.type === TokenType.Directive) {
 					kws.pop(), must = true;
-					if (!tk.topofline && tk.type === TokenType.Identifier &&
+					if (mode & BlockType.Func)
+						scope = _parent as FuncNode;
+					else if (!tk.topofline && tk.type === TokenType.Identifier &&
 						tk.content.toLowerCase() === 'export')
 						kws.push(tk), nexttoken(), export_ = true;
-					if (mode & BlockType.Func)
-						export_ && (export_ = false, unexpected(lk));
 				}
 				const r = parse();
 				if (r) {
@@ -2314,12 +2316,17 @@ export class Lexer implements Module {
 					if (!mk) return r;
 					const from = mk.type === TokenType.String ? (mk.value = escape_str(mk.content)) : mk.content;
 					export_ && wildcard && (wildcard = Wildcard.Export);
-					((_this.curr_mod ?? _this).import ??= { imp: [] })
-						.imp.push({ from, tk: mk, wildcard, var: syms });
-					// if (parent && wildcard)
-					// 	((parent as FuncNode).import ??= []).push(from);
+					let imp: Import;
+					((scope ?? _this.curr_mod ?? _this).import ??= (
+						(_this.imports ??= []).push(imp = []), imp
+					)).push({ from, tk: mk, wildcard, var: syms });
 					for (const s of syms)
 						s.from = from, export_ && add_export(s);
+					if (mode & BlockType.Func) {
+						const fn = _parent as FuncNode;
+						for (const s of syms)
+							s.is_global = true, fn.global[s.name.toUpperCase()] ??= s;
+					}
 					pi.name = from, mk.as ??= null;
 				} else {
 					_this.diagnostics.splice(dl);
@@ -2395,6 +2402,8 @@ export class Lexer implements Module {
 								message: diagnostic.reservedworderr(vr.name),
 								range: vr.range
 							});
+							if (has_suffix_imps && !tk.prefix_is_whitespace)
+								_this.addDiagnostic(diagnostic.missingspace(), tk.offset, 1);
 						}
 					}
 					if (has_suffix_imps && !parse_imps() && !must)
@@ -2412,13 +2421,9 @@ export class Lexer implements Module {
 					while (nexttoken()) {
 						if (tk.content === '*') {
 							nexttoken();
-							if (tk.type === TokenType.Comma || tk.type === TokenType.BlockEnd) {
-								if (mode & BlockType.Func)
-									_this.addDiagnostic(warn.notimplemented(), lk.offset, lk.length, {
-										severity: DiagnosticSeverity.Warning
-									});
-								else wildcard = Wildcard.Import;
-							} else unexpected(lk);
+							if (tk.type === TokenType.Comma || tk.type === TokenType.BlockEnd)
+								wildcard = Wildcard.Import;
+							else unexpected(lk);
 						} else if (isIdentifier((sk = tk).content)) {
 							if (nexttoken(), tk.type === TokenType.Operator && tk.content.toLowerCase() === 'as') {
 								tk.semantic = SE_KEYWORD;
@@ -4117,7 +4122,7 @@ export class Lexer implements Module {
 								});
 								continue;
 							}
-							const varsp = v.static ? 'static' : 'local';
+							const varsp = t.static ? 'static' : 'local';
 							_diags.push({
 								message: diagnostic.conflictserr(...(
 									t.selectionRange.start.line < v.selectionRange.start.line ?
@@ -6603,7 +6608,7 @@ export class Lexer implements Module {
 		this.d_uri = '';
 		this.importLex?.forEach(l => l.importedLex?.delete(this));
 		this.bc_mode = this.checkmember = this.curr_mod = this.explicitContext =
-			this.export = this.import = this.importLex = this.maybev1 =
+			this.export = this.import = this.imports = this.importLex = this.importMod = this.maybev1 =
 			this.module = this.st = this.symbolInformation = this.winapi = undefined!;
 		ahkVersion >= alpha_31 && (this.export = this.declaration);
 	}
@@ -7579,7 +7584,7 @@ export const alpha_3 = versionEncode('2.1-alpha.3');
 const v2alpha1 = versionEncode('2.0-alpha.1');
 const alpha_11 = alpha_3 + 8;
 const alpha_21 = alpha_11 + 10;
-const alpha_31 = alpha_11 + 20;
+export const alpha_31 = alpha_11 + 20;
 export const alpha_35 = alpha_31 + 4;
 function versionDecode(n: number) {
 	const v: number[] = [];

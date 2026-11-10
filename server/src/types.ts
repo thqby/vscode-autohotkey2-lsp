@@ -160,6 +160,7 @@ export interface FuncNode extends AhkSymbol {
 	has_this_param?: boolean
 	unresolved_vars?: Record<string, Variable>
 	ranges?: [number, number][]	// class's __init
+	import?: Import
 	in_expr?: boolean
 	unset_kind?: UnsetKind
 	$type?: string | null	// @type {...}
@@ -169,9 +170,7 @@ export enum FuncScope { DEFAULT, STATIC, GLOBAL }
 
 export interface HotStringOpt { x?: boolean, t?: boolean }
 
-export interface Import {
-	imp: Array<{ from: string, tk: Token, wildcard: Wildcard, var: Variable[] }>
-	mod?: Record<string, Module | false>
+export interface Import extends Array<{ from: string, mod?: Module, tk: Token, wildcard: Wildcard, var: Variable[] }> {
 	alias?: Record<string, AhkSymbol>
 }
 

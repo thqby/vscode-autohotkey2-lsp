@@ -9,7 +9,7 @@ import {
 import {
 	ANY, ARRAY, BLANK, EMPTY_TOKEN, FLOAT, INTEGER, Lexer,
 	NUMBER, STRING, UNSET, VARREF, VOID, ZERO_RANGE,
-	ahkModule, ahkVersion, alpha_3, createModules, escape_str,
+	ahkModule, ahkVersion, alpha_3, alpha_31, createModules, escape_str,
 	getImportPath, isContinuousLine, isIdentifier, isYieldsOperand,
 	resolveVarAlias, sym_related_msg, sym_type
 } from './lexer';
@@ -1622,19 +1622,16 @@ export function findLibrary(path: string, libdirs: string[], workdir: string = '
 }
 
 export function resolveImports(lex?: Lexer) {
-	if (!lex) return;
-	let imp = lex.import, module;
+	if (!lex?.imports || lex.importMod) return;
 	const cache = {};
-	imp && !imp.alias && resolveImport(lex, imp, cache);
-	for (const n in (module = lex.module)) {
-		imp = module[n].import;
-		imp && !imp.alias && resolveImport(lex, imp, cache);
-	}
+	lex.importMod = {};
+	for (const imp of lex.imports)
+		resolveImport(lex, imp, cache);
 }
 
 function resolveImport(lex: Lexer, imp: Import, cache = {}) {
-	const mods = imp.mod ??= {}, alias = imp.alias ??= {}, decl: Record<string, Variable> = {};
-	for (const i of imp.imp) {
+	const mods = lex.importMod!, alias = imp.alias ??= {}, decl: Record<string, Variable> = {};
+	for (const i of imp) {
 		let n = i.from.toUpperCase();
 		const m = mods[n] ??= findDirectiveModule(n, lex, cache) ??
 			findFileModule(n, lex, cache) ?? false;
@@ -1642,6 +1639,7 @@ function resolveImport(lex: Lexer, imp: Import, cache = {}) {
 			lex.addDiagnostic(diagnostic.modulenotfound(i.from), i.tk.offset, i.tk.length);
 			continue;
 		}
+		i.mod = m;
 		for (const v of i.var) {
 			let r, t;
 			n = v.alias?.toUpperCase() ?? '';
@@ -1846,20 +1844,32 @@ export function getModuleMembers(mod: Module) {
 	};
 }
 
-function getImplicitImport(mods: Module[], name: string, wildcard = Wildcard.Import, scope?: AhkSymbol): { node: AhkSymbol, mod: Module } | undefined {
-	const v1 = new Set<Module>, v2 = new Set<Module>, v3 = new Set<Module>;
-	// const scopes = [scope];
-	// while (scope)
-	// 	scopes.push(scope = scope.parent);
-	return (function traverse(mods: Module[], wildcard: Wildcard, visted = v1) {
+interface ImportNode { import?: Import, uri?: string }
+function join_importnode(mods: ImportNode[], scope?: AhkSymbol) {
+	if (scope) {
+		const ms = [];
+		do {
+			(scope as ImportNode).import && ms.push(scope as ImportNode);
+		} while (scope = scope.parent);
+		if (ms.length)
+			ms.push(...mods), mods = ms;
+	}
+	return mods;
+}
+
+function getImplicitImport(mods: ImportNode[], name: string, wildcard = Wildcard.Import, scope?: AhkSymbol): { node: AhkSymbol, mod: Module } | undefined {
+	const v1 = new Set<ImportNode>, v2 = new Set<ImportNode>, v3 = new Set<ImportNode>;
+	if (ahkVersion >= alpha_31 && name[0] === '_')
+		return;
+	return (function traverse(mods: ImportNode[], wildcard: Wildcard, visted = v1) {
 		let ii, m, mm, t, w;
 		for (m of mods) {
 			if (!(ii = m.import) || visted.has(m)) continue; else visted.add(m);
-			for (const i of ii.imp.toReversed()) {
-				if (!(w = i.wildcard) || w < wildcard) continue;
-				!ii.mod && resolveImports(lexers[m.uri!]);
-				if (!(mm = ii.mod?.[i.from.toUpperCase()])) continue;
-				if (v3.has(mm)) continue; else v3.add(mm);
+			for (let _i = ii.length; _i;) {
+				const i = ii[--_i];
+				if ((w = i.wildcard) < wildcard) continue;
+				ii.alias || resolveImports(lexers[m.uri!]);
+				if (!(mm = i.mod) || v3.has(mm)) continue; else v3.add(mm);
 				const ms = mm.modules ?? [mm];
 				for (m of ms) {
 					if ((t = m.export?.[name])) {
@@ -1873,29 +1883,27 @@ function getImplicitImport(mods: Module[], name: string, wildcard = Wildcard.Imp
 					return r;
 			}
 		}
-	})(mods, wildcard, wildcard === Wildcard.Export ? v2 : v1);
+	})(join_importnode(mods, scope), wildcard, wildcard === Wildcard.Export ? v2 : v1);
 }
 
-export function getImplicitImports(mods: Module[], wildcard = Wildcard.Import, scope?: AhkSymbol, ...others: Record<string, AhkSymbol>[]): Record<string, AhkSymbol> {
+export function getImplicitImports(mods: ImportNode[], wildcard = Wildcard.Import, scope?: AhkSymbol, ...others: Record<string, AhkSymbol>[]): Record<string, AhkSymbol> {
 	const o: Record<string, AhkSymbol> = {};
-	const v1 = new Set<Module>, v2 = new Set<Module>, v3 = new Set<Module>;
-	// const scopes = [scope];
-	// while (scope)
-	// 	scopes.push(scope = scope.parent);
-	(function traverse(mods: Module[], wildcard: Wildcard, visted = v1) {
+	const v1 = new Set<ImportNode>, v2 = new Set<ImportNode>, v3 = new Set<ImportNode>;
+	const prefix = ahkVersion >= alpha_31 ? '_' : '';
+	(function traverse(mods: ImportNode[], wildcard: Wildcard, visted = v1) {
 		let ee, ii, m, mm, t, w;
 		for (m of mods) {
 			if (!(ii = m.import) || visted.has(m)) continue; else visted.add(m);
-			for (const i of ii.imp.toReversed()) {
-				if (!(w = i.wildcard) || w < wildcard) continue;
-				!ii.mod && resolveImports(lexers[m.uri!]);
-				if (!(mm = ii.mod?.[i.from.toUpperCase()])) continue;
-				if (v3.has(mm)) continue; else v3.add(mm);
+			for (let _i = ii.length; _i;) {
+				const i = ii[--_i];
+				if ((w = i.wildcard) < wildcard) continue;
+				ii.alias || resolveImports(lexers[m.uri!]);
+				if (!(mm = i.mod) || v3.has(mm)) continue; else v3.add(mm);
 				const ms = mm.modules ?? [mm];
 				i.wildcard = Wildcard.None;
 				for (m of ms)
 					for (const k in ee = m.export)
-						if (!(k in o) && (
+						if (k[0] !== prefix && !(k in o) && (
 							(t = ee[k]).kind !== SymbolKind.Variable ||
 							(t as Variable).from !== undefined ||
 							(t = getModuleMember(mm, k))
@@ -1904,14 +1912,14 @@ export function getImplicitImports(mods: Module[], wildcard = Wildcard.Import, s
 				i.wildcard = w;
 			}
 		}
-	})(mods, wildcard, wildcard === Wildcard.Export ? v2 : v1);
+	})(join_importnode(mods, scope), wildcard, wildcard === Wildcard.Export ? v2 : v1);
 	delete o[''];
 	return Object.assign({}, ...others, o);
 }
 
 export function getModuleImporteds(mod: Module) {
 	let u = mod.uri!, t, v;
-	const rs = new Map<Module, Import["imp"]>(), r = new Map;
+	const rs = new Map<Module, Import>(), r = new Map;
 	if (mod.selectionRange !== ZERO_RANGE)
 		u += `|${mod.name.toUpperCase()}`;
 	for (u in { [u]: '', ...includedCache[u] }) {
@@ -1921,8 +1929,8 @@ export function getModuleImporteds(mod: Module) {
 			resolveImports(t);
 			for (const m of [t, ...Object.values(t.module ?? {})]) {
 				const imp = m.import;
-				const rr = imp?.imp.flatMap(i => {
-					t = imp.mod![i.from.toUpperCase()];
+				const rr = imp?.flatMap(i => {
+					t = i.mod;
 					if (t && (r.get(t) ?? (r.set(t, v = moduleInclude(t, mod)), v)))
 						return i;
 					return [];

@@ -951,7 +951,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		if (mod === false)
 			return;
 		if (!mod) {
-			mod = lex.import?.mod?.[from?.toUpperCase()!];
+			mod = lex.importMod?.[from?.toUpperCase()!];
 			if (!mod)
 				return;
 			const ms = mod.modules ?? [mod];
@@ -969,7 +969,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				for (const m of Object.values(l.module ?? {}))
 					add_item(m.name, CompletionItemKind.Module);
 		} else if (path.endsWith(':')) {
-			if ((mod = lex.import?.mod?.[path.slice(0, -1).toUpperCase()])) {
+			if ((mod = lex.importMod?.[path.slice(0, -1).toUpperCase()])) {
 				for (let m of mod.modules ?? [mod])
 					for (m of Object.values((m as Lexer).module ?? {}))
 						add_item(m.name, CompletionItemKind.Module);

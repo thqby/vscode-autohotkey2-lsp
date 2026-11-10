@@ -48,13 +48,12 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	}
 	implicitVars ??= getImplicitImports(mods, undefined, undefined, lexers[ahkUris.winapi]?.declaration, ahkVars);
 	for (const n in implicitVars)
-		if (gvar[n]?.def === undefined)
-			gvar[n] = implicitVars[n];
-		else gvar[n] ??= implicitVars[n];
+		if ((gvar[n] ?? null)?.def === undefined)
+			delete gvar[n];
 	const warnLocalSameAsGlobal = configCache.Warn?.LocalSameAsGlobal;
 	const result = result_ ?? [], unset_vars = new Map<Variable, Variable>();
 	for (const [k, v] of Object.entries(mod.declaration)) {
-		let t = gvar[k];
+		let t = gvar[k] ?? implicitVars[k];
 		if (t.kind === SymbolKind.Variable && !t.assigned && !v.decl)
 			if (v.returns === undefined)
 				unset_vars.set(t, v);
@@ -62,7 +61,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 			(v as Variable).from ?? result.push(v), (v as FuncNode).in_expr || unused.add(v), converttype(v, v);
 	}
 	const gu = new Set(unused);
-	flatTree(mod);
+	flatTree(mod, implicitVars);
 	!lex.d && fns.push(function () {
 		const mm = mods.filter(m => m !== mod);
 		for (const t of unused.intersection(gu)) {
@@ -132,7 +131,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	function add(v: AhkSymbol) {
 		return unused.add(v), result.push(v);
 	}
-	function flatTree(node: { children?: AhkSymbol[] }, vars: Record<string, Variable> = {}, outer_is_global = false) {
+	function flatTree(node: { children?: AhkSymbol[] }, implicit: Record<string, Variable>, vars: Record<string, Variable> = {}, outer_is_global = false) {
 		const t: AhkSymbol[] = [];
 		if ((node as AhkSymbol).kind === SymbolKind.Class)
 			node.children?.forEach(it => it.children && t.push(it));
@@ -143,7 +142,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 				return;
 			const kind = info.kind;
 			if (kind === SymbolKind.Variable || kind === SymbolKind.Function || kind === SymbolKind.Class) {
-				const name = info.name.toUpperCase(), sym = vars[name] ?? gvar[name];
+				const name = info.name.toUpperCase(), sym = vars[name] ?? gvar[name] ?? implicit[name];
 				if (sym === info || !sym)
 					return;
 				unused.delete(sym);
@@ -236,19 +235,22 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 							if (warnLocalSameAsGlobal && v.kind === SymbolKind.Variable && gvar[k])
 								lex.diagnostics.push({ message: warn.localsameasglobal(v.name), range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 						}
-					// if (fn.import && mod!.import?.mod) {
-					// 	const ms = mod!.import.mod;
-					// 	implicit = Object.assign({ ...implicit }, ...fn.import.flatMap(s => {
-					// 		const m = ms[s.toUpperCase()];
-					// 		return m ? [getModuleMembers(m)] : [];
-					// 	}));
-					// }
-					for (const [k, v] of Object.entries(fn.unresolved_vars ?? {}))
-						if ((s = inherit[k] ?? gvar[k])) {
-							if (s === gvar[k])
+					if (fn.import) {
+						const ni = getImplicitImports([fn]);
+						for (const _ in ni) {
+							implicit = { ...implicit, ...ni };
+							break;
+						}
+					}
+					for (const [k, v] of Object.entries(fn.unresolved_vars ?? {})) {
+						let s;
+						if (inherit[k] ?? (s = gvar[k])) {
+							if (s)
 								(fn.global ??= {})[k] = v, lex.declaration[k] ??= (v.is_global = true, v);
 							else fn.declaration[k] = v;
-						} else {
+						} else if (k in implicit)
+							(fn.global ??= {})[k] = v, v.is_global = true;
+						else {
 							converttype(fn.declaration[k] = fn.local[k] = v, v);
 							add(inherit[k] = v), check_name(v);
 							if (fn.assume === FuncScope.STATIC)
@@ -256,6 +258,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 							if (v.returns === undefined)
 								unset_vars.set(v, v);
 						}
+					}
 					delete fn.unresolved_vars;
 					break;
 				default: inherit = { ...vars }; break;
@@ -263,7 +266,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 			const h = info.kind === SymbolKind.Function && unused.has(info);
 			const bbc = bc_mode;
 			bc_mode = info.bc_mode ?? bc_mode;
-			flatTree(info, inherit, oig);
+			flatTree(info, implicit, inherit, oig);
 			bc_mode = bbc;
 			h && unused.add(info);
 		}
