@@ -5,7 +5,7 @@ import { CancellationToken, CompletionItem, CompletionParams, InsertTextFormat, 
 import {
 	$DIRPATH, $DLLFUNC, $FILEPATH, ANY, AccessModifier, AhkSymbol, ClassNode, CompletionItemKind, CompletionTriggerKind,
 	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, Wildcard, ZERO_RANGE,
-	a_Vars, ahkModule, ahkUris, ahkVars, ahkVersion, alpha_3, completionItemCache, completionitem, configCache,
+	a_Vars, ahkModule, ahkVars, ahkVersion, ahkWinapi, alpha_3, builtinLexs, completionItemCache, completionitem, configCache,
 	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
 	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getImportPath, getSymbolDetail, isIdentifier,
 	kindSortChar, lexers, libSymbols, makeSearchRegExp, traverseRelevance, utils, winapis
@@ -307,10 +307,9 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					(s: string) => s.replaceAll(/`.|"/g, s => s === '"' ? '`"' : s === "`'" ? "'" : s) :
 					(s: string) => s.replaceAll(/`.|'/g, s => s === "'" ? "`'" : s === '`"' ? '"' : s);
 				if (ci) {
-					let fn: FuncNode, l: string, index: number, is_builtin: boolean, it;
+					let fn: FuncNode, l: string, index: number, is_builtin, it;
 					const ctx = lex.getContext(ci.pos);
 					const syms = findSymbols(lex, ctx) ?? [];
-					const uris = Object.values(ahkUris);
 					const bases: ClassNode[] = [], set: AhkSymbol[] = [];
 					for (it of syms) {
 						fn = it.node as FuncNode;
@@ -319,7 +318,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 							syms.push(...decltypeExpr(lex, ctx.token, ctx.range.end).map(it => ({ node: it } as typeof syms[0])));
 							continue;
 						}
-						is_builtin = uris.includes(fn.uri!), index = ci.index, l = fn.name.toLowerCase();
+						is_builtin = fn.is_builtin, index = ci.index, l = fn.name.toLowerCase();
 						kind = CompletionItemKind.Value, command = { title: 'cursorRight', command: 'cursorRight' };
 						switch (is_builtin && ((it as { kind?: SymbolKind }).kind ?? ci.kind)) {
 							case SymbolKind.Method:
@@ -565,7 +564,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 		if (!is_any && (triggerKind !== CompletionTriggerKind.Invoked || word.length < 3))
 			return items;
-		const objs = new Set([lex.object, lexers[ahkUris.ahk2]?.object, lexers[ahkUris.ahk2_h]?.object]);
+		const objs = new Set([lex.object, ...builtinLexs.values().map(l => l.object)]);
 		for (const uri in lex.relevance)
 			objs.add(lexers[uri.replace(/\|.+/, '')]?.object);
 		objs.delete(undefined!);
@@ -763,8 +762,8 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		}
 	}
 
-	if (ahkUris.winapi && !uris.has(ahkUris.winapi) && lexs.some(l => l.winapi))
-		for (const n in temp = lexers[ahkUris.winapi]?.declaration)
+	if (ahkWinapi && !uris.has(ahkWinapi.uri) && lexs.some(l => l.winapi))
+		for (const n in temp = ahkWinapi.declaration)
 			expg.test(n) && (vars[n] ??= convertNodeCompletion(temp[n]));
 
 	// constant

@@ -3,8 +3,8 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	ANY, ASSIGN_TYPE, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SK2STT,
 	SUPER, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, UnsetKind, VARREF, VOID, Variable, ZERO_RANGE,
-	ahkUris, ahkVars, ahkVersion, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles, findClass, getAllModules,
-	getClassBase, getClassMember, getClassMembers, getImplicitImports, getModuleImporteds, getModuleMembers, getParamCount, getWorkspaceFile, hint, inactiveVars,
+	ahkVars, ahkVersion, ahkWinapi, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles, findClass, getAllModules,
+	getClassBase, getClassMember, getClassMembers, getImplicitImports, getModuleImporteds, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
@@ -44,9 +44,9 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 		for (const n in ahkVars)
 			if (!gvar[n]?.children)
 				gvar[n] = ahkVars[n];
-		implicitVars = lexers[ahkUris.winapi]?.declaration ?? {};
+		implicitVars = ahkWinapi?.declaration ?? {};
 	}
-	implicitVars ??= getImplicitImports(mods, undefined, undefined, lexers[ahkUris.winapi]?.declaration, ahkVars);
+	implicitVars ??= getImplicitImports(mods, undefined, undefined, ahkWinapi?.declaration!, ahkVars);
 	for (const n in implicitVars)
 		if ((gvar[n] ?? null)?.def === undefined)
 			delete gvar[n];

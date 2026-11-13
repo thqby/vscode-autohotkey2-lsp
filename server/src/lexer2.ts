@@ -3,7 +3,7 @@ import { resolve } from 'path';
 import { MarkupContent, Position } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	URI, a_Vars, ahkUris, ahkVars, diagnostic, lexers,
+	URI, ahkVars, ahkWinapi, builtinLexs, diagnostic, lexers,
 	openAndParse, parseInclude, restorePath, utils
 } from './common';
 import {
@@ -1136,12 +1136,12 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 	function find_builtin_symbol(name: string) {
 		if ((t = ahkVars[name]))
 			return t;
-		for (const uri of [ahkUris.ahk2_h, ahkUris.ahk2])
-			if ((t = lexers[uri]?.typedef[name]))
-				return t.uri ??= uri, t;
+		for (const l of builtinLexs)
+			if ((t = l.typedef[name]))
+				return t.uri ??= l.uri, t;
 		if (notdef && !l)
-			if ((t = lexers[uri = ahkUris.winapi]?.declaration[name]))
-				return t.uri ??= uri, t;
+			if ((t = ahkWinapi?.declaration[name]))
+				return t.uri ??= ahkWinapi.uri, t;
 	}
 	function find_include_symbol(name: string, mod?: Module) {
 		const mods = getAllModules(lex, mod);

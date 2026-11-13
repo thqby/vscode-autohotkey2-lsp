@@ -96,6 +96,7 @@ interface Utils {
 
 export const winapis: string[] = [];
 export const lexers: Record<string, Lexer> = {};
+export const builtinLexs = new Set<Lexer>();
 export const configCache: LSConfig = {
 	ActionWhenV1IsDetected: 'Warn',
 	AutoLibInclude: 0,
@@ -129,8 +130,8 @@ export const utils: Utils = {
 };
 
 export let locale = 'en-us', rootDir = '', isahk2_h = false;
-export let ahkUris: Record<string, string>;
 export let ahkVars: Record<string, AhkSymbol>;
+export let ahkWinapi: Lexer | undefined;
 export let inactiveVars: Record<string, string>;
 export let libSymbols: Record<string, LibSymbol> = {};
 export let commentTags: RegExp | undefined;
@@ -262,7 +263,7 @@ export function getWorkspaceFile(uri: string) {
 
 export function initCaches() {
 	const kind = CompletionItemKind.Keyword, data = '*';
-	ahkVars = {}, ahkUris = {}, inactiveVars = {};
+	ahkVars = {}, ahkWinapi = undefined, builtinLexs.clear(), inactiveVars = {};
 	ahkModule.export = ahkModule.declaration = ahkModule.property = ahkVars;
 	completionItemCache = {
 		constant: [],
@@ -289,26 +290,38 @@ export function loadSyntax(filename = 'ahk2', d = 3) {
 	} else {
 		const syntaxes = configCache.Syntaxes;
 		const file2 = syntaxes ? `${syntaxes}/<>/${filename}` : file;
-		const td = (path = getfilepath('.d.ahk')) && openFile(restorePath(path));
+		const exclude = ['ahk.d.ahk', 'ahk_h.d.ahk', 'winapi.d.ahk'];
+		let td = (path = getfilepath('.d.ahk')) && openFile(restorePath(path));
 		td && load_td(td);
+		(path = getfilepath('.json')) && files.push(path);
 		if (filename === 'ahk2') {
 			existsSync(path = `${rootDir}/syntaxes/ahk2_common.json`) && files.push(path);
-			syntaxes && opendir(syntaxes).then(async dir => {
-				for await (const file of dir)
-					!file.isDirectory() && file.name.toLowerCase().endsWith('.snippet.json') &&
-						readFile(`${syntaxes}/${file}`).then(buf => build_item_cache(bufferDecode(buf)));
-			});
+			if (syntaxes) {
+				opendir(resolve(syntaxes)).then(async dir => {
+					({ path } = dir), d = 6;
+					for await (const file of dir)
+						if (!file.isDirectory()) {
+							const f = file.name.toLowerCase();
+							if (f.endsWith('.snippet.json'))
+								files.push(`${path}/${f}`);
+							else if (f.endsWith('.d.ahk') && !exclude.includes(f))
+								(td = openFile(`${path}/${f}`)) && load_td(td, '');
+						}
+				}, () => 0);
+			}
 		}
-		(path = getfilepath('.json')) && files.push(path);
 		files.forEach(file => readFile(file).then(buf => build_item_cache(bufferDecode(buf))));
 		function getfilepath(ext: string) {
 			return getLocalePath(file2 + ext) || (file2 !== file ? getLocalePath(file + ext) : undefined);
 		}
 	}
-	function load_td(td: TextDocument) {
+	function load_td(td: TextDocument, name = filename) {
 		const lex = new Lexer(td, undefined, d);
-		filename === 'ahk2' && (ahkModule.uri = lex.uri);
-		lex.parseScript(), lexers[lex.uri] = lex, ahkUris[filename] = lex.uri;
+		lex.parseScript(), builtinLexs.add(lexers[lex.uri] = lex);
+		switch (name) {
+			case 'ahk2': ahkModule.uri = lex.uri; break;
+			case 'winapi': builtinLexs.delete(ahkWinapi = lex); break;
+		}
 	}
 	function build_item_cache(str?: string) {
 		const obj = JSON.parse(str || '{}');

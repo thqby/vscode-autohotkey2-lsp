@@ -1,7 +1,7 @@
 import { CancellationToken, ParameterInformation, SignatureHelp, SignatureHelpParams } from 'vscode-languageserver';
 import {
 	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, ParamInfo, SymbolKind, Variable,
-	ahkUris, decltypeExpr, decltypeInvoke, decltypeReturns, generateTypeAnnotation, getCallInfo,
+	builtinLexs, decltypeExpr, decltypeInvoke, decltypeReturns, generateTypeAnnotation, getCallInfo,
 	getClassConstructor, getClassMember, getClassOwnProp, getOverloads, getSymbolDetail, lexers,
 	matchOverloads
 } from './common';
@@ -63,9 +63,9 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			if (kind !== SymbolKind.Method) return;
 			const uname = name.toUpperCase();
 			nodes = [];
-			for (const u of new Set([ahkUris.ahk2, ahkUris.ahk2_h, lex.uri, ...Object.keys(lex.relevance)]))
-				for (const node of lexers[u]?.object.method[uname] ?? [])
-					nodes.push({ node, uri: u });
+			for (const l of builtinLexs.union(new Set([lex, ...Object.keys(lex.relevance).map(u => lexers[u] ?? lex)])))
+				for (const node of l.object.method[uname] ?? [])
+					nodes.push({ node, uri: l.uri });
 		} else {
 			let prop = context.text ? '' : context.word.toLowerCase();
 			if (kind === SymbolKind.Property)

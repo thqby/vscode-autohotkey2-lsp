@@ -8,7 +8,7 @@ import {
 } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
-	a_Vars, action, ahkUris, ahkVars, builtinCommands_v1, commentTags, configCache,
+	a_Vars, action, ahkVars, ahkWinapi, builtinCommands_v1, builtinLexs, commentTags, configCache,
 	diagnostic, difference, hint, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
 	libSymbols, locale, Mode, parseInclude, restorePath, rootDir,
 	symbolProvider, URI, utils, warn, workspaceFolders
@@ -4303,7 +4303,7 @@ export class Lexer implements Module {
 				return '';
 			});
 			if (!tn.extendsuri && tn.extends.startsWith('#'))
-				tn.extendsuri = ahkVars[(tn.extends = tn.extends.substring(1)).toUpperCase()]?.uri ?? ahkUris.ahk2;
+				tn.extendsuri = ahkVars[(tn.extends = tn.extends.substring(1)).toUpperCase()]?.uri ?? ahkModule.uri;
 		}
 
 		function add_include_dllload(text: string, tk?: Token, mode = 0, isdll = false) {
@@ -5263,9 +5263,9 @@ export class Lexer implements Module {
 								s = s.substring(t[1].length).trimStart();
 								cmm.hover_word = '@' + t[1];
 								switch (t[1]) {
-									case 'include': s && add_include_dllload(s); break;
+									case 'include': s && add_include_dllload(s.replace(/^~[\\/]/, rootDir + s.slice(1))); break;
 									case 'include-winapi':
-										h && (t = lexers[ahkUris.winapi]) && (_this.winapi = true);
+										h && ahkWinapi && (_this.winapi = true);
 										break;
 									case 'reference': _this.d_uri ||= s; break;
 									case 'lint':
@@ -7376,7 +7376,7 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 	const vs: Variable[] = [], uri2 = lex.document.uri;
 	let l = '', v1: Variable, v2: Variable;
 	if (!check_self && (relevance ??= lex.relevance, ahkVersion < alpha_11))
-		Object.assign(relevance, { [ahkUris.ahk2]: 1, [ahkUris.ahk2_h ?? '\0']: 1 });
+		builtinLexs.forEach(l => relevance![l.uri] = '');
 	(function flat(syms: AhkSymbol[]) {
 		for (const it of syms) {
 			if (!it.name || it.selectionRange === ZERO_RANGE) {
@@ -7403,7 +7403,7 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 								});
 						}
 						it.uri = uri;
-					} else if (v2 && !relevance![v2.uri!]) {
+					} else if (v2 && !(v2.uri! in relevance!)) {
 						decs[l] = it;
 						continue;
 					}

@@ -1,7 +1,7 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
 	ANY, AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, TokenType, Variable, ZERO_RANGE,
-	ahkUris, ahkVars, decltypeExpr, findClass, findSymbols, getAllModules, getClassBase, lexers, symbolProvider
+	ahkVars, builtinLexs, decltypeExpr, findClass, findSymbols, getAllModules, getClassBase, lexers, symbolProvider
 } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
@@ -78,8 +78,8 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 		case SymbolKind.Method:
 		case SymbolKind.Property: {
 			const cache = new Map<AhkSymbol | string, boolean>();
-			const builtin_uris = new Set(Object.values(ahkUris));
-			builtin_uris.delete(ahkUris.winapi), cache.set(undefined!, false);
+			const builtin_uris = new Set(builtinLexs.values().map(l => l.uri));
+			cache.set(undefined!, false);
 			name = context.word.toUpperCase();
 			for (const it of nodes) {
 				const cls = add_cls(it.parent ?? it.node.parent!);
