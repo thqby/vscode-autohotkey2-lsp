@@ -4,7 +4,7 @@ import {
 	ANY, ASSIGN_TYPE, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SK2STT,
 	SUPER, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, UnsetKind, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkVars, ahkVersion, ahkWinapi, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles, findClass, getAllModules,
-	getClassBase, getClassMember, getClassMembers, getImplicitImports, getLexer, getModuleImporteds, getParamCount, getWorkspaceFile, hint, inactiveVars,
+	getClassBase, getClassMember, getClassMembers, getImplicitImports, getLexer, collectImportedModules, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
@@ -15,7 +15,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	return lex.symbolInformation ?? getSymbolInfo(lex) ?? [];
 }
 
-export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
+export function getSymbolInfo(lex: Lexer, mod: Module = (lex.symbolInformation = [], lex), result_?: AhkSymbol[],
 	oncomp?: Array<() => Maybe<() => void>>, caches = new Map<ClassNode, Record<string, AhkSymbol>>()) {
 	const fns = oncomp ?? [];
 	const uri = lex.document.uri;
@@ -26,7 +26,6 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	const undefined_props = new Map<Token, ClassNode>();
 	const ClassNonDynamicMemberCheck = configCache.Diagnostics?.ClassNonDynamicMemberCheck;
 	let p_this: ClassNode | undefined;
-	mod ??= (lex.symbolInformation = [], lex);
 	let bc_mode = mod.bc_mode ?? mod.bc_mode_def ?? true;
 	for (let m of mods) {
 		const { d } = m as Lexer, { declaration: dec } = m, lex = m instanceof Lexer ? m : getLexer(m.uri);
@@ -53,7 +52,8 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	const warnLocalSameAsGlobal = configCache.Warn?.LocalSameAsGlobal;
 	const result = result_ ?? [], unset_vars = new Map<Variable, Variable>();
 	for (const [k, v] of Object.entries(mod.declaration)) {
-		let t = gvar[k] ?? implicitVars[k];
+		let t = gvar[k]; 
+		t ?? (t = implicitVars[k], mod.importVar?.add(t));
 		if (t.kind === SymbolKind.Variable && !t.assigned && !v.decl)
 			if (v.returns === undefined)
 				unset_vars.set(t, v);
@@ -71,21 +71,24 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 			}
 			const n = t.name.toUpperCase();
 			for (const m of mm)
-				if (m.declaration[n]) {
+				if (n in m.declaration) {
 					unused.delete(t);
 					break;
 				}
 		}
 		const ug = unused.intersection(gu);
 		if (ug.size) {
-			const ns = new Set(ug.values().map(t => t.name.toUpperCase()));
-			let s;
-			for (const imps of getModuleImporteds(mod).values()) {
-				for (const imp of imps)
-					for (const v of imp.var)
-						ns.has(s = v.alias?.toUpperCase()!) && ns.delete(s);
+			const vs = new Set(collectImportedModules(mod).values().flatMap(l => l.importVar?.values() ?? []));
+			ug.intersection(vs).forEach(t => (ug.delete(t), unused.delete(t)));
+			if (ug.size) {
+				const o: Record<string, AhkSymbol> = {};
+				let t, s;
+				for (const it of ug.values())
+					o[it.name.toUpperCase()] = it;
+				for (const it of vs.values())
+					if (it.uri === mod.uri && (t = o[s = it.name.toUpperCase()]))
+						unused.delete(t), o[s] = undefined!;
 			}
-			ug.forEach(n => !ns.has(n.name.toUpperCase()) && unused.delete(n));
 		}
 		const diag = {
 			message: hint.unused(), tags: [DiagnosticTag.Unnecessary],
@@ -248,8 +251,8 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 							if (s)
 								(fn.global ??= {})[k] = v, lex.declaration[k] ??= (v.is_global = true, v);
 							else fn.declaration[k] = v;
-						} else if (k in implicit)
-							(fn.global ??= {})[k] = v, v.is_global = true;
+						} else if ((s = implicit[k]))
+							(fn.global ??= {})[k] = v, v.is_global = true, mod.importVar?.add(s);
 						else {
 							converttype(fn.declaration[k] = fn.local[k] = v, v);
 							add(inherit[k] = v), check_name(v);
@@ -338,9 +341,9 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 		let { is_builtin, kind } = ss = source;
 		switch (kind) {
 			case SymbolKind.Variable:
+				if (it.selectionRange === ZERO_RANGE)
+					return;
 				if ((source as Variable).is_param) {
-					if (it.selectionRange === ZERO_RANGE)
-						return;
 					if (source.selectionRange !== ZERO_RANGE)
 						st = SemanticTokenTypes.parameter;
 				} else if (!is_builtin) {
@@ -479,6 +482,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 				case SymbolKind.Variable: {
 					const t = resolveVarAlias(tk.definition = n);
 					sem.type = SK2STT.get(t.kind) ?? SemanticTokenTypes.variable;
+					mod.importVar?.add(n);
 					if (t.kind === SymbolKind.Variable)
 						return;
 					sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;

@@ -197,6 +197,7 @@ export interface Module extends AhkSymbol {
 	flat?: boolean
 	hs_opt?: HotStringOpt
 	import?: Import
+	importVar?: Set<AhkSymbol>
 	include: Record<string, string>
 	labels?: Record<string, AhkSymbol[]>
 	modules?: Module[]

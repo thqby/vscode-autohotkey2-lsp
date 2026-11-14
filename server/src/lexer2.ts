@@ -1409,8 +1409,8 @@ function getDeclareClass(lex: Lexer, cls?: ClassNode): ClassNode | undefined {
 		return t;
 }
 
-function getModuleMember(mod: Module, name: string, wildcard = Wildcard.Export) {
-	let t, d, v, mm;
+function getModuleMember(mod: Module, name: string, wildcard = Wildcard.Export, add?: string) {
+	let t, d, v, mm, u: AhkSymbol;
 	for (const m of mm = mod.modules ?? [mod]) {
 		if ((t = m.declaration[name]))
 			if (t.kind !== SymbolKind.Variable || (t as Variable).from !== undefined)
@@ -1419,8 +1419,18 @@ function getModuleMember(mod: Module, name: string, wildcard = Wildcard.Export) 
 				d ??= t;
 			else if (t.def)
 				v ??= t;
+			else u ??= t;
 	}
-	return d ?? v ?? getImplicitImport(mm, name, wildcard)?.node;
+	return d ?? v ?? getImplicitImport(mm, name, wildcard)?.node ?? add_var();
+	function add_var() {
+		if (!add) return;
+		if (u) return u;
+		mod = mod.modules?.[0] ?? mod;
+		return mod.declaration[name] = {
+			name: add, kind: SymbolKind.Variable, uri: mod.uri, def: true,
+			range: ZERO_RANGE, selectionRange: ZERO_RANGE,
+		};
+	}
 }
 
 export function getOverloads(fn: FuncNode) {
@@ -1629,8 +1639,9 @@ export function resolveImports(lex?: Lexer) {
 		resolveImport(lex, imp, cache);
 }
 
-function resolveImport(lex: Lexer, imp: Import, cache = {}) {
+function resolveImport(lex: Lexer, imp: Import & { mod?: Module }, cache = {}) {
 	const mods = lex.importMod!, alias = imp.alias ??= {}, decl: Record<string, Variable> = {};
+	const vars = (imp.mod ?? lex).importVar ??= new Set;
 	for (const i of imp) {
 		let n = i.from.toUpperCase();
 		const m = mods[n] ??= findDirectiveModule(n, lex, cache) ??
@@ -1648,7 +1659,7 @@ function resolveImport(lex: Lexer, imp: Import, cache = {}) {
 					if (r = o.export?.[''])
 						break;
 				r ??= m;
-			} else r = getModuleMember(m, n, Wildcard.Export);
+			} else r = getModuleMember(m, n, Wildcard.Export, v.alias), vars.add(r!);
 			v.alias_to = r ?? (r = v, null), decl[n = v.name.toUpperCase()] ??= v;
 			if (r !== (t = alias[n] ??= r)) {
 				if (r.selectionRange === t.selectionRange) {
@@ -1727,15 +1738,18 @@ function findDirectiveModule(n: string, lex: Lexer, cache: Record<string, Lexer[
 		return;
 	return ((cache as unknown as Record<string, Module | false>)[`${lex.uri}|${n}`] ??= get()) || undefined;
 	function get() {
-		let mods: Module[] = [], u;
+		let mods: Module[] = [], ls: Lexer[], u, l;
 		if (n === 'AHK')
 			mods.push(ahkModule);
 		else if (n === '__MAIN')	// todo: __main in imported modules
-			mods.push(...cache.__MAIN ??= findMainEntry(lex));
+			mods.push(...ls = cache.__MAIN ??= findMainEntry(lex));
 		else if (n === '__INIT')
-			mods.push(...findIncludeEntry(lex));
-		for (u of cache[lex.uri] ??= traverseRelevance(lex))
-			(u = u.module?.[n]) && mods.push(u);
+			mods.push(...ls = findIncludeEntry(lex));
+		ls ??= [];
+		for (l of cache[lex.uri] ??= traverseRelevance(lex))
+			(u = l.module?.[n]) && (mods.push(u), ls.push(l));
+		for (l of ls)
+			(l.importedLex ??= new Set).add(lex) && (lex.importLex ??= new Set).add(l);
 		if (mods.length > 1)
 			return flatModule(createModules(n, mods));
 		return (u = mods.pop()) ? flatModule(u) : false;
@@ -1777,7 +1791,7 @@ function findFileModule(path: string, lex: Lexer, cache: Record<string, Lexer[]>
 			traverseInclude(t);
 		}
 		if (!t) break;
-		t !== lex && (t.importedLex ??= new Set).add(lex) && (lex.importLex ??= new Set).add(t);
+		(t.importedLex ??= new Set).add(lex) && (lex.importLex ??= new Set).add(t);
 		return findDirectiveModule(m, t, cache);
 	}
 }
@@ -1922,11 +1936,13 @@ export function getImplicitImports(mods: ImportNode[], wildcard = Wildcard.Impor
 	return Object.assign({}, ...others, o);
 }
 
+function moduleInclude(mod: Module, m: Module) {
+	return (mod.modules ?? [mod]).some(t => t === m || t.uri === m.uri);
+}
+
 export function getModuleImporteds(mod: Module) {
-	let u = mod.uri!, t, v;
+	let u = mod.uri, t, v;
 	const rs = new Map<Module, Import>(), r = new Map;
-	if (mod.selectionRange !== ZERO_RANGE)
-		u += `|${mod.name.toUpperCase()}`;
 	for (u in { [u]: '', ...includedCache[u] }) {
 		const l = getLexer(u);
 		if (!l?.importedLex) continue;
@@ -1946,9 +1962,26 @@ export function getModuleImporteds(mod: Module) {
 		}
 	}
 	return rs;
+}
 
-	function moduleInclude(mod: Module, m: Module) {
-		return (mod.modules ?? [mod]).some(t => t === m || t.uri === m.uri &&
-			t.name.toLowerCase() === m.name.toLowerCase());
-	}
+export function collectImportedModules(mod: Module) {
+	const ls = new Set<Module>(), v1 = new Set();
+	(function traverse(mod: Module) {
+		const r = new Map;
+		let u = mod.uri;
+		if (v1.has(mod)) return;
+		v1.add(mod);
+		for (u in { [u]: '', ...includedCache[u] }) {
+			getLexer(u)?.importedLex?.forEach(lex => {
+				let v;
+				for (const imp of lex.imports ?? [])
+					for (const i of imp) {
+						const im = i.mod;
+						if (im && (r.get(im) ?? (r.set(im, v = moduleInclude(im, mod)), v && ls.add(imp.mod ?? lex))))
+							i.wildcard === Wildcard.Export && traverse(imp.mod ?? lex);
+					}
+			});
+		}
+	})(mod);
+	return ls;
 }

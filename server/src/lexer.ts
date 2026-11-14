@@ -177,9 +177,10 @@ export class Lexer implements Module {
 	folding_ranges: FoldingRange[] = [];
 	fsPath = '';
 	getToken: (offset?: number, ignorecomment?: boolean) => Token;
-	imports?: Import[];
+	imports?: Array<Import & { mod?: Module }>;
 	importMod?: Record<string, Module | false> | null;
 	importLex?: Set<Lexer>;
+	importVar?: Set<AhkSymbol>;
 	importedLex?: Set<Lexer>;
 	importDir?: string[];
 	includedir = new Map<number, string>();
@@ -2319,7 +2320,7 @@ export class Lexer implements Module {
 					export_ && wildcard && (wildcard = Wildcard.Export);
 					let imp: Import;
 					((scope ?? _this.curr_mod ?? _this).import ??= (
-						(_this.imports ??= []).push(imp = []), imp
+						(_this.imports ??= []).push(Object.assign(imp = [], { mod: _this.curr_mod })), imp
 					)).push({ from, tk: mk, wildcard, var: syms });
 					for (const s of syms)
 						s.from = from, export_ && add_export(s);
@@ -6609,7 +6610,7 @@ export class Lexer implements Module {
 		this.includedir.clear(), this.dlldir.clear();
 		this.d_uri = '';
 		this.importLex?.forEach(l => l.importedLex?.delete(this));
-		this.bc_mode = this.checkmember = this.curr_mod = this.explicitContext =
+		this.bc_mode = this.checkmember = this.curr_mod = this.explicitContext = this.importVar =
 			this.export = this.import = this.imports = this.importLex = this.importMod = this.maybev1 =
 			this.module = this.st = this.symbolInformation = this.winapi = undefined!;
 		ahkVersion >= alpha_31 && (this.export = this.declaration);
