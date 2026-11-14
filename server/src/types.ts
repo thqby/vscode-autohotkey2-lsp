@@ -202,6 +202,7 @@ export interface Module extends AhkSymbol {
 	modules?: Module[]
 	property: Record<string, Variable>
 	offsets?: [number, number][]
+	uri: string
 }
 
 export interface ParamInfo {

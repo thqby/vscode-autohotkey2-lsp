@@ -2,7 +2,7 @@ import { CancellationToken, ParameterInformation, SignatureHelp, SignatureHelpPa
 import {
 	ANY, AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, ParamInfo, SymbolKind, Variable,
 	builtinLexs, decltypeExpr, decltypeInvoke, decltypeReturns, generateTypeAnnotation, getCallInfo,
-	getClassConstructor, getClassMember, getClassOwnProp, getOverloads, getSymbolDetail, lexers,
+	getClassConstructor, getClassMember, getClassOwnProp, getLexer, getOverloads, getSymbolDetail, lexers,
 	matchOverloads
 } from './common';
 
@@ -63,7 +63,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 			if (kind !== SymbolKind.Method) return;
 			const uname = name.toUpperCase();
 			nodes = [];
-			for (const l of builtinLexs.union(new Set([lex, ...Object.keys(lex.relevance).map(u => lexers[u] ?? lex)])))
+			for (const l of builtinLexs.union(new Set([lex, ...Object.keys(lex.relevance).map(u => getLexer(u) ?? lex)])))
 				for (const node of l.object.method[uname] ?? [])
 					nodes.push({ node, uri: l.uri });
 		} else {
@@ -116,7 +116,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 							proto = getClassOwnProp(lex, cls, 'PROTOTYPE');
 							if (proto?.kind === SymbolKind.Property) {
 								decltypeReturns(proto, lex).forEach(it => {
-									it = getClassMember(lexers[it.uri!] ?? lex, it, '__new', true)!;
+									it = getClassMember(getLexer(it.uri) ?? lex, it, '__new', true)!;
 									it && nodes.push({ node: has_new = it, needthis, uri: it.uri! });
 								});
 								if (has_new) return;
@@ -126,7 +126,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 						if (proto)
 							n = getClassMember(lex, proto, (n as FuncNode).construct || '__new', true) ?? n;
 					} else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
-						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, lexers[n.uri!] ?? lex, cls);
+						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, getLexer(n.uri) ?? lex, cls);
 						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
 							tps = decltypeInvoke(lex, tps, '', 1);
 						return tps.forEach(it => add(it, 'call', -1));
@@ -145,7 +145,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 				else if (n.kind !== SymbolKind.Property)
 					return;
 				else if (!(n as FuncNode).params) {
-					for (let t of decltypeReturns(n, lexers[n.uri!] ?? lex, cls))
+					for (let t of decltypeReturns(n, getLexer(n.uri!) ?? lex, cls))
 						(t = getClassMember(lex, t, '__item', false)!) &&
 							nodes.push({ node: t, needthis, uri: t.uri! });
 					return;
@@ -155,7 +155,7 @@ export async function signatureProvider(params: SignatureHelpParams, token: Canc
 		}
 	}
 	for (const it of nodes) {
-		const fn = it.node as FuncNode, ll = lexers[it.uri], needthis = it.needthis ?? 0;
+		const fn = it.node as FuncNode, ll = getLexer(it.uri), needthis = it.needthis ?? 0;
 		if (!fn.params || set.has(fn))
 			continue;
 		const fns = [fn], pi = index - needthis;

@@ -9,7 +9,7 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
 	a_Vars, action, ahkVars, ahkWinapi, builtinCommands_v1, builtinLexs, commentTags, configCache,
-	diagnostic, difference, hint, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
+	diagnostic, difference, getLexer, hint, hoverCache, inactiveVars, invokeCheck, isahk2_h, lexers, libDirs,
 	libSymbols, locale, Mode, parseInclude, restorePath, rootDir,
 	symbolProvider, URI, utils, warn, workspaceFolders
 } from './common';
@@ -131,6 +131,7 @@ export const ahkModule: Module = {
 	property: null!,
 	range: structuredClone(ZERO_RANGE),
 	selectionRange: ZERO_RANGE,
+	uri: ''
 };
 //#endregion
 
@@ -218,12 +219,12 @@ export class Lexer implements Module {
 		let in_loop = false, string_mode = false;
 		let warn_once: Record<string, unknown>, mixes: [AhkSymbol, string][];
 		let has_return: (number | undefined)[] = [undefined], return_index: number | undefined;
-		let bc_mode = true;
+		let bc_mode = true, cur_uri = '';
 
 		this.document = document;
 		if (document.uri) {
 			allow_$ = false;
-			this.uri = document.uri.toLowerCase();
+			this.uri = cur_uri = document.uri.toLowerCase();
 			this.setWorkspaceFolder();
 			this.scriptpath = (this.fsPath = uri.fsPath).replace(/[\\/][^\\/]+$/, '');
 			this.initLibDirs(scriptdir);
@@ -542,7 +543,7 @@ export class Lexer implements Module {
 						}
 					}
 				}
-				checkDupError({}, this.children, this, true);
+				checkDupError({}, this.children, this, this.uri);
 				parse_unresolved_typedef();
 				this.is_parsed = true;
 				customblocks.region.forEach(o => this.addFoldingRange(o, parser_pos - 1, 'region'));
@@ -822,7 +823,7 @@ export class Lexer implements Module {
 				parser_pos = 0, last_LF = -1, customblocks = { region: [], bracket: [] }, continuation_sections_mode = false, h = isahk2_h;
 				this.clear(), includetable = this.include, comments = {}, sharp_offsets = [], mixes = [];
 				callWithoutParentheses = configCache.Warn?.CallWithoutParentheses, bc_mode = true;
-				has_return = [return_index = undefined];
+				has_return = [return_index = undefined], cur_uri = this.uri;
 				warn_once = {};
 				try {
 					const rs = utils.getRCData?.('#2');
@@ -842,11 +843,11 @@ export class Lexer implements Module {
 						this.include[this.d_uri = m.uri] = m.path;
 					else this.d_uri = '';
 				}
-				checkDupError(this.declaration, this.children, this, true);
+				checkDupError(this.declaration, this.children, this, this.uri);
 				if (this.module) {
 					this.addFoldingRange(...this.curr_mod!.offsets!.at(-1)!)
 					Object.values(this.module)
-						.forEach(it => checkDupError(it.declaration, it.children, this, true));
+						.forEach(it => checkDupError(it.declaration, it.children, this, it.uri));
 				}
 				parse_unresolved_typedef();
 				this.is_parsed = true;
@@ -2083,7 +2084,7 @@ export class Lexer implements Module {
 				const skip = skip_reachable();
 				return_index = undefined;
 				cl.symbol = cl.definition = tn, tn.full = classfullname + cl.content;
-				tn.extends = ex, tn.uri = _this.uri;
+				tn.extends = ex, tn.uri = cur_uri;
 				if ((_cm = comments[tn.selectionRange.start.line]))
 					set_detail(tn, _cm);
 				tn.prototype = { ...tn, cache: [], detail: undefined, property: tn.$property = {} };
@@ -2825,6 +2826,7 @@ export class Lexer implements Module {
 								_this.diagnostics.push({ message: diagnostic.invalidsymbolname(), range: rg });
 							if (mod)
 								mod.offsets!.at(-1)![1] = tk.offset, _this.addFoldingRange(...mod.offsets!.at(-1)!);
+							cur_uri = `${_this.uri}|${name.toUpperCase()}`;
 							mod = _this.curr_mod = (_this.module ??= {})[name.toUpperCase()] ??= {
 								name: name || '\0', kind: SymbolKind.Module,
 								range: ZERO_RANGE, selectionRange: rg,
@@ -2835,7 +2837,7 @@ export class Lexer implements Module {
 								property: o,
 								include: {},
 								offsets: [],
-								uri: _this.uri,
+								uri: cur_uri,
 							};
 							_parent = mod;
 							result = mod.children;
@@ -3505,7 +3507,7 @@ export class Lexer implements Module {
 					b.next_pair_pos = tk.offset;
 					if (Object.keys(props).length) {
 						const cls = DocumentSymbol.create('', undefined, SymbolKind.Class, ZERO_RANGE, ZERO_RANGE) as ClassNode;
-						b.data = cls, cls.property = props, cls.name = cls.full = cls.extends = '';
+						b.data = cls, cls.property = props, cls.name = cls.full = cls.extends = '', cls.uri = cur_uri;
 						for (k of mark)
 							k.symbol = props[k.content.toUpperCase()];
 						const o: Partial<AhkSymbol> = { decl: true, parent: cls };
@@ -4134,7 +4136,7 @@ export class Lexer implements Module {
 							delete local[k];
 						}
 						dec[k] ??= v;
-						gd[k] ??= (v.uri = _this.uri, v);
+						gd[k] ??= (v.uri = cur_uri, v);
 						v.assigned ||= Boolean(v.returns);
 						v.is_global = true;
 					}
@@ -4209,7 +4211,7 @@ export class Lexer implements Module {
 					if (fn.assume === FuncScope.GLOBAL) {
 						for (const [k, v] of Object.entries(Object.assign(unresolved_vars, vars))) {
 							if (!(t = dec[k]))
-								gd[k] ??= (v.uri = _this.uri, v), global[k] = v, v.is_global = true;
+								gd[k] ??= (v.uri = cur_uri, v), global[k] = v, v.is_global = true;
 							else if (t.kind === SymbolKind.Function && v.def)
 								v.assigned !== 1 && _diags.push({
 									message: diagnostic.assignerr('Func', t.name), range: v.selectionRange,
@@ -6651,6 +6653,7 @@ export class Lexer implements Module {
 		if (glo)
 			mod = position && this.inDirectiveModule(position);
 		else ({ mod, scope } = position ? this.searchScopedNode(position) : {});
+		mod && ({ uri } = mod);
 		if (scope) {
 			if (scope.kind === SymbolKind.Class)
 				scope = undefined;
@@ -6678,7 +6681,7 @@ export class Lexer implements Module {
 				if (name === 'THIS')
 					return { node, uri, mod, scope, this: node };
 				if ((parent = getClassBase(node, this)))
-					return { node: parent, uri, mod, scope, this: node };
+					return { node: parent, uri: parent.uri ?? uri, mod, scope, this: node };
 				return null;
 			}
 			if (((t = fn.global?.[name]) && (node = t) ||
@@ -7064,7 +7067,7 @@ export class Lexer implements Module {
 			if (flags & 3) {
 				const ls = new Set<Lexer>;
 				for (u in included)
-					(u = lexers[u.replace(/\|.+$/, '')]) && ls.add(u);
+					(u = getLexer(u)) && ls.add(u);
 				ls.delete(this);
 				ls.forEach(u => traverseInclude(u));
 				({ included } = this);
@@ -7140,16 +7143,13 @@ export class Lexer implements Module {
 		}
 		visted.set(this, true);
 		for (const u in this.getRelevance(false))
-			if (lexers[trim(u)]?.actived)
+			if (getLexer(u)?.actived)
 				return true;
 		visted.set(this, false);
 		for (const u in { [this.uri]: '', ...this.included })
-			if (lexers[trim(u)]?.importedLex?.values().some(l => visted.get(l) ?? l.keepAlive(visted)))
+			if (getLexer(u)?.importedLex?.values().some(l => visted.get(l) ?? l.keepAlive(visted)))
 				return visted.set(this, true), true;
 		return false;
-		function trim(s: string) {
-			return s.replace(/\|.+$/, '');
-		}
 	}
 
 	close(force = false, visted?: Map<Lexer, boolean | 0>) {
@@ -7225,7 +7225,7 @@ export function createModules(name: string, modules: Module[]) {
 	const m: Module = {
 		name, kind: SymbolKind.Module, modules,
 		range: ZERO_RANGE, selectionRange: ZERO_RANGE,
-		children: [], declaration: {},
+		children: [], declaration: {}, uri: '',
 		include: null!, property: null!, offsets: null!,
 	};
 	return m;
@@ -7246,7 +7246,7 @@ export function resolveVarAlias(v: Variable, set?: Array<Variable>): AhkSymbol {
 	if (v.from === undefined)
 		return v;
 	if (v.alias_to === undefined) {
-		const t = lexers[v.uri!];
+		const t = getLexer(v.uri);
 		t && resolveImports(t);
 	}
 	let { alias_to } = v;
@@ -7371,8 +7371,8 @@ function flatBlock(block: FuncNode, flat: (syms: AhkSymbol[]) => void, ...decls:
 	return block.params;
 }
 
-export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer, check_self = false, relevance?: Record<string, string>) {
-	const { diagnostics, uri } = lex;
+export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[], lex: Lexer, uri?: string, relevance?: Record<string, string>) {
+	const { diagnostics } = lex, check_self = uri !== undefined;
 	const vs: Variable[] = [], uri2 = lex.document.uri;
 	let l = '', v1: Variable, v2: Variable;
 	if (!check_self && (relevance ??= lex.relevance, ahkVersion < alpha_11))
@@ -7402,7 +7402,7 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 									relatedInformation: [sym_related_msg(ahkVars[l])]
 								});
 						}
-						it.uri = uri;
+						it.uri ??= uri;
 					} else if (v2 && !(v2.uri! in relevance!)) {
 						decs[l] = it;
 						continue;
@@ -7477,7 +7477,7 @@ export function checkDupError(decs: Record<string, AhkSymbol>, syms: AhkSymbol[]
 export function sym_related_msg(sym: AhkSymbol, uri?: string, message?: string) {
 	return {
 		location: {
-			uri: uri ?? lexers[sym.uri!]?.document.uri ?? sym.uri,
+			uri: uri ?? getLexer(sym.uri)?.document.uri ?? sym.uri,
 			range: sym.selectionRange
 		}, message: message ?? diagnostic.readonly(sym_type(sym), sym.name)
 	};

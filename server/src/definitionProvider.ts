@@ -1,5 +1,5 @@
 import { CancellationToken, DefinitionParams, LocationLink, Range } from 'vscode-languageserver';
-import { AhkSymbol, findSymbols, Lexer, lexers, resolveVarAlias, restorePath, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE } from './common';
+import { AhkSymbol, findSymbols, getLexer, Lexer, lexers, resolveVarAlias, restorePath, SymbolKind, Token, TokenType, URI, Variable, ZERO_RANGE } from './common';
 
 export async function defintionProvider(params: DefinitionParams, token: CancellationToken): Promise<LocationLink[] | undefined> {
 	if (token.isCancellationRequested) return;
@@ -44,7 +44,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 			for (mod of mods) {
 				has_default ||= !!mod.export?.[''];
 				locas.push(LocationLink.create(
-					((mod as Lexer).document ?? lexers[mod.uri!]?.document ?? mod).uri!,
+					((mod as Lexer).document ?? getLexer(mod.uri)?.document ?? mod).uri!,
 					mod.range, mod.selectionRange, rg));
 			}
 		}
@@ -61,7 +61,7 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 		if ((node as Variable).from !== undefined)
 			node = resolveVarAlias(node as Variable), uri = node.uri!;
 		if (!set.includes(node) && set.push(node) && node.selectionRange !== ZERO_RANGE && uri)
-			locas.push(LocationLink.create(lexers[uri].document.uri, node.range, node.selectionRange));
+			locas.push(LocationLink.create(getLexer(uri)?.document.uri ?? uri, node.range, node.selectionRange));
 	});
 	return locas;
 }

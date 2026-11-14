@@ -1,7 +1,7 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
 	ANY, AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, TokenType, Variable, ZERO_RANGE,
-	ahkVars, builtinLexs, decltypeExpr, findClass, findSymbols, getAllModules, getClassBase, lexers, symbolProvider
+	ahkVars, builtinLexs, decltypeExpr, findClass, findSymbols, getAllModules, getClassBase, getLexer, lexers, symbolProvider
 } from './common';
 
 export async function referenceProvider(params: ReferenceParams, token: CancellationToken): Promise<Location[] | undefined> {
@@ -23,7 +23,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 	const { node, parent, uri, mod, scope, this: that, is_global } = nodes[0];
 	if (that === node) {	// this
 		const range = scope?.children && findAllFromScope(scope, name, SymbolKind.Variable);
-		return range?.length ? { [lexers[uri].document.uri]: range } : undefined;
+		return range?.length ? { [getLexer(uri).document.uri]: range } : undefined;
 	}
 
 	if (!uri || /* super */ that)
@@ -40,7 +40,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 				const mods = getAllModules(lex, mod);
 				for (const m of mods) {
 					const rs = m.labels?.[name]?.map(t => t.selectionRange);
-					if (rs?.length && (u = lexers[m.uri!]?.document.uri))
+					if (rs?.length && (u = getLexer(m.uri)?.document.uri))
 						(references[u] ??= []).push(...rs);
 				}
 			} else {
@@ -68,9 +68,9 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 						all_uris[uri] = undefined;
 				for (const uri in all_uris) {
 					symbolProvider({ textDocument: { uri } });
-					const rgs = findAllFromScope(all_uris[uri] ?? lexers[uri] as unknown as AhkSymbol, name, SymbolKind.Variable);
+					const rgs = findAllFromScope(all_uris[uri] ?? getLexer(uri) as unknown as AhkSymbol, name, SymbolKind.Variable);
 					if (rgs.length)
-						references[lexers[uri].document.uri] = rgs;
+						references[getLexer(uri).document.uri] = rgs;
 				}
 				break;
 			}
@@ -87,7 +87,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 					return null;
 			}
 			for (const uri of [lex.uri, ...Object.keys(lex.relevance)]) {
-				if (!(lex = lexers[uri]))
+				if (!(lex = getLexer(uri)))
 					continue;
 				const refs: Range[] = [], { document, tokens } = lex;
 				for (const tk of Object.values(tokens)) {
@@ -138,7 +138,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 					syms.push(sym);
 					if ((t = (sym as ClassNode).property?.[name])){
 						add_cache(syms, true), cls = sym;
-						const uri = lexers[sym.uri!]?.document.uri;
+						const uri = getLexer(sym.uri)?.document.uri;
 						uri && (references[uri] ??= []).push(t.selectionRange);
 					}
 				} while ((sym = getClassBase(sym, lex)!));

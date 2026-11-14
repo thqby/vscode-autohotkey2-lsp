@@ -4,7 +4,7 @@ import {
 	ANY, ASSIGN_TYPE, AhkSymbol, CallSite, ClassNode, DiagnosticSeverity, DiagnosticTag, FuncNode, FuncScope, Lexer, Maybe, Module, Property, SK2STT,
 	SUPER, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, UnsetKind, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkVars, ahkVersion, ahkWinapi, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles, findClass, getAllModules,
-	getClassBase, getClassMember, getClassMembers, getImplicitImports, getModuleImporteds, getParamCount, getWorkspaceFile, hint, inactiveVars,
+	getClassBase, getClassMember, getClassMembers, getImplicitImports, getLexer, getModuleImporteds, getParamCount, getWorkspaceFile, hint, inactiveVars,
 	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
 } from './common';
 
@@ -29,7 +29,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	mod ??= (lex.symbolInformation = [], lex);
 	let bc_mode = mod.bc_mode ?? mod.bc_mode_def ?? true;
 	for (let m of mods) {
-		const { d } = m as Lexer, { declaration: dec } = m, lex = m instanceof Lexer ? m : lexers[m.uri!];
+		const { d } = m as Lexer, { declaration: dec } = m, lex = m instanceof Lexer ? m : getLexer(m.uri);
 		let t;
 		d || lex && (lex.symbolInformation ?? getSymbolInfo(lex, undefined, undefined, fns, caches));
 		for (const k in dec) {
@@ -281,9 +281,9 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 			rele = Object.fromEntries(mods.map(m => [m.uri!, ' ']));
 		mi !== -1 && mods.splice(mi, 1);
 		for (const m of mods) {
-			if ((m as Lexer).d || !(dd = m instanceof Lexer ? m : lexers[m.uri!]))
+			if ((m as Lexer).d || !(dd = m instanceof Lexer ? m : getLexer(m.uri)))
 				continue;
-			checkDupError(dec, Object.values(m.declaration).filter(it => it.kind !== SymbolKind.Variable), dd, false, rele);
+			checkDupError(dec, Object.values(m.declaration).filter(it => it.kind !== SymbolKind.Variable), dd, undefined, rele);
 			const labels = m.labels;
 			if (!labels) continue;
 			const r = rele ? undefined : dd.relevance;
@@ -299,15 +299,15 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 			}
 		}
 		const t = Object.values(mod.declaration);
-		checkDupError(dec, t, lex, false, rele);
+		checkDupError(dec, t, lex, undefined, rele);
 		for (const m of mods) {
-			if ((dd = m instanceof Lexer ? m : lexers[m.uri!]))
-				checkDupError(dec, Object.values(m.declaration).filter(it => it.kind === SymbolKind.Variable), dd, false, rele);
+			if ((dd = m instanceof Lexer ? m : getLexer(m.uri)))
+				checkDupError(dec, Object.values(m.declaration).filter(it => it.kind === SymbolKind.Variable), dd, undefined, rele);
 		}
 		let cls: ClassNode;
 		mods.splice(mi, 0, mod);
 		for (const m of mods) {
-			if ((dd = m instanceof Lexer ? m : lexers[m.uri!]))
+			if ((dd = m instanceof Lexer ? m : getLexer(m.uri)))
 				for (const it of Object.values(m.declaration))
 					if (it.kind === SymbolKind.Class && (cls = it as ClassNode).extendsuri === undefined) {
 						const l = cls.extends?.toUpperCase();
@@ -515,7 +515,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	}
 
 	function addClassProp(cls: ClassNode, name: string, offset?: number) {
-		const l = lexers[cls.uri!];
+		const l = getLexer(cls.uri);
 		if (l && offset) {
 			const n = name.toUpperCase();
 			if (cls.property[n])
@@ -558,7 +558,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 		let params, tr = UnsetKind.None;
 		if (!paraminfo || !invokeCheck) return;
 		if (is_construct === undefined && node?.kind === SymbolKind.Class) {
-			const cls = node as unknown as ClassNode, ll = lexers[node.uri!] ?? lex;
+			const cls = node as unknown as ClassNode, ll = getLexer(node.uri) ?? lex;
 			node = getClassMember(ll, cls, 'call', true) as FuncNode;
 			if ((is_construct = node?.construct !== undefined))
 				node = (getClassMember(ll, cls.prototype!, node.construct || '__new', true) ?? node) as FuncNode;
@@ -671,7 +671,7 @@ export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 				// fall through
 				default: return tr === UnsetKind.Void ? fRV : tr && fRU && bc();
 			}
-			const ta = node.type_annotations || decltypeReturns(node, lexers[node.uri!] ?? lex, that, false);
+			const ta = node.type_annotations || decltypeReturns(node, getLexer(node.uri) ?? lex, that, false);
 			let r;
 			node.unset_kind ??= node.cached_types_map && UnsetKind.Unknown;
 			if (ta?.length) {

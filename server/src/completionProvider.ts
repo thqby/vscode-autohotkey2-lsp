@@ -7,7 +7,7 @@ import {
 	FuncNode, Lexer, Maybe, Module, Property, STRING, SemanticTokenTypes, SymbolKind, Token, TokenType, URI, Variable, Wildcard, ZERO_RANGE,
 	a_Vars, ahkModule, ahkVars, ahkVersion, ahkWinapi, alpha_3, builtinLexs, completionItemCache, completionitem, configCache,
 	decltypeExpr, dllcallTypes, findClass, findSymbol, findSymbols, generateFuncComment, getAllModules, getCallInfo,
-	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getImportPath, getSymbolDetail, isIdentifier,
+	getClassBase, getClassConstructor, getClassMember, getClassMembers, getImplicitImports, getImportPath, getLexer, getSymbolDetail, isIdentifier,
 	kindSortChar, lexers, libSymbols, makeSearchRegExp, traverseRelevance, utils, winapis
 } from './common';
 
@@ -402,7 +402,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 						}
 						if (fn.kind === SymbolKind.Class) {
 							if (ci.kind === SymbolKind.Property)
-								fn = getClassMember(lexers[fn.uri!], fn, '__item', false) as FuncNode;
+								fn = getClassMember(getLexer(fn.uri), fn, '__item', false) as FuncNode;
 							else fn = getClassConstructor(fn as unknown as ClassNode) as FuncNode;
 						}
 						const param = fn?.params?.[index];
@@ -566,7 +566,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			return items;
 		const objs = new Set([lex.object, ...builtinLexs.values().map(l => l.object)]);
 		for (const uri in lex.relevance)
-			objs.add(lexers[uri.replace(/\|.+/, '')]?.object);
+			objs.add(getLexer(uri)?.object);
 		objs.delete(undefined!);
 		const t = (temp = lex.object.property)[word.toUpperCase()];
 		if (t?.length === 1 && at_edit_pos(t[0]))
@@ -604,7 +604,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			}
 			function get_base_names(cls: AhkSymbol) {
 				const bases = [cls], set = new Set;
-				while ((cls = getClassBase(cls, lexers[cls.uri!] ?? lex)!) && !bases.includes(cls))
+				while ((cls = getClassBase(cls, getLexer(cls.uri) ?? lex)!) && !bases.includes(cls))
 					bases.push(cls), set.add(cls.full);
 				set.delete(''), set.delete(undefined);
 				return set as Set<string>;
@@ -878,7 +878,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		let pre = token.content.substring(1, offset - token.offset), suf = '', t;
 		const docs = [lex], ls: Record<string, unknown> = {};
 		for (const u in lex.relevance)
-			(t = lexers[u.replace(/\|.+/, '')]) && docs.push(t);
+			(t = getLexer(u)) && docs.push(t);
 		pre = pre.replace(/`(.)/g, '$1').replace(/[^\\/]+$/, m => (suf = m, ''));
 		const expg = makeSearchRegExp(suf), kind = CompletionItemKind.Function;
 		const range = !isIdentifier(suf) ? {
@@ -985,7 +985,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 				vars[it.label.toUpperCase()] = true, items.push(it);
 		}
 		for (const u in lex.getRelevance(undefined, true))
-			for (const t in (temp = lexers[u.replace(/\|.+/, '')]?.texts))
+			for (const t in (temp = getLexer(u)?.texts))
 				expg.test(t) && add_item(temp[t], CompletionItemKind.Text);
 	}
 	function add_item(label: string, kind: CompletionItemKind) {

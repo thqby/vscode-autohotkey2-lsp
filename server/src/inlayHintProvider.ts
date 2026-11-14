@@ -1,5 +1,5 @@
 import { CancellationToken, InlayHint, InlayHintParams } from 'vscode-languageserver';
-import { ClassNode, configCache, escape_str, FuncNode, getClassConstructor, getOverloads, getSymbolInfo, lexers, matchOverloads, resolveVarAlias, SymbolKind, Token, TokenType } from './common';
+import { ClassNode, configCache, escape_str, FuncNode, getClassConstructor, getLexer, getOverloads, getSymbolInfo, lexers, matchOverloads, resolveVarAlias, SymbolKind, Token, TokenType } from './common';
 
 export function inlayHintProvider(params: InlayHintParams, token?: CancellationToken) {
 	const { ParameterNames, SuppressWhenArgumentMatchesName } = configCache.InlayHints ?? {};
@@ -26,7 +26,7 @@ export function inlayHintProvider(params: InlayHintParams, token?: CancellationT
 		if (node?.kind === SymbolKind.Class)
 			node = getClassConstructor(node as unknown as ClassNode) as FuncNode;
 		if (!(params = node?.params)) return;
-		let { count, miss: arr } = pi, ll = lexers[node.uri!], n;
+		let { count, miss: arr } = pi, ll = getLexer(node.uri), n;
 		for (arr = [...arr]; (n = arr.pop()) === --count;);
 		(arr = [pi.offset, ...pi.comma]).length = ++count;
 		let ol = getOverloads(node);

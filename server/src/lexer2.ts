@@ -362,7 +362,7 @@ function decltypeExpr2(lex: Lexer, operand: Token[], _this?: ClassNode, bc_mode 
 					if ((prop = cls?.property?.[prop.name.toUpperCase()])) {
 						if (!prop.get && ((t = prop).kind !== SymbolKind.Property || (t = prop.call)))
 							syms = [t];
-						else syms = decltypeReturns(prop, lexers[cls.uri!] ?? lex, cls);
+						else syms = decltypeReturns(prop, getLexer(cls.uri) ?? lex, cls);
 					} else syms = [];
 				} else syms = [tk.symbol], tk.symbol.uri ??= lex.uri;
 			} else switch (tk.type) {
@@ -380,7 +380,7 @@ function decltypeExpr2(lex: Lexer, operand: Token[], _this?: ClassNode, bc_mode 
 					if (node.kind === SymbolKind.Variable) {
 						if (r.uri !== lex.uri)
 							pos = { line: Infinity, character: 0 };
-						syms = decltypeVar(node, lexers[r.uri] ?? lex, pos, r.scope ?? r.mod, _this);
+						syms = decltypeVar(node, getLexer(r.uri) ?? lex, pos, r.scope ?? r.mod, _this);
 					} else if (syms = [node], r.this) {
 						that = _this ?? r.this as ClassNode;
 						can_cache_types = false;
@@ -522,7 +522,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 						break;
 					for (const that of decltypeExpr(lex, lex.findToken(paraminfo.offset + 1),
 						paraminfo.comma[0] ?? paraminfo.end, _this))
-						for (const t of decltypeReturns(n, lexers[n.uri!] ?? lex, that as ClassNode))
+						for (const t of decltypeReturns(n, getLexer(n.uri) ?? lex, that as ClassNode))
 							tps.add(t);
 					continue;
 				}
@@ -550,7 +550,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 				if (n.kind !== SymbolKind.Property) {
 					if ((n as FuncNode).eval) {
 						// if (paraminfo) continue;
-						const tt = decltypeReturns(n, lexers[n.uri!] ?? lex, that);
+						const tt = decltypeReturns(n, getLexer(n.uri) ?? lex, that);
 						for (const t of call ? decltypeInvoke(lex, tt, '', InvokeFlag.CALL) : tt)
 							tps.add(t);
 						continue;
@@ -561,14 +561,14 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 						tps.add(t);
 					continue;
 				} else if ((n as FuncNode).eval) {
-					let tt = decltypeInvoke(lex, decltypeReturns(n, lexers[n.uri!] ?? lex, that), '', InvokeFlag.CALL);
+					let tt = decltypeInvoke(lex, decltypeReturns(n, getLexer(n.uri) ?? lex, that), '', InvokeFlag.CALL);
 					if ((n as Property).typed)
 						tt = decltypeInvoke(lex, tt, '__value', InvokeFlag.PROP | InvokeFlag.META | InvokeFlag.OPT_HANDLED);
 					for (const t of call ? decltypeInvoke(lex, tt, '', flag | InvokeFlag.CALL, paraminfo) : tt)
 						tps.add(t);
 					continue;
 				} else if (call || paraminfo && !(n as Property).get?.params.length) {
-					for (const t of decltypeInvoke(lex, decltypeReturns(n, lexers[n.uri!] ?? lex, that),
+					for (const t of decltypeInvoke(lex, decltypeReturns(n, getLexer(n.uri) ?? lex, that),
 						'', flag, paraminfo))
 						tps.add(t);
 					continue;
@@ -582,16 +582,16 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 					else {
 						let mod = cls as unknown as Module;
 						mod = mod.modules?.find(t => t.uri === n.uri) ?? mod;
-						r = decltypeVar(n, lexers[mod.uri!] ?? lex, { line: Infinity, character: 0 }, mod);
+						r = decltypeVar(n, getLexer(mod.uri) ?? lex, { line: Infinity, character: 0 }, mod);
 					}
 					if (call)
-						r = decltypeInvoke(lexers[cls.uri!] ?? lex, r, '', InvokeFlag.CALL, paraminfo);
+						r = decltypeInvoke(getLexer(cls.uri) ?? lex, r, '', InvokeFlag.CALL, paraminfo);
 					for (const t of r)
 						tps.add(t);
 				}
 				continue;
 		}
-		for (const t of decltypeReturns(n, lexers[n.uri!] ?? lex, that, bc_mode))
+		for (const t of decltypeReturns(n, getLexer(n.uri) ?? lex, that, bc_mode))
 			tps.add(t);
 	}
 	return tps;
@@ -601,7 +601,7 @@ export function decltypeInvoke(lex: Lexer, syms: Set<AhkSymbol> | AhkSymbol[], n
 		if (n.kind === SymbolKind.Method && !(n as FuncNode).eval)
 			return n;
 		const syms = n.kind === SymbolKind.Class ? [n] : !n.children ?
-			decltypeReturns(n, lexers[n.uri!] ?? lex, that) : undefined;
+			decltypeReturns(n, getLexer(n.uri) ?? lex, that) : undefined;
 		if (!syms?.length)
 			return;
 		for (const t of decltypeInvoke(lex, syms, '', InvokeFlag.CALL, paraminfo))
@@ -681,7 +681,7 @@ function decltypeByref(sym: Variable, lex: Lexer, _this?: ClassNode) {
 					else if ((n as FuncNode).construct !== undefined)
 						n = getClassMember(lex, cls.prototype!, (n as FuncNode).construct || '__new', true) ?? n;
 					else if (n.kind === SymbolKind.Property || (n as FuncNode).eval) {
-						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, lexers[n.uri!] ?? lex, cls);
+						let tps: AhkSymbol[] | Set<AhkSymbol> = decltypeReturns(n, getLexer(n.uri) ?? lex, cls);
 						if (n.kind === SymbolKind.Property && (n as FuncNode).eval)
 							tps = decltypeInvoke(lex, tps, '', InvokeFlag.CALL);
 						tps.forEach(it => resolve(it, 'call', -1));
@@ -695,7 +695,7 @@ function decltypeByref(sym: Variable, lex: Lexer, _this?: ClassNode) {
 				else if (n.kind !== SymbolKind.Property)
 					return;
 				else if (!(n as FuncNode).params) {
-					for (let t of decltypeReturns(n, lexers[n.uri!] ?? lex, cls))
+					for (let t of decltypeReturns(n, getLexer(n.uri) ?? lex, cls))
 						(t = getClassMember(lex, t, '__item', false)!) &&
 							resolve(t, '');
 					return;
@@ -765,7 +765,7 @@ function decltypeVar(sym: Variable, lex: Lexer, pos: Position, scope?: AhkSymbol
 					if (invoke_enum && (t = getClassMember(lex, it, '__enum', true, bases))) {
 						if (t.kind !== SymbolKind.Method)
 							break;
-						for (const tp of decltypeReturns(t, lexers[t.uri!] ?? lex, it as ClassNode))
+						for (const tp of decltypeReturns(t, getLexer(t.uri) ?? lex, it as ClassNode))
 							resolve(tp, false);
 						break;
 					} else if ((t = getClassMember(lex, it, 'call', true, bases))?.kind === SymbolKind.Method)
@@ -901,7 +901,7 @@ export function decltypeReturns(sym: AhkSymbol, lex: Lexer, _this?: ClassNode, b
 }
 
 export function generateTypeAnnotation(sym: AhkSymbol, lex?: Lexer, _this?: ClassNode) {
-	return joinTypes((sym.type_annotations || decltypeReturns(sym, lexers[sym.uri!] ?? lex, _this)));
+	return joinTypes((sym.type_annotations || decltypeReturns(sym, getLexer(sym.uri) ?? lex, _this)));
 }
 
 export function joinTypes(tps?: Array<string | AhkSymbol> | false) {
@@ -1000,7 +1000,7 @@ export function resolveFuncType(fn: FuncNode, lex: Lexer) {
 		if (!f.params) return;
 		if (node.kind === SymbolKind.Method && ci.kind === SymbolKind.Function)
 			ci.index--;
-		(t = lexers[uri]) && resolveFuncType(f, t);
+		(t = getLexer(uri)) && resolveFuncType(f, t);
 		return f.params[ci.index]?.type_annotations;
 	}
 }
@@ -1066,7 +1066,7 @@ export function typeNaming(sym: AhkSymbol) {
 export function findClass(lex: Lexer, name: string, pos?: Position, uri?: string) {
 	const arr = name.toUpperCase().split('.');
 	let n = arr.shift()!;
-	let cls = (uri ? lexers[uri]?.declaration[n] : findSymbol(lex, n, undefined, pos)?.node) as ClassNode;
+	let cls = (uri ? getLexer(uri)?.declaration[n] : findSymbol(lex, n, undefined, pos)?.node) as ClassNode;
 	if (!uri && cls?.kind === SymbolKind.Variable)
 		cls = resolveVarAlias(cls) as ClassNode;
 	if (!cls?.property || cls.def === false)
@@ -1163,7 +1163,7 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 function findSymbol2(mod: Module, name: string, kind?: SymbolKind) {
 	if (kind === SymbolKind.Field) {
 		let lex, data;
-		if (!mod.labels || !(lex = lexers[mod.uri!]))
+		if (!mod.labels || !(lex = getLexer(mod.uri)))
 			return;
 		const tokens = lex.tokens;
 		for (const node of mod.labels?.[name.endsWith(':') ? name.slice(0, -1) : name] ?? []) {
@@ -1287,7 +1287,7 @@ export function getClassBase(node: AhkSymbol, lex?: Lexer) {
 			cls = node as ClassNode;
 			if ((base = cls.base))
 				return base;
-			if ((ll = lexers[cls.uri!]))
+			if ((ll = getLexer(cls.uri)))
 				pos = cls.selectionRange.start;
 			else if (!cls.is_builtin && !(ll = lex))
 				return;
@@ -1309,7 +1309,7 @@ export function getClassBase(node: AhkSymbol, lex?: Lexer) {
 }
 
 export function getClassConstructor(cls: ClassNode, lex?: Lexer) {
-	const fn = getClassMember(lex ??= lexers[cls.uri!], cls, 'call', true) as FuncNode;
+	const fn = getClassMember(lex ??= getLexer(cls.uri), cls, 'call', true) as FuncNode;
 	if (fn?.construct !== undefined)
 		return getClassMember(lex, cls.prototype!, fn.construct || '__new', true) ?? fn;
 	return fn;
@@ -1474,7 +1474,7 @@ export function getSymbolDetail(sym: AhkSymbol, lex?: Lexer, remove_re?: RegExp)
 			const n = findSymbol(lex, name, name.includes('.') ?
 				link.endsWith(')') ? SymbolKind.Method : SymbolKind.Property :
 				link.endsWith(')') ? SymbolKind.Function : SymbolKind.Class);
-			if (n && (lex = lexers[n.uri])) {
+			if (n && (lex = getLexer(n.uri))) {
 				const { start: { line, character } } = n.node.selectionRange;
 				const encode_params = encodeURIComponent(JSON.stringify([
 					URI.parse(lex.document.uri).toJSON(),
@@ -1585,10 +1585,10 @@ export function traverseInclude(lex: Lexer, included?: Record<string, string>) {
 		} else if (includedCache[u] ??= { ...included }, !(u in included) && (lex = lexers[u]))
 			traverseInclude(lex, included);
 	}
-	for (const n in module) {
-		u = `${uri}|${n}`;
-		(u in included) || traverseInclude({
-			uri: u, fsPath: '', is_virtual, include: module[n].include
+	if (!module) return cache;
+	for (const m of Object.values(module)) {
+		(m.uri in included) || traverseInclude({
+			uri: u, fsPath: '', is_virtual, include: m.include
 		} as Lexer);
 	}
 	return cache;
@@ -1803,6 +1803,11 @@ export function getModule(uri: string) {
 	return i === -1 ? lexers[uri] : lexers[uri.substring(0, i)]?.module?.[uri.substring(i + 1)];
 }
 
+export function getLexer(uri = '') {
+	const i = uri.lastIndexOf('|');
+	return i === -1 ? lexers[uri] : lexers[uri.substring(0, i)];
+}
+
 export function getAllModules(lex: Lexer, mod?: Module): Module[] {
 	let r1: Module[] = [], r2: Module[] = [];
 	let i, u, t, mm: Record<string, boolean> = {}, cc = {};
@@ -1868,7 +1873,7 @@ function getImplicitImport(mods: ImportNode[], name: string, wildcard = Wildcard
 			for (let _i = ii.length; _i;) {
 				const i = ii[--_i];
 				if ((w = i.wildcard) < wildcard) continue;
-				ii.alias || resolveImports(lexers[m.uri!]);
+				ii.alias || resolveImports(getLexer(m.uri));
 				if (!(mm = i.mod) || v3.has(mm)) continue; else v3.add(mm);
 				const ms = mm.modules ?? [mm];
 				for (m of ms) {
@@ -1897,7 +1902,7 @@ export function getImplicitImports(mods: ImportNode[], wildcard = Wildcard.Impor
 			for (let _i = ii.length; _i;) {
 				const i = ii[--_i];
 				if ((w = i.wildcard) < wildcard) continue;
-				ii.alias || resolveImports(lexers[m.uri!]);
+				ii.alias || resolveImports(getLexer(m.uri));
 				if (!(mm = i.mod) || v3.has(mm)) continue; else v3.add(mm);
 				const ms = mm.modules ?? [mm];
 				i.wildcard = Wildcard.None;
@@ -1923,7 +1928,7 @@ export function getModuleImporteds(mod: Module) {
 	if (mod.selectionRange !== ZERO_RANGE)
 		u += `|${mod.name.toUpperCase()}`;
 	for (u in { [u]: '', ...includedCache[u] }) {
-		const l = lexers[u.replace(/\|.+/, '')];
+		const l = getLexer(u);
 		if (!l?.importedLex) continue;
 		for (t of l.importedLex) {
 			resolveImports(t);
