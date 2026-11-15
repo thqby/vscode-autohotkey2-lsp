@@ -21,7 +21,7 @@ import { DiagnosticSeverity, DiagnosticTag, MessageType, SymbolKind } from './ls
 import {
 	AccessModifier, ActionType, AhkSymbol, BlockType, CallSite, ClassNode, Context, ContinueSectionOption, DiagnosticCode,
 	FormatFlags, FormatOptions, FuncNode, FuncScope, HotStringOpt, Import, JsDoc, Module, ParamInfo, ParamList, Property,
-	SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, TokenType, USAGE, Variable, Wildcard
+	ScopeType, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, Token, TokenType, USAGE, Variable, Wildcard
 } from './types';
 export { traverseInclude };
 
@@ -6632,7 +6632,7 @@ export class Lexer implements Module {
 
 	findSymbol(name: string, kind?: SymbolKind, position?: Position, glo = !position)
 		: {
-			node: AhkSymbol, uri: string, is_global?: boolean | 1	// maybe
+			node: AhkSymbol, uri: string, scope_type?: ScopeType
 			this?: AhkSymbol, parent?: AhkSymbol, mod?: Module, scope?: AhkSymbol
 		} | null | undefined {
 		let node, scope, mod, uri = this.uri;
@@ -6648,9 +6648,9 @@ export class Lexer implements Module {
 			}
 			return scope ? null : mod && { mod, node: null!, uri };
 		}
-		let t: AhkSymbol | undefined, parent: AhkSymbol | undefined, is_global: boolean | 1 = true;
+		let t: AhkSymbol | undefined, parent: AhkSymbol | undefined, scope_type = ScopeType.Global;
 		if (name.startsWith('$'))
-			return (node = from_d(this.d ? uri : this.d_uri) ?? this.typedef[name]) && { node, uri, is_global: true };
+			return (node = from_d(this.d ? uri : this.d_uri) ?? this.typedef[name]) && { node, uri, scope_type };
 		if (glo)
 			mod = position && this.inDirectiveModule(position);
 		else ({ mod, scope } = position ? this.searchScopedNode(position) : {});
@@ -6666,7 +6666,7 @@ export class Lexer implements Module {
 		let fn = scope as FuncNode | undefined;
 		while (fn?.local) {
 			if ((t = fn.local[name])) {
-				node = t, parent = fn, is_global = false;
+				node = t, parent = fn, scope_type = ScopeType.Local;
 				if ((node as Variable).is_param) {
 					if (fn.parent?.kind === SymbolKind.Property)
 						parent = fn.parent;
@@ -6686,21 +6686,21 @@ export class Lexer implements Module {
 				return null;
 			}
 			if (((t = fn.global?.[name]) && (node = t) ||
-				fn.assume === FuncScope.GLOBAL) && (is_global = true))
+				fn.assume === FuncScope.GLOBAL) && (scope_type = ScopeType.Global))
 				break;
 			if ((t = fn.declaration?.[name]))
-				node = t, parent = fn, is_global = false;
+				node = t, parent = fn, scope_type = ScopeType.Local;
 			else if ((t = fn.unresolved_vars?.[name]))
 				node ??= (parent = fn, t);
 			if (fn.static && fn.kind === SymbolKind.Function) {
 				let stash;
 				while ((fn = fn.parent as FuncNode)?.local) {
 					if (((t = fn.global?.[name]) && (node = t) ||
-						fn.assume === FuncScope.GLOBAL) && (stash = undefined, is_global = true))
+						fn.assume === FuncScope.GLOBAL) && (stash = undefined, scope_type = ScopeType.Global))
 						break;
 					if ((t = fn.local[name])) {
 						stash = undefined;
-						t.static && (node = t, parent = fn, is_global = false);
+						t.static && (node = t, parent = fn, scope_type = ScopeType.Local);
 						break;
 					}
 					if ((t = fn.declaration?.[name]))
@@ -6710,15 +6710,15 @@ export class Lexer implements Module {
 							stash = { parent: fn, node: t };
 				}
 				if (stash)
-					({ node, parent } = stash), node.static = true, is_global = !node.def;
+					({ node, parent } = stash), node.static = true, scope_type = node.def ? ScopeType.Local : ScopeType.Global;
 				break;
 			}
 			fn = fn.parent as FuncNode;
 		}
-		if (is_global)
+		if (scope_type)
 			node = from_d(this.d_uri) ?? (mod ?? this).declaration[name] ??
-				(is_global = 1, node) ?? (is_global = true, this.typedef[name]);
-		return node && { node, uri, mod, scope, is_global, parent };
+				(scope_type = ScopeType.MaybeGlobal, node) ?? (scope_type = ScopeType.Global, this.typedef[name]);
+		return node && { node, uri, mod, scope, scope_type, parent };
 		function from_d(d_uri: string) {
 			const lex = lexers[d_uri];
 			if (!lex) return;

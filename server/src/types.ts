@@ -168,6 +168,8 @@ export interface FuncNode extends AhkSymbol {
 
 export enum FuncScope { DEFAULT, STATIC, GLOBAL }
 
+export enum ScopeType { Local, MaybeGlobal, Global, ImplicitImport }
+
 export interface HotStringOpt { x?: boolean, t?: boolean }
 
 export interface Import extends Array<{ from: string, mod?: Module, tk: Token, wildcard: Wildcard, var: Variable[] }> {

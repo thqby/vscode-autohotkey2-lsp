@@ -15,7 +15,7 @@ export function symbolProvider(params: DocumentSymbolParams, token?: Cancellatio
 	return lex.symbolInformation ?? getSymbolInfo(lex) ?? [];
 }
 
-export function getSymbolInfo(lex: Lexer, mod: Module = (lex.symbolInformation = [], lex), result_?: AhkSymbol[],
+export function getSymbolInfo(lex: Lexer, mod?: Module, result_?: AhkSymbol[],
 	oncomp?: Array<() => Maybe<() => void>>, caches = new Map<ClassNode, Record<string, AhkSymbol>>()) {
 	const fns = oncomp ?? [];
 	const uri = lex.document.uri;
@@ -26,7 +26,9 @@ export function getSymbolInfo(lex: Lexer, mod: Module = (lex.symbolInformation =
 	const undefined_props = new Map<Token, ClassNode>();
 	const ClassNonDynamicMemberCheck = configCache.Diagnostics?.ClassNonDynamicMemberCheck;
 	let p_this: ClassNode | undefined;
+	mod ??= (lex.symbolInformation = [], lex);
 	let bc_mode = mod.bc_mode ?? mod.bc_mode_def ?? true;
+	mod === lex && lex.importedLex?.forEach(l => l.symbolInformation ?? getSymbolInfo(l, undefined, undefined, fns, caches));
 	for (let m of mods) {
 		const { d } = m as Lexer, { declaration: dec } = m, lex = m instanceof Lexer ? m : getLexer(m.uri);
 		let t;
@@ -271,7 +273,7 @@ export function getSymbolInfo(lex: Lexer, mod: Module = (lex.symbolInformation =
 								(fn.global ??= {})[k] = v, lex.declaration[k] ??= (v.is_global = true, v);
 							else fn.declaration[k] = v;
 						} else if ((s = implicit[k]))
-							(fn.global ??= {})[k] = v, v.is_global = true, mod.importVar?.add(s);
+							(fn.global ??= {})[k] = v, v.is_global = true, mod!.importVar?.add(s);
 						else {
 							converttype(fn.declaration[k] = fn.local[k] = v, v);
 							add(inherit[k] = v), check_name(v);
@@ -501,7 +503,7 @@ export function getSymbolInfo(lex: Lexer, mod: Module = (lex.symbolInformation =
 				case SymbolKind.Variable: {
 					const t = resolveVarAlias(tk.definition = n);
 					sem.type = SK2STT.get(t.kind) ?? SemanticTokenTypes.variable;
-					mod.importVar?.add(n);
+					mod!.importVar?.add(n);
 					if (t.kind === SymbolKind.Variable)
 						return;
 					sem.modifier = (sem.modifier ?? 0) | SemanticTokenModifiers.readonly;

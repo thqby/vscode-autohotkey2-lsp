@@ -1,6 +1,6 @@
 import { CancellationToken, Hover, HoverParams } from 'vscode-languageserver';
 import {
-	AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, SemanticTokenTypes, SymbolKind, Variable,
+	AhkSymbol, ClassNode, FuncNode, Lexer, Maybe, ScopeType, SemanticTokenTypes, SymbolKind, Variable,
 	findSymbols, generateTypeAnnotation, getClassBase, getClassMember, getLexer, getOverloads, getSymbolDetail,
 	hoverCache, joinTypes, lexers, resolveVarAlias
 } from './common';
@@ -25,7 +25,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 		let { node } = it;
 		if ((node as Variable).from !== undefined) {
 			if (it.node !== (node = resolveVarAlias(node as Variable)))
-				return { node, uri: node.uri!, is_global: true };
+				return { node, uri: node.uri!, scope_type: ScopeType.Global };
 		}
 		return it;
 	});
@@ -46,7 +46,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 				s = getClassMember(ll, p, (s as FuncNode).construct || '__new', true) ?? s;
 			nodes[0].node = s;
 		}
-		const { node, is_global } = nodes[0], fn = node as FuncNode;
+		const { node, scope_type } = nodes[0], fn = node as FuncNode;
 		if (node.kind === SymbolKind.Class && !fn.full?.startsWith('(')) {
 			let base: AhkSymbol | undefined = (node as ClassNode).prototype ?? node;
 			for (const bs = [base]; base?.full === node.full;)
@@ -80,7 +80,7 @@ export async function hoverProvider(params: HoverParams, token: CancellationToke
 				md = `*@param* \`${node.name}\`${(t = joinTypes(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
 			else md = md.replace(/\n|(?<=`\*?) — /, '\n___\n');
 		} else if (node.kind === SymbolKind.Variable) {
-			const kind = is_global === true ? '*@global*' : node.static ? '*@static*' : '*@local*';
+			const kind = scope_type! >= ScopeType.Global ? '*@global*' : node.static ? '*@static*' : '*@local*';
 			md = `${kind} \`${node.name}\`${(t = joinTypes(node.type_annotations)) && `: *\`${t}\`*`}\n___\n${md}`;
 		} else if (node.kind === SymbolKind.Property) {
 			t = node.children ? generateTypeAnnotation(node, ll) : joinTypes(node.type_annotations);

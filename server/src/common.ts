@@ -10,6 +10,7 @@ import { Lexer, ZERO_RANGE, ahkModule, fixupFormatOptions, traverseInclude } fro
 import { diagnostic, setting } from './localize';
 import { CompletionItemKind, MessageType, SymbolKind } from './lsp-enums';
 import { ActionType, AhkSymbol, FormatOptions } from './types';
+import { resolveImports } from './lexer2';
 export * from './codeActionProvider';
 export * from './colorProvider';
 export * from './commandProvider';
@@ -619,9 +620,10 @@ function glob2RegExp(glob: string) {
 	return new RegExp(reStr, 'i');
 }
 
-export function parseInclude(lex: Lexer, dir: string, _set = new Set()) {
+export function parseInclude(lex: Lexer, dir: string, _set?: Set<Lexer>) {
 	let include = lex.include;
-	const l = dir.toLowerCase();
+	const l = dir.toLowerCase(), root = !_set;
+	_set ??= new Set();
 	if (lex.module)
 		include = Object.assign({}, include, ...Object.values(lex.module).map(m => m.include));
 	_set.add(lex);
@@ -633,9 +635,13 @@ export function parseInclude(lex: Lexer, dir: string, _set = new Set()) {
 				continue;
 			(lexers[uri] = lex = new Lexer(t, dir)).parseScript();
 		} else if (lex.scriptdir.toLowerCase() !== l && (lex.initLibDirs(dir), lex.need_scriptdir) || lex.last_diags)
-			lex.parseScript();
+			lex.parseScript(), _set.delete(lex);
 		_set.has(lex) || parseInclude(lex, dir, _set);
 	}
+	root && setTimeout(() => {
+		for (const lex of _set)
+			resolveImports(lex);
+	}, 500);
 }
 
 export async function parseProject(uri: string) {

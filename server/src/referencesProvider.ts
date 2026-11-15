@@ -1,6 +1,6 @@
 import { CancellationToken, Location, Range, ReferenceParams } from 'vscode-languageserver';
 import {
-	ANY, AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, SymbolKind, TokenType, Variable, ZERO_RANGE,
+	ANY, AhkSymbol, ClassNode, Context, FuncNode, FuncScope, Lexer, Property, ScopeType, SymbolKind, TokenType, Variable, ZERO_RANGE,
 	ahkVars, builtinLexs, decltypeExpr, findClass, findSymbols, getAllModules, getClassBase, getLexer, lexers, symbolProvider
 } from './common';
 
@@ -20,7 +20,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 		return;
 	let name = context.text.toUpperCase();
 	const references: Record<string, Range[]> = {};
-	const { node, parent, uri, mod, scope, this: that, is_global } = nodes[0];
+	const { node, parent, uri, mod, scope, this: that, scope_type } = nodes[0];
 	if (that === node) {	// this
 		const range = scope?.children && findAllFromScope(scope, name, SymbolKind.Variable);
 		return range?.length ? { [getLexer(uri).document.uri]: range } : undefined;
@@ -59,7 +59,7 @@ export function getAllReferences(lex: Lexer, context: Context, allow_builtin = t
 		case SymbolKind.Variable:
 		case SymbolKind.Class:
 			if (node.kind !== SymbolKind.Class || !(node as FuncNode).full.includes('.')) {
-				const scope = is_global === true ? mod : parent;
+				const scope = scope_type! >= ScopeType.Global ? mod : parent;
 				const all_uris = { [lex.uri]: scope };
 				if (uri !== lex.uri)
 					all_uris[uri] = undefined;

@@ -5,6 +5,7 @@
 [![installs](https://img.shields.io/visual-studio-marketplace/i/thqby.vscode-autohotkey2-lsp?label=Extension%20Install&style=for-the-badge&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
 [![version](https://img.shields.io/visual-studio-marketplace/v/thqby.vscode-autohotkey2-lsp?label=Extension%20Version&style=for-the-badge&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=thqby.vscode-autohotkey2-lsp)
 [![](https://img.shields.io/badge/Compatibility-autohotkey%20v2.0+-green?style=for-the-badge&logo=autohotkey)](https://www.autohotkey.com/)
+[![](https://img.shields.io/badge/Compatibility-autohotkey%20v2.1+-green?style=for-the-badge&logo=autohotkey)](https://www.autohotkey.com/)
 
 **仓库**: [Github](https://github.com/thqby/vscode-autohotkey2-lsp) | [Gitee](https://gitee.com/orz707/vscode-autohotkey2-lsp)
 

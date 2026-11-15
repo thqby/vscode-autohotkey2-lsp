@@ -16,7 +16,7 @@ import {
 import { SymbolKind } from './lsp-enums';
 import {
 	AhkSymbol, ClassNode, Context, FuncNode, Import, Module,
-	ParamInfo, Property, Token, TokenType, USAGE, Variable, Wildcard
+	ParamInfo, Property, ScopeType, Token, TokenType, USAGE, Variable, Wildcard
 } from './types';
 
 //#region type Inference
@@ -1093,20 +1093,25 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 	if (res === null)
 		return null;
 	const scope = res?.scope;
-	if (!res?.node || res.is_global === 1)
+	if (!res?.node || res.scope_type === ScopeType.MaybeGlobal)
 		res = find_include_symbol(name, res?.mod) ?? res;
-	else if (res.is_global && res.node.kind === SymbolKind.Variable && (res.node as Variable).from === undefined) {
-		t = find_include_symbol(name, res.mod);
-		if (t && (t.node.kind !== SymbolKind.Variable || (t.node as Variable).from !== undefined || t.node.def && !res.node.def))
+	else if (res.scope_type && res.node.kind === SymbolKind.Variable && (res.node as Variable).from === undefined) {
+		t = find_include_symbol(name, res.mod, !res.node.def);
+		if (t && (t.scope_type === ScopeType.ImplicitImport ||
+			t.node.kind !== SymbolKind.Variable ||
+			(t.node as Variable).from !== undefined ||
+			t.node.def && !res.node.def))
 			res = t;
 	}
 	if (!res?.node) res = undefined;
 	if (kind === SymbolKind.Field)
 		return res;
-	if ((!res || res.node.kind === SymbolKind.Variable && ((notdef = !res.node.def) || res.is_global)) && (t = find_builtin_symbol(name)))
-		res = { uri: t.uri!, node: t, is_global: true };
+	if ((!res || res.scope_type !== ScopeType.ImplicitImport && res.node.kind === SymbolKind.Variable &&
+		(res.node as Variable).from === undefined && ((notdef = !res.node.def) || res.scope_type && ahkVersion < alpha_3 + 8)) &&
+		(t = find_builtin_symbol(name)))
+		res = { uri: t.uri!, node: t, scope_type: ScopeType.ImplicitImport };
 	else if (scope)
-		scope.uri ??= lex.uri, res!.scope = scope;
+		scope.uri ??= (res!.mod ?? lex).uri, res!.scope = scope;
 	if (!res)
 		return;
 	let p = name.length, parent: AhkSymbol | undefined, node: typeof parent = res.node;
@@ -1143,7 +1148,7 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 			if ((t = ahkWinapi?.declaration[name]))
 				return t.uri ??= ahkWinapi.uri, t;
 	}
-	function find_include_symbol(name: string, mod?: Module) {
+	function find_include_symbol(name: string, mod?: Module, allow_implicit = true) {
 		const mods = getAllModules(lex, mod);
 		let ret, t;
 		name = name.toUpperCase();
@@ -1154,8 +1159,8 @@ export function findSymbol(lex: Lexer, fullname: string, kind?: SymbolKind, pos?
 				else if (!ret || t.node.def && !ret.node.def)
 					ret = t;
 		}
-		if (ret?.node?.def === undefined && (t = getImplicitImport(mods, name, undefined, scope)))
-			return { ...t, uri: t.node.uri!, is_global: true };
+		if (allow_implicit && ret?.node?.def === undefined && (t = getImplicitImport(mods, name, undefined, scope)))
+			return { ...t, uri: t.node.uri!, scope_type: ScopeType.ImplicitImport };
 		return ret;
 	}
 }
@@ -1177,7 +1182,7 @@ function findSymbol2(mod: Module, name: string, kind?: SymbolKind) {
 	if (mod instanceof Lexer)
 		return mod.findSymbol(name, kind);
 	const node = mod.declaration[name];
-	return node && { mod, node, uri: node.uri!, is_global: true };
+	return node && { mod, node, uri: node.uri!, scope_type: ScopeType.Global };
 }
 
 export function findSymbols(lex: Lexer, context: Context) {
@@ -1202,9 +1207,9 @@ export function findSymbols(lex: Lexer, context: Context) {
 		return syms;
 	}
 	for (const tp of tps) {
-		const is_global = tp.kind === SymbolKind.Module || undefined;
+		const scope_type = tp.kind === SymbolKind.Module ? ScopeType.Global : undefined;
 		if ((t = getClassMember(lex, tp, word, ismethod)))
-			syms.push({ node: t, uri: t.uri!, is_global, parent: tp });
+			syms.push({ node: t, uri: t.uri!, scope_type, parent: tp });
 	}
 	if (syms.length)
 		return syms;
@@ -1424,9 +1429,8 @@ function getModuleMember(mod: Module, name: string, wildcard = Wildcard.Export, 
 	return d ?? v ?? getImplicitImport(mm, name, wildcard)?.node ?? add_var();
 	function add_var() {
 		if (!add) return;
-		if (u) return u;
-		mod = mod.modules?.[0] ?? mod;
-		return mod.declaration[name] = {
+		if (u) return u.def = true, u;
+		return {
 			name: add, kind: SymbolKind.Variable, uri: mod.uri, def: true,
 			range: ZERO_RANGE, selectionRange: ZERO_RANGE,
 		};
@@ -1906,7 +1910,7 @@ function getImplicitImport(mods: ImportNode[], name: string, wildcard = Wildcard
 }
 
 export function getImplicitImports(mods: ImportNode[], wildcard = Wildcard.Import, scope?: AhkSymbol, ...others: Record<string, AhkSymbol>[]): Record<string, AhkSymbol> {
-	const o: Record<string, AhkSymbol> = {};
+	const o: Record<string, AhkSymbol> = {}, p: typeof o = {};
 	const v1 = new Set<ImportNode>, v2 = new Set<ImportNode>, v3 = new Set<ImportNode>;
 	const prefix = ahkVersion >= alpha_31 ? '_' : '';
 	(function traverse(mods: ImportNode[], wildcard: Wildcard, visted = v1) {
@@ -1925,7 +1929,7 @@ export function getImplicitImports(mods: ImportNode[], wildcard = Wildcard.Impor
 						if (k[0] !== prefix && !(k in o) && (
 							(t = ee[k]).kind !== SymbolKind.Variable ||
 							(t as Variable).from !== undefined ||
-							(t = getModuleMember(mm, k))
+							(t = getModuleMember(mm, k) ?? (p[k] ??= t, null))
 						)) o[k] = t;
 				traverse(ms, Wildcard.Export, v2);
 				i.wildcard = w;
@@ -1933,7 +1937,7 @@ export function getImplicitImports(mods: ImportNode[], wildcard = Wildcard.Impor
 		}
 	})(join_importnode(mods, scope), wildcard, wildcard === Wildcard.Export ? v2 : v1);
 	delete o[''];
-	return Object.assign({}, ...others, o);
+	return Object.assign(p, ...others, o);
 }
 
 function moduleInclude(mod: Module, m: Module) {

@@ -124,7 +124,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 			if ((pt = token.previous_token)?.type === TokenType.Directive) {
 				let isdll = false;
 				switch (pt!.content.toLowerCase()) {
-					case '#import': return await import_items();
+					case '#import': return import_items();
 					case '#dllload': isdll = true;
 					// fall through
 					case '#include':
@@ -294,7 +294,7 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 					}
 				}
 			} if (pt?.type === TokenType.Directive && pt.content.toLowerCase() === '#import')
-				return await import_items(pt, pi?.name);
+				return import_items(pt, pi?.name);
 			//#region string items
 			else if (!maxn && !token.ignore) {
 				const cache = new Set<AhkSymbol | string>;
@@ -963,12 +963,13 @@ export async function completionProvider(params: CompletionParams, _token: Cance
 		const is_id = token.type !== TokenType.String;
 		let path = token.content.substring(is_id ? 0 : 1,
 			(offset ??= lex.document.offsetAt(position)) - token.offset);
-		if (is_id) {
+		if (is_id || isIdentifier(path)) {
 			for (const l of traverseRelevance(lex))
 				for (const m of Object.values(l.module ?? {}))
 					add_item(m.name, CompletionItemKind.Module);
+			['AHK', '__Main', '__Init'].forEach(n => add_item(n, CompletionItemKind.Module));
 		} else if (path.endsWith(':')) {
-			if ((mod = lex.importMod?.[path.slice(0, -1).toUpperCase()])) {
+			if ((mod = lex.importMod?.[path.toUpperCase()])) {
 				for (let m of mod.modules ?? [mod])
 					for (m of Object.values((m as Lexer).module ?? {}))
 						add_item(m.name, CompletionItemKind.Module);
