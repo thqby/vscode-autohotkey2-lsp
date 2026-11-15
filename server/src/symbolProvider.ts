@@ -5,7 +5,7 @@ import {
 	SUPER, SemanticToken, SemanticTokenModifiers, SemanticTokenTypes, SymbolKind, THIS, Token, TokenType, UNSET, URI, UnsetKind, VARREF, VOID, Variable, ZERO_RANGE,
 	ahkVars, ahkVersion, ahkWinapi, alpha_3, checkDupError, configCache, decltypeExpr, decltypeReturns, diagnostic, enumFiles, findClass, getAllModules,
 	getClassBase, getClassMember, getClassMembers, getImplicitImports, getLexer, collectImportedModules, getParamCount, getWorkspaceFile, hint, inactiveVars,
-	invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders
+	includedCache, invokeCheck, isContinuousLine, lexers, openFile, resolveVarAlias, sym_related_msg, sym_type, utils, warn, workspaceFolders,
 } from './common';
 
 export function symbolProvider(params: DocumentSymbolParams, token?: CancellationToken): SymbolInformation[] {
@@ -54,9 +54,10 @@ export function getSymbolInfo(lex: Lexer, mod: Module = (lex.symbolInformation =
 	for (const [k, v] of Object.entries(mod.declaration)) {
 		let t = gvar[k]; 
 		t ?? (t = implicitVars[k], mod.importVar?.add(t));
-		if (t.kind === SymbolKind.Variable && !t.assigned && !v.decl)
-			if (v.returns === undefined)
-				unset_vars.set(t, v);
+		if (t.kind === SymbolKind.Variable && !t.assigned && !v.decl && v.returns === undefined) {
+			const a = t.alias_to ?? t;
+			a.kind === SymbolKind.Variable && unset_vars.set(a, v);
+		}
 		if (v.kind === SymbolKind.Variable ? t === v && (check_name(v), true) : t === v || (gvar[k] = v))
 			(v as Variable).from ?? result.push(v), (v as FuncNode).in_expr || unused.add(v), converttype(v, v);
 	}
@@ -77,16 +78,17 @@ export function getSymbolInfo(lex: Lexer, mod: Module = (lex.symbolInformation =
 				}
 		}
 		const ug = unused.intersection(gu);
+		let importedVars: Set<AhkSymbol>;
 		if (ug.size) {
-			const vs = new Set(collectImportedModules(mod).values().flatMap(l => l.importVar?.values() ?? []));
-			ug.intersection(vs).forEach(t => (ug.delete(t), unused.delete(t)));
+			importedVars = collectImportedVars(mod);
+			ug.intersection(importedVars).forEach(t => (ug.delete(t), unused.delete(t)));
 			if (ug.size) {
 				const o: Record<string, AhkSymbol> = {};
 				let t, s;
-				for (const it of ug.values())
+				for (const it of ug)
 					o[it.name.toUpperCase()] = it;
-				for (const it of vs.values())
-					if (it.uri === mod.uri && (t = o[s = it.name.toUpperCase()]))
+				for (const it of importedVars)
+					if ((t = o[s = it.name.toUpperCase()]))
 						unused.delete(t), o[s] = undefined!;
 			}
 		}
@@ -96,16 +98,28 @@ export function getSymbolInfo(lex: Lexer, mod: Module = (lex.symbolInformation =
 		};
 		for (const t of unused)
 			t.name[0] !== '_' && lex.diagnostics.push({ range: t.selectionRange, ...diag });
-		if (configCache.Warn?.VarUnset)
+		if (configCache.Warn?.VarUnset) {
+			let ns;
 			for (const [k, v] of unset_vars) {
 				if (k.assigned || k.has_warned)
 					continue;
+				if (gu.has(v) && !(importedVars ??= collectImportedVars(mod)).has(k)) {
+					ns ?? (function () {
+						ns = new Set();
+						for (const it of importedVars)
+							if ((it as Variable).assigned && it.uri === mod.uri)
+								ns.add(it.name.toLowerCase());
+					})();
+					if (ns.has(v.name.toLowerCase()))
+						continue;
+				}
 				k.has_warned = true;
 				let code, since, message = warn.varisunset(v.name);
 				if (!k.decl && (since = inactiveVars[k.name.toUpperCase()]))
 					message += `, ${diagnostic.requireversion(since)}`, code = 'built-in library';
 				lex.diagnostics.push({ code, message, range: v.selectionRange, severity: DiagnosticSeverity.Warning });
 			}
+		}
 		if (lex.actived) {
 			checksamename(lex, mod);
 			resolveUndefinedProp();
@@ -128,6 +142,11 @@ export function getSymbolInfo(lex: Lexer, mod: Module = (lex.symbolInformation =
 	return lex.symbolInformation = result.map(info => SymbolInformation.create(info.name, info.kind, info.range, uri));
 
 	function maybe_unset(k: Variable, v: Variable) {
+		const { alias_to } = k;
+		if (alias_to)
+			if (alias_to.kind === SymbolKind.Variable)
+				k = alias_to;
+			else return;
 		if (!(k.assigned ||= v.assigned) && !v.decl && v.returns === undefined)
 			unset_vars.has(k) || unset_vars.set(k, v);
 	}
@@ -747,6 +766,12 @@ export async function workspaceSymbolProvider(params: WorkspaceSymbolParams, tok
 	}
 }
 
+function collectImportedVars(mod: Module) {
+	const uris = { [mod.uri]: '', ...includedCache[mod.uri] };
+	let r = collectImportedModules(mod).values().flatMap(l => l.importVar?.values() ?? []);
+	r = new Set(r).values().filter(it => it.uri! in uris);
+	return new Set(r);
+}
 
 function get_global_var(lexs: Module[]) {
 	const vars: Record<string, Variable> = {};

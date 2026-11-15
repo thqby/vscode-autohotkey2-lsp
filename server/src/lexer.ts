@@ -2395,7 +2395,7 @@ export class Lexer implements Module {
 						if (vk && (has_suffix_imps === false || mk !== vk || has_suffix_imps && !le20)) {
 							mk.as = vr = createVar(vk.content, SymbolKind.Variable,
 								make_range(vk.offset, vk.length));
-							vr.decl = vr.def = true, vr.assigned = 1;
+							vr.decl = vr.def = true;
 							ss.push(mk, vk), vk.semantic = { type: SemanticTokenTypes.module };
 							if (mk.type !== TokenType.String)
 								mk.semantic = vk.semantic;
@@ -2437,7 +2437,7 @@ export class Lexer implements Module {
 								sk.as = vr = createVar(vk.content, SymbolKind.Variable,
 									make_range(vk.offset, vk.length));
 								vr.alias = sk.content;
-								vr.decl = vr.def = true, vr.assigned = 1;
+								vr.decl = vr.def = true;
 								sk.semantic = vk.semantic = { type: SemanticTokenTypes.variable };
 								ss.push(sk, vk), syms.push(vr);
 								vk.type !== TokenType.Identifier && _this.diagnostics.push({
