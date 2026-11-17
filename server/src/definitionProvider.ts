@@ -48,10 +48,9 @@ export async function defintionProvider(params: DefinitionParams, token: Cancell
 					mod.range, mod.selectionRange, rg));
 			}
 		}
-		if (tk.type === TokenType.String)
+		if (tk.type === TokenType.String || !has_default)
 			return locas;
-		if (has_default)
-			locas.length = 0;
+		locas.length = 0;
 	}
 	if (context.kind === SymbolKind.Null)
 		return;
